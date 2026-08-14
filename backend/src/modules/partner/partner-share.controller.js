@@ -24,6 +24,12 @@ const generateShareLink = async (req, res, next) => {
       if (app) {
         productId = app.product_id;
         partnerId = app.partner_id;
+      } else {
+        const { rows: [lead] } = await query(`SELECT product_id, partner_id FROM leads WHERE id = $1`, [req.body.application_id]);
+        if (lead) {
+          productId = lead.product_id;
+          if (!partnerId) partnerId = lead.partner_id;
+        }
       }
     }
 
@@ -185,13 +191,13 @@ const submitShareLead = async (req, res, next) => {
       if (existingCust) {
         customerId = existingCust.id;
         await query(
-          `UPDATE customers SET full_name = COALESCE($1, full_name), updated_at = NOW() WHERE id = $2`,
+          `UPDATE customers SET full_name = COALESCE(NULLIF(full_name, ''), $1), updated_at = NOW() WHERE id = $2`,
           [customerName, customerId]
         );
       } else {
         const { rows: [newCust] } = await query(
-          `INSERT INTO customers (full_name, mobile, created_by, pipeline_status, source)
-           VALUES ($1, $2, $3, 'interested', 'partner_share')
+          `INSERT INTO customers (full_name, mobile, created_by)
+           VALUES ($1, $2, $3)
            RETURNING id`,
           [customerName, cleanMobile, partnerUserId]
         );

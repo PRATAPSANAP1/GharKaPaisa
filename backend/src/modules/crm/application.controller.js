@@ -224,6 +224,19 @@ const submitPublicApplication = async (req, res, next) => {
       customerId = newCust.id;
     }
 
+    // Also create or link Lead record
+    const leadNum = 'LEAD-' + Date.now().toString(36).toUpperCase();
+    const { rows: [newLead] } = await client.query(`
+      INSERT INTO leads (
+        lead_number, partner_id, parent_partner_id, created_by, customer_id,
+        product_id, customer_name, mobile, city, status, process_type,
+        otp_verified, source, pipeline_stage
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'confirmed', $10, TRUE, 'public_landing', 'submitted')
+      RETURNING id
+    `, [leadNum, partnerId, parentPartnerId, sysUserId, customerId, product_id, customer.full_name, customer.mobile, customer.city || null, process_type || 'lead_punching']);
+    const leadId = newLead.id;
+
     const commission = await calculatePartnerCommission(product_id, partnerId, salaryVal);
 
     const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
@@ -233,12 +246,15 @@ const submitPublicApplication = async (req, res, next) => {
 
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
-        (app_number, customer_id, product_id, partner_id, parent_partner_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, tracking_id, submitted_at,
+        (app_number, lead_id, customer_id, product_id, partner_id, parent_partner_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, tracking_id, submitted_at,
          status_history, process_type, company_name, pincode, city)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'submitted',$11,NOW(),
-        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$12::text)), $13, $14, $15, $16)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'submitted',$12,NOW(),
+        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$13::text)), $14, $15, $16, $17)
       RETURNING id, app_number
-    `, [appNumber, customerId, product_id, partnerId, parentPartnerId, product.bank_id, sysUserId, salaryVal, commission, notes, tracking_id || null, sysUserId.toString(), process_type || 'lead_punching', company_name || null, pincode || null, customer.city || null]);
+    `, [appNumber, leadId, customerId, product_id, partnerId, parentPartnerId, product.bank_id, sysUserId, salaryVal, commission, notes, tracking_id || null, sysUserId.toString(), process_type || 'lead_punching', company_name || null, pincode || null, customer.city || null]);
+
+    // Link application_id on lead record
+    await client.query(`UPDATE leads SET application_id = $1 WHERE id = $2`, [app.id, leadId]);
 
     await logTimeline(client, app.id, 'submitted', 'Application Created', 'Public direct landing application logged.', sysUserId);
     await logTimeline(client, app.id, 'submitted', 'Customer Submitted Form', 'Verified lead details saved.', sysUserId);
@@ -317,6 +333,7 @@ const getApplicationsDashboard = async (req, res, next) => {
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
+        WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
       ${whereClause}
     `, [partnerId, userId]);
@@ -336,11 +353,12 @@ const getApplicationsDashboard = async (req, res, next) => {
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         UNION ALL
-        SELECT l.id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, l.status::text, p.commission_value as commission_amount, 'pending'::text as commission_status, l.created_at, l.partner_id, COALESCE(l.created_by, c.created_by) as submitted_by,
+        SELECT l.id, COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number, l.status::text, p.commission_value as commission_amount, 'pending'::text as commission_status, l.created_at, l.partner_id, COALESCE(l.created_by, c.created_by) as submitted_by,
                COALESCE(NULLIF(l.customer_name, ''), c.full_name, 'Customer') as customer_name, p.name as product_name
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
+        WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
       ${whereClause}
       ORDER BY combined.created_at DESC LIMIT 5
@@ -371,13 +389,26 @@ const getApplicationsDashboard = async (req, res, next) => {
 const getTimeline = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { rows } = await query(`
+    let { rows } = await query(`
       SELECT at.*, u.full_name as performed_by_name
       FROM application_timeline at
       LEFT JOIN users u ON u.id = at.performed_by
       WHERE at.application_id = $1
       ORDER BY at.performed_at ASC
     `, [id]);
+
+    if (!rows || rows.length === 0) {
+      const { rows: leadTimeline } = await query(`
+        SELECT lt.id, lt.lead_id as application_id, lt.activity_type as event_type, lt.title, lt.description, lt.created_at as performed_at, lt.created_at,
+               lt.status, u.full_name as performed_by_name
+        FROM lead_timeline lt
+        LEFT JOIN users u ON u.id = lt.created_by
+        WHERE lt.lead_id = $1
+        ORDER BY lt.created_at ASC
+      `, [id]);
+      rows = leadTimeline;
+    }
+
     return success(res, rows);
   } catch (err) {
     next(err);
@@ -388,9 +419,18 @@ const getTimeline = async (req, res, next) => {
 const getDocuments = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { rows } = await query(`
+    let { rows } = await query(`
       SELECT * FROM application_documents WHERE application_id = $1 ORDER BY uploaded_at DESC
     `, [id]);
+
+    if (!rows || rows.length === 0) {
+      const { rows: leadDocs } = await query(`
+        SELECT id, lead_id as application_id, document_type as doc_type, file_url, verification_status as status, uploaded_at, uploaded_at as created_at
+        FROM lead_documents WHERE lead_id = $1 ORDER BY uploaded_at DESC
+      `, [id]);
+      rows = leadDocs;
+    }
+
     return success(res, rows);
   } catch (err) {
     next(err);
@@ -821,6 +861,10 @@ const reassignApplication = async (req, res, next) => {
       UPDATE applications SET partner_id = $1, updated_at = NOW() WHERE id = $2
     `, [partner.id, id]);
 
+    await client.query(`
+      UPDATE leads SET partner_id = $1, updated_at = NOW() WHERE id = $2 OR application_id = $2
+    `, [partner.id, id]);
+
     await logTimeline(client, id, 'submitted', 'Reassigned Partner', `Application reassigned to ${partner.first_name} ${partner.last_name || ''} (${partner.partner_code}).`, req.user.id);
     await logAction(req, 'REASSIGN_APPLICATION', id, { target_partner: partner.id });
 
@@ -950,11 +994,11 @@ const listApplications = async (req, res, next) => {
           a.commission_paid_at,
           a.submitted_by,
           COALESCE(a.source, 'partner_punch') as process_by,
-          COALESCE(c.full_name, 'Customer') as customer_name,
-          c.mobile as customer_mobile,
+          COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+          COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
           c.email as customer_email,
           c.pan_number,
-          c.city,
+          COALESCE(l.city, c.city) as city,
           c.state,
           c.employment_type,
           c.monthly_income,
@@ -971,6 +1015,7 @@ const listApplications = async (req, res, next) => {
           COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id,
           oh.full_name as operation_head_name
         FROM applications a
+        LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
@@ -981,7 +1026,7 @@ const listApplications = async (req, res, next) => {
 
         SELECT 
           l.id,
-          CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number,
+          COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number,
           l.status::text,
           NULL::numeric as loan_amount,
           NULL::numeric as approved_amount,
@@ -996,11 +1041,11 @@ const listApplications = async (req, res, next) => {
           NULL as commission_paid_at,
           COALESCE(l.created_by, c.created_by) as submitted_by,
           COALESCE(l.source, 'partner_share') as process_by,
-          COALESCE(NULLIF(l.customer_name, ''), c.full_name, 'Customer') as customer_name,
-          COALESCE(NULLIF(l.mobile, ''), c.mobile) as customer_mobile,
+          COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+          COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
           c.email as customer_email,
           c.pan_number,
-          COALESCE(c.city, l.city) as city,
+          COALESCE(l.city, c.city) as city,
           c.state,
           c.employment_type,
           c.monthly_income,
@@ -1017,7 +1062,7 @@ const listApplications = async (req, res, next) => {
           COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id,
           oh.full_name as operation_head_name
         FROM leads l
-        LEFT JOIN customers c ON c.mobile = l.mobile
+        LEFT JOIN customers c ON c.id = l.customer_id OR (l.customer_id IS NULL AND c.mobile = l.mobile)
         LEFT JOIN products p ON p.id = l.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         LEFT JOIN partner_profiles ap ON ap.id = l.partner_id
@@ -1064,15 +1109,16 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.status::text, a.product_id, p.bank_id, a.app_number, c.full_name as customer_name, c.mobile as customer_mobile, a.submitted_by, COALESCE(a.source, 'partner_punch') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id
+        SELECT a.id, a.partner_id, a.status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, a.submitted_by, COALESCE(a.source, 'partner_punch') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id
         FROM applications a
+        LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         UNION ALL
-        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8))) as app_number, COALESCE(NULLIF(l.customer_name, ''), c.full_name, 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), c.mobile) as customer_mobile, COALESCE(l.created_by, c.created_by) as submitted_by, COALESCE(l.source, 'partner_share') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id
+        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(l.created_by, c.created_by) as submitted_by, COALESCE(l.source, 'partner_share') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id
         FROM leads l
-        LEFT JOIN customers c ON c.mobile = l.mobile
+        LEFT JOIN customers c ON c.id = l.customer_id OR (l.customer_id IS NULL AND c.mobile = l.mobile)
         LEFT JOIN products p ON p.id = l.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
@@ -1098,13 +1144,16 @@ const getApplication = async (req, res, next) => {
     const { id } = req.params;
     const { rows: [app] } = await query(`
       SELECT a.*, 
-        c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email,
-        c.pan_number, c.monthly_income, c.employment_type, c.city, c.state,
+        COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+        COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
+        c.email as customer_email,
+        c.pan_number, c.monthly_income, c.employment_type, COALESCE(l.city, c.city) as city, c.state,
         p.name as product_name, p.category, p.features, p.commission_type, p.commission_value,
         b.name as bank_name, b.short_code as bank_code,
         ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
       FROM applications a
-      JOIN customers c ON c.id = a.customer_id
+      LEFT JOIN leads l ON l.id = a.lead_id
+      LEFT JOIN customers c ON c.id = a.customer_id
       JOIN products p ON p.id = a.product_id
       JOIN banks b ON b.id = p.bank_id
       JOIN partner_profiles ap ON ap.id = a.partner_id
@@ -1565,19 +1614,23 @@ const submitPartnerApplication = async (req, res, next) => {
     }
 
     // Sync into leads table so it appears in CRM leads queue
+    let syncedLeadId = null;
     if (trimmedMobile) {
       try {
         await client.query('SAVEPOINT lead_sync_sp');
-        await client.query(`
+        const leadNum = 'LEAD-' + Date.now().toString(36).toUpperCase();
+        const { rows: [newLead] } = await client.query(`
           INSERT INTO leads (
-            partner_id, product_id, customer_name, customer_mobile, mobile,
-            customer_email, source, status, pipeline_stage, customer_id, created_by
+            lead_number, partner_id, product_id, customer_name, customer_mobile, mobile,
+            customer_email, source, status, pipeline_stage, customer_id, created_by, otp_verified
           )
-          VALUES ($1, $2, $3, $4, $4, $5, $6, 'pending', 'created', $7, $8)
+          VALUES ($1, $2, $3, $4, $5, $5, $6, $7, 'confirmed', 'submitted', $8, $9, TRUE)
+          RETURNING id
         `, [
-          partnerId, product_id, trimmedName, trimmedMobile,
+          leadNum, partnerId, product_id, trimmedName, trimmedMobile,
           trimmedEmail, `partner_${process_type}`, customerId, req.user.id
         ]);
+        syncedLeadId = newLead?.id || null;
         await client.query('RELEASE SAVEPOINT lead_sync_sp');
       } catch (leadErr) {
         await client.query('ROLLBACK TO SAVEPOINT lead_sync_sp').catch(() => {});
@@ -1596,16 +1649,20 @@ const submitPartnerApplication = async (req, res, next) => {
 
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
-        (app_number, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, commission_amount,
+        (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, commission_amount,
          status, process_type, business_type, gst_number, trade_license_number, company_name, pincode, city, state, country_code, agree_terms, submitted_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW())
       RETURNING *
     `, [
-      appNumber, customerId, product_id, partnerId, product.bank_id, req.user.id,
+      appNumber, syncedLeadId, customerId, product_id, partnerId, product.bank_id, req.user.id,
       monthly_salary || 0, commission, appStatus, process_type, business_type || null,
       gst_number || null, trade_license_number || null, company_name || null,
       pincode || null, city || null, state || null, country_code, agree_terms,
     ]);
+
+    if (syncedLeadId && app?.id) {
+      await client.query(`UPDATE leads SET application_id = $1 WHERE id = $2`, [app.id, syncedLeadId]);
+    }
 
     try {
       await client.query('SAVEPOINT timeline_sp');
@@ -1875,16 +1932,81 @@ const updateApplicationDetails = async (req, res, next) => {
       state,
       bank_id,
       product_id,
-      loan_amount
+      loan_amount,
+      dob,
+      employment_type,
+      employer,
+      company_name
     } = req.body;
 
-    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id = $1`, [id]);
+    let { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id = $1`, [id]);
+    let isLeadOnly = false;
+    if (!app) {
+      const { rows: [leadRec] } = await client.query(`SELECT * FROM leads WHERE id = $1`, [id]);
+      if (leadRec) {
+        app = leadRec;
+        isLeadOnly = true;
+      }
+    }
+
     if (!app) {
       await client.query('ROLLBACK');
-      return notFound(res, 'Application not found');
+      return notFound(res, 'Application or Lead record not found');
     }
 
     const appNumToSave = (bank_application_number || bank_ref_number || '').trim();
+    const employerToSave = employer || company_name || null;
+
+    if (isLeadOnly) {
+      const { rows: [updatedLead] } = await client.query(`
+        UPDATE leads SET
+          vkyc_status = COALESCE(NULLIF($1, ''), vkyc_status),
+          vkyc_url = COALESCE(NULLIF($2, ''), vkyc_url),
+          status = COALESCE(NULLIF($3, ''), status),
+          product_id = COALESCE($4, product_id),
+          customer_name = COALESCE(NULLIF($5, ''), customer_name),
+          city = COALESCE(NULLIF($6, ''), city),
+          updated_at = NOW()
+        WHERE id = $7
+        RETURNING *
+      `, [vkyc_status || null, vkyc_url || null, status || null, product_id || null, full_name || null, city || null, id]);
+
+      if (app.mobile || app.customer_id) {
+        await client.query(`
+          UPDATE customers SET
+            full_name = COALESCE(NULLIF($1, ''), full_name),
+            mobile = COALESCE(NULLIF($2, ''), mobile),
+            email = COALESCE(NULLIF($3, ''), email),
+            dob = COALESCE(NULLIF($4, '')::date, dob),
+            pan_number = COALESCE(NULLIF($5, ''), pan_number),
+            monthly_income = COALESCE($6, monthly_income),
+            city = COALESCE(NULLIF($7, ''), city),
+            state = COALESCE(NULLIF($8, ''), state),
+            pincode = COALESCE(NULLIF($9, ''), pincode),
+            employment_type = COALESCE(NULLIF($10, ''), employment_type),
+            employer = COALESCE(NULLIF($11, ''), employer),
+            updated_at = NOW()
+          WHERE id = $12 OR mobile = $13
+        `, [
+          full_name || null,
+          mobile || null,
+          email || null,
+          dob || null,
+          pan_number || null,
+          monthly_salary ? parseFloat(monthly_salary) : null,
+          city || null,
+          state || null,
+          pincode || null,
+          employment_type || null,
+          employerToSave,
+          app.customer_id,
+          app.mobile
+        ]);
+      }
+
+      await client.query('COMMIT');
+      return success(res, updatedLead, 'Lead details updated successfully');
+    }
 
     // 1. Update applications table
     const { rows: [updatedApp] } = await client.query(`
@@ -1924,24 +2046,30 @@ const updateApplicationDetails = async (req, res, next) => {
       await client.query(`
         UPDATE customers SET
           full_name = COALESCE(NULLIF($1, ''), full_name),
-          email = COALESCE(NULLIF($2, ''), email),
-          pincode = COALESCE(NULLIF($3, ''), pincode),
-          city = COALESCE(NULLIF($4, ''), city),
-          state = COALESCE(NULLIF($5, ''), state),
-          pan_number = COALESCE(NULLIF($6, ''), pan_number),
-          pan = COALESCE(NULLIF($6, ''), pan),
-          monthly_income = COALESCE($7, monthly_income),
-          income = COALESCE($7, income),
+          mobile = COALESCE(NULLIF($2, ''), mobile),
+          email = COALESCE(NULLIF($3, ''), email),
+          dob = COALESCE(NULLIF($4, '')::date, dob),
+          pincode = COALESCE(NULLIF($5, ''), pincode),
+          city = COALESCE(NULLIF($6, ''), city),
+          state = COALESCE(NULLIF($7, ''), state),
+          pan_number = COALESCE(NULLIF($8, ''), pan_number),
+          monthly_income = COALESCE($9, monthly_income),
+          employment_type = COALESCE(NULLIF($10, ''), employment_type),
+          employer = COALESCE(NULLIF($11, ''), employer),
           updated_at = NOW()
-        WHERE id = $8
+        WHERE id = $12
       `, [
         full_name || null,
+        mobile || null,
         email || null,
+        dob || null,
         pincode || null,
         city || null,
         state || null,
         pan_number || null,
         monthly_salary ? parseFloat(monthly_salary) : null,
+        employment_type || null,
+        employerToSave,
         app.customer_id
       ]);
     }
@@ -2196,13 +2324,25 @@ const deleteApplication = async (req, res, next) => {
     const { id } = req.params;
     if (!id) return error(res, 'Application ID is required', 400);
 
-    const { rows: [app] } = await client.query(
+    let { rows: [app] } = await client.query(
       `SELECT id, partner_id, app_number, status FROM applications WHERE id = $1`, 
       [id]
     );
 
+    let isLeadOnly = false;
     if (!app) {
-      return error(res, 'Application record not found', 404);
+      const { rows: [leadRec] } = await client.query(
+        `SELECT id, partner_id, COALESCE(NULLIF(lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(id::text, 1, 8)))) as app_number, status FROM leads WHERE id = $1`,
+        [id]
+      );
+      if (leadRec) {
+        app = leadRec;
+        isLeadOnly = true;
+      }
+    }
+
+    if (!app) {
+      return error(res, 'Application or Lead record not found', 404);
     }
 
     // Check authorization for Partner or Team Member roles
@@ -2213,11 +2353,29 @@ const deleteApplication = async (req, res, next) => {
         [req.user.id]
       );
       if (!partner || app.partner_id !== partner.id) {
-        return error(res, 'You are not authorized to delete this application', 403);
+        return error(res, 'You are not authorized to delete this record', 403);
       }
     }
 
     await client.query('BEGIN');
+
+    if (isLeadOnly) {
+      // Cascade delete lead related records
+      await client.query(`DELETE FROM lead_documents WHERE lead_id = $1`, [id]).catch(() => {});
+      await client.query(`DELETE FROM lead_timeline WHERE lead_id = $1`, [id]).catch(() => {});
+      await client.query(`DELETE FROM lead_notes WHERE lead_id = $1`, [id]).catch(() => {});
+      await client.query(`DELETE FROM lead_status_history WHERE lead_id = $1`, [id]).catch(() => {});
+      await client.query(`DELETE FROM lead_checklist WHERE lead_id = $1`, [id]).catch(() => {});
+      await client.query(`DELETE FROM lead_sla WHERE lead_id = $1`, [id]).catch(() => {});
+      await client.query(`DELETE FROM bank_assignments WHERE lead_id = $1`, [id]).catch(() => {});
+      await client.query(`DELETE FROM lead_assignments WHERE lead_id = $1`, [id]).catch(() => {});
+      await client.query(`DELETE FROM leads WHERE id = $1`, [id]);
+
+      await logAction(req, 'DELETE_LEAD', id, { app_number: app.app_number });
+
+      await client.query('COMMIT');
+      return success(res, {}, 'Lead record deleted successfully');
+    }
 
     // 1. Delete application_notes
     try {

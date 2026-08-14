@@ -80,11 +80,22 @@ export default function PartnerApplications() {
   const [editApp, setEditApp] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
+    full_name: '',
+    mobile: '',
+    email: '',
+    dob: '',
+    pan_number: '',
+    employment_type: 'salaried',
+    monthly_salary: '',
+    employer: '',
+    city: '',
+    state: '',
+    pincode: '',
     bank_application_number: '',
+    loan_amount: '',
+    status: 'submitted',
     vkyc_status: 'Pending',
     vkyc_url: '',
-    pan_number: '',
-    monthly_salary: '',
     remarks: ''
   });
 
@@ -92,6 +103,15 @@ export default function PartnerApplications() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareData, setShareData] = useState(null);
   const [generatingShare, setGeneratingShare] = useState(false);
+  const [shareForm, setShareForm] = useState({
+    bank_application_number: '',
+    vkyc_status: 'Pending',
+    vkyc_url: '',
+    pan_number: '',
+    monthly_salary: '',
+    remarks: ''
+  });
+  const [savingShareForm, setSavingShareForm] = useState(false);
 
   const handleGenerateShareLink = async (app) => {
     setGeneratingShare(true);
@@ -104,8 +124,17 @@ export default function PartnerApplications() {
       if (res.data?.success) {
         setShareData({
           ...res.data.data,
+          app: app,
           app_number: app.app_number,
           customer_name: app.customer_name || 'Customer'
+        });
+        setShareForm({
+          bank_application_number: app.bank_application_number || app.bank_ref_number || '',
+          vkyc_status: app.vkyc_status || 'Pending',
+          vkyc_url: app.vkyc_url || '',
+          pan_number: app.pan_number || app.pan || '',
+          monthly_salary: app.monthly_salary || app.monthly_income || app.income || '',
+          remarks: app.remarks || ''
         });
         setShowShareModal(true);
       }
@@ -113,6 +142,24 @@ export default function PartnerApplications() {
       alert(err.response?.data?.message || 'Failed to generate customer share link');
     } finally {
       setGeneratingShare(false);
+    }
+  };
+
+  const handleSaveShareFormDetails = async (e) => {
+    e.preventDefault();
+    if (!shareData?.app?.id) return;
+    setSavingShareForm(true);
+    try {
+      const res = await api.put(`/applications/${shareData.app.id}`, shareForm);
+      if (res.data?.success) {
+        alert('Application details updated successfully');
+        setShowShareModal(false);
+        fetchApplicationsList();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save application details');
+    } finally {
+      setSavingShareForm(false);
     }
   };
 
@@ -132,11 +179,22 @@ export default function PartnerApplications() {
   const handleOpenEditModal = (app) => {
     setEditApp(app);
     setEditForm({
+      full_name: app.customer_name || app.full_name || '',
+      mobile: app.customer_mobile || app.mobile || '',
+      email: app.customer_email || app.email || '',
+      dob: app.dob ? new Date(app.dob).toISOString().split('T')[0] : '',
+      pan_number: app.pan_number || app.pan || '',
+      employment_type: app.employment_type || 'salaried',
+      monthly_salary: app.monthly_salary || app.monthly_income || app.income || '',
+      employer: app.employer || app.company_name || '',
+      city: app.city || '',
+      state: app.state || '',
+      pincode: app.pincode || '',
       bank_application_number: app.bank_application_number || app.bank_ref_number || '',
+      loan_amount: app.loan_amount || app.approved_amount || '',
+      status: app.status || 'submitted',
       vkyc_status: app.vkyc_status || 'Pending',
       vkyc_url: app.vkyc_url || '',
-      pan_number: app.pan_number || app.pan || '',
-      monthly_salary: app.monthly_salary || app.monthly_income || app.income || '',
       remarks: app.remarks || ''
     });
     setShowEditModal(true);
@@ -862,29 +920,209 @@ export default function PartnerApplications() {
         </div>
       )}
 
-      {/* ═══ MODAL 4: EDIT LEAD & APPLICATION DETAILS ═══ */}
+      {/* ═══ MODAL 4: EDIT FULL CUSTOMER & APPLICATION DETAILS ═══ */}
       {showEditModal && editApp && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
-          <div style={{ width: '100%', maxWidth: 520, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto', background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: `1px solid ${border}`, paddingBottom: 12 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>✏️ Update Lead #{editApp.app_number}</h3>
-                <span style={{ fontSize: 11, color: textMuted }}>Bank: {editApp.bank_name || editApp.bank_code || 'Partner Bank'}</span>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>✏️ Edit Customer & Application Details</h3>
+                <span style={{ fontSize: 11, color: textMuted }}>Lead/App #{editApp.app_number} • Bank: {editApp.bank_name || editApp.bank_code || 'Partner Bank'}</span>
               </div>
               <button onClick={() => setShowEditModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
             </div>
 
-            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Section 1: Customer Personal Details */}
+              <div>
+                <h4 style={{ fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>👤 1. Customer Personal Details</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Full Name *</label>
+                    <input type="text" required value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Customer Full Name" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Mobile Number *</label>
+                    <input type="text" required value={editForm.mobile} onChange={e => setEditForm({ ...editForm, mobile: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="10-digit mobile" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Email Address</label>
+                    <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="customer@example.com" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Date of Birth</label>
+                    <input type="date" value={editForm.dob} onChange={e => setEditForm({ ...editForm, dob: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>PAN Card Number</label>
+                    <input type="text" maxLength={10} value={editForm.pan_number} onChange={e => setEditForm({ ...editForm, pan_number: e.target.value.toUpperCase() })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="ABCDE1234F" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Employment & Financial Info */}
+              <div>
+                <h4 style={{ fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>💼 2. Employment & Income Profile</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Employment Type</label>
+                    <select value={editForm.employment_type} onChange={e => setEditForm({ ...editForm, employment_type: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
+                      <option value="salaried">Salaried</option>
+                      <option value="self_employed">Self Employed</option>
+                      <option value="business">Business Owner</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Monthly Income (₹)</label>
+                    <input type="number" placeholder="e.g. 45000" value={editForm.monthly_salary} onChange={e => setEditForm({ ...editForm, monthly_salary: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Employer / Company Name</label>
+                    <input type="text" placeholder="Company Name" value={editForm.employer} onChange={e => setEditForm({ ...editForm, employer: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>City</label>
+                    <input type="text" placeholder="City" value={editForm.city} onChange={e => setEditForm({ ...editForm, city: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>State</label>
+                    <input type="text" placeholder="State" value={editForm.state} onChange={e => setEditForm({ ...editForm, state: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Pincode</label>
+                    <input type="text" maxLength={6} placeholder="Pincode" value={editForm.pincode} onChange={e => setEditForm({ ...editForm, pincode: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Application & Verification Status */}
+              <div>
+                <h4 style={{ fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', marginBottom: 8, letterSpacing: '0.05em' }}>🏦 3. Bank Application & Verification Info</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Bank Application / Ref Number</label>
+                    <input type="text" placeholder="Enter bank reference number" value={editForm.bank_application_number} onChange={e => setEditForm({ ...editForm, bank_application_number: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Applied Loan Amount (₹)</label>
+                    <input type="number" placeholder="Loan amount" value={editForm.loan_amount} onChange={e => setEditForm({ ...editForm, loan_amount: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Application Status</label>
+                    <select value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
+                      <option value="submitted">Applied</option>
+                      <option value="under_review">Under Review</option>
+                      <option value="approved">Approved</option>
+                      <option value="disbursed">Disbursed</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>VKYC Status</label>
+                    <select value={editForm.vkyc_status} onChange={e => setEditForm({ ...editForm, vkyc_status: e.target.value })}
+                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
+                      <option value="Pending">Pending</option>
+                      <option value="Scheduled">Scheduled</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Failed">Failed</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>VKYC Link / Video URL</label>
+                <input type="url" placeholder="https://vkyc..." value={editForm.vkyc_url} onChange={e => setEditForm({ ...editForm, vkyc_url: e.target.value })}
+                  style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Remarks & Activity Notes</label>
+                <textarea rows={2} placeholder="Application details notes..." value={editForm.remarks} onChange={e => setEditForm({ ...editForm, remarks: e.target.value })}
+                  style={{ ...selectStyle, width: '100%', boxSizing: 'border-box', height: 'auto' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8, borderTop: `1px solid ${border}`, paddingTop: 14 }}>
+                <button type="button" onClick={() => setShowEditModal(false)} style={{ padding: '9px 16px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={editing} style={{ padding: '9px 22px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                  {editing ? 'Saving...' : 'Save All Details'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL 5: CUSTOMER SHARE LINK & APPLICATION DETAILS MODAL ═══ */}
+      {showShareModal && shareData && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>🔗 Customer Application Link</h3>
+                <span style={{ fontSize: 11, color: textMuted }}>Application #{shareData.app_number} for {shareData.customer_name}</span>
+              </div>
+              <button onClick={() => setShowShareModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
+            </div>
+
+            {/* Share Link Banner */}
+            <div style={{ background: isDark ? '#1a2234' : '#f0f7ff', border: '1px solid #3b82f640', borderRadius: 14, padding: 14, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: textMuted, marginBottom: 4, fontWeight: 700 }}>Direct Customer Share URL</div>
+              <div style={{ fontSize: 13, color: '#2563eb', fontWeight: 700, wordBreak: 'break-all', fontFamily: 'monospace', marginBottom: 10 }}>
+                {shareData.share_url}
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareData.share_url);
+                    alert('Link copied to clipboard!');
+                  }}
+                  style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: `1px solid ${border}`, background: cardBg, color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  <Copy size={14} /> Copy Link
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = encodeURIComponent(`Hi ${shareData.customer_name}, please complete your application details using this secure link: ${shareData.share_url}`);
+                    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
+                  }}
+                  style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: 'none', background: '#25D366', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  💬 Share via WhatsApp
+                </button>
+              </div>
+            </div>
+
+            {/* Customer Application Details Form */}
+            <form onSubmit={handleSaveShareFormDetails} style={{ display: 'flex', flexDirection: 'column', gap: 14, borderTop: `1px solid ${border}`, paddingTop: 16 }}>
+              <h4 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: textPrimary }}>📋 Take / Update Application Details</h4>
+
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Bank Application / Reference Number *</label>
-                <input type="text" required placeholder="Enter bank reference number" value={editForm.bank_application_number} onChange={e => setEditForm({ ...editForm, bank_application_number: e.target.value })}
+                <input type="text" required placeholder="Enter bank reference number" value={shareForm.bank_application_number} onChange={e => setShareForm({ ...shareForm, bank_application_number: e.target.value })}
                   style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>VKYC Status</label>
-                  <select value={editForm.vkyc_status} onChange={e => setEditForm({ ...editForm, vkyc_status: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
+                  <select value={shareForm.vkyc_status} onChange={e => setShareForm({ ...shareForm, vkyc_status: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
                     <option value="Pending">Pending</option>
                     <option value="Scheduled">Scheduled</option>
                     <option value="Completed">Completed</option>
@@ -893,81 +1131,32 @@ export default function PartnerApplications() {
                 </div>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Monthly Income (₹)</label>
-                  <input type="number" placeholder="e.g. 45000" value={editForm.monthly_salary} onChange={e => setEditForm({ ...editForm, monthly_salary: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                  <input type="number" placeholder="e.g. 45000" value={shareForm.monthly_salary} onChange={e => setShareForm({ ...shareForm, monthly_salary: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
                 </div>
               </div>
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>VKYC Link / Video URL</label>
-                <input type="url" placeholder="https://vkyc..." value={editForm.vkyc_url} onChange={e => setEditForm({ ...editForm, vkyc_url: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                <input type="url" placeholder="https://vkyc..." value={shareForm.vkyc_url} onChange={e => setShareForm({ ...shareForm, vkyc_url: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
               </div>
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>PAN Card Number</label>
-                <input type="text" maxLength={10} placeholder="ABCDE1234F" value={editForm.pan_number} onChange={e => setEditForm({ ...editForm, pan_number: e.target.value.toUpperCase() })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                <input type="text" maxLength={10} placeholder="ABCDE1234F" value={shareForm.pan_number} onChange={e => setShareForm({ ...shareForm, pan_number: e.target.value.toUpperCase() })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
               </div>
 
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Remarks & Activity Notes</label>
-                <textarea rows={2} placeholder="Application details notes..." value={editForm.remarks} onChange={e => setEditForm({ ...editForm, remarks: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box', height: 'auto' }} />
+                <textarea rows={2} placeholder="Application details notes..." value={shareForm.remarks} onChange={e => setShareForm({ ...shareForm, remarks: e.target.value })} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box', height: 'auto' }} />
               </div>
 
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 6 }}>
-                <button type="button" onClick={() => setShowEditModal(false)} style={{ padding: '9px 16px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
-                <button type="submit" disabled={editing} style={{ padding: '9px 18px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
-                  {editing ? 'Saving...' : 'Update Lead'}
+                <button type="button" onClick={() => setShowShareModal(false)} style={{ padding: '9px 16px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Close</button>
+                <button type="submit" disabled={savingShareForm} style={{ padding: '9px 18px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                  {savingShareForm ? 'Saving...' : 'Save Application Details'}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* ═══ MODAL 5: CUSTOMER SHARE LINK MODAL ═══ */}
-      {showShareModal && shareData && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
-          <div style={{ width: '100%', maxWidth: 480, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>🔗 Customer Application Link</h3>
-                <span style={{ fontSize: 11, color: textMuted }}>Send link to {shareData.customer_name} for self-fulfillment</span>
-              </div>
-              <button onClick={() => setShowShareModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ background: isDark ? '#1a2234' : '#f0f7ff', border: '1px solid #3b82f640', borderRadius: 12, padding: 14 }}>
-                <div style={{ fontSize: 11, color: textMuted, marginBottom: 4, fontWeight: 700 }}>Direct Customer Share URL</div>
-                <div style={{ fontSize: 13, color: '#2563eb', fontWeight: 700, wordBreak: 'break-all', fontFamily: 'monospace' }}>
-                  {shareData.share_url}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareData.share_url);
-                    alert('Link copied to clipboard!');
-                  }}
-                  style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: `1px solid ${border}`, background: cardBg, color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                >
-                  <Copy size={14} /> Copy Link
-                </button>
-                <button
-                  onClick={() => {
-                    const text = encodeURIComponent(`Hi ${shareData.customer_name}, please complete your application details using this secure link: ${shareData.share_url}`);
-                    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
-                  }}
-                  style={{ flex: 1, padding: '10px 14px', borderRadius: 12, border: 'none', background: '#25D366', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                >
-                  💬 Share via WhatsApp
-                </button>
-              </div>
-
-              <div style={{ textAlign: 'right', marginTop: 10 }}>
-                <button onClick={() => setShowShareModal(false)} style={{ padding: '8px 18px', borderRadius: 10, border: `1px solid ${border}`, background: 'transparent', color: textMuted, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Close</button>
-              </div>
-            </div>
           </div>
         </div>
       )}
