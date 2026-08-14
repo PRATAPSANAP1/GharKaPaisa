@@ -21,7 +21,10 @@ const STAGES = [
 export default function PartnerApplications() {
   const { t } = useTranslation();
   const { C, isDark } = useTheme();
-  const isTeamMember = useAuthStore((state) => state.user?.role === 'TEAM_MEMBER');
+  const user = useAuthStore((state) => state.user);
+  const userRole = (user?.role || '').toUpperCase();
+  const isTeamMember = userRole === 'TEAM_MEMBER';
+  const isAdminOrSuperAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(userRole);
 
   const border = isDark ? '#1f1f1f' : C.border;
   const cardBg = isDark ? '#0f0f0f' : '#ffffff';
@@ -485,7 +488,7 @@ export default function PartnerApplications() {
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {!isTeamMember && selectedAppIds.length > 0 && (
+          {isAdminOrSuperAdmin && selectedAppIds.length > 0 && (
             <button onClick={() => setShowBulkModal(true)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', boxShadow: `0 4px 14px ${accent}30` }}>
               <Layers size={14} /> Bulk Update ({selectedAppIds.length})
@@ -536,32 +539,44 @@ export default function PartnerApplications() {
         })}
       </div>
 
-      {/* ── Analytics Funnel Grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(4, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: isMobile ? 6 : 12, marginBottom: 14 }}>
+      {/* ── Analytics Funnel Grid (Max 4 Cards per row) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 14 }}>
         {[
-          { label: 'Total Leads', val: dashboardStats?.total ?? dashboardStats?.total_applications ?? applications.length, color: accent, icon: FileText },
-          { label: 'Under Review', val: dashboardStats?.under_review ?? applications.filter(a => a.status === 'under_review').length, color: '#f59e0b', icon: Clock },
-          { label: 'Approved & Disbursed', val: dashboardStats?.approved ?? applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length, color: '#10b981', icon: CheckCircle2 },
-          { label: 'Rejected', val: dashboardStats?.rejected ?? applications.filter(a => a.status === 'rejected').length, color: '#ef4444', icon: XCircle },
+          { key: '', label: 'Total Leads', val: dashboardStats?.total ?? dashboardStats?.total_applications ?? applications.length, color: accent, icon: FileText },
+          { key: 'under_review', label: 'Under Review', val: dashboardStats?.under_review ?? applications.filter(a => ['under_review', 'under review', 'verification', 'in_progress'].includes(a.status)).length, color: '#f59e0b', icon: Clock },
+          { key: 'approved', label: 'Approved & Disbursed', val: dashboardStats?.approved ?? applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length, color: '#10b981', icon: CheckCircle2 },
+          { key: 'rejected', label: 'Rejected', val: dashboardStats?.rejected ?? applications.filter(a => a.status === 'rejected').length, color: '#ef4444', icon: XCircle },
         ].map((stat) => {
           const Icon = stat.icon;
+          const isSelected = statusFilter === stat.key;
           return (
-            <div key={stat.label} style={{
-              padding: isMobile ? '8px 6px' : '16px 18px', borderRadius: isMobile ? 12 : 16, background: cardBg, border: `1px solid ${border}`,
-              borderLeft: `${isMobile ? 3 : 4}px solid ${stat.color}`, boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 18px rgba(0,0,0,0.04)',
-              textAlign: isMobile ? 'center' : 'left'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'space-between', marginBottom: isMobile ? 2 : 6 }}>
+            <div key={stat.label}
+              onClick={() => {
+                setStatusFilter(stat.key);
+                setSearchParams(prev => {
+                  if (stat.key) prev.set('status', stat.key);
+                  else prev.delete('status');
+                  return prev;
+                });
+              }}
+              style={{
+                padding: isMobile ? '8px 6px' : '14px 16px', borderRadius: isMobile ? 12 : 16, background: cardBg,
+                border: `1.5px solid ${isSelected ? stat.color : border}`,
+                borderLeft: `${isMobile ? 3 : 4}px solid ${stat.color}`,
+                boxShadow: isSelected ? `0 4px 18px ${stat.color}30` : (isDark ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 18px rgba(0,0,0,0.04)'),
+                textAlign: isMobile ? 'center' : 'left', cursor: 'pointer', transition: 'all 0.2s'
+              }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'space-between', marginBottom: isMobile ? 2 : 4 }}>
                 <span style={{ fontSize: isMobile ? 8.5 : 11, fontWeight: 800, color: textMuted, textTransform: 'uppercase', letterSpacing: isMobile ? 0 : '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {isMobile && stat.label === 'Approved & Disbursed' ? 'Approved' : stat.label}
                 </span>
                 {!isMobile && (
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: stat.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon size={14} color={stat.color} />
+                  <div style={{ width: 26, height: 26, borderRadius: 8, background: stat.color + '15', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon size={13} color={stat.color} />
                   </div>
                 )}
               </div>
-              <div style={{ fontSize: isMobile ? 16 : 24, fontWeight: 900, color: textPrimary }}>{stat.val}</div>
+              <div style={{ fontSize: isMobile ? 16 : 22, fontWeight: 900, color: textPrimary }}>{stat.val}</div>
             </div>
           );
         })}
@@ -613,8 +628,8 @@ export default function PartnerApplications() {
             <p style={{ fontSize: 12, marginTop: 4 }}>Try adjusting your search query or status filters</p>
           </div>
         ) : isMobile ? (
-          /* Mobile Cards View */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12 }}>
+          /* Mobile Cards View (Max 4 per line on responsive screens) */
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, padding: 12 }}>
             {applications.map((app, i) => {
               const isExpanded = expandedId === app.id;
               const isSelected = selectedAppIds.includes(app.id);
@@ -958,14 +973,21 @@ export default function PartnerApplications() {
                   </div>
                   <div>
                     <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Application Status</label>
-                    <select value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                      style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
-                      <option value="submitted">Applied</option>
-                      <option value="under_review">Under Review</option>
-                      <option value="approved">Approved</option>
-                      <option value="disbursed">Disbursed</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
+                    {isAdminOrSuperAdmin ? (
+                      <select value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                        style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
+                        <option value="submitted">Applied</option>
+                        <option value="under_review">Under Review</option>
+                        <option value="approved">Approved</option>
+                        <option value="disbursed">Disbursed</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    ) : (
+                      <div style={{ padding: '9px 12px', borderRadius: 12, border: `1px solid ${border}`, background: inputBg, color: textPrimary, fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ textTransform: 'capitalize' }}>{editForm.status?.replace('_', ' ')}</span>
+                        <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: '#f59e0b20', color: '#f59e0b', fontWeight: 800 }}>Admin Only</span>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>VKYC Status</label>

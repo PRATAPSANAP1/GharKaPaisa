@@ -318,10 +318,10 @@ const getApplicationsDashboard = async (req, res, next) => {
       SELECT 
         COUNT(*) as total,
         COUNT(*) FILTER (WHERE DATE(created_at) = CURRENT_DATE) as today,
-        COUNT(*) FILTER (WHERE status = 'submitted' OR status = 'pending') as pending,
-        COUNT(*) FILTER (WHERE status IN ('approved', 'disbursed', 'confirmed')) as approved,
-        COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
-        COUNT(*) FILTER (WHERE status = 'under_review') as under_review,
+        COUNT(*) FILTER (WHERE status IN ('submitted', 'pending', 'applied', 'lead_created', 'new', 'draft')) as pending,
+        COUNT(*) FILTER (WHERE status IN ('approved', 'disbursed', 'confirmed', 'sanctioned')) as approved,
+        COUNT(*) FILTER (WHERE status IN ('rejected', 'declined', 'cancelled')) as rejected,
+        COUNT(*) FILTER (WHERE status IN ('under_review', 'under review', 'verification', 'in_progress', 'bank_verification')) as under_review,
         COUNT(*) FILTER (WHERE commission_status = 'pending') as comm_pending,
         COUNT(*) FILTER (WHERE commission_status = 'approved') as comm_approved,
         COUNT(*) FILTER (WHERE commission_status = 'processed') as comm_paid,
@@ -1070,7 +1070,15 @@ const listApplications = async (req, res, next) => {
         WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
       ${partnerTeamScopeSQL}
-        AND ($2::text IS NULL OR combined.status = $2)
+        AND (
+          $2::text IS NULL
+          OR combined.status = $2
+          OR ($2 = 'under_review' AND combined.status IN ('under_review', 'under review', 'verification', 'in_progress', 'bank_verification'))
+          OR ($2 = 'submitted' AND combined.status IN ('submitted', 'applied', 'lead_created', 'new', 'draft', 'pending'))
+          OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned'))
+          OR ($2 = 'disbursed' AND combined.status IN ('disbursed', 'completed', 'paid'))
+          OR ($2 = 'rejected' AND combined.status IN ('rejected', 'declined', 'cancelled'))
+        )
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
@@ -1124,7 +1132,15 @@ const listApplications = async (req, res, next) => {
         WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
       ${countScopeSQL}
-        AND ($2::text IS NULL OR combined.status = $2)
+        AND (
+          $2::text IS NULL
+          OR combined.status = $2
+          OR ($2 = 'under_review' AND combined.status IN ('under_review', 'under review', 'verification', 'in_progress', 'bank_verification'))
+          OR ($2 = 'submitted' AND combined.status IN ('submitted', 'applied', 'lead_created', 'new', 'draft', 'pending'))
+          OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned'))
+          OR ($2 = 'disbursed' AND combined.status IN ('disbursed', 'completed', 'paid'))
+          OR ($2 = 'rejected' AND combined.status IN ('rejected', 'declined', 'cancelled'))
+        )
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
@@ -1777,6 +1793,10 @@ const submitPartnerApplication = async (req, res, next) => {
 
 // ── PUT /applications/bulk-status — Bulk update status ────────────────
 const bulkUpdateStatus = async (req, res, next) => {
+  const userRole = (req.user?.role || '').toUpperCase();
+  if (['PARTNER', 'TEAM_MEMBER'].includes(userRole)) {
+    return error(res, 'Application status changes are reserved for Super Admin and Admin.', 403);
+  }
   const client = await getClient();
   try {
     const { ids, status, remarks } = req.body;
@@ -1952,6 +1972,12 @@ const updateApplicationDetails = async (req, res, next) => {
     if (!app) {
       await client.query('ROLLBACK');
       return notFound(res, 'Application or Lead record not found');
+    }
+
+    const userRole = (req.user?.role || '').toUpperCase();
+    if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && status && status !== app.status) {
+      await client.query('ROLLBACK');
+      return error(res, 'Application status changes are reserved for Super Admin and Admin.', 403);
     }
 
     const appNumToSave = (bank_application_number || bank_ref_number || '').trim();
