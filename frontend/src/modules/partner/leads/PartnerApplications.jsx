@@ -367,14 +367,21 @@ export default function PartnerApplications() {
 
   const handleAssignSubmit = async (e) => {
     e.preventDefault();
-    if (!assignTargetApp || !assignPartnerId) return;
+    if (!assignPartnerId) return;
+    const targetIds = assignTargetApp ? [assignTargetApp.id] : selectedAppIds;
+    if (targetIds.length === 0) return;
     setAssigning(true);
     try {
-      await api.post(`/applications/${assignTargetApp.id}/assign`, { partner_id: assignPartnerId });
+      await Promise.all(targetIds.map(id => api.post(`/applications/${id}/assign`, { partner_id: assignPartnerId })));
       setShowAssignModal(false);
+      setAssignTargetApp(null);
+      setSelectedAppIds([]);
       fetchApplicationsList();
+      fetchDashboardStats();
     } catch (err) {
       setShowAssignModal(false);
+      setAssignTargetApp(null);
+      setSelectedAppIds([]);
       fetchApplicationsList();
     } finally {
       setAssigning(false);
@@ -490,10 +497,10 @@ export default function PartnerApplications() {
 
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {isAdminOrSuperAdmin && selectedAppIds.length > 0 && (
-            <button onClick={() => setShowBulkModal(true)}
+          {selectedAppIds.length > 0 && !isTeamMember && (
+            <button onClick={() => { setAssignTargetApp(null); setShowAssignModal(true); }}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', boxShadow: `0 4px 14px ${accent}30` }}>
-              <Layers size={14} /> Bulk Update ({selectedAppIds.length})
+              <UserPlus size={14} /> Bulk Assign ({selectedAppIds.length})
             </button>
           )}
           {!isTeamMember && (
@@ -849,23 +856,27 @@ export default function PartnerApplications() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', padding: 16 }}>
           <div style={{ width: '100%', maxWidth: 440, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 22, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>Assign Lead #{assignTargetApp?.app_number}</h3>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>
+                {assignTargetApp ? `Assign Lead #${assignTargetApp.app_number}` : `Bulk Assign (${selectedAppIds.length} Leads)`}
+              </h3>
               <button onClick={() => setShowAssignModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
             </div>
             <form onSubmit={handleAssignSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Select Team Member</label>
+                <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Select Team Member to Assign</label>
                 <select style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} value={assignPartnerId} onChange={e => setAssignPartnerId(e.target.value)} required>
                   <option value="">Choose Team Member...</option>
-                  <option value="self">Self (Unassign)</option>
+                  <option value="self">Assign to Myself (Self)</option>
                   {teamMembers.map(m => (
-                    <option key={m.id} value={m.id}>{m.first_name} {m.last_name} ({m.partner_code})</option>
+                    <option key={m.id || m.user_id} value={m.id || m.user_id}>
+                      {m.full_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.email} ({m.partner_code || 'Member'})
+                    </option>
                   ))}
                 </select>
               </div>
               <button type="submit" disabled={assigning}
                 style={{ padding: 11, borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: assigning ? 0.6 : 1 }}>
-                {assigning ? 'Assigning...' : 'Confirm Assignment'}
+                {assigning ? 'Assigning...' : `Confirm Assignment (${assignTargetApp ? 1 : selectedAppIds.length})`}
               </button>
             </form>
           </div>
