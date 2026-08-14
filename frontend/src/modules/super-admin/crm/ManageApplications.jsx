@@ -465,6 +465,7 @@ export default function ManageApplications() {
             <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Application Status</label>
             <select style={S.input} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
               <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
               <option value="submitted">Applied</option>
               <option value="under_review">Under Review</option>
               <option value="approved">Approved</option>
@@ -1297,6 +1298,7 @@ export default function ManageApplications() {
                   <div>
                     <label style={S.label}>Application Stage / Status</label>
                     <select style={S.input} value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })}>
+                      <option value="pending">Pending</option>
                       <option value="submitted">Applied / Submitted</option>
                       <option value="under_review">Verification / Under Review</option>
                       <option value="vkyc_pending">VKYC Pending</option>

@@ -148,6 +148,7 @@ export default function ManageApplications() {
             onChange={(e) => { setStatus(e.target.value); setPage(1); }}
           >
             <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
             <option value="submitted">Submitted</option>
             <option value="under_review">Under Review</option>
             <option value="approved">Approved</option>

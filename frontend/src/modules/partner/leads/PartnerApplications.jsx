@@ -448,10 +448,13 @@ export default function PartnerApplications() {
     if (s === 'rejected' || s === 'cancelled') {
       return { label: 'Rejected', bg: '#ef444415', color: '#ef4444', border: '#ef444430', icon: XCircle };
     }
+    if (s === 'pending' || s === 'lead_created' || s === 'new' || s === 'draft' || s === 'initiated' || s === 'link_sent') {
+      return { label: 'Pending', bg: '#6366f115', color: '#6366f1', border: '#6366f130', icon: Clock };
+    }
     if (s === 'under_review' || s === 'under review' || s === 'verification' || s === 'in_progress') {
       return { label: 'Under Review', bg: '#f59e0b15', color: '#f59e0b', border: '#f59e0b30', icon: Clock };
     }
-    return { label: 'Under Review', bg: '#3b82f615', color: '#3b82f6', border: '#3b82f630', icon: Clock };
+    return { label: 'Applied', bg: '#3b82f615', color: '#3b82f6', border: '#3b82f630', icon: Clock };
   };
 
   const getStepProgress = (status) => {
@@ -550,10 +553,11 @@ export default function PartnerApplications() {
         })}
       </div>
 
-      {/* ── Analytics Funnel Grid (Max 4 Cards per row) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 14 }}>
+      {/* ── Analytics Funnel Grid (Max 5 Cards per row) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 14 }}>
         {[
           { key: '', label: 'Total Leads', val: dashboardStats?.total ?? dashboardStats?.total_applications ?? applications.length, color: accent, icon: FileText },
+          { key: 'pending', label: 'Pending', val: dashboardStats?.pending ?? applications.filter(a => ['pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent'].includes(a.status)).length, color: '#6366f1', icon: Clock },
           { key: 'under_review', label: 'Under Review', val: dashboardStats?.under_review ?? applications.filter(a => ['under_review', 'under review', 'verification', 'in_progress'].includes(a.status)).length, color: '#f59e0b', icon: Clock },
           { key: 'approved', label: 'Approved & Disbursed', val: dashboardStats?.approved ?? applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length, color: '#10b981', icon: CheckCircle2 },
           { key: 'rejected', label: 'Rejected', val: dashboardStats?.rejected ?? applications.filter(a => a.status === 'rejected').length, color: '#ef4444', icon: XCircle },
@@ -621,7 +625,8 @@ export default function PartnerApplications() {
 
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...selectStyle, flex: 1, minWidth: 130 }}>
             <option value="">All Statuses</option>
-            <option value="submitted">Applied</option>
+            <option value="pending">Pending</option>
+            <option value="submitted">Applied / Submitted</option>
             <option value="under_review">Under Review</option>
             <option value="approved">Approved</option>
             <option value="disbursed">Disbursed</option>
@@ -837,6 +842,7 @@ export default function PartnerApplications() {
               <div>
                 <label style={{ fontSize: 12, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 6 }}>Target Stage</label>
                 <select style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}>
+                  <option value="pending">Pending</option>
                   <option value="submitted">Applied</option>
                   <option value="under_review">Verification Under Review</option>
                   <option value="approved">Approved</option>
@@ -1013,6 +1019,7 @@ export default function PartnerApplications() {
                     {isAdminOrSuperAdmin ? (
                       <select value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })}
                         style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
+                        <option value="pending">Pending</option>
                         <option value="submitted">Applied</option>
                         <option value="under_review">Under Review</option>
                         <option value="approved">Approved</option>
