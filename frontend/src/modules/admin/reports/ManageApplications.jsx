@@ -201,8 +201,16 @@ export default function ManageApplications() {
                       <div style={{ fontSize: "11px", color: C.textLight }}>{app.customer_mobile}</div>
                     </td>
                     <td style={{ padding: "14px 16px" }}>
-                      <div>{app.Partner_first_name} {app.Partner_last_name}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>Code: {app.Partner_code || app.partner_code}</div>
+                      <div>{app.Partner_first_name || app.partner_first_name || 'Direct'} {app.Partner_last_name || app.partner_last_name || ''}</div>
+                      <div style={{ fontSize: "11px", color: C.textLight }}>Code: {app.Partner_code || app.partner_code || 'N/A'}</div>
+                      <div style={{
+                        marginTop: "4px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase", display: "inline-block",
+                        padding: "2px 8px", borderRadius: "6px",
+                        background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
+                        color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
+                      }}>
+                        {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? '🔗 Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? '📱 Customer Apply' : '✍️ Partner Punch'}
+                      </div>
                     </td>
                     <td style={{ padding: "14px 16px" }}>
                       <div style={{ fontWeight: 500 }}>{app.product_name}</div>

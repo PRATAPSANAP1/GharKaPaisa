@@ -457,6 +457,17 @@ export default function PartnerApplications() {
     return { label: 'Applied', bg: '#3b82f615', color: '#3b82f6', border: '#3b82f630', icon: Clock };
   };
 
+  const getProcessByBadge = (processBy, processType) => {
+    const p = String(processBy || processType || '').toLowerCase();
+    if (p.includes('share') || p.includes('link') || p.includes('customer_self')) {
+      return { label: '🔗 Share Link', color: '#14b8a6', bg: '#14b8a618', border: '#14b8a640' };
+    }
+    if (p.includes('direct') || p.includes('bank') || p.includes('partner_self')) {
+      return { label: '📱 Direct Apply', color: '#3b82f6', bg: '#3b82f618', border: '#3b82f640' };
+    }
+    return { label: '✍️ Partner Punch', color: '#8b5cf6', bg: '#8b5cf618', border: '#8b5cf640' };
+  };
+
   const getStepProgress = (status) => {
     if (status === 'rejected') return 0;
     if (status === 'disbursed') return 4;
@@ -692,6 +703,17 @@ export default function PartnerApplications() {
                         <span style={{ fontWeight: 700, color: '#3b82f6' }}>{app.submitted_by_name || `${app.partner_first_name || ''} ${app.partner_last_name || ''}`}</span>
                       </div>
                     )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: textMuted }}>Process By:</span>
+                      {(() => {
+                        const proc = getProcessByBadge(app.process_by, app.process_type);
+                        return (
+                          <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: proc.bg, color: proc.color, border: `1px solid ${proc.border}` }}>
+                            {proc.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span style={{ color: textMuted }}>Mobile:</span>
                       <span style={{ color: textMuted }}>{app.customer_mobile}</span>
@@ -765,11 +787,21 @@ export default function PartnerApplications() {
                         <td style={{ padding: '12px 14px' }}>
                           <div style={{ fontWeight: 800, color: textPrimary }}>#{app.app_number}</div>
                           <div style={{ fontSize: 11, color: textMuted }}>{new Date(app.created_at).toLocaleDateString()}</div>
-                          {(app.submitted_by_name || (app.partner_first_name && `${app.partner_first_name} ${app.partner_last_name || ''}`)) && (
-                            <div style={{ fontSize: 10, color: '#3b82f6', fontWeight: 700, marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 3, background: '#3b82f612', padding: '1px 6px', borderRadius: 4 }}>
-                              👤 {app.submitted_by_name || `${app.partner_first_name || ''} ${app.partner_last_name || ''}`}
-                            </div>
-                          )}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 3, alignItems: 'flex-start' }}>
+                            {(() => {
+                              const proc = getProcessByBadge(app.process_by, app.process_type);
+                              return (
+                                <span style={{ fontSize: 9.5, fontWeight: 800, padding: '1px 6px', borderRadius: 4, background: proc.bg, color: proc.color, border: `1px solid ${proc.border}` }}>
+                                  {proc.label}
+                                </span>
+                              );
+                            })()}
+                            {(app.submitted_by_name || (app.partner_first_name && `${app.partner_first_name} ${app.partner_last_name || ''}`)) && (
+                              <div style={{ fontSize: 10, color: '#3b82f6', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3, background: '#3b82f612', padding: '1px 6px', borderRadius: 4 }}>
+                                👤 {app.submitted_by_name || `${app.partner_first_name || ''} ${app.partner_last_name || ''}`}
+                              </div>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '12px 14px' }}>
                           <div style={{ fontWeight: 700, color: textPrimary }}>{app.customer_name}</div>

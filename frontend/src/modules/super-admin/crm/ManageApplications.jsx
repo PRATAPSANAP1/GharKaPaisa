@@ -563,10 +563,10 @@ export default function ManageApplications() {
                       <div style={{
                         marginTop: '4px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', display: 'inline-block',
                         padding: '2px 8px', borderRadius: '6px',
-                        background: (app.process_by === 'partner_share' || app.process_by === 'share_link') ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct') ? `${C.blue}15` : `${C.purple}15`,
-                        color: (app.process_by === 'partner_share' || app.process_by === 'share_link') ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct') ? C.blue : C.purple
+                        background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
+                        color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
                       }}>
-                        {app.process_by === 'partner_share' || app.process_by === 'share_link' ? '🔗 Share Link' : app.process_by === 'customer_direct' || app.process_by === 'direct' ? '📱 Customer Apply' : '✍️ Partner Punch'}
+                        {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? '🔗 Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? '📱 Customer Apply' : '✍️ Partner Punch'}
                       </div>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
