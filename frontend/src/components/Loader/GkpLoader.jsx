@@ -1,5 +1,6 @@
-import React from "react";
+import React from 'react';
+import LoadingLogo from './LoadingLogo';
 
-export default function GkpLoader() {
-  return null;
+export default function GkpLoader(props) {
+  return <LoadingLogo fullScreen {...props} />;
 }

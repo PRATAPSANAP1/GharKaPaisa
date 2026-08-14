@@ -11,7 +11,7 @@ function App() {
     <ThemeProvider>
       <BanksProvider>
         <BrowserRouter>
-          <Suspense fallback={null}>
+          <Suspense fallback={<GkpLoader />}>
             <AppRoutes />
           </Suspense>
         </BrowserRouter>
