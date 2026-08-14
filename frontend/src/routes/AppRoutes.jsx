@@ -4,6 +4,7 @@ import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
 import { useAuthStore } from '../app/store/authStore';
 import logo from '../assets/logos/logo.png';
+import GkpLoader from '../components/Loader/GkpLoader';
 
 // Layouts
 import AdminLayout from '../layouts/AdminLayout';
@@ -104,33 +105,7 @@ const AppRoutes = () => {
   }, []);
 
   if (isInitializing) {
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        background: '#ffffff'
-      }}>
-        <img 
-          src={logo} 
-          alt="GharKaPaisa" 
-          style={{
-            width: '64px',
-            height: '64px',
-            objectFit: 'contain',
-            animation: 'rotateLogo 1.5s linear infinite'
-          }} 
-        />
-        <style>{`
-          @keyframes rotateLogo {
-            0% { transform: rotate(0deg) scale(0.95); }
-            50% { transform: rotate(180deg) scale(1.05); }
-            100% { transform: rotate(360deg) scale(0.95); }
-          }
-        `}</style>
-      </div>
-    );
+    return <GkpLoader />;
   }
 
   return (

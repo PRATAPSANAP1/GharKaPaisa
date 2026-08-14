@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useTheme, makeS } from '../../contexts/ThemeContext';
+import LoadingLogo from '../../components/Loader/LoadingLogo';
 import { 
   MdArrowBack, MdCheckCircle, MdStar, MdShare, MdBookmarkBorder, 
   MdBookmark, MdCompareArrows, MdExpandMore, MdExpandLess,
@@ -114,9 +115,8 @@ export default function ProductDetails() {
     return (
       <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textLight }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: '36px', height: '36px', border: `4px solid ${C.teal}`, borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 12px', animation: 'spin 1s linear infinite' }} />
-          <p style={{ fontWeight: 700 }}>Loading product specifications...</p>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <LoadingLogo size={100} />
+          <p style={{ fontWeight: 700, marginTop: '16px' }}>Loading product specifications...</p>
         </div>
       </div>
     );

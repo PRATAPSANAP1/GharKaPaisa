@@ -4,6 +4,7 @@ import { getApiV1Url } from '../../config/api';
 import { getCleanImageUrl } from '../../utils/urlHelper';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getBankApplyLink } from '../home/components/CreditCards/cardLinkHelper';
+import LoadingLogo from '../../components/Loader/LoadingLogo';
 
 export default function PartnerShareLanding() {
   const { trackingToken } = useParams();
@@ -146,9 +147,8 @@ export default function PartnerShareLanding() {
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bg, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif' }}>
-        <div style={{ width: '48px', height: '48px', border: `4px solid ${border}`, borderTopColor: themeColor, borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '16px' }} />
-        <p style={{ fontSize: '15px', fontWeight: 600 }}>Loading product details...</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <LoadingLogo size={100} />
+        <p style={{ fontSize: '15px', fontWeight: 600, marginTop: '16px' }}>Loading product details...</p>
       </div>
     );
   }
