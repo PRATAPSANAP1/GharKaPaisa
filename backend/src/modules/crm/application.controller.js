@@ -2094,7 +2094,7 @@ const updateApplicationDetails = async (req, res, next) => {
         UPDATE leads SET
           vkyc_status = COALESCE(NULLIF($1, ''), vkyc_status),
           vkyc_url = COALESCE(NULLIF($2, ''), vkyc_url),
-          status = COALESCE(NULLIF($3, ''), status),
+          status = COALESCE(NULLIF($3, ''), status::text),
           product_id = COALESCE($4, product_id),
           customer_name = COALESCE(NULLIF($5, ''), customer_name),
           city = COALESCE(NULLIF($6, ''), city),
@@ -2149,7 +2149,7 @@ const updateApplicationDetails = async (req, res, next) => {
         vkyc_url = COALESCE(NULLIF($3, ''), vkyc_url),
         salary_slip_url = COALESCE(NULLIF($4, ''), salary_slip_url),
         pan_card_url = COALESCE(NULLIF($5, ''), pan_card_url),
-        status = COALESCE(NULLIF($6, ''), status),
+        status = COALESCE(NULLIF($6, ''), status::text)::application_status,
         remarks = COALESCE(NULLIF($7, ''), remarks),
         bank_id = COALESCE($8, bank_id),
         product_id = COALESCE($9, product_id),

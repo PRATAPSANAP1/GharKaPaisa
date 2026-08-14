@@ -335,7 +335,7 @@ const listBankCardApplications = async (req, res, next) => {
         b.name as bank_name,
         b.short_code as bank_short_code,
         b.logo_url as bank_logo,
-        u.name as process_by_user_name
+        COALESCE(u.full_name, u.email) as process_by_user_name
       FROM bank_card_applications bca
       JOIN banks b ON bca.bank_id = b.id
       LEFT JOIN users u ON bca.process_by = u.id
@@ -376,7 +376,7 @@ const getBankCardApplicationById = async (req, res, next) => {
     if (!application) return error(res, 'Bank card application not found', 404);
 
     const { rows: timeline } = await query(
-      `SELECT bcat.*, u.name as changed_by_user
+      `SELECT bcat.*, COALESCE(u.full_name, u.email) as changed_by_user
        FROM bank_card_application_timeline bcat
        LEFT JOIN users u ON bcat.changed_by = u.id
        WHERE bcat.application_id = $1
