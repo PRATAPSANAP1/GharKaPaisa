@@ -974,6 +974,7 @@ export default function PartnerApplications() {
 
       {/* ═══ MODAL 4: EDIT CUSTOMER & APPLICATION DETAILS ═══ */}
       {showEditModal && editApp && (() => {
+        const isPhysical = String(editApp.process_type || editApp.process_by || '').toLowerCase().includes('physical');
         const bankId = editApp.bank_id || editApp.bankId;
         const bankStr = String(editApp.bank_name || editApp.bank_code || editApp.product_name || '').toLowerCase();
         const isSbi = bankId === 'e7c2c604-139d-4fcf-a87c-695633535a02' || bankStr.includes('sbi');
