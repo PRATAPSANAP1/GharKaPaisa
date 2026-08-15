@@ -388,11 +388,22 @@ const createLead = async (req, res, next) => {
     }
 
     if (targetProcess === 'physical_process') {
-      const { rows: [bankRec] } = await query(`SELECT name, short_code FROM banks WHERE id = $1`, [product.bank_id]).catch(() => ({ rows: [] }));
+      const { rows: [bankRec] } = await query(`SELECT id, name, short_code FROM banks WHERE id = $1`, [product.bank_id]).catch(() => ({ rows: [] }));
       const bankName = (bankRec?.name || bankRec?.short_code || product.name || '').toLowerCase();
-      const isSbi = bankName.includes('sbi');
+      const isSbi = product.bank_id === 'e7c2c604-139d-4fcf-a87c-695633535a02' || bankRec?.id === 'e7c2c604-139d-4fcf-a87c-695633535a02' || bankName.includes('sbi');
 
       const detailSheetText = isSbi ? `*SBI DETAIL SHEET*
+
+ADHAR LINK CONTACT NUMBER ${trimmedMobile}
+AS PER PAN CARD DOB 
+NAME AS PER PAN CARD ${targetName.trim()}
+PERSONAL EMAIL ID ${trimmedEmail || ''}
+PAN CARD NUMBER 
+AS PER SALARY SLIP COMPANY NAME ${company_name || ''}
+DESIGNATION 
+CURRENT HOME ADDRESS WITH LAND MARK PIN CODE ${targetCity} ${pincode || ''}
+FULL COMPANY ADDRESS 
+MOTHER NAME ` : `*OTHER BANK DETAIL SHEET*
 
 ✅CUSTOMER FULL NAME-: ${targetName.trim()}
 (As per pan card)
@@ -416,18 +427,7 @@ Pin code - ${pincode || ''}
 
 ✅DESIGNATION- 
 
-✅MOBILE No - ${trimmedMobile}` : `*PHYSICAL PROCESS DETAILS SHEET*
-
-ADHAR LINK CONTACT NUMBER ${trimmedMobile}
-AS PER PAN CARD DOB 
-NAME AS PER PAN CARD ${targetName.trim()}
-PERSONAL EMAIL ID ${trimmedEmail || ''}
-PAN CARD NUMBER 
-AS PER SALARY SLIP COMPANY NAME ${company_name || ''}
-DESIGNATION 
-CURRENT HOME ADDRESS WITH LAND MARK PIN CODE ${targetCity} ${pincode || ''}
-FULL COMPANY ADDRESS 
-MOTHER NAME `;
+✅MOBILE No - ${trimmedMobile}`;
 
       const { rows: [lead] } = await query(`
         INSERT INTO leads (
@@ -464,7 +464,7 @@ MOTHER NAME `;
         process_type: 'physical_process',
         process_by: 'physical',
         otp_required: false,
-        detail_sheet_title: isSbi ? '*SBI DETAIL SHEET*' : '*PHYSICAL PROCESS DETAILS SHEET*',
+        detail_sheet_title: isSbi ? '*SBI DETAIL SHEET*' : '*OTHER BANK DETAIL SHEET*',
         detail_sheet_text: detailSheetText,
         whatsapp_url: whatsappUrl
       }, 'Physical process detail sheet created successfully.');

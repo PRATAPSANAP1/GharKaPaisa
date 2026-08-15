@@ -974,9 +974,9 @@ export default function PartnerApplications() {
 
       {/* ═══ MODAL 4: EDIT CUSTOMER & APPLICATION DETAILS ═══ */}
       {showEditModal && editApp && (() => {
-        const isPhysical = String(editApp.process_type || editApp.process_by || '').toLowerCase().includes('physical');
+        const bankId = editApp.bank_id || editApp.bankId;
         const bankStr = String(editApp.bank_name || editApp.bank_code || editApp.product_name || '').toLowerCase();
-        const isSbi = bankStr.includes('sbi');
+        const isSbi = bankId === 'e7c2c604-139d-4fcf-a87c-695633535a02' || bankStr.includes('sbi');
 
         return (
           <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
@@ -1041,10 +1041,87 @@ export default function PartnerApplications() {
                     )}
                   </div>
                 ) : isSbi ? (
-                  /* ═══ PHYSICAL PROCESS — SBI DETAIL SHEET FORM ═══ */
+                  /* ═══ PHYSICAL PROCESS — SBI DETAIL SHEET FORM (ADHAR LINK FIELDS) ═══ */
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div style={{ padding: '10px 14px', background: '#F59E0B15', border: '1px solid #F59E0B40', borderRadius: 12, fontSize: 12, fontWeight: 800, color: isDark ? '#FBBF24' : '#B45309' }}>
                       📋 *SBI DETAIL SHEET* Form
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>ADHAR LINK CONTACT NUMBER *</label>
+                        <input type="text" required value={editForm.mobile} onChange={e => setEditForm({ ...editForm, mobile: e.target.value })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Aadhaar linked mobile" />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>AS PER PAN CARD DOB</label>
+                        <input type="date" value={editForm.dob} onChange={e => setEditForm({ ...editForm, dob: e.target.value })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
+                      </div>
+
+                      <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>NAME AS PER PAN CARD *</label>
+                        <input type="text" required value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Full Name as per PAN" />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>PERSONAL EMAIL ID</label>
+                        <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="email@example.com" />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>PAN CARD NUMBER</label>
+                        <input type="text" maxLength={10} value={editForm.pan_number} onChange={e => setEditForm({ ...editForm, pan_number: e.target.value.toUpperCase() })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="ABCDE1234F" />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>AS PER SALARY SLIP COMPANY NAME</label>
+                        <input type="text" value={editForm.employer} onChange={e => setEditForm({ ...editForm, employer: e.target.value })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Company Name" />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>DESIGNATION</label>
+                        <input type="text" value={editForm.designation} onChange={e => setEditForm({ ...editForm, designation: e.target.value })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Designation / Role" />
+                      </div>
+
+                      <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>CURRENT HOME ADDRESS WITH LAND MARK PIN CODE</label>
+                        <input type="text" value={editForm.flat_no} onChange={e => setEditForm({ ...editForm, flat_no: e.target.value })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Address with landmark & pincode" />
+                      </div>
+
+                      <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>FULL COMPANY ADDRESS</label>
+                        <input type="text" value={editForm.company_address} onChange={e => setEditForm({ ...editForm, company_address: e.target.value })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Full official company address" />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>MOTHER NAME</label>
+                        <input type="text" value={editForm.mother_name} onChange={e => setEditForm({ ...editForm, mother_name: e.target.value })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Mother Name" />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Application Number</label>
+                        <input type="text" value={editForm.bank_application_number} onChange={e => setEditForm({ ...editForm, bank_application_number: e.target.value })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Bank Application Number" />
+                      </div>
+                      <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>VKYC Link</label>
+                        <input type="url" value={editForm.vkyc_url} onChange={e => setEditForm({ ...editForm, vkyc_url: e.target.value })}
+                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="https://vkyc..." />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* ═══ PHYSICAL PROCESS — OTHER BANK PROCESS DETAILS SHEET FORM ═══ */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ padding: '10px 14px', background: '#3B82F615', border: '1px solid #3B82F640', borderRadius: 12, fontSize: 12, fontWeight: 800, color: '#2563EB' }}>
+                      📋 *OTHER BANK DETAIL SHEET* Form
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
@@ -1120,83 +1197,6 @@ export default function PartnerApplications() {
                           style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Bank Application Number" />
                       </div>
                       <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>VKYC Link</label>
-                        <input type="url" value={editForm.vkyc_url} onChange={e => setEditForm({ ...editForm, vkyc_url: e.target.value })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="https://vkyc..." />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* ═══ PHYSICAL PROCESS — OTHER BANK PROCESS DETAILS SHEET FORM ═══ */
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ padding: '10px 14px', background: '#3B82F615', border: '1px solid #3B82F640', borderRadius: 12, fontSize: 12, fontWeight: 800, color: '#2563EB' }}>
-                      📋 *PHYSICAL PROCESS DETAILS SHEET* Form
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>ADHAR LINK CONTACT NUMBER *</label>
-                        <input type="text" required value={editForm.mobile} onChange={e => setEditForm({ ...editForm, mobile: e.target.value })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Aadhaar linked mobile" />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>AS PER PAN CARD DOB</label>
-                        <input type="date" value={editForm.dob} onChange={e => setEditForm({ ...editForm, dob: e.target.value })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
-                      </div>
-
-                      <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>NAME AS PER PAN CARD *</label>
-                        <input type="text" required value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Full Name as per PAN" />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>PERSONAL EMAIL ID</label>
-                        <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="email@example.com" />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>PAN CARD NUMBER</label>
-                        <input type="text" maxLength={10} value={editForm.pan_number} onChange={e => setEditForm({ ...editForm, pan_number: e.target.value.toUpperCase() })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="ABCDE1234F" />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>AS PER SALARY SLIP COMPANY NAME</label>
-                        <input type="text" value={editForm.employer} onChange={e => setEditForm({ ...editForm, employer: e.target.value })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Company Name" />
-                      </div>
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>DESIGNATION</label>
-                        <input type="text" value={editForm.designation} onChange={e => setEditForm({ ...editForm, designation: e.target.value })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Designation / Role" />
-                      </div>
-
-                      <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>CURRENT HOME ADDRESS WITH LAND MARK PIN CODE</label>
-                        <input type="text" value={editForm.flat_no} onChange={e => setEditForm({ ...editForm, flat_no: e.target.value })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Address with landmark & pincode" />
-                      </div>
-
-                      <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>FULL COMPANY ADDRESS</label>
-                        <input type="text" value={editForm.company_address} onChange={e => setEditForm({ ...editForm, company_address: e.target.value })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Full official company address" />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>MOTHER NAME</label>
-                        <input type="text" value={editForm.mother_name} onChange={e => setEditForm({ ...editForm, mother_name: e.target.value })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Mother Name" />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Application Number</label>
-                        <input type="text" value={editForm.bank_application_number} onChange={e => setEditForm({ ...editForm, bank_application_number: e.target.value })}
-                          style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Bank Application Number" />
-                      </div>
-                      <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
                         <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>VKYC Link</label>
                         <input type="url" value={editForm.vkyc_url} onChange={e => setEditForm({ ...editForm, vkyc_url: e.target.value })}
                           style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="https://vkyc..." />
