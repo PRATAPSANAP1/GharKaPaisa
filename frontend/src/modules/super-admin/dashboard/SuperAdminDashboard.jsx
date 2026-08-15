@@ -66,6 +66,7 @@ export default function SuperAdminDashboard() {
   const [assignedBankIds, setAssignedBankIds] = useState([]);
   const [selectedCreateBankIds, setSelectedCreateBankIds] = useState([]);
   const [bankSearchQuery, setBankSearchQuery] = useState('');
+  const [expandedAdminBanks, setExpandedAdminBanks] = useState({});
 
   // Fetch Admins
   const fetchAdmins = async () => {
@@ -455,11 +456,68 @@ export default function SuperAdminDashboard() {
                         >
                           🏦 {admin.assigned_banks?.length ? `${admin.assigned_banks.length} Banks` : 'Assign Banks'}
                         </button>
-                        {admin.assigned_banks?.length > 0 && (
-                          <div style={{ fontSize: "11px", color: "#4B5563", marginTop: "4px", maxWidth: "160px" }}>
-                            {admin.assigned_banks.map(b => b.name || b.short_code).join(', ')}
-                          </div>
-                        )}
+                        {admin.assigned_banks?.length > 0 && (() => {
+                          const bankList = admin.assigned_banks;
+                          const adminKey = admin._id || admin.id;
+                          const isExpanded = !!expandedAdminBanks[adminKey];
+
+                          if (bankList.length > 5 && !isExpanded) {
+                            const firstBank = bankList[0]?.name || bankList[0]?.short_code || 'Bank';
+                            return (
+                              <div style={{ fontSize: "11px", color: "#4B5563", marginTop: "4px", maxWidth: "200px", lineHeight: 1.4 }}>
+                                <span>{firstBank}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedAdminBanks(prev => ({ ...prev, [adminKey]: true }));
+                                  }}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: "#2563EB",
+                                    cursor: "pointer",
+                                    fontWeight: 800,
+                                    fontSize: "11px",
+                                    padding: 0,
+                                    marginLeft: "4px",
+                                    textDecoration: "underline"
+                                  }}
+                                >
+                                  ...Read More (+{bankList.length - 1} more)
+                                </button>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div style={{ fontSize: "11px", color: "#4B5563", marginTop: "4px", maxWidth: "220px", lineHeight: 1.4 }}>
+                              {bankList.map(b => b.name || b.short_code).join(', ')}
+                              {bankList.length > 5 && isExpanded && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setExpandedAdminBanks(prev => ({ ...prev, [adminKey]: false }));
+                                  }}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: "#2563EB",
+                                    cursor: "pointer",
+                                    fontWeight: 800,
+                                    fontSize: "11px",
+                                    padding: 0,
+                                    marginLeft: "6px",
+                                    textDecoration: "underline"
+                                  }}
+                                >
+                                  Show Less
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td style={{ padding: "16px 24px", color: "#374151", fontWeight: 500 }}>
                         {admin.designation}
