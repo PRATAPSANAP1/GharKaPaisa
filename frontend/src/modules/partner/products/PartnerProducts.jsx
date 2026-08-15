@@ -295,55 +295,17 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         window.open(targetUrl, '_blank');
         alert(`✅ Opening direct bank application portal for ${selectedProduct.name}...`);
       } else if (processType === 'physical_process') {
-        const bankName = (selectedProduct?.bank_code || selectedProduct?.bank_name || selectedProduct?.name || '').toLowerCase();
-        const isSbi = bankName.includes('sbi');
-        const sheetTitle = appData?.detail_sheet_title || (isSbi ? '*SBI DETAIL SHEET*' : '♦️*HDFC ADOBE PROCESS DETAILS SHEET*♦️');
-        const sheetText = appData?.detail_sheet_text || (isSbi ? `*SBI DETAIL SHEET*
-
-✅CUSTOMER FULL NAME-: ${customerName.trim()}
-(As per pan card)
-
-✅Current full address .
-  Flat no/House no/sr no - 
-Sub Area- 
-Landmark - 
-Pin code - 
-
-✅PAN CARD NUMBER-
-
-✅DOB- (as per pan ) 
-
-✅MOTHER FULL NAME- 
-
-✅PERSONAL MAIL ID- 
-
-✅COMPANY Name - 
-(As per payment slip)
-
-✅DESIGNATION- 
-
-✅MOBILE No - ${mobile.trim()}` : `♦️*HDFC ADOBE PROCESS DETAILS SHEET*♦️
-
-ADHAR LINK CONTACT NUMBER ${mobile.trim()}
-AS PER PAN CARD DOB 
-NAME AS PER PAN CARD ${customerName.trim()}
-PERSONAL EMAIL ID 
-PAN CARD NUMBER 
-AS PER SALARY SLIP COMPANY NAME 
-DESIGNATION 
-CURRENT HOME ADDRESS WITH LAND MARK PIN CODE 
-FULL COMPANY ADDRESS 
-MOTHER NAME `);
-
         const cleanMobile = mobile.trim().replace(/\D/g, '');
-        const waUrl = appData?.whatsapp_url || `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(sheetText)}`;
+        const shareUrl = appData?.share_url || appData?.whatsapp_url || `${window.location.origin}/partner/applications`;
+        const waMsg = `Hello ${customerName.trim()},\n\nPlease fill your application details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n${shareUrl}\n\nShared via GharKaPaisa.`;
+        const waUrl = `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(waMsg)}`;
 
         setPhysicalSheetData({
-          title: sheetTitle,
-          text: sheetText,
-          mobile: mobile.trim(),
           customerName: customerName.trim(),
-          whatsappUrl: waUrl
+          mobile: mobile.trim(),
+          shareUrl: shareUrl,
+          whatsappUrl: waUrl,
+          app: appData
         });
         setShowPhysicalSheetModal(true);
       }
@@ -2356,48 +2318,100 @@ MOTHER NAME `);
         </div>
       )}
 
-      {/* ═══ PHYSICAL PROCESS DETAIL SHEET MODAL ═══ */}
+      {/* ═══ PHYSICAL PROCESS ACTION MODAL ═══ */}
       {showPhysicalSheetModal && physicalSheetData && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', padding: '16px' }}>
-          <div style={{ background: C.card, width: '100%', maxWidth: '540px', borderRadius: '20px', padding: '24px', border: `1px solid ${C.border}`, boxShadow: '0 25px 60px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ background: C.card, width: '100%', maxWidth: '520px', borderRadius: '24px', padding: '24px', border: `1px solid ${C.border}`, boxShadow: '0 25px 60px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>
-                📋 {physicalSheetData.title}
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📋 Physical Process - Customer Details Needed
               </h3>
               <button onClick={() => setShowPhysicalSheetModal(false)} style={{ background: 'none', border: 'none', fontSize: '18px', fontWeight: 700, cursor: 'pointer', color: C.textMid }}>✕</button>
             </div>
 
-            <div style={{ fontSize: '12.5px', color: C.textMid }}>
-              Physical detail sheet template generated for <strong>{physicalSheetData.customerName}</strong> ({physicalSheetData.mobile}). Copy or send via WhatsApp to collect customer information:
+            {/* Notification Alert */}
+            <div style={{ padding: '14px 16px', background: '#F59E0B15', border: '1px solid #F59E0B40', borderRadius: '14px', color: isDark ? '#FBBF24' : '#B45309' }}>
+              <div style={{ fontWeight: 800, fontSize: '13.5px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                ⚠️ Partner Action Required:
+              </div>
+              <div style={{ fontSize: '12.5px', lineHeight: 1.5 }}>
+                Lead created for <strong>{physicalSheetData.customerName}</strong> ({physicalSheetData.mobile}). Complete the required customer details (DOB, PAN, Address, Mother Name, Email, Company, Designation) or share the secure upload link directly with the customer.
+              </div>
             </div>
 
-            <textarea
-              readOnly
-              rows={14}
-              value={physicalSheetData.text}
-              style={{ ...S.input, fontFamily: 'monospace', fontSize: '12px', lineHeight: 1.5, padding: '12px', background: isDark ? '#0f172a' : '#f8fafc', width: '100%', boxSizing: 'border-box' }}
-            />
-
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(physicalSheetData.text);
-                  alert('Detail sheet template copied to clipboard!');
-                }}
-                style={{ flex: 1, minWidth: '140px', padding: '10px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontWeight: 800, fontSize: '12.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              >
-                📋 Copy Detail Sheet
-              </button>
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <a
                 href={physicalSheetData.whatsappUrl}
                 target="_blank"
                 rel="noreferrer"
-                style={{ flex: 1, minWidth: '160px', padding: '10px', borderRadius: '10px', border: 'none', background: '#25D366', color: '#fff', fontWeight: 800, fontSize: '12.5px', cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: '#25D366',
+                  color: '#FFFFFF',
+                  fontWeight: 800,
+                  fontSize: '13.5px',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 14px rgba(37,211,102,0.3)'
+                }}
               >
-                💬 Send via WhatsApp
+                💬 Share Upload Link to Customer via WhatsApp
               </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(physicalSheetData.shareUrl || physicalSheetData.whatsappUrl);
+                  alert('Upload link copied to clipboard!');
+                }}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: C.bgSecondary,
+                  color: C.text,
+                  border: `1px solid ${C.border}`,
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                🔗 Copy Customer Upload Link
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPhysicalSheetModal(false);
+                  window.location.href = '/partner/applications';
+                }}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontWeight: 800,
+                  fontSize: '13.5px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                ✍️ Fill Customer Details as Partner
+              </button>
             </div>
+
           </div>
         </div>
       )}
