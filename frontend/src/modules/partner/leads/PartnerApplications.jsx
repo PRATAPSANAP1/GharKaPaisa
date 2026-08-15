@@ -1127,10 +1127,10 @@ export default function PartnerApplications() {
                     </div>
                   </div>
                 ) : (
-                  /* ═══ PHYSICAL PROCESS — HDFC ADOBE PROCESS DETAILS SHEET FORM ═══ */
+                  /* ═══ PHYSICAL PROCESS — OTHER BANK PROCESS DETAILS SHEET FORM ═══ */
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <div style={{ padding: '10px 14px', background: '#3B82F615', border: '1px solid #3B82F640', borderRadius: 12, fontSize: 12, fontWeight: 800, color: '#2563EB' }}>
-                      ♦️*HDFC ADOBE PROCESS DETAILS SHEET*♦️ Form
+                      📋 *PHYSICAL PROCESS DETAILS SHEET* Form
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>

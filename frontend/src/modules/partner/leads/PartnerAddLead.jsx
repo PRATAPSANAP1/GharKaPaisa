@@ -44,7 +44,7 @@ const PROCESS_OPTIONS = [
     color: '#F59E0B',
     bgColor: '#FFFBEB',
     darkBgColor: '#78350F',
-    description: 'Generates SBI or HDFC Adobe Detail Sheet template for offline physical customer verification.'
+    description: 'Generates SBI or Physical Process Detail Sheet template for offline physical customer verification.'
   }
 ];
 

@@ -1674,7 +1674,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                           4. Physical process
                         </div>
                         <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
-                          Generates SBI or HDFC Adobe Detail Sheet template for physical offline customer verification.
+                          Generates SBI or Physical Process Detail Sheet template for physical offline customer verification.
                         </div>
                       </div>
                     </label>

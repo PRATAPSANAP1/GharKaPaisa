@@ -416,7 +416,7 @@ Pin code - ${pincode || ''}
 
 ✅DESIGNATION- 
 
-✅MOBILE No - ${trimmedMobile}` : `♦️*HDFC ADOBE PROCESS DETAILS SHEET*♦️
+✅MOBILE No - ${trimmedMobile}` : `*PHYSICAL PROCESS DETAILS SHEET*
 
 ADHAR LINK CONTACT NUMBER ${trimmedMobile}
 AS PER PAN CARD DOB 
@@ -464,7 +464,7 @@ MOTHER NAME `;
         process_type: 'physical_process',
         process_by: 'physical',
         otp_required: false,
-        detail_sheet_title: isSbi ? '*SBI DETAIL SHEET*' : '♦️*HDFC ADOBE PROCESS DETAILS SHEET*♦️',
+        detail_sheet_title: isSbi ? '*SBI DETAIL SHEET*' : '*PHYSICAL PROCESS DETAILS SHEET*',
         detail_sheet_text: detailSheetText,
         whatsapp_url: whatsappUrl
       }, 'Physical process detail sheet created successfully.');
