@@ -35,6 +35,16 @@ const PROCESS_OPTIONS = [
     bgColor: '#F5F3FF',
     darkBgColor: '#2E1065',
     description: 'Immediately opens official bank portal in a new tab for instant application completion.'
+  },
+  {
+    id: 'physical_process',
+    title: 'Physical Process',
+    badge: '4. Physical Detail Sheet',
+    icon: <MdAssignment size={24} />,
+    color: '#F59E0B',
+    bgColor: '#FFFBEB',
+    darkBgColor: '#78350F',
+    description: 'Generates SBI or HDFC Adobe Detail Sheet template for offline physical customer verification.'
   }
 ];
 
@@ -212,7 +222,7 @@ export default function PartnerAddLead() {
         setShowOtpModal(false);
         setOtpValue('');
 
-        if (processType === 'linked_share') {
+        if (processType === 'linked_share' || processType === 'physical_process') {
           setShareResult(appData);
           if (appData?.whatsapp_url) {
             window.open(appData.whatsapp_url, '_blank');

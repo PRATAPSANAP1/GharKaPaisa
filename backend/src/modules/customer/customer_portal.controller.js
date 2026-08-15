@@ -319,9 +319,197 @@ const submitDocuments = async (req, res) => {
   }
 };
 
+/**
+ * Validate customer share token and fetch customer details & documents
+ * GET /api/v1/customer-portal/link/:token
+ */
+const getCustomerPortalLinkData = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const tokenRes = await query(
+      `SELECT cat.*, c.*
+       FROM customer_access_tokens cat
+       JOIN customers c ON cat.customer_id = c.id
+       WHERE cat.token = $1`,
+      [token]
+    );
+
+    if (tokenRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invalid or expired upload portal link' });
+    }
+
+    const tokenData = tokenRes.rows[0];
+    if (new Date(tokenData.expires_at) < new Date()) {
+      return res.status(410).json({ success: false, expired: true, message: 'This upload link has expired. Please ask your partner to send a new link.' });
+    }
+
+    const docsRes = await query(
+      `SELECT * FROM customer_documents WHERE customer_id = $1 ORDER BY uploaded_at DESC`,
+      [tokenData.customer_id]
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        customer: {
+          id: tokenData.customer_id,
+          full_name: tokenData.full_name,
+          mobile: tokenData.mobile,
+          email: tokenData.email,
+          dob: tokenData.dob,
+          pan_number: tokenData.pan_number,
+          aadhaar_last4: tokenData.aadhaar_last4,
+          city: tokenData.city,
+          state: tokenData.state,
+          pincode: tokenData.pincode,
+          employment_type: tokenData.employment_type,
+          monthly_income: tokenData.monthly_income,
+          employer: tokenData.employer,
+          occupation: tokenData.occupation,
+          pipeline_status: tokenData.pipeline_status
+        },
+        uploaded_documents: docsRes.rows,
+        expires_at: tokenData.expires_at
+      }
+    });
+  } catch (err) {
+    logger.error('Error fetching portal link data:', err);
+    res.status(500).json({ success: false, message: 'Failed to load upload portal details' });
+  }
+};
+
+/**
+ * Update Customer Details via Token
+ * POST /api/v1/customer-portal/link/:token/update-details
+ */
+const updateCustomerPortalDetails = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const {
+      full_name, email, dob, pan_number, aadhaar_last4,
+      city, state, pincode, employment_type, monthly_income, employer, occupation
+    } = req.body;
+
+    const tokenRes = await query(
+      `SELECT customer_id FROM customer_access_tokens WHERE token = $1 AND expires_at > NOW()`,
+      [token]
+    );
+
+    if (tokenRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invalid or expired upload portal link' });
+    }
+
+    const customerId = tokenRes.rows[0].customer_id;
+
+    const { rows: [updated] } = await query(`
+      UPDATE customers SET
+        full_name = COALESCE($1, full_name),
+        email = COALESCE($2, email),
+        dob = COALESCE($3, dob),
+        pan_number = COALESCE($4, pan_number),
+        aadhaar_last4 = COALESCE($5, aadhaar_last4),
+        city = COALESCE($6, city),
+        state = COALESCE($7, state),
+        pincode = COALESCE($8, pincode),
+        employment_type = COALESCE($9, employment_type),
+        monthly_income = COALESCE($10, monthly_income),
+        employer = COALESCE($11, employer),
+        occupation = COALESCE($12, occupation),
+        updated_at = NOW()
+      WHERE id = $13
+      RETURNING *
+    `, [
+      full_name, email, dob, pan_number ? pan_number.toUpperCase() : null, aadhaar_last4,
+      city, state, pincode, employment_type, monthly_income, employer, occupation, customerId
+    ]);
+
+    await query(
+      `INSERT INTO customer_timeline (customer_id, event_type, title, description, actor_type, actor_id)
+       VALUES ($1, 'profile_updated', 'Profile Updated', 'Customer updated details via upload portal', 'customer', $1)`,
+      [customerId]
+    ).catch(() => {});
+
+    return res.json({
+      success: true,
+      message: 'Profile details updated successfully',
+      data: updated
+    });
+  } catch (err) {
+    logger.error('Error updating customer portal details:', err);
+    res.status(500).json({ success: false, message: 'Failed to update profile details' });
+  }
+};
+
+/**
+ * Upload Document via Customer Share Link Token
+ * POST /api/v1/customer-portal/link/:token/upload-document
+ */
+const uploadCustomerPortalDocument = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { document_type } = req.body;
+
+    if (!document_type) return res.status(400).json({ success: false, message: 'document_type is required' });
+    if (!req.file) return res.status(400).json({ success: false, message: 'No document file uploaded' });
+
+    const tokenRes = await query(
+      `SELECT customer_id FROM customer_access_tokens WHERE token = $1 AND expires_at > NOW()`,
+      [token]
+    );
+
+    if (tokenRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Invalid or expired upload portal link' });
+    }
+
+    const customerId = tokenRes.rows[0].customer_id;
+
+    let fileUrl = '';
+    try {
+      const s3Res = await uploadToS3(req.file.buffer, req.file.originalname, 'customer-documents');
+      fileUrl = s3Res.url;
+    } catch (uploadErr) {
+      logger.warn('S3 upload fallback to local path:', uploadErr.message);
+      const cleanName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+      fileUrl = `/uploads/documents/${Date.now()}_${cleanName}`;
+    }
+
+    const docTypeLabel = document_type.toLowerCase();
+    const { rows: [doc] } = await query(`
+      INSERT INTO customer_documents (customer_id, document_type, file_url, status, uploaded_at)
+      VALUES ($1, $2, $3, 'uploaded', NOW())
+      RETURNING *
+    `, [customerId, docTypeLabel, fileUrl]);
+
+    // Update customer status to documents_pending if currently new
+    await query(
+      `UPDATE customers SET pipeline_status = 'documents_pending', updated_at = NOW() WHERE id = $1 AND pipeline_status = 'new'`,
+      [customerId]
+    ).catch(() => {});
+
+    await query(
+      `INSERT INTO customer_timeline (customer_id, event_type, title, description, actor_type, actor_id)
+       VALUES ($1, 'document_uploaded', '${docTypeLabel.toUpperCase()} Uploaded', 'Customer uploaded ${docTypeLabel} via upload portal', 'customer', $1)`,
+      [customerId]
+    ).catch(() => {});
+
+    return res.json({
+      success: true,
+      message: `${docTypeLabel.toUpperCase()} uploaded successfully`,
+      data: doc
+    });
+  } catch (err) {
+    logger.error('Error uploading customer portal document:', err);
+    res.status(500).json({ success: false, message: 'Failed to upload document' });
+  }
+};
+
 module.exports = {
   getPortalData,
   uploadCustomerDocument,
   submitDocuments,
-  addTimelineEvent
+  addTimelineEvent,
+  getCustomerPortalLinkData,
+  updateCustomerPortalDetails,
+  uploadCustomerPortalDocument
 };

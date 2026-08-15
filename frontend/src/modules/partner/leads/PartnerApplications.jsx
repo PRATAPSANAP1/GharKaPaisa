@@ -48,6 +48,7 @@ export default function PartnerApplications() {
   const [expandedId, setExpandedId] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -56,6 +57,12 @@ export default function PartnerApplications() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'export') {
+      setShowExportModal(true);
+    }
+  }, [searchParams]);
 
   // Detail components state
   const [timelines, setTimelines] = useState({});
@@ -410,16 +417,25 @@ export default function PartnerApplications() {
   };
 
   const handleExportCSV = () => {
-    if (applications.length === 0) return;
+    setShowExportModal(true);
+  };
+
+  const handleExecuteExportCSV = () => {
+    if (applications.length === 0) {
+      alert('No application records found matching current filters to export.');
+      return;
+    }
     let csvContent = 'data:text/csv;charset=utf-8,';
-    csvContent += 'Application / Lead ID,Customer Name,Customer Mobile,Submitted By / Member,Product,Category,Bank,Application Status,Commission Status,Commission Amount,Date\n';
+    csvContent += 'Application / Lead ID,Customer Name,Customer Mobile,Submitted By / Member,Process Type,Product,Category,Bank,Application Status,Commission Status,Commission Amount,Date\n';
 
     applications.forEach(a => {
+      const proc = getProcessByBadge(a.process_by, a.process_type);
       const row = [
         `"${a.app_number}"`,
         `"${a.customer_name}"`,
         `"${a.customer_mobile}"`,
         `"${a.submitted_by_name || (a.partner_first_name ? `${a.partner_first_name} ${a.partner_last_name || ''}`.trim() : 'Partner')}"`,
+        `"${proc.label.replace(/[^\w\s]/gi, '').trim()}"`,
         `"${a.product_name}"`,
         `"${a.category}"`,
         `"${a.bank_name}"`,
@@ -434,10 +450,11 @@ export default function PartnerApplications() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `GKP_Applications_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `GKP_Applications_Export_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setShowExportModal(false);
   };
 
   const getStatusBadge = (status) => {
@@ -459,6 +476,9 @@ export default function PartnerApplications() {
 
   const getProcessByBadge = (processBy, processType) => {
     const p = String(processBy || processType || '').toLowerCase();
+    if (p.includes('physical')) {
+      return { label: '📋 Physical Process', color: '#d97706', bg: '#fef3c7', border: '#f59e0b40' };
+    }
     if (p.includes('share') || p.includes('link') || p.includes('customer_self')) {
       return { label: '🔗 Share Link', color: '#14b8a6', bg: '#14b8a618', border: '#14b8a640' };
     }
@@ -765,7 +785,7 @@ export default function PartnerApplications() {
                   <th style={{ padding: '12px 14px', width: 36 }}>
                     <input type="checkbox" onChange={handleSelectAll} checked={selectedAppIds.length === applications.length && applications.length > 0} />
                   </th>
-                  {['Application', 'Customer Info', 'Product & Bank', 'Lead Stage', 'Commission', 'Actions'].map(h => (
+                  {['Application', 'Process Type', 'Customer Info', 'Product & Bank', 'Lead Stage', 'Commission', 'Actions'].map(h => (
                     <th key={h} style={{ padding: '12px 14px', textAlign: h === 'Actions' ? 'right' : 'left', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: textMuted, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -787,21 +807,21 @@ export default function PartnerApplications() {
                         <td style={{ padding: '12px 14px' }}>
                           <div style={{ fontWeight: 800, color: textPrimary }}>#{app.app_number}</div>
                           <div style={{ fontSize: 11, color: textMuted }}>{new Date(app.created_at).toLocaleDateString()}</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 3, alignItems: 'flex-start' }}>
-                            {(() => {
-                              const proc = getProcessByBadge(app.process_by, app.process_type);
-                              return (
-                                <span style={{ fontSize: 9.5, fontWeight: 800, padding: '1px 6px', borderRadius: 4, background: proc.bg, color: proc.color, border: `1px solid ${proc.border}` }}>
-                                  {proc.label}
-                                </span>
-                              );
-                            })()}
-                            {(app.submitted_by_name || (app.partner_first_name && `${app.partner_first_name} ${app.partner_last_name || ''}`)) && (
-                              <div style={{ fontSize: 10, color: '#3b82f6', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3, background: '#3b82f612', padding: '1px 6px', borderRadius: 4 }}>
-                                👤 {app.submitted_by_name || `${app.partner_first_name || ''} ${app.partner_last_name || ''}`}
-                              </div>
-                            )}
-                          </div>
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          {(() => {
+                            const proc = getProcessByBadge(app.process_by, app.process_type);
+                            return (
+                              <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: proc.bg, color: proc.color, border: `1px solid ${proc.border}`, display: 'inline-block' }}>
+                                {proc.label}
+                              </span>
+                            );
+                          })()}
+                          {(app.submitted_by_name || (app.partner_first_name && `${app.partner_first_name} ${app.partner_last_name || ''}`)) && (
+                            <div style={{ fontSize: 10, color: '#3b82f6', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', gap: 3, background: '#3b82f612', padding: '2px 6px', borderRadius: 4, width: 'fit-content' }}>
+                              👤 {app.submitted_by_name || `${app.partner_first_name || ''} ${app.partner_last_name || ''}`}
+                            </div>
+                          )}
                         </td>
                         <td style={{ padding: '12px 14px' }}>
                           <div style={{ fontWeight: 700, color: textPrimary }}>{app.customer_name}</div>
@@ -1160,6 +1180,64 @@ export default function PartnerApplications() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button type="button" onClick={() => setShowShareModal(false)} style={{ padding: '9px 20px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL 5: EXPORT CSV DIALOG ═══ */}
+      {showExportModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 460, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Download size={18} color="#10b981" /> Export Applications CSV
+              </h3>
+              <button onClick={() => setShowExportModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
+            </div>
+
+            <p style={{ fontSize: 12.5, color: textMuted, margin: 0, lineHeight: 1.5 }}>
+              Download CSV report of applications owned by your account and your downline team members.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {teamMembers.length > 0 && (
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Filter Member</label>
+                  <select value={memberFilter} onChange={e => setMemberFilter(e.target.value)} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
+                    <option value="">All Team Members & Self</option>
+                    {teamMembers.map(m => (
+                      <option key={m.id || m.user_id} value={m.user_id || m.id}>
+                        {m.full_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.email} ({m.partner_code || 'Member'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Filter Status</label>
+                <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="submitted">Applied / Submitted</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="disbursed">Disbursed</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              <div style={{ fontSize: 12, fontWeight: 700, color: accent, background: `${accent}12`, padding: '10px 12px', borderRadius: 10 }}>
+                📊 Total Matching Records: <strong>{applications.length}</strong>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+              <button type="button" onClick={() => setShowExportModal(false)} style={{ padding: '9px 18px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
+              <button type="button" onClick={handleExecuteExportCSV} style={{ padding: '9px 22px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Download size={14} /> Download CSV File
+              </button>
             </div>
           </div>
         </div>

@@ -1578,7 +1578,7 @@ const submitPartnerApplication = async (req, res, next) => {
         return error(res, 'Please enter a valid 6-digit postal pincode', 400);
       }
 
-      const validProcesses = ['lead_punching', 'linked_share', 'direct_bank', 'partner_cell', 'customer_sell', 'punching_process'];
+      const validProcesses = ['lead_punching', 'linked_share', 'direct_bank', 'physical_process', 'partner_cell', 'customer_sell', 'punching_process'];
       if (!validProcesses.includes(process_type)) {
         await client.query('ROLLBACK');
         return error(res, 'Invalid Process Assignment selection', 400);

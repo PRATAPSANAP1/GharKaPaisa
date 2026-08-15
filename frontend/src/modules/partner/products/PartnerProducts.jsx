@@ -193,6 +193,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
 
+  // Physical Process Detail Sheet Modal state
+  const [showPhysicalSheetModal, setShowPhysicalSheetModal] = useState(false);
+  const [physicalSheetData, setPhysicalSheetData] = useState(null);
+
   // Benefits & Compare state
   const [showBenefitsProduct, setShowBenefitsProduct] = useState(null);
   const [compareList, setCompareList] = useState([]);
@@ -290,6 +294,58 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         const targetUrl = appData?.bank_url || directBankUrl;
         window.open(targetUrl, '_blank');
         alert(`✅ Opening direct bank application portal for ${selectedProduct.name}...`);
+      } else if (processType === 'physical_process') {
+        const bankName = (selectedProduct?.bank_code || selectedProduct?.bank_name || selectedProduct?.name || '').toLowerCase();
+        const isSbi = bankName.includes('sbi');
+        const sheetTitle = appData?.detail_sheet_title || (isSbi ? '*SBI DETAIL SHEET*' : '♦️*HDFC ADOBE PROCESS DETAILS SHEET*♦️');
+        const sheetText = appData?.detail_sheet_text || (isSbi ? `*SBI DETAIL SHEET*
+
+✅CUSTOMER FULL NAME-: ${customerName.trim()}
+(As per pan card)
+
+✅Current full address .
+  Flat no/House no/sr no - 
+Sub Area- 
+Landmark - 
+Pin code - 
+
+✅PAN CARD NUMBER-
+
+✅DOB- (as per pan ) 
+
+✅MOTHER FULL NAME- 
+
+✅PERSONAL MAIL ID- 
+
+✅COMPANY Name - 
+(As per payment slip)
+
+✅DESIGNATION- 
+
+✅MOBILE No - ${mobile.trim()}` : `♦️*HDFC ADOBE PROCESS DETAILS SHEET*♦️
+
+ADHAR LINK CONTACT NUMBER ${mobile.trim()}
+AS PER PAN CARD DOB 
+NAME AS PER PAN CARD ${customerName.trim()}
+PERSONAL EMAIL ID 
+PAN CARD NUMBER 
+AS PER SALARY SLIP COMPANY NAME 
+DESIGNATION 
+CURRENT HOME ADDRESS WITH LAND MARK PIN CODE 
+FULL COMPANY ADDRESS 
+MOTHER NAME `);
+
+        const cleanMobile = mobile.trim().replace(/\D/g, '');
+        const waUrl = appData?.whatsapp_url || `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(sheetText)}`;
+
+        setPhysicalSheetData({
+          title: sheetTitle,
+          text: sheetText,
+          mobile: mobile.trim(),
+          customerName: customerName.trim(),
+          whatsappUrl: waUrl
+        });
+        setShowPhysicalSheetModal(true);
       }
 
       setSelectedProduct(null);
@@ -1636,6 +1692,31 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                       </div>
                     </label>
 
+                    {/* Mode 4: Physical process */}
+                    <label style={{
+                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                      border: `2px solid ${processType === 'physical_process' ? C.primary : C.border}`,
+                      background: processType === 'physical_process' ? `${C.primary}0D` : C.card,
+                      cursor: 'pointer', transition: 'all 0.2s'
+                    }}>
+                      <input
+                        type="radio"
+                        name="processType"
+                        value="physical_process"
+                        checked={processType === 'physical_process'}
+                        onChange={(e) => setProcessType(e.target.value)}
+                        style={{ marginTop: '2px', accentColor: C.primary }}
+                      />
+                      <div>
+                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                          4. Physical process
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                          Generates SBI or HDFC Adobe Detail Sheet template for physical offline customer verification.
+                        </div>
+                      </div>
+                    </label>
+
                   </div>
                 </div>
 
@@ -1670,7 +1751,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                   }}
                 >
-                  {submitting ? 'Processing...' : processType === 'lead_punching' ? 'Punch Lead' : processType === 'linked_share' ? 'Generate & Share Link' : 'Open Bank Portal'}
+                  {submitting ? 'Processing...' : processType === 'lead_punching' ? 'Punch Lead' : processType === 'linked_share' ? 'Generate & Share Link' : processType === 'physical_process' ? 'Generate Detail Sheet' : 'Open Bank Portal'}
                 </button>
               </div>
             </form>
@@ -2270,6 +2351,52 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
               >
                 <span>✉️ Email</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ PHYSICAL PROCESS DETAIL SHEET MODAL ═══ */}
+      {showPhysicalSheetModal && physicalSheetData && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', padding: '16px' }}>
+          <div style={{ background: C.card, width: '100%', maxWidth: '540px', borderRadius: '20px', padding: '24px', border: `1px solid ${C.border}`, boxShadow: '0 25px 60px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>
+                📋 {physicalSheetData.title}
+              </h3>
+              <button onClick={() => setShowPhysicalSheetModal(false)} style={{ background: 'none', border: 'none', fontSize: '18px', fontWeight: 700, cursor: 'pointer', color: C.textMid }}>✕</button>
+            </div>
+
+            <div style={{ fontSize: '12.5px', color: C.textMid }}>
+              Physical detail sheet template generated for <strong>{physicalSheetData.customerName}</strong> ({physicalSheetData.mobile}). Copy or send via WhatsApp to collect customer information:
+            </div>
+
+            <textarea
+              readOnly
+              rows={14}
+              value={physicalSheetData.text}
+              style={{ ...S.input, fontFamily: 'monospace', fontSize: '12px', lineHeight: 1.5, padding: '12px', background: isDark ? '#0f172a' : '#f8fafc', width: '100%', boxSizing: 'border-box' }}
+            />
+
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(physicalSheetData.text);
+                  alert('Detail sheet template copied to clipboard!');
+                }}
+                style={{ flex: 1, minWidth: '140px', padding: '10px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontWeight: 800, fontSize: '12.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                📋 Copy Detail Sheet
+              </button>
+              <a
+                href={physicalSheetData.whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{ flex: 1, minWidth: '160px', padding: '10px', borderRadius: '10px', border: 'none', background: '#25D366', color: '#fff', fontWeight: 800, fontSize: '12.5px', cursor: 'pointer', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                💬 Send via WhatsApp
+              </a>
             </div>
           </div>
         </div>

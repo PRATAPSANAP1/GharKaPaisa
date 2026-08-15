@@ -205,7 +205,6 @@ const SuperAdminLayout = () => {
         { path: '/super-admin/wallet', label: 'Wallet & Settlements', icon: <Icons.wallet size={16} /> },
         { path: '/super-admin/commissions', label: 'Commission Manager', icon: <Icons.gift size={16} /> },
         { path: '/super-admin/announcements', label: 'Announcements Manager', icon: <Icons.gift size={16} /> },
-        { path: '/super-admin/commission-rules', label: 'Commission Rules', icon: <Icons.gift size={16} /> },
         { path: '/super-admin/support', label: 'Support Tickets', icon: <Icons.profile size={16} /> },
         { path: '/super-admin/audit', label: 'Audit Logs', icon: <Icons.clock size={16} /> },
         { path: '/super-admin/reports', label: 'Reports', icon: <Icons.trending size={16} /> }

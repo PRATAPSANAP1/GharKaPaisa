@@ -363,6 +363,116 @@ const logCommunication = async (req, res, next) => {
   }
 };
 
+// Partner Direct Document Upload
+const uploadCustomerDocument = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { document_type } = req.body;
+
+    if (!document_type) return error(res, 'document_type is required', 400);
+    if (!req.file) return error(res, 'No document file uploaded', 400);
+
+    const { rows: [customer] } = await query(`SELECT * FROM customers WHERE id = $1`, [id]);
+    if (!customer) return notFound(res, 'Customer not found');
+
+    let fileUrl = '';
+    try {
+      const s3Res = await uploadToS3(req.file.buffer, req.file.originalname, 'customer-documents');
+      fileUrl = s3Res.url;
+    } catch (uploadErr) {
+      logger.warn('S3 upload fallback to local path:', uploadErr.message);
+      const cleanName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+      fileUrl = `/uploads/documents/${Date.now()}_${cleanName}`;
+    }
+
+    const docTypeLabel = document_type.toLowerCase();
+    const { rows: [doc] } = await query(`
+      INSERT INTO customer_documents (customer_id, document_type, file_url, status, uploaded_at)
+      VALUES ($1, $2, $3, 'verified', NOW())
+      RETURNING *
+    `, [id, docTypeLabel, fileUrl]);
+
+    await logCustomerTimeline(null, id, 'document_uploaded', `${docTypeLabel.toUpperCase()} Uploaded`, `Document ${docTypeLabel} uploaded by partner`, 'document', doc.id, req.user?.id);
+    await logCustomerActivity(null, id, 'upload_document', req.user?.id, 'customer', id, req);
+
+    return created(res, doc, 'Customer document uploaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Delete Customer Document
+const deleteCustomerDocument = async (req, res, next) => {
+  try {
+    const { id, docId } = req.params;
+    const { rows: [existing] } = await query(`SELECT * FROM customer_documents WHERE id = $1 AND customer_id = $2`, [docId, id]);
+    if (!existing) return notFound(res, 'Document not found');
+
+    await query(`DELETE FROM customer_documents WHERE id = $1`, [docId]);
+    await logCustomerTimeline(null, id, 'document_deleted', 'Document Removed', `Deleted document ${existing.document_type}`, 'document', docId, req.user?.id);
+
+    return success(res, {}, 'Document deleted successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Generate Customer Document Upload Share Link
+const generateShareLink = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows: [customer] } = await query(`SELECT * FROM customers WHERE id = $1`, [id]);
+    if (!customer) return notFound(res, 'Customer not found');
+
+    // Ensure application_id can be NULL in customer_access_tokens
+    await query(`ALTER TABLE customer_access_tokens ALTER COLUMN application_id DROP NOT NULL;`).catch(() => {});
+
+    const { rows: existingTokens } = await query(
+      `SELECT * FROM customer_access_tokens WHERE customer_id = $1 AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1`,
+      [id]
+    );
+
+    let token = '';
+    let expiresAt = '';
+
+    if (existingTokens.length > 0) {
+      token = existingTokens[0].token;
+      expiresAt = existingTokens[0].expires_at;
+    } else {
+      const { v4: uuidv4 } = require('uuid');
+      token = `c_${uuidv4().replace(/-/g, '')}`;
+      const { rows: [newToken] } = await query(
+        `INSERT INTO customer_access_tokens (customer_id, token, expires_at)
+         VALUES ($1, $2, NOW() + INTERVAL '7 days')
+         RETURNING *`,
+        [id, token]
+      );
+      expiresAt = newToken.expires_at;
+    }
+
+    const host = req.get('host') || 'gharkapaisa.in';
+    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
+    const uploadUrl = `${baseUrl.replace(/\/$/, '')}/customer-upload/${token}`;
+
+    const customerName = customer.full_name || 'Customer';
+    const whatsappMessage = `Hello ${customerName}, please click this secure link to update your details and upload your required documents for GharKaPaisa: ${uploadUrl}`;
+    const cleanMobile = String(customer.mobile || '').replace(/[^0-9]/g, '');
+    const formattedMobile = cleanMobile.length === 10 ? `91${cleanMobile}` : cleanMobile;
+    const whatsappLink = `https://wa.me/${formattedMobile}?text=${encodeURIComponent(whatsappMessage)}`;
+
+    return success(res, {
+      token,
+      upload_url: uploadUrl,
+      whatsapp_message: whatsappMessage,
+      whatsapp_link: whatsappLink,
+      expires_at: expiresAt
+    }, 'Share link generated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listCustomers,
   getDashboardMetrics,
@@ -374,5 +484,8 @@ module.exports = {
   processMergeCustomers,
   addNote,
   addFollowup,
-  logCommunication
+  logCommunication,
+  uploadCustomerDocument,
+  deleteCustomerDocument,
+  generateShareLink
 };

@@ -366,6 +366,15 @@ const createLead = async (req, res, next) => {
 
       await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
 
+      // Sync into applications table for instant visibility in Applications CRM
+      const date = new Date();
+      const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+      const appNum = 'APP' + datePart + Math.floor(1000 + Math.random() * 9000);
+      await query(`
+        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, agree_terms, submitted_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'direct_bank', TRUE, NOW())
+      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]).catch(() => {});
+
       return created(res, {
         lead_id: lead.id,
         lead_number: lead.lead_number,
@@ -376,6 +385,89 @@ const createLead = async (req, res, next) => {
         otp_required: false,
         bank_url: bankUrl
       }, 'Direct bank tracking initialized successfully.');
+    }
+
+    if (targetProcess === 'physical_process') {
+      const { rows: [bankRec] } = await query(`SELECT name, short_code FROM banks WHERE id = $1`, [product.bank_id]).catch(() => ({ rows: [] }));
+      const bankName = (bankRec?.name || bankRec?.short_code || product.name || '').toLowerCase();
+      const isSbi = bankName.includes('sbi');
+
+      const detailSheetText = isSbi ? `*SBI DETAIL SHEET*
+
+✅CUSTOMER FULL NAME-: ${targetName.trim()}
+(As per pan card)
+
+✅Current full address .
+  Flat no/House no/sr no - 
+Sub Area- ${targetCity}
+Landmark - 
+Pin code - ${pincode || ''}
+
+✅PAN CARD NUMBER-
+
+✅DOB- (as per pan ) 
+
+✅MOTHER FULL NAME- 
+
+✅PERSONAL MAIL ID- ${trimmedEmail || ''}
+
+✅COMPANY Name - ${company_name || ''}
+(As per payment slip)
+
+✅DESIGNATION- 
+
+✅MOBILE No - ${trimmedMobile}` : `♦️*HDFC ADOBE PROCESS DETAILS SHEET*♦️
+
+ADHAR LINK CONTACT NUMBER ${trimmedMobile}
+AS PER PAN CARD DOB 
+NAME AS PER PAN CARD ${targetName.trim()}
+PERSONAL EMAIL ID ${trimmedEmail || ''}
+PAN CARD NUMBER 
+AS PER SALARY SLIP COMPANY NAME ${company_name || ''}
+DESIGNATION 
+CURRENT HOME ADDRESS WITH LAND MARK PIN CODE ${targetCity} ${pincode || ''}
+FULL COMPANY ADDRESS 
+MOTHER NAME `;
+
+      const { rows: [lead] } = await query(`
+        INSERT INTO leads (
+          lead_number, partner_id, parent_partner_id, created_by, customer_id,
+          product_id, customer_name, mobile, city, status, process_type, process_by,
+          otp_verified, source, priority, pipeline_stage
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'physical_process', 'physical', TRUE, $10, $11, 'physical_details')
+        RETURNING *
+      `, [
+        leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
+        targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
+      ]);
+
+      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
+
+      // Sync into applications table
+      const date = new Date();
+      const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+      const appNum = 'APP' + datePart + Math.floor(1000 + Math.random() * 9000);
+      await query(`
+        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, agree_terms, submitted_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'physical_process', TRUE, NOW())
+      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]).catch(() => {});
+
+      const cleanMobile = trimmedMobile.replace(/\D/g, '');
+      const whatsappUrl = `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(detailSheetText)}`;
+
+      return created(res, {
+        lead_id: lead.id,
+        lead_number: lead.lead_number,
+        customer_id: customer.id,
+        mobile: lead.mobile,
+        process_type: 'physical_process',
+        process_by: 'physical',
+        otp_required: false,
+        detail_sheet_title: isSbi ? '*SBI DETAIL SHEET*' : '♦️*HDFC ADOBE PROCESS DETAILS SHEET*♦️',
+        detail_sheet_text: detailSheetText,
+        whatsapp_url: whatsappUrl
+      }, 'Physical process detail sheet created successfully.');
     }
 
     // Default: Lead Punching (Requires Customer OTP)

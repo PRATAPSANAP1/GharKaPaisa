@@ -43,6 +43,18 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
   const [commMessage, setCommMessage] = useState('Hello! Checking in regarding your GharKaPaisa application.');
   const [sendingComm, setSendingComm] = useState(false);
 
+  // Document Upload & Share Link State
+  const [uploadDocType, setUploadDocType] = useState('pan');
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [docUploadError, setDocUploadError] = useState('');
+  const [docUploadSuccess, setDocUploadSuccess] = useState('');
+
+  // Share Link State
+  const [shareData, setShareData] = useState(null);
+  const [generatingShareLink, setGeneratingShareLink] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
   const fetchProfileData = async () => {
     if (!customerId) return;
     setLoading(true);
@@ -56,6 +68,65 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
       console.error('Failed to load customer profile:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateShareLink = async () => {
+    setGeneratingShareLink(true);
+    try {
+      const res = await api.post(`/customers/${customerId}/share-link`);
+      if (res.data?.success) {
+        setShareData(res.data.data);
+      }
+    } catch (err) {
+      alert('Failed to generate customer share link');
+    } finally {
+      setGeneratingShareLink(false);
+    }
+  };
+
+  const handleCopyLink = (url) => {
+    navigator.clipboard.writeText(url);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 3000);
+  };
+
+  const handlePartnerUploadDoc = async (e) => {
+    e.preventDefault();
+    if (!uploadFile) return setDocUploadError('Please select a file to upload');
+    setUploadingDoc(true);
+    setDocUploadError('');
+    setDocUploadSuccess('');
+
+    const formData = new FormData();
+    formData.append('document_type', uploadDocType);
+    formData.append('file', uploadFile);
+
+    try {
+      const res = await api.post(`/customers/${customerId}/documents`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data?.success) {
+        setDocUploadSuccess(`${uploadDocType.toUpperCase()} document uploaded successfully.`);
+        setUploadFile(null);
+        fetchProfileData();
+      }
+    } catch (err) {
+      setDocUploadError(err.response?.data?.message || 'Failed to upload document');
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
+    try {
+      const res = await api.delete(`/customers/${customerId}/documents/${docId}`);
+      if (res.data?.success) {
+        fetchProfileData();
+      }
+    } catch (err) {
+      alert('Failed to delete document');
     }
   };
 
@@ -414,34 +485,205 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
 
               {/* TAB 3: DOCUMENTS */}
               {activeTab === 'documents' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-                    {['pan', 'aadhaar', 'salary_slip', 'itr', 'bank_statement', 'photo'].map(type => {
-                      const doc = documents.find(d => d.document_type === type);
-                      return (
-                        <div key={type} style={{ ...S.card, padding: '14px', textAlign: 'center' }}>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, textTransform: 'uppercase' }}>{type.replace('_', ' ')}</div>
-                          {doc ? (
-                            <div style={{ marginTop: '8px' }}>
-                              <span style={{
-                                fontSize: '11px',
-                                background: C.bg === "#000000" ? `${C.green}15` : '#ECFDF5',
-                                color: C.bg === "#000000" ? C.green : '#059669',
-                                padding: '2px 8px', borderRadius: '4px', fontWeight: 700
-                              }}>
-                                VERIFIED
-                              </span>
-                              <div style={{ marginTop: '8px' }}>
-                                <a href={doc.file_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: C.teal, fontWeight: 700 }}>Preview Doc</a>
-                              </div>
-                            </div>
-                          ) : (
-                            <div style={{ fontSize: '11px', color: C.textLight, marginTop: '8px' }}>Not Uploaded</div>
-                          )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  
+                  {/* 1. Share Upload Link with Customer Card */}
+                  <div style={{ ...S.card, padding: '18px', background: `${C.teal}08`, border: `1px solid ${C.teal}30` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <div>
+                        <h4 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          📲 Customer Document & Details Upload Link
+                        </h4>
+                        <p style={{ fontSize: '12.5px', color: C.textMid, marginTop: '4px', margin: 0 }}>
+                          Send a secure upload link to <strong>{overview.full_name}</strong> so they can fill their details & upload PAN, Aadhaar, Bank Statement, etc. directly from their mobile.
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleGenerateShareLink}
+                        disabled={generatingShareLink}
+                        style={{
+                          ...S.btn('primary'),
+                          padding: '8px 16px',
+                          fontSize: '12.5px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <MdSend style={{ fontSize: '16px' }} />
+                        <span>{generatingShareLink ? 'Generating Link...' : 'Generate / Get Share Link'}</span>
+                      </button>
+                    </div>
+
+                    {shareData && (
+                      <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: `1px solid ${C.teal}20`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ fontSize: '12px', color: C.textMid }}>
+                          Share Link: <strong style={{ color: C.teal, wordBreak: 'break-all' }}>{shareData.upload_url}</strong>
                         </div>
-                      );
-                    })}
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => handleCopyLink(shareData.upload_url)}
+                            style={{
+                              background: copiedLink ? C.green : C.card,
+                              color: copiedLink ? '#fff' : C.text,
+                              border: `1px solid ${C.border}`,
+                              borderRadius: '8px',
+                              padding: '6px 14px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            {copiedLink ? <MdCheckCircle /> : <MdPictureAsPdf />}
+                            <span>{copiedLink ? 'Link Copied!' : 'Copy Upload Link'}</span>
+                          </button>
+                          <a
+                            href={shareData.whatsapp_link}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              background: '#25D366',
+                              color: '#FFFFFF',
+                              borderRadius: '8px',
+                              padding: '6px 14px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <MdOutlineWhatsapp style={{ fontSize: '16px' }} />
+                            <span>Share via WhatsApp</span>
+                          </a>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {/* 2. Partner Direct Upload Form */}
+                  <div style={{ ...S.card, padding: '18px' }}>
+                    <h4 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <MdCloudUpload style={{ fontSize: '18px', color: C.teal }} />
+                      <span>Upload Document (Partner / Staff)</span>
+                    </h4>
+
+                    {docUploadSuccess && (
+                      <div style={{ fontSize: '12.5px', color: C.green, background: `${C.green}15`, padding: '8px 12px', borderRadius: '8px', marginBottom: '12px' }}>
+                        ✓ {docUploadSuccess}
+                      </div>
+                    )}
+                    {docUploadError && (
+                      <div style={{ fontSize: '12.5px', color: C.red, background: `${C.red}15`, padding: '8px 12px', borderRadius: '8px', marginBottom: '12px' }}>
+                        ⚠️ {docUploadError}
+                      </div>
+                    )}
+
+                    <form onSubmit={handlePartnerUploadDoc} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <div style={{ flex: '1 1 180px' }}>
+                        <select
+                          value={uploadDocType}
+                          onChange={e => setUploadDocType(e.target.value)}
+                          style={{ ...S.input, width: '100%' }}
+                        >
+                          <option value="pan">🪪 PAN Card</option>
+                          <option value="aadhaar">🆔 Aadhaar Card</option>
+                          <option value="salary_slip">📄 Salary Slip</option>
+                          <option value="bank_statement">🏦 Bank Statement</option>
+                          <option value="itr">📊 ITR / Income Tax Return</option>
+                          <option value="photo">📷 Photo / Passport Size</option>
+                          <option value="other">📁 Other Document</option>
+                        </select>
+                      </div>
+                      <div style={{ flex: '2 1 240px' }}>
+                        <input
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={e => setUploadFile(e.target.files[0] || null)}
+                          style={{ ...S.input, width: '100%', padding: '6px 10px' }}
+                        />
+                      </div>
+                      <div>
+                        <button
+                          type="submit"
+                          disabled={uploadingDoc || !uploadFile}
+                          style={{
+                            ...S.btn('primary'),
+                            padding: '10px 20px',
+                            fontSize: '13px',
+                            opacity: (uploadingDoc || !uploadFile) ? 0.6 : 1,
+                            cursor: (uploadingDoc || !uploadFile) ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {uploadingDoc ? 'Uploading...' : 'Upload File'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* 3. Document Cards Grid */}
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, margin: '0 0 12px 0' }}>
+                      Uploaded Customer Documents ({documents.length})
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+                      {['pan', 'aadhaar', 'salary_slip', 'itr', 'bank_statement', 'photo', 'other'].map(type => {
+                        const docList = documents.filter(d => (d.document_type || '').toLowerCase() === type);
+                        return (
+                          <div key={type} style={{ ...S.card, padding: '14px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                            <div>
+                              <div style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                {type.replace('_', ' ')}
+                              </div>
+                              {docList.length > 0 ? (
+                                docList.map(doc => (
+                                  <div key={doc.id} style={{ marginTop: '10px', paddingTop: '8px', borderTop: `1px solid ${C.border}` }}>
+                                    <span style={{
+                                      fontSize: '10.5px',
+                                      background: `${C.green}18`,
+                                      color: C.green,
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      fontWeight: 700,
+                                      textTransform: 'uppercase'
+                                    }}>
+                                      {doc.status || 'VERIFIED'}
+                                    </span>
+                                    <div style={{ fontSize: '11px', color: C.textLight, marginTop: '4px' }}>
+                                      Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
+                                    </div>
+                                    <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                                      <a
+                                        href={doc.file_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        style={{ fontSize: '12px', color: C.teal, fontWeight: 700, textDecoration: 'none' }}
+                                      >
+                                        Preview 👁️
+                                      </a>
+                                      <button
+                                        onClick={() => handleDeleteDocument(doc.id)}
+                                        style={{ background: 'none', border: 'none', color: C.red, fontSize: '12px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                                      >
+                                        Delete 🗑️
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div style={{ fontSize: '11px', color: C.textLight, marginTop: '10px' }}>Not Uploaded</div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                 </div>
               )}
 

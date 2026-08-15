@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware.js');
 const ctrl = require('./customer.controller.js');
+const { upload } = require('../../services/aws/s3.service.js');
 
 // Require authentication for all customer routes
 router.use(jwtAuth);
@@ -19,6 +20,11 @@ router.get('/:id', ctrl.getCustomerProfile);
 router.put('/:id', ctrl.updateCustomer);
 router.patch('/:id/status', ctrl.updatePipelineStatus);
 router.delete('/:id', ctrl.archiveCustomer);
+
+// Partner Document Upload & Share Link
+router.post('/:id/documents', upload.single('file'), ctrl.uploadCustomerDocument);
+router.delete('/:id/documents/:docId', ctrl.deleteCustomerDocument);
+router.post('/:id/share-link', ctrl.generateShareLink);
 
 // Sub-resource endpoints
 router.post('/:id/notes', ctrl.addNote);

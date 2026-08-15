@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
+import { ChevronDown, ChevronRight, Edit2, Check, X } from 'lucide-react';
 
 export default function ManageCommissions() {
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const S = makeS(C);
 
   const [products, setProducts] = useState([]);
@@ -30,6 +31,18 @@ export default function ManageCommissions() {
   const [parentPct, setParentPct] = useState(10);
   const [savingSplits, setSavingSplits] = useState(false);
   
+  // Partner Overview / Hierarchy State for DSA Team Splits Tab
+  const [partnersOverview, setPartnersOverview] = useState([]);
+  const [expandedPartners, setExpandedPartners] = useState({});
+  const [teamSearch, setTeamSearch] = useState("");
+  const [editingMember, setEditingMember] = useState(null);
+  const [newRate, setNewRate] = useState("");
+  const [savingRate, setSavingRate] = useState(false);
+
+  // View Assigned Cards Payout Modal State
+  const [viewCardsRule, setViewCardsRule] = useState(null);
+  const [viewCardsSearch, setViewCardsSearch] = useState("");
+
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
@@ -37,8 +50,9 @@ export default function ManageCommissions() {
   
   const [form, setForm] = useState({
     product_id: "",
+    product_ids: [], // for multi-product selection
     Partner_id: "", // empty or 'global' means Global Override
-    partner_ids: [], // for multiple selection
+    partner_ids: [], // for multiple partner selection
     commission_type: "fixed",
     commission_value: "",
     effective_from: new Date().toISOString().split("T")[0],
@@ -55,16 +69,18 @@ export default function ManageCommissions() {
     setLoading(true);
     setErrorMsg("");
     try {
-      const [prodRes, partnerRes, rulesRes, settingsRes] = await Promise.all([
+      const [prodRes, partnerRes, rulesRes, settingsRes, overviewRes] = await Promise.all([
         api.get("/products", { params: { is_active: "all", limit: 200 } }),
         api.get("/admin/partners", { params: { limit: 1000 } }),
         api.get("/admin/commission-rules"),
-        api.get("/settings")
+        api.get("/settings"),
+        api.get("/superadmin/partners-commission-overview").catch(() => ({ data: { data: [] } }))
       ]);
       
       if (prodRes.data?.success) setProducts(prodRes.data.data);
       if (partnerRes.data?.success) setPartners(partnerRes.data.data || []);
       if (rulesRes.data?.success) setRules(rulesRes.data.data || []);
+      if (overviewRes.data?.success) setPartnersOverview(overviewRes.data.data || []);
       
       if (settingsRes.data?.success) {
         const settings = settingsRes.data.data;
@@ -109,9 +125,40 @@ export default function ManageCommissions() {
     }
   };
 
+  const togglePartnerExpand = (partnerId) => {
+    setExpandedPartners(prev => ({
+      ...prev,
+      [partnerId]: !prev[partnerId]
+    }));
+  };
+
+  const handleSaveMemberRate = async (memberId) => {
+    const rateNum = parseFloat(newRate);
+    if (isNaN(rateNum) || rateNum < 0 || rateNum > 100) {
+      alert("Commission percentage must be between 0 and 100%");
+      return;
+    }
+    setSavingRate(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    try {
+      const res = await api.patch(`/team/${memberId}/commission-rate`, { commission_rate: rateNum });
+      if (res.data?.success) {
+        setSuccessMsg(res.data.message || "Team member commission rate updated successfully.");
+        setEditingMember(null);
+        fetchData();
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || "Failed to update team member commission rate");
+    } finally {
+      setSavingRate(false);
+    }
+  };
+
   const handleOpenModal = (targetPartnerId = "") => {
     setForm({
       product_id: products[0]?.id || "",
+      product_ids: products[0]?.id ? [products[0]?.id] : [],
       Partner_id: targetPartnerId || "",
       partner_ids: targetPartnerId ? [targetPartnerId] : [],
       commission_type: "fixed",
@@ -132,8 +179,10 @@ export default function ManageCommissions() {
     setErrorMsg("");
     setSuccessMsg("");
 
+    const targetProductIds = form.product_ids.length > 0 ? form.product_ids : (form.product_id || "all");
+
     const payload = {
-      product_ids: form.product_id || "all",
+      product_ids: targetProductIds,
       partner_ids: form.partner_ids.length > 0 ? form.partner_ids : (form.Partner_id || "global"),
       commission_type: form.commission_type,
       commission_value: parseFloat(form.commission_value || 0),
@@ -162,8 +211,10 @@ export default function ManageCommissions() {
     setErrorMsg("");
     setSuccessMsg("");
 
+    const targetProductIds = form.product_ids.length > 0 ? form.product_ids : (form.product_id || "all");
+
     const payload = {
-      product_ids: form.product_id || "all",
+      product_ids: targetProductIds,
       partner_ids: selectedPartnerIds.length > 0 ? selectedPartnerIds : (form.Partner_id || "all"),
       commission_type: form.commission_type,
       commission_value: parseFloat(form.commission_value || 0),
@@ -186,18 +237,18 @@ export default function ManageCommissions() {
     }
   };
 
-  const handleDeleteRule = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this custom commission override?")) {
+  const handleDeleteRule = async (ruleGroup) => {
+    const count = ruleGroup.cardCount || ruleGroup.product_ids?.length || 1;
+    if (!window.confirm(`Are you sure you want to delete this custom commission override for ${count} product(s)?`)) {
       return;
     }
     setErrorMsg("");
     setSuccessMsg("");
     try {
-      const res = await api.delete(`/admin/commission-rules/${id}`);
-      if (res.data?.success) {
-        setSuccessMsg("Override rule deleted successfully.");
-        fetchData();
-      }
+      const idsToDelete = ruleGroup.rules_list ? ruleGroup.rules_list.map(r => r.id) : [ruleGroup.id];
+      await Promise.all(idsToDelete.map(id => api.delete(`/admin/commission-rules/${id}`)));
+      setSuccessMsg("Override rule(s) deleted successfully.");
+      fetchData();
     } catch (err) {
       setErrorMsg(err.response?.data?.message || "Failed to delete commission rule");
     }
@@ -208,31 +259,52 @@ export default function ManageCommissions() {
     return cat.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   };
 
-  // Consolidate rules - group by partner_id and show "All Cards" for multiple product overrides
+  // Consolidate rules - group by partner_id, commission_type, commission_value, effective_from, effective_to
   const consolidatedRules = (() => {
     const grouped = {};
     rules.forEach(rule => {
-      const key = rule.Partner_id || rule.partner_id || 'global';
+      const partnerKey = rule.Partner_id || rule.partner_id || 'global';
+      const key = `${partnerKey}_${rule.commission_type}_${rule.commission_value}_${rule.effective_from}_${rule.effective_to || ''}`;
+      
       if (!grouped[key]) {
         grouped[key] = {
           ...rule,
           product_ids: [rule.product_id],
           product_names: [rule.product_name],
+          rules_list: [rule]
         };
       } else {
         if (!grouped[key].product_ids.includes(rule.product_id)) {
           grouped[key].product_ids.push(rule.product_id);
           grouped[key].product_names.push(rule.product_name);
+          grouped[key].rules_list.push(rule);
         }
       }
     });
     
-    // Convert to array and mark "All Cards" if multiple products
-    return Object.values(grouped).map(rule => ({
-      ...rule,
-      isAllCards: rule.product_ids.length > 1 || rule.product_ids.includes('all'),
-      displayProduct: rule.isAllCards ? 'All Cards & Products' : rule.product_name
-    }));
+    const totalActiveProductsCount = products.length;
+
+    return Object.values(grouped).map(rule => {
+      const isAllCards = rule.product_ids.includes('all') || (totalActiveProductsCount > 0 && rule.product_ids.length >= totalActiveProductsCount);
+      const isMultipleCards = !isAllCards && rule.product_ids.length > 1;
+      const isSingleCard = !isAllCards && rule.product_ids.length === 1;
+
+      let displayProduct = rule.product_name;
+      if (isAllCards) {
+        displayProduct = 'All Cards';
+      } else if (isMultipleCards) {
+        displayProduct = 'Selected Cards';
+      }
+
+      return {
+        ...rule,
+        isAllCards,
+        isMultipleCards,
+        isSingleCard,
+        displayProduct,
+        cardCount: isAllCards ? totalActiveProductsCount : rule.product_ids.length
+      };
+    });
   })();
 
   // Filtered partners/team members list
@@ -256,6 +328,18 @@ export default function ManageCommissions() {
     return matchesQuery && matchesRole && matchesStatus;
   });
 
+  // Filtered partners overview for Team Splits tab
+  const filteredPartnersOverview = partnersOverview.filter(p => {
+    const q = teamSearch.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (p.full_name && p.full_name.toLowerCase().includes(q)) ||
+      (p.partner_code && p.partner_code.toLowerCase().includes(q)) ||
+      (p.email && p.email.toLowerCase().includes(q)) ||
+      (p.mobile && p.mobile.toLowerCase().includes(q))
+    );
+  });
+
   const isAllSelected = filteredPartners.length > 0 && filteredPartners.every(p => selectedPartnerIds.includes(p.id));
 
   const toggleSelectAll = () => {
@@ -274,6 +358,13 @@ export default function ManageCommissions() {
     }
   };
 
+  const thStyle = {
+    padding: '12px 18px', fontSize: '11px', fontWeight: 700,
+    color: C.textLight, textTransform: 'uppercase', textAlign: 'left',
+    borderBottom: `1px solid ${C.border}`
+  };
+  const tdStyle = { padding: '14px 18px', fontSize: '13px', color: C.text, borderBottom: `1px solid ${C.border}` };
+
   return (
     <div style={{ boxSizing: "border-box", minHeight: "100%" }}>
       {/* Title Header */}
@@ -290,7 +381,9 @@ export default function ManageCommissions() {
               onClick={() => {
                 setForm({
                   product_id: products[0]?.id || "",
+                  product_ids: products[0]?.id ? [products[0]?.id] : [],
                   Partner_id: "",
+                  partner_ids: [],
                   commission_type: "fixed",
                   commission_value: "",
                   effective_from: new Date().toISOString().split("T")[0],
@@ -633,92 +726,257 @@ export default function ManageCommissions() {
           </div>
         </div>
       ) : activeTab === "team-splits" ? (
-        /* TAB: TEAM SPLITS */
-        <div style={S.card}>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, margin: "0 0 12px", color: C.text }}>DSA Team Commission Splitting</h3>
-          <p style={{ fontSize: "13px", color: C.textMid, marginBottom: "24px" }}>
-            Configure the default commission share split percentage between a Child partner (who sells the product) and their Parent partner (DSA referral override). The shares must total exactly 100%.
-          </p>
+        /* TAB: TEAM SPLITS (GLOBAL CONFIG & PARTNER TEAM HIERARCHY) */
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           
-          <form onSubmit={handleSaveSplits} style={{ maxWidth: "420px", display: "flex", flexDirection: "column", gap: "20px" }}>
-            <div>
-              <label style={S.label}>Child Partner Share (%)</label>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "6px" }}>
+          {/* Card 1: Global Default Commission Split Slider */}
+          <div style={S.card}>
+            <h3 style={{ fontSize: "16px", fontWeight: 800, margin: "0 0 8px", color: C.text }}>DSA Team Default Split Ratio</h3>
+            <p style={{ fontSize: "13px", color: C.textMid, marginBottom: "20px" }}>
+              Configure the default commission share percentage between a Child partner (who sells the product) and their Parent partner (DSA referral override). The shares must total exactly 100%.
+            </p>
+            
+            <form onSubmit={handleSaveSplits} style={{ maxWidth: "460px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label style={S.label}>Child Partner Share (%)</label>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "6px" }}>
+                  <input 
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={childPct}
+                    onChange={e => {
+                      const val = parseInt(e.target.value) || 0;
+                      setChildPct(val);
+                      setParentPct(100 - val);
+                    }}
+                    style={{ flex: 1, accentColor: C.teal }}
+                  />
+                  <input 
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={childPct}
+                    onChange={e => {
+                      const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                      setChildPct(val);
+                      setParentPct(100 - val);
+                    }}
+                    style={{ ...S.input, width: "70px", textAlign: "center" }}
+                  />
+                  <span style={{ fontWeight: 700 }}>%</span>
+                </div>
+              </div>
+
+              <div>
+                <label style={S.label}>Parent Partner Override Share (%)</label>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "6px" }}>
+                  <input 
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={parentPct}
+                    onChange={e => {
+                      const val = parseInt(e.target.value) || 0;
+                      setParentPct(val);
+                      setChildPct(100 - val);
+                    }}
+                    style={{ flex: 1, accentColor: C.teal }}
+                  />
+                  <input 
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={parentPct}
+                    onChange={e => {
+                      const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                      setParentPct(val);
+                      setChildPct(100 - val);
+                    }}
+                    style={{ ...S.input, width: "70px", textAlign: "center" }}
+                  />
+                  <span style={{ fontWeight: 700 }}>%</span>
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={savingSplits}
+                style={{
+                  ...S.btn("primary"),
+                  border: "none",
+                  borderRadius: "10px",
+                  padding: "10px 18px",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: savingSplits ? "not-allowed" : "pointer",
+                  alignSelf: "flex-start"
+                }}
+              >
+                {savingSplits ? "Saving..." : "Save Default Split Ratio"}
+              </button>
+            </form>
+          </div>
+
+          {/* Card 2: Partner Team Downline Commission Splits Hierarchy */}
+          <div style={S.card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+              <div>
+                <h3 style={{ fontSize: "16px", fontWeight: 800, margin: 0, color: C.text }}>Partner Team Downline Commission Splits</h3>
+                <p style={{ fontSize: "13px", color: C.textMid, marginTop: "4px", margin: 0 }}>
+                  View partner teams and override individual downline member commission split rates.
+                </p>
+              </div>
+              <div style={{ flex: 1, maxWidth: "340px", position: "relative" }}>
                 <input 
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={childPct}
-                  onChange={e => {
-                    const val = parseInt(e.target.value) || 0;
-                    setChildPct(val);
-                    setParentPct(100 - val);
-                  }}
-                  style={{ flex: 1, accentColor: C.teal }}
+                  type="text"
+                  placeholder="Search partner by name, code or email..."
+                  value={teamSearch}
+                  onChange={e => setTeamSearch(e.target.value)}
+                  style={{ ...S.input, width: "100%", paddingLeft: "34px" }}
                 />
-                <input 
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={childPct}
-                  onChange={e => {
-                    const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
-                    setChildPct(val);
-                    setParentPct(100 - val);
-                  }}
-                  style={{ ...S.input, width: "70px", textAlign: "center" }}
-                />
-                <span style={{ fontWeight: 700 }}>%</span>
+                <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: C.textLight }}>
+                  🔍
+                </span>
               </div>
             </div>
 
-            <div>
-              <label style={S.label}>Parent Partner Override Share (%)</label>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "6px" }}>
-                <input 
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={parentPct}
-                  onChange={e => {
-                    const val = parseInt(e.target.value) || 0;
-                    setParentPct(val);
-                    setChildPct(100 - val);
-                  }}
-                  style={{ flex: 1, accentColor: C.teal }}
-                />
-                <input 
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={parentPct}
-                  onChange={e => {
-                    const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
-                    setParentPct(val);
-                    setChildPct(100 - val);
-                  }}
-                  style={{ ...S.input, width: "70px", textAlign: "center" }}
-                />
-                <span style={{ fontWeight: 700 }}>%</span>
+            {filteredPartnersOverview.length === 0 ? (
+              <div style={{ padding: "36px", textAlign: "center", color: C.textLight }}>
+                No partner teams found matching your search.
               </div>
-            </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", borderRadius: "10px", border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                {filteredPartnersOverview.map(p => {
+                  const isExpanded = !!expandedPartners[p.id];
+                  const hasMembers = p.team_members && p.team_members.length > 0;
+                  return (
+                    <div key={p.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      {/* Partner Accordion Row */}
+                      <div 
+                        onClick={() => togglePartnerExpand(p.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                          padding: '14px 18px', background: isExpanded ? (isDark ? '#1a1a1a' : '#f8fafc') : 'transparent',
+                          cursor: 'pointer', transition: 'background 0.2s'
+                        }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ color: C.teal, display: 'flex' }}>
+                            {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                          </span>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '14px', color: C.text }}>
+                              {p.full_name} <span style={{ fontSize: '12px', fontWeight: 600, color: C.teal }}>({p.partner_code})</span>
+                            </div>
+                            <div style={{ fontSize: '12px', color: C.textMid, marginTop: '2px' }}>
+                              {p.email} • {p.mobile}
+                            </div>
+                          </div>
+                        </div>
 
-            <button 
-              type="submit" 
-              disabled={savingSplits}
-              style={{
-                ...S.btn("primary"),
-                border: "none",
-                borderRadius: "10px",
-                padding: "12px 20px",
-                fontSize: "14px",
-                fontWeight: 700,
-                cursor: savingSplits ? "not-allowed" : "pointer"
-              }}
-            >
-              {savingSplits ? "Saving..." : "Save Split Configurations"}
-            </button>
-          </form>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                          <span style={{
+                            padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800,
+                            background: hasMembers ? `${C.teal}15` : `${C.border}40`,
+                            color: hasMembers ? C.teal : C.textMid
+                          }}>
+                            {p.team_count || (p.team_members ? p.team_members.length : 0)} Team Member(s)
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Expanded Team Members List */}
+                      {isExpanded && (
+                        <div style={{ padding: '0 18px 16px 44px', background: isDark ? '#141414' : '#f1f5f9' }}>
+                          <h4 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: C.textLight, marginTop: '12px', marginBottom: '8px' }}>
+                            Downline Member Commission Splits (Member Share vs Partner Share)
+                          </h4>
+
+                          {!hasMembers ? (
+                            <div style={{ padding: '12px 0', fontSize: '13px', color: C.textLight, fontStyle: 'italic' }}>
+                              This partner has not added any direct team members yet.
+                            </div>
+                          ) : (
+                            <div style={{ overflowX: "auto", borderRadius: '8px', border: `1px solid ${C.border}` }}>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', background: isDark ? '#1a1a1a' : '#fff' }}>
+                                <thead>
+                                  <tr style={{ background: isDark ? '#222' : '#e2e8f0' }}>
+                                    <th style={{ ...thStyle, fontSize: '10px' }}>Team Member</th>
+                                    <th style={{ ...thStyle, fontSize: '10px' }}>Partner Code</th>
+                                    <th style={{ ...thStyle, fontSize: '10px' }}>Member Share %</th>
+                                    <th style={{ ...thStyle, fontSize: '10px' }}>Partner Share %</th>
+                                    <th style={{ ...thStyle, fontSize: '10px', textAlign: 'right' }}>Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {p.team_members.map(m => (
+                                    <tr key={m.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                                      <td style={tdStyle}>
+                                        <div style={{ fontWeight: 700 }}>{m.full_name}</div>
+                                        <div style={{ fontSize: '11px', color: C.textLight }}>{m.email}</div>
+                                      </td>
+                                      <td style={tdStyle}>{m.partner_code}</td>
+                                      <td style={tdStyle}>
+                                        {editingMember === m.id ? (
+                                          <input 
+                                            type="number" 
+                                            min="0" 
+                                            max="100"
+                                            value={newRate}
+                                            onChange={e => setNewRate(e.target.value)}
+                                            style={{ ...S.input, width: '80px', padding: '4px 8px', fontSize: '13px' }}
+                                          />
+                                        ) : (
+                                          <span style={{ fontWeight: 800, color: C.green }}>{m.commission_rate}%</span>
+                                        )}
+                                      </td>
+                                      <td style={tdStyle}>
+                                        {editingMember === m.id ? (
+                                          <span style={{ fontWeight: 800, color: C.primary }}>
+                                            {!isNaN(parseFloat(newRate)) ? (100 - parseFloat(newRate)).toFixed(2) : '0'}%
+                                          </span>
+                                        ) : (
+                                          <span style={{ fontWeight: 800, color: C.primary }}>{m.parent_share}%</span>
+                                        )}
+                                      </td>
+                                      <td style={{ ...tdStyle, textAlign: 'right' }}>
+                                        {editingMember === m.id ? (
+                                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                            <button 
+                                              onClick={() => handleSaveMemberRate(m.id)}
+                                              disabled={savingRate}
+                                              style={{ padding: '4px 8px', background: C.green, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                                              <Check size={14} />
+                                            </button>
+                                            <button 
+                                              onClick={() => setEditingMember(null)}
+                                              style={{ padding: '4px 8px', background: C.red, color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                                              <X size={14} />
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          <button 
+                                            onClick={() => { setEditingMember(m.id); setNewRate(m.commission_rate); }}
+                                            style={{ padding: '6px 12px', background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}30`, borderRadius: '6px', fontWeight: 700, fontSize: '11px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                            <Edit2 size={12} /> Edit Split
+                                          </button>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
         </div>
       ) : activeTab === "overrides" ? (
         /* TAB: OVERRIDES */
@@ -748,14 +1006,29 @@ export default function ManageCommissions() {
                   {consolidatedRules.map((rule) => (
                     <tr key={rule.id} style={{ borderBottom: `1px solid ${C.border}`, transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = `${C.border}15`} onMouseLeave={e => e.currentTarget.style.background = "none"}>
                       <td style={{ padding: "14px 16px" }}>
-                        <div style={{ fontWeight: 700, color: C.text }}>{rule.displayProduct}</div>
-                        {rule.isAllCards && (
-                          <div style={{ fontSize: "11px", color: C.teal, fontWeight: 600, marginTop: "2px" }}>
-                            {rule.product_names.length} products
+                        {rule.isSingleCard ? (
+                          <div>
+                            <div style={{ fontWeight: 700, color: C.text }}>{rule.displayProduct}</div>
+                            <div style={{ fontSize: "11px", color: C.teal, fontWeight: 600, marginTop: "2px" }}>
+                              {formatCategory(rule.product_category)}
+                            </div>
                           </div>
-                        )}
-                        {!rule.isAllCards && (
-                          <div style={{ fontSize: "11px", color: C.teal, fontWeight: 600, marginTop: "2px" }}>{formatCategory(rule.product_category)}</div>
+                        ) : (
+                          <div 
+                            onClick={() => {
+                              setViewCardsRule(rule);
+                              setViewCardsSearch("");
+                            }}
+                            style={{ cursor: "pointer", display: "inline-block" }}
+                            title="Click to view all assigned cards & payout details"
+                          >
+                            <div style={{ fontWeight: 700, color: C.teal, textDecoration: "underline", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                              {rule.displayProduct} 🔍
+                            </div>
+                            <div style={{ fontSize: "11px", color: C.teal, fontWeight: 700, marginTop: "2px", background: `${C.teal}15`, padding: "2px 8px", borderRadius: "10px", display: "block" }}>
+                              {rule.cardCount} product(s) (Click to view)
+                            </div>
+                          </div>
                         )}
                       </td>
                       <td style={{ padding: "14px 16px" }}>
@@ -800,7 +1073,7 @@ export default function ManageCommissions() {
                       </td>
                       <td style={{ padding: "14px 16px", textAlign: "center" }}>
                         <button
-                          onClick={() => handleDeleteRule(rule.id)}
+                          onClick={() => handleDeleteRule(rule)}
                           style={{
                             border: `1.5px solid ${C.red}35`,
                             background: `${C.red}12`,
@@ -882,6 +1155,141 @@ export default function ManageCommissions() {
         </div>
       )}
 
+      {/* VIEW ASSIGNED CARDS PAYOUT MODAL */}
+      {viewCardsRule && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px" }}>
+          <div style={{ ...S.card, width: "100%", maxWidth: "680px", maxHeight: "90vh", overflowY: "auto", padding: "24px" }}>
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: `1px solid ${C.border}`, paddingBottom: "12px" }}>
+              <div>
+                <h3 style={{ fontSize: "18px", fontWeight: 900, color: C.text, margin: 0 }}>
+                  Assigned Cards & Payout Details
+                </h3>
+                <p style={{ fontSize: "12px", color: C.textMid, marginTop: "4px", margin: 0 }}>
+                  {viewCardsRule.Partner_id || viewCardsRule.partner_id ? (
+                    <span>Target Member: <strong>{viewCardsRule.first_name} {viewCardsRule.last_name}</strong> ({viewCardsRule.Partner_code || viewCardsRule.partner_code})</span>
+                  ) : (
+                    <span>🌐 Global Default Override</span>
+                  )}
+                </p>
+              </div>
+              <button onClick={() => setViewCardsRule(null)} style={{ background: "none", border: "none", color: C.textLight, cursor: "pointer", padding: "4px" }}>
+                <Icons.x size={20} />
+              </button>
+            </div>
+
+            {/* Summary Chips */}
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "16px", padding: "12px", background: `${C.teal}08`, borderRadius: "10px", border: `1px solid ${C.teal}20` }}>
+              <div style={{ fontSize: "12px", color: C.textMid }}>
+                Payout Type: <strong style={{ color: C.text, textTransform: "capitalize" }}>{viewCardsRule.commission_type}</strong>
+              </div>
+              <div style={{ fontSize: "12px", color: C.textMid }}>
+                Payout Value: <strong style={{ color: C.teal }}>{viewCardsRule.commission_type === "percentage" ? `${viewCardsRule.commission_value}%` : `₹${viewCardsRule.commission_value}`}</strong>
+              </div>
+              <div style={{ fontSize: "12px", color: C.textMid }}>
+                Effective From: <strong style={{ color: C.text }}>{new Date(viewCardsRule.effective_from).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</strong>
+              </div>
+              <div style={{ fontSize: "12px", color: C.textMid }}>
+                Total Cards: <strong style={{ color: C.primary }}>{viewCardsRule.cardCount} product(s)</strong>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div style={{ marginBottom: "14px", position: "relative" }}>
+              <input
+                type="text"
+                placeholder="Search card by name or category..."
+                value={viewCardsSearch}
+                onChange={e => setViewCardsSearch(e.target.value)}
+                style={{ ...S.input, width: "100%", paddingLeft: "36px" }}
+              />
+              <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight }}>
+                🔍
+              </span>
+            </div>
+
+            {/* Table of Assigned Cards */}
+            <div style={{ border: `1px solid ${C.border}`, borderRadius: "10px", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ background: `${C.border}20`, borderBottom: `1px solid ${C.border}` }}>
+                    <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Card / Product Name</th>
+                    <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Category</th>
+                    <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Lending Bank</th>
+                    <th style={{ padding: "10px 14px", fontSize: "11px", fontWeight: 700, color: C.textLight, textTransform: "uppercase" }}>Assigned Payout</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    let cardList = [];
+                    if (viewCardsRule.isAllCards) {
+                      cardList = products;
+                    } else if (viewCardsRule.rules_list && viewCardsRule.rules_list.length > 0) {
+                      cardList = viewCardsRule.rules_list.map(r => {
+                        const matchedProd = products.find(p => p.id === r.product_id);
+                        return {
+                          id: r.product_id,
+                          name: r.product_name || matchedProd?.name || "Product",
+                          category: r.product_category || matchedProd?.category || "",
+                          bank_name: matchedProd?.bank_name || "N/A"
+                        };
+                      });
+                    } else {
+                      cardList = viewCardsRule.product_names.map((name, i) => {
+                        const pId = viewCardsRule.product_ids[i];
+                        const matchedProd = products.find(p => p.id === pId);
+                        return {
+                          id: pId || i,
+                          name: name || matchedProd?.name || "Product",
+                          category: matchedProd?.category || "",
+                          bank_name: matchedProd?.bank_name || "N/A"
+                        };
+                      });
+                    }
+
+                    const filteredList = cardList.filter(c => {
+                      const q = viewCardsSearch.toLowerCase().trim();
+                      return !q || c.name.toLowerCase().includes(q) || (c.category && c.category.toLowerCase().includes(q));
+                    });
+
+                    if (filteredList.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={4} style={{ padding: "20px", textAlign: "center", color: C.textLight }}>
+                            No cards match your search term.
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return filteredList.map((card, index) => (
+                      <tr key={card.id || index} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: "10px 14px", fontWeight: 700, color: C.text }}>{card.name}</td>
+                        <td style={{ padding: "10px 14px", color: C.textMid, fontSize: "12px" }}>{formatCategory(card.category)}</td>
+                        <td style={{ padding: "10px 14px", color: C.textMid, fontSize: "12px" }}>{card.bank_name || "N/A"}</td>
+                        <td style={{ padding: "10px 14px", fontWeight: 800, color: C.teal }}>
+                          {viewCardsRule.commission_type === "percentage" ? `${viewCardsRule.commission_value}%` : `₹${viewCardsRule.commission_value}`}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "16px" }}>
+              <button
+                onClick={() => setViewCardsRule(null)}
+                style={{ ...S.btn("primary"), padding: "8px 20px" }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* INDIVIDUAL OVERRIDE CREATION MODAL */}
       {modalOpen && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px" }}>
@@ -895,9 +1303,9 @@ export default function ManageCommissions() {
 
             <form onSubmit={handleCreateRule} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               
-              {/* Product with Search */}
+              {/* Product Selection */}
               <div>
-                <label style={S.label}>Select Product or Cards *</label>
+                <label style={S.label}>Select Product(s) or Cards *</label>
                 <input
                   type="text"
                   placeholder="Search cards by name..."
@@ -905,23 +1313,53 @@ export default function ManageCommissions() {
                   value={productSearch}
                   onChange={e => setProductSearch(e.target.value)}
                 />
-                <div style={{ marginTop: "8px", maxHeight: "150px", overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: "8px" }}>
-                  <div
-                    style={{ padding: "10px", cursor: "pointer", borderBottom: `1px solid ${C.border}`, background: form.product_id === "all" ? `${C.teal}15` : "transparent" }}
-                    onClick={() => setForm({ ...form, product_id: "all" })}
+                <div style={{ marginTop: "8px", maxHeight: "160px", overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "4px" }}>
+                  <label
+                    style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px", cursor: "pointer", borderBottom: `1px solid ${C.border}`, background: form.product_ids.includes("all") ? `${C.teal}15` : "transparent" }}
                   >
+                    <input
+                      type="checkbox"
+                      checked={form.product_ids.includes("all")}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setForm({ ...form, product_ids: ["all"], product_id: "all" });
+                        } else {
+                          setForm({ ...form, product_ids: [], product_id: "" });
+                        }
+                      }}
+                    />
                     🌟 All Cards & Products (Apply same payout to all products)
-                  </div>
-                  {products.filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())).map(p => (
-                    <div
-                      key={p.id}
-                      style={{ padding: "10px", cursor: "pointer", borderBottom: `1px solid ${C.border}`, background: form.product_id === p.id ? `${C.teal}15` : "transparent" }}
-                      onClick={() => setForm({ ...form, product_id: p.id })}
-                    >
-                      {p.name} (Default: {p.commission_type === "percentage" ? `${p.commission_value}%` : `₹${p.commission_value}`})
-                    </div>
-                  ))}
+                  </label>
+                  {products.filter(p => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase())).map(p => {
+                    const isChecked = form.product_ids.includes(p.id);
+                    return (
+                      <label
+                        key={p.id}
+                        style={{ display: "flex", alignItems: "center", gap: "8px", padding: "6px 8px", cursor: "pointer", borderBottom: `1px solid ${C.border}`, background: isChecked ? `${C.teal}12` : "transparent" }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={e => {
+                            let updated;
+                            if (e.target.checked) {
+                              updated = [...form.product_ids.filter(id => id !== "all"), p.id];
+                            } else {
+                              updated = form.product_ids.filter(id => id !== p.id);
+                            }
+                            setForm({ ...form, product_ids: updated, product_id: updated[0] || "" });
+                          }}
+                        />
+                        {p.name} (Default: {p.commission_type === "percentage" ? `${p.commission_value}%` : `₹${p.commission_value}`})
+                      </label>
+                    );
+                  })}
                 </div>
+                {form.product_ids.length > 0 && (
+                  <div style={{ marginTop: "6px", fontSize: "12px", color: C.teal, fontWeight: 600 }}>
+                    {form.product_ids.includes("all") ? "All Products Selected" : `${form.product_ids.length} product(s) selected`}
+                  </div>
+                )}
               </div>
 
               {/* Partner Role Filter */}
@@ -941,7 +1379,7 @@ export default function ManageCommissions() {
               {/* Target Partner / Team Member - Multiple Selection */}
               <div>
                 <label style={S.label}>Select Target Partner or Team Member</label>
-                <div style={{ maxHeight: "200px", overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "8px" }}>
+                <div style={{ maxHeight: "180px", overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: "8px", padding: "8px" }}>
                   <div style={{ marginBottom: "8px" }}>
                     <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}>
                       <input
@@ -1102,7 +1540,10 @@ export default function ManageCommissions() {
                   required
                   style={S.input}
                   value={form.product_id}
-                  onChange={e => setForm({ ...form, product_id: e.target.value })}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setForm({ ...form, product_id: val, product_ids: val === "all" ? ["all"] : [val] });
+                  }}
                 >
                   <option value="all">🌟 All Cards & Products (Apply same payout to all products)</option>
                   {products.map(p => (

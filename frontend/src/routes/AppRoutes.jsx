@@ -22,6 +22,7 @@ import ResetPassword from '../modules/authentication/reset-password/ResetPasswor
 import TermsAndConditions from '../modules/home/TermsAndConditions';
 import PrivacyPolicy from '../modules/home/PrivacyPolicy';
 import CustomerUploadPortal from '../modules/customer/CustomerUploadPortal';
+import PublicCustomerUploadPage from '../modules/public/PublicCustomerUploadPage';
 
 // Services Pages
 import MoneyTransfer from '../modules/cms/MoneyTransfer';
@@ -167,6 +168,8 @@ const AppRoutes = () => {
       <Route path="/apply/:token" element={<CustomerApplyStep1 />} />
       <Route path="/apply/:token/post-apply" element={<CustomerPostApplyStep2 />} />
       <Route path="/customer/upload/:token" element={<CustomerUploadPortal />} />
+      <Route path="/customer-upload/:token" element={<PublicCustomerUploadPage />} />
+      <Route path="/customer/upload-details/:token" element={<PublicCustomerUploadPage />} />
       <Route path="/customer/application/:token" element={<CustomerUploadPortal />} />
 
       {/* Partner Protected Routes */}
@@ -276,7 +279,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/services" element={<ManageServices />} />
             <Route path="/super-admin/direct-leads" element={<ManageDirectLeads />} />
             <Route path="/super-admin/commissions" element={<ManageCommissions />} />
-            <Route path="/super-admin/commission-rules" element={<ManageCommissionRules />} />
+            <Route path="/super-admin/commission-rules" element={<Navigate to="/super-admin/commissions" replace />} />
             <Route path="/super-admin/wallet" element={<ManageWallet />} />
             <Route path="/super-admin/notifications" element={<NotificationCenter />} />
             <Route path="/super-admin/announcements" element={<ManageAnnouncements />} />
@@ -296,7 +299,7 @@ const AppRoutes = () => {
             <Route path="/superadmin/wallet" element={<Navigate to="/super-admin/wallet" replace />} />
             <Route path="/superadmin/announcements" element={<Navigate to="/super-admin/announcements" replace />} />
             <Route path="/superadmin/services" element={<Navigate to="/super-admin/services" replace />} />
-            <Route path="/superadmin/commission-rules" element={<Navigate to="/super-admin/commission-rules" replace />} />
+            <Route path="/superadmin/commission-rules" element={<Navigate to="/super-admin/commissions" replace />} />
             <Route path="/superadmin/audit-logs" element={<Navigate to="/super-admin/audit" replace />} />
             <Route path="/superadmin/reports" element={<Navigate to="/super-admin/reports" replace />} />
             <Route path="/superadmin/*" element={<Navigate to="/super-admin/dashboard" replace />} />
