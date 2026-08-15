@@ -71,14 +71,21 @@ const corsOptions = {
     const normalizedOrigin = origin.trim();
     try {
       const hostname = new URL(normalizedOrigin).hostname;
-      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.gharkapaisa.in')) {
+      if (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname.endsWith('.gharkapaisa.in') ||
+        hostname.endsWith('.amazonaws.com') ||
+        hostname.endsWith('.compute.amazonaws.com') ||
+        hostname.endsWith('.vercel.app')
+      ) {
         return callback(null, true);
       }
     } catch (e) {}
     if (allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }
-    return callback(new Error(`CORS origin not allowed: ${normalizedOrigin}`), false);
+    return callback(null, false);
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Id', 'x-device-id', 'X-Requested-With', 'Accept'],

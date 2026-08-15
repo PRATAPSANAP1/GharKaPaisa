@@ -7,7 +7,7 @@ const { success, error } = require('../../utils/response/response');
 const { logAction } = require('../admin/audit.service.js');
 
 // Public or global check to fetch settings
-router.get('/', jwtAuth, roleCheck('SUPER_ADMIN'), async (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
     const { rows } = await query(`SELECT key, value FROM system_settings`);
     const settings = rows.reduce((acc, curr) => {

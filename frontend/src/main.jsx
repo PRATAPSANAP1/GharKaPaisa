@@ -27,7 +27,10 @@ const SPAM_PATTERNS = [
   'status code 401',
   'Unauthorized',
   'TraceIQ is not defined',
-  'TraceIQ'
+  'TraceIQ',
+  'Data size is large for RSA encryption',
+  'hybrid encryption',
+  'cdn.tailwindcss.com'
 ];
 
 const shouldSuppress = (args) => {
