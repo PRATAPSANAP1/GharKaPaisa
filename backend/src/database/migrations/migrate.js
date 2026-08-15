@@ -484,6 +484,7 @@ const migrate = async () => {
       disbursal_date     DATE,
       rejection_reason   TEXT,
       notes              TEXT,
+      remarks            TEXT,
       documents          JSONB DEFAULT '[]',
       status_history     JSONB DEFAULT '[]',
       commission_amount  DECIMAL(12,2),
@@ -4099,6 +4100,7 @@ const migrate = async () => {
         ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(50);
         ALTER TABLE applications ADD COLUMN IF NOT EXISTS monthly_salary NUMERIC(15,2);
         ALTER TABLE applications ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
+        ALTER TABLE applications ADD COLUMN IF NOT EXISTS remarks TEXT;
 
         ALTER TABLE customers ADD COLUMN IF NOT EXISTS dob DATE;
         ALTER TABLE customers ADD COLUMN IF NOT EXISTS pan VARCHAR(20);
