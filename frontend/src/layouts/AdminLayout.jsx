@@ -78,10 +78,16 @@ const AdminLayout = () => {
         flexShrink: 0,
         overflowY: 'auto'
       }} className="hidden md:flex">
-        <div style={{ padding: '24px 20px', borderBottom: `1px solid ${C.border}20` }}>
-          <h2 id="admin-sidebar-title" style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '0.5px', margin: 0 }}>
-            {t('adminLayout.title', 'GharKaPaisa Admin')}
-          </h2>
+        <div style={{ padding: '20px 20px', borderBottom: `1px solid rgba(255,255,255,0.1)`, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 20 }}>⚡</span>
+          <div>
+            <h2 id="admin-sidebar-title" style={{ fontSize: '17px', fontWeight: 900, margin: 0, background: 'linear-gradient(90deg, #60a5fa, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              {t('adminLayout.title', 'GharKaPaisa')}
+            </h2>
+            <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Admin Operations Portal
+            </span>
+          </div>
         </div>
 
         <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
@@ -90,9 +96,10 @@ const AdminLayout = () => {
           <NavLink
             to="/admin/dashboard"
             style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px',
-              fontSize: '13.5px', fontWeight: 700, color: isActive ? '#fff' : 'rgba(255, 255, 255, 0.7)',
-              background: isActive ? `${C.teal}35` : 'transparent', textDecoration: 'none'
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
+              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
+              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
+              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
             })}
           >
             <Icons.dashboard size={18} />
@@ -103,9 +110,10 @@ const AdminLayout = () => {
           <NavLink
             to="/admin/partners"
             style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px',
-              fontSize: '13.5px', fontWeight: 700, color: isActive ? '#fff' : 'rgba(255, 255, 255, 0.7)',
-              background: isActive ? `${C.teal}35` : 'transparent', textDecoration: 'none'
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
+              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
+              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
+              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
             })}
           >
             <Icons.profile size={18} />
