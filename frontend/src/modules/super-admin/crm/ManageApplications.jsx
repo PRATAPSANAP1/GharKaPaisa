@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
+import AdminDocumentVerificationModal from '../../admin/reports/AdminDocumentVerificationModal';
 import { 
   MdSearch, MdFilterList, MdCheckCircle, MdBlock, 
   MdCompareArrows, MdHistory, MdFileDownload, MdClose,
@@ -17,6 +18,9 @@ const VISIBILITY_OPTIONS = [
 export default function ManageApplications() {
   const { C } = useTheme();
   const S = makeS(C);
+
+  // Verification modal state
+  const [verifyModalApp, setVerifyModalApp] = useState(null);
 
   // ── Active Tab ──
   const [activeTab, setActiveTab] = useState('applications'); // 'applications' | 'partner_share'
@@ -46,6 +50,30 @@ export default function ManageApplications() {
   // Notes Form State
   const [noteForm, setNoteForm] = useState({ note: '', visibility: 'public' });
   const [postingNote, setPostingNote] = useState(false);
+
+  // Super Admin Approval State inside Review Drawer
+  const [superAdminRemark, setSuperAdminRemark] = useState('');
+  const [submittingSuperAdminApprove, setSubmittingSuperAdminApprove] = useState(false);
+
+  const handleSuperAdminApprove = async (appId) => {
+    setSubmittingSuperAdminApprove(true);
+    try {
+      const res = await api.put(`/applications/${appId}/status`, {
+        status: 'super_admin_approved',
+        remarks: superAdminRemark || 'Super Admin Approved'
+      });
+      if (res.data?.success || res.status === 200) {
+        alert('Application approved successfully! Status updated to Super Admin Approved (super_admin_approved).');
+        setDetailModalOpen(false);
+        setSuperAdminRemark('');
+        fetchApplications();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to approve application');
+    } finally {
+      setSubmittingSuperAdminApprove(false);
+    }
+  };
 
   // Action Dialog States
   const [actionType, setActionType] = useState(null); // 'approve', 'reject', 'reassign', 'manual', 'reverse'
@@ -618,12 +646,15 @@ export default function ManageApplications() {
                       </div>
                     </td>
                     <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                        <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'nowrap' }}>
+                        <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
                           <MdVisibility /> Review
                         </button>
-                        <button onClick={() => handleOpenEditModal(app)} style={{ border: `1px solid ${C.primary}40`, background: `${C.primary}12`, color: C.primary, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                        <button onClick={() => setVerifyModalApp(app)} style={{ border: `1px solid ${C.primary}40`, background: `${C.primary}12`, color: C.primary, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
                           ✏️ Edit
+                        </button>
+                        <button onClick={() => setVerifyModalApp(app)} style={{ border: `1px solid ${C.teal}40`, background: `${C.teal}12`, color: C.teal, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                          Verify Details
                         </button>
                         <button onClick={() => handleDeleteApplication(app.id, app.app_number)} style={{ border: `1px solid ${C.red}40`, background: `${C.red}12`, color: C.red, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
                           <MdDelete /> Delete
@@ -672,44 +703,105 @@ export default function ManageApplications() {
               </p>
             </div>
 
-            {/* Action Bar Overrides */}
-            <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '14px', borderRadius: '12px', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              <button onClick={() => handleOpenEditModal(selectedApp)} style={{ ...S.btn('primary'), background: C.primary, display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
-                ✏️ Edit Application Details
-              </button>
-              <button onClick={async () => {
-                try {
-                  const res = await api.post('/applications/generate-share-link', {
-                    application_id: selectedApp.id,
-                    lead_id: selectedApp.lead_id,
-                    product_id: selectedApp.product_id || selectedApp.productId
-                  });
-                  if (res.data?.success) {
-                    const shareUrl = res.data.data.share_url;
-                    navigator.clipboard.writeText(shareUrl);
-                    alert(`Customer Application Link Generated & Copied to Clipboard!\n\nLink: ${shareUrl}`);
-                  }
-                } catch (err) {
-                  alert(err.response?.data?.message || 'Failed to generate customer share link');
-                }
-              }} style={{ ...S.btn('outline'), color: C.teal, borderColor: C.teal, display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
-                <MdShare /> Send Customer Share Link
-              </button>
-              <button onClick={() => triggerActionDialog('approve')} style={{ ...S.btn('primary'), display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
-                <MdCheckCircle /> Approve Lead
-              </button>
-              <button onClick={() => triggerActionDialog('reject')} style={{ ...S.btn('outline'), color: C.red, borderColor: C.red, display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
-                <MdBlock /> Reject Lead
-              </button>
-              <button onClick={() => triggerActionDialog('reassign')} style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
-                <MdSwapHoriz /> Reassign Partner
-              </button>
-              <button onClick={() => triggerActionDialog('manual')} style={{ ...S.btn('outline'), color: C.teal, borderColor: C.teal, display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
-                <MdAssignment /> Manual Commission
-              </button>
-              <button onClick={() => handleDeleteApplication(selectedApp.id, selectedApp.app_number)} style={{ ...S.btn('outline'), color: C.red, borderColor: C.red, display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px', fontWeight: 700 }}>
-                <MdDelete /> Delete Application
-              </button>
+            {/* Super Admin Approval & Remarks Card */}
+            <div style={{ background: `${C.primary}08`, border: `1.5px solid ${C.primary}30`, padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ fontWeight: 800, fontSize: '14px', color: C.primary, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <MdCheckCircle size={18} /> Super Admin Final Approval & Status Upgrade
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '12px', background: selectedApp.status === 'super_admin_approved' ? `${C.green}20` : `${C.gold}20`, color: selectedApp.status === 'super_admin_approved' ? C.green : C.gold, textTransform: 'uppercase' }}>
+                  Current Status: {selectedApp.status?.replace(/_/g, ' ')}
+                </span>
+              </div>
+              
+              <div>
+                <label style={{ ...S.label, marginBottom: '4px' }}>Super Admin Remark / Approval Note</label>
+                <textarea
+                  rows={2}
+                  placeholder="Enter remarks or approval notes..."
+                  style={S.input}
+                  value={superAdminRemark}
+                  onChange={e => setSuperAdminRemark(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  disabled={submittingSuperAdminApprove}
+                  onClick={() => handleSuperAdminApprove(selectedApp.id)}
+                  style={{ ...S.btn('primary'), background: C.green, borderColor: C.green, padding: '8px 18px', fontSize: '13px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <MdCheckCircle size={18} /> {submittingSuperAdminApprove ? 'Approving...' : 'Approve (Super Admin Approved)'}
+                </button>
+                <button
+                  onClick={() => setVerifyModalApp(selectedApp)}
+                  style={{ ...S.btn('outline'), color: C.primary, borderColor: C.primary, padding: '8px 14px', fontSize: '12.5px', fontWeight: 700 }}
+                >
+                  ✏️ Edit Details (Form 1 / 2 / 3)
+                </button>
+              </div>
+            </div>
+
+            {/* Read-Only Form 1, Part 2 & Part 3 Overview */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* Form 1: Customer & Physical Details (Read-Only) */}
+              <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.primary, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                  📋 Form 1: Customer & Physical Details (Read-Only)
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                  <div><span style={{ color: C.textLight }}>Customer Name:</span> <strong style={{ color: C.text }}>{selectedApp.customer_name || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Mobile:</span> <strong style={{ color: C.text }}>{selectedApp.customer_mobile || selectedApp.mobile || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Email:</span> <strong style={{ color: C.text }}>{selectedApp.customer_email || selectedApp.email || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>PAN Number:</span> <strong style={{ color: C.text }}>{selectedApp.pan_number || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Date of Birth:</span> <strong style={{ color: C.text }}>{selectedApp.dob || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Company / Employer:</span> <strong style={{ color: C.text }}>{selectedApp.company_name || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Occupation / Designation:</span> <strong style={{ color: C.text }}>{selectedApp.designation || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Monthly Salary:</span> <strong style={{ color: C.text }}>{selectedApp.monthly_salary ? `₹${parseFloat(selectedApp.monthly_salary).toLocaleString('en-IN')}` : '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Mother's Name:</span> <strong style={{ color: C.text }}>{selectedApp.mother_name || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Partner Code / Name:</span> <strong style={{ color: C.text }}>{selectedApp.partner_code ? `${selectedApp.partner_code} (${selectedApp.partner_name || ''})` : '—'}</strong></div>
+                </div>
+              </div>
+
+              {/* Part 2: Operations & Dispatch Stage (Read-Only) */}
+              <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.teal, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                  ⚙️ Part 2 Operations & Dispatch Stage (Read-Only)
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                  <div><span style={{ color: C.textLight }}>Appcode Status:</span> <strong style={{ color: C.text }}>{selectedApp.appcode_status || 'Appcode Pending'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Soft Approval Status:</span> <strong style={{ color: C.text }}>{selectedApp.soft_approval_status || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>VKYC Stage:</span> <strong style={{ color: C.text }}>{selectedApp.vkyc_stage || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>IQA Stage:</span> <strong style={{ color: C.text }}>{selectedApp.iqa_stage || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Dispatch Status:</span> <strong style={{ color: C.text }}>{selectedApp.dispatch_status || '—'}</strong></div>
+                </div>
+              </div>
+
+              {/* Part 3: Bank Remark & Final Status (Read-Only) */}
+              <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.purple, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                  🏦 Part 3: Bank Remark & Final Status (Read-Only)
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                  <div><span style={{ color: C.textLight }}>Application Number:</span> <strong style={{ color: C.text }}>{selectedApp.app_number || selectedApp.bank_ref_number || '—'}</strong></div>
+                  <div>
+                    <span style={{ color: C.textLight }}>VKYC Link:</span>{' '}
+                    {selectedApp.vkyc_url ? (
+                      <a href={selectedApp.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: C.primary, fontWeight: 700, textDecoration: 'underline', marginLeft: '4px' }}>
+                        🔗 Open V-KYC Link
+                      </a>
+                    ) : (
+                      <strong style={{ color: C.text }}>—</strong>
+                    )}
+                  </div>
+                  <div><span style={{ color: C.textLight }}>Final Status from Bank:</span> <strong style={{ color: C.text }}>{selectedApp.final_status || selectedApp.status || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Eligible for Re-QD:</span> <strong style={{ color: C.text }}>{selectedApp.eligible_reqd || 'No'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Bank Remark:</span> <strong style={{ color: C.text }}>{selectedApp.bank_remark || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Decline Reason Remark:</span> <strong style={{ color: C.text }}>{selectedApp.decline_reason_remark || selectedApp.decline_reason || '—'}</strong></div>
+                </div>
+              </div>
+
             </div>
 
             {/* Dual Column details */}
@@ -1361,6 +1453,18 @@ export default function ManageApplications() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* VERIFY DETAILS & EDIT FORM MODAL */}
+      {verifyModalApp && (
+        <AdminDocumentVerificationModal
+          application={verifyModalApp}
+          onClose={() => setVerifyModalApp(null)}
+          onRefresh={() => {
+            setVerifyModalApp(null);
+            fetchApplications();
+          }}
+        />
       )}
 
     </div>
