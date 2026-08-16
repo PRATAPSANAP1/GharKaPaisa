@@ -41,6 +41,9 @@ export default function PhysicalApplicationForm() {
     decline_reason: ''
   });
 
+  const bankNameStr = String(appData?.bank_name || appData?.bank?.name || appData?.product_name || appData?.product?.name || '').toLowerCase();
+  const isSbi = bankNameStr.includes('sbi');
+
   useEffect(() => {
     fetchApplicationDetails();
   }, [token]);

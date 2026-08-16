@@ -40,6 +40,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
   const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || application?.app_number || '');
   const [approvedAmount, setApprovedAmount] = useState(application?.approved_amount || application?.loan_amount || '');
 
+  const bankNameStr = String(application?.bank_name || application?.bank?.name || application?.product_name || application?.product?.name || '').toLowerCase();
+  const isSbi = bankNameStr.includes('sbi');
+
   const fetchData = async () => {
     if (!application?.id) return;
     try {
