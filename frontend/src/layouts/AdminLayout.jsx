@@ -78,11 +78,24 @@ const AdminLayout = () => {
   const { C } = useTheme();
   const { t } = useTranslation();
   const logout = useAuthStore((state) => state.logout);
+  const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
   const location = useLocation();
 
   const { activeBanks } = useActiveBanks();
-  const banks = activeBanks.length > 0 ? activeBanks : DEFAULT_BANKS;
+  let banks = activeBanks.length > 0 ? activeBanks : DEFAULT_BANKS;
+
+  const isOpHead = user?.designation === 'Operational Head' || user?.designation === 'OPERATIONAL_HEAD';
+  const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
+  if ((isOpHead || assignedList.length > 0) && assignedList.length > 0) {
+    banks = assignedList.map(b => ({
+      id: b.id,
+      name: b.name || b.bank_name || b.short_code,
+      short_code: b.short_code || b.code || b.name,
+      logo: b.logo_url || b.logo
+    }));
+  }
+
   const [openCcMenu, setOpenCcMenu] = useState(false);
   const [openLoansMenu, setOpenLoansMenu] = useState(false);
   const [openInsuranceMenu, setOpenInsuranceMenu] = useState(false);

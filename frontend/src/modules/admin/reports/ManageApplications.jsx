@@ -34,13 +34,13 @@ export default function ManageApplications() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchApplications = async () => {
-    setLoading(true);
+    if (apps.length === 0) setLoading(true);
     setErr("");
     try {
       const res = await api.get("/applications", {
         params: {
           page,
-          limit: 10,
+          limit: 100,
           search: search || undefined,
           status: status || undefined,
         },

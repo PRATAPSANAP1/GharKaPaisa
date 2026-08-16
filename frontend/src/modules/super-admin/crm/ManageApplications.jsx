@@ -195,16 +195,23 @@ export default function ManageApplications() {
     coverage_amount: ''
   });
 
+  const [totalCount, setTotalCount] = useState(0);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
   const fetchApplications = async () => {
-    setLoading(true);
+    if (applications.length === 0) {
+      setLoading(true);
+    } else {
+      setIsFetchingMore(true);
+    }
     try {
       const res = await api.get('/applications', {
         params: {
           page,
-          limit: 10,
+          limit: 100,
           status: statusFilter || undefined,
           commission_status: commFilter || undefined,
-          Partner_id: partnerFilter || undefined,
+          partner_id: partnerFilter || undefined,
           process_by: processByFilter || undefined,
           operation_head_id: opHeadFilter || undefined,
           search: search.trim() || undefined
@@ -213,11 +220,13 @@ export default function ManageApplications() {
       if (res.data?.success) {
         setApplications(res.data.data || []);
         setTotalPages(res.data.pagination?.pages || 1);
+        setTotalCount(res.data.pagination?.total || (res.data.data ? res.data.data.length : 0));
       }
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+      setIsFetchingMore(false);
     }
   };
 
@@ -609,15 +618,16 @@ export default function ManageApplications() {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: `1px solid ${C.border}`, background: C.bgSecondary }}>
-              <span style={{ fontSize: '13px', color: C.textLight }}>Page {page} of {totalPages}</span>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={S.btn('outline')}>Prev</button>
-                <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={S.btn('outline')}>Next</button>
-              </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: `1px solid ${C.border}`, background: C.bgSecondary, flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ fontSize: '13px', color: C.textLight, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>Showing 100 per batch • Page <strong>{page}</strong> of <strong>{totalPages}</strong> {totalCount ? `(${totalCount} Total Applications)` : ''}</span>
+              {isFetchingMore && <span style={{ fontSize: '11px', color: C.primary, fontWeight: 700 }}>⚡ Updating 100 records...</span>}
             </div>
-          )}
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={S.btn('outline')}>← Prev 100</button>
+              <button disabled={page >= totalPages} onClick={() => setPage(page + 1)} style={{ ...S.btn('primary'), background: C.primary }}>Next 100 →</button>
+            </div>
+          </div>
         </div>
       )}
 

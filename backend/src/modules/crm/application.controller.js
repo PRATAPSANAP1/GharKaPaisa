@@ -981,6 +981,16 @@ const listApplications = async (req, res, next) => {
     const validScope = req.query.scope && req.query.scope.trim() ? req.query.scope.trim() : null;
     const validMemberId = isUuid(member_id) ? member_id : null;
 
+    let opHeadBankFilterSQL = '';
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isOpHeadUser = userDesignation === 'OPERATIONAL HEAD' || userDesignation === 'OPERATIONAL_HEAD';
+    if (!isPartnerOrTeam && req.user?.id) {
+      const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
+      if (isOpHeadUser || abRows.length > 0) {
+        opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR combined.operation_head_id = '${req.user.id}')`;
+      }
+    }
+
     const partnerTeamScopeSQL = `
       WHERE (
         ($11::boolean = false AND ($1::uuid IS NULL OR combined.partner_id IN (
@@ -1129,6 +1139,7 @@ const listApplications = async (req, res, next) => {
           OR ($12::text = 'team' AND NOT (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
         )
         AND ($13::uuid IS NULL OR combined.submitted_by = $13::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $13::uuid OR id = $13::uuid))
+        ${opHeadBankFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
@@ -1197,6 +1208,7 @@ const listApplications = async (req, res, next) => {
           OR ($10::text = 'team' AND NOT (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
         )
         AND ($11::uuid IS NULL OR combined.submitted_by = $11::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $11::uuid OR id = $11::uuid))
+        ${opHeadBankFilterSQL}
     `, countQueryParams);
 
     return paginate(res, rows, parseInt(count), page, limit);

@@ -51,13 +51,80 @@ export default function SuperAdminDashboard() {
     role: 'ADMIN',
     password: '',
     confirmPassword: '',
-    department: 'Operations',
     designation: ''
   });
   
   const [formLoading, setFormLoading] = useState(false);
   const [formErr, setFormErr] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
+
+  // ── Edit Admin State ──
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingAdmin, setEditingAdmin] = useState(null);
+  const [editForm, setEditForm] = useState({
+    id: '',
+    fullName: '',
+    email: '',
+    mobile: '',
+    designation: '',
+    status: 'active',
+    bank_ids: [],
+    password: ''
+  });
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+  const [editBankSearchQuery, setEditBankSearchQuery] = useState('');
+
+  const handleOpenEditAdminModal = (admin) => {
+    const bankIds = admin.bank_ids || admin.assigned_banks?.map(b => b.id || b._id) || [];
+    setEditingAdmin(admin);
+    setEditForm({
+      id: admin._id || admin.id,
+      fullName: admin.fullName || admin.full_name || '',
+      email: admin.email || '',
+      mobile: admin.mobile || '',
+      designation: admin.designation || 'Operation Head',
+      status: admin.status || 'active',
+      bank_ids: bankIds,
+      password: ''
+    });
+    setEditBankSearchQuery('');
+    setShowEditModal(true);
+  };
+
+  const handleEditAdminSubmit = async (e) => {
+    e.preventDefault();
+    if (!editForm.id) return;
+    setSubmittingEdit(true);
+    try {
+      const isOpHead = editForm.designation === 'Operational Head' || editForm.designation === 'OPERATIONAL_HEAD';
+      if (isOpHead && editForm.bank_ids.length === 0) {
+        alert('Please select at least one assigned bank for Operational Head designation');
+        setSubmittingEdit(false);
+        return;
+      }
+      const payload = {
+        fullName: editForm.fullName,
+        email: editForm.email,
+        mobile: editForm.mobile,
+        designation: editForm.designation,
+        status: editForm.status,
+        bank_ids: editForm.bank_ids
+      };
+      if (editForm.password) {
+        payload.password = editForm.password;
+      }
+      const res = await api.put(`/superadmin/admins/${editForm.id}`, payload);
+      if (res.data?.success) {
+        alert('Admin record updated successfully!');
+        setShowEditModal(false);
+        fetchAdmins();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update admin record');
+    } finally {
+      setSubmittingEdit(false);
+    }
+  };
 
   // ── Operation Head Bank Assignment State ──
   const [selectedOpHead, setSelectedOpHead] = useState(null);
@@ -89,13 +156,16 @@ export default function SuperAdminDashboard() {
 
   const handleOpenBankModal = async (admin) => {
     setSelectedOpHead(admin);
+    setAssignedBankIds(admin.bank_ids || admin.assigned_banks?.map(b => b.id) || []);
+    setBankSearchQuery('');
     setBankModalOpen(true);
+
     try {
-      const [banksRes, assignedRes] = await Promise.all([
-        api.get('/banks'),
-        api.get(`/superadmin/admins/${admin.id}/banks`)
-      ]);
-      if (banksRes.data && banksRes.data.data) setAllBanks(banksRes.data.data);
+      const res = await api.get('/banks');
+      if (res.data && res.data.data) {
+        setAllBanks(res.data.data);
+      }
+      const assignedRes = await api.get(`/superadmin/admins/${admin._id || admin.id}/banks`);
       if (assignedRes.data && assignedRes.data.data) {
         setAssignedBankIds(assignedRes.data.data.map(b => b.id || b));
       }
@@ -151,7 +221,7 @@ export default function SuperAdminDashboard() {
     setFormSuccess('');
 
     // Validations
-    if (!form.fullName || !form.email || !form.mobile || !form.role || !form.password || !form.confirmPassword || !form.department || !form.designation) {
+    if (!form.fullName || !form.email || !form.mobile || !form.role || !form.password || !form.confirmPassword || !form.designation) {
       return setFormErr('All fields marked with * are required');
     }
 
@@ -184,7 +254,6 @@ export default function SuperAdminDashboard() {
           role: 'ADMIN',
           password: '',
           confirmPassword: '',
-          department: 'Operations',
           designation: ''
         });
         setSelectedCreateBankIds([]);
@@ -391,7 +460,6 @@ export default function SuperAdminDashboard() {
                     <th style={{ padding: "16px 24px" }}>Administrator</th>
                     <th style={{ padding: "16px 24px" }}>Role & Emp ID</th>
                     <th style={{ padding: "16px 24px" }}>Contact Info</th>
-                    <th style={{ padding: "16px 24px" }}>Department</th>
                     <th style={{ padding: "16px 24px" }}>Assigned Banks</th>
                     <th style={{ padding: "16px 24px" }}>Designation</th>
                     <th style={{ padding: "16px 24px" }}>Status</th>
@@ -432,11 +500,7 @@ export default function SuperAdminDashboard() {
                           <Icons.phone size={14} color="#6B7280" /> {admin.mobile}
                         </div>
                       </td>
-                      <td style={{ padding: "16px 24px" }}>
-                        <span style={{ display: "inline-block", padding: "4px 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 600, background: "#EFF6FF", color: "#2563EB" }}>
-                          {admin.department}
-                        </span>
-                      </td>
+
                       <td style={{ padding: "16px 24px" }}>
                         <button
                           onClick={() => handleOpenBankModal(admin)}
@@ -535,6 +599,34 @@ export default function SuperAdminDashboard() {
                       </td>
                       <td style={{ padding: "16px 24px", textAlign: "center" }}>
                         <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                          <button
+                            onClick={() => handleOpenEditAdminModal(admin)}
+                            style={{
+                              background: "#FFFFFF",
+                              color: "#2563EB",
+                              border: "1px solid #BFDBFE",
+                              width: "32px",
+                              height: "32px",
+                              borderRadius: "8px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              transition: "all 0.2s",
+                              boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)"
+                            }}
+                            title="Edit Admin"
+                            onMouseEnter={e => {
+                              e.currentTarget.style.background = "#EFF6FF";
+                              e.currentTarget.style.borderColor = "#93C5FD";
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.background = "#FFFFFF";
+                              e.currentTarget.style.borderColor = "#BFDBFE";
+                            }}
+                          >
+                            <span style={{ fontSize: "14px" }}>✏️</span>
+                          </button>
                           <button
                             onClick={() => handleToggleBlock(admin._id, admin.status)}
                             style={{
@@ -772,27 +864,7 @@ export default function SuperAdminDashboard() {
                 />
               </div>
 
-              {/* Department */}
-              <div>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Department *</label>
-                <select
-                  name="department"
-                  value={form.department}
-                  onChange={handleChange}
-                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", color: "#111827", outline: "none", transition: "border-color 0.2s", boxSizing: "border-box", background: "#FFFFFF" }}
-                  onFocus={e => e.currentTarget.style.borderColor = "#3B82F6"}
-                  onBlur={e => e.currentTarget.style.borderColor = "#D1D5DB"}
-                  required
-                >
-                  <option value="Operations">Operations</option>
-                  <option value="Sales">Sales</option>
-                  <option value="Credit">Credit</option>
-                  <option value="Collection">Collection</option>
-                  <option value="Support">Support</option>
-                  <option value="Accounts">Accounts</option>
-                  <option value="Marketing">Marketing</option>
-                </select>
-              </div>
+
 
               {/* Designation */}
               <div>
@@ -933,6 +1005,217 @@ export default function SuperAdminDashboard() {
               </button>
             </div>
           </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Admin Modal */}
+      {showEditModal && editingAdmin && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(17, 24, 39, 0.7)", zIndex: 9999,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "20px", backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            background: "#FFFFFF", borderRadius: "16px", padding: "24px",
+            maxWidth: "650px", width: "100%", maxHeight: "90vh", overflowY: "auto",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)"
+          }}>
+            <div style={{ borderBottom: `1px solid #F3F4F6`, paddingBottom: "14px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#111827", margin: 0 }}>✏️ Edit Administrator Details</h3>
+                <p style={{ fontSize: "13px", color: "#6B7280", margin: "2px 0 0 0" }}>Update admin designation, permissions, status and bank assignments</p>
+              </div>
+              <button onClick={() => setShowEditModal(false)} style={{ background: "#F3F4F6", border: "none", color: "#4B5563", cursor: "pointer", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Icons.x size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditAdminSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px" }}>
+                
+                {/* Full Name */}
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Full Name *</label>
+                  <input
+                    type="text"
+                    value={editForm.fullName}
+                    onChange={e => setEditForm({ ...editForm, fullName: e.target.value })}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" }}
+                    required
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Email Address *</label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" }}
+                    required
+                  />
+                </div>
+
+                {/* Mobile */}
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Mobile Number *</label>
+                  <input
+                    type="text"
+                    value={editForm.mobile}
+                    onChange={e => setEditForm({ ...editForm, mobile: e.target.value })}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" }}
+                    required
+                  />
+                </div>
+
+                {/* Designation */}
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Designation *</label>
+                  <select
+                    value={editForm.designation}
+                    onChange={e => setEditForm({ ...editForm, designation: e.target.value })}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" }}
+                    required
+                  >
+                    <option value="Operational Head">Operational Head</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Executive">Executive</option>
+                    <option value="Team Lead">Team Lead</option>
+                    <option value="Super Admin">Super Admin</option>
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>Account Status *</label>
+                  <select
+                    value={editForm.status}
+                    onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" }}
+                    required
+                  >
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                {/* Password (Optional reset) */}
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>New Password (Optional)</label>
+                  <input
+                    type="password"
+                    placeholder="Leave blank to keep unchanged"
+                    value={editForm.password}
+                    onChange={e => setEditForm({ ...editForm, password: e.target.value })}
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+
+                {/* Bank Assignments (If Operational Head) */}
+                {(editForm.designation === 'Operational Head' || editForm.designation === 'OPERATIONAL_HEAD') && (
+                  <div style={{ gridColumn: "span 2", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "4px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                      <div>
+                        <label style={{ fontSize: "14px", fontWeight: 700, color: "#0F172A", display: "block" }}>Assigned Banks *</label>
+                        <span style={{ fontSize: "12px", color: "#64748B" }}>Select banks managed by this Operational Head</span>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          type="button"
+                          onClick={() => setEditForm({ ...editForm, bank_ids: allBanks.map(b => b.id) })}
+                          style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", borderRadius: "6px", cursor: "pointer" }}
+                        >
+                          Select All
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditForm({ ...editForm, bank_ids: [] })}
+                          style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600, background: "#F1F5F9", color: "#64748B", border: "1px solid #CBD5E1", borderRadius: "6px", cursor: "pointer" }}
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Search Banks..."
+                      value={editBankSearchQuery}
+                      onChange={(e) => setEditBankSearchQuery(e.target.value)}
+                      style={{ width: "100%", padding: "8px 12px", border: "1px solid #CBD5E1", borderRadius: "6px", fontSize: "13px", marginBottom: "12px", outline: "none", boxSizing: "border-box" }}
+                    />
+
+                    <div style={{ maxHeight: "180px", overflowY: "auto", display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", paddingRight: "4px" }}>
+                      {allBanks.filter(b => b.name.toLowerCase().includes((editBankSearchQuery || '').toLowerCase()) || (b.short_code || '').toLowerCase().includes((editBankSearchQuery || '').toLowerCase())).map(bank => {
+                        const isChecked = editForm.bank_ids.includes(bank.id);
+                        return (
+                          <div
+                            key={bank.id}
+                            onClick={() => {
+                              if (isChecked) {
+                                setEditForm({ ...editForm, bank_ids: editForm.bank_ids.filter(id => id !== bank.id) });
+                              } else {
+                                setEditForm({ ...editForm, bank_ids: [...editForm.bank_ids, bank.id] });
+                              }
+                            }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "8px 12px",
+                              borderRadius: "8px",
+                              border: `1px solid ${isChecked ? "#2563EB" : "#CBD5E1"}`,
+                              background: isChecked ? "#EFF6FF" : "#FFFFFF",
+                              cursor: "pointer",
+                              transition: "all 0.15s"
+                            }}
+                          >
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              {bank.logo_url ? (
+                                <img src={bank.logo_url} alt={bank.name} style={{ width: "20px", height: "20px", objectFit: "contain" }} />
+                              ) : (
+                                <div style={{ width: "20px", height: "20px", background: "#DBEAFE", borderRadius: "4px", fontSize: "10px", fontWeight: 800, color: "#1E40AF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                  {bank.short_code?.substring(0, 2) || 'BK'}
+                                </div>
+                              )}
+                              <span style={{ fontSize: "13px", fontWeight: 600, color: "#1E293B" }}>{bank.name}</span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {}}
+                              style={{ cursor: "pointer" }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "16px", borderTop: `1px solid #F3F4F6`, paddingTop: "20px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  style={{ background: "#FFFFFF", border: "1px solid #D1D5DB", color: "#374151", padding: "10px 20px", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEdit}
+                  style={{ background: "#2563EB", border: "none", color: "#FFFFFF", padding: "10px 20px", borderRadius: "8px", fontSize: "14px", fontWeight: 600, cursor: submittingEdit ? "not-allowed" : "pointer", opacity: submittingEdit ? 0.7 : 1 }}
+                >
+                  {submittingEdit ? 'Saving Changes...' : 'Save Admin Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -89,7 +89,7 @@ export default function AdminDashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       
       {/* Top Banner Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, background: isDark ? 'linear-gradient(135deg, #111c35 0%, #0d1428 100%)' : '#ffffff', border: `1px solid ${border}`, borderRadius: 24, padding: "22px 26px", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, background: isDark ? 'linear-gradient(135deg, #111c35 0%, #0d1428 100%)' : '#ffffff', border: `1px solid ${border}`, borderRadius: 20, padding: "18px 20px", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
             <span>⚡ Operational Intelligence Desk</span>
@@ -107,7 +107,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Grid Cards Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px" }}>
         {statCards.map((card, idx) => (
           <div key={idx} style={{ 
             background: cardBg, 
@@ -138,10 +138,10 @@ export default function AdminDashboard() {
       </div>
 
       {/* Chart Section: Application Volume Trends */}
-      <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "24px", padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.04)" }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 900, color: textPrimary, margin: 0, display: "flex", alignItems: "center", gap: "10px" }}>
-            <BarChart3 size={20} color="#3b82f6" /> Application Volume Trends (12-Month Performance)
+      <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: 20, padding: "16px", boxShadow: "0 10px 30px rgba(0,0,0,0.04)", overflowX: "auto" }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+          <h3 style={{ fontSize: "14px", fontWeight: 900, color: textPrimary, margin: 0, display: "flex", alignItems: "center", gap: "10px" }}>
+            <BarChart3 size={18} color="#3b82f6" /> Application Trends (12M)
           </h3>
           <span style={{ fontSize: 11, fontWeight: 800, color: '#3b82f6', background: '#3b82f615', padding: '4px 10px', borderRadius: 20 }}>
             Live Sync
@@ -178,7 +178,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tables Breakdown Section */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
         
         {/* Top Performing Partners Table */}
         <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "24px", padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.04)" }}>

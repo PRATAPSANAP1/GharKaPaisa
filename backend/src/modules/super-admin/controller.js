@@ -18,11 +18,12 @@ const createAdmin = async (req, res, next) => {
     } = req.body;
 
     role = role || 'ADMIN';
+    department = department || 'Operations';
 
     console.log("CREATE ADMIN REQUEST:", req.body);
     console.log("ROLE:", role);
 
-    if (!fullName || !email || !mobile || !password || !confirmPassword || !department || !designation) {
+    if (!fullName || !email || !mobile || !password || !confirmPassword || !designation) {
       console.log("FAILED: Missing required fields");
       return error(res, 'All required fields must be provided', 400);
     }
@@ -36,11 +37,6 @@ const createAdmin = async (req, res, next) => {
     if (password !== confirmPassword) {
       console.log("FAILED: Password mismatch");
       return error(res, 'Passwords do not match', 400);
-    }
-
-    const validDepartments = ['Operations', 'Sales', 'Credit', 'Collection', 'Support', 'Accounts', 'Marketing'];
-    if (!validDepartments.includes(department)) {
-      return error(res, `Invalid department. Must be one of: ${validDepartments.join(', ')}`, 400);
     }
 
     const formattedMobile = sanitizeMobile(mobile);
