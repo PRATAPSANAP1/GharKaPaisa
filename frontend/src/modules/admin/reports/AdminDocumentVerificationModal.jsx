@@ -72,39 +72,50 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
       else if (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('rejected')) backendStatus = 'rejected';
       else if (finalStatus.toLowerCase().includes('process')) backendStatus = 'under_review';
 
-      const res = await axios.put(
-        `${API_BASE}/applications/${application.id}/bank-status`,
-        {
-          status: backendStatus,
-          bank_ref_number: bankRefNumber || appNumber || undefined,
-          approved_amount: approvedAmount ? Number(approvedAmount) : undefined,
-          rejection_reason: declineReason || undefined,
-          appcode_status: appcodeStatus,
-          soft_approval_status: softApprovalStatus,
-          vkyc_stage: vkycStage,
-          iqa_stage: iqaStage,
-          dispatch_status: dispatchStatus,
-          bank_remark: bankRemark,
-          final_status: finalStatus,
-          decline_reason: declineReason,
-          eligible_reqd: eligibleReQd,
-          // Form 1 Details
-          customer_mobile: customerMobile,
-          customer_name: customerName,
-          dob: dob,
-          customer_email: customerEmail,
-          pan_number: panNumber,
-          company_name: companyName,
-          designation: designation,
-          address: address,
-          company_address: companyAddress,
-          mother_name: motherName,
-          vkyc_url: vkycUrl
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const payload = {
+        status: backendStatus,
+        bank_ref_number: bankRefNumber || appNumber || undefined,
+        approved_amount: approvedAmount ? Number(approvedAmount) : undefined,
+        rejection_reason: declineReason || undefined,
+        appcode_status: appcodeStatus,
+        soft_approval_status: softApprovalStatus,
+        vkyc_stage: vkycStage,
+        iqa_stage: iqaStage,
+        dispatch_status: dispatchStatus,
+        bank_remark: bankRemark,
+        final_status: finalStatus,
+        decline_reason: declineReason,
+        eligible_reqd: eligibleReQd,
+        // Form 1 Details
+        customer_mobile: customerMobile,
+        customer_name: customerName,
+        dob: dob,
+        customer_email: customerEmail,
+        pan_number: panNumber,
+        company_name: companyName,
+        designation: designation,
+        address: address,
+        company_address: companyAddress,
+        mother_name: motherName,
+        vkyc_url: vkycUrl
+      };
 
-      if (res.data.success) {
+      let res;
+      try {
+        res = await axios.put(`${API_BASE}/applications/${application.id}/bank-status`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      } catch (putErr) {
+        if (putErr.response?.status === 405) {
+          try {
+            res = await axios.patch(`${API_BASE}/applications/${application.id}/bank-status`, payload, { headers: { Authorization: `Bearer ${token}` } });
+          } catch (patchErr) {
+            res = await axios.post(`${API_BASE}/applications/${application.id}/bank-status`, payload, { headers: { Authorization: `Bearer ${token}` } });
+          }
+        } else {
+          throw putErr;
+        }
+      }
+
+      if (res.data?.success) {
         alert(`Application details & Form status saved successfully to database!`);
         fetchData();
         if (onRefresh) onRefresh();

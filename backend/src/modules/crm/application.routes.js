@@ -40,15 +40,11 @@ router.patch('/bulk-status', requireApprovedPartnerOrAdmin, appCtrl.bulkUpdateSt
 router.post('/import', requireApprovedPartnerOrAdmin, upload.single('file'), appCtrl.importApplications);
 router.get('/export/csv', requireApprovedPartnerOrAdmin, appCtrl.exportApplicationsCSV);
 
-// Basic CRUD
-router.get('/', requireApprovedPartnerOrAdmin, appCtrl.listApplications);
-router.get('/:id', requireApprovedPartnerOrAdmin, appCtrl.getApplication);
-router.post('/', requireApprovedPartner, applicationRules, validate, appCtrl.submitApplication);
-router.put('/:id', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);
-router.patch('/:id', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);
-router.delete('/:id', requireApprovedPartnerOrAdmin, appCtrl.deleteApplication);
+// Sub-resource & lifecycle endpoints (MUST be defined before generic /:id)
+router.put('/:id/bank-status', requireApprovedPartnerOrAdmin, appCtrl.updateBankProcessingStatus);
+router.patch('/:id/bank-status', requireApprovedPartnerOrAdmin, appCtrl.updateBankProcessingStatus);
+router.post('/:id/bank-status', requireApprovedPartnerOrAdmin, appCtrl.updateBankProcessingStatus);
 
-// Lifecycle states (support both PUT and PATCH for FE compatibility)
 router.put('/:id/status', requireApprovedPartnerOrAdmin, appCtrl.updateStatus);
 router.patch('/:id/status', requireApprovedPartnerOrAdmin, appCtrl.updateStatus);
 router.patch('/:id/process-type', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.updateProcessType);
@@ -77,7 +73,13 @@ router.post('/:id/assign', requireApprovedPartnerOrAdmin, appCtrl.reassignApplic
 router.post('/:id/reassign', requireApprovedPartnerOrAdmin, appCtrl.reassignApplication);
 router.put('/:id/documents/:docId/verify', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.verifyDocument);
 router.put('/:id/verification-complete', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.markVerificationComplete);
-router.put('/:id/bank-status', requireApprovedPartnerOrAdmin, appCtrl.updateBankProcessingStatus);
-router.patch('/:id/bank-status', requireApprovedPartnerOrAdmin, appCtrl.updateBankProcessingStatus);
+
+// Basic CRUD (generic /:id defined after all sub-resources)
+router.get('/', requireApprovedPartnerOrAdmin, appCtrl.listApplications);
+router.get('/:id', requireApprovedPartnerOrAdmin, appCtrl.getApplication);
+router.post('/', requireApprovedPartner, applicationRules, validate, appCtrl.submitApplication);
+router.put('/:id', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);
+router.patch('/:id', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);
+router.delete('/:id', requireApprovedPartnerOrAdmin, appCtrl.deleteApplication);
 
 module.exports = router;

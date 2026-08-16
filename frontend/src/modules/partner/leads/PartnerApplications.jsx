@@ -622,12 +622,11 @@ export default function PartnerApplications() {
         transition: 'opacity 0.4s ease, transform 0.4s ease'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 46, height: 46, borderRadius: 16, background: `${accent}15`, border: `1px solid ${accent}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FileText size={22} color={accent} />
+          <div style={{ width: 40, height: 40, borderRadius: 14, background: `${accent}15`, border: `1px solid ${accent}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <FileText size={20} color={accent} />
           </div>
           <div>
-            <h1 style={{ fontSize: 'clamp(16px, 3vw, 22px)', fontWeight: 900, color: textPrimary, margin: 0 }}>Applications & Leads</h1>
-            <p style={{ fontSize: 12, color: textMuted, margin: '2px 0 0' }}>Track customer submissions, verification status, and commission payouts</p>
+            <h1 style={{ fontSize: 'clamp(15px, 2.5vw, 18px)', fontWeight: 900, color: textPrimary, margin: 0 }}>My Applications</h1>
           </div>
         </div>
 
@@ -637,12 +636,6 @@ export default function PartnerApplications() {
             <button onClick={() => { setAssignTargetApp(null); setShowAssignModal(true); }}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', boxShadow: `0 4px 14px ${accent}30` }}>
               <UserPlus size={14} /> Bulk Assign ({selectedAppIds.length})
-            </button>
-          )}
-          {!isTeamMember && (
-            <button onClick={() => setShowImportModal(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#f8faff', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-              <Upload size={14} /> Import CSV
             </button>
           )}
           <button onClick={handleExportCSV}
