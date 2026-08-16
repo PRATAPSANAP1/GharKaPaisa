@@ -7,7 +7,7 @@ import { useActiveBanks } from '../contexts/BanksContext';
 import { Icons } from '../components/Icon/PartnerIcons';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 import api from '../services/api';
-import { MdExpandMore, MdChevronRight, MdAccountBalance, MdShoppingBag, MdSettings } from 'react-icons/md';
+import { MdExpandMore, MdChevronRight, MdAccountBalance, MdShoppingBag, MdSettings, MdMenu, MdClose } from 'react-icons/md';
 
 const DEFAULT_BANKS = [
   { id: 'hdfc', name: 'HDFC Bank', short_code: 'HDFC' },
@@ -45,6 +45,35 @@ const INSURANCE_TYPES = [
   { slug: 'general-insurance', title: 'General Insurance' }
 ];
 
+// Reusable active link style
+const navLinkStyle = ({ isActive }) => ({
+  display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
+  fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
+  background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
+  borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
+});
+
+// Reusable submenu parent button style
+const menuBtnStyle = (isOpen) => ({
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+  padding: '10px 14px', borderRadius: '12px', fontSize: '13.5px', fontWeight: 800,
+  color: isOpen ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)', background: isOpen ? 'rgba(59,130,246,0.08)' : 'transparent',
+  border: 'none', cursor: 'pointer', outline: 'none', transition: 'all 0.2s ease',
+  borderLeft: isOpen ? '3px solid #3b82f6' : '3px solid transparent'
+});
+
+const subLinkStyle = ({ isActive }) => ({
+  display: 'block',
+  padding: '7px 12px',
+  borderRadius: '8px',
+  fontSize: '12.5px',
+  fontWeight: 700,
+  color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.6)',
+  background: isActive ? 'rgba(59,130,246,0.15)' : 'transparent',
+  textDecoration: 'none',
+  transition: 'all 0.15s ease'
+});
+
 const AdminLayout = () => {
   const { C } = useTheme();
   const { t } = useTranslation();
@@ -55,19 +84,220 @@ const AdminLayout = () => {
   const { activeBanks } = useActiveBanks();
   const banks = activeBanks.length > 0 ? activeBanks : DEFAULT_BANKS;
   const [openCcMenu, setOpenCcMenu] = useState(false);
-  const [openBankSlug, setOpenBankSlug] = useState(null);
   const [openLoansMenu, setOpenLoansMenu] = useState(false);
   const [openInsuranceMenu, setOpenInsuranceMenu] = useState(false);
   const [openProductsMenu, setOpenProductsMenu] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
     navigate('/admin-login');
   };
 
+  // Sidebar Navigation Content (shared between desktop and mobile)
+  const SidebarContent = () => (
+    <>
+      {/* Sidebar Header / Logo */}
+      <div style={{ padding: '20px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 20 }}>⚡</span>
+        <div>
+          <h2 id="admin-sidebar-title" style={{ fontSize: '17px', fontWeight: 900, margin: 0, background: 'linear-gradient(90deg, #60a5fa, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            {t('adminLayout.title', 'GharKaPaisa')}
+          </h2>
+          <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Admin Operations Portal
+          </span>
+        </div>
+      </div>
+
+      <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+        
+        {/* Dashboard */}
+        <NavLink to="/admin/dashboard" style={navLinkStyle}>
+          <Icons.dashboard size={18} />
+          <span>📊 Dashboard</span>
+        </NavLink>
+
+        {/* User Management */}
+        <NavLink to="/admin/partners" style={navLinkStyle}>
+          <Icons.profile size={18} />
+          <span>👥 User Management</span>
+        </NavLink>
+
+        {/* 💳 CREDIT CARDS — Only Assign Banks */}
+        <div>
+          <button onClick={() => setOpenCcMenu(!openCcMenu)} style={menuBtnStyle(openCcMenu)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Icons.creditCard size={18} />
+              <span>💳 Credit Cards</span>
+            </div>
+            {openCcMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
+          </button>
+
+          {openCcMenu && (
+            <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+              {banks.map((bank) => {
+                const slug = (bank.short_code || bank.name).toLowerCase().replace(/[^a-z0-9]/g, '');
+                return (
+                  <NavLink key={bank.id} to={`/admin/credit-cards/${slug}/applications`} style={subLinkStyle}>
+                    {bank.name}
+                  </NavLink>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 🏦 LOANS — Only Assign Banks */}
+        <div>
+          <button onClick={() => setOpenLoansMenu(!openLoansMenu)} style={menuBtnStyle(openLoansMenu)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Icons.wallet size={18} />
+              <span>🏦 Loans</span>
+            </div>
+            {openLoansMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
+          </button>
+
+          {openLoansMenu && (
+            <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+              {banks.map((bank) => {
+                const slug = (bank.short_code || bank.name).toLowerCase().replace(/[^a-z0-9]/g, '');
+                return (
+                  <NavLink key={bank.id} to={`/admin/loans/${slug}`} style={subLinkStyle}>
+                    {bank.name}
+                  </NavLink>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 🛡 INSURANCE — Only Assign Banks */}
+        <div>
+          <button onClick={() => setOpenInsuranceMenu(!openInsuranceMenu)} style={menuBtnStyle(openInsuranceMenu)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Icons.trending size={18} />
+              <span>🛡 Insurance</span>
+            </div>
+            {openInsuranceMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
+          </button>
+
+          {openInsuranceMenu && (
+            <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+              {banks.map((bank) => {
+                const slug = (bank.short_code || bank.name).toLowerCase().replace(/[^a-z0-9]/g, '');
+                return (
+                  <NavLink key={bank.id} to={`/admin/insurance/${slug}`} style={subLinkStyle}>
+                    {bank.name}
+                  </NavLink>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 📋 Applications */}
+        <NavLink to="/admin/applications" style={navLinkStyle}>
+          <Icons.creditCard size={18} />
+          <span>📋 Applications</span>
+        </NavLink>
+
+        {/* 👥 Customers */}
+        <NavLink to="/admin/leads" style={navLinkStyle}>
+          <Icons.trending size={18} />
+          <span>👥 Customers</span>
+        </NavLink>
+
+        <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
+
+        {/* 🏦 BANKS MANAGEMENT */}
+        <NavLink to="/admin/banks" style={navLinkStyle}>
+          <MdAccountBalance size={18} />
+          <span>🏦 Banks</span>
+        </NavLink>
+
+        {/* 📦 PRODUCTS MANAGEMENT */}
+        <div>
+          <button onClick={() => setOpenProductsMenu(!openProductsMenu)} style={menuBtnStyle(openProductsMenu)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <MdShoppingBag size={18} />
+              <span>📦 Products</span>
+            </div>
+            {openProductsMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
+          </button>
+
+          {openProductsMenu && (
+            <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+              <NavLink to="/admin/products/credit_card" style={subLinkStyle}>Credit Cards</NavLink>
+              <NavLink to="/admin/products/loans" style={subLinkStyle}>Loans</NavLink>
+              <NavLink to="/admin/products/insurance" style={subLinkStyle}>Insurance</NavLink>
+              <NavLink to="/admin/products/savings_account" style={subLinkStyle}>Savings Account</NavLink>
+              <NavLink to="/admin/products/current_account" style={subLinkStyle}>Current Account</NavLink>
+              <NavLink to="/admin/products/fixed_deposit" style={subLinkStyle}>Fixed Deposit</NavLink>
+              <NavLink to="/admin/products/demat_account" style={subLinkStyle}>DEMAT</NavLink>
+              <NavLink to="/admin/products/upi_credit" style={subLinkStyle}>UPI Credit</NavLink>
+              <NavLink to="/admin/products/fastag" style={subLinkStyle}>FASTag</NavLink>
+              <NavLink to="/admin/products/recharge" style={subLinkStyle}>Recharge & Bills</NavLink>
+              <NavLink to="/admin/products/other" style={subLinkStyle}>Other Products</NavLink>
+            </div>
+          )}
+        </div>
+
+        <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
+
+        {/* 💰 Wallet & Withdrawals */}
+        <NavLink to="/admin/withdrawals" style={navLinkStyle}>
+          <Icons.wallet size={18} />
+          <span>💰 Wallet & Payouts</span>
+        </NavLink>
+
+        {/* 💵 Commissions */}
+        <NavLink to="/admin/commissions" style={navLinkStyle}>
+          <Icons.trending size={18} />
+          <span>💵 Commissions</span>
+        </NavLink>
+
+        {/* 📈 Reports & Analytics */}
+        <NavLink to="/admin/reports" style={navLinkStyle}>
+          <Icons.dashboard size={18} />
+          <span>📈 Reports</span>
+        </NavLink>
+
+        {/* ⚙ Settings */}
+        <NavLink to="/admin/sections" style={navLinkStyle}>
+          <MdSettings size={18} />
+          <span>⚙ Settings</span>
+        </NavLink>
+
+        <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <button
+            id="admin-sidebar-logout-button"
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
+              fontSize: '13.5px', fontWeight: 800, color: '#EF4444',
+              background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)',
+              cursor: 'pointer', transition: 'all 0.2s ease'
+            }}
+          >
+            <Icons.logout size={18} />
+            <span>Log Out</span>
+          </button>
+        </div>
+      </nav>
+    </>
+  );
+
   return (
     <div style={{ display: 'flex', height: '100vh', background: C.bg, overflow: 'hidden' }}>
-      {/* Sidebar - Desktop */}
+      
+      {/* ── Desktop Sidebar ── */}
       <aside style={{
         width: '270px',
         background: C.sidebar,
@@ -78,336 +308,82 @@ const AdminLayout = () => {
         flexShrink: 0,
         overflowY: 'auto'
       }} className="hidden md:flex">
-        <div style={{ padding: '20px 20px', borderBottom: `1px solid rgba(255,255,255,0.1)`, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 20 }}>⚡</span>
-          <div>
-            <h2 id="admin-sidebar-title" style={{ fontSize: '17px', fontWeight: 900, margin: 0, background: 'linear-gradient(90deg, #60a5fa, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              {t('adminLayout.title', 'GharKaPaisa')}
-            </h2>
-            <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Admin Operations Portal
-            </span>
-          </div>
-        </div>
-
-        <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-          
-          {/* Dashboard */}
-          <NavLink
-            to="/admin/dashboard"
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
-              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
-              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
-              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
-            })}
-          >
-            <Icons.dashboard size={18} />
-            <span>📊 Dashboard</span>
-          </NavLink>
-
-          {/* User Management */}
-          <NavLink
-            to="/admin/partners"
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
-              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
-              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
-              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
-            })}
-          >
-            <Icons.profile size={18} />
-            <span>👥 User Management</span>
-          </NavLink>
-
-          {/* 💳 CREDIT CARDS (Dynamic Bank Submenu) */}
-          <div>
-            <button
-              onClick={() => setOpenCcMenu(!openCcMenu)}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
-                padding: '10px 14px', borderRadius: '10px', fontSize: '13.5px', fontWeight: 700,
-                color: openCcMenu ? '#fff' : 'rgba(255, 255, 255, 0.7)', background: 'transparent',
-                border: 'none', cursor: 'pointer', outline: 'none'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Icons.creditCard size={18} />
-                <span>💳 Credit Cards</span>
-              </div>
-              {openCcMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
-            </button>
-
-            {openCcMenu && (
-              <div style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-                {banks.map((bank) => {
-                  const slug = (bank.short_code || bank.name).toLowerCase().replace(/[^a-z0-9]/g, '');
-                  const isBankOpen = openBankSlug === slug;
-
-                  return (
-                    <div key={bank.id}>
-                      <button
-                        onClick={() => setOpenBankSlug(isBankOpen ? null : slug)}
-                        style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
-                          padding: '8px 12px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
-                          color: isBankOpen ? '#FFF' : 'rgba(255,255,255,0.65)', background: 'transparent',
-                          border: 'none', cursor: 'pointer', outline: 'none'
-                        }}
-                      >
-                        <span>{bank.name}</span>
-                        {isBankOpen ? <MdExpandMore size={16} /> : <MdChevronRight size={16} />}
-                      </button>
-
-                      {isBankOpen && (
-                        <div style={{ paddingLeft: '14px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
-                          <NavLink to={`/admin/credit-cards/${slug}/add`} style={subLinkStyle}>Add {bank.short_code || 'Card'}</NavLink>
-                          <NavLink to={`/admin/credit-cards/${slug}/list`} style={subLinkStyle}>Card List</NavLink>
-                          <NavLink to={`/admin/credit-cards/${slug}/applications`} style={subLinkStyle}>Applications</NavLink>
-                          <NavLink to={`/admin/credit-cards/${slug}/reports`} style={subLinkStyle}>Reports</NavLink>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 🏦 LOANS */}
-          <div>
-            <button
-              onClick={() => setOpenLoansMenu(!openLoansMenu)}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
-                padding: '10px 14px', borderRadius: '10px', fontSize: '13.5px', fontWeight: 700,
-                color: openLoansMenu ? '#fff' : 'rgba(255, 255, 255, 0.7)', background: 'transparent',
-                border: 'none', cursor: 'pointer', outline: 'none'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Icons.wallet size={18} />
-                <span>🏦 Loans</span>
-              </div>
-              {openLoansMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
-            </button>
-
-            {openLoansMenu && (
-              <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-                {LOAN_TYPES.map(loan => (
-                  <NavLink key={loan.slug} to={`/admin/loans/${loan.slug}/list`} style={subLinkStyle}>
-                    {loan.title}
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 🛡 INSURANCE */}
-          <div>
-            <button
-              onClick={() => setOpenInsuranceMenu(!openInsuranceMenu)}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
-                padding: '10px 14px', borderRadius: '10px', fontSize: '13.5px', fontWeight: 700,
-                color: openInsuranceMenu ? '#fff' : 'rgba(255, 255, 255, 0.7)', background: 'transparent',
-                border: 'none', cursor: 'pointer', outline: 'none'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Icons.trending size={18} />
-                <span>🛡 Insurance</span>
-              </div>
-              {openInsuranceMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
-            </button>
-
-            {openInsuranceMenu && (
-              <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-                {INSURANCE_TYPES.map(ins => (
-                  <NavLink key={ins.slug} to={`/admin/insurance/${ins.slug}/list`} style={subLinkStyle}>
-                    {ins.title}
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 📋 Applications */}
-          <NavLink
-            to="/admin/applications"
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px',
-              fontSize: '13.5px', fontWeight: 700, color: isActive ? '#fff' : 'rgba(255, 255, 255, 0.7)',
-              background: isActive ? `${C.teal}35` : 'transparent', textDecoration: 'none'
-            })}
-          >
-            <Icons.creditCard size={18} />
-            <span>📋 Applications</span>
-          </NavLink>
-
-          {/* 👥 Customers */}
-          <NavLink
-            to="/admin/leads"
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px',
-              fontSize: '13.5px', fontWeight: 700, color: isActive ? '#fff' : 'rgba(255, 255, 255, 0.7)',
-              background: isActive ? `${C.teal}35` : 'transparent', textDecoration: 'none'
-            })}
-          >
-            <Icons.trending size={18} />
-            <span>👥 Customers</span>
-          </NavLink>
-
-          <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
-
-          {/* 🏦 BANKS MANAGEMENT */}
-          <NavLink
-            to="/admin/banks"
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px',
-              fontSize: '13.5px', fontWeight: 700, color: isActive ? '#fff' : 'rgba(255, 255, 255, 0.7)',
-              background: isActive ? `${C.teal}35` : 'transparent', textDecoration: 'none'
-            })}
-          >
-            <MdAccountBalance size={18} />
-            <span>🏦 Banks</span>
-          </NavLink>
-
-          {/* 📦 PRODUCTS MANAGEMENT */}
-          <div>
-            <button
-              onClick={() => setOpenProductsMenu(!openProductsMenu)}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
-                padding: '10px 14px', borderRadius: '10px', fontSize: '13.5px', fontWeight: 700,
-                color: openProductsMenu ? '#fff' : 'rgba(255, 255, 255, 0.7)', background: 'transparent',
-                border: 'none', cursor: 'pointer', outline: 'none'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <MdShoppingBag size={18} />
-                <span>📦 Products</span>
-              </div>
-              {openProductsMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
-            </button>
-
-            {openProductsMenu && (
-              <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-                <NavLink to="/admin/products/credit_card" style={subLinkStyle}>Credit Cards</NavLink>
-                <NavLink to="/admin/products/loans" style={subLinkStyle}>Loans</NavLink>
-                <NavLink to="/admin/products/insurance" style={subLinkStyle}>Insurance</NavLink>
-                <NavLink to="/admin/products/savings_account" style={subLinkStyle}>Savings Account</NavLink>
-                <NavLink to="/admin/products/current_account" style={subLinkStyle}>Current Account</NavLink>
-                <NavLink to="/admin/products/fixed_deposit" style={subLinkStyle}>Fixed Deposit</NavLink>
-                <NavLink to="/admin/products/demat_account" style={subLinkStyle}>DEMAT</NavLink>
-                <NavLink to="/admin/products/upi_credit" style={subLinkStyle}>UPI Credit</NavLink>
-                <NavLink to="/admin/products/fastag" style={subLinkStyle}>FASTag</NavLink>
-                <NavLink to="/admin/products/recharge" style={subLinkStyle}>Recharge & Bills</NavLink>
-                <NavLink to="/admin/products/other" style={subLinkStyle}>Other Products</NavLink>
-              </div>
-            )}
-          </div>
-
-          <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
-
-          {/* 💰 Wallet & Withdrawals */}
-          <NavLink
-            to="/admin/withdrawals"
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
-              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
-              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
-              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
-            })}
-          >
-            <Icons.wallet size={18} />
-            <span>💰 Wallet & Payouts</span>
-          </NavLink>
-
-          {/* 💵 Commissions */}
-          <NavLink
-            to="/admin/commissions"
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
-              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
-              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
-              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
-            })}
-          >
-            <Icons.trending size={18} />
-            <span>💵 Commissions</span>
-          </NavLink>
-
-          {/* 📈 Reports & Analytics */}
-          <NavLink
-            to="/admin/reports"
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
-              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
-              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
-              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
-            })}
-          >
-            <Icons.dashboard size={18} />
-            <span>📈 Reports</span>
-          </NavLink>
-
-          {/* ⚙ Settings */}
-          <NavLink
-            to="/admin/sections"
-            style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
-              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
-              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
-              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
-            })}
-          >
-            <MdSettings size={18} />
-            <span>⚙ Settings</span>
-          </NavLink>
-
-          <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-            <button
-              id="admin-sidebar-logout-button"
-              onClick={handleLogout}
-              style={{
-                width: '100%',
-                display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px',
-                fontSize: '13.5px', fontWeight: 700, color: '#EF4444',
-                background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)',
-                cursor: 'pointer', transition: 'all 0.2s ease'
-              }}
-            >
-              <Icons.logout size={18} />
-              <span>Log Out</span>
-            </button>
-          </div>
-        </nav>
+        <SidebarContent />
       </aside>
 
-      {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* ── Mobile Sidebar Overlay ── */}
+      {mobileMenuOpen && (
+        <div
+          onClick={() => setMobileMenuOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 998,
+            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)'
+          }}
+          className="md:hidden"
+        />
+      )}
+
+      {/* ── Mobile Sidebar Drawer ── */}
+      <aside
+        style={{
+          position: 'fixed', top: 0, left: 0, bottom: 0,
+          width: '280px', maxWidth: '85vw',
+          background: C.sidebar,
+          color: C.sidebarText,
+          zIndex: 999,
+          display: 'flex',
+          flexDirection: 'column',
+          overflowY: 'auto',
+          transform: mobileMenuOpen ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          boxShadow: mobileMenuOpen ? '8px 0 30px rgba(0,0,0,0.3)' : 'none'
+        }}
+        className="md:hidden"
+      >
+        {/* Close button */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 16px 0' }}>
+          <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', borderRadius: '8px', padding: '6px', cursor: 'pointer' }}>
+            <MdClose size={22} />
+          </button>
+        </div>
+        <SidebarContent />
+      </aside>
+
+      {/* ── Main Content Area ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
         {/* Header */}
         <header style={{
           background: C.card,
           borderBottom: `1px solid ${C.border}`,
-          padding: '16px 24px',
+          padding: '12px 16px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
+          flexShrink: 0
         }}>
-          <h2 id="admin-header-title-mobile" style={{ fontSize: '16px', fontWeight: 800, color: C.text }} className="md:hidden">
-            {t('adminLayout.titleMobile', 'GKP Admin')}
-          </h2>
-          <div className="hidden md:block"></div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden"
+              style={{ background: 'transparent', border: 'none', color: C.text, cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+            >
+              <MdMenu size={24} />
+            </button>
+            <h2 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }} className="md:hidden">
+              {t('adminLayout.titleMobile', 'GKP Admin')}
+            </h2>
+            <div className="hidden md:block" />
+          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <ThemeToggle />
             <LanguageSwitcher />
             <button
               id="admin-logout-button"
               onClick={handleLogout}
+              className="hidden md:flex"
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px', background: `${C.red}10`,
                 color: C.red, border: 'none', borderRadius: '8px', padding: '8px 16px',
@@ -420,7 +396,7 @@ const AdminLayout = () => {
         </header>
 
         {/* Dynamic Inner Page Content */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: '24px', boxSizing: 'border-box' }}>
+        <main style={{ flex: 1, overflowY: 'auto', padding: '16px', boxSizing: 'border-box' }}>
           <Outlet />
         </main>
       </div>
@@ -428,16 +404,4 @@ const AdminLayout = () => {
   );
 };
 
-const subLinkStyle = ({ isActive }) => ({
-  display: 'block',
-  padding: '6px 10px',
-  borderRadius: '6px',
-  fontSize: '12px',
-  fontWeight: 600,
-  color: isActive ? '#fff' : 'rgba(255, 255, 255, 0.6)',
-  background: isActive ? 'rgba(255, 255, 255, 0.15)' : 'transparent',
-  textDecoration: 'none'
-});
-
 export default AdminLayout;
-

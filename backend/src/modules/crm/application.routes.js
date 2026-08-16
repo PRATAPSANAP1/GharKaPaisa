@@ -72,6 +72,7 @@ router.post('/:id/documents', requireApprovedPartnerOrAdmin, upload.single('docu
 // Customer Document Workflow
 router.post('/partner-apply', requireApprovedPartnerOrAdmin, appCtrl.submitPartnerApplication);
 router.post('/:id/send-link', requireApprovedPartnerOrAdmin, appCtrl.sendUploadLink);
+router.all('/:id/send-link', requireApprovedPartnerOrAdmin, appCtrl.sendUploadLink);
 router.post('/:id/assign', requireApprovedPartnerOrAdmin, appCtrl.reassignApplication);
 router.post('/:id/reassign', requireApprovedPartnerOrAdmin, appCtrl.reassignApplication);
 router.put('/:id/documents/:docId/verify', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.verifyDocument);

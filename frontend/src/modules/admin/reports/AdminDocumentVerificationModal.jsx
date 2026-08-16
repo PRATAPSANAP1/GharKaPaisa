@@ -159,9 +159,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
       <div style={{ background: '#ffffff', width: '100%', maxWidth: '960px', maxHeight: '90vh', borderRadius: '20px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
         
         {/* Modal Header */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
                 Application #{application.app_number}
               </h3>
@@ -169,12 +169,12 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                 {application.status ? application.status.replace(/_/g, ' ').toUpperCase() : 'PENDING'}
               </span>
             </div>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0' }}>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
               Customer: <strong>{application.customer_name}</strong> | Mobile: {application.customer_mobile || application.mobile} | Product: {application.product_name}
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <button
               onClick={handleSendLink}
               disabled={sendLinkLoading}
