@@ -11,9 +11,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [sendLinkLoading, setSendLinkLoading] = useState(false);
-  const [linkCopied, setLinkCopied] = useState(false);
-  const [generatedLink, setGeneratedLink] = useState('');
 
   // Bank status update state
   const [bankStatus, setBankStatus] = useState(application?.status || 'under_review');
@@ -43,29 +40,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
     fetchData();
   }, [application?.id]);
 
-  const handleSendLink = async () => {
-    try {
-      setSendLinkLoading(true);
-      const token = localStorage.getItem('token');
-      const res = await axios.post(
-        `${API_BASE}/applications/${application.id}/send-link`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (res.data.success) {
-        setGeneratedLink(res.data.data.uploadUrl);
-        alert(`Application reference link sent to customer!\nLink: ${res.data.data.uploadUrl}`);
-        fetchData();
-        if (onRefresh) onRefresh();
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to send application link');
-    } finally {
-      setSendLinkLoading(false);
-    }
-  };
-
   const handleUpdateBankStatus = async () => {
     try {
       setActionLoading(true);
@@ -74,9 +48,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
         `${API_BASE}/applications/${application.id}/bank-status`,
         {
           status: bankStatus,
-          bank_ref_number: bankRefNumber,
-          approved_amount: approvedAmount,
-          rejection_reason: bankRejectReason
+          bank_ref_number: bankRefNumber || undefined,
+          approved_amount: approvedAmount ? Number(approvedAmount) : undefined,
+          rejection_reason: bankRejectReason || undefined
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -111,7 +85,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
               </span>
             </div>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
-              Customer: <strong>{application.customer_name}</strong> | Mobile: {application.customer_mobile || application.mobile} | Bank: {application.bank_name || application.bank_code || 'Bank Partner'}
+              Customer: <strong>{application.customer_name || application.full_name || application.name}</strong> | Mobile: {application.customer_mobile || application.mobile} | Bank: {application.bank_name || application.bank_code || 'Bank Partner'}
             </p>
           </div>
 
@@ -167,7 +141,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                   <div>
                     <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Application Number</label>
                     <div style={{ fontSize: '15px', fontWeight: 900, color: '#0284c7', fontFamily: 'monospace' }}>
-                      {application.app_number || application.bank_ref_number || 'N/A'}
+                      {application.app_number || application.bank_ref_number || application.application_no || 'N/A'}
                     </div>
                   </div>
 
@@ -204,17 +178,22 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', fontSize: '13px' }}>
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Customer Full Name</div>
-                    <div style={{ fontWeight: 800, color: '#0f172a' }}>{application.customer_name || 'N/A'}</div>
+                    <div style={{ fontWeight: 800, color: '#0f172a' }}>{application.customer_name || application.full_name || application.name || 'N/A'}</div>
                   </div>
 
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Mobile Number</div>
-                    <div style={{ fontWeight: 800, color: '#0f172a' }}>{application.customer_mobile || application.mobile || 'N/A'}</div>
+                    <div style={{ fontWeight: 800, color: '#0f172a' }}>{application.customer_mobile || application.mobile || application.phone || 'N/A'}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Email Address</div>
+                    <div style={{ fontWeight: 700, color: '#334155' }}>{application.customer_email || application.email || 'N/A'}</div>
                   </div>
 
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>PAN Card Number</div>
-                    <div style={{ fontWeight: 800, color: '#0f172a', fontFamily: 'monospace', textTransform: 'uppercase' }}>{application.pan_number || 'N/A'}</div>
+                    <div style={{ fontWeight: 800, color: '#0f172a', fontFamily: 'monospace', textTransform: 'uppercase' }}>{application.pan_number || application.pan || 'N/A'}</div>
                   </div>
 
                   <div>
@@ -224,22 +203,41 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
 
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Product / Card Category</div>
-                    <div style={{ fontWeight: 800, color: '#0f172a' }}>{application.product_name || application.credit_card_category || 'Credit Card / Loan'}</div>
+                    <div style={{ fontWeight: 800, color: '#0f172a' }}>{application.product_name || application.card_name || application.category || 'Credit Card / Loan'}</div>
                   </div>
 
                   <div>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Monthly Income</div>
-                    <div style={{ fontWeight: 800, color: '#16a34a' }}>₹{application.monthly_income || application.loan_amount || 'N/A'}</div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Monthly Income / Loan Amount</div>
+                    <div style={{ fontWeight: 800, color: '#16a34a' }}>
+                      {application.monthly_income || application.salary || application.loan_amount ? `₹${application.monthly_income || application.salary || application.loan_amount}` : 'N/A'}
+                    </div>
                   </div>
 
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>City & Pincode</div>
-                    <div style={{ fontWeight: 700, color: '#334155' }}>{application.city || 'N/A'} - {application.pincode || ''}</div>
+                    <div style={{ fontWeight: 700, color: '#334155' }}>
+                      {application.city || 'N/A'} {application.pincode ? `(${application.pincode})` : ''}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Full Address</div>
+                    <div style={{ fontWeight: 700, color: '#334155' }}>{application.address || application.residential_address || 'N/A'}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Employment Type</div>
+                    <div style={{ fontWeight: 700, color: '#334155', textTransform: 'capitalize' }}>{application.employment_type || application.employment || 'Salaried / Self Employed'}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Company Name</div>
+                    <div style={{ fontWeight: 700, color: '#334155' }}>{application.company_name || application.employer_name || 'N/A'}</div>
                   </div>
 
                   <div>
                     <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Process Channel</div>
-                    <div style={{ fontWeight: 800, color: '#2563eb' }}>{application.process_by_name || application.process_by || 'Partner Lead'}</div>
+                    <div style={{ fontWeight: 800, color: '#2563eb' }}>{application.process_by_name || application.process_by || application.channel || 'Partner Lead'}</div>
                   </div>
                 </div>
               </div>
