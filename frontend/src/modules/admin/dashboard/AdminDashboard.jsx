@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from "../../../services/api";
 import { useTheme } from "../../../contexts/ThemeContext";
 import { 
@@ -7,6 +8,7 @@ import {
 } from 'lucide-react';
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const { C, isDark } = useTheme();
   const [stats, setStats] = useState(null);
   const [trends, setTrends] = useState([]);
@@ -77,12 +79,12 @@ export default function AdminDashboard() {
   const maxTrendVal = trends.length > 0 ? Math.max(...trends.map(t => parseInt(t.applications || 0))) : 10;
 
   const statCards = [
-    { label: "Pending Leads", val: leadStats.pending_leads || 0, sub: "Requires PAN/QD review", icon: <Clock size={22} />, color: "#f59e0b", bg: "#f59e0b15" },
-    { label: "Today's Leads", val: leadStats.todays_leads || 0, sub: "New entries logged today", icon: <TrendingUp size={22} />, color: "#3b82f6", bg: "#3b82f615" },
-    { label: "Pending KYC", val: partnerStats.pending_kyc || 0, sub: "Partner documents pending", icon: <Shield size={22} />, color: "#8b5cf6", bg: "#8b5cf615" },
-    { label: "Pending Withdrawals", val: withdrawalStats.pending_withdrawals || 0, sub: "Wallet payouts requested", icon: <Wallet size={22} />, color: "#ef4444", bg: "#ef444415" },
-    { label: "Total Partners", val: partnerStats.total || 0, sub: `${partnerStats.active || 0} Active Network`, icon: <Users size={22} />, color: "#10b981", bg: "#10b98115" },
-    { label: "Total Applications", val: appStats.total || 0, sub: `${appStats.approved || 0} Approved Cases`, icon: <FileText size={22} />, color: "#06b6d4", bg: "#06b6d415" }
+    { label: "Pending Leads", val: leadStats.pending_leads || 0, sub: "Requires PAN/QD review", icon: <Clock size={22} />, color: "#f59e0b", bg: "#f59e0b15", path: "/admin/leads" },
+    { label: "Today's Leads", val: leadStats.todays_leads || 0, sub: "New entries logged today", icon: <TrendingUp size={22} />, color: "#3b82f6", bg: "#3b82f615", path: "/admin/leads" },
+    { label: "Pending KYC", val: partnerStats.pending_kyc || 0, sub: "Partner documents pending", icon: <Shield size={22} />, color: "#8b5cf6", bg: "#8b5cf615", path: "/admin/partners" },
+    { label: "Pending Withdrawals", val: withdrawalStats.pending_withdrawals || 0, sub: "Wallet payouts requested", icon: <Wallet size={22} />, color: "#ef4444", bg: "#ef444415", path: "/admin/withdrawals" },
+    { label: "Total Partners", val: partnerStats.total || 0, sub: `${partnerStats.active || 0} Active Network`, icon: <Users size={22} />, color: "#10b981", bg: "#10b98115", path: "/admin/partners" },
+    { label: "Total Applications", val: appStats.total || 0, sub: `${appStats.approved || 0} Approved Cases`, icon: <FileText size={22} />, color: "#06b6d4", bg: "#06b6d415", path: "/admin/applications" }
   ];
 
   return (
@@ -109,18 +111,23 @@ export default function AdminDashboard() {
       {/* Grid Cards Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px" }}>
         {statCards.map((card, idx) => (
-          <div key={idx} style={{ 
-            background: cardBg, 
-            border: `1px solid ${border}`, 
-            borderTop: `3px solid ${card.color}`,
-            borderRadius: "20px", 
-            padding: "20px 22px", 
-            display: "flex", 
-            alignItems: "center", 
-            gap: "16px",
-            boxShadow: isDark ? "0 10px 25px rgba(0,0,0,0.3)" : "0 4px 16px rgba(0,0,0,0.03)",
-            transition: 'transform 0.2s ease, boxShadow 0.2s ease'
-          }}>
+          <div 
+            key={idx} 
+            onClick={() => card.path && navigate(card.path)}
+            style={{ 
+              background: cardBg, 
+              border: `1px solid ${border}`, 
+              borderTop: `3px solid ${card.color}`,
+              borderRadius: "20px", 
+              padding: "20px 22px", 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "16px",
+              cursor: "pointer",
+              boxShadow: isDark ? "0 10px 25px rgba(0,0,0,0.3)" : "0 4px 16px rgba(0,0,0,0.03)",
+              transition: 'transform 0.2s ease, boxShadow 0.2s ease'
+            }}
+          >
             <div style={{ background: card.bg, color: card.color, borderRadius: "16px", width: "50px", height: "50px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {card.icon}
             </div>
