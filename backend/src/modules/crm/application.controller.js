@@ -1464,7 +1464,10 @@ const updateBankProcessingStatus = async (req, res, next) => {
     const { 
       status, bank_ref_number, rejection_reason, approved_amount,
       appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
-      bank_remark, final_status, decline_reason, eligible_reqd
+      bank_remark, final_status, decline_reason, eligible_reqd,
+      // Form 1 Customer Application Details
+      customer_mobile, customer_name, dob, customer_email, pan_number,
+      company_name, designation, address, company_address, mother_name, vkyc_url
     } = req.body;
 
     const validStatuses = ['under_review', 'approved', 'rejected', 'disbursed', 'in_process', 'app_file_generated', 'decline', 'technical_error'];
@@ -1485,6 +1488,13 @@ const updateBankProcessingStatus = async (req, res, next) => {
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_remark TEXT`);
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(100)`);
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dob VARCHAR(50)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS designation VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_address TEXT`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS mother_name VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_url VARCHAR(500)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(20)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
 
       await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(100)`);
       await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`);
@@ -1495,6 +1505,13 @@ const updateBankProcessingStatus = async (req, res, next) => {
       await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS bank_remark TEXT`);
       await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(100)`);
       await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS dob VARCHAR(50)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS designation VARCHAR(100)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS company_address TEXT`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS mother_name VARCHAR(100)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS vkyc_url VARCHAR(500)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(20)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
     } catch (e) {
       logger.warn('Schema check warning for bank status columns:', e);
     }
@@ -1524,21 +1541,34 @@ const updateBankProcessingStatus = async (req, res, next) => {
               final_status = COALESCE($11, final_status),
               decline_reason = COALESCE($12, decline_reason),
               eligible_reqd = COALESCE($13, eligible_reqd),
+              customer_mobile = COALESCE($14, customer_mobile, mobile),
+              customer_name = COALESCE($15, customer_name, full_name),
+              dob = COALESCE($16, dob),
+              customer_email = COALESCE($17, customer_email, email),
+              pan_number = COALESCE($18, pan_number),
+              company_name = COALESCE($19, company_name),
+              designation = COALESCE($20, designation),
+              address = COALESCE($21, address),
+              company_address = COALESCE($22, company_address),
+              mother_name = COALESCE($23, mother_name),
+              vkyc_url = COALESCE($24, vkyc_url),
               updated_at = NOW()
-          WHERE id = $14
+          WHERE id = $25
         `, [
           currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount,
           appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
           dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
-          eligible_reqd || null, id
+          eligible_reqd || null, customer_mobile || null, customer_name || null, dob || null,
+          customer_email || null, pan_number || null, company_name || null, designation || null,
+          address || null, company_address || null, mother_name || null, vkyc_url || null, id
         ]);
 
         await query(`
           INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
           VALUES ($1, $2, $3, $4, 'admin', $5)
-        `, [id, currentStatus, `Bank Processing Update (${finalStatus || currentStatus.toUpperCase()})`, `Status updated. Remark: ${bank_remark || 'N/A'}`, req.user ? req.user.id : null]).catch(() => {});
+        `, [id, currentStatus, `Bank Processing Update (${finalStatus || currentStatus.toUpperCase()})`, `Status & Form details updated. Remark: ${bank_remark || 'N/A'}`, req.user ? req.user.id : null]).catch(() => {});
 
-        return success(res, null, `Application status updated successfully`);
+        return success(res, null, `Application status & Form details updated successfully`);
       }
       return notFound(res, 'Application not found');
     }
@@ -1560,13 +1590,19 @@ const updateBankProcessingStatus = async (req, res, next) => {
           final_status = COALESCE($11, final_status),
           decline_reason = COALESCE($12, decline_reason),
           eligible_reqd = COALESCE($13, eligible_reqd),
+          dob = COALESCE($14, dob),
+          designation = COALESCE($15, designation),
+          company_address = COALESCE($16, company_address),
+          mother_name = COALESCE($17, mother_name),
+          vkyc_url = COALESCE($18, vkyc_url),
           updated_at = NOW()
-      WHERE id = $14
+      WHERE id = $19
     `, [
       currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount,
       appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
       dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
-      eligible_reqd || null, id
+      eligible_reqd || null, dob || null, designation || null, company_address || null,
+      mother_name || null, vkyc_url || null, id
     ]);
 
     const titleMap = {

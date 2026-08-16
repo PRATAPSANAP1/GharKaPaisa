@@ -12,7 +12,21 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Form 2 Status & Operations Head Remarks
+  // Form 1 Customer Application Details State (Editable & Pre-filled)
+  const [customerMobile, setCustomerMobile] = useState(application?.customer_mobile || application?.mobile || application?.phone || '');
+  const [customerName, setCustomerName] = useState(application?.customer_name || application?.full_name || application?.name || '');
+  const [dob, setDob] = useState(application?.dob || application?.date_of_birth || '');
+  const [customerEmail, setCustomerEmail] = useState(application?.customer_email || application?.email || '');
+  const [panNumber, setPanNumber] = useState(application?.pan_number || application?.pan || '');
+  const [companyName, setCompanyName] = useState(application?.company_name || application?.employer_name || '');
+  const [designation, setDesignation] = useState(application?.designation || application?.occupation || '');
+  const [address, setAddress] = useState(application?.address || application?.residential_address || '');
+  const [companyAddress, setCompanyAddress] = useState(application?.company_address || application?.office_address || '');
+  const [motherName, setMotherName] = useState(application?.mother_name || '');
+  const [appNumber, setAppNumber] = useState(application?.app_number || application?.bank_ref_number || application?.application_no || '');
+  const [vkycUrl, setVkycUrl] = useState(application?.vkyc_url || application?.vkyc_link || '');
+
+  // Form 2 Status & Operations Head Remarks State (Editable & Pre-filled)
   const [appcodeStatus, setAppcodeStatus] = useState(application?.appcode_status || 'Appcode Pending');
   const [softApprovalStatus, setSoftApprovalStatus] = useState(application?.soft_approval_status || 'Approval-income 25k');
   const [vkycStage, setVkycStage] = useState(application?.vkyc_stage || 'VKYC Pending');
@@ -48,7 +62,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
     fetchData();
   }, [application?.id]);
 
-  const handleUpdateBankStatus = async () => {
+  const handleSaveDetails = async () => {
     try {
       setActionLoading(true);
       const token = localStorage.getItem('token');
@@ -62,7 +76,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
         `${API_BASE}/applications/${application.id}/bank-status`,
         {
           status: backendStatus,
-          bank_ref_number: bankRefNumber || undefined,
+          bank_ref_number: bankRefNumber || appNumber || undefined,
           approved_amount: approvedAmount ? Number(approvedAmount) : undefined,
           rejection_reason: declineReason || undefined,
           appcode_status: appcodeStatus,
@@ -73,42 +87,52 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
           bank_remark: bankRemark,
           final_status: finalStatus,
           decline_reason: declineReason,
-          eligible_reqd: eligibleReQd
+          eligible_reqd: eligibleReQd,
+          // Form 1 Details
+          customer_mobile: customerMobile,
+          customer_name: customerName,
+          dob: dob,
+          customer_email: customerEmail,
+          pan_number: panNumber,
+          company_name: companyName,
+          designation: designation,
+          address: address,
+          company_address: companyAddress,
+          mother_name: motherName,
+          vkyc_url: vkycUrl
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (res.data.success) {
-        alert(`Form 2 Status & Operations Remarks updated successfully!`);
+        alert(`Application details & Form status saved successfully to database!`);
         fetchData();
         if (onRefresh) onRefresh();
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to update bank status');
+      alert(err.response?.data?.message || 'Failed to update application details');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const vkycLink = application?.vkyc_url || application?.vkyc_link || '';
-
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div style={{ background: '#ffffff', width: '100%', maxWidth: '960px', maxHeight: '92vh', borderRadius: '20px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+      <div style={{ background: '#ffffff', width: '100%', maxWidth: '980px', maxHeight: '94vh', borderRadius: '20px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
         
         {/* Modal Header */}
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                Application #{application.app_number || application.bank_ref_number || 'APP-REF'}
+                Application #{appNumber || application.app_number || 'APP-REF'}
               </h3>
               <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '12px', background: '#ffedd5', color: '#c2410c' }}>
-                {application.status ? application.status.replace(/_/g, ' ').toUpperCase() : 'UNDER REVIEW'}
+                {finalStatus ? finalStatus.toUpperCase() : 'UNDER REVIEW'}
               </span>
             </div>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
-              Customer: <strong>{application.customer_name || application.full_name || application.name}</strong> | Mobile: {application.customer_mobile || application.mobile} | Bank: {application.bank_name || application.bank_code || 'SBI Bank'}
+              Customer: <strong>{customerName || application.customer_name || 'pratap'}</strong> | Mobile: {customerMobile || application.customer_mobile} | Bank: {application.bank_name || application.bank_code || 'SBI Bank'}
             </p>
           </div>
 
@@ -142,7 +166,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                 cursor: 'pointer'
               }}
             >
-              Form 1: Customer & Physical Application Details
+              Form 1: Customer & Physical Details
             </button>
 
             <button
@@ -184,115 +208,170 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
               
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 16px 0', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  📋 Form 1: Customer Details & Identification Fields
+                  📋 Form 1: Customer Details & Identification Fields (Pre-filled & Editable)
                 </h4>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', fontSize: '13px' }}>
                   
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Aadhaar Link Contact Number *</div>
-                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px', marginTop: '2px' }}>
-                      {application.customer_mobile || application.mobile || application.phone || '9370470694'}
-                    </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Aadhaar Link Contact Number *</label>
+                    <input
+                      type="text"
+                      value={customerMobile}
+                      onChange={(e) => setCustomerMobile(e.target.value)}
+                      placeholder="9370470694"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700 }}
+                    />
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Name As Per PAN Card *</div>
-                    <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px', marginTop: '2px', textTransform: 'capitalize' }}>
-                      {application.customer_name || application.full_name || application.name || 'pratap'}
-                    </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Name As Per PAN Card *</label>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="pratap"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700 }}
+                    />
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>DOB As Per PAN Card</div>
-                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '14px', marginTop: '2px' }}>
-                      {application.dob || application.date_of_birth || 'dd-mm-yyyy'}
-                    </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>DOB As Per PAN Card (dd-mm-yyyy)</label>
+                    <input
+                      type="text"
+                      value={dob}
+                      onChange={(e) => setDob(e.target.value)}
+                      placeholder="dd-mm-yyyy"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Personal Email ID</div>
-                    <div style={{ fontWeight: 700, color: '#334155', fontSize: '13px', marginTop: '2px' }}>
-                      {application.customer_email || application.email || 'email@example.com'}
-                    </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Personal Email ID</label>
+                    <input
+                      type="email"
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
+                      placeholder="email@example.com"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>PAN Card Number *</div>
-                    <div style={{ fontWeight: 800, color: '#ea580c', fontSize: '14px', fontFamily: 'monospace', marginTop: '2px', textTransform: 'uppercase' }}>
-                      {application.pan_number || application.pan || 'ABCDE1234F'}
-                    </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>PAN Card Number *</label>
+                    <input
+                      type="text"
+                      value={panNumber}
+                      onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
+                      placeholder="ABCDE1234F"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800, fontFamily: 'monospace', textTransform: 'uppercase' }}
+                    />
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>As Per Salary Slip Company Name</div>
-                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '13px', marginTop: '2px' }}>
-                      {application.company_name || application.employer_name || 'Company Name'}
-                    </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>As Per Salary Slip Company Name</label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Company Name"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Designation</div>
-                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '13px', marginTop: '2px' }}>
-                      {application.designation || application.occupation || 'Designation / Role'}
-                    </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Designation</label>
+                    <input
+                      type="text"
+                      value={designation}
+                      onChange={(e) => setDesignation(e.target.value)}
+                      placeholder="Designation / Role"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Current Home Address with Landmark & Pincode</div>
-                    <div style={{ fontWeight: 700, color: '#334155', fontSize: '13px', marginTop: '2px' }}>
-                      {application.address || application.residential_address || 'Address with landmark & pincode'} {application.pincode ? `- ${application.pincode}` : ''}
-                    </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Current Home Address with Landmark & Pincode</label>
+                    <input
+                      type="text"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="Address with landmark & pincode"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Full Company Address</div>
-                    <div style={{ fontWeight: 700, color: '#334155', fontSize: '13px', marginTop: '2px' }}>
-                      {application.company_address || application.office_address || 'Full official company address'}
-                    </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Full Company Address</label>
+                    <input
+                      type="text"
+                      value={companyAddress}
+                      onChange={(e) => setCompanyAddress(e.target.value)}
+                      placeholder="Full official company address"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Mother Name</div>
-                    <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '13px', marginTop: '2px' }}>
-                      {application.mother_name || 'Mother Name'}
-                    </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Mother Name</label>
+                    <input
+                      type="text"
+                      value={motherName}
+                      onChange={(e) => setMotherName(e.target.value)}
+                      placeholder="Mother Name"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>Application Number</div>
-                    <div style={{ fontWeight: 900, color: '#0284c7', fontSize: '14px', fontFamily: 'monospace', marginTop: '2px' }}>
-                      {application.app_number || application.bank_ref_number || application.application_no || 'Bank Application Number'}
-                    </div>
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Application Number (Bank Application Ref No.)</label>
+                    <input
+                      type="text"
+                      value={appNumber}
+                      onChange={(e) => setAppNumber(e.target.value)}
+                      placeholder="Bank Application Number"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800, fontFamily: 'monospace' }}
+                    />
                   </div>
 
-                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>VKYC Link</div>
-                    {vkycLink ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="text"
-                          readOnly
-                          value={vkycLink}
-                          style={{ flex: 1, padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '11px', background: '#fff' }}
-                        />
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>VKYC Link</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="text"
+                        value={vkycUrl}
+                        onChange={(e) => setVkycUrl(e.target.value)}
+                        placeholder="https://vkyc..."
+                        style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px' }}
+                      />
+                      {vkycUrl && (
                         <button
-                          onClick={() => window.open(vkycLink, '_blank')}
-                          style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                          type="button"
+                          onClick={() => window.open(vkycUrl, '_blank')}
+                          style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
                         >
-                          Open
+                          Open V-KYC
                         </button>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>https://vkyc...</span>
-                    )}
+                      )}
+                    </div>
                   </div>
+
                 </div>
               </div>
 
               {/* Form Navigation Action Bar */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
                 <button
+                  type="button"
+                  onClick={handleSaveDetails}
+                  disabled={actionLoading}
+                  style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+                >
+                  {actionLoading ? 'Saving...' : 'Save Form 1 Details'}
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setActiveTab('bank')}
                   style={{
                     background: '#f97316',
@@ -488,11 +567,11 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                   </button>
 
                   <button
-                    onClick={handleUpdateBankStatus}
+                    onClick={handleSaveDetails}
                     disabled={actionLoading}
                     style={{ background: '#16a34a', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    <CheckCircle size={18} /> {actionLoading ? 'Saving Form 2 Status...' : 'Save & Update Bank Status'}
+                    <CheckCircle size={18} /> {actionLoading ? 'Saving Details...' : 'Save Details'}
                   </button>
                 </div>
 
