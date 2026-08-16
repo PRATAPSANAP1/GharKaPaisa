@@ -3,8 +3,6 @@ import { Check, Clock, AlertCircle } from 'lucide-react';
 
 const STEPS = [
   { id: 'applied', label: 'Applied' },
-  { id: 'documents_uploaded', label: 'Documents Uploaded' },
-  { id: 'verification', label: 'Verification' },
   { id: 'bank_review', label: 'Bank Review' },
   { id: 'approved', label: 'Approved' },
   { id: 'disbursed', label: 'Disbursed' }
@@ -12,12 +10,10 @@ const STEPS = [
 
 const getStepIndex = (status) => {
   const norm = (status || '').toLowerCase();
-  if (['draft', 'submitted', 'applied'].includes(norm)) return 0;
-  if (['link_sent', 'documents_uploaded'].includes(norm)) return 1;
-  if (['under_review', 'verification_pending'].includes(norm)) return 2;
-  if (['verification_completed', 'sent_to_bank', 'bank_review'].includes(norm)) return 3;
-  if (['approved'].includes(norm)) return 4;
-  if (['disbursed'].includes(norm)) return 5;
+  if (['draft', 'submitted', 'applied', 'lead_created', 'new', 'initiated', 'link_sent'].includes(norm)) return 0;
+  if (['link_generated', 'under_review', 'verification', 'in_progress', 'documents_uploaded', 'verification_pending', 'verification_completed', 'sent_to_bank', 'bank_review'].includes(norm)) return 1;
+  if (['approved'].includes(norm)) return 2;
+  if (['disbursed'].includes(norm)) return 3;
   return 0;
 };
 

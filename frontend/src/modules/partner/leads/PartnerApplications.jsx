@@ -14,7 +14,7 @@ import {
 
 const STAGES = [
   { id: 'submitted', label: 'Applied', step: 1 },
-  { id: 'under_review', label: 'Verification', step: 2 },
+  { id: 'under_review', label: 'Bank Review', step: 2 },
   { id: 'approved', label: 'Approved', step: 3 },
   { id: 'disbursed', label: 'Disbursed', step: 4 },
 ];
