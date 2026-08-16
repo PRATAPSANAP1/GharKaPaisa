@@ -193,7 +193,7 @@ export default function PhysicalApplicationForm() {
           <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#10b98120', border: '2px solid #10b981', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36, fontWeight: 900 }}>
             ✓
           </div>
-          <h2 style={{ margin: '0 0 10px', fontSize: 22, fontWeight: 900, color: '#fff' }}>Details Saved Successfully</h2>
+          <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 900, color: '#fff' }}>Application details & Form status saved successfully to database!</h2>
           <p style={{ fontSize: 13.5, color: theme.mutedText, margin: '0 0 24px', lineHeight: 1.6 }}>
             Application <strong style={{ color: '#60a5fa' }}>#{appData?.app_number}</strong> has been updated with physical verification details and operations status.
           </p>

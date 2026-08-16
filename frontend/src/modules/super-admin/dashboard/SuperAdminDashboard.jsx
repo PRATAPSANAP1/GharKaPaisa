@@ -886,14 +886,9 @@ export default function SuperAdminDashboard() {
                   required
                 >
                   <option value="">Select Designation...</option>
-                  <option value="Administrative Operator">Administrative Operator</option>
                   <option value="Operational Head">Operational Head</option>
+                  <option value="Administrative Operator">Administrative Operator</option>
                   <option value="Super Admin">Super Admin</option>
-                  <option value="Credit Manager">Credit Manager</option>
-                  <option value="Operations Executive">Operations Executive</option>
-                  <option value="Support Lead">Support Lead</option>
-                  <option value="Accounts Admin">Accounts Admin</option>
-                  <option value="Other Admin">Other Admin</option>
                 </select>
               </div>
 
@@ -1089,12 +1084,8 @@ export default function SuperAdminDashboard() {
                     style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" }}
                     required
                   >
-                    <option value="Administrative Operator">Administrative Operator</option>
                     <option value="Operational Head">Operational Head</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Manager">Manager</option>
-                    <option value="Executive">Executive</option>
-                    <option value="Team Lead">Team Lead</option>
+                    <option value="Administrative Operator">Administrative Operator</option>
                     <option value="Super Admin">Super Admin</option>
                   </select>
                 </div>

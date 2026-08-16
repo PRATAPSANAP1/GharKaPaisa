@@ -10,15 +10,22 @@ const STEPS = [
 
 const getStepIndex = (status) => {
   const norm = (status || '').toLowerCase();
-  if (['draft', 'submitted', 'applied', 'lead_created', 'new', 'initiated', 'link_sent'].includes(norm)) return 0;
-  if (['link_generated', 'under_review', 'verification', 'in_progress', 'documents_uploaded', 'verification_pending', 'verification_completed', 'sent_to_bank', 'bank_review'].includes(norm)) return 1;
-  if (['approved'].includes(norm)) return 2;
-  if (['disbursed'].includes(norm)) return 3;
-  return 0;
+  if (['draft', 'applied', 'lead_created', 'new', 'initiated', 'link_sent'].includes(norm)) return 0;
+  if ([
+    'link_generated', 'under_review', 'verification', 'in_progress', 
+    'in process', 'technical error', 'documents_uploaded', 'verification_pending', 
+    'verification_completed', 'sent_to_bank', 'bank_review', 
+    'physical_form_submitted', 'details_submitted', 'submitted',
+    'appcode pending', 'appcode submit', 'iqa sent', 'iqa pending', 'blaze continue'
+  ].includes(norm)) return 1;
+  if (['approved', 'app file generated (approved)', 'app_file_generated'].includes(norm)) return 2;
+  if (['disbursed', 'dispatch done'].includes(norm)) return 3;
+  return 1;
 };
 
 const ApplicationTracker = ({ currentStatus }) => {
-  const isRejected = (currentStatus || '').toLowerCase() === 'rejected';
+  const norm = (currentStatus || '').toLowerCase();
+  const isRejected = norm.includes('reject') || norm.includes('decline') || norm.includes('failed');
   const activeIndex = isRejected ? -1 : getStepIndex(currentStatus);
 
   return (

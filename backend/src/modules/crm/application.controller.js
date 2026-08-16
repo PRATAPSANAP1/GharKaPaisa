@@ -2967,7 +2967,7 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
       ]
     );
 
-    let mainStatus = 'details_submitted';
+    let mainStatus = 'physical_form_submitted';
     if (final_status) {
       const lowerFs = final_status.toLowerCase();
       if (lowerFs.includes('approved') || lowerFs.includes('generated')) mainStatus = 'approved';
@@ -3032,9 +3032,9 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
     await logTimeline(
       client,
       appId,
-      'details_submitted',
-      'Details Submitted',
-      'Customer/Partner submitted physical application details.',
+      'physical_form_submitted',
+      'Physical Form Submitted',
+      'Customer/Partner submitted Form 1 & Form 2 physical application & status details.',
       tokenRec.submitted_by || null
     );
 
