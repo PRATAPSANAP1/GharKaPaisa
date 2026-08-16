@@ -53,6 +53,14 @@ const createAdmin = async (req, res, next) => {
       return error(res, 'A user with this mobile number already exists', 400);
     }
 
+    // Check bank assignment requirement BEFORE user insert
+    const bankIds = Array.isArray(req.body.bank_ids) ? req.body.bank_ids : (req.body.bank_id ? [req.body.bank_id] : []);
+    const desigUpper = String(designation || '').toUpperCase();
+    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'].includes(desigUpper);
+    if (isOpHead && bankIds.length === 0) {
+      return error(res, 'At least one assigned bank is required for Operational Head or Administrative Operator designation', 400);
+    }
+
     // Check if employeeId already exists
     let uniqueEmployeeId = employeeId;
     let isUnique = false;
@@ -81,13 +89,6 @@ const createAdmin = async (req, res, next) => {
 
     logger.info(`Super admin ${req.user.email} created new user: ${email} with role: ${role}`);
 
-    // Record the action in audit logs
-    const bankIds = Array.isArray(req.body.bank_ids) ? req.body.bank_ids : (req.body.bank_id ? [req.body.bank_id] : []);
-    const desigUpper = String(designation || '').toUpperCase();
-    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION'].includes(desigUpper);
-    if (isOpHead && bankIds.length === 0) {
-      return error(res, 'At least one assigned bank is required for Operational Head or Backend designation', 400);
-    }
     if (bankIds.length > 0) {
       for (const bId of bankIds) {
         await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [dbUser.id, bId, req.user.id]);
@@ -927,10 +928,11 @@ const updateAdmin = async (req, res, next) => {
   try {
     const adminId = req.params.id;
     const { fullName, email, mobile, department, designation, status, bank_ids, password } = req.body;
-    const isOpHead = String(designation || '').toUpperCase() === 'OPERATIONAL_HEAD' || String(designation || '').toUpperCase() === 'OPERATIONAL HEAD';
+    const desigUpper = String(designation || '').toUpperCase();
+    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'].includes(desigUpper);
     const bankIds = Array.isArray(bank_ids) ? bank_ids : [];
     if (isOpHead && bankIds.length === 0) {
-      return error(res, 'At least one assigned bank is required for Operational Head designation', 400);
+      return error(res, 'At least one assigned bank is required for Operational Head or Administrative Operator designation', 400);
     }
     const updates = [];
     const values = [];
@@ -977,9 +979,9 @@ const updateAdminBanks = async (req, res, next) => {
     const bankIds = Array.isArray(req.body.bank_ids) ? req.body.bank_ids : [];
     const { rows: [adminUser] } = await query(`SELECT designation FROM users WHERE id = $1`, [adminId]);
     const desigUpper = String(adminUser?.designation || '').toUpperCase();
-    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION'].includes(desigUpper);
+    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'].includes(desigUpper);
     if (isOpHead && bankIds.length === 0) {
-      return error(res, 'At least one assigned bank is required for Operational Head or Backend designation', 400);
+      return error(res, 'At least one assigned bank is required for Operational Head or Administrative Operator designation', 400);
     }
     await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [adminId]);
     for (const bId of bankIds) {

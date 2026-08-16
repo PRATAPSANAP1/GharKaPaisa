@@ -233,9 +233,9 @@ export default function SuperAdminDashboard() {
       return setFormErr('Password must be at least 8 characters long');
     }
 
-    const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND'].includes(form.designation);
+    const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(form.designation);
     if (isOpHead && selectedCreateBankIds.length === 0) {
-      return setFormErr('At least one bank must be selected for Operational Head or Backend designation');
+      return setFormErr('At least one bank must be selected for Operational Head or Administrative Operator designation');
     }
 
     setFormLoading(true);
@@ -874,7 +874,7 @@ export default function SuperAdminDashboard() {
                   value={form.designation}
                   onChange={(e) => {
                     handleChange(e);
-                    if (['Operational Head', 'Backend'].includes(e.target.value) && allBanks.length === 0) {
+                    if (['Operational Head', 'Backend', 'Administrative Operator'].includes(e.target.value) && allBanks.length === 0) {
                       api.get('/banks').then(res => {
                         if (res.data && res.data.data) setAllBanks(res.data.data);
                       }).catch(err => console.error(err));
@@ -886,7 +886,7 @@ export default function SuperAdminDashboard() {
                   required
                 >
                   <option value="">Select Designation...</option>
-                  <option value="Backend">Backend</option>
+                  <option value="Administrative Operator">Administrative Operator</option>
                   <option value="Operational Head">Operational Head</option>
                   <option value="Super Admin">Super Admin</option>
                   <option value="Credit Manager">Credit Manager</option>
@@ -897,8 +897,8 @@ export default function SuperAdminDashboard() {
                 </select>
               </div>
 
-              {/* Operational Head / Backend Bank Assignment Section */}
-              {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND'].includes(form.designation)) && (
+              {/* Operational Head / Administrative Operator Bank Assignment Section */}
+              {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(form.designation)) && (
                 <div style={{ gridColumn: "span 2", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "4px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                     <div>
@@ -1080,7 +1080,7 @@ export default function SuperAdminDashboard() {
                     onChange={e => {
                       const val = e.target.value;
                       setEditForm({ ...editForm, designation: val });
-                      if (['Operational Head', 'Backend'].includes(val) && allBanks.length === 0) {
+                      if (['Operational Head', 'Backend', 'Administrative Operator'].includes(val) && allBanks.length === 0) {
                         api.get('/banks').then(res => {
                           if (res.data && res.data.data) setAllBanks(res.data.data);
                         }).catch(err => console.error(err));
@@ -1089,7 +1089,7 @@ export default function SuperAdminDashboard() {
                     style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" }}
                     required
                   >
-                    <option value="Backend">Backend</option>
+                    <option value="Administrative Operator">Administrative Operator</option>
                     <option value="Operational Head">Operational Head</option>
                     <option value="Admin">Admin</option>
                     <option value="Manager">Manager</option>
@@ -1126,8 +1126,8 @@ export default function SuperAdminDashboard() {
                   />
                 </div>
 
-                {/* Bank Assignments (If Operational Head or Backend) */}
-                {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND'].includes(editForm.designation)) && (
+                {/* Bank Assignments (If Operational Head or Administrative Operator) */}
+                {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(editForm.designation)) && (
                   <div style={{ gridColumn: "span 2", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "4px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                       <div>

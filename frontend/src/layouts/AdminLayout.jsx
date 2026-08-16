@@ -87,7 +87,7 @@ const AdminLayout = () => {
 
   const userDesignation = user?.designation || '';
   const isOpHead = userDesignation === 'Operational Head' || userDesignation === 'OPERATIONAL_HEAD';
-  const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION'].includes(userDesignation);
+  const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
   const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
   if ((isOpHead || isBackend || assignedList.length > 0) && assignedList.length > 0) {
     banks = assignedList.map(b => ({
@@ -104,7 +104,7 @@ const AdminLayout = () => {
   const [openProductsMenu, setOpenProductsMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Close mobile menu on route change & restrict Backend designation navigation
+  // Close mobile menu on route change & restrict Backend/Administrative Operator designation navigation
   useEffect(() => {
     setMobileMenuOpen(false);
     if (isBackend) {
@@ -132,7 +132,7 @@ const AdminLayout = () => {
             {t('adminLayout.title', 'GharKaPaisa')}
           </h2>
           <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {isBackend ? 'Backend Operations' : 'Admin Operations Portal'}
+            {isBackend ? 'Administrative Operator' : 'Admin Operations Portal'}
           </span>
         </div>
       </div>
