@@ -200,9 +200,12 @@ export default function ManageBankCardApplications() {
       try {
         const res = await api.get('/banks', { params: { limit: 100 } });
         if (res.data?.success && res.data?.data) {
-          const found = res.data.data.find(b => 
-            (b.short_code || b.name).toLowerCase().replace(/[^a-z0-9]/g, '') === activeBankSlug
-          );
+          const slugClean = activeBankSlug.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const found = res.data.data.find(b => {
+            const sc = (b.short_code || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            const nm = (b.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            return sc === slugClean || nm === slugClean || sc.includes(slugClean) || nm.includes(slugClean) || (sc && slugClean.includes(sc));
+          });
           setBankInfo(found || { name: activeBankSlug.toUpperCase(), short_code: activeBankSlug.toUpperCase() });
         }
       } catch (err) {

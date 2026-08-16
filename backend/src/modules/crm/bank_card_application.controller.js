@@ -260,7 +260,7 @@ const updateDeclineFields = async (req, res, next) => {
   }
 };
 
-// GET /api/v1/admin/bank-cards — List Applications with Filters
+// GET /api/v1/admin/bank-cards — List Applications with Filters (Unified from bank_card_applications and applications)
 const listBankCardApplications = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
@@ -271,76 +271,125 @@ const listBankCardApplications = async (req, res, next) => {
     let idx = 1;
 
     if (bank_id && bank_id !== 'all') {
-      whereClause += ` AND bca.bank_id = $${idx}`;
-      values.push(bank_id);
+      whereClause += ` AND combined.bank_id = $${idx}`;
+      values.push(String(bank_id));
       idx++;
     } else if (bank_slug && bank_slug !== 'all') {
-      whereClause += ` AND (LOWER(b.short_code) = $${idx} OR LOWER(b.name) ILIKE $${idx})`;
+      whereClause += ` AND (LOWER(combined.bank_short_code) ILIKE $${idx} OR LOWER(combined.bank_name) ILIKE $${idx})`;
       values.push(`%${bank_slug.trim().toLowerCase()}%`);
       idx++;
     }
 
     if (final_stage && final_stage !== 'all') {
-      whereClause += ` AND bca.final_stage = $${idx}`;
+      whereClause += ` AND LOWER(combined.final_stage) = LOWER($${idx})`;
       values.push(final_stage);
       idx++;
     }
 
     if (qd_status && qd_status !== 'all') {
-      whereClause += ` AND bca.qd_status = $${idx}`;
+      whereClause += ` AND combined.qd_status = $${idx}`;
       values.push(qd_status);
       idx++;
     }
 
     if (income_status && income_status !== 'all') {
-      whereClause += ` AND bca.income_status = $${idx}`;
+      whereClause += ` AND combined.income_status = $${idx}`;
       values.push(income_status);
       idx++;
     }
 
     if (dispatch_stage && dispatch_stage !== 'all') {
-      whereClause += ` AND bca.dispatch_stage = $${idx}`;
+      whereClause += ` AND combined.dispatch_stage = $${idx}`;
       values.push(dispatch_stage);
       idx++;
     }
 
     if (category && category !== 'all') {
-      whereClause += ` AND LOWER(bca.credit_card_category) = $${idx}`;
-      values.push(category.trim().toLowerCase());
+      whereClause += ` AND LOWER(combined.credit_card_category) ILIKE $${idx}`;
+      values.push(`%${category.trim().toLowerCase()}%`);
       idx++;
     }
 
     if (executive && executive !== 'all') {
-      whereClause += ` AND (bca.process_by = $${idx} OR bca.qd_executive_name = $${idx} OR bca.pan_check_executive_name = $${idx})`;
+      whereClause += ` AND (combined.process_by = $${idx} OR combined.qd_executive_name = $${idx} OR combined.pan_check_executive_name = $${idx})`;
       values.push(executive);
       idx++;
     }
 
     if (search) {
-      whereClause += ` AND (bca.application_no ILIKE $${idx} OR bca.customer_name ILIKE $${idx} OR bca.customer_mobile ILIKE $${idx} OR bca.pan_number ILIKE $${idx})`;
+      whereClause += ` AND (combined.application_no ILIKE $${idx} OR combined.customer_name ILIKE $${idx} OR combined.customer_mobile ILIKE $${idx} OR combined.pan_number ILIKE $${idx})`;
       values.push(`%${search.trim()}%`);
       idx++;
     }
 
-    const countQuery = `
-      SELECT COUNT(*)
+    const baseUnionQuery = `
+      SELECT 
+        bca.id::text as id,
+        bca.application_no,
+        bca.bank_id::text as bank_id,
+        bca.credit_card_category,
+        bca.customer_name,
+        bca.customer_mobile,
+        bca.pan_number,
+        bca.final_stage,
+        bca.qd_status,
+        bca.income_status,
+        bca.dispatch_stage,
+        bca.process_by::text as process_by,
+        bca.qd_executive_name,
+        bca.pan_check_executive_name,
+        COALESCE(u.full_name, u.email, 'Admin System') as executive_name,
+        bca.created_at,
+        b.name as bank_name,
+        b.short_code as bank_short_code,
+        b.logo_url as bank_logo,
+        'bank_card_applications' as source_table
       FROM bank_card_applications bca
       JOIN banks b ON bca.bank_id = b.id
+      LEFT JOIN users u ON bca.process_by = u.id
+
+      UNION ALL
+
+      SELECT 
+        a.id::text as id,
+        COALESCE(a.app_number, 'APP' || SUBSTRING(a.id::text, 1, 8)) as application_no,
+        a.bank_id::text as bank_id,
+        COALESCE(p.name, 'Credit Card') as credit_card_category,
+        COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+        COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile, '') as customer_mobile,
+        COALESCE(c.pan_number, '') as pan_number,
+        COALESCE(a.status::text, 'Submitted') as final_stage,
+        'Completed' as qd_status,
+        'Verified' as income_status,
+        'In Transit' as dispatch_stage,
+        a.partner_id::text as process_by,
+        NULL as qd_executive_name,
+        NULL as pan_check_executive_name,
+        COALESCE(u.full_name, u.email, 'Partner / Direct Lead') as executive_name,
+        a.created_at,
+        b.name as bank_name,
+        b.short_code as bank_short_code,
+        b.logo_url as bank_logo,
+        'applications' as source_table
+      FROM applications a
+      JOIN banks b ON a.bank_id = b.id
+      LEFT JOIN products p ON a.product_id = p.id
+      LEFT JOIN leads l ON a.lead_id = l.id
+      LEFT JOIN customers c ON a.customer_id = c.id
+      LEFT JOIN users u ON a.partner_id = u.id
+    `;
+
+    const countQuery = `
+      SELECT COUNT(*)
+      FROM (${baseUnionQuery}) combined
       ${whereClause}
     `;
 
     const dataQuery = `
-      SELECT 
-        bca.*,
-        b.name as bank_name,
-        b.short_code as bank_short_code,
-        b.logo_url as bank_logo,
-        COALESCE(u.full_name, u.email) as process_by_user_name
-      FROM bank_card_applications bca
-      JOIN banks b ON bca.bank_id = b.id
-      LEFT JOIN users u ON bca.process_by = u.id
+      SELECT combined.*
+      FROM (${baseUnionQuery}) combined
       ${whereClause}
-      ORDER BY bca.created_at DESC
+      ORDER BY combined.created_at DESC
       LIMIT $${idx} OFFSET $${idx + 1}
     `;
 
@@ -349,7 +398,7 @@ const listBankCardApplications = async (req, res, next) => {
       query(dataQuery, [...values, limit, offset])
     ]);
 
-    const total = parseInt(countResult.rows[0].count);
+    const total = parseInt(countResult.rows[0]?.count || 0);
     return paginate(res, dataResult.rows, total, page, limit);
   } catch (err) {
     next(err);
@@ -369,22 +418,63 @@ const getBankCardApplicationById = async (req, res, next) => {
         b.logo_url as bank_logo
        FROM bank_card_applications bca
        JOIN banks b ON bca.bank_id = b.id
-       WHERE bca.id = $1`,
+       WHERE bca.id::text = $1`,
       [id]
     );
 
-    if (!application) return error(res, 'Bank card application not found', 404);
+    if (application) {
+      const { rows: timeline } = await query(
+        `SELECT bcat.*, COALESCE(u.full_name, u.email) as changed_by_user
+         FROM bank_card_application_timeline bcat
+         LEFT JOIN users u ON bcat.changed_by = u.id
+         WHERE bcat.application_id::text = $1
+         ORDER BY bcat.created_at ASC`,
+        [id]
+      );
 
-    const { rows: timeline } = await query(
-      `SELECT bcat.*, COALESCE(u.full_name, u.email) as changed_by_user
-       FROM bank_card_application_timeline bcat
-       LEFT JOIN users u ON bcat.changed_by = u.id
-       WHERE bcat.application_id = $1
-       ORDER BY bcat.created_at ASC`,
+      return success(res, { ...application, timeline });
+    }
+
+    // Fallback to main applications table
+    const { rows: [mainApp] } = await query(
+      `SELECT 
+        a.id,
+        COALESCE(a.app_number, 'APP' || SUBSTRING(a.id::text, 1, 8)) as application_no,
+        a.bank_id,
+        COALESCE(p.name, 'Credit Card') as credit_card_category,
+        COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+        COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
+        c.pan_number,
+        c.email,
+        c.city as residence_address,
+        c.employment_type,
+        c.monthly_income as gross_monthly_income,
+        a.status::text as final_stage,
+        a.created_at,
+        b.name as bank_name,
+        b.short_code as bank_short_code,
+        b.logo_url as bank_logo
+       FROM applications a
+       JOIN banks b ON a.bank_id = b.id
+       LEFT JOIN products p ON a.product_id = p.id
+       LEFT JOIN leads l ON a.lead_id = l.id
+       LEFT JOIN customers c ON a.customer_id = c.id
+       WHERE a.id::text = $1`,
       [id]
     );
 
-    return success(res, { ...application, timeline });
+    if (mainApp) {
+      const timeline = [
+        {
+          stage: mainApp.final_stage || 'Submitted',
+          activity: 'Application logged via Partner Portal / Lead Punching',
+          created_at: mainApp.created_at
+        }
+      ];
+      return success(res, { ...mainApp, timeline });
+    }
+
+    return error(res, 'Bank card application not found', 404);
   } catch (err) {
     next(err);
   }
@@ -394,29 +484,39 @@ const getBankCardApplicationById = async (req, res, next) => {
 const getBankCardReports = async (req, res, next) => {
   try {
     const { bank_id, bank_slug } = req.query;
-    let filter = '';
+    let filter = 'WHERE 1=1';
     const params = [];
+    let idx = 1;
 
     if (bank_id && bank_id !== 'all') {
-      filter = 'WHERE bca.bank_id = $1';
-      params.push(bank_id);
+      filter += ` AND combined.bank_id = $${idx}`;
+      params.push(String(bank_id));
+      idx++;
     } else if (bank_slug && bank_slug !== 'all') {
-      filter = 'WHERE (LOWER(b.short_code) = $1 OR LOWER(b.name) ILIKE $1)';
+      filter += ` AND (LOWER(combined.bank_short_code) ILIKE $${idx} OR LOWER(combined.bank_name) ILIKE $${idx})`;
       params.push(`%${bank_slug.trim().toLowerCase()}%`);
+      idx++;
     }
 
     const { rows: [metrics] } = await query(
       `SELECT
         COUNT(*) as total_applications,
-        COUNT(CASE WHEN final_stage = 'PAN Check' THEN 1 END) as pending_pan,
-        COUNT(CASE WHEN final_stage = 'QD Verification' THEN 1 END) as pending_qd,
-        COUNT(CASE WHEN final_stage = 'Income Verification' THEN 1 END) as pending_income,
-        COUNT(CASE WHEN final_stage = 'V-KYC' THEN 1 END) as pending_vkyc,
-        COUNT(CASE WHEN final_stage = 'Dispatch' THEN 1 END) as pending_dispatch,
-        COUNT(CASE WHEN final_stage = 'Approved' THEN 1 END) as approved_count,
-        COUNT(CASE WHEN final_stage = 'Declined' THEN 1 END) as declined_count
-       FROM bank_card_applications bca
-       JOIN banks b ON bca.bank_id = b.id
+        COUNT(CASE WHEN LOWER(final_stage) = 'pan check' OR LOWER(final_stage) = 'submitted' THEN 1 END) as pending_pan,
+        COUNT(CASE WHEN LOWER(final_stage) = 'qd verification' THEN 1 END) as pending_qd,
+        COUNT(CASE WHEN LOWER(final_stage) = 'income verification' THEN 1 END) as pending_income,
+        COUNT(CASE WHEN LOWER(final_stage) = 'v-kyc' THEN 1 END) as pending_vkyc,
+        COUNT(CASE WHEN LOWER(final_stage) = 'dispatch' THEN 1 END) as pending_dispatch,
+        COUNT(CASE WHEN LOWER(final_stage) = 'approved' THEN 1 END) as approved_count,
+        COUNT(CASE WHEN LOWER(final_stage) = 'declined' OR LOWER(final_stage) = 'rejected' THEN 1 END) as declined_count
+       FROM (
+         SELECT bca.final_stage, bca.bank_id::text as bank_id, b.short_code as bank_short_code, b.name as bank_name
+         FROM bank_card_applications bca
+         JOIN banks b ON bca.bank_id = b.id
+         UNION ALL
+         SELECT a.status::text as final_stage, a.bank_id::text as bank_id, b.short_code as bank_short_code, b.name as bank_name
+         FROM applications a
+         JOIN banks b ON a.bank_id = b.id
+       ) combined
        ${filter}`,
       params
     );
