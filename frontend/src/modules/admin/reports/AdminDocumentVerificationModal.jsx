@@ -358,8 +358,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                       {vkycUrl && (
                         <button
                           type="button"
-                          onClick={() => window.open(vkycUrl, '_blank')}
-                          style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                          onClick={() => {
+                            const raw = (vkycUrl || '').trim();
+                            if (!raw) return;
+                            const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+                            window.open(target, '_blank', 'noopener,noreferrer');
+                          }}
+                          style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
                         >
                           Open V-KYC
                         </button>

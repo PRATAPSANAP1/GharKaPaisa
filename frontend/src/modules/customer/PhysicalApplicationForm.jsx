@@ -438,25 +438,28 @@ export default function PhysicalApplicationForm() {
                       style={{ ...inputStyle, flex: 1 }}
                     />
                     {form.vkyc_url && (
-                      <a
-                        href={form.vkyc_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const raw = form.vkyc_url.trim();
+                          if (!raw) return;
+                          const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+                          window.open(target, '_blank', 'noopener,noreferrer');
+                        }}
                         style={{
                           padding: '12px 14px',
                           borderRadius: '12px',
+                          border: 'none',
                           background: 'linear-gradient(135deg, #10b981, #059669)',
                           color: '#fff',
                           fontWeight: 800,
                           fontSize: '12px',
-                          textDecoration: 'none',
-                          display: 'inline-flex',
-                          alignItems: 'center',
+                          cursor: 'pointer',
                           whiteSpace: 'nowrap'
                         }}
                       >
                         Open V-KYC ↗
-                      </a>
+                      </button>
                     )}
                   </div>
                 </div>
