@@ -336,6 +336,7 @@ const listBankCardApplications = async (req, res, next) => {
         bca.income_status,
         bca.dispatch_stage,
         bca.process_by::text as process_by,
+        COALESCE(u.full_name, u.email, 'Lead Punching') as process_by_name,
         bca.qd_executive_name,
         bca.pan_check_executive_name,
         COALESCE(u.full_name, u.email, 'Admin System') as executive_name,
@@ -363,6 +364,7 @@ const listBankCardApplications = async (req, res, next) => {
         'Verified' as income_status,
         'In Transit' as dispatch_stage,
         a.partner_id::text as process_by,
+        COALESCE(u.full_name, u.email, COALESCE(a.process_type, a.source, 'Lead Punching')) as process_by_name,
         NULL as qd_executive_name,
         NULL as pan_check_executive_name,
         COALESCE(u.full_name, u.email, 'Partner / Direct Lead') as executive_name,
@@ -480,7 +482,7 @@ const getBankCardApplicationById = async (req, res, next) => {
   }
 };
 
-// GET /api/v1/admin/bank-cards/reports — Aggregated Report Metrics
+// GET /api/v1/admin/bank-cards/reports — Aggregated Report Metrics & Volume
 const getBankCardReports = async (req, res, next) => {
   try {
     const { bank_id, bank_slug } = req.query;
@@ -521,7 +523,56 @@ const getBankCardReports = async (req, res, next) => {
       params
     );
 
-    return success(res, metrics || {});
+    const { rows: dailyVolume } = await query(
+      `SELECT TO_CHAR(created_at, 'DD Mon') as date_label, COUNT(*)::int as count
+       FROM (
+         SELECT bca.created_at, bca.bank_id::text as bank_id, b.short_code as bank_short_code, b.name as bank_name
+         FROM bank_card_applications bca JOIN banks b ON bca.bank_id = b.id
+         UNION ALL
+         SELECT a.created_at, a.bank_id::text as bank_id, b.short_code as bank_short_code, b.name as bank_name
+         FROM applications a JOIN banks b ON a.bank_id = b.id
+       ) combined
+       ${filter}
+       GROUP BY TO_CHAR(created_at, 'DD Mon'), DATE(created_at)
+       ORDER BY DATE(created_at) DESC LIMIT 15`,
+      params
+    );
+
+    const { rows: monthlyVolume } = await query(
+      `SELECT TO_CHAR(created_at, 'Mon YYYY') as month_label, COUNT(*)::int as count
+       FROM (
+         SELECT bca.created_at, bca.bank_id::text as bank_id, b.short_code as bank_short_code, b.name as bank_name
+         FROM bank_card_applications bca JOIN banks b ON bca.bank_id = b.id
+         UNION ALL
+         SELECT a.created_at, a.bank_id::text as bank_id, b.short_code as bank_short_code, b.name as bank_name
+         FROM applications a JOIN banks b ON a.bank_id = b.id
+       ) combined
+       ${filter}
+       GROUP BY TO_CHAR(created_at, 'Mon YYYY'), DATE_TRUNC('month', created_at)
+       ORDER BY DATE_TRUNC('month', created_at) DESC LIMIT 12`,
+      params
+    );
+
+    const { rows: executivePerformance } = await query(
+      `SELECT COALESCE(executive_name, 'Direct Lead') as executive_name, COUNT(*)::int as count
+       FROM (
+         SELECT COALESCE(u.full_name, u.email, 'Admin') as executive_name, bca.bank_id::text as bank_id, b.short_code as bank_short_code, b.name as bank_name
+         FROM bank_card_applications bca JOIN banks b ON bca.bank_id = b.id LEFT JOIN users u ON bca.process_by = u.id
+         UNION ALL
+         SELECT COALESCE(u.full_name, u.email, 'Partner') as executive_name, a.bank_id::text as bank_id, b.short_code as bank_short_code, b.name as bank_name
+         FROM applications a JOIN banks b ON a.bank_id = b.id LEFT JOIN users u ON a.partner_id = u.id
+       ) combined
+       ${filter}
+       GROUP BY executive_name ORDER BY count DESC LIMIT 10`,
+      params
+    );
+
+    return success(res, {
+      ...(metrics || {}),
+      dailyVolume: (dailyVolume || []).reverse(),
+      monthlyVolume: (monthlyVolume || []).reverse(),
+      executivePerformance: executivePerformance || []
+    });
   } catch (err) {
     next(err);
   }

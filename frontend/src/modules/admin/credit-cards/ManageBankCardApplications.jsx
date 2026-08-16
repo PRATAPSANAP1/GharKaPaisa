@@ -96,6 +96,25 @@ const SBI_CC_CATALOG = [
   }
 ];
 
+const BANK_CARD_CATALOGS = {
+  hdfc: [
+    { name: 'HDFC Millennia Credit Card', category: 'Millennia', badge: '5% Cashback', commission: '₹2,200', color: '#1E3A8A', features: ['5% Cashback on Amazon, Flipkart, Myntra & Swiggy', '1% fuel surcharge waiver across India', '8 complimentary domestic airport lounge visits per year'] },
+    { name: 'HDFC Regalia Gold Credit Card', category: 'Regalia Gold', badge: 'Premium Rewards', commission: '₹3,500', color: '#B45309', features: ['4 Reward Points per ₹150 spent on all retail', 'Club Marriott & MMT Black Elite Membership', '12 complimentary airport lounge access visits/yr'] },
+    { name: 'HDFC Freedom Credit Card', category: 'Freedom', badge: 'Entry Level', commission: '₹1,500', color: '#047857', features: ['10X Reward Points on Birthday & Big Spends', '500 bonus reward points on joining', '1% fuel surcharge waiver'] },
+    { name: 'HDFC Tata Neu Infinity Credit Card', category: 'Tata Neu', badge: 'UPI Credit Card', commission: '₹2,500', color: '#6D28D9', features: ['5% NeuCoins on Tata Neu & Partner Brands', '1.5% NeuCoins on non-Tata UPI spends', 'Complimentary International & Domestic Lounge access'] }
+  ],
+  icici: [
+    { name: 'Amazon Pay ICICI Credit Card', category: 'Amazon Pay', badge: 'Lifetime Free', commission: '₹1,800', color: '#D97706', features: ['5% Cashback for Amazon Prime members', '3% Cashback for Non-Prime members', 'Zero joining and annual fees forever'] },
+    { name: 'ICICI Coral Credit Card', category: 'Coral', badge: 'Rewards & Lifestyle', commission: '₹1,500', color: '#DC2626', features: ['Buy 1 Get 1 free movie ticket on BookMyShow', '2 Reward Points per ₹100 spent', 'Complimentary Railway and Airport lounge visits'] },
+    { name: 'ICICI Rubyx Credit Card', category: 'Rubyx', badge: 'Premium Lifestyle', commission: '₹2,800', color: '#4F46E5', features: ['Dual card suite (Visa & Amex)', 'Welcome vouchers worth ₹5,000+', 'Golf privileges & airport lounge access'] }
+  ],
+  axis: [
+    { name: 'Axis Bank ACE Credit Card', category: 'ACE', badge: '5% Cashback', commission: '₹2,000', color: '#9D174D', features: ['5% Cashback on Google Pay utility bills', '2% Unlimited Cashback on all other spends', '4 complimentary domestic airport lounge access/yr'] },
+    { name: 'Axis Bank Flipkart Credit Card', category: 'Flipkart', badge: 'Shopping Cashback', commission: '₹1,800', color: '#2563EB', features: ['5% Unlimited Cashback on Flipkart & Myntra', '1.5% Unlimited Cashback on all other spends', '₹1,100 welcome benefits'] },
+    { name: 'Axis Bank MY ZONE Credit Card', category: 'MY ZONE', badge: 'Entertainment', commission: '₹1,400', color: '#7C3AED', features: ['Buy 1 Get 1 free movie ticket on Paytm Movies', 'Free SonyLIV Premium annual subscription', 'Up to ₹120 off on Swiggy orders'] }
+  ]
+};
+
 export default function ManageBankCardApplications() {
   const { bankSlug, tab } = useParams();
   const navigate = useNavigate();
@@ -1174,85 +1193,83 @@ export default function ManageBankCardApplications() {
             fontSize: '13px'
           }}>
             <MdStar size={20} style={{ color: C.teal }} />
-            <span>Select a credit card from the official catalog to apply directly on behalf of a customer. All applications will be recorded inside the SBI Bank module.</span>
+            <span>Select a credit card from the official catalog to apply directly on behalf of a customer. All applications will be recorded inside the {bankInfo?.name || activeBankSlug.toUpperCase()} Bank module.</span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-            {isSbi ? (
-              SBI_CC_CATALOG.map((card, idx) => (
-                <div 
-                  key={idx}
-                  style={{
-                    background: C.card,
-                    borderRadius: '20px',
-                    border: `1px solid ${C.border}`,
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: '0 8px 30px rgba(0,0,0,0.02)',
-                    transition: 'all 0.25s ease'
-                  }}
-                  className="hover:scale-[1.01]"
-                >
-                  <div style={{ background: `linear-gradient(135deg, ${card.color}, ${card.color}DD)`, padding: '24px 20px', color: '#fff', position: 'relative' }}>
-                    <span style={{ 
-                      position: 'absolute', top: '16px', right: '16px', 
-                      background: 'rgba(255, 255, 255, 0.2)', color: '#fff', 
-                      padding: '4px 10px', borderRadius: '8px', fontSize: '10px', 
-                      fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' 
-                    }}>
-                      {card.badge}
-                    </span>
-                    <h3 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 4px 0' }}>{card.name}</h3>
-                    <span style={{ fontSize: '12px', opacity: 0.8 }}>SBI Credit Card Portfolio</span>
-                  </div>
-
-                  <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: 1, gap: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: `${C.border}20`, padding: '10px 14px', borderRadius: '10px' }}>
-                      <span style={{ fontSize: '12.5px', color: C.textMid, fontWeight: 700 }}>Commission Rate:</span>
-                      <span style={{ fontSize: '15px', color: '#10B981', fontWeight: 900 }}>{card.commission}</span>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                      <span style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase' }}>Key Benefits</span>
-                      {card.features.map((feat, fidx) => (
-                        <div key={fidx} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px', color: C.text }}>
-                          <MdCheck size={16} style={{ color: '#10B981', flexShrink: 0, marginTop: '1px' }} />
-                          <span>{feat}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={() => handleApplyClick(card.category)}
-                      style={{
-                        width: '100%',
-                        padding: '12px 0',
-                        borderRadius: '12px',
-                        border: 'none',
-                        background: C.teal,
-                        color: '#FFF',
-                        fontWeight: 800,
-                        fontSize: '13.5px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        boxShadow: `0 4px 14px ${C.teal}25`
-                      }}
-                    >
-                      <span>Apply Now</span>
-                      <MdArrowForward size={16} />
-                    </button>
-                  </div>
+            {((BANK_CARD_CATALOGS[activeBankSlug] || (isSbi ? SBI_CC_CATALOG : null)) || [
+              { name: `${bankInfo?.name || activeBankSlug.toUpperCase()} Standard Credit Card`, category: 'Standard', badge: 'Best Value', commission: '₹1,800', color: '#1E3A8A', features: ['Instant digital application processing', 'Attractive reward points on all spends', 'Fuel surcharge waiver & cashback options'] },
+              { name: `${bankInfo?.name || activeBankSlug.toUpperCase()} Premium Credit Card`, category: 'Premium', badge: 'Rewards', commission: '₹2,500', color: '#B45309', features: ['Complimentary airport lounge access', 'Higher reward point multiplier', 'Dedicated concierge services'] },
+              { name: `${bankInfo?.name || activeBankSlug.toUpperCase()} Lifetime Free Credit Card`, category: 'Lifetime Free', badge: 'Zero Annual Fee', commission: '₹1,500', color: '#047857', features: ['Zero joining and annual fees', 'Cashback on daily retail transactions', 'Instant digital approval workflow'] }
+            ]).map((card, idx) => (
+              <div 
+                key={idx}
+                style={{
+                  background: C.card,
+                  borderRadius: '20px',
+                  border: `1px solid ${C.border}`,
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  boxShadow: '0 8px 30px rgba(0,0,0,0.02)',
+                  transition: 'all 0.25s ease'
+                }}
+                className="hover:scale-[1.01]"
+              >
+                <div style={{ background: `linear-gradient(135deg, ${card.color}, ${card.color}DD)`, padding: '24px 20px', color: '#fff', position: 'relative' }}>
+                  <span style={{ 
+                    position: 'absolute', top: '16px', right: '16px', 
+                    background: 'rgba(255, 255, 255, 0.2)', color: '#fff', 
+                    padding: '4px 10px', borderRadius: '8px', fontSize: '10px', 
+                    fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' 
+                  }}>
+                    {card.badge}
+                  </span>
+                  <h3 style={{ fontSize: '16px', fontWeight: 900, margin: '0 0 4px 0' }}>{card.name}</h3>
+                  <span style={{ fontSize: '12px', opacity: 0.8 }}>{bankInfo?.name || activeBankSlug.toUpperCase()} Credit Card Portfolio</span>
                 </div>
-              ))
-            ) : (
-              <div style={{ gridColumn: 'span 3', padding: '40px', textAlign: 'center', color: C.textLight }}>
-                Catalog list for {activeBankSlug.toUpperCase()} is under construction.
+
+                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: 1, gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: `${C.border}20`, padding: '10px 14px', borderRadius: '10px' }}>
+                    <span style={{ fontSize: '12.5px', color: C.textMid, fontWeight: 700 }}>Commission Rate:</span>
+                    <span style={{ fontSize: '15px', color: '#10B981', fontWeight: 900 }}>{card.commission}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase' }}>Key Benefits</span>
+                    {card.features.map((feat, fidx) => (
+                      <div key={fidx} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px', color: C.text }}>
+                        <MdCheck size={16} style={{ color: '#10B981', flexShrink: 0, marginTop: '1px' }} />
+                        <span>{feat}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => handleApplyClick(card.category)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 0',
+                      borderRadius: '12px',
+                      border: 'none',
+                      background: C.teal,
+                      color: '#FFF',
+                      fontWeight: 800,
+                      fontSize: '13.5px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: `0 4px 14px ${C.teal}25`
+                    }}
+                  >
+                    <span>Apply Now</span>
+                    <MdArrowForward size={16} />
+                  </button>
+                </div>
               </div>
-            )}
+            ))}
           </div>
 
         </div>
@@ -1386,6 +1403,7 @@ export default function ManageBankCardApplications() {
                   <th style={{ padding: '14px 16px', fontWeight: 800 }}>Customer</th>
                   <th style={{ padding: '14px 16px', fontWeight: 800 }}>Mobile / PAN</th>
                   <th style={{ padding: '14px 16px', fontWeight: 800 }}>Card Category</th>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Process By</th>
                   <th style={{ padding: '14px 16px', fontWeight: 800 }}>Status</th>
                   <th style={{ padding: '14px 16px', fontWeight: 800 }}>Assigned To</th>
                   <th style={{ padding: '14px 16px', fontWeight: 800 }}>Created</th>
@@ -1394,9 +1412,9 @@ export default function ManageBankCardApplications() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={8} style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>Loading direct applications...</td></tr>
+                  <tr><td colSpan={9} style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>Loading direct applications...</td></tr>
                 ) : applications.length === 0 ? (
-                  <tr><td colSpan={8} style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>No credit card applications match.</td></tr>
+                  <tr><td colSpan={9} style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>No credit card applications match.</td></tr>
                 ) : (
                   applications.map(app => (
                     <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -1407,6 +1425,14 @@ export default function ManageBankCardApplications() {
                         <div style={{ fontSize: '11px', color: C.textLight, fontFamily: 'monospace' }}>{app.pan_number}</div>
                       </td>
                       <td style={{ padding: '14px 16px', fontWeight: 700 }}>{app.credit_card_category}</td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{
+                          padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
+                          background: '#3B82F615', color: '#3B82F6', border: '1px solid #3B82F630'
+                        }}>
+                          {app.process_by_name || app.process_by || 'Lead Punching Only'}
+                        </span>
+                      </td>
                       <td style={{ padding: '14px 16px' }}>
                         <span style={{
                           padding: '4px 10px', borderRadius: '10px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase',
