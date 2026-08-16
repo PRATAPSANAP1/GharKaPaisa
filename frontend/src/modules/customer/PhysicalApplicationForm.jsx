@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import api from '../../services/api';
+import logo from '../../assets/logos/logo.png';
 
 export default function PhysicalApplicationForm() {
   const { token } = useParams();
@@ -10,7 +9,6 @@ export default function PhysicalApplicationForm() {
   const [errorMsg, setErrorMsg] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
   const [appData, setAppData] = useState(null);
 
   // Form states
@@ -38,7 +36,7 @@ export default function PhysicalApplicationForm() {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await axios.get(`${API_BASE}/api/applications/physical-application/${token}`);
+      const res = await api.get(`/applications/physical-application/${token}`);
       if (res.data?.success) {
         const data = res.data.data;
         setAppData(data);
@@ -61,15 +59,11 @@ export default function PhysicalApplicationForm() {
           pincode: pd.pincode || '',
           company_address: pd.company_address || ''
         });
-
-        if (data.status === 'details_submitted' && pd.id) {
-          // Keep form editable but note that details were previously submitted
-        }
       } else {
         setErrorMsg(res.data?.message || 'Unable to load application details.');
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Invalid or expired application link.');
+      setErrorMsg(err.response?.data?.message || 'Invalid or expired physical application link.');
     } finally {
       setLoading(false);
     }
@@ -81,7 +75,7 @@ export default function PhysicalApplicationForm() {
     setErrorMsg('');
 
     try {
-      const res = await axios.post(`${API_BASE}/api/applications/physical-application/${token}/submit`, form);
+      const res = await api.post(`/applications/physical-application/${token}/submit`, form);
       if (res.data?.success) {
         setSubmitted(true);
       } else {
@@ -98,43 +92,52 @@ export default function PhysicalApplicationForm() {
     setForm(prev => ({ ...prev, [field]: val }));
   };
 
-  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const bg = isDark ? '#0f172a' : '#f8fafc';
-  const cardBg = isDark ? '#1e293b' : '#ffffff';
-  const textColor = isDark ? '#f8fafc' : '#0f172a';
-  const mutedText = isDark ? '#94a3b8' : '#64748b';
-  const border = isDark ? '#334155' : '#e2e8f0';
+  // GharKaPaisa Theme Palette
+  const theme = {
+    pageBg: 'linear-gradient(135deg, #0b1329 0%, #152243 50%, #091024 100%)',
+    cardBg: '#131e38',
+    cardBorder: '1px solid rgba(59, 130, 246, 0.25)',
+    cardShadow: '0 24px 60px rgba(0, 0, 0, 0.5)',
+    inputBg: '#0a1122',
+    inputBorder: '1.5px solid #233354',
+    inputFocusBorder: '#3b82f6',
+    textColor: '#f8fafc',
+    mutedText: '#94a3b8',
+    brandBlue: '#2563eb',
+    brandBlueGradient: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+  };
 
   const inputStyle = {
     width: '100%',
-    padding: '11px 14px',
-    borderRadius: '10px',
-    border: `1.5px solid ${border}`,
-    background: isDark ? '#0f172a' : '#ffffff',
-    color: textColor,
-    fontSize: '13px',
+    padding: '12px 14px',
+    borderRadius: '12px',
+    border: theme.inputBorder,
+    background: theme.inputBg,
+    color: theme.textColor,
+    fontSize: '13.5px',
     fontWeight: '600',
     outline: 'none',
     boxSizing: 'border-box',
-    transition: 'border-color 0.2s'
+    transition: 'all 0.2s ease',
+    fontFamily: 'inherit'
   };
 
   const labelStyle = {
     display: 'block',
     fontSize: '11px',
     fontWeight: '800',
-    color: mutedText,
+    color: theme.mutedText,
     marginBottom: '6px',
-    letterSpacing: '0.04em',
+    letterSpacing: '0.05em',
     textTransform: 'uppercase'
   };
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bg, color: textColor, fontFamily: 'system-ui, sans-serif' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: theme.pageBg, color: theme.textColor, fontFamily: "'Inter', sans-serif" }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 40, height: 40, border: '4px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ fontWeight: 700, fontSize: 14 }}>Loading Physical Application Form...</p>
+          <div style={{ width: 44, height: 44, border: '4px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.02em', color: '#93c5fd' }}>Loading Application Form...</p>
         </div>
       </div>
     );
@@ -142,12 +145,13 @@ export default function PhysicalApplicationForm() {
 
   if (errorMsg && !appData) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bg, color: textColor, padding: 16, fontFamily: 'system-ui, sans-serif' }}>
-        <div style={{ maxWidth: 440, width: '100%', background: cardBg, borderRadius: 20, padding: 28, border: `1px solid ${border}`, textAlign: 'center' }}>
-          <h2 style={{ margin: '0 0 10px', fontSize: 18, color: '#ef4444' }}>Link Error</h2>
-          <p style={{ fontSize: 13, color: mutedText, margin: '0 0 20px' }}>{errorMsg}</p>
-          <button onClick={fetchApplicationDetails} style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: '#3b82f6', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
-            Try Again
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: theme.pageBg, color: theme.textColor, padding: 20, fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ maxWidth: 460, width: '100%', background: theme.cardBg, borderRadius: 24, padding: 32, border: theme.cardBorder, textAlign: 'center', boxShadow: theme.cardShadow }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>⚠️</div>
+          <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 900, color: '#f87171' }}>Application Form Error</h2>
+          <p style={{ fontSize: 13.5, color: theme.mutedText, margin: '0 0 24px', lineHeight: 1.5 }}>{errorMsg}</p>
+          <button onClick={fetchApplicationDetails} style={{ padding: '12px 24px', borderRadius: 14, border: 'none', background: theme.brandBlueGradient, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37,99,235,0.4)' }}>
+            Retry Loading Form
           </button>
         </div>
       </div>
@@ -156,19 +160,28 @@ export default function PhysicalApplicationForm() {
 
   if (submitted) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bg, color: textColor, padding: 16, fontFamily: 'system-ui, sans-serif' }}>
-        <div style={{ maxWidth: 480, width: '100%', background: cardBg, borderRadius: 24, padding: 32, border: `1px solid ${border}`, textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.08)' }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#10b98115', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 32, fontWeight: 900 }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: theme.pageBg, color: theme.textColor, padding: 20, fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ maxWidth: 500, width: '100%', background: theme.cardBg, borderRadius: 28, padding: 36, border: theme.cardBorder, textAlign: 'center', boxShadow: theme.cardShadow }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#10b98120', border: '2px solid #10b981', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36, fontWeight: 900 }}>
             ✓
           </div>
-          <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 800 }}>Details Submitted Successfully</h2>
-          <p style={{ fontSize: 13, color: mutedText, margin: '0 0 20px' }}>
-            Application #{appData?.app_number} has been updated. The operational team will verify the details shortly.
+          <h2 style={{ margin: '0 0 10px', fontSize: 22, fontWeight: 900, color: '#fff' }}>Details Submitted Successfully</h2>
+          <p style={{ fontSize: 13.5, color: theme.mutedText, margin: '0 0 24px', lineHeight: 1.6 }}>
+            Application <strong style={{ color: '#60a5fa' }}>#{appData?.app_number}</strong> has been updated with your verification details. Our operations desk will review and verify your application.
           </p>
-          <div style={{ background: isDark ? '#0f172a' : '#f1f5f9', padding: 14, borderRadius: 14, fontSize: 12, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-            <div><strong style={{ color: mutedText }}>Bank:</strong> {appData?.bank_name}</div>
-            <div><strong style={{ color: mutedText }}>Product:</strong> {appData?.product_name}</div>
-            <div><strong style={{ color: mutedText }}>Status:</strong> DETAILS SUBMITTED</div>
+          <div style={{ background: '#0a1122', border: '1px solid #233354', padding: 18, borderRadius: 18, fontSize: 13, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: theme.mutedText }}>Bank Partner:</span>
+              <strong style={{ color: '#f8fafc' }}>{appData?.bank_name || 'Partner Bank'}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: theme.mutedText }}>Product:</span>
+              <strong style={{ color: '#f8fafc' }}>{appData?.product_name || 'Credit Card / Loan'}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: theme.mutedText }}>Status:</span>
+              <strong style={{ color: '#10b981', textTransform: 'uppercase' }}>Details Submitted</strong>
+            </div>
           </div>
         </div>
       </div>
@@ -178,32 +191,51 @@ export default function PhysicalApplicationForm() {
   const isSbi = appData?.is_sbi;
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, color: textColor, padding: '24px 16px', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ maxWidth: 640, margin: '0 auto' }}>
+    <div style={{ minHeight: '100vh', background: theme.pageBg, color: theme.textColor, padding: '24px 16px 48px', fontFamily: "'Inter', sans-serif" }}>
+      
+      {/* Top Header Navbar */}
+      <div style={{ maxWidth: 680, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(19, 30, 56, 0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {logo && <img src={logo} alt="GharKaPaisa Logo" style={{ height: 32, width: 'auto' }} />}
+          <span style={{ fontSize: 18, fontWeight: 900, background: 'linear-gradient(90deg, #60a5fa, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            GharKaPaisa
+          </span>
+        </div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: '#34d399', background: '#064e3b40', border: '1px solid #05966950', padding: '4px 10px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4 }}>
+          🔒 256-Bit SSL Encrypted
+        </div>
+      </div>
 
-        {/* Top Header Card */}
-        <div style={{ background: cardBg, borderRadius: 20, padding: '20px 24px', border: `1px solid ${border}`, marginBottom: 20, boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
-          <h1 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 800 }}>Physical Application Form</h1>
-          <p style={{ margin: 0, fontSize: 12, color: mutedText }}>
-            Application #{appData?.app_number} • Bank: {appData?.bank_name} • Product: {appData?.product_name}
+      <div style={{ maxWidth: 680, margin: '0 auto' }}>
+
+        {/* Header Card */}
+        <div style={{ background: theme.cardBg, borderRadius: 24, padding: '24px 28px', border: theme.cardBorder, marginBottom: 20, boxShadow: theme.cardShadow }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+            ⚡ Official Verification Portal
+          </div>
+          <h1 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 900, color: '#fff' }}>
+            {isSbi ? 'SBI Detail Sheet Form' : 'Bank Application Form'}
+          </h1>
+          <p style={{ margin: 0, fontSize: 13, color: theme.mutedText }}>
+            Application <strong style={{ color: '#e2e8f0' }}>#{appData?.app_number}</strong> • Bank: <strong style={{ color: '#e2e8f0' }}>{appData?.bank_name || 'Bank'}</strong> • Product: <strong style={{ color: '#e2e8f0' }}>{appData?.product_name || 'Product'}</strong>
           </p>
         </div>
 
         {errorMsg && (
-          <div style={{ background: '#ef444415', border: '1px solid #ef444440', color: '#ef4444', padding: '12px 16px', borderRadius: 14, fontSize: 12, fontWeight: 700, marginBottom: 20 }}>
+          <div style={{ background: '#ef444415', border: '1px solid #ef444440', color: '#ef4444', padding: '14px 18px', borderRadius: 16, fontSize: 13, fontWeight: 700, marginBottom: 20 }}>
             {errorMsg}
           </div>
         )}
 
-        {/* Main Form */}
-        <form onSubmit={handleSubmit} style={{ background: cardBg, borderRadius: 24, padding: 24, border: `1px solid ${border}`, display: 'flex', flexDirection: 'column', gap: 16, boxShadow: '0 8px 30px rgba(0,0,0,0.04)' }}>
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ background: theme.cardBg, borderRadius: 28, padding: 28, border: theme.cardBorder, display: 'flex', flexDirection: 'column', gap: 18, boxShadow: theme.cardShadow }}>
 
           {isSbi ? (
             /* ═══ SBI BANK FORM ═══ */
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
-                  <label style={labelStyle}>AADHAR LINK CONTACT NUMBER *</label>
+                  <label style={labelStyle}>ADHAR LINK CONTACT NUMBER *</label>
                   <input
                     type="text"
                     required
@@ -236,7 +268,7 @@ export default function PhysicalApplicationForm() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>PERSONAL EMAIL ID</label>
                   <input
@@ -255,12 +287,12 @@ export default function PhysicalApplicationForm() {
                     value={form.pan_number}
                     onChange={e => handleChange('pan_number', e.target.value.toUpperCase())}
                     placeholder="ABCDE1234F"
-                    style={inputStyle}
+                    style={{ ...inputStyle, textTransform: 'uppercase', letterSpacing: '1px' }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>AS PER SALARY SLIP COMPANY NAME</label>
                   <input
@@ -331,7 +363,7 @@ export default function PhysicalApplicationForm() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>Flat no / House no / sr no</label>
                   <input
@@ -354,7 +386,7 @@ export default function PhysicalApplicationForm() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>Landmark</label>
                   <input
@@ -379,7 +411,7 @@ export default function PhysicalApplicationForm() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>PAN CARD NUMBER *</label>
                   <input
@@ -389,7 +421,7 @@ export default function PhysicalApplicationForm() {
                     value={form.pan_number}
                     onChange={e => handleChange('pan_number', e.target.value.toUpperCase())}
                     placeholder="ABCDE1234F"
-                    style={inputStyle}
+                    style={{ ...inputStyle, textTransform: 'uppercase', letterSpacing: '1px' }}
                   />
                 </div>
                 <div>
@@ -403,7 +435,7 @@ export default function PhysicalApplicationForm() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>MOTHER FULL NAME</label>
                   <input
@@ -426,7 +458,7 @@ export default function PhysicalApplicationForm() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>COMPANY Name (as per payment slip)</label>
                   <input
@@ -463,26 +495,27 @@ export default function PhysicalApplicationForm() {
             </>
           )}
 
-          <div style={{ borderTop: `1px solid ${border}`, paddingTop: 16, marginTop: 8 }}>
+          <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10 }}>
             <button
               type="submit"
               disabled={submitting}
               style={{
                 width: '100%',
-                padding: '12px 20px',
-                borderRadius: '12px',
+                padding: '14px 24px',
+                borderRadius: '16px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                background: theme.brandBlueGradient,
                 color: '#ffffff',
-                fontWeight: 800,
-                fontSize: '14px',
+                fontWeight: 900,
+                fontSize: '15px',
                 cursor: submitting ? 'not-allowed' : 'pointer',
                 opacity: submitting ? 0.7 : 1,
-                boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
-                transition: 'all 0.2s'
+                boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
+                transition: 'all 0.2s ease',
+                letterSpacing: '0.02em'
               }}
             >
-              {submitting ? 'Submitting Details...' : 'Submit Physical Application Details'}
+              {submitting ? 'Submitting Application Details...' : 'SUBMIT PHYSICAL APPLICATION DETAILS ➔'}
             </button>
           </div>
 
