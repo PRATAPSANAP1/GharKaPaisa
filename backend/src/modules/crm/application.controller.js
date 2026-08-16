@@ -1303,7 +1303,7 @@ const sendUploadLink = async (req, res, next) => {
     const { sendSms } = require('../../services/sms/sms.service');
     const { sendEmail } = require('../../services/email/email.service');
 
-    const appRes = await query(`
+    let appRes = await query(`
       SELECT a.*, c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email,
              p.name as product_name, b.name as bank_name
       FROM applications a
@@ -1312,6 +1312,15 @@ const sendUploadLink = async (req, res, next) => {
       LEFT JOIN banks b ON p.bank_id = b.id
       WHERE a.id = $1
     `, [id]);
+
+    if (appRes.rows.length === 0) {
+      appRes = await query(`
+        SELECT bca.*, bca.full_name as customer_name, bca.mobile as customer_mobile, bca.email as customer_email,
+               bca.app_number, bca.bank_name, bca.card_name as product_name, bca.id as customer_id
+        FROM bank_card_applications bca
+        WHERE bca.id = $1
+      `, [id]);
+    }
 
     if (appRes.rows.length === 0) return notFound(res, 'Application not found');
     const app = appRes.rows[0];
@@ -1459,23 +1468,51 @@ const updateBankProcessingStatus = async (req, res, next) => {
       return error(res, `Invalid status. Must be one of: ${validStatuses.join(', ')}`, 400);
     }
 
-    const appRes = await query(`
+    const parsedAmount = (approved_amount !== undefined && approved_amount !== '' && approved_amount !== null && !isNaN(approved_amount))
+      ? parseFloat(approved_amount)
+      : null;
+
+    let appRes = await query(`
       SELECT a.*, p.category as product_category 
       FROM applications a
       LEFT JOIN products p ON p.id = a.product_id
       WHERE a.id = $1
     `, [id]);
-    if (appRes.rows.length === 0) return notFound(res, 'Application not found');
+
+    if (appRes.rows.length === 0) {
+      const bankCardRes = await query(`SELECT * FROM bank_card_applications WHERE id = $1`, [id]);
+      if (bankCardRes.rows.length > 0) {
+        await query(`
+          UPDATE bank_card_applications 
+          SET status = $1, 
+              bank_ref_number = COALESCE($2, bank_ref_number), 
+              rejection_reason = COALESCE($3, rejection_reason), 
+              approved_amount = COALESCE($4, approved_amount),
+              updated_at = NOW()
+          WHERE id = $5
+        `, [status, bank_ref_number || null, rejection_reason || null, parsedAmount, id]);
+
+        await query(`
+          INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
+          VALUES ($1, $2, $3, $4, 'admin', $5)
+        `, [id, status, `Bank Card App ${status.toUpperCase()}`, `Status updated to ${status}`, req.user ? req.user.id : null]).catch(() => {});
+
+        return success(res, null, `Application status updated to ${status}`);
+      }
+      return notFound(res, 'Application not found');
+    }
+
     const app = appRes.rows[0];
 
     await query(`
       UPDATE applications 
-      SET status = $1, bank_ref_number = COALESCE($2, bank_ref_number), 
+      SET status = $1, 
+          bank_ref_number = COALESCE($2, bank_ref_number), 
           rejection_reason = COALESCE($3, rejection_reason), 
           approved_amount = COALESCE($4, approved_amount),
           updated_at = NOW()
       WHERE id = $5
-    `, [status, bank_ref_number, rejection_reason, approved_amount, id]);
+    `, [status, bank_ref_number || null, rejection_reason || null, parsedAmount, id]);
 
     const titleMap = {
       under_review: 'Bank Reviewing Application',

@@ -116,14 +116,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <button
-              onClick={handleSendLink}
-              disabled={sendLinkLoading}
-              style={{ background: '#f97316', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Send size={14} /> {sendLinkLoading ? 'Sending...' : 'Send Link to Customer'}
-            </button>
-
             <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}>
               <X size={22} />
             </button>
