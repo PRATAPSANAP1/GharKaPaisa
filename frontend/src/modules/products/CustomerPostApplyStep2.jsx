@@ -173,34 +173,6 @@ export default function CustomerPostApplyStep2() {
             />
           </div>
 
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '6px' }}>
-              Salary Slip Document / Link {bankInfo?.is_sbi_bank ? <span style={{ color: '#EF4444', fontWeight: 800 }}>* (Required for SBI)</span> : <span style={{ color: C.textLight, fontWeight: 400 }}>(Optional)</span>}
-            </label>
-            <input
-              type="text"
-              required={!!bankInfo?.is_sbi_bank}
-              placeholder="Paste document URL or S3 storage link"
-              value={salarySlipUrl}
-              onChange={(e) => setSalarySlipUrl(e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '10px', border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#fff', color: C.text, fontSize: '14px', outline: 'none' }}
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '6px' }}>
-              PAN Card Document / Link {bankInfo?.is_sbi_bank ? <span style={{ color: '#EF4444', fontWeight: 800 }}>* (Required for SBI)</span> : <span style={{ color: C.textLight, fontWeight: 400 }}>(Optional)</span>}
-            </label>
-            <input
-              type="text"
-              required={!!bankInfo?.is_sbi_bank}
-              placeholder="Paste document URL or S3 storage link"
-              value={panCardUrl}
-              onChange={(e) => setPanCardUrl(e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '10px', border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#fff', color: C.text, fontSize: '14px', outline: 'none' }}
-            />
-          </div>
-
           <button
             type="submit"
             disabled={submitting}
@@ -211,7 +183,7 @@ export default function CustomerPostApplyStep2() {
               marginTop: '8px'
             }}
           >
-            {submitting ? 'Submitting Application Reference...' : 'Confirm Application & Documents →'}
+            {submitting ? 'Submitting Application Reference...' : 'Confirm Application Details →'}
           </button>
         </form>
       </div>

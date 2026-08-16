@@ -7,8 +7,7 @@ import {
 import ApplicationTracker from '../../../components/common/ApplicationTracker';
 
 const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => {
-  const [activeTab, setActiveTab] = useState('documents'); // 'documents' | 'bank' | 'timeline'
-  const [documents, setDocuments] = useState([]);
+  const [activeTab, setActiveTab] = useState('details'); // 'details' | 'bank' | 'timeline'
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -16,17 +15,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
   const [linkCopied, setLinkCopied] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
 
-  // Document preview state
-  const [previewFile, setPreviewFile] = useState(null);
-
-  // Reject modal state
-  const [rejectingDoc, setRejectingDoc] = useState(null);
-  const [rejectReasonType, setRejectReasonType] = useState('Image blurred');
-  const [rejectCustomReason, setRejectCustomReason] = useState('');
-
   // Bank status update state
   const [bankStatus, setBankStatus] = useState(application?.status || 'under_review');
-  const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || '');
+  const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || application?.app_number || '');
   const [approvedAmount, setApprovedAmount] = useState(application?.approved_amount || application?.loan_amount || '');
   const [bankRejectReason, setBankRejectReason] = useState('');
 
@@ -39,15 +30,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [docsRes, timelineRes] = await Promise.all([
-        axios.get(`${API_BASE}/applications/${application.id}/documents`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API_BASE}/applications/${application.id}/timeline`, { headers }).catch(() => ({ data: { data: [] } }))
-      ]);
-
-      setDocuments(docsRes.data.data || []);
+      const timelineRes = await axios.get(`${API_BASE}/applications/${application.id}/timeline`, { headers }).catch(() => ({ data: { data: [] } }));
       setTimeline(timelineRes.data.data || []);
     } catch (err) {
-      console.error('Error loading application verification details:', err);
+      console.error('Error loading application timeline details:', err);
     } finally {
       setLoading(false);
     }
@@ -69,59 +55,14 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
 
       if (res.data.success) {
         setGeneratedLink(res.data.data.uploadUrl);
-        alert(`Upload link generated & sent to customer successfully!\nLink: ${res.data.data.uploadUrl}`);
+        alert(`Application reference link sent to customer!\nLink: ${res.data.data.uploadUrl}`);
         fetchData();
         if (onRefresh) onRefresh();
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to send upload link');
+      alert(err.response?.data?.message || 'Failed to send application link');
     } finally {
       setSendLinkLoading(false);
-    }
-  };
-
-  const handleVerifyDoc = async (docId, status, reason = null) => {
-    try {
-      setActionLoading(true);
-      const token = localStorage.getItem('token');
-      const res = await axios.put(
-        `${API_BASE}/applications/${application.id}/documents/${docId}/verify`,
-        { status, rejection_reason: reason },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (res.data.success) {
-        setRejectingDoc(null);
-        setRejectCustomReason('');
-        fetchData();
-        if (onRefresh) onRefresh();
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to verify document');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleCompleteVerification = async () => {
-    try {
-      setActionLoading(true);
-      const token = localStorage.getItem('token');
-      const res = await axios.put(
-        `${API_BASE}/applications/${application.id}/verification-complete`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      if (res.data.success) {
-        alert('Verification completed! Application sent to bank.');
-        fetchData();
-        if (onRefresh) onRefresh();
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to complete verification');
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -152,7 +93,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
     }
   };
 
-  const allApproved = documents.length > 0 && documents.every(d => d.status === 'approved');
+  const vkycLink = application?.vkyc_url || application?.vkyc_link || '';
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
@@ -163,14 +104,14 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                Application #{application.app_number}
+                Application #{application.app_number || application.bank_ref_number || 'APP-REF'}
               </h3>
               <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '12px', background: '#ffedd5', color: '#c2410c' }}>
-                {application.status ? application.status.replace(/_/g, ' ').toUpperCase() : 'PENDING'}
+                {application.status ? application.status.replace(/_/g, ' ').toUpperCase() : 'UNDER REVIEW'}
               </span>
             </div>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
-              Customer: <strong>{application.customer_name}</strong> | Mobile: {application.customer_mobile || application.mobile} | Product: {application.product_name}
+              Customer: <strong>{application.customer_name}</strong> | Mobile: {application.customer_mobile || application.mobile} | Bank: {application.bank_name || application.bank_code || 'Bank Partner'}
             </p>
           </div>
 
@@ -180,7 +121,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
               disabled={sendLinkLoading}
               style={{ background: '#f97316', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
-              <Send size={14} /> {sendLinkLoading ? 'Sending...' : 'Send Upload Link'}
+              <Send size={14} /> {sendLinkLoading ? 'Sending...' : 'Send Link to Customer'}
             </button>
 
             <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}>
@@ -192,14 +133,14 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
         {/* Modal Body Scrollable */}
         <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
           
-          {/* Module 12 Application Tracker */}
+          {/* Application Tracker */}
           <div style={{ marginBottom: '24px' }}>
             <ApplicationTracker currentStatus={application.status} />
           </div>
 
           {/* Navigation Tabs */}
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', gap: '24px' }}>
-            {['documents', 'bank', 'timeline'].map((tab) => (
+            {['details', 'bank', 'timeline'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -215,114 +156,127 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                   textTransform: 'capitalize'
                 }}
               >
-                {tab === 'documents' ? 'Customer Documents' : tab === 'bank' ? 'Bank Processing' : 'Audit Timeline'}
+                {tab === 'details' ? 'Application & V-KYC Details' : tab === 'bank' ? 'Bank Processing & Statuses' : 'Audit Timeline'}
               </button>
             ))}
           </div>
 
-          {/* TAB 1: CUSTOMER DOCUMENTS VERIFICATION */}
-          {activeTab === 'documents' && (
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', margin: 0 }}>Uploaded Customer Documents</h4>
-                
-                <button
-                  onClick={handleCompleteVerification}
-                  disabled={actionLoading || !allApproved}
-                  style={{
-                    background: allApproved ? '#10b981' : '#cbd5e1',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '8px 18px',
-                    borderRadius: '8px',
-                    fontWeight: 700,
-                    fontSize: '13px',
-                    cursor: allApproved ? 'pointer' : 'not-allowed',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <CheckCircle size={16} /> Mark Verification Complete
-                </button>
+          {/* TAB 1: APPLICATION & V-KYC DETAILS */}
+          {activeTab === 'details' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Key Reference & VKYC Link Card */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  📌 Application Identification & V-KYC Information
+                </h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Application Number</label>
+                    <div style={{ fontSize: '15px', fontWeight: 900, color: '#0284c7', fontFamily: 'monospace' }}>
+                      {application.app_number || application.bank_ref_number || 'N/A'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>V-KYC Link (Video Verification)</label>
+                    {vkycLink ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="text"
+                          readOnly
+                          value={vkycLink}
+                          style={{ flex: 1, padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff' }}
+                        />
+                        <button
+                          onClick={() => window.open(vkycLink, '_blank')}
+                          style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          Open V-KYC
+                        </button>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>No Video KYC link attached yet</span>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {loading ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Loading documents...</div>
-              ) : documents.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
-                  <FileText size={40} color="#94a3b8" style={{ marginBottom: '8px' }} />
-                  <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>No documents uploaded yet by customer.</p>
-                  <button onClick={handleSendLink} style={{ marginTop: '12px', background: '#f97316', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
-                    Send Upload Link Now
-                  </button>
+              {/* Physical Process & Form Fields (Bankwise Details) */}
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 14px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  📋 Physical Application Form Fields (Bank-wise Details)
+                </h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', fontSize: '13px' }}>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Customer Full Name</div>
+                    <div style={{ fontWeight: 800, color: '#0f172a' }}>{application.customer_name || 'N/A'}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Mobile Number</div>
+                    <div style={{ fontWeight: 800, color: '#0f172a' }}>{application.customer_mobile || application.mobile || 'N/A'}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>PAN Card Number</div>
+                    <div style={{ fontWeight: 800, color: '#0f172a', fontFamily: 'monospace', textTransform: 'uppercase' }}>{application.pan_number || 'N/A'}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Target Bank</div>
+                    <div style={{ fontWeight: 800, color: '#ea580c' }}>{application.bank_name || application.bank_code || 'Bank Partner'}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Product / Card Category</div>
+                    <div style={{ fontWeight: 800, color: '#0f172a' }}>{application.product_name || application.credit_card_category || 'Credit Card / Loan'}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Monthly Income</div>
+                    <div style={{ fontWeight: 800, color: '#16a34a' }}>₹{application.monthly_income || application.loan_amount || 'N/A'}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>City & Pincode</div>
+                    <div style={{ fontWeight: 700, color: '#334155' }}>{application.city || 'N/A'} - {application.pincode || ''}</div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Process Channel</div>
+                    <div style={{ fontWeight: 800, color: '#2563eb' }}>{application.process_by_name || application.process_by || 'Partner Lead'}</div>
+                  </div>
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {documents.map((doc) => {
-                    const docLabel = doc.document_type ? doc.document_type.replace(/_/g, ' ').toUpperCase() : 'DOCUMENT';
-                    const isApproved = doc.status === 'approved';
-                    const isRejected = doc.status === 'rejected';
+              </div>
 
-                    return (
-                      <div
-                        key={doc.id}
-                        style={{
-                          background: isApproved ? '#f0fdf4' : isRejected ? '#fef2f2' : '#ffffff',
-                          border: `1px solid ${isApproved ? '#bbf7d0' : isRejected ? '#fecaca' : '#e2e8f0'}`,
-                          borderRadius: '12px',
-                          padding: '16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '12px'
-                        }}
-                      >
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <span style={{ fontWeight: 700, fontSize: '14px', color: '#1e293b' }}>{docLabel}</span>
-                            <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '10px', background: isApproved ? '#dcfce7' : isRejected ? '#fee2e2' : '#e0f2fe', color: isApproved ? '#166534' : isRejected ? '#991b1b' : '#0369a1' }}>
-                              {doc.status ? doc.status.toUpperCase() : 'PENDING'}
-                            </span>
-                            {doc.version > 1 && <span style={{ fontSize: '11px', color: '#64748b' }}>(v{doc.version})</span>}
-                          </div>
-                          {doc.rejection_reason && (
-                            <div style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px' }}>
-                              <strong>Reason:</strong> {doc.rejection_reason}
-                            </div>
-                          )}
-                        </div>
+              {/* Status Checklist Badges */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  🏷 Application Statuses & Checklist Badges
+                </h4>
 
-                        {/* Actions */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <button
-                            onClick={() => window.open(doc.file_url, '_blank')}
-                            style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <Eye size={14} /> Preview
-                          </button>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                  <span style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, background: '#e0f2fe', color: '#0369a1', border: '1px solid #bae6fd' }}>
+                    Stage: {(application.final_stage || application.status || 'Submitted').toUpperCase()}
+                  </span>
 
-                          <button
-                            onClick={() => handleVerifyDoc(doc.id, 'approved')}
-                            disabled={actionLoading || isApproved}
-                            style={{ background: isApproved ? '#10b981' : '#dcfce7', color: isApproved ? '#ffffff' : '#15803d', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: isApproved ? 'default' : 'pointer' }}
-                          >
-                            Approve ✓
-                          </button>
+                  <span style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
+                    QD Status: {application.qd_status || 'Verified'}
+                  </span>
 
-                          <button
-                            onClick={() => setRejectingDoc(doc)}
-                            disabled={actionLoading}
-                            style={{ background: isRejected ? '#ef4444' : '#fee2e2', color: isRejected ? '#ffffff' : '#b91c1c', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-                          >
-                            Reject ✗
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <span style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
+                    Income Verification: {application.income_status || 'Verified'}
+                  </span>
+
+                  <span style={{ padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 800, background: '#f3e8ff', color: '#6b21a8', border: '1px solid #e9d5ff' }}>
+                    Dispatch Stage: {application.dispatch_stage || 'In Transit'}
+                  </span>
                 </div>
-              )}
+              </div>
+
             </div>
           )}
 
@@ -411,49 +365,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
             </div>
           )}
         </div>
-
-        {/* Reject Document Modal Popup */}
-        {rejectingDoc && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-            <div style={{ background: '#ffffff', padding: '24px', borderRadius: '16px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-              <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#991b1b', marginBottom: '12px' }}>
-                Reject Document: {rejectingDoc.document_type?.replace(/_/g, ' ').toUpperCase()}
-              </h4>
-              
-              <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', display: 'block', marginBottom: '6px' }}>Select Reason</label>
-              <select
-                value={rejectReasonType}
-                onChange={(e) => setRejectReasonType(e.target.value)}
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '12px', fontSize: '14px' }}
-              >
-                <option value="Image blurred">Image blurred / Unreadable</option>
-                <option value="Upload expired">Upload expired</option>
-                <option value="Wrong document">Wrong document type uploaded</option>
-                <option value="Other">Other (Specify below)</option>
-              </select>
-
-              {rejectReasonType === 'Other' && (
-                <textarea
-                  value={rejectCustomReason}
-                  onChange={(e) => setRejectCustomReason(e.target.value)}
-                  placeholder="Enter rejection details..."
-                  rows={3}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '12px', fontSize: '14px' }}
-                />
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
-                <button onClick={() => setRejectingDoc(null)} style={{ background: '#f1f5f9', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-                <button
-                  onClick={() => handleVerifyDoc(rejectingDoc.id, 'rejected', rejectReasonType === 'Other' ? rejectCustomReason : rejectReasonType)}
-                  style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
-                >
-                  Confirm Rejection
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

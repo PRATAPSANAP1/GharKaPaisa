@@ -237,7 +237,7 @@ export default function ManageApplications() {
                           onClick={() => setVerifyModalApp(app)}
                           style={{ background: "#f97316", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
                         >
-                          Verify Docs
+                          Verify Details
                         </button>
                         <button
                           onClick={() => handleViewDetails(app)}
