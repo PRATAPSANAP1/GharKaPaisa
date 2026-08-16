@@ -180,7 +180,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>V-KYC Link (Video Verification)</label>
+                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>V-KYC Link</label>
                     {vkycLink ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
