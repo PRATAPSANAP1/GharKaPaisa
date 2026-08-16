@@ -237,7 +237,7 @@ export default function PhysicalApplicationForm() {
         {/* Header Card */}
         <div style={{ background: theme.cardBg, borderRadius: 24, padding: '24px 28px', border: theme.cardBorder, marginBottom: 20, boxShadow: theme.cardShadow }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-            ⚡ SBI Physical Verification Sheet
+            ⚡ {isSbi ? 'SBI' : 'Bank'} Physical Verification Sheet
           </div>
           <h1 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 900, color: '#fff' }}>
             Physical Application Verification
@@ -416,54 +416,56 @@ export default function PhysicalApplicationForm() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div>
-                  <label style={labelStyle}>APPLICATION NUMBER</label>
-                  <input
-                    type="text"
-                    value={form.bank_ref_number}
-                    onChange={e => handleChange('bank_ref_number', e.target.value)}
-                    placeholder="Bank Application Number"
-                    style={inputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>VKYC LINK</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
+              {isSbi && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div>
+                    <label style={labelStyle}>APPLICATION NUMBER</label>
                     <input
                       type="text"
-                      value={form.vkyc_url}
-                      onChange={e => handleChange('vkyc_url', e.target.value)}
-                      placeholder="https://vkyc..."
-                      style={{ ...inputStyle, flex: 1 }}
+                      value={form.bank_ref_number}
+                      onChange={e => handleChange('bank_ref_number', e.target.value)}
+                      placeholder="Bank Application Number"
+                      style={inputStyle}
                     />
-                    {form.vkyc_url && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const raw = form.vkyc_url.trim();
-                          if (!raw) return;
-                          const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-                          window.open(target, '_blank', 'noopener,noreferrer');
-                        }}
-                        style={{
-                          padding: '12px 14px',
-                          borderRadius: '12px',
-                          border: 'none',
-                          background: 'linear-gradient(135deg, #10b981, #059669)',
-                          color: '#fff',
-                          fontWeight: 800,
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        Open V-KYC ↗
-                      </button>
-                    )}
+                  </div>
+                  <div>
+                    <label style={labelStyle}>VKYC LINK</label>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="text"
+                        value={form.vkyc_url}
+                        onChange={e => handleChange('vkyc_url', e.target.value)}
+                        placeholder="https://vkyc..."
+                        style={{ ...inputStyle, flex: 1 }}
+                      />
+                      {form.vkyc_url && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const raw = form.vkyc_url.trim();
+                            if (!raw) return;
+                            const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+                            window.open(target, '_blank', 'noopener,noreferrer');
+                          }}
+                          style={{
+                            padding: '12px 14px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            color: '#fff',
+                            fontWeight: 800,
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          Open V-KYC ↗
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
                 <button
@@ -489,18 +491,20 @@ export default function PhysicalApplicationForm() {
           ) : (
             /* ═══ FORM 2: PARTNERS / OPERATIONS REMARK & BANK STATUSES ═══ */
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div>
-                  <label style={labelStyle}>APPCODE STATUS</label>
-                  <select
-                    value={form.appcode_status}
-                    onChange={e => handleChange('appcode_status', e.target.value)}
-                    style={inputStyle}
-                  >
-                    <option value="Appcode Pending" style={{ background: '#0a1122' }}>1. Appcode Pending</option>
-                    <option value="Appcode Submit" style={{ background: '#0a1122' }}>2. Appcode Submit</option>
-                  </select>
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isSbi ? '1fr 1fr' : '1fr', gap: 14 }}>
+                {isSbi && (
+                  <div>
+                    <label style={labelStyle}>APPCODE STATUS</label>
+                    <select
+                      value={form.appcode_status}
+                      onChange={e => handleChange('appcode_status', e.target.value)}
+                      style={inputStyle}
+                    >
+                      <option value="Appcode Pending" style={{ background: '#0a1122' }}>1. Appcode Pending</option>
+                      <option value="Appcode Submit" style={{ background: '#0a1122' }}>2. Appcode Submit</option>
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label style={labelStyle}>SOFT APPROVAL STATUS</label>

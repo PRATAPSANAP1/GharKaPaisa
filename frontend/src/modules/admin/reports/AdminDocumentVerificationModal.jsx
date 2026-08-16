@@ -367,43 +367,47 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     />
                   </div>
 
-                  <div>
-                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Application Number (Bank Application Ref No.)</label>
-                    <input
-                      type="text"
-                      value={appNumber}
-                      onChange={(e) => setAppNumber(e.target.value)}
-                      placeholder="Bank Application Number"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800, fontFamily: 'monospace' }}
-                    />
-                  </div>
+                  {isSbi && (
+                    <>
+                      <div>
+                        <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Application Number (Bank Application Ref No.)</label>
+                        <input
+                          type="text"
+                          value={appNumber}
+                          onChange={(e) => setAppNumber(e.target.value)}
+                          placeholder="Bank Application Number"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800, fontFamily: 'monospace' }}
+                        />
+                      </div>
 
-                  <div>
-                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>VKYC Link</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input
-                        type="text"
-                        value={vkycUrl}
-                        onChange={(e) => setVkycUrl(e.target.value)}
-                        placeholder="https://vkyc..."
-                        style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px' }}
-                      />
-                      {vkycUrl && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const raw = (vkycUrl || '').trim();
-                            if (!raw) return;
-                            const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-                            window.open(target, '_blank', 'noopener,noreferrer');
-                          }}
-                          style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                        >
-                          Open V-KYC
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                      <div>
+                        <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>VKYC Link</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input
+                            type="text"
+                            value={vkycUrl}
+                            onChange={(e) => setVkycUrl(e.target.value)}
+                            placeholder="https://vkyc..."
+                            style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px' }}
+                          />
+                          {vkycUrl && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const raw = (vkycUrl || '').trim();
+                                if (!raw) return;
+                                const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+                                window.open(target, '_blank', 'noopener,noreferrer');
+                              }}
+                              style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              Open V-KYC
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                 </div>
               </div>
@@ -456,17 +460,19 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
                   
                   {/* 1. Appcode Status */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Appcode Status</label>
-                    <select
-                      value={appcodeStatus}
-                      onChange={(e) => setAppcodeStatus(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
-                    >
-                      <option value="Appcode Pending">1. Appcode Pending</option>
-                      <option value="Appcode Submit">2. Appcode Submit</option>
-                    </select>
-                  </div>
+                  {isSbi && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Appcode Status</label>
+                      <select
+                        value={appcodeStatus}
+                        onChange={(e) => setAppcodeStatus(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                      >
+                        <option value="Appcode Pending">1. Appcode Pending</option>
+                        <option value="Appcode Submit">2. Appcode Submit</option>
+                      </select>
+                    </div>
+                  )}
 
                   {/* 2. Soft Approval Status */}
                   <div>
