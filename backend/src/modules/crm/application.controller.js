@@ -1250,6 +1250,9 @@ const getApplication = async (req, res, next) => {
     const notes = await getFilteredNotes(id, req.user.role);
     app.notes_list = notes;
 
+    const { rows: [pd] } = await query(`SELECT * FROM physical_application_details WHERE application_id = $1`, [id]);
+    app.physical_details = pd || {};
+
     return success(res, app);
   } catch (err) {
     next(err);

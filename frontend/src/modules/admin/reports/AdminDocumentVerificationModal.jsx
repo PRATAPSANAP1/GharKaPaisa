@@ -44,10 +44,45 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
     if (!application?.id) return;
     try {
       setLoading(true);
-      const timelineRes = await api.get(`/applications/${application.id}/timeline`).catch(() => ({ data: { data: [] } }));
-      setTimeline(timelineRes.data?.data || []);
+      const [appRes, timelineRes] = await Promise.all([
+        api.get(`/applications/${application.id}`).catch(() => null),
+        api.get(`/applications/${application.id}/timeline`).catch(() => ({ data: { data: [] } }))
+      ]);
+
+      if (appRes?.data?.success && appRes.data.data) {
+        const app = appRes.data.data;
+        const cust = app.customer || {};
+        const pd = app.physical_details || {};
+
+        if (pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile) setCustomerMobile(pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile || app.mobile || '');
+        if (pd.pan_name || cust.full_name || app.customer_name) setCustomerName(pd.pan_name || cust.full_name || app.customer_name || app.full_name || '');
+        if (pd.dob || cust.dob || app.dob) setDob(pd.dob || cust.dob || app.dob || '');
+        if (pd.personal_email || cust.email || app.customer_email) setCustomerEmail(pd.personal_email || cust.email || app.customer_email || app.email || '');
+        if (pd.pan_number || cust.pan_number || app.pan_number) setPanNumber(pd.pan_number || cust.pan_number || app.pan_number || app.pan || '');
+        if (pd.company_name || app.company_name) setCompanyName(pd.company_name || app.company_name || app.employer_name || '');
+        if (pd.designation || app.designation) setDesignation(pd.designation || app.designation || app.occupation || '');
+        if (pd.flat_no || app.address) setAddress(pd.flat_no || app.address || app.residential_address || '');
+        if (pd.company_address || app.company_address) setCompanyAddress(pd.company_address || app.company_address || app.office_address || '');
+        if (pd.mother_name || app.mother_name) setMotherName(pd.mother_name || app.mother_name || '');
+        if (app.bank_ref_number || app.app_number) setAppNumber(app.bank_ref_number || app.app_number || app.application_no || '');
+        if (app.vkyc_url) setVkycUrl(app.vkyc_url || app.vkyc_link || '');
+
+        if (app.appcode_status) setAppcodeStatus(app.appcode_status);
+        if (app.soft_approval_status) setSoftApprovalStatus(app.soft_approval_status);
+        if (app.vkyc_stage) setVkycStage(app.vkyc_stage);
+        if (app.iqa_stage) setIqaStage(app.iqa_stage);
+        if (app.dispatch_status) setDispatchStatus(app.dispatch_status);
+        if (app.bank_remark) setBankRemark(app.bank_remark);
+        if (app.final_status) setFinalStatus(app.final_status);
+        if (app.decline_reason) setDeclineReason(app.decline_reason);
+        if (app.eligible_reqd) setEligibleReQd(app.eligible_reqd);
+        if (app.bank_ref_number) setBankRefNumber(app.bank_ref_number);
+        if (app.approved_amount) setApprovedAmount(app.approved_amount);
+      }
+
+      setTimeline(timelineRes?.data?.data || []);
     } catch (err) {
-      console.error('Error loading application timeline details:', err);
+      console.error('Error loading application details:', err);
     } finally {
       setLoading(false);
     }
