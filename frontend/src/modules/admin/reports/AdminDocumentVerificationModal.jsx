@@ -251,7 +251,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                 whiteSpace: 'nowrap'
               }}
             >
-              📦 Form 2 (Part 2): IQA & Dispatch
+              📦 Part 2 Operations & Dispatch Stage
             </button>
 
             <button
@@ -269,7 +269,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                 whiteSpace: 'nowrap'
               }}
             >
-              🏦 Form 2 (Part 3): Bank Status & Remark
+              🏦 Part 3: Bank Remark & Final Status
             </button>
 
             <button
@@ -572,7 +572,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 16px 0', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  📦 Form 2 (Part 2): Operations & Dispatch Stage — IQA & Dispatch Workflow
+                  Part 2 Operations & Dispatch Stage
                 </h4>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
@@ -636,11 +636,54 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
               
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#991b1b', margin: '0 0 16px 0', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  🏦 Form 2 (Part 3): Bank Remark & Final Status (Operations Head / Admin Only)
+                  Part 3: Bank Remark & Final Status
                 </h4>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
                   
+                  {/* Application Number (Bank Application Reference No.) */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Application Number (Bank Application Ref No.)</label>
+                    <input
+                      type="text"
+                      value={appNumber || bankRefNumber}
+                      onChange={(e) => {
+                        setAppNumber(e.target.value);
+                        setBankRefNumber(e.target.value);
+                      }}
+                      placeholder="Enter Bank Application Ref No."
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace' }}
+                    />
+                  </div>
+
+                  {/* VKYC Link with Open V-KYC Direct Button */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Link</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="text"
+                        value={vkycUrl}
+                        onChange={(e) => setVkycUrl(e.target.value)}
+                        placeholder="https://vkyc..."
+                        style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px' }}
+                      />
+                      {vkycUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const raw = (vkycUrl || '').trim();
+                            if (!raw) return;
+                            const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+                            window.open(target, '_blank', 'noopener,noreferrer');
+                          }}
+                          style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        >
+                          Open V-KYC
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Final Status from the Bank / Current Stage */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Final Status from Bank / Current Stage</label>
@@ -667,18 +710,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                       <option value="Yes">1. Yes</option>
                       <option value="No">2. No</option>
                     </select>
-                  </div>
-
-                  {/* Bank Reference Number */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Bank Reference Number</label>
-                    <input
-                      type="text"
-                      value={bankRefNumber}
-                      onChange={(e) => setBankRefNumber(e.target.value)}
-                      placeholder="Enter Bank Application Ref No."
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                    />
                   </div>
 
                   {/* Bank Remark (Operations Head) */}

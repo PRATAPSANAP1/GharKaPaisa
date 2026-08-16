@@ -1125,6 +1125,10 @@ const listApplications = async (req, res, next) => {
           OR ($2 = 'under_review' AND combined.status IN ('under_review', 'under review', 'verification', 'in_progress', 'bank_verification'))
           OR ($2 = 'submitted' AND combined.status IN ('submitted', 'applied'))
           OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned'))
+          OR ($2 = 'operational_verified' AND (
+            LOWER(combined.status) IN ('approved', 'operational_verified', 'app file generated (approved)', 'approved_by_ops', 'disbursed', 'sanctioned')
+            OR LOWER(combined.status) LIKE '%approve%' OR LOWER(combined.status) LIKE '%generated%'
+          ))
           OR ($2 = 'disbursed' AND combined.status IN ('disbursed', 'completed', 'paid'))
           OR ($2 = 'rejected' AND combined.status IN ('rejected', 'declined', 'cancelled'))
         )
@@ -1194,6 +1198,10 @@ const listApplications = async (req, res, next) => {
           OR ($2 = 'under_review' AND combined.status IN ('under_review', 'under review', 'verification', 'in_progress', 'bank_verification'))
           OR ($2 = 'submitted' AND combined.status IN ('submitted', 'applied', 'lead_created', 'new', 'draft', 'pending'))
           OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned'))
+          OR ($2 = 'operational_verified' AND (
+            LOWER(combined.status) IN ('approved', 'operational_verified', 'app file generated (approved)', 'approved_by_ops', 'disbursed', 'sanctioned')
+            OR LOWER(combined.status) LIKE '%approve%' OR LOWER(combined.status) LIKE '%generated%'
+          ))
           OR ($2 = 'disbursed' AND combined.status IN ('disbursed', 'completed', 'paid'))
           OR ($2 = 'rejected' AND combined.status IN ('rejected', 'declined', 'cancelled'))
         )
@@ -2644,16 +2652,10 @@ const deleteApplication = async (req, res, next) => {
       return error(res, 'Application or Lead record not found', 404);
     }
 
-    // Check authorization for Partner or Team Member roles
+    // Check authorization: ONLY SUPER_ADMIN and ADMIN are authorized to delete application records
     const userRole = req.user?.role;
-    if (['PARTNER', 'TEAM_MEMBER'].includes(userRole)) {
-      const { rows: [partner] } = await client.query(
-        `SELECT id FROM partner_profiles WHERE user_id = $1`, 
-        [req.user.id]
-      );
-      if (!partner || app.partner_id !== partner.id) {
-        return error(res, 'You are not authorized to delete this record', 403);
-      }
+    if (userRole !== 'SUPER_ADMIN' && userRole !== 'ADMIN') {
+      return error(res, 'Access denied: Only Super Admin is authorized to delete application records', 403);
     }
 
     const targetCustomerId = app.customer_id || null;

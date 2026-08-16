@@ -584,7 +584,7 @@ export default function PhysicalApplicationForm() {
           {activeTab === 'step3' && (
             <>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #233354', paddingBottom: 10, marginBottom: 6 }}>
-                📦 Form 2 (Part 2): Operations & Dispatch Stage — IQA & Dispatch Workflow
+                Part 2 Operations & Dispatch Stage
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
@@ -663,10 +663,58 @@ export default function PhysicalApplicationForm() {
           {activeTab === 'step4' && (
             <>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#f97316', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #233354', paddingBottom: 10, marginBottom: 6 }}>
-                🏦 Form 2 (Part 3): Bank Remark & Final Status (Admin / Operations Head Only)
+                Part 3: Bank Remark & Final Status
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={labelStyle}>APPLICATION NUMBER (BANK APPLICATION REF NO.)</label>
+                  <input
+                    type="text"
+                    value={form.application_number}
+                    onChange={e => handleChange('application_number', e.target.value)}
+                    placeholder="Enter Bank Application Number"
+                    style={{ ...inputStyle, fontWeight: 'bold', fontFamily: 'monospace' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>VKYC LINK</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      type="url"
+                      value={form.vkyc_url}
+                      onChange={e => handleChange('vkyc_url', e.target.value)}
+                      placeholder="https://vkyc..."
+                      style={{ ...inputStyle, flex: 1 }}
+                    />
+                    {form.vkyc_url && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const raw = (form.vkyc_url || '').trim();
+                          if (!raw) return;
+                          const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+                          window.open(target, '_blank', 'noopener,noreferrer');
+                        }}
+                        style={{
+                          background: '#ea580c',
+                          color: '#ffffff',
+                          border: 'none',
+                          padding: '8px 14px',
+                          borderRadius: '12px',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Open V-KYC
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div>
                   <label style={labelStyle}>FINAL STATUS FROM BANK / CURRENT STAGE</label>
                   <select

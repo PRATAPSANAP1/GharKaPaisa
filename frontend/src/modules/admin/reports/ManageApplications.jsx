@@ -237,14 +237,12 @@ export default function ManageApplications() {
                     </td>
                     <td style={{ padding: "14px 16px", textAlign: "right" }}>
                       <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", alignItems: "center" }}>
-                        {(app.process_by === 'partner_punch' || app.process_by === 'punching' || app.process_by === 'punching_only' || app.process_by === 'physical' || app.process_by === 'Partner Punch' || (app.process_by && !app.process_by.includes('share') && !app.process_by.includes('direct'))) && (
-                          <button
-                            onClick={() => setVerifyModalApp(app)}
-                            style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                          >
-                            ✏️ Edit Form
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setVerifyModalApp(app)}
+                          style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                        >
+                          ✏️ Edit Form
+                        </button>
                         <button
                           onClick={() => setVerifyModalApp(app)}
                           style={{ background: "#f97316", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}

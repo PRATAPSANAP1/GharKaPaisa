@@ -5,7 +5,7 @@ import {
   MdSearch, MdFilterList, MdCheckCircle, MdBlock, 
   MdCompareArrows, MdHistory, MdFileDownload, MdClose,
   MdModeEdit, MdSwapHoriz, MdAssignment, MdVisibility,
-  MdShare, MdTrackChanges
+  MdShare, MdTrackChanges, MdDelete
 } from 'react-icons/md';
 
 const VISIBILITY_OPTIONS = [
@@ -29,7 +29,7 @@ export default function ManageApplications() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('operational_verified');
   const [commFilter, setCommFilter] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('');
   const [processByFilter, setProcessByFilter] = useState('');
@@ -83,6 +83,20 @@ export default function ManageApplications() {
     status: 'submitted',
     remarks: ''
   });
+
+  const handleDeleteApplication = async (appId, appNumber) => {
+    if (!window.confirm(`Are you sure you want to delete application lead #${appNumber || appId}? This action will permanently remove the application and associated records.`)) return;
+    try {
+      const res = await api.delete(`/applications/${appId}`);
+      if (res.data?.success) {
+        alert('Application deleted successfully!');
+        if (selectedApp?.id === appId) setDetailModalOpen(false);
+        fetchApplications();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete application record');
+    }
+  };
 
   const handleOpenEditModal = (app) => {
     setEditingApp(app);
@@ -438,8 +452,8 @@ export default function ManageApplications() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>Customer Applications Queue</h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>Review verifications, track documents, log admin notes, and approve partner commission payouts</p>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>Operational Verified & Approved Applications</h2>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>Showing applications verified and approved by Operational Head</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button 
@@ -470,15 +484,16 @@ export default function ManageApplications() {
             </div>
           </div>
           
-          <div style={{ width: '150px' }}>
+          <div style={{ width: '180px' }}>
             <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Application Status</label>
             <select style={S.input} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">All Statuses</option>
-              <option value="pending">Pending</option>
+              <option value="operational_verified">Operational Verified / Approved</option>
+              <option value="approved">Approved</option>
+              <option value="disbursed">Disbursed</option>
               <option value="submitted">Applied</option>
               <option value="under_review">Under Review</option>
-              <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
+              <option value="">All Applications</option>
             </select>
           </div>
 
@@ -610,6 +625,9 @@ export default function ManageApplications() {
                         <button onClick={() => handleOpenEditModal(app)} style={{ border: `1px solid ${C.primary}40`, background: `${C.primary}12`, color: C.primary, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
                           ✏️ Edit
                         </button>
+                        <button onClick={() => handleDeleteApplication(app.id, app.app_number)} style={{ border: `1px solid ${C.red}40`, background: `${C.red}12`, color: C.red, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                          <MdDelete /> Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -688,6 +706,9 @@ export default function ManageApplications() {
               </button>
               <button onClick={() => triggerActionDialog('manual')} style={{ ...S.btn('outline'), color: C.teal, borderColor: C.teal, display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px' }}>
                 <MdAssignment /> Manual Commission
+              </button>
+              <button onClick={() => handleDeleteApplication(selectedApp.id, selectedApp.app_number)} style={{ ...S.btn('outline'), color: C.red, borderColor: C.red, display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 14px', fontSize: '12.5px', fontWeight: 700 }}>
+                <MdDelete /> Delete Application
               </button>
             </div>
 

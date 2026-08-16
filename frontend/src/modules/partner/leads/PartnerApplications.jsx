@@ -875,10 +875,12 @@ export default function PartnerApplications() {
                         style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}40`, background: accent + '10', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                         ✏️ Edit
                       </button>
-                      <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
-                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ef444440`, background: '#ef444410', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Trash2 size={12} /> Delete
-                      </button>
+                      {userRole === 'SUPER_ADMIN' && (
+                        <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
+                          style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ef444440`, background: '#ef444410', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Trash2 size={12} /> Delete
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -991,10 +993,12 @@ export default function PartnerApplications() {
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}40`, background: accent + '10', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               ✏️ Edit
                             </button>
-                            <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
-                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ef444440`, background: '#ef444410', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              <Trash2 size={13} /> Delete
-                            </button>
+                            {userRole === 'SUPER_ADMIN' && (
+                              <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
+                                style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ef444440`, background: '#ef444410', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <Trash2 size={13} /> Delete
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

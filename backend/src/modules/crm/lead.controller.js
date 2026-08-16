@@ -45,7 +45,25 @@ const listLeads = async (req, res, next) => {
       idx += 2;
     }
 
-    if (status) {
+    const isSuperAdminLeads = req.query.is_super_admin_leads === 'true' || req.query.is_super_admin_leads === true || (req.user?.role === 'SUPER_ADMIN' && req.headers.referer?.includes('/super-admin/leads'));
+
+    if (isSuperAdminLeads) {
+      if (status && status !== 'approved' && status !== 'operational_verified') {
+        whereClause += ` AND l.status = $${idx++}`;
+        values.push(status);
+      } else {
+        whereClause += ` AND (
+          LOWER(l.status) IN ('approved', 'operational_verified', 'app file generated (approved)', 'approved_by_ops', 'disbursed', 'dispatched')
+          OR LOWER(l.pipeline_stage) IN ('approved', 'operational_verified', 'disbursed')
+          OR EXISTS (
+            SELECT 1 FROM applications a 
+            WHERE a.lead_id = l.id 
+              AND (LOWER(a.status) IN ('approved', 'operational_verified', 'app file generated (approved)', 'disbursed')
+                   OR LOWER(a.final_status) LIKE '%approve%' OR LOWER(a.final_status) LIKE '%generated%')
+          )
+        )`;
+      }
+    } else if (status) {
       whereClause += ` AND l.status = $${idx++}`;
       values.push(status);
     }

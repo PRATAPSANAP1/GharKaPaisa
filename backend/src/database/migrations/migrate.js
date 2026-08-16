@@ -115,19 +115,32 @@ const migrate = async () => {
   `);
   await query(`
     DO $$ BEGIN
-      CREATE TYPE wallet_txn_status AS ENUM ('pending','approved','rejected','processed');
+      CREATE TYPE wallet_txn_status AS ENUM ('pending','approved','rejected','processed','cancelled','failed','completed','processing','refunded','declined');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
+  await addEnumValue('wallet_txn_status', 'cancelled');
+  await addEnumValue('wallet_txn_status', 'failed');
+  await addEnumValue('wallet_txn_status', 'completed');
+  await addEnumValue('wallet_txn_status', 'processing');
+  await addEnumValue('wallet_txn_status', 'refunded');
+  await addEnumValue('wallet_txn_status', 'declined');
+
   await query(`
     DO $$ BEGIN
-      CREATE TYPE commission_status AS ENUM ('pending','approved','rejected','processed');
+      CREATE TYPE commission_status AS ENUM ('pending','approved','rejected','processed','cancelled','released','on_hold');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
+  await addEnumValue('commission_status', 'cancelled');
+  await addEnumValue('commission_status', 'released');
+  await addEnumValue('commission_status', 'on_hold');
+
   await query(`
     DO $$ BEGIN
-      CREATE TYPE withdrawal_status AS ENUM ('pending','approved','processed','rejected');
+      CREATE TYPE withdrawal_status AS ENUM ('pending','approved','processed','rejected','cancelled','failed');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
+  await addEnumValue('withdrawal_status', 'cancelled');
+  await addEnumValue('withdrawal_status', 'failed');
 
   // Create sequence for Partner code generation
   await query(`CREATE SEQUENCE IF NOT EXISTS partner_code_seq START 1000`);

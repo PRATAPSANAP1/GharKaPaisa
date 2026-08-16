@@ -8,6 +8,8 @@ export default function ManageLeads() {
   const { C } = useTheme();
   const S = makeS(C);
 
+  const isSuperAdminView = typeof window !== 'undefined' && window.location.pathname.includes('/super-admin');
+
   // Listing State
   const [leads, setLeads] = useState([]);
   const [total, setTotal] = useState(0);
@@ -43,7 +45,7 @@ export default function ManageLeads() {
       const res = await api.get("/leads", {
         params: {
           page,
-          limit: 20,
+          limit: 50,
           search: search || undefined,
           status: status || undefined,
           priority: priority || undefined,
@@ -159,8 +161,14 @@ export default function ManageLeads() {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
         <div>
-          <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Leads</h2>
-          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Operations hub, verification checklist engine, bank executive assignments, SLA monitoring & automatic wallet payouts.</p>
+          <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>
+            {isSuperAdminView ? "All Customer Leads & Details" : "Leads"}
+          </h2>
+          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>
+            {isSuperAdminView
+              ? "Comprehensive directory of all customer details and lead records across all statuses"
+              : "Operations hub, verification checklist engine, bank executive assignments, SLA monitoring & automatic wallet payouts."}
+          </p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -207,6 +215,7 @@ export default function ManageLeads() {
             <option value="submitted">Submitted to Bank</option>
             <option value="under_review">Bank Review</option>
             <option value="approved">Approved</option>
+            <option value="operational_verified">Operational Verified</option>
             <option value="rejected">Rejected</option>
           </select>
 
