@@ -1382,6 +1382,10 @@ const migrate = async () => {
       )
     `);
     
+    await query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS tds_rate NUMERIC(5,2) DEFAULT 2.00`);
+    await query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS tds_amount NUMERIC(15,2) DEFAULT 0.00`);
+    await query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS net_amount NUMERIC(15,2)`);
+    
     logger.info('Wallet Engine Migrations completed successfully');
   } catch (walletMigrateErr) {
     logger.error('Failed to run Wallet Engine Migrations:', walletMigrateErr);

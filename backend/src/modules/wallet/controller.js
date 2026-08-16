@@ -415,23 +415,33 @@ const requestWithdrawal = async (req, res, next) => {
       return error(res, 'Please register your Bank Account or UPI details under Wallet -> Bank Details before requesting a withdrawal.', 400);
     }
 
+    // Calculate 2% TDS
+    const tdsRate = 2.00;
+    const tdsAmount = Math.round((parsedAmount * 0.02) * 100) / 100;
+    const netAmount = Math.round((parsedAmount - tdsAmount) * 100) / 100;
+
+    // Ensure columns exist on table
+    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS tds_rate NUMERIC(5,2) DEFAULT 2.00`);
+    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS tds_amount NUMERIC(15,2) DEFAULT 0.00`);
+    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS net_amount NUMERIC(15,2)`);
+
     // Insert pending withdrawal request
     const { rows: [wr] } = await client.query(`
-      INSERT INTO wallet_withdrawals (wallet_id, partner_id, amount, bank_name, account_number, ifsc_code, status, bank_account_id, remarks)
-      VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7, $8) RETURNING id
-    `, [wallet.id, PartnerId, parsedAmount, bank?.bank_name || 'UPI Settlement', bank?.account_number || null, bank?.ifsc_code || null, bank?.id || null, String(remarks || '').trim() || null]);
+      INSERT INTO wallet_withdrawals (wallet_id, partner_id, amount, tds_rate, tds_amount, net_amount, bank_name, account_number, ifsc_code, status, bank_account_id, remarks)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11) RETURNING id
+    `, [wallet.id, PartnerId, parsedAmount, tdsRate, tdsAmount, netAmount, bank?.bank_name || 'UPI Settlement', bank?.account_number || null, bank?.ifsc_code || null, bank?.id || null, String(remarks || '').trim() || null]);
     await client.query(`INSERT INTO wallet_withdrawal_events (withdrawal_id,status,remarks,changed_by) VALUES ($1,'pending',$2,$3)`, [wr.id, String(remarks || '').trim() || 'Withdrawal requested', req.user?.id || null]);
 
     await debitAvailable(PartnerId, parsedAmount, {
       reference_type: 'withdrawal',
       reference_id: wr.id,
       bank_name: bank?.bank_name || 'UPI Settlement',
-      description: `Withdrawal request for ₹${parsedAmount}`
+      description: `Withdrawal request for ₹${parsedAmount} (2% TDS: ₹${tdsAmount}, Net Payable: ₹${netAmount})`
     }, client);
 
     await client.query('COMMIT');
-    await logAction(req, 'REQUEST_WITHDRAWAL', wr.id, { partner_id: PartnerId, amount: parsedAmount, remarks: String(remarks || '').trim() || null });
-    return success(res, { withdrawal_id: wr.id }, 'Withdrawal request submitted. Will be processed in 1-2 business days.');
+    await logAction(req, 'REQUEST_WITHDRAWAL', wr.id, { partner_id: PartnerId, amount: parsedAmount, tds_rate: tdsRate, tds_amount: tdsAmount, net_amount: netAmount, remarks: String(remarks || '').trim() || null });
+    return success(res, { withdrawal_id: wr.id, amount: parsedAmount, tds_rate: tdsRate, tds_amount: tdsAmount, net_amount: netAmount }, `Withdrawal request submitted. (Gross: ₹${parsedAmount}, 2% TDS: ₹${tdsAmount}, Net Payout: ₹${netAmount})`);
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) {}
     if (err.code === '23505') return error(res, 'A withdrawal request is already pending');

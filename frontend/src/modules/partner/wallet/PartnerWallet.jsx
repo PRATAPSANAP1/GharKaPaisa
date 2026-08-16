@@ -1388,6 +1388,22 @@ const PartnerWallet = () => {
                   <div style={{ fontSize: '11px', color: C.textLight, marginTop: '4px' }}>
                     <span>Min: ₹100 — Max: ₹50,000</span>
                   </div>
+                  {parseFloat(withdrawAmount) >= 100 && (
+                    <div style={{ marginTop: '10px', padding: '12px', background: `${C.primary}10`, border: `1px solid ${C.primary}25`, borderRadius: '10px', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: C.text }}>
+                        <span>Requested Amount:</span>
+                        <strong>₹{parseFloat(withdrawAmount).toLocaleString('en-IN')}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: C.red }}>
+                        <span>TDS Deduction (2%):</span>
+                        <strong>-₹{(parseFloat(withdrawAmount) * 0.02).toFixed(2)}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: C.green, fontWeight: 800, borderTop: `1px dashed ${C.border}`, paddingTop: '6px' }}>
+                        <span>Net Bank Payout Amount:</span>
+                        <span>₹{(parseFloat(withdrawAmount) * 0.98).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <button 
@@ -1822,7 +1838,7 @@ const PartnerWallet = () => {
           <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
             <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800 }}>Confirm Payout Settlement</h3>
             <p style={{ margin: '0 0 20px', fontSize: '13px', color: C.textLight, lineHeight: 1.5 }}>
-              A 6-digit verification code has been sent to <strong>{emailMasked}</strong>. Enter it below to authorize withdrawal of <strong>₹{parseFloat(withdrawAmount || 0).toLocaleString('en-IN')}</strong>.
+              A 6-digit verification code has been sent to <strong>{emailMasked}</strong>. Enter it below to authorize withdrawal of <strong>₹{parseFloat(withdrawAmount || 0).toLocaleString('en-IN')}</strong> (Net Payout after 2% TDS: <strong>₹{(parseFloat(withdrawAmount || 0) * 0.98).toFixed(2)}</strong>).
             </p>
             <form onSubmit={handleConfirmWithdrawalOTP} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
@@ -1937,12 +1953,12 @@ const PartnerWallet = () => {
                 <strong>₹{parseFloat(selectedWithdrawalForReceipt.amount).toFixed(2)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: C.red }}>
-                <span>TDS Deducted (5%):</span>
-                <strong>-₹{(parseFloat(selectedWithdrawalForReceipt.amount) * 0.05).toFixed(2)}</strong>
+                <span>TDS Deducted (2%):</span>
+                <strong>-₹{parseFloat(selectedWithdrawalForReceipt.tds_amount || (selectedWithdrawalForReceipt.amount * 0.02)).toFixed(2)}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 800, borderTop: `1px solid ${C.border}`, paddingTop: '10px' }}>
                 <span>Total Disbursed Net Amount:</span>
-                <span style={{ color: C.green }}>₹{(parseFloat(selectedWithdrawalForReceipt.amount) * 0.95).toFixed(2)}</span>
+                <span style={{ color: C.green }}>₹{parseFloat(selectedWithdrawalForReceipt.net_amount || (selectedWithdrawalForReceipt.amount * 0.98)).toFixed(2)}</span>
               </div>
             </div>
 

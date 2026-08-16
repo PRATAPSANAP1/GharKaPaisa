@@ -135,6 +135,20 @@ export default function WalletScreen({ route, navigation }) {
             />
           </View>
 
+          {parseFloat(withdrawAmount) > 0 && (
+            <View style={{ marginBottom: 12, padding: 10, backgroundColor: '#F0FDF4', borderRadius: 8, borderWidth: 1, borderColor: '#BBF7D0' }}>
+              <Text style={{ fontSize: 11, color: '#166534', fontWeight: '700' }}>
+                Gross Amount: ₹{parseFloat(withdrawAmount).toLocaleString('en-IN')}
+              </Text>
+              <Text style={{ fontSize: 11, color: '#DC2626', fontWeight: '700', marginTop: 2 }}>
+                2% TDS Deduction: -₹{(parseFloat(withdrawAmount) * 0.02).toFixed(2)}
+              </Text>
+              <Text style={{ fontSize: 12, color: '#15803D', fontWeight: '800', marginTop: 2 }}>
+                Net Payout: ₹{(parseFloat(withdrawAmount) * 0.98).toFixed(2)}
+              </Text>
+            </View>
+          )}
+
           <TouchableOpacity
             style={[styles.withdrawBtn, withdrawLoading && styles.btnDisabled]}
             onPress={handleWithdrawalRequest}
