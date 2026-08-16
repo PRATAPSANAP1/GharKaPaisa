@@ -2952,9 +2952,35 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
       ]
     );
 
+    // Sync to applications table
     await client.query(
-      `UPDATE applications SET status = 'details_submitted', updated_at = NOW() WHERE id = $1`,
-      [appId]
+      `UPDATE applications 
+       SET status = 'details_submitted',
+           customer_mobile = COALESCE($1, customer_mobile),
+           customer_name = COALESCE($2, customer_name),
+           dob = COALESCE($3, dob),
+           customer_email = COALESCE($4, customer_email),
+           pan_number = COALESCE($5, pan_number),
+           company_name = COALESCE($6, company_name),
+           designation = COALESCE($7, designation),
+           address = COALESCE($8, address),
+           company_address = COALESCE($9, company_address),
+           mother_name = COALESCE($10, mother_name),
+           updated_at = NOW()
+       WHERE id = $11`,
+      [
+        aadhaar_linked_mobile || null,
+        pan_name || null,
+        dob || null,
+        personal_email || null,
+        pan_number || null,
+        company_name || null,
+        designation || null,
+        flat_no ? `${flat_no} ${sub_area || ''} ${landmark || ''} ${pincode || ''}`.trim() : null,
+        company_address || null,
+        mother_name || null,
+        appId
+      ]
     );
 
     await logTimeline(

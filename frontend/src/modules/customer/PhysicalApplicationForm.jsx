@@ -188,7 +188,10 @@ export default function PhysicalApplicationForm() {
     );
   }
 
-  const isSbi = appData?.is_sbi;
+  const isSbi = appData?.is_sbi || 
+    (appData?.bank_name && appData.bank_name.toLowerCase().includes('sbi')) || 
+    (appData?.product_name && appData.product_name.toLowerCase().includes('sbi')) ||
+    true; // Default to SBI physical form layout for physical application links
 
   return (
     <div style={{ minHeight: '100vh', background: theme.pageBg, color: theme.textColor, padding: '24px 16px 48px', fontFamily: "'Inter', sans-serif" }}>
@@ -217,7 +220,7 @@ export default function PhysicalApplicationForm() {
             {isSbi ? 'SBI Detail Sheet Form' : 'Bank Application Form'}
           </h1>
           <p style={{ margin: 0, fontSize: 13, color: theme.mutedText }}>
-            Application <strong style={{ color: '#e2e8f0' }}>#{appData?.app_number}</strong> • Bank: <strong style={{ color: '#e2e8f0' }}>{appData?.bank_name || 'Bank'}</strong> • Product: <strong style={{ color: '#e2e8f0' }}>{appData?.product_name || 'Product'}</strong>
+            Application <strong style={{ color: '#e2e8f0' }}>#{appData?.app_number}</strong> • Bank: <strong style={{ color: '#e2e8f0' }}>{appData?.bank_name || 'SBI Bank'}</strong> • Product: <strong style={{ color: '#e2e8f0' }}>{appData?.product_name || 'Credit Card / Loan'}</strong>
           </p>
         </div>
 
@@ -241,16 +244,17 @@ export default function PhysicalApplicationForm() {
                     required
                     value={form.aadhaar_linked_mobile}
                     onChange={e => handleChange('aadhaar_linked_mobile', e.target.value)}
-                    placeholder="10-digit mobile number"
+                    placeholder="9370470694"
                     style={inputStyle}
                   />
                 </div>
                 <div>
                   <label style={labelStyle}>AS PER PAN CARD DOB</label>
                   <input
-                    type="date"
+                    type="text"
                     value={form.dob}
                     onChange={e => handleChange('dob', e.target.value)}
+                    placeholder="dd-mm-yyyy"
                     style={inputStyle}
                   />
                 </div>
