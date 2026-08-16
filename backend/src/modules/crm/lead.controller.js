@@ -57,8 +57,13 @@ const listLeads = async (req, res, next) => {
       whereClause += ` AND l.source = $${idx++}`;
       values.push(source);
     }
-    if (bank_id) {
-      whereClause += ` AND p.bank_id = $${idx++}`;
+    if (req.user?.assigned_banks && Array.isArray(req.user.assigned_banks) && req.user.assigned_banks.length > 0) {
+      whereClause += ` AND p.bank_id = ANY($${idx++}::uuid[])`;
+      values.push(req.user.assigned_banks);
+    }
+
+    if (bank_id && bank_id !== 'all') {
+      whereClause += ` AND p.bank_id = $${idx++}::uuid`;
       values.push(bank_id);
     }
 

@@ -31,7 +31,9 @@ export default function ManageLeads() {
   // 360 Lead Modal State
   const [active360LeadId, setActive360LeadId] = useState(null);
 
-  // Partners list for bulk assignment dropdown
+  // Bank & Partners list
+  const [banksList, setBanksList] = useState([]);
+  const [bankId, setBankId] = useState("");
   const [partnersList, setPartnersList] = useState([]);
 
   const fetchLeads = async () => {
@@ -45,7 +47,8 @@ export default function ManageLeads() {
           search: search || undefined,
           status: status || undefined,
           priority: priority || undefined,
-          source: source || undefined
+          source: source || undefined,
+          bank_id: bankId || undefined
         },
       });
       if (res.data?.success) {
@@ -62,9 +65,13 @@ export default function ManageLeads() {
 
   useEffect(() => {
     fetchLeads();
-  }, [page, status, priority, source]);
+  }, [page, status, priority, source, bankId]);
 
   useEffect(() => {
+    api.get('/banks', { params: { limit: 100 } })
+      .then(res => { if (res.data?.success) setBanksList(res.data.data); })
+      .catch(console.error);
+
     api.get('/Partners', { params: { limit: 200 } })
       .then(res => { if (res.data?.success) setPartnersList(res.data.data); })
       .catch(console.error);
@@ -186,6 +193,13 @@ export default function ManageLeads() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+
+          <select style={{ ...S.input, width: "auto" }} value={bankId} onChange={(e) => setBankId(e.target.value)}>
+            <option value="">All Banks</option>
+            {banksList.map(b => (
+              <option key={b.id} value={b.id}>{b.name} ({b.short_code})</option>
+            ))}
+          </select>
 
           <select style={{ ...S.input, width: "auto" }} value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All Statuses</option>
