@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../../services/api';
 import { 
   X, CheckCircle, XCircle, Eye, Send, ShieldCheck, 
   Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft
@@ -40,17 +40,12 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
   const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || application?.app_number || '');
   const [approvedAmount, setApprovedAmount] = useState(application?.approved_amount || application?.loan_amount || '');
 
-  const API_BASE = '/api/v1';
-
   const fetchData = async () => {
     if (!application?.id) return;
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const timelineRes = await axios.get(`${API_BASE}/applications/${application.id}/timeline`, { headers }).catch(() => ({ data: { data: [] } }));
-      setTimeline(timelineRes.data.data || []);
+      const timelineRes = await api.get(`/applications/${application.id}/timeline`).catch(() => ({ data: { data: [] } }));
+      setTimeline(timelineRes.data?.data || []);
     } catch (err) {
       console.error('Error loading application timeline details:', err);
     } finally {
@@ -65,7 +60,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
   const handleSaveDetails = async () => {
     try {
       setActionLoading(true);
-      const token = localStorage.getItem('token');
       
       let backendStatus = 'under_review';
       if (finalStatus.toLowerCase().includes('approved') || finalStatus.toLowerCase().includes('generated')) backendStatus = 'approved';
@@ -102,20 +96,24 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
 
       let res;
       try {
-        res = await axios.put(`${API_BASE}/applications/${application.id}/bank-status`, payload, { headers: { Authorization: `Bearer ${token}` } });
+        res = await api.put(`/applications/${application.id}/bank-status`, payload);
       } catch (putErr) {
-        if (putErr.response?.status === 405) {
+        if (putErr.response?.status === 405 || putErr.response?.status === 403 || putErr.response?.status === 404) {
           try {
-            res = await axios.patch(`${API_BASE}/applications/${application.id}/bank-status`, payload, { headers: { Authorization: `Bearer ${token}` } });
+            res = await api.patch(`/applications/${application.id}/bank-status`, payload);
           } catch (patchErr) {
-            res = await axios.post(`${API_BASE}/applications/${application.id}/bank-status`, payload, { headers: { Authorization: `Bearer ${token}` } });
+            try {
+              res = await api.post(`/applications/${application.id}/bank-status`, payload);
+            } catch (postErr) {
+              res = await api.put(`/applications/${application.id}`, payload);
+            }
           }
         } else {
           throw putErr;
         }
       }
 
-      if (res.data?.success) {
+      if (res?.data?.success) {
         alert(`Application details & Form status saved successfully to database!`);
         fetchData();
         if (onRefresh) onRefresh();
