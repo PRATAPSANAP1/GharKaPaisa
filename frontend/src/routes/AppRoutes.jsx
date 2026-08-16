@@ -24,6 +24,7 @@ import PrivacyPolicy from '../modules/home/PrivacyPolicy';
 import CustomerUploadPortal from '../modules/customer/CustomerUploadPortal';
 import PublicCustomerUploadPage from '../modules/public/PublicCustomerUploadPage';
 import PhysicalApplicationForm from '../modules/customer/PhysicalApplicationForm';
+import CustomerShareApplyForm from '../modules/customer/CustomerShareApplyForm';
 
 // Services Pages
 import MoneyTransfer from '../modules/cms/MoneyTransfer';
@@ -64,6 +65,7 @@ import ManageSections from '../modules/super-admin/cms/ManageSections';
 import ManageServices from '../modules/super-admin/system/ManageServices';
 import ManageDirectLeads from '../modules/super-admin/crm/ManageDirectLeads';
 import ManageCommissions from '../modules/super-admin/settings/ManageCommissions';
+import SuperAdminCommission from '../modules/admin/dashboard/SuperAdminCommission';
 import ManageCommissionRules from '../modules/super-admin/settings/ManageCommissionRules';
 import ManageWallet from '../modules/super-admin/wallet/ManageWallet';
 import SuperAdminManageApplications from '../modules/super-admin/crm/ManageApplications';
@@ -167,6 +169,7 @@ const AppRoutes = () => {
 
       {/* Customer Secure Self-Fulfillment & Post-Apply Portals (Standalone Public Routes) */}
       <Route path="/physical-application/:token" element={<PhysicalApplicationForm />} />
+      <Route path="/apply/:token" element={<CustomerShareApplyForm />} />
       <Route path="/apply/:token" element={<CustomerApplyStep1 />} />
       <Route path="/apply/:token/post-apply" element={<CustomerPostApplyStep2 />} />
       <Route path="/customer/upload/:token" element={<CustomerUploadPortal />} />
@@ -280,7 +283,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/sections" element={<ManageSections />} />
             <Route path="/super-admin/services" element={<ManageServices />} />
             <Route path="/super-admin/direct-leads" element={<ManageDirectLeads />} />
-            <Route path="/super-admin/commissions" element={<ManageCommissions />} />
+            <Route path="/super-admin/commissions" element={<SuperAdminCommission />} />
             <Route path="/super-admin/commission-rules" element={<Navigate to="/super-admin/commissions" replace />} />
             <Route path="/super-admin/wallet" element={<ManageWallet />} />
             <Route path="/super-admin/notifications" element={<NotificationCenter />} />

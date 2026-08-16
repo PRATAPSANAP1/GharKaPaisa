@@ -55,6 +55,10 @@ router.patch('/:id/process-type', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.upd
 router.put('/:id/commission', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.updateCommission);
 router.patch('/:id/vkyc', requireApprovedPartnerOrAdmin, appCtrl.updateVkyc);
 
+// Super Admin Commission Management
+router.post('/:id/release-commission', authorize('SUPER_ADMIN'), appCtrl.releaseCommission);
+router.post('/:id/hold-commission', authorize('SUPER_ADMIN'), appCtrl.holdCommission);
+
 // Timeline & logs
 router.get('/:id/timeline', requireApprovedPartnerOrAdmin, appCtrl.getTimeline);
 

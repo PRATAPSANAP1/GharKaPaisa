@@ -423,37 +423,6 @@ export default function PartnerCrm() {
         </div>
       </div>
 
-      {/* Tag Chips List */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '24px' }}>
-        {CUSTOMER_TAGS.map(tag => (
-          <button
-            key={tag}
-            onClick={() => setSelectedTag(tag)}
-            style={{
-              padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-              background: selectedTag === tag ? C.primary : (C.bgSecondary === '#000000' ? '#18181B' : C.bgSecondary),
-              color: selectedTag === tag ? '#FFF' : C.textLight,
-              transition: 'all 0.2s ease',
-              border: `1px solid ${selectedTag === tag ? C.primary : C.border}`
-            }}
-            onMouseEnter={(e) => {
-              if (selectedTag !== tag) {
-                e.currentTarget.style.borderColor = C.primary;
-                e.currentTarget.style.color = C.text;
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (selectedTag !== tag) {
-                e.currentTarget.style.borderColor = C.border;
-                e.currentTarget.style.color = C.textLight;
-              }
-            }}
-          >
-            {tag === 'All' ? t("crm.allCustomers", "All Customers") : `#${t(`crm.tags.${tag}`, tag)}`}
-          </button>
-        ))}
-      </div>
-
       {/* ── MAIN CONTENT: CRM CARDS GRID VS TABLE VIEW ── */}
       {isLoading ? (
         <div style={{ padding: '60px', textAlign: 'center', color: C.textLight }}>{t("crm.loadingRecords", "Loading customer records...")}</div>

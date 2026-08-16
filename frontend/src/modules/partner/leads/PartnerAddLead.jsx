@@ -192,8 +192,26 @@ export default function PartnerAddLead() {
       const res = await api.post('/leads', payload);
       if (res.data?.success) {
         const leadData = res.data.data;
-        setPendingLead(leadData);
-        setShowOtpModal(true);
+        if (leadData.otp_required) {
+          setPendingLead(leadData);
+          setShowOtpModal(true);
+        } else if (processType === 'linked_share' || processType === 'physical_process') {
+          setShareResult(leadData);
+          if (leadData?.whatsapp_url) {
+            window.open(leadData.whatsapp_url, '_blank');
+          }
+        } else if (processType === 'direct_bank') {
+          if (leadData?.bank_url) {
+            window.open(leadData.bank_url, '_blank');
+          }
+          clearPersistedDraft();
+          alert(`Direct Bank Application #${leadData?.app_number || ''} created! Opening official bank portal...`);
+          navigate('/partner/applications');
+        } else {
+          clearPersistedDraft();
+          alert(`Lead Punching Application #${leadData?.app_number || ''} logged successfully!`);
+          navigate('/partner/applications');
+        }
       }
     } catch (err) {
       if (err.response?.status === 409) {

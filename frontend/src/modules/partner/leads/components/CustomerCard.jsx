@@ -168,20 +168,6 @@ export default function CustomerCard({ customer, onOpenProfile, onEditCustomer, 
           ) : (
             <span style={{ fontSize: '11px', color: C.textLight }}>{t("crm.defaultProductLead", "Credit Card & Loan Lead")}</span>
           )}
-
-          {Array.isArray(tags) && tags.map((tg, idx) => (
-            <span key={`tag-${idx}`} style={{
-              background: `${tg.color || '#3B82F6'}15`,
-              color: tg.color || '#3B82F6',
-              border: `1px solid ${tg.color || '#3B82F6'}40`,
-              borderRadius: '6px',
-              padding: '2px 8px',
-              fontSize: '11px',
-              fontWeight: 700
-            }}>
-              #{tg.name || tg}
-            </span>
-          ))}
         </div>
       </div>
 

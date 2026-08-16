@@ -304,15 +304,20 @@ const createLead = async (req, res, next) => {
 
     // 5. Handle Process-Specific Workflow
     const leadNum = 'LEAD-' + Date.now().toString(36).toUpperCase();
+    const date = new Date();
+    const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    const appNum = 'APP' + datePart + Math.floor(1000 + Math.random() * 9000);
 
     if (targetProcess === 'linked_share') {
       const trackingToken = 'SH_' + Math.random().toString(36).substring(2, 12).toUpperCase();
-      const baseUrl = process.env.PUBLIC_APP_URL || 'https://gharkapaisa.in';
-      const shareUrl = `${baseUrl}/share/${trackingToken}`;
+      const host = req.get('host') || 'gharkapaisa.in';
+      const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+      const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
+      const shareUrl = `${baseUrl.replace(/\/$/, '')}/apply/${trackingToken}`;
 
       const partnerName = `${partner.first_name || ''} ${partner.last_name || ''}`.trim() || 'Partner';
       const cleanMobile = trimmedMobile.replace(/\D/g, '');
-      const waText = encodeURIComponent(`Hello ${targetName.trim()},\n\nApply for ${product?.name || 'Financial Product'} using your tracked link:\n${shareUrl}\n\nShared by ${partnerName} via GharKaPaisa.`);
+      const waText = encodeURIComponent(`Hello ${targetName.trim()},\n\nPlease complete your application for ${product?.name || 'Financial Product'} using this secure link:\n${shareUrl}\n\nShared by ${partnerName} via GharKaPaisa.`);
       const whatsappUrl = `https://wa.me/91${cleanMobile}?text=${waText}`;
 
       const { rows: [lead] } = await query(`
@@ -321,7 +326,7 @@ const createLead = async (req, res, next) => {
           product_id, customer_name, mobile, city, status, process_type, process_by,
           otp_verified, source, priority, pipeline_stage
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'link_sent', 'linked_share', 'customer_self', TRUE, $10, $11, 'created')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'link_pending', 'linked_share', 'customer_self', TRUE, $10, $11, 'created')
         RETURNING *
       `, [
         leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
@@ -333,11 +338,18 @@ const createLead = async (req, res, next) => {
         VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')
       `, [partner.id, targetProductId, trackingToken]);
 
+      const { rows: [app] } = await query(`
+        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, tracking_token, agree_terms, submitted_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'link_pending', 'linked_share', $9, TRUE, NOW())
+        RETURNING *
+      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, trackingToken]);
+
       await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
 
       return created(res, {
         lead_id: lead.id,
-        lead_number: lead.lead_number,
+        app_id: app.id,
+        app_number: app.app_number,
         customer_id: customer.id,
         mobile: lead.mobile,
         process_type: 'linked_share',
@@ -357,77 +369,38 @@ const createLead = async (req, res, next) => {
           product_id, customer_name, mobile, city, status, process_type, process_by,
           otp_verified, source, priority, pipeline_stage
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'initiated', 'direct_bank', 'partner_self', TRUE, $10, $11, 'bank_redirected')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'bank_application_pending', 'direct_bank', 'partner_self', TRUE, $10, $11, 'bank_redirected')
         RETURNING *
       `, [
         leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
         targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
       ]);
 
-      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
+      const { rows: [app] } = await query(`
+        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, bank_url, agree_terms, submitted_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'bank_application_pending', 'direct_bank', $9, TRUE, NOW())
+        RETURNING *
+      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, bankUrl]);
 
-      // Sync into applications table for instant visibility in Applications CRM
-      const date = new Date();
-      const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-      const appNum = 'APP' + datePart + Math.floor(1000 + Math.random() * 9000);
-      await query(`
-        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, agree_terms, submitted_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'direct_bank', TRUE, NOW())
-      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]).catch(() => {});
+      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
 
       return created(res, {
         lead_id: lead.id,
-        lead_number: lead.lead_number,
+        app_id: app.id,
+        app_number: app.app_number,
         customer_id: customer.id,
         mobile: lead.mobile,
         process_type: 'direct_bank',
         process_by: 'partner_self',
         otp_required: false,
         bank_url: bankUrl
-      }, 'Direct bank tracking initialized successfully.');
+      }, 'Direct bank application initialized successfully.');
     }
 
     if (targetProcess === 'physical_process') {
       const { rows: [bankRec] } = await query(`SELECT id, name, short_code FROM banks WHERE id = $1`, [product.bank_id]).catch(() => ({ rows: [] }));
       const bankName = (bankRec?.name || bankRec?.short_code || product.name || '').toLowerCase();
       const isSbi = product.bank_id === 'e7c2c604-139d-4fcf-a87c-695633535a02' || bankRec?.id === 'e7c2c604-139d-4fcf-a87c-695633535a02' || bankName.includes('sbi');
-
-      const detailSheetText = isSbi ? `*SBI DETAIL SHEET*
-
-ADHAR LINK CONTACT NUMBER ${trimmedMobile}
-AS PER PAN CARD DOB 
-NAME AS PER PAN CARD ${targetName.trim()}
-PERSONAL EMAIL ID ${trimmedEmail || ''}
-PAN CARD NUMBER 
-AS PER SALARY SLIP COMPANY NAME ${company_name || ''}
-DESIGNATION 
-CURRENT HOME ADDRESS WITH LAND MARK PIN CODE ${targetCity} ${pincode || ''}
-FULL COMPANY ADDRESS 
-MOTHER NAME ` : `*OTHER BANK DETAIL SHEET*
-
-✅CUSTOMER FULL NAME-: ${targetName.trim()}
-(As per pan card)
-
-✅Current full address .
-  Flat no/House no/sr no - 
-Sub Area- ${targetCity}
-Landmark - 
-Pin code - ${pincode || ''}
-
-✅PAN CARD NUMBER-
-
-✅DOB- (as per pan ) 
-
-✅MOTHER FULL NAME- 
-
-✅PERSONAL MAIL ID- ${trimmedEmail || ''}
-
-✅COMPANY Name - ${company_name || ''}
-(As per payment slip)
-
-✅DESIGNATION- 
-
-✅MOBILE No - ${trimmedMobile}`;
 
       const { rows: [lead] } = await query(`
         INSERT INTO leads (
@@ -442,87 +415,72 @@ Pin code - ${pincode || ''}
         targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
       ]);
 
-      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
-
-      // Sync into applications table
-      const date = new Date();
-      const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-      const appNum = 'APP' + datePart + Math.floor(1000 + Math.random() * 9000);
-      await query(`
+      const { rows: [app] } = await query(`
         INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, agree_terms, submitted_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'physical_process', TRUE, NOW())
-      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]).catch(() => {});
+        RETURNING *
+      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]);
 
-      const cleanMobile = trimmedMobile.replace(/\D/g, '');
-      const whatsappUrl = `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(detailSheetText)}`;
+      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
+
+      const host = req.get('host') || 'gharkapaisa.in';
+      const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+      const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
+
+      // Access token creation for physical link
+      const { v4: uuidv4 } = require('uuid');
+      const physToken = `phys_${uuidv4().replace(/-/g, '')}`;
+      await query(`
+        INSERT INTO customer_access_tokens (customer_id, application_id, token, token_type, expires_at)
+        VALUES ($1, $2, $3, 'physical_process', NOW() + INTERVAL '72 hours')
+      `, [customer.id, app.id, physToken]).catch(() => {});
+
+      const physicalFormUrl = `${baseUrl.replace(/\/$/, '')}/physical-application/${physToken}`;
 
       return created(res, {
         lead_id: lead.id,
-        lead_number: lead.lead_number,
+        app_id: app.id,
+        app_number: app.app_number,
         customer_id: customer.id,
         mobile: lead.mobile,
         process_type: 'physical_process',
         process_by: 'physical',
         otp_required: false,
-        detail_sheet_title: isSbi ? '*SBI DETAIL SHEET*' : '*OTHER BANK DETAIL SHEET*',
-        detail_sheet_text: detailSheetText,
-        whatsapp_url: whatsappUrl
-      }, 'Physical process detail sheet created successfully.');
+        share_url: physicalFormUrl
+      }, 'Physical process application created successfully.');
     }
 
-    // Default: Lead Punching (Requires Customer OTP)
-    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
-    const otpExpires = new Date(Date.now() + 15 * 60 * 1000);
-
+    // Default: Lead Punching Process (No OTP requirement for internal punching)
     const { rows: [lead] } = await query(`
       INSERT INTO leads (
         lead_number, partner_id, parent_partner_id, created_by, customer_id,
         product_id, customer_name, mobile, city, status, process_type, process_by,
-        otp_code, otp_expires_at, otp_verified, source, priority, pipeline_stage
+        otp_verified, source, priority, pipeline_stage
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'lead_punching', 'punching', $10, $11, FALSE, $12, $13, 'created')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'under_process', 'lead_punching', 'punching', TRUE, $10, $11, 'pan_check')
       RETURNING *
     `, [
       leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
-      targetProductId, targetName.trim(), trimmedMobile, targetCity,
-      otpCode, otpExpires, source || 'partner', priority || 'medium'
+      targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
     ]);
+
+    const { rows: [app] } = await query(`
+      INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, agree_terms, submitted_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'under_process', 'lead_punching', TRUE, NOW())
+      RETURNING *
+    `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]);
 
     await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
 
-    // SMS & Email OTP Dispatch
-    if (trimmedMobile) {
-      try {
-        const { sendSms } = require('../../services/sms/sms.service');
-        await sendSms(trimmedMobile, `Your GharKaPaisa verification OTP for lead ${leadNum} is ${otpCode}. Valid for 15 minutes.`).catch(e => logger.warn(`OTP SMS send failed: ${e.message}`));
-      } catch (err) {
-        logger.warn('SMS service not configured');
-      }
-    }
-
-    if (trimmedEmail) {
-      try {
-        const { sendEmail } = require('../../services/email/email.service');
-        await sendEmail({
-          to: trimmedEmail,
-          subject: 'GharKaPaisa Lead Verification OTP',
-          html: `<p>Your verification OTP for lead ${leadNum} is <strong>${otpCode}</strong>. Valid for 15 minutes.</p>`
-        }).catch(e => logger.warn(`OTP email send failed: ${e.message}`));
-      } catch (err) {
-        logger.warn('Email service not configured for OTP notification');
-      }
-    }
-
     return created(res, {
       lead_id: lead.id,
-      lead_number: lead.lead_number,
+      app_id: app.id,
+      app_number: app.app_number,
       customer_id: customer.id,
       mobile: lead.mobile,
-      email: trimmedEmail,
       process_type: 'lead_punching',
-      otp_required: true,
-      expires_at: otpExpires
-    }, 'Lead created successfully. Customer OTP generated.');
+      otp_required: false
+    }, 'Lead Punching application logged successfully.');
   } catch (err) {
     next(err);
   }

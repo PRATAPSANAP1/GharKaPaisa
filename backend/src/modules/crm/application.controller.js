@@ -401,25 +401,29 @@ const getApplicationsDashboard = async (req, res, next) => {
 const getTimeline = async (req, res, next) => {
   try {
     const { id } = req.params;
-    let { rows } = await query(`
-      SELECT at.*, u.full_name as performed_by_name
-      FROM application_timeline at
-      LEFT JOIN users u ON u.id = at.performed_by
-      WHERE at.application_id = $1
-      ORDER BY at.performed_at ASC
-    `, [id]);
 
-    if (!rows || rows.length === 0) {
-      const { rows: leadTimeline } = await query(`
-        SELECT lt.id, lt.lead_id as application_id, lt.activity_type as event_type, lt.title, lt.description, lt.created_at as performed_at, lt.created_at,
-               lt.status, u.full_name as performed_by_name
+    // Resolve application & linked lead ID
+    const { rows: [app] } = await query(`SELECT id, lead_id FROM applications WHERE id = $1`, [id]);
+    const leadId = app?.lead_id || null;
+
+    const { rows } = await query(`
+      SELECT DISTINCT ON (id, performed_at, title)
+             id, application_id, event_type, title, description, status, performed_by, performed_at, created_at, performed_by_name, remarks
+      FROM (
+        SELECT at.id::text, at.application_id::text, at.event_type, at.title, at.description, at.status, at.performed_by, at.performed_at, at.performed_at as created_at, u.full_name as performed_by_name, at.description as remarks
+        FROM application_timeline at
+        LEFT JOIN users u ON u.id = at.performed_by
+        WHERE at.application_id = $1
+
+        UNION ALL
+
+        SELECT lt.id::text, lt.lead_id::text as application_id, lt.activity_type as event_type, lt.title, lt.description, lt.status, lt.created_by as performed_by, lt.created_at as performed_at, lt.created_at, u.full_name as performed_by_name, lt.description as remarks
         FROM lead_timeline lt
         LEFT JOIN users u ON u.id = lt.created_by
-        WHERE lt.lead_id = $1
-        ORDER BY lt.created_at ASC
-      `, [id]);
-      rows = leadTimeline;
-    }
+        WHERE lt.lead_id = $1 OR ($2::uuid IS NOT NULL AND lt.lead_id = $2::uuid)
+      ) combined
+      ORDER BY performed_at DESC
+    `, [id, leadId]);
 
     return success(res, rows);
   } catch (err) {
@@ -2661,8 +2665,8 @@ const getPhysicalApplicationByToken = async (req, res, next) => {
     const { token } = req.params;
     if (!token) return error(res, 'Token is required', 400);
 
-    const { rows: [tokenRec] } = await query(
-      `SELECT cat.*, a.app_number, a.process_type, a.status, a.bank_id, a.product_id,
+    let { rows: [tokenRec] } = await query(
+      `SELECT cat.*, a.id as application_id, a.app_number, a.process_type, a.status, a.bank_id, a.product_id,
               b.name as bank_name, b.short_code as bank_code,
               p.name as product_name,
               c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email, c.pan_number as customer_pan, c.dob as customer_dob
@@ -2671,9 +2675,42 @@ const getPhysicalApplicationByToken = async (req, res, next) => {
        LEFT JOIN banks b ON b.id = a.bank_id
        LEFT JOIN products p ON p.id = a.product_id
        LEFT JOIN customers c ON c.id = a.customer_id
-       WHERE cat.token = $1 AND cat.expires_at > NOW()`,
+       WHERE cat.token = $1`,
       [token]
     );
+
+    if (!tokenRec) {
+      const { rows: [appRec] } = await query(
+        `SELECT a.id as application_id, a.app_number, a.process_type, a.status, a.bank_id, a.product_id,
+                b.name as bank_name, b.short_code as bank_code,
+                p.name as product_name,
+                c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email, c.pan_number as customer_pan, c.dob as customer_dob
+         FROM applications a
+         LEFT JOIN banks b ON b.id = a.bank_id
+         LEFT JOIN products p ON p.id = a.product_id
+         LEFT JOIN customers c ON c.id = a.customer_id
+         WHERE a.tracking_token = $1 OR a.id::text = $1 OR a.app_number = $1`,
+        [token]
+      );
+      tokenRec = appRec;
+    }
+
+    if (!tokenRec) {
+      const { rows: [pslRec] } = await query(
+        `SELECT psl.application_id, a.app_number, a.process_type, a.status, a.bank_id, a.product_id,
+                b.name as bank_name, b.short_code as bank_code,
+                p.name as product_name,
+                c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email, c.pan_number as customer_pan, c.dob as customer_dob
+         FROM partner_share_links psl
+         JOIN applications a ON a.id = psl.application_id
+         LEFT JOIN banks b ON b.id = a.bank_id
+         LEFT JOIN products p ON p.id = a.product_id
+         LEFT JOIN customers c ON c.id = a.customer_id
+         WHERE psl.tracking_token = $1`,
+        [token]
+      );
+      tokenRec = pslRec;
+    }
 
     if (!tokenRec) {
       return res.status(404).json({ success: false, message: 'Invalid or expired physical application link.' });
@@ -2719,13 +2756,23 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
     const { token } = req.params;
     if (!token) return error(res, 'Token is required', 400);
 
-    const { rows: [tokenRec] } = await client.query(
+    let { rows: [tokenRec] } = await client.query(
       `SELECT cat.*, a.id as application_id, a.app_number, a.submitted_by
        FROM customer_access_tokens cat
        JOIN applications a ON a.id = cat.application_id
-       WHERE cat.token = $1 AND cat.expires_at > NOW()`,
+       WHERE cat.token = $1`,
       [token]
     );
+
+    if (!tokenRec) {
+      const { rows: [appRec] } = await client.query(
+        `SELECT a.id as application_id, a.app_number, a.submitted_by
+         FROM applications a
+         WHERE a.tracking_token = $1 OR a.id::text = $1 OR a.app_number = $1`,
+        [token]
+      );
+      tokenRec = appRec;
+    }
 
     if (!tokenRec) {
       await client.query('ROLLBACK');
@@ -2839,6 +2886,112 @@ module.exports = {
   generatePhysicalLink,
   getPhysicalApplicationByToken,
   submitPhysicalApplicationByToken,
-  deleteApplication
+  deleteApplication,
+  releaseCommission,
+  holdCommission
 };
 
+// POST /applications/:id/release-commission — Super Admin releases commission & credits wallet
+async function releaseCommission(req, res, next) {
+  const client = await getClient();
+  try {
+    const { id } = req.params;
+
+    const { rows: [app] } = await client.query(
+      `SELECT a.id, a.app_number, a.partner_id, a.commission_amount, a.commission_status, a.status,
+              pp.first_name as partner_name, pp.wallet_balance
+       FROM applications a
+       LEFT JOIN partner_profiles pp ON pp.id = a.partner_id
+       WHERE a.id = $1`,
+      [id]
+    );
+
+    if (!app) return notFound(res, 'Application not found');
+
+    if (app.commission_status === 'released') {
+      return error(res, 'Commission has already been released for this application', 400);
+    }
+
+    const commissionAmount = parseFloat(app.commission_amount || 0);
+    if (commissionAmount <= 0) {
+      return error(res, 'No commission amount set for this application. Please update commission first.', 400);
+    }
+
+    await client.query('BEGIN');
+
+    // 1. Update application commission status
+    await client.query(
+      `UPDATE applications SET commission_status = 'released', status = 'commission_released', updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+
+    // 2. Credit partner wallet
+    await client.query(
+      `UPDATE partner_profiles SET wallet_balance = COALESCE(wallet_balance, 0) + $1, updated_at = NOW() WHERE id = $2`,
+      [commissionAmount, app.partner_id]
+    );
+
+    // 3. Insert wallet transaction
+    await client.query(
+      `INSERT INTO wallet_transactions (partner_id, amount, type, status, description, application_id)
+       VALUES ($1, $2, 'commission', 'completed', $3, $4)`,
+      [app.partner_id, commissionAmount, `Commission released for application ${app.app_number}`, id]
+    ).catch(() => {});
+
+    // 4. Log timeline
+    try {
+      await logTimeline(client, id, 'commission_released', 'Commission Released',
+        `₹${commissionAmount} commission released and credited to partner wallet by Super Admin.`,
+        req.user.id
+      );
+    } catch (_) {}
+
+    await client.query('COMMIT');
+
+    return success(res, {
+      application_id: id,
+      app_number: app.app_number,
+      commission_amount: commissionAmount,
+      commission_status: 'released',
+      partner_id: app.partner_id,
+      new_wallet_balance: parseFloat(app.wallet_balance || 0) + commissionAmount
+    }, 'Commission released and partner wallet credited successfully.');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+}
+
+// POST /applications/:id/hold-commission — Super Admin holds commission
+async function holdCommission(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { remarks } = req.body;
+
+    const { rows: [app] } = await query(
+      `SELECT id, app_number, commission_status FROM applications WHERE id = $1`,
+      [id]
+    );
+
+    if (!app) return notFound(res, 'Application not found');
+
+    if (app.commission_status === 'released') {
+      return error(res, 'Cannot hold commission that has already been released', 400);
+    }
+
+    await query(
+      `UPDATE applications SET commission_status = 'held', updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+
+    return success(res, {
+      application_id: id,
+      app_number: app.app_number,
+      commission_status: 'held'
+    }, 'Commission has been put on hold.');
+  } catch (err) {
+    next(err);
+  }
+}

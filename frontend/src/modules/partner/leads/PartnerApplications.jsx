@@ -18,6 +18,50 @@ const STAGES = [
   { id: 'disbursed', label: 'Disbursed', step: 4 },
 ];
 
+// Process-specific lifecycle stages for the TRACK modal
+const PROCESS_STAGES = {
+  lead_punching: [
+    { id: 'under_process', label: 'Application Created' },
+    { id: 'pan_check', label: 'PAN Check' },
+    { id: 'qd', label: 'QD (Quality Details)' },
+    { id: 'income', label: 'Income Verification' },
+    { id: 'official_mail', label: 'Official Mail' },
+    { id: 'vkyc', label: 'V-KYC' },
+    { id: 'dispatch', label: 'Dispatch' },
+    { id: 'approved', label: 'Approved' },
+  ],
+  linked_share: [
+    { id: 'link_pending', label: 'Application Created' },
+    { id: 'link_generated', label: 'Link Generated' },
+    { id: 'link_sent', label: 'Link Sent' },
+    { id: 'customer_started', label: 'Customer Started' },
+    { id: 'bank_application', label: 'Bank Application' },
+    { id: 'approved', label: 'Approved' },
+    { id: 'commission', label: 'Commission' },
+  ],
+  direct_bank: [
+    { id: 'bank_application_pending', label: 'Application Created' },
+    { id: 'app_number_added', label: 'Application Number Added' },
+    { id: 'kyc_pending', label: 'KYC Pending' },
+    { id: 'bank_processing', label: 'Bank Processing' },
+    { id: 'approved', label: 'Approved' },
+    { id: 'commission', label: 'Commission' },
+  ],
+  physical_process: [
+    { id: 'pending', label: 'Application Created' },
+    { id: 'details_submitted', label: 'Physical Form Submitted' },
+    { id: 'operational_verified', label: 'Operational Verified' },
+    { id: 'super_admin_approved', label: 'Super Admin Approved' },
+    { id: 'commission_processing', label: 'Commission Pending' },
+    { id: 'commission_released', label: 'Commission Released' },
+  ],
+};
+
+const getProcessStages = (processType) => {
+  const pt = (processType || '').toLowerCase();
+  return PROCESS_STAGES[pt] || PROCESS_STAGES.lead_punching;
+};
+
 export default function PartnerApplications() {
   const { t } = useTranslation();
   const { C, isDark } = useTheme();
@@ -813,10 +857,18 @@ export default function PartnerApplications() {
                           <UserPlus size={12} /> Assign
                         </button>
                       )}
-                      <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
-                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Share2 size={12} /> Link
-                      </button>
+                      {String(app.process_type || '').toLowerCase() !== 'lead_punching' && (
+                        <button onClick={() => {
+                          if (String(app.process_type || '').toLowerCase() === 'direct_bank' && app.bank_url) {
+                            window.open(app.bank_url, '_blank');
+                          } else {
+                            handleGenerateShareLink(app);
+                          }
+                        }} disabled={generatingShare}
+                          style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Share2 size={12} /> Link
+                        </button>
+                      )}
                       <button onClick={() => handleOpenViewModal(app)}
                         style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #3b82f640`, background: '#3b82f615', color: '#3b82f6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <Eye size={12} /> View
@@ -921,10 +973,18 @@ export default function PartnerApplications() {
                                 <UserPlus size={14} />
                               </button>
                             )}
-                            <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
-                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              <Share2 size={13} /> Link
-                            </button>
+                            {String(app.process_type || '').toLowerCase() !== 'lead_punching' && (
+                              <button onClick={() => {
+                                if (String(app.process_type || '').toLowerCase() === 'direct_bank' && app.bank_url) {
+                                  window.open(app.bank_url, '_blank');
+                                } else {
+                                  handleGenerateShareLink(app);
+                                }
+                              }} disabled={generatingShare}
+                                style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <Share2 size={13} /> Link
+                              </button>
+                            )}
                             <button onClick={() => handleOpenViewModal(app)}
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #3b82f640`, background: '#3b82f615', color: '#3b82f6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               <Eye size={13} /> View
@@ -1495,23 +1555,49 @@ export default function PartnerApplications() {
 
       {/* ═══ MODAL 7: TRACK APPLICATION LIFECYCLE ═══ */}
       {showTrackModal && trackApp && (() => {
-        const lifecycleStages = [
-          { id: 'details_submitted', label: 'Details Submitted' },
-          { id: 'operational_verified', label: 'Operational Verified' },
-          { id: 'super_admin_approved', label: 'Super Admin Approved' },
-          { id: 'commission_processing', label: 'Commission Processing' },
-          { id: 'commission_released', label: 'Commission Released' },
-        ];
+        const processType = (trackApp.process_type || 'lead_punching').toLowerCase();
+        const lifecycleStages = getProcessStages(processType);
 
         const currentStatus = (trackApp.status || 'submitted').toLowerCase();
+        const pipelineStage = (trackApp.pipeline_stage || '').toLowerCase();
         
-        const getStageStatus = (stageId) => {
-          const statusOrder = ['submitted', 'details_submitted', 'operational_verified', 'super_admin_approved', 'approved', 'commission_processing', 'commission_released', 'disbursed'];
-          const currentIndex = statusOrder.indexOf(currentStatus);
-          const stageIndex = statusOrder.indexOf(stageId);
-          if (currentIndex >= stageIndex && currentIndex !== -1) return 'completed';
+        const STATUS_RANK = {
+          'pending': 1, 'submitted': 1, 'initiated': 1, 'link_pending': 1, 'created': 1, 'bank_application_pending': 1,
+          'details_submitted': 2, 'link_generated': 2, 'app_number_added': 2, 'pan_check': 2,
+          'operational_verified': 3, 'link_sent': 3, 'kyc_pending': 3, 'qd': 3,
+          'super_admin_approved': 4, 'approved': 4, 'customer_started': 4, 'bank_application': 4, 'bank_processing': 4, 'income': 4, 'official_mail': 4, 'vkyc': 4, 'dispatch': 4,
+          'commission_processing': 5, 'commission_pending': 5, 'commission': 5,
+          'commission_released': 6, 'disbursed': 6
+        };
+
+        const getStageStatus = (stageId, index) => {
+          const stageIndex = index + 1;
+          const statusRank = Math.max(
+            STATUS_RANK[currentStatus] || 0,
+            STATUS_RANK[pipelineStage] || 0
+          );
+          
+          if (statusRank >= stageIndex) return 'completed';
+
+          const stageIds = lifecycleStages.map(s => s.id);
+          const currIdx = Math.max(stageIds.indexOf(currentStatus), stageIds.indexOf(pipelineStage));
+          if (currIdx >= index && currIdx !== -1) return 'completed';
+
+          if (['approved', 'super_admin_approved', 'commission_released', 'disbursed'].includes(currentStatus)) {
+            if (['pending', 'details_submitted', 'operational_verified', 'super_admin_approved', 'approved'].includes(stageId)) {
+              return 'completed';
+            }
+          }
+
           return 'pending';
         };
+
+        const processLabel = {
+          lead_punching: '🏢 Lead Punching Pipeline',
+          linked_share: '🔗 Linked Share Pipeline',
+          direct_bank: '🏦 Direct Bank Pipeline',
+          physical_process: '📋 Physical Process Pipeline',
+        }[processType] || '📍 Application Pipeline';
 
         return (
           <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
@@ -1520,7 +1606,7 @@ export default function PartnerApplications() {
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: `1px solid ${border}`, paddingBottom: 12 }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>📍 APPLICATION TRACKING</h3>
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>{processLabel}</h3>
                   <span style={{ fontSize: 11, color: textMuted }}>
                     App #{trackApp.app_number} • Customer: {trackApp.customer_name}
                   </span>
@@ -1552,7 +1638,7 @@ export default function PartnerApplications() {
               {/* 5-Step Progress Timeline */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20, paddingLeft: 8 }}>
                 {lifecycleStages.map((stage, idx) => {
-                  const state = getStageStatus(stage.id);
+                  const state = getStageStatus(stage.id, idx);
                   const isDone = state === 'completed';
                   return (
                     <div key={stage.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', position: 'relative' }}>
