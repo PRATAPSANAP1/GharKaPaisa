@@ -77,7 +77,7 @@ router.post('/:id/assign', requireApprovedPartnerOrAdmin, appCtrl.reassignApplic
 router.post('/:id/reassign', requireApprovedPartnerOrAdmin, appCtrl.reassignApplication);
 router.put('/:id/documents/:docId/verify', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.verifyDocument);
 router.put('/:id/verification-complete', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.markVerificationComplete);
-router.put('/:id/bank-status', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.updateBankProcessingStatus);
-router.patch('/:id/bank-status', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.updateBankProcessingStatus);
+router.put('/:id/bank-status', requireApprovedPartnerOrAdmin, appCtrl.updateBankProcessingStatus);
+router.patch('/:id/bank-status', requireApprovedPartnerOrAdmin, appCtrl.updateBankProcessingStatus);
 
 module.exports = router;
