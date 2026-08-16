@@ -10,8 +10,9 @@ export default function PhysicalApplicationForm() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [appData, setAppData] = useState(null);
+  const [activeTab, setActiveTab] = useState('form1'); // 'form1' | 'form2'
 
-  // Form states
+  // Form states (Form 1 & Form 2)
   const [form, setForm] = useState({
     aadhaar_linked_mobile: '',
     pan_name: '',
@@ -25,7 +26,19 @@ export default function PhysicalApplicationForm() {
     sub_area: '',
     landmark: '',
     pincode: '',
-    company_address: ''
+    company_address: '',
+    bank_ref_number: '',
+    vkyc_url: '',
+    // Form 2 Statuses
+    appcode_status: 'Appcode Pending',
+    soft_approval_status: 'Approval-income 25k',
+    vkyc_stage: 'VKYC Pending',
+    iqa_stage: 'IQA Pending',
+    dispatch_status: 'E-sign Pending',
+    eligible_reqd: 'No',
+    final_status: 'In Process',
+    bank_remark: '',
+    decline_reason: ''
   });
 
   useEffect(() => {
@@ -43,21 +56,33 @@ export default function PhysicalApplicationForm() {
 
         const cust = data.customer || {};
         const pd = data.physical_details || {};
+        const app = data.application || data || {};
 
         setForm({
-          aadhaar_linked_mobile: pd.aadhaar_linked_mobile || cust.mobile || '',
-          pan_name: pd.pan_name || cust.full_name || '',
-          dob: pd.dob || cust.dob || '',
-          pan_number: pd.pan_number || cust.pan_number || '',
-          mother_name: pd.mother_name || '',
-          personal_email: pd.personal_email || cust.email || '',
-          company_name: pd.company_name || '',
-          designation: pd.designation || '',
-          flat_no: pd.flat_no || '',
+          aadhaar_linked_mobile: pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile || '',
+          pan_name: pd.pan_name || cust.full_name || app.customer_name || '',
+          dob: pd.dob || cust.dob || app.dob || '',
+          pan_number: pd.pan_number || cust.pan_number || app.pan_number || '',
+          mother_name: pd.mother_name || app.mother_name || '',
+          personal_email: pd.personal_email || cust.email || app.customer_email || '',
+          company_name: pd.company_name || app.company_name || '',
+          designation: pd.designation || app.designation || '',
+          flat_no: pd.flat_no || app.address || '',
           sub_area: pd.sub_area || '',
           landmark: pd.landmark || '',
           pincode: pd.pincode || '',
-          company_address: pd.company_address || ''
+          company_address: pd.company_address || app.company_address || '',
+          bank_ref_number: app.bank_ref_number || app.app_number || '',
+          vkyc_url: app.vkyc_url || '',
+          appcode_status: app.appcode_status || 'Appcode Pending',
+          soft_approval_status: app.soft_approval_status || 'Approval-income 25k',
+          vkyc_stage: app.vkyc_stage || 'VKYC Pending',
+          iqa_stage: app.iqa_stage || 'IQA Pending',
+          dispatch_status: app.dispatch_status || 'E-sign Pending',
+          eligible_reqd: app.eligible_reqd || 'No',
+          final_status: app.final_status || 'In Process',
+          bank_remark: app.bank_remark || '',
+          decline_reason: app.decline_reason || ''
         });
       } else {
         setErrorMsg(res.data?.message || 'Unable to load application details.');
@@ -70,7 +95,7 @@ export default function PhysicalApplicationForm() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setSubmitting(true);
     setErrorMsg('');
 
@@ -165,39 +190,37 @@ export default function PhysicalApplicationForm() {
           <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#10b98120', border: '2px solid #10b981', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36, fontWeight: 900 }}>
             ✓
           </div>
-          <h2 style={{ margin: '0 0 10px', fontSize: 22, fontWeight: 900, color: '#fff' }}>Details Submitted Successfully</h2>
+          <h2 style={{ margin: '0 0 10px', fontSize: 22, fontWeight: 900, color: '#fff' }}>Details Saved Successfully</h2>
           <p style={{ fontSize: 13.5, color: theme.mutedText, margin: '0 0 24px', lineHeight: 1.6 }}>
-            Application <strong style={{ color: '#60a5fa' }}>#{appData?.app_number}</strong> has been updated with your verification details. Our operations desk will review and verify your application.
+            Application <strong style={{ color: '#60a5fa' }}>#{appData?.app_number}</strong> has been updated with physical verification details and operations status.
           </p>
           <div style={{ background: '#0a1122', border: '1px solid #233354', padding: 18, borderRadius: 18, fontSize: 13, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: theme.mutedText }}>Bank Partner:</span>
-              <strong style={{ color: '#f8fafc' }}>{appData?.bank_name || 'Partner Bank'}</strong>
+              <strong style={{ color: '#f8fafc' }}>{appData?.bank_name || 'SBI Bank'}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: theme.mutedText }}>Product:</span>
               <strong style={{ color: '#f8fafc' }}>{appData?.product_name || 'Credit Card / Loan'}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: theme.mutedText }}>Status:</span>
-              <strong style={{ color: '#10b981', textTransform: 'uppercase' }}>Details Submitted</strong>
+              <span style={{ color: theme.mutedText }}>Final Status:</span>
+              <strong style={{ color: '#10b981', textTransform: 'uppercase' }}>{form.final_status}</strong>
             </div>
           </div>
+          <button onClick={() => setSubmitted(false)} style={{ marginTop: 20, padding: '12px 24px', borderRadius: 14, border: 'none', background: theme.brandBlueGradient, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+            Edit / View Form Again
+          </button>
         </div>
       </div>
     );
   }
 
-  const isSbi = appData?.is_sbi || 
-    (appData?.bank_name && appData.bank_name.toLowerCase().includes('sbi')) || 
-    (appData?.product_name && appData.product_name.toLowerCase().includes('sbi')) ||
-    true; // Default to SBI physical form layout for physical application links
-
   return (
     <div style={{ minHeight: '100vh', background: theme.pageBg, color: theme.textColor, padding: '24px 16px 48px', fontFamily: "'Inter', sans-serif" }}>
       
       {/* Top Header Navbar */}
-      <div style={{ maxWidth: 680, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(19, 30, 56, 0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: 18 }}>
+      <div style={{ maxWidth: 720, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(19, 30, 56, 0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {logo && <img src={logo} alt="GharKaPaisa Logo" style={{ height: 32, width: 'auto' }} />}
           <span style={{ fontSize: 18, fontWeight: 900, background: 'linear-gradient(90deg, #60a5fa, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -205,22 +228,22 @@ export default function PhysicalApplicationForm() {
           </span>
         </div>
         <div style={{ fontSize: 11, fontWeight: 800, color: '#34d399', background: '#064e3b40', border: '1px solid #05966950', padding: '4px 10px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4 }}>
-          🔒 256-Bit SSL Encrypted
+          🔒 Physical Verification Portal
         </div>
       </div>
 
-      <div style={{ maxWidth: 680, margin: '0 auto' }}>
+      <div style={{ maxWidth: 720, margin: '0 auto' }}>
 
         {/* Header Card */}
         <div style={{ background: theme.cardBg, borderRadius: 24, padding: '24px 28px', border: theme.cardBorder, marginBottom: 20, boxShadow: theme.cardShadow }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-            ⚡ Official Verification Portal
+            ⚡ SBI Physical Verification Sheet
           </div>
           <h1 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 900, color: '#fff' }}>
-            {isSbi ? 'SBI Detail Sheet Form' : 'Bank Application Form'}
+            Physical Application Verification
           </h1>
           <p style={{ margin: 0, fontSize: 13, color: theme.mutedText }}>
-            Application <strong style={{ color: '#e2e8f0' }}>#{appData?.app_number}</strong> • Bank: <strong style={{ color: '#e2e8f0' }}>{appData?.bank_name || 'SBI Bank'}</strong> • Product: <strong style={{ color: '#e2e8f0' }}>{appData?.product_name || 'Credit Card / Loan'}</strong>
+            Application <strong style={{ color: '#e2e8f0' }}>#{appData?.app_number}</strong> • Bank: <strong style={{ color: '#e2e8f0' }}>{appData?.bank_name || 'SBI Bank'}</strong> • Product: <strong style={{ color: '#e2e8f0' }}>{appData?.product_name || 'Credit Card'}</strong>
           </p>
         </div>
 
@@ -230,11 +253,51 @@ export default function PhysicalApplicationForm() {
           </div>
         )}
 
-        {/* Form */}
+        {/* Form Tab Navigation */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+          <button
+            type="button"
+            onClick={() => setActiveTab('form1')}
+            style={{
+              flex: 1,
+              padding: '12px 16px',
+              borderRadius: 16,
+              border: activeTab === 'form1' ? '2px solid #3b82f6' : '1px solid #233354',
+              background: activeTab === 'form1' ? '#1d4ed825' : '#0a1122',
+              color: activeTab === 'form1' ? '#60a5fa' : theme.mutedText,
+              fontWeight: 800,
+              fontSize: 13,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Form 1: Customer Details
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('form2')}
+            style={{
+              flex: 1,
+              padding: '12px 16px',
+              borderRadius: 16,
+              border: activeTab === 'form2' ? '2px solid #3b82f6' : '1px solid #233354',
+              background: activeTab === 'form2' ? '#1d4ed825' : '#0a1122',
+              color: activeTab === 'form2' ? '#60a5fa' : theme.mutedText,
+              fontWeight: 800,
+              fontSize: 13,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Form 2: Remark & Bank Statuses
+          </button>
+        </div>
+
+        {/* Form Container */}
         <form onSubmit={handleSubmit} style={{ background: theme.cardBg, borderRadius: 28, padding: 28, border: theme.cardBorder, display: 'flex', flexDirection: 'column', gap: 18, boxShadow: theme.cardShadow }}>
 
-          {isSbi ? (
-            /* ═══ SBI BANK FORM ═══ */
+          {activeTab === 'form1' ? (
+            /* ═══ FORM 1: CUSTOMER & PHYSICAL DETAILS ═══ */
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
@@ -267,7 +330,7 @@ export default function PhysicalApplicationForm() {
                   required
                   value={form.pan_name}
                   onChange={e => handleChange('pan_name', e.target.value)}
-                  placeholder="Full Name as per PAN card"
+                  placeholder="pratap"
                   style={inputStyle}
                 />
               </div>
@@ -284,10 +347,11 @@ export default function PhysicalApplicationForm() {
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>PAN CARD NUMBER</label>
+                  <label style={labelStyle}>PAN CARD NUMBER *</label>
                   <input
                     type="text"
                     maxLength={10}
+                    required
                     value={form.pan_number}
                     onChange={e => handleChange('pan_number', e.target.value.toUpperCase())}
                     placeholder="ABCDE1234F"
@@ -325,7 +389,7 @@ export default function PhysicalApplicationForm() {
                   type="text"
                   value={form.flat_no}
                   onChange={e => handleChange('flat_no', e.target.value)}
-                  placeholder="Address with landmark and pincode"
+                  placeholder="Address with landmark & pincode"
                   style={inputStyle}
                 />
               </div>
@@ -347,181 +411,245 @@ export default function PhysicalApplicationForm() {
                   type="text"
                   value={form.mother_name}
                   onChange={e => handleChange('mother_name', e.target.value)}
-                  placeholder="Mother Full Name"
+                  placeholder="Mother Name"
                   style={inputStyle}
                 />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={labelStyle}>APPLICATION NUMBER</label>
+                  <input
+                    type="text"
+                    value={form.bank_ref_number}
+                    onChange={e => handleChange('bank_ref_number', e.target.value)}
+                    placeholder="Bank Application Number"
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>VKYC LINK</label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      type="text"
+                      value={form.vkyc_url}
+                      onChange={e => handleChange('vkyc_url', e.target.value)}
+                      placeholder="https://vkyc..."
+                      style={{ ...inputStyle, flex: 1 }}
+                    />
+                    {form.vkyc_url && (
+                      <a
+                        href={form.vkyc_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: '12px',
+                          background: 'linear-gradient(135deg, #10b981, #059669)',
+                          color: '#fff',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Open V-KYC ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('form2')}
+                  style={{
+                    padding: '14px 28px',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: theme.brandBlueGradient,
+                    color: '#ffffff',
+                    fontWeight: 900,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
+                    letterSpacing: '0.02em'
+                  }}
+                >
+                  Next Form: Partners/Operation Remark →
+                </button>
               </div>
             </>
           ) : (
-            /* ═══ OTHER BANK FORM ═══ */
+            /* ═══ FORM 2: PARTNERS / OPERATIONS REMARK & BANK STATUSES ═══ */
             <>
-              <div>
-                <label style={labelStyle}>CUSTOMER FULL NAME (As per PAN card) *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.pan_name}
-                  onChange={e => handleChange('pan_name', e.target.value)}
-                  placeholder="Full Name as per PAN"
-                  style={inputStyle}
-                />
-              </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
-                  <label style={labelStyle}>Flat no / House no / sr no</label>
-                  <input
-                    type="text"
-                    value={form.flat_no}
-                    onChange={e => handleChange('flat_no', e.target.value)}
-                    placeholder="Flat / House / Sr No"
+                  <label style={labelStyle}>APPCODE STATUS</label>
+                  <select
+                    value={form.appcode_status}
+                    onChange={e => handleChange('appcode_status', e.target.value)}
                     style={inputStyle}
-                  />
+                  >
+                    <option value="Appcode Pending" style={{ background: '#0a1122' }}>1. Appcode Pending</option>
+                    <option value="Appcode Submit" style={{ background: '#0a1122' }}>2. Appcode Submit</option>
+                  </select>
                 </div>
+
                 <div>
-                  <label style={labelStyle}>Sub Area</label>
-                  <input
-                    type="text"
-                    value={form.sub_area}
-                    onChange={e => handleChange('sub_area', e.target.value)}
-                    placeholder="Sub Area / Locality"
+                  <label style={labelStyle}>SOFT APPROVAL STATUS</label>
+                  <select
+                    value={form.soft_approval_status}
+                    onChange={e => handleChange('soft_approval_status', e.target.value)}
                     style={inputStyle}
-                  />
+                  >
+                    <option value="Approval-income 25k" style={{ background: '#0a1122' }}>1. Approval-income 25k</option>
+                    <option value="Approval-income 30k" style={{ background: '#0a1122' }}>2. Approval-income 30k</option>
+                    <option value="Approval-NSDP-Cibil based" style={{ background: '#0a1122' }}>3. Approval-NSDP-Cibil based</option>
+                  </select>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
-                  <label style={labelStyle}>Landmark</label>
-                  <input
-                    type="text"
-                    value={form.landmark}
-                    onChange={e => handleChange('landmark', e.target.value)}
-                    placeholder="Landmark"
+                  <label style={labelStyle}>VKYC STAGE</label>
+                  <select
+                    value={form.vkyc_stage}
+                    onChange={e => handleChange('vkyc_stage', e.target.value)}
                     style={inputStyle}
-                  />
+                  >
+                    <option value="VKYC Pending" style={{ background: '#0a1122' }}>1. VKYC Pending</option>
+                    <option value="VKYC Complete" style={{ background: '#0a1122' }}>2. VKYC Complete</option>
+                    <option value="VKYC Failed" style={{ background: '#0a1122' }}>3. VKYC Failed</option>
+                  </select>
                 </div>
+
                 <div>
-                  <label style={labelStyle}>Pincode *</label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    required
-                    value={form.pincode}
-                    onChange={e => handleChange('pincode', e.target.value)}
-                    placeholder="6-digit pincode"
+                  <label style={labelStyle}>IQA STAGE</label>
+                  <select
+                    value={form.iqa_stage}
+                    onChange={e => handleChange('iqa_stage', e.target.value)}
                     style={inputStyle}
-                  />
+                  >
+                    <option value="IQA Sent" style={{ background: '#0a1122' }}>1. IQA Sent</option>
+                    <option value="IQA Complete" style={{ background: '#0a1122' }}>2. IQA Complete</option>
+                    <option value="IQA Pending" style={{ background: '#0a1122' }}>3. IQA Pending</option>
+                    <option value="BLAZE Continue" style={{ background: '#0a1122' }}>4. BLAZE Continue</option>
+                    <option value="BLAZE Decline" style={{ background: '#0a1122' }}>5. BLAZE Decline</option>
+                  </select>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
-                  <label style={labelStyle}>PAN CARD NUMBER *</label>
-                  <input
-                    type="text"
-                    maxLength={10}
-                    required
-                    value={form.pan_number}
-                    onChange={e => handleChange('pan_number', e.target.value.toUpperCase())}
-                    placeholder="ABCDE1234F"
-                    style={{ ...inputStyle, textTransform: 'uppercase', letterSpacing: '1px' }}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>DOB (as per PAN)</label>
-                  <input
-                    type="date"
-                    value={form.dob}
-                    onChange={e => handleChange('dob', e.target.value)}
+                  <label style={labelStyle}>DISPATCH STATUS</label>
+                  <select
+                    value={form.dispatch_status}
+                    onChange={e => handleChange('dispatch_status', e.target.value)}
                     style={inputStyle}
-                  />
+                  >
+                    <option value="DISPATCH DONE" style={{ background: '#0a1122' }}>1. DISPATCH DONE</option>
+                    <option value="WCP STAGE" style={{ background: '#0a1122' }}>2. WCP STAGE</option>
+                    <option value="E-sign Done" style={{ background: '#0a1122' }}>3. E-sign Done</option>
+                    <option value="E-sign Pending" style={{ background: '#0a1122' }}>4. E-sign Pending</option>
+                    <option value="RTB(ERROR)" style={{ background: '#0a1122' }}>5. RTB(ERROR)</option>
+                  </select>
                 </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
-                  <label style={labelStyle}>MOTHER FULL NAME</label>
-                  <input
-                    type="text"
-                    value={form.mother_name}
-                    onChange={e => handleChange('mother_name', e.target.value)}
-                    placeholder="Mother Full Name"
+                  <label style={labelStyle}>ELIGIBLE FOR RE-QD</label>
+                  <select
+                    value={form.eligible_reqd}
+                    onChange={e => handleChange('eligible_reqd', e.target.value)}
                     style={inputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>PERSONAL MAIL ID</label>
-                  <input
-                    type="email"
-                    value={form.personal_email}
-                    onChange={e => handleChange('personal_email', e.target.value)}
-                    placeholder="email@example.com"
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div>
-                  <label style={labelStyle}>COMPANY Name (as per payment slip)</label>
-                  <input
-                    type="text"
-                    value={form.company_name}
-                    onChange={e => handleChange('company_name', e.target.value)}
-                    placeholder="Company Name"
-                    style={inputStyle}
-                  />
-                </div>
-                <div>
-                  <label style={labelStyle}>DESIGNATION</label>
-                  <input
-                    type="text"
-                    value={form.designation}
-                    onChange={e => handleChange('designation', e.target.value)}
-                    placeholder="Designation / Role"
-                    style={inputStyle}
-                  />
+                  >
+                    <option value="Yes" style={{ background: '#0a1122' }}>1. Yes</option>
+                    <option value="No" style={{ background: '#0a1122' }}>2. No</option>
+                  </select>
                 </div>
               </div>
 
               <div>
-                <label style={labelStyle}>MOBILE No *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.aadhaar_linked_mobile}
-                  onChange={e => handleChange('aadhaar_linked_mobile', e.target.value)}
-                  placeholder="10-digit mobile number"
+                <label style={labelStyle}>FINAL STATUS FROM BANK / CURRENT STAGE</label>
+                <select
+                  value={form.final_status}
+                  onChange={e => handleChange('final_status', e.target.value)}
                   style={inputStyle}
+                >
+                  <option value="App file generated (approved)" style={{ background: '#0a1122' }}>1. App file generated (approved)</option>
+                  <option value="Decline" style={{ background: '#0a1122' }}>2. Decline</option>
+                  <option value="In Process" style={{ background: '#0a1122' }}>3. In Process</option>
+                  <option value="Technical Error" style={{ background: '#0a1122' }}>4. Technical Error</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>BANK REMARK (OPERATIONS HEAD ONLY)</label>
+                <textarea
+                  rows={3}
+                  value={form.bank_remark}
+                  onChange={e => handleChange('bank_remark', e.target.value)}
+                  placeholder="Operations / Partner remark..."
+                  style={{ ...inputStyle, resize: 'vertical' }}
                 />
+              </div>
+
+              {form.final_status === 'Decline' && (
+                <div>
+                  <label style={{ ...labelStyle, color: '#f87171' }}>DECLINE REASON REMARK</label>
+                  <textarea
+                    rows={2}
+                    value={form.decline_reason}
+                    onChange={e => handleChange('decline_reason', e.target.value)}
+                    placeholder="Enter decline reason..."
+                    style={{ ...inputStyle, borderColor: '#ef444450', resize: 'vertical' }}
+                  />
+                </div>
+              )}
+
+              <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('form1')}
+                  style={{
+                    padding: '14px 22px',
+                    borderRadius: '16px',
+                    border: '1px solid #233354',
+                    background: '#0a1122',
+                    color: theme.mutedText,
+                    fontWeight: 800,
+                    fontSize: '13.5px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ← Back to Form 1
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  style={{
+                    padding: '14px 28px',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: theme.brandBlueGradient,
+                    color: '#ffffff',
+                    fontWeight: 900,
+                    fontSize: '14px',
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    opacity: submitting ? 0.7 : 1,
+                    boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
+                    letterSpacing: '0.02em'
+                  }}
+                >
+                  {submitting ? 'Saving Details...' : 'SAVE DETAILS 💾'}
+                </button>
               </div>
             </>
           )}
-
-          <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10 }}>
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                width: '100%',
-                padding: '14px 24px',
-                borderRadius: '16px',
-                border: 'none',
-                background: theme.brandBlueGradient,
-                color: '#ffffff',
-                fontWeight: 900,
-                fontSize: '15px',
-                cursor: submitting ? 'not-allowed' : 'pointer',
-                opacity: submitting ? 0.7 : 1,
-                boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
-                transition: 'all 0.2s ease',
-                letterSpacing: '0.02em'
-              }}
-            >
-              {submitting ? 'Submitting Application Details...' : 'SUBMIT PHYSICAL APPLICATION DETAILS ➔'}
-            </button>
-          </div>
 
         </form>
       </div>
