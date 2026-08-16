@@ -462,8 +462,8 @@ export default function PartnerCrm() {
           {t("crm.noRecords", "No customer records match your filter criteria. Click Add New Customer to create a lead profile.")}
         </div>
       ) : viewMode === 'cards' ? (
-        /* CRM Cards Grid (Max 4 per line on responsive view) */
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+        /* CRM Customers Row List (100% Full Width Row-Wise View) */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
           {filteredCustomers.map(cust => (
             <CustomerCard
               key={cust.id}

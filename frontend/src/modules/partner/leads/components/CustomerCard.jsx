@@ -81,138 +81,114 @@ export default function CustomerCard({ customer, onOpenProfile, onEditCustomer, 
   }
 
   return (
-    <div style={{
-      background: C.card,
-      border: `1px solid ${C.border}`,
-      borderRadius: '16px',
-      padding: '20px',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)',
-      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-      cursor: 'pointer'
-    }}
-    onClick={() => onOpenProfile && onOpenProfile(customer)}
+    <div
+      style={{
+        background: C.card,
+        border: `1px solid ${C.border}`,
+        borderRadius: '14px',
+        padding: '14px 18px',
+        width: '100%',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '14px',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
+        transition: 'all 0.2s ease',
+        cursor: 'pointer'
+      }}
+      onClick={() => onOpenProfile && onOpenProfile(customer)}
     >
-      <div>
-        {/* Header Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)',
-              color: '#FFFFFF',
-              fontWeight: 800,
-              fontSize: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 10px rgba(99, 102, 241, 0.3)'
+      {/* Left: Avatar + Name + Contact Details */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: '1 1 280px' }}>
+        <div style={{
+          width: '42px',
+          height: '42px',
+          borderRadius: '12px',
+          background: 'linear-gradient(135deg, #4338CA 0%, #6366F1 100%)',
+          color: '#FFFFFF',
+          fontWeight: 800,
+          fontSize: '15px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 3px 8px rgba(99, 102, 241, 0.3)',
+          flexShrink: 0
+        }}>
+          {initials}
+        </div>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, lineHeight: 1.2 }}>
+              {full_name}
+            </h3>
+            <span style={{
+              background: badge.bg,
+              color: badge.color,
+              border: `1px solid ${badge.border}40`,
+              padding: '2px 8px',
+              borderRadius: '999px',
+              fontSize: '10px',
+              fontWeight: 700,
+              whiteSpace: 'nowrap'
             }}>
-              {initials}
-            </div>
-            <div>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0, lineHeight: 1.2 }}>
-                {full_name}
-              </h3>
-              <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
-                ID: #{id ? id.substring(0, 8) : 'CUST'}
-              </div>
-            </div>
+              {badge.label}
+            </span>
           </div>
-
-          {/* Status Badge */}
-          <span style={{
-            background: badge.bg,
-            color: badge.color,
-            border: `1px solid ${badge.border}40`,
-            padding: '4px 10px',
-            borderRadius: '999px',
-            fontSize: '11px',
-            fontWeight: 700,
-            whiteSpace: 'nowrap'
-          }}>
-            {badge.label}
-          </span>
-        </div>
-
-        {/* Contact Info Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px', fontSize: '12.5px', color: C.textMid }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-            <MdPhone style={{ color: C.textLight, fontSize: '14px', flexShrink: 0 }} />
-            <span style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{mobile}</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-            <MdEmail style={{ color: C.textLight, fontSize: '14px', flexShrink: 0 }} />
-            <span style={{ whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{email || t("common.noEmail", "No email")}</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <MdLocationOn style={{ color: C.textLight, fontSize: '14px', flexShrink: 0 }} />
-            <span>{city || t("common.locationNa", "Location N/A")}</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <MdAccessTime style={{ color: C.textLight, fontSize: '14px', flexShrink: 0 }} />
-            <span>{created_at ? new Date(created_at).toLocaleDateString() : t("common.today", "Today")}</span>
-          </div>
-        </div>
-
-        {/* Interested Products Tags */}
-        <div style={{ marginBottom: '14px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase', marginBottom: '6px' }}>
-            {t("crm.interestedProducts", "Interested Products")}
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-            {parsedInterests.length > 0 ? (
-              parsedInterests.map((prod, idx) => (
-                <span key={idx} style={{
-                  background: C.bgSecondary,
-                  color: C.text,
-                  border: `1px solid ${C.border}`,
-                  borderRadius: '6px',
-                  padding: '2px 8px',
-                  fontSize: '11px',
-                  fontWeight: 600
-                }}>
-                  {prod}
-                </span>
-              ))
-            ) : (
-              <span style={{ fontSize: '11px', color: C.textLight, italic: 'true' }}>{t("crm.defaultProductLead", "Credit Card & Loan Lead")}</span>
-            )}
-
-            {Array.isArray(tags) && tags.map((t, idx) => (
-              <span key={`tag-${idx}`} style={{
-                background: `${t.color || '#3B82F6'}15`,
-                color: t.color || '#3B82F6',
-                border: `1px solid ${t.color || '#3B82F6'}40`,
-                borderRadius: '6px',
-                padding: '2px 8px',
-                fontSize: '11px',
-                fontWeight: 700
-              }}>
-                #{t.name || t}
-              </span>
-            ))}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '4px', fontSize: '12px', color: C.textMid }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><MdPhone style={{ color: C.textLight }} /> {mobile}</span>
+            {email && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><MdEmail style={{ color: C.textLight }} /> {email}</span>}
+            {city && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><MdLocationOn style={{ color: C.textLight }} /> {city}</span>}
           </div>
         </div>
       </div>
 
-      {/* Card Footer */}
-      <div style={{
-        paddingTop: '12px',
-        borderTop: `1px dashed ${C.border}`,
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <div style={{ fontSize: '11px', color: C.textLight }}>
-          {t("crm.partner", "Partner")}: <strong style={{ color: C.text }}>{partner_first_name ? `${partner_first_name} ${partner_last_name || ''}` : t("crm.directAssigned", "Direct/Assigned")}</strong>
+      {/* Middle: Interested Products & Tags */}
+      <div style={{ flex: '1 1 200px' }}>
+        <div style={{ fontSize: '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.04em' }}>
+          {t("crm.interestedProducts", "Interested Products")}
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          {parsedInterests.length > 0 ? (
+            parsedInterests.map((prod, idx) => (
+              <span key={idx} style={{
+                background: C.bgSecondary,
+                color: C.text,
+                border: `1px solid ${C.border}`,
+                borderRadius: '6px',
+                padding: '2px 8px',
+                fontSize: '11px',
+                fontWeight: 600
+              }}>
+                {prod}
+              </span>
+            ))
+          ) : (
+            <span style={{ fontSize: '11px', color: C.textLight }}>{t("crm.defaultProductLead", "Credit Card & Loan Lead")}</span>
+          )}
+
+          {Array.isArray(tags) && tags.map((tg, idx) => (
+            <span key={`tag-${idx}`} style={{
+              background: `${tg.color || '#3B82F6'}15`,
+              color: tg.color || '#3B82F6',
+              border: `1px solid ${tg.color || '#3B82F6'}40`,
+              borderRadius: '6px',
+              padding: '2px 8px',
+              fontSize: '11px',
+              fontWeight: 700
+            }}>
+              #{tg.name || tg}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Right: Partner Info & Action Buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0, marginLeft: 'auto' }}>
+        <div style={{ fontSize: '11px', color: C.textLight, textAlign: 'right' }}>
+          {t("crm.partner", "Partner")}: <strong style={{ color: C.text, display: 'block' }}>{partner_first_name ? `${partner_first_name} ${partner_last_name || ''}` : t("crm.directAssigned", "Direct/Assigned")}</strong>
         </div>
 
         <div style={{ display: 'flex', gap: '6px' }}>
@@ -229,11 +205,10 @@ export default function CustomerCard({ customer, onOpenProfile, onEditCustomer, 
               color: C.primary,
               border: `1px solid ${C.primary}40`,
               borderRadius: '8px',
-              padding: '6px 10px',
+              padding: '6px 12px',
               fontSize: '11px',
               fontWeight: 800,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              cursor: 'pointer'
             }}
           >
             <MdEdit style={{ fontSize: '13px' }} />
@@ -253,11 +228,10 @@ export default function CustomerCard({ customer, onOpenProfile, onEditCustomer, 
               color: C.teal,
               border: `1px solid ${C.teal}40`,
               borderRadius: '8px',
-              padding: '6px 10px',
+              padding: '6px 12px',
               fontSize: '11px',
               fontWeight: 800,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              cursor: 'pointer'
             }}
           >
             <span>360° Profile</span>
