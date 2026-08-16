@@ -417,7 +417,7 @@ const getTimeline = async (req, res, next) => {
 
         UNION ALL
 
-        SELECT lt.id::text, lt.lead_id::text as application_id, lt.activity_type as event_type, lt.title, lt.description, lt.status, lt.created_by as performed_by, lt.created_at as performed_at, lt.created_at, u.full_name as performed_by_name, lt.description as remarks
+        SELECT lt.id::text, lt.lead_id::text as application_id, COALESCE(lt.title, 'Lead Event') as event_type, COALESCE(lt.title, 'Timeline Event') as title, lt.description, 'completed' as status, lt.created_by as performed_by, lt.created_at as performed_at, lt.created_at, u.full_name as performed_by_name, lt.description as remarks
         FROM lead_timeline lt
         LEFT JOIN users u ON u.id = lt.created_by
         WHERE lt.lead_id = $1 OR ($2::uuid IS NOT NULL AND lt.lead_id = $2::uuid)
