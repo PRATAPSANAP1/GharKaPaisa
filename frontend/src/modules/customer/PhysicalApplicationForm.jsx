@@ -256,52 +256,52 @@ export default function PhysicalApplicationForm() {
           </div>
         )}
 
-        {/* Form Tab Navigation */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-          <button
-            type="button"
-            onClick={() => setActiveTab('form1')}
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              borderRadius: 16,
-              border: activeTab === 'form1' ? '2px solid #3b82f6' : '1px solid #233354',
-              background: activeTab === 'form1' ? '#1d4ed825' : '#0a1122',
-              color: activeTab === 'form1' ? '#60a5fa' : theme.mutedText,
-              fontWeight: 800,
-              fontSize: 13,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Form 1: Customer Details
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('form2')}
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              borderRadius: 16,
-              border: activeTab === 'form2' ? '2px solid #3b82f6' : '1px solid #233354',
-              background: activeTab === 'form2' ? '#1d4ed825' : '#0a1122',
-              color: activeTab === 'form2' ? '#60a5fa' : theme.mutedText,
-              fontWeight: 800,
-              fontSize: 13,
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Form 2: Remark & Bank Statuses
-          </button>
+        {/* Form Tab Navigation (4 Steps) */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
+          {[
+            { id: 'step1', num: '1', title: 'Customer Details', sub: 'Form 1' },
+            { id: 'step2', num: '2', title: 'Appcode & VKYC', sub: 'Remark Part 1' },
+            { id: 'step3', num: '3', title: 'IQA & Dispatch', sub: 'Remark Part 2' },
+            { id: 'step4', num: '4', title: 'Bank & Final Status', sub: 'Ops Head / Admin' }
+          ].map((tab) => {
+            const isActive = activeTab === tab.id || (activeTab === 'form1' && tab.id === 'step1') || (activeTab === 'form2' && tab.id === 'step2');
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  flex: 1,
+                  minWidth: '130px',
+                  padding: '10px 12px',
+                  borderRadius: 14,
+                  border: isActive ? '2px solid #3b82f6' : '1px solid #233354',
+                  background: isActive ? '#1d4ed825' : '#0a1122',
+                  color: isActive ? '#60a5fa' : theme.mutedText,
+                  fontWeight: 800,
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ fontSize: 10, color: isActive ? '#93c5fd' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Step {tab.num} • {tab.sub}</div>
+                <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>{tab.title}</div>
+              </button>
+            );
+          })}
         </div>
 
         {/* Form Container */}
         <form onSubmit={handleSubmit} style={{ background: theme.cardBg, borderRadius: 28, padding: 28, border: theme.cardBorder, display: 'flex', flexDirection: 'column', gap: 18, boxShadow: theme.cardShadow }}>
 
-          {activeTab === 'form1' ? (
-            /* ═══ FORM 1: CUSTOMER & PHYSICAL DETAILS ═══ */
+          {/* ═══ STEP 1: CUSTOMER & PHYSICAL DETAILS (FORM 1) ═══ */}
+          {(activeTab === 'step1' || activeTab === 'form1') && (
             <>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #233354', paddingBottom: 10, marginBottom: 6 }}>
+                📋 Form 1: Customer Details & Physical Verification Info
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>ADHAR LINK CONTACT NUMBER *</label>
@@ -315,7 +315,7 @@ export default function PhysicalApplicationForm() {
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>AS PER PAN CARD DOB</label>
+                  <label style={labelStyle}>AS PER PAN CARD DOB (dd-mm-yyyy)</label>
                   <input
                     type="text"
                     value={form.dob}
@@ -470,10 +470,10 @@ export default function PhysicalApplicationForm() {
                 </div>
               )}
 
-              <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('form2')}
+                  onClick={() => setActiveTab('step2')}
                   style={{
                     padding: '14px 28px',
                     borderRadius: '16px',
@@ -487,27 +487,31 @@ export default function PhysicalApplicationForm() {
                     letterSpacing: '0.02em'
                   }}
                 >
-                  Next Form: Partners/Operation Remark →
+                  Next Step 2: Appcode & VKYC Remark →
                 </button>
               </div>
             </>
-          ) : (
-            /* ═══ FORM 2: PARTNERS / OPERATIONS REMARK & BANK STATUSES ═══ */
+          )}
+
+          {/* ═══ STEP 2: PARTNERS / OPERATIONS REMARK (PART 1: APPCODE, SOFT APPROVAL, VKYC) ═══ */}
+          {(activeTab === 'step2' || activeTab === 'form2') && (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: isSbi ? '1fr 1fr' : '1fr', gap: 14 }}>
-                {isSbi && (
-                  <div>
-                    <label style={labelStyle}>APPCODE STATUS</label>
-                    <select
-                      value={form.appcode_status}
-                      onChange={e => handleChange('appcode_status', e.target.value)}
-                      style={inputStyle}
-                    >
-                      <option value="Appcode Pending" style={{ background: '#0a1122' }}>1. Appcode Pending</option>
-                      <option value="Appcode Submit" style={{ background: '#0a1122' }}>2. Appcode Submit</option>
-                    </select>
-                  </div>
-                )}
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #233354', paddingBottom: 10, marginBottom: 6 }}>
+                ⚙️ Form 2 (Part 1): Partners / Operations Remark — Appcode, Soft Approval & VKYC Stage
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={labelStyle}>APPCODE STATUS</label>
+                  <select
+                    value={form.appcode_status}
+                    onChange={e => handleChange('appcode_status', e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="Appcode Pending" style={{ background: '#0a1122' }}>1. Appcode Pending</option>
+                    <option value="Appcode Submit" style={{ background: '#0a1122' }}>2. Appcode Submit</option>
+                  </select>
+                </div>
 
                 <div>
                   <label style={labelStyle}>SOFT APPROVAL STATUS</label>
@@ -523,20 +527,67 @@ export default function PhysicalApplicationForm() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <div>
-                  <label style={labelStyle}>VKYC STAGE</label>
-                  <select
-                    value={form.vkyc_stage}
-                    onChange={e => handleChange('vkyc_stage', e.target.value)}
-                    style={inputStyle}
-                  >
-                    <option value="VKYC Pending" style={{ background: '#0a1122' }}>1. VKYC Pending</option>
-                    <option value="VKYC Complete" style={{ background: '#0a1122' }}>2. VKYC Complete</option>
-                    <option value="VKYC Failed" style={{ background: '#0a1122' }}>3. VKYC Failed</option>
-                  </select>
-                </div>
+              <div>
+                <label style={labelStyle}>VKYC STAGE</label>
+                <select
+                  value={form.vkyc_stage}
+                  onChange={e => handleChange('vkyc_stage', e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="VKYC Pending" style={{ background: '#0a1122' }}>1. VKYC Pending</option>
+                  <option value="VKYC Complete" style={{ background: '#0a1122' }}>2. VKYC Complete</option>
+                  <option value="VKYC Failed" style={{ background: '#0a1122' }}>3. VKYC Failed</option>
+                </select>
+              </div>
 
+              <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('step1')}
+                  style={{
+                    padding: '14px 22px',
+                    borderRadius: '16px',
+                    border: '1px solid #233354',
+                    background: '#0a1122',
+                    color: theme.mutedText,
+                    fontWeight: 800,
+                    fontSize: '13.5px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ← Back to Step 1
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('step3')}
+                  style={{
+                    padding: '14px 28px',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: theme.brandBlueGradient,
+                    color: '#ffffff',
+                    fontWeight: 900,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
+                    letterSpacing: '0.02em'
+                  }}
+                >
+                  Next Step 3: IQA & Dispatch Stage →
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ═══ STEP 3: OPERATIONS & DISPATCH STAGE (PART 2: IQA & DISPATCH) ═══ */}
+          {activeTab === 'step3' && (
+            <>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #233354', paddingBottom: 10, marginBottom: 6 }}>
+                📦 Form 2 (Part 2): Operations & Dispatch Stage — IQA & Dispatch Workflow
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>IQA STAGE</label>
                   <select
@@ -551,9 +602,7 @@ export default function PhysicalApplicationForm() {
                     <option value="BLAZE Decline" style={{ background: '#0a1122' }}>5. BLAZE Decline</option>
                   </select>
                 </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>DISPATCH STATUS</label>
                   <select
@@ -566,6 +615,69 @@ export default function PhysicalApplicationForm() {
                     <option value="E-sign Done" style={{ background: '#0a1122' }}>3. E-sign Done</option>
                     <option value="E-sign Pending" style={{ background: '#0a1122' }}>4. E-sign Pending</option>
                     <option value="RTB(ERROR)" style={{ background: '#0a1122' }}>5. RTB(ERROR)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('step2')}
+                  style={{
+                    padding: '14px 22px',
+                    borderRadius: '16px',
+                    border: '1px solid #233354',
+                    background: '#0a1122',
+                    color: theme.mutedText,
+                    fontWeight: 800,
+                    fontSize: '13.5px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ← Back to Step 2
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('step4')}
+                  style={{
+                    padding: '14px 28px',
+                    borderRadius: '16px',
+                    border: 'none',
+                    background: theme.brandBlueGradient,
+                    color: '#ffffff',
+                    fontWeight: 900,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
+                    letterSpacing: '0.02em'
+                  }}
+                >
+                  Next Step 4: Bank & Final Status →
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ═══ STEP 4: BANK REMARK & FINAL STATUS (PART 3: EDITABLE BY ADMIN / OPERATIONS HEAD ONLY) ═══ */}
+          {activeTab === 'step4' && (
+            <>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#f97316', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #233354', paddingBottom: 10, marginBottom: 6 }}>
+                🏦 Form 2 (Part 3): Bank Remark & Final Status (Admin / Operations Head Only)
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={labelStyle}>FINAL STATUS FROM BANK / CURRENT STAGE</label>
+                  <select
+                    value={form.final_status}
+                    onChange={e => handleChange('final_status', e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="App file generated (approved)" style={{ background: '#0a1122' }}>1. App file generated (approved)</option>
+                    <option value="Decline" style={{ background: '#0a1122' }}>2. Decline</option>
+                    <option value="In Process" style={{ background: '#0a1122' }}>3. In Process</option>
+                    <option value="Technical Error" style={{ background: '#0a1122' }}>4. Technical Error</option>
                   </select>
                 </div>
 
@@ -583,26 +695,12 @@ export default function PhysicalApplicationForm() {
               </div>
 
               <div>
-                <label style={labelStyle}>FINAL STATUS FROM BANK / CURRENT STAGE</label>
-                <select
-                  value={form.final_status}
-                  onChange={e => handleChange('final_status', e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="App file generated (approved)" style={{ background: '#0a1122' }}>1. App file generated (approved)</option>
-                  <option value="Decline" style={{ background: '#0a1122' }}>2. Decline</option>
-                  <option value="In Process" style={{ background: '#0a1122' }}>3. In Process</option>
-                  <option value="Technical Error" style={{ background: '#0a1122' }}>4. Technical Error</option>
-                </select>
-              </div>
-
-              <div>
                 <label style={labelStyle}>BANK REMARK (OPERATIONS HEAD ONLY)</label>
                 <textarea
                   rows={3}
                   value={form.bank_remark}
                   onChange={e => handleChange('bank_remark', e.target.value)}
-                  placeholder="Operations / Partner remark..."
+                  placeholder="Operations Head / Bank remark..."
                   style={{ ...inputStyle, resize: 'vertical' }}
                 />
               </div>
@@ -623,7 +721,7 @@ export default function PhysicalApplicationForm() {
               <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('form1')}
+                  onClick={() => setActiveTab('step3')}
                   style={{
                     padding: '14px 22px',
                     borderRadius: '16px',
@@ -635,7 +733,7 @@ export default function PhysicalApplicationForm() {
                     cursor: 'pointer'
                   }}
                 >
-                  ← Back to Form 1
+                  ← Back to Step 3
                 </button>
 
                 <button

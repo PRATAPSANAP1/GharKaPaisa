@@ -198,54 +198,96 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
             <ApplicationTracker currentStatus={application.status} />
           </div>
 
-          {/* Navigation Tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', gap: '24px' }}>
+          {/* Navigation Tabs (Form 1 + 3 Parts of Form 2 + Timeline) */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
             <button
               onClick={() => setActiveTab('details')}
               style={{
-                background: 'none',
+                background: activeTab === 'details' ? '#fff7ed' : 'none',
                 border: 'none',
-                padding: '10px 4px',
-                fontWeight: activeTab === 'details' ? 700 : 500,
-                fontSize: '14px',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontWeight: activeTab === 'details' ? 800 : 600,
+                fontSize: '13px',
                 color: activeTab === 'details' ? '#ea580c' : '#64748b',
-                borderBottom: activeTab === 'details' ? '2px solid #ea580c' : 'none',
-                cursor: 'pointer'
+                borderBottom: activeTab === 'details' ? '2.5px solid #ea580c' : '2.5px solid transparent',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
-              Form 1: Customer & Physical Details
+              📋 Form 1: Customer Details
+            </button>
+
+            <button
+              onClick={() => setActiveTab('remark1')}
+              style={{
+                background: activeTab === 'remark1' ? '#fff7ed' : 'none',
+                border: 'none',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontWeight: activeTab === 'remark1' ? 800 : 600,
+                fontSize: '13px',
+                color: activeTab === 'remark1' ? '#ea580c' : '#64748b',
+                borderBottom: activeTab === 'remark1' ? '2.5px solid #ea580c' : '2.5px solid transparent',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              ⚙️ Form 2 (Part 1): Appcode & VKYC
+            </button>
+
+            <button
+              onClick={() => setActiveTab('remark2')}
+              style={{
+                background: activeTab === 'remark2' ? '#fff7ed' : 'none',
+                border: 'none',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontWeight: activeTab === 'remark2' ? 800 : 600,
+                fontSize: '13px',
+                color: activeTab === 'remark2' ? '#ea580c' : '#64748b',
+                borderBottom: activeTab === 'remark2' ? '2.5px solid #ea580c' : '2.5px solid transparent',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              📦 Form 2 (Part 2): IQA & Dispatch
             </button>
 
             <button
               onClick={() => setActiveTab('bank')}
               style={{
-                background: 'none',
+                background: activeTab === 'bank' ? '#fff7ed' : 'none',
                 border: 'none',
-                padding: '10px 4px',
-                fontWeight: activeTab === 'bank' ? 700 : 500,
-                fontSize: '14px',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontWeight: activeTab === 'bank' ? 800 : 600,
+                fontSize: '13px',
                 color: activeTab === 'bank' ? '#ea580c' : '#64748b',
-                borderBottom: activeTab === 'bank' ? '2px solid #ea580c' : 'none',
-                cursor: 'pointer'
+                borderBottom: activeTab === 'bank' ? '2.5px solid #ea580c' : '2.5px solid transparent',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
-              Form 2: Partners / Operations Remark & Bank Statuses
+              🏦 Form 2 (Part 3): Bank Status & Remark
             </button>
 
             <button
               onClick={() => setActiveTab('timeline')}
               style={{
-                background: 'none',
+                background: activeTab === 'timeline' ? '#fff7ed' : 'none',
                 border: 'none',
-                padding: '10px 4px',
-                fontWeight: activeTab === 'timeline' ? 700 : 500,
-                fontSize: '14px',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontWeight: activeTab === 'timeline' ? 800 : 600,
+                fontSize: '13px',
                 color: activeTab === 'timeline' ? '#ea580c' : '#64748b',
-                borderBottom: activeTab === 'timeline' ? '2px solid #ea580c' : 'none',
-                cursor: 'pointer'
+                borderBottom: activeTab === 'timeline' ? '2.5px solid #ea580c' : '2.5px solid transparent',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
-              Audit Timeline Log
+              📜 Audit Log
             </button>
           </div>
 
@@ -255,7 +297,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
               
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 16px 0', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  📋 Form 1: Customer Details & Identification Fields (Pre-filled & Editable)
+                  📋 Form 1: Customer Details & Identification Fields
                 </h4>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', fontSize: '13px' }}>
@@ -428,7 +470,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
 
                 <button
                   type="button"
-                  onClick={() => setActiveTab('bank')}
+                  onClick={() => setActiveTab('remark1')}
                   style={{
                     background: '#f97316',
                     color: '#ffffff',
@@ -444,20 +486,19 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     boxShadow: '0 4px 12px rgba(249, 115, 22, 0.25)'
                   }}
                 >
-                  Next Form: Partners/Operation Remark <ArrowRight size={18} />
+                  Next: Appcode & VKYC (Part 1) <ArrowRight size={18} />
                 </button>
               </div>
 
             </div>
           )}
 
-          {/* FORM 2: PARTNERS / OPERATIONS REMARK & BANK STATUS WORKFLOW */}
-          {activeTab === 'bank' && (
+          {/* FORM 2 (PART 1): APPCODE, SOFT APPROVAL, VKYC STAGE */}
+          {activeTab === 'remark1' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 16px 0', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  ⚙️ Form 2: Operations Remarks & Bank Status Update
+                  ⚙️ Form 2 (Part 1): Partners / Operations Remark — Appcode, Soft Approval & VKYC Stage
                 </h4>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
@@ -505,6 +546,37 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     </select>
                   </div>
 
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
+                  <button
+                    onClick={() => setActiveTab('details')}
+                    style={{ background: '#f1f5f9', color: '#475569', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <ArrowLeft size={16} /> Back to Form 1
+                  </button>
+
+                  <button
+                    onClick={() => setActiveTab('remark2')}
+                    style={{ background: '#f97316', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    Next: IQA & Dispatch (Part 2) <ArrowRight size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FORM 2 (PART 2): IQA STAGE & DISPATCH STATUS */}
+          {activeTab === 'remark2' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 16px 0', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+                  📦 Form 2 (Part 2): Operations & Dispatch Stage — IQA & Dispatch Workflow
+                </h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
+                  
                   {/* 4. IQA Stage */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>IQA Stage</label>
@@ -537,26 +609,34 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     </select>
                   </div>
 
-                  {/* 6. Eligible for Re-QD */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Eligible for Re-QD</label>
-                    <select
-                      value={eligibleReQd}
-                      onChange={(e) => setEligibleReQd(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
-                    >
-                      <option value="Yes">1. Yes</option>
-                      <option value="No">2. No</option>
-                    </select>
-                  </div>
-
                 </div>
 
-                <hr style={{ border: 'none', borderTop: '1px solid #f1f5f9', margin: '20px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
+                  <button
+                    onClick={() => setActiveTab('remark1')}
+                    style={{ background: '#f1f5f9', color: '#475569', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <ArrowLeft size={16} /> Back to Part 1
+                  </button>
 
-                {/* Bank Remarks & Final Stage Section */}
-                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#991b1b', margin: '0 0 14px 0', textTransform: 'uppercase' }}>
-                  🏦 Bank Remark & Final Status (Operations Head Only)
+                  <button
+                    onClick={() => setActiveTab('bank')}
+                    style={{ background: '#ea580c', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  >
+                    Next: Bank & Final Status (Part 3) <ArrowRight size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FORM 2 (PART 3): BANK REMARK & FINAL STATUS (ADMIN & OPERATIONS HEAD ONLY) */}
+          {activeTab === 'bank' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#991b1b', margin: '0 0 16px 0', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+                  🏦 Form 2 (Part 3): Bank Remark & Final Status (Operations Head / Admin Only)
                 </h4>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
@@ -573,6 +653,19 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                       <option value="Decline">2. Decline</option>
                       <option value="In Process">3. In Process</option>
                       <option value="Technical Error">4. Technical Error</option>
+                    </select>
+                  </div>
+
+                  {/* Eligible for Re-QD */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Eligible for Re-QD</label>
+                    <select
+                      value={eligibleReQd}
+                      onChange={(e) => setEligibleReQd(e.target.value)}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                    >
+                      <option value="Yes">1. Yes</option>
+                      <option value="No">2. No</option>
                     </select>
                   </div>
 
@@ -618,10 +711,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', flexWrap: 'wrap', gap: '12px' }}>
                   <button
-                    onClick={() => setActiveTab('details')}
+                    onClick={() => setActiveTab('remark2')}
                     style={{ background: '#f1f5f9', color: '#475569', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <ArrowLeft size={16} /> Back to Form 1
+                    <ArrowLeft size={16} /> Back to Part 2
                   </button>
 
                   <button
@@ -629,7 +722,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     disabled={actionLoading}
                     style={{ background: '#16a34a', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
                   >
-                    <CheckCircle size={18} /> {actionLoading ? 'Saving Details...' : 'Save Details'}
+                    <CheckCircle size={18} /> {actionLoading ? 'Saving Details...' : 'Save All Details 💾'}
                   </button>
                 </div>
 
