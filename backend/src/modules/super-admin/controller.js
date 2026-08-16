@@ -83,9 +83,10 @@ const createAdmin = async (req, res, next) => {
 
     // Record the action in audit logs
     const bankIds = Array.isArray(req.body.bank_ids) ? req.body.bank_ids : (req.body.bank_id ? [req.body.bank_id] : []);
-    const isOpHead = String(designation).toUpperCase() === 'OPERATIONAL_HEAD' || String(designation).toUpperCase() === 'OPERATIONAL HEAD';
+    const desigUpper = String(designation || '').toUpperCase();
+    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION'].includes(desigUpper);
     if (isOpHead && bankIds.length === 0) {
-      return error(res, 'At least one assigned bank is required for Operational Head designation', 400);
+      return error(res, 'At least one assigned bank is required for Operational Head or Backend designation', 400);
     }
     if (bankIds.length > 0) {
       for (const bId of bankIds) {
@@ -975,9 +976,10 @@ const updateAdminBanks = async (req, res, next) => {
     const adminId = req.params.id;
     const bankIds = Array.isArray(req.body.bank_ids) ? req.body.bank_ids : [];
     const { rows: [adminUser] } = await query(`SELECT designation FROM users WHERE id = $1`, [adminId]);
-    const isOpHead = String(adminUser?.designation || '').toUpperCase() === 'OPERATIONAL_HEAD' || String(adminUser?.designation || '').toUpperCase() === 'OPERATIONAL HEAD';
+    const desigUpper = String(adminUser?.designation || '').toUpperCase();
+    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION'].includes(desigUpper);
     if (isOpHead && bankIds.length === 0) {
-      return error(res, 'At least one assigned bank is required for Operational Head designation', 400);
+      return error(res, 'At least one assigned bank is required for Operational Head or Backend designation', 400);
     }
     await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [adminId]);
     for (const bId of bankIds) {

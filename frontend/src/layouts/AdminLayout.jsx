@@ -85,9 +85,11 @@ const AdminLayout = () => {
   const { activeBanks } = useActiveBanks();
   let banks = activeBanks.length > 0 ? activeBanks : DEFAULT_BANKS;
 
-  const isOpHead = user?.designation === 'Operational Head' || user?.designation === 'OPERATIONAL_HEAD';
+  const userDesignation = user?.designation || '';
+  const isOpHead = userDesignation === 'Operational Head' || userDesignation === 'OPERATIONAL_HEAD';
+  const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION'].includes(userDesignation);
   const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
-  if ((isOpHead || assignedList.length > 0) && assignedList.length > 0) {
+  if ((isOpHead || isBackend || assignedList.length > 0) && assignedList.length > 0) {
     banks = assignedList.map(b => ({
       id: b.id,
       name: b.name || b.bank_name || b.short_code,
@@ -102,10 +104,17 @@ const AdminLayout = () => {
   const [openProductsMenu, setOpenProductsMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Close mobile menu on route change
+  // Close mobile menu on route change & restrict Backend designation navigation
   useEffect(() => {
     setMobileMenuOpen(false);
-  }, [location.pathname]);
+    if (isBackend) {
+      const allowedPaths = ['/admin/applications', '/admin/credit-cards', '/admin/loans', '/admin/insurance'];
+      const isAllowed = allowedPaths.some(p => location.pathname.startsWith(p));
+      if (!isAllowed) {
+        navigate('/admin/applications', { replace: true });
+      }
+    }
+  }, [location.pathname, isBackend, navigate]);
 
   const handleLogout = () => {
     logout();
@@ -123,26 +132,31 @@ const AdminLayout = () => {
             {t('adminLayout.title', 'GharKaPaisa')}
           </h2>
           <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Admin Operations Portal
+            {isBackend ? 'Backend Operations' : 'Admin Operations Portal'}
           </span>
         </div>
       </div>
 
       <nav style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
         
-        {/* Dashboard */}
-        <NavLink to="/admin/dashboard" style={navLinkStyle}>
-          <Icons.dashboard size={18} />
-          <span>📊 Dashboard</span>
-        </NavLink>
+        {/* Full Admin Nav Items (Hidden for Backend admins) */}
+        {!isBackend && (
+          <>
+            {/* Dashboard */}
+            <NavLink to="/admin/dashboard" style={navLinkStyle}>
+              <Icons.dashboard size={18} />
+              <span>📊 Dashboard</span>
+            </NavLink>
 
-        {/* User Management */}
-        <NavLink to="/admin/partners" style={navLinkStyle}>
-          <Icons.profile size={18} />
-          <span>👥 User Management</span>
-        </NavLink>
+            {/* User Management */}
+            <NavLink to="/admin/partners" style={navLinkStyle}>
+              <Icons.profile size={18} />
+              <span>👥 User Management</span>
+            </NavLink>
+          </>
+        )}
 
-        {/* 💳 CREDIT CARDS — Only Assign Banks */}
+        {/* 💳 CREDIT CARDS — Only Assigned Banks */}
         <div>
           <button onClick={() => setOpenCcMenu(!openCcMenu)} style={menuBtnStyle(openCcMenu)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -166,7 +180,7 @@ const AdminLayout = () => {
           )}
         </div>
 
-        {/* 🏦 LOANS — Only Assign Banks */}
+        {/* 🏦 LOANS — Only Assigned Banks */}
         <div>
           <button onClick={() => setOpenLoansMenu(!openLoansMenu)} style={menuBtnStyle(openLoansMenu)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -190,7 +204,7 @@ const AdminLayout = () => {
           )}
         </div>
 
-        {/* 🛡 INSURANCE — Only Assign Banks */}
+        {/* 🛡 INSURANCE — Only Assigned Banks */}
         <div>
           <button onClick={() => setOpenInsuranceMenu(!openInsuranceMenu)} style={menuBtnStyle(openInsuranceMenu)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -220,72 +234,77 @@ const AdminLayout = () => {
           <span>📋 Applications</span>
         </NavLink>
 
-        {/* 👥 Customers */}
-        <NavLink to="/admin/leads" style={navLinkStyle}>
-          <Icons.trending size={18} />
-          <span>👥 Customers</span>
-        </NavLink>
+        {/* Full Admin Nav Items (Hidden for Backend admins) */}
+        {!isBackend && (
+          <>
+            {/* 👥 Customers */}
+            <NavLink to="/admin/leads" style={navLinkStyle}>
+              <Icons.trending size={18} />
+              <span>👥 Customers</span>
+            </NavLink>
 
-        <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
 
-        {/* 🏦 BANKS MANAGEMENT */}
-        <NavLink to="/admin/banks" style={navLinkStyle}>
-          <MdAccountBalance size={18} />
-          <span>🏦 Banks</span>
-        </NavLink>
+            {/* 🏦 BANKS MANAGEMENT */}
+            <NavLink to="/admin/banks" style={navLinkStyle}>
+              <MdAccountBalance size={18} />
+              <span>🏦 Banks</span>
+            </NavLink>
 
-        {/* 📦 PRODUCTS MANAGEMENT */}
-        <div>
-          <button onClick={() => setOpenProductsMenu(!openProductsMenu)} style={menuBtnStyle(openProductsMenu)}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <MdShoppingBag size={18} />
-              <span>📦 Products</span>
+            {/* 📦 PRODUCTS MANAGEMENT */}
+            <div>
+              <button onClick={() => setOpenProductsMenu(!openProductsMenu)} style={menuBtnStyle(openProductsMenu)}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <MdShoppingBag size={18} />
+                  <span>📦 Products</span>
+                </div>
+                {openProductsMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
+              </button>
+
+              {openProductsMenu && (
+                <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+                  <NavLink to="/admin/products/credit_card" style={subLinkStyle}>Credit Cards</NavLink>
+                  <NavLink to="/admin/products/loans" style={subLinkStyle}>Loans</NavLink>
+                  <NavLink to="/admin/products/insurance" style={subLinkStyle}>Insurance</NavLink>
+                  <NavLink to="/admin/products/savings_account" style={subLinkStyle}>Savings Account</NavLink>
+                  <NavLink to="/admin/products/current_account" style={subLinkStyle}>Current Account</NavLink>
+                  <NavLink to="/admin/products/fixed_deposit" style={subLinkStyle}>Fixed Deposit</NavLink>
+                  <NavLink to="/admin/products/demat_account" style={subLinkStyle}>DEMAT</NavLink>
+                  <NavLink to="/admin/products/upi_credit" style={subLinkStyle}>UPI Credit</NavLink>
+                  <NavLink to="/admin/products/fastag" style={subLinkStyle}>FASTag</NavLink>
+                  <NavLink to="/admin/products/recharge" style={subLinkStyle}>Recharge & Bills</NavLink>
+                  <NavLink to="/admin/products/other" style={subLinkStyle}>Other Products</NavLink>
+                </div>
+              )}
             </div>
-            {openProductsMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
-          </button>
 
-          {openProductsMenu && (
-            <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-              <NavLink to="/admin/products/credit_card" style={subLinkStyle}>Credit Cards</NavLink>
-              <NavLink to="/admin/products/loans" style={subLinkStyle}>Loans</NavLink>
-              <NavLink to="/admin/products/insurance" style={subLinkStyle}>Insurance</NavLink>
-              <NavLink to="/admin/products/savings_account" style={subLinkStyle}>Savings Account</NavLink>
-              <NavLink to="/admin/products/current_account" style={subLinkStyle}>Current Account</NavLink>
-              <NavLink to="/admin/products/fixed_deposit" style={subLinkStyle}>Fixed Deposit</NavLink>
-              <NavLink to="/admin/products/demat_account" style={subLinkStyle}>DEMAT</NavLink>
-              <NavLink to="/admin/products/upi_credit" style={subLinkStyle}>UPI Credit</NavLink>
-              <NavLink to="/admin/products/fastag" style={subLinkStyle}>FASTag</NavLink>
-              <NavLink to="/admin/products/recharge" style={subLinkStyle}>Recharge & Bills</NavLink>
-              <NavLink to="/admin/products/other" style={subLinkStyle}>Other Products</NavLink>
-            </div>
-          )}
-        </div>
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
 
-        <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
+            {/* 💰 Wallet & Withdrawals */}
+            <NavLink to="/admin/withdrawals" style={navLinkStyle}>
+              <Icons.wallet size={18} />
+              <span>💰 Wallet & Payouts</span>
+            </NavLink>
 
-        {/* 💰 Wallet & Withdrawals */}
-        <NavLink to="/admin/withdrawals" style={navLinkStyle}>
-          <Icons.wallet size={18} />
-          <span>💰 Wallet & Payouts</span>
-        </NavLink>
+            {/* 💵 Commissions */}
+            <NavLink to="/admin/commissions" style={navLinkStyle}>
+              <Icons.trending size={18} />
+              <span>💵 Commissions</span>
+            </NavLink>
 
-        {/* 💵 Commissions */}
-        <NavLink to="/admin/commissions" style={navLinkStyle}>
-          <Icons.trending size={18} />
-          <span>💵 Commissions</span>
-        </NavLink>
+            {/* 📈 Reports & Analytics */}
+            <NavLink to="/admin/reports" style={navLinkStyle}>
+              <Icons.dashboard size={18} />
+              <span>📈 Reports</span>
+            </NavLink>
 
-        {/* 📈 Reports & Analytics */}
-        <NavLink to="/admin/reports" style={navLinkStyle}>
-          <Icons.dashboard size={18} />
-          <span>📈 Reports</span>
-        </NavLink>
-
-        {/* ⚙ Settings */}
-        <NavLink to="/admin/sections" style={navLinkStyle}>
-          <MdSettings size={18} />
-          <span>⚙ Settings</span>
-        </NavLink>
+            {/* ⚙ Settings */}
+            <NavLink to="/admin/sections" style={navLinkStyle}>
+              <MdSettings size={18} />
+              <span>⚙ Settings</span>
+            </NavLink>
+          </>
+        )}
 
         <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
           <button

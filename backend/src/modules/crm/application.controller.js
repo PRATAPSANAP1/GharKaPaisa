@@ -983,7 +983,7 @@ const listApplications = async (req, res, next) => {
 
     let opHeadBankFilterSQL = '';
     const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isOpHeadUser = userDesignation === 'OPERATIONAL HEAD' || userDesignation === 'OPERATIONAL_HEAD';
+    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION'].includes(userDesignation);
     if (!isPartnerOrTeam && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
       if (isOpHeadUser || abRows.length > 0) {
