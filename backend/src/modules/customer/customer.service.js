@@ -224,6 +224,27 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
     })
   ]);
 
+  // Auto-sync customer pipeline_status from applications if applications exist
+  if (appsRes?.rows?.length > 0) {
+    const apps = appsRes.rows;
+    let autoStatus = 'interested';
+
+    const hasApproved = apps.some(a => ['approved', 'disbursed', 'confirmed', 'super_admin_approved', 'commission_processing', 'commission_released'].includes((a.status || '').toLowerCase()));
+    const hasBankVerification = apps.some(a => ['bank_verification', 'under_review', 'operational_verified'].includes((a.status || '').toLowerCase()));
+    const hasSubmitted = apps.some(a => ['submitted', 'details_submitted', 'lead_created', 'in_progress'].includes((a.status || '').toLowerCase()));
+    const hasDocsPending = apps.some(a => ['correction_required', 'documents_pending'].includes((a.status || '').toLowerCase()));
+    const allRejected = apps.every(a => (a.status || '').toLowerCase() === 'rejected');
+
+    if (hasApproved) autoStatus = 'approved';
+    else if (hasBankVerification) autoStatus = 'bank_verification';
+    else if (hasSubmitted) autoStatus = 'application_submitted';
+    else if (hasDocsPending) autoStatus = 'documents_pending';
+    else if (allRejected) autoStatus = 'rejected';
+
+    customer.pipeline_status = autoStatus;
+    query(`UPDATE customers SET pipeline_status = $1, updated_at = NOW() WHERE id = $2`, [autoStatus, customerId]).catch(() => {});
+  }
+
   // Group applications by Category (Credit Cards, Personal Loan, Home Loan, etc.)
   const applicationsByCategory = {
     credit_card: [],

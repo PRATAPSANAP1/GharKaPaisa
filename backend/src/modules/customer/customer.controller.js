@@ -74,6 +74,15 @@ const listCustomers = async (req, res, next) => {
       query(`SELECT COUNT(DISTINCT c.id) FROM customers c ${whereClause}`, values),
       query(`
         SELECT c.*,
+               CASE
+                 WHEN (SELECT COUNT(*) FROM applications WHERE customer_id = c.id AND LOWER(status::text) IN ('approved', 'disbursed', 'confirmed', 'super_admin_approved', 'commission_processing', 'commission_released')) > 0 THEN 'approved'
+                 WHEN (SELECT COUNT(*) FROM applications WHERE customer_id = c.id AND LOWER(status::text) IN ('bank_verification', 'under_review', 'operational_verified')) > 0 THEN 'bank_verification'
+                 WHEN (SELECT COUNT(*) FROM applications WHERE customer_id = c.id AND LOWER(status::text) IN ('submitted', 'details_submitted', 'lead_created', 'in_progress')) > 0 THEN 'application_submitted'
+                 WHEN (SELECT COUNT(*) FROM applications WHERE customer_id = c.id AND LOWER(status::text) IN ('correction_required', 'documents_pending')) > 0 THEN 'documents_pending'
+                 WHEN (SELECT COUNT(*) FROM applications WHERE customer_id = c.id) > 0 AND (SELECT COUNT(*) FROM applications WHERE customer_id = c.id AND LOWER(status::text) != 'rejected') = 0 THEN 'rejected'
+                 WHEN (SELECT COUNT(*) FROM applications WHERE customer_id = c.id) > 0 THEN 'interested'
+                 ELSE COALESCE(NULLIF(c.pipeline_status, ''), 'new')
+               END AS pipeline_status,
                u.full_name as created_by_name, u.role as created_by_role,
                p.partner_code, p.first_name as partner_first_name, p.last_name as partner_last_name,
                (SELECT json_agg(json_build_object('name', tag_name, 'color', tag_color)) FROM customer_tags WHERE customer_id = c.id) as tags,
