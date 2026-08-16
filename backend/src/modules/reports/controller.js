@@ -18,6 +18,7 @@ const getOverview = async (req, res, next) => {
         COUNT(*) FILTER (WHERE status IN ('approved','disbursed')) as approved,
         COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
         COUNT(*) FILTER (WHERE status IN ('submitted','under_review')) as pending,
+        COUNT(*) FILTER (WHERE status::text IN ('operational_verified','operational_approved','Operational Verified','approved') OR form_status::text IN ('operational_verified','operational_approved','Operational Verified')) as pending_leads,
         COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE) as todays_apps,
         COALESCE(SUM(commission_amount) FILTER (WHERE status IN ('approved','disbursed')), 0) as total_commission
       FROM applications WHERE 1=1 ${partnerScopeApps}
