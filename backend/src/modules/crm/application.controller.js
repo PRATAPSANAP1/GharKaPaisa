@@ -1474,6 +1474,31 @@ const updateBankProcessingStatus = async (req, res, next) => {
       ? parseFloat(approved_amount)
       : null;
 
+    // Ensure DB columns exist for physical form processing fields
+    try {
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_remark TEXT`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
+
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(100)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(100)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(100)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS bank_remark TEXT`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(100)`);
+      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
+    } catch (e) {
+      logger.warn('Schema check warning for bank status columns:', e);
+    }
+
     let appRes = await query(`
       SELECT a.*, p.category as product_category 
       FROM applications a
@@ -1490,14 +1515,28 @@ const updateBankProcessingStatus = async (req, res, next) => {
               bank_ref_number = COALESCE($2, bank_ref_number), 
               rejection_reason = COALESCE($3, rejection_reason), 
               approved_amount = COALESCE($4, approved_amount),
+              appcode_status = COALESCE($5, appcode_status),
+              soft_approval_status = COALESCE($6, soft_approval_status),
+              vkyc_stage = COALESCE($7, vkyc_stage),
+              iqa_stage = COALESCE($8, iqa_stage),
+              dispatch_status = COALESCE($9, dispatch_status),
+              bank_remark = COALESCE($10, bank_remark),
+              final_status = COALESCE($11, final_status),
+              decline_reason = COALESCE($12, decline_reason),
+              eligible_reqd = COALESCE($13, eligible_reqd),
               updated_at = NOW()
-          WHERE id = $5
-        `, [currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount, id]);
+          WHERE id = $14
+        `, [
+          currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount,
+          appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
+          dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
+          eligible_reqd || null, id
+        ]);
 
         await query(`
           INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
           VALUES ($1, $2, $3, $4, 'admin', $5)
-        `, [id, currentStatus, `Bank Processing Update (${currentStatus.toUpperCase()})`, `Status updated. Remark: ${bank_remark || 'N/A'}`, req.user ? req.user.id : null]).catch(() => {});
+        `, [id, currentStatus, `Bank Processing Update (${finalStatus || currentStatus.toUpperCase()})`, `Status updated. Remark: ${bank_remark || 'N/A'}`, req.user ? req.user.id : null]).catch(() => {});
 
         return success(res, null, `Application status updated successfully`);
       }
@@ -1512,9 +1551,23 @@ const updateBankProcessingStatus = async (req, res, next) => {
           bank_ref_number = COALESCE($2, bank_ref_number), 
           rejection_reason = COALESCE($3, rejection_reason), 
           approved_amount = COALESCE($4, approved_amount),
+          appcode_status = COALESCE($5, appcode_status),
+          soft_approval_status = COALESCE($6, soft_approval_status),
+          vkyc_stage = COALESCE($7, vkyc_stage),
+          iqa_stage = COALESCE($8, iqa_stage),
+          dispatch_status = COALESCE($9, dispatch_status),
+          bank_remark = COALESCE($10, bank_remark),
+          final_status = COALESCE($11, final_status),
+          decline_reason = COALESCE($12, decline_reason),
+          eligible_reqd = COALESCE($13, eligible_reqd),
           updated_at = NOW()
-      WHERE id = $5
-    `, [currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount, id]);
+      WHERE id = $14
+    `, [
+      currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount,
+      appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
+      dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
+      eligible_reqd || null, id
+    ]);
 
     const titleMap = {
       under_review: 'Bank Reviewing Application',
