@@ -23,6 +23,7 @@ import TermsAndConditions from '../modules/home/TermsAndConditions';
 import PrivacyPolicy from '../modules/home/PrivacyPolicy';
 import CustomerUploadPortal from '../modules/customer/CustomerUploadPortal';
 import PublicCustomerUploadPage from '../modules/public/PublicCustomerUploadPage';
+import PhysicalApplicationForm from '../modules/customer/PhysicalApplicationForm';
 
 // Services Pages
 import MoneyTransfer from '../modules/cms/MoneyTransfer';
@@ -165,6 +166,7 @@ const AppRoutes = () => {
       </Route>
 
       {/* Customer Secure Self-Fulfillment & Post-Apply Portals (Standalone Public Routes) */}
+      <Route path="/physical-application/:token" element={<PhysicalApplicationForm />} />
       <Route path="/apply/:token" element={<CustomerApplyStep1 />} />
       <Route path="/apply/:token/post-apply" element={<CustomerPostApplyStep2 />} />
       <Route path="/customer/upload/:token" element={<CustomerUploadPortal />} />

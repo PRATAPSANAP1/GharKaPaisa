@@ -345,6 +345,12 @@ export default function ManageApplications() {
                         required
                       >
                         <option value="submitted">Submitted</option>
+                        <option value="details_submitted">Details Submitted</option>
+                        <option value="operational_verified">Operational Verified</option>
+                        <option value="correction_required">Correction Required</option>
+                        <option value="super_admin_approved">Super Admin Approved</option>
+                        <option value="commission_processing">Commission Processing</option>
+                        <option value="commission_released">Commission Released</option>
                         <option value="under_review">Under Review</option>
                         <option value="approved">Approved (Triggers Commission)</option>
                         <option value="confirmed">Confirmed (Matures Commission)</option>

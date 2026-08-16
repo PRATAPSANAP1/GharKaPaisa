@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { query, getClient } = require('../../config/database');
 const { generateAppNumber, getPaginationParams } = require('../../utils/helpers/helpers');
 const { creditCommission, releaseHold } = require('../wallet/service.js');
@@ -497,8 +498,21 @@ const updateStatus = async (req, res, next) => {
     const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id = $1 FOR UPDATE`, [id]);
     if (!app) return notFound(res, 'Application not found');
 
+    const userRole = (req.user?.role || '').toUpperCase();
+    const restrictedForPartner = ['operational_verified', 'super_admin_approved', 'commission_processing', 'commission_released'];
+    if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && restrictedForPartner.includes(status)) {
+      await client.query('ROLLBACK');
+      return forbidden(res, 'Partners are not authorized to update application to operational or admin approval statuses.');
+    }
+
+    const restrictedForOpHead = ['super_admin_approved', 'commission_processing', 'commission_released'];
+    if (['EMPLOYEE', 'ADMIN'].includes(userRole) && restrictedForOpHead.includes(status) && userRole !== 'SUPER_ADMIN') {
+      await client.query('ROLLBACK');
+      return forbidden(res, 'Super Admin authorization required for final approval and commission processing.');
+    }
+
     let approvedAt = app.approved_at;
-    if (status === 'approved' && !app.approved_at) {
+    if ((status === 'approved' || status === 'super_admin_approved') && !app.approved_at) {
       approvedAt = new Date();
     }
 
@@ -2591,6 +2605,203 @@ const deleteApplication = async (req, res, next) => {
   }
 };
 
+// POST /applications/generate-physical-link
+const generatePhysicalLink = async (req, res, next) => {
+  try {
+    const { application_id, lead_id } = req.body;
+    const appId = application_id || req.body.id || req.params.id;
+    if (!appId) return error(res, 'Application ID is required', 400);
+
+    const { rows: [app] } = await query(
+      `SELECT a.id, a.customer_id, a.process_type, a.bank_id, b.name as bank_name
+       FROM applications a
+       LEFT JOIN banks b ON b.id = a.bank_id
+       WHERE a.id = $1`,
+      [appId]
+    );
+
+    if (!app) return notFound(res, 'Application not found');
+
+    const { rows: [existingToken] } = await query(
+      `SELECT token, expires_at FROM customer_access_tokens
+       WHERE application_id = $1 AND token_type = 'physical_process' AND expires_at > NOW()
+       ORDER BY created_at DESC LIMIT 1`,
+      [appId]
+    );
+
+    let tokenStr;
+    if (existingToken) {
+      tokenStr = existingToken.token;
+    } else {
+      tokenStr = crypto.randomBytes(24).toString('hex');
+      await query(
+        `INSERT INTO customer_access_tokens (application_id, customer_id, token, token_type, expires_at)
+         VALUES ($1, $2, $3, 'physical_process', NOW() + INTERVAL '72 hours')`,
+        [appId, app.customer_id || null, tokenStr]
+      );
+    }
+
+    const host = req.get('origin') || process.env.FRONTEND_URL || 'https://gharkapaisa.in';
+    const physicalUrl = `${host}/physical-application/${tokenStr}`;
+
+    return success(res, {
+      token: tokenStr,
+      url: physicalUrl,
+      share_url: physicalUrl,
+      process_type: app.process_type
+    }, 'Physical application link generated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /applications/physical-application/:token
+const getPhysicalApplicationByToken = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    if (!token) return error(res, 'Token is required', 400);
+
+    const { rows: [tokenRec] } = await query(
+      `SELECT cat.*, a.app_number, a.process_type, a.status, a.bank_id, a.product_id,
+              b.name as bank_name, b.short_code as bank_code,
+              p.name as product_name,
+              c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email, c.pan_number as customer_pan, c.dob as customer_dob
+       FROM customer_access_tokens cat
+       JOIN applications a ON a.id = cat.application_id
+       LEFT JOIN banks b ON b.id = a.bank_id
+       LEFT JOIN products p ON p.id = a.product_id
+       LEFT JOIN customers c ON c.id = a.customer_id
+       WHERE cat.token = $1 AND cat.expires_at > NOW()`,
+      [token]
+    );
+
+    if (!tokenRec) {
+      return res.status(404).json({ success: false, message: 'Invalid or expired physical application link.' });
+    }
+
+    const { rows: [pad] } = await query(
+      `SELECT * FROM physical_application_details WHERE application_id = $1`,
+      [tokenRec.application_id]
+    );
+
+    const isSbi = (tokenRec.bank_id === 'e7c2c604-139d-4fcf-a87c-695633535a02') ||
+                  (String(tokenRec.bank_name || tokenRec.bank_code || '').toLowerCase().includes('sbi'));
+
+    return success(res, {
+      application_id: tokenRec.application_id,
+      app_number: tokenRec.app_number,
+      process_type: tokenRec.process_type,
+      status: tokenRec.status,
+      bank_id: tokenRec.bank_id,
+      bank_name: tokenRec.bank_name,
+      bank_code: tokenRec.bank_code,
+      is_sbi: isSbi,
+      product_name: tokenRec.product_name,
+      customer: {
+        full_name: tokenRec.customer_name,
+        mobile: tokenRec.customer_mobile,
+        email: tokenRec.customer_email,
+        pan_number: tokenRec.customer_pan,
+        dob: tokenRec.customer_dob
+      },
+      physical_details: pad || null
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /applications/physical-application/:token/submit
+const submitPhysicalApplicationByToken = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const { token } = req.params;
+    if (!token) return error(res, 'Token is required', 400);
+
+    const { rows: [tokenRec] } = await client.query(
+      `SELECT cat.*, a.id as application_id, a.app_number, a.submitted_by
+       FROM customer_access_tokens cat
+       JOIN applications a ON a.id = cat.application_id
+       WHERE cat.token = $1 AND cat.expires_at > NOW()`,
+      [token]
+    );
+
+    if (!tokenRec) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, message: 'Invalid or expired link.' });
+    }
+
+    const {
+      aadhaar_linked_mobile,
+      pan_name,
+      dob,
+      pan_number,
+      mother_name,
+      personal_email,
+      company_name,
+      designation,
+      flat_no,
+      sub_area,
+      landmark,
+      pincode,
+      company_address
+    } = req.body;
+
+    const appId = tokenRec.application_id;
+
+    await client.query(
+      `INSERT INTO physical_application_details (
+        application_id, aadhaar_linked_mobile, pan_name, dob, pan_number,
+        mother_name, personal_email, company_name, designation, flat_no,
+        sub_area, landmark, pincode, company_address, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+      ON CONFLICT (application_id) DO UPDATE SET
+        aadhaar_linked_mobile = EXCLUDED.aadhaar_linked_mobile,
+        pan_name = EXCLUDED.pan_name,
+        dob = EXCLUDED.dob,
+        pan_number = EXCLUDED.pan_number,
+        mother_name = EXCLUDED.mother_name,
+        personal_email = EXCLUDED.personal_email,
+        company_name = EXCLUDED.company_name,
+        designation = EXCLUDED.designation,
+        flat_no = EXCLUDED.flat_no,
+        sub_area = EXCLUDED.sub_area,
+        landmark = EXCLUDED.landmark,
+        pincode = EXCLUDED.pincode,
+        company_address = EXCLUDED.company_address,
+        updated_at = NOW()`,
+      [
+        appId, aadhaar_linked_mobile || null, pan_name || null, dob || null, pan_number || null,
+        mother_name || null, personal_email || null, company_name || null, designation || null, flat_no || null,
+        sub_area || null, landmark || null, pincode || null, company_address || null
+      ]
+    );
+
+    await client.query(
+      `UPDATE applications SET status = 'details_submitted', updated_at = NOW() WHERE id = $1`,
+      [appId]
+    );
+
+    await logTimeline(
+      client,
+      appId,
+      'details_submitted',
+      'Details Submitted',
+      'Customer/Partner submitted physical application details.',
+      tokenRec.submitted_by || null
+    );
+
+    await client.query('COMMIT');
+    return success(res, {}, 'Physical application details submitted successfully');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   submitApplication,
   submitPublicApplication,
@@ -2625,6 +2836,9 @@ module.exports = {
   getBankRequirements,
   saveBankRequirements,
   generateShareLink,
+  generatePhysicalLink,
+  getPhysicalApplicationByToken,
+  submitPhysicalApplicationByToken,
   deleteApplication
 };
 

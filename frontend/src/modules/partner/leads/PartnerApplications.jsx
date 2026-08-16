@@ -8,7 +8,7 @@ import {
   Search, Filter, Download, Upload, CheckCircle2, Clock, 
   XCircle, AlertCircle, Phone, MessageSquare, ArrowUpRight, 
   UserPlus, Layers, FileSpreadsheet, ChevronDown, ChevronUp,
-  FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send, Share2, Copy, Trash2
+  FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send, Share2, Copy, Trash2, Eye, Activity
 } from 'lucide-react';
 
 const STAGES = [
@@ -124,12 +124,61 @@ export default function PartnerApplications() {
     monthly_salary: '',
     remarks: ''
   });
-  const [savingShareForm, setSavingShareForm] = useState(false);
+  // View Modal State
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [viewApp, setViewApp] = useState(null);
+  const [viewAppDetails, setViewAppDetails] = useState(null);
+  const [loadingView, setLoadingView] = useState(false);
+
+  // Track Modal State
+  const [showTrackModal, setShowTrackModal] = useState(false);
+  const [trackApp, setTrackApp] = useState(null);
+  const [trackTimeline, setTrackTimeline] = useState([]);
+  const [loadingTrack, setLoadingTrack] = useState(false);
+
+  const handleOpenViewModal = async (app) => {
+    setViewApp(app);
+    setShowViewModal(true);
+    setLoadingView(true);
+    try {
+      const res = await api.get(`/applications/${app.id}`);
+      if (res.data?.success) {
+        setViewAppDetails(res.data.data);
+      } else {
+        setViewAppDetails(app);
+      }
+    } catch (err) {
+      setViewAppDetails(app);
+    } finally {
+      setLoadingView(false);
+    }
+  };
+
+  const handleOpenTrackModal = async (app) => {
+    setTrackApp(app);
+    setShowTrackModal(true);
+    setLoadingTrack(true);
+    try {
+      const res = await api.get(`/applications/${app.id}/timeline`);
+      if (res.data?.success) {
+        setTrackTimeline(res.data.data || []);
+      } else {
+        setTrackTimeline([]);
+      }
+    } catch (err) {
+      setTrackTimeline([]);
+    } finally {
+      setLoadingTrack(false);
+    }
+  };
 
   const handleGenerateShareLink = async (app) => {
     setGeneratingShare(true);
     try {
-      const res = await api.post('/applications/generate-share-link', {
+      const isPhysical = String(app.process_type || app.process_by || '').toLowerCase().includes('physical');
+      const endpoint = isPhysical ? '/applications/generate-physical-link' : '/applications/generate-share-link';
+
+      const res = await api.post(endpoint, {
         application_id: app.id,
         lead_id: app.lead_id,
         product_id: app.product_id || app.productId
@@ -768,6 +817,14 @@ export default function PartnerApplications() {
                         style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <Share2 size={12} /> Link
                       </button>
+                      <button onClick={() => handleOpenViewModal(app)}
+                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #3b82f640`, background: '#3b82f615', color: '#3b82f6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Eye size={12} /> View
+                      </button>
+                      <button onClick={() => handleOpenTrackModal(app)}
+                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #8b5cf640`, background: '#8b5cf615', color: '#8b5cf6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Activity size={12} /> Track
+                      </button>
                       <button onClick={() => handleOpenEditModal(app)}
                         style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}40`, background: accent + '10', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                         ✏️ Edit
@@ -867,6 +924,14 @@ export default function PartnerApplications() {
                             <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               <Share2 size={13} /> Link
+                            </button>
+                            <button onClick={() => handleOpenViewModal(app)}
+                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #3b82f640`, background: '#3b82f615', color: '#3b82f6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Eye size={13} /> View
+                            </button>
+                            <button onClick={() => handleOpenTrackModal(app)}
+                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #8b5cf640`, background: '#8b5cf615', color: '#8b5cf6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Activity size={13} /> Track
                             </button>
                             <button onClick={() => handleOpenEditModal(app)}
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}40`, background: accent + '10', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -1278,6 +1343,300 @@ export default function PartnerApplications() {
           </div>
         </div>
       )}
+
+      {/* ═══ MODAL 6: READ-ONLY VIEW APPLICATION DETAILS ═══ */}
+      {showViewModal && viewApp && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 580, maxHeight: '90vh', overflowY: 'auto', background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: `1px solid ${border}`, paddingBottom: 12 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>📋 APPLICATION DETAILS</h3>
+                <span style={{ fontSize: 11, color: textMuted }}>
+                  App #{viewApp.app_number} • Bank: {viewApp.bank_name || viewApp.bank_code || 'Bank'} • Product: {viewApp.product_name}
+                </span>
+              </div>
+              <button onClick={() => setShowViewModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
+            </div>
+
+            {loadingView ? (
+              <div style={{ padding: 40, textAlign: 'center', color: textMuted }}>
+                <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 10px', color: accent }} />
+                <p style={{ fontSize: 12, fontWeight: 700 }}>Loading Application Details...</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                {/* Section 1: Customer Details */}
+                <div style={{ background: isDark ? '#161616' : '#f8fafc', borderRadius: 14, padding: 14, border: `1px solid ${border}` }}>
+                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Customer Details</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FULL NAME</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.customer_name || viewAppDetails?.full_name || viewApp.customer_name || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>MOBILE NUMBER</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.customer_mobile || viewAppDetails?.mobile || viewApp.customer_mobile || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DOB</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.dob || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PAN CARD NUMBER</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pan_number || viewAppDetails?.pan || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>MOTHER FULL NAME</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.mother_name || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PERSONAL EMAIL ID</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.email || viewAppDetails?.customer_email || 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Employment */}
+                <div style={{ background: isDark ? '#161616' : '#f8fafc', borderRadius: 14, padding: 14, border: `1px solid ${border}` }}>
+                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Employment</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>COMPANY NAME</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.company_name || viewAppDetails?.employer || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DESIGNATION</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.designation || 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 3: Address */}
+                <div style={{ background: isDark ? '#161616' : '#f8fafc', borderRadius: 14, padding: 14, border: `1px solid ${border}` }}>
+                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Address</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FLAT / HOUSE NO</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.flat_no || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>SUB AREA</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.sub_area || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>LANDMARK</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.landmark || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PINCODE</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pincode || 'N/A'}</div>
+                    </div>
+                    {viewAppDetails?.company_address && (
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>COMPANY ADDRESS</div>
+                        <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails.company_address}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section 4: Operational Information */}
+                <div style={{ background: isDark ? '#1a2234' : '#eff6ff', borderRadius: 14, padding: 14, border: '1px solid #3b82f640' }}>
+                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operational Information</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || 'Pending'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>VKYC STATUS</div>
+                      <div style={{ fontWeight: 800, color: viewAppDetails?.vkyc_status === 'Completed' ? '#10b981' : '#f59e0b' }}>
+                        {viewAppDetails?.vkyc_status || 'Pending'}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>CURRENT STAGE</div>
+                      <div style={{ fontWeight: 800, color: textPrimary, textTransform: 'uppercase' }}>
+                        {(viewAppDetails?.status || viewApp.status || 'submitted').replace(/_/g, ' ')}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>COMMISSION STATUS</div>
+                      <div style={{ fontWeight: 800, color: viewAppDetails?.commission_amount > 0 ? '#10b981' : textMuted }}>
+                        ₹{viewAppDetails?.commission_amount || viewApp.commission_amount || 0} ({viewAppDetails?.commission_status || 'pending'})
+                      </div>
+                    </div>
+                    {viewAppDetails?.vkyc_url && (
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700, marginBottom: 4 }}>VKYC LINK</div>
+                        <a href={viewAppDetails.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700, fontSize: 12, wordBreak: 'break-all' }}>
+                          {viewAppDetails.vkyc_url}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18, borderTop: `1px solid ${border}`, paddingTop: 14 }}>
+              <button type="button" onClick={() => setShowViewModal(false)} style={{ padding: '9px 24px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                Close
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL 7: TRACK APPLICATION LIFECYCLE ═══ */}
+      {showTrackModal && trackApp && (() => {
+        const lifecycleStages = [
+          { id: 'details_submitted', label: 'Details Submitted' },
+          { id: 'operational_verified', label: 'Operational Verified' },
+          { id: 'super_admin_approved', label: 'Super Admin Approved' },
+          { id: 'commission_processing', label: 'Commission Processing' },
+          { id: 'commission_released', label: 'Commission Released' },
+        ];
+
+        const currentStatus = (trackApp.status || 'submitted').toLowerCase();
+        
+        const getStageStatus = (stageId) => {
+          const statusOrder = ['submitted', 'details_submitted', 'operational_verified', 'super_admin_approved', 'approved', 'commission_processing', 'commission_released', 'disbursed'];
+          const currentIndex = statusOrder.indexOf(currentStatus);
+          const stageIndex = statusOrder.indexOf(stageId);
+          if (currentIndex >= stageIndex && currentIndex !== -1) return 'completed';
+          return 'pending';
+        };
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
+            <div style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
+              
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: `1px solid ${border}`, paddingBottom: 12 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>📍 APPLICATION TRACKING</h3>
+                  <span style={{ fontSize: 11, color: textMuted }}>
+                    App #{trackApp.app_number} • Customer: {trackApp.customer_name}
+                  </span>
+                </div>
+                <button onClick={() => setShowTrackModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
+              </div>
+
+              {/* Operational Summary Header Box */}
+              <div style={{ background: isDark ? '#1a2234' : '#eff6ff', border: '1px solid #3b82f640', borderRadius: 14, padding: 14, marginBottom: 18 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', marginBottom: 8 }}>Current Application Information</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
+                  <div>
+                    <span style={{ color: textMuted, fontSize: 10 }}>Application Number: </span>
+                    <strong style={{ color: textPrimary }}>{trackApp.bank_application_number || trackApp.app_number}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: textMuted, fontSize: 10 }}>VKYC Status: </span>
+                    <strong style={{ color: trackApp.vkyc_status === 'Completed' ? '#10b981' : '#f59e0b' }}>{trackApp.vkyc_status || 'Pending'}</strong>
+                  </div>
+                  {trackApp.vkyc_url && (
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <span style={{ color: textMuted, fontSize: 10 }}>VKYC Link: </span>
+                      <a href={trackApp.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700 }}>Open VKYC</a>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 5-Step Progress Timeline */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20, paddingLeft: 8 }}>
+                {lifecycleStages.map((stage, idx) => {
+                  const state = getStageStatus(stage.id);
+                  const isDone = state === 'completed';
+                  return (
+                    <div key={stage.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', position: 'relative' }}>
+                      {/* Line connector */}
+                      {idx < lifecycleStages.length - 1 && (
+                        <div style={{
+                          position: 'absolute',
+                          left: 11,
+                          top: 24,
+                          width: 2,
+                          height: 28,
+                          background: isDone ? '#10b981' : border
+                        }} />
+                      )}
+                      
+                      {/* Node Dot */}
+                      <div style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        background: isDone ? '#10b981' : (isDark ? '#262626' : '#e2e8f0'),
+                        color: isDone ? '#fff' : textMuted,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justify: 'center',
+                        fontSize: 12,
+                        fontWeight: 900,
+                        zIndex: 1,
+                        flexShrink: 0
+                      }}>
+                        {isDone ? '✓' : (idx + 1)}
+                      </div>
+
+                      {/* Content */}
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: isDone ? textPrimary : textMuted }}>
+                          {stage.label}
+                        </div>
+                        <div style={{ fontSize: 11, color: textMuted }}>
+                          {isDone ? 'Stage Completed' : 'Pending Step'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Detailed Activity Logs */}
+              <div style={{ borderTop: `1px solid ${border}`, paddingTop: 14 }}>
+                <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: textMuted, textTransform: 'uppercase' }}>Activity Timeline History</h4>
+                {loadingTrack ? (
+                  <div style={{ textAlign: 'center', color: textMuted, padding: 20, fontSize: 12 }}>Loading timeline history...</div>
+                ) : trackTimeline.length === 0 ? (
+                  <div style={{ fontSize: 12, color: textMuted }}>No history logs recorded yet.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 180, overflowY: 'auto' }}>
+                    {trackTimeline.map(item => (
+                      <div key={item.id || item.created_at} style={{ background: isDark ? '#161616' : '#f8fafc', padding: '10px 12px', borderRadius: 10, fontSize: 12, border: `1px solid ${border}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                          <span style={{ fontWeight: 800, color: textPrimary }}>{item.activity || item.title || item.status}</span>
+                          <span style={{ fontSize: 10, color: textMuted }}>{new Date(item.performed_at || item.created_at).toLocaleString()}</span>
+                        </div>
+                        {item.remarks || item.description ? (
+                          <div style={{ fontSize: 11, color: textMuted }}>{item.remarks || item.description}</div>
+                        ) : null}
+                        {item.performed_by_name && (
+                          <div style={{ fontSize: 10, color: accent, fontWeight: 700, marginTop: 4 }}>By: {item.performed_by_name}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18, borderTop: `1px solid ${border}`, paddingTop: 14 }}>
+                <button type="button" onClick={() => setShowTrackModal(false)} style={{ padding: '9px 24px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                  Close
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ═══ MODAL 5: EXPORT CSV DIALOG ═══ */}
       {showExportModal && (

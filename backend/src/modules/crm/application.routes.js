@@ -14,12 +14,18 @@ router.get('/apply/:token', appCtrl.getPublicApplyToken);
 router.patch('/apply/:token', appCtrl.submitPublicApplyToken);
 router.post('/apply/:token', appCtrl.submitPublicApplyToken);
 
+// Dedicated Physical Application Form Public Routes
+router.get('/physical-application/:token', appCtrl.getPhysicalApplicationByToken);
+router.post('/physical-application/:token/submit', appCtrl.submitPhysicalApplicationByToken);
+
 router.use(authenticate, syncUser);
 
 // Configurable Bank Requirements & Customer Share Link
 router.get('/bank-requirements', requireApprovedPartnerOrAdmin, appCtrl.getBankRequirements);
 router.post('/bank-requirements', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.saveBankRequirements);
 router.post('/generate-share-link', requireApprovedPartnerOrAdmin, appCtrl.generateShareLink);
+router.post('/generate-physical-link', requireApprovedPartnerOrAdmin, appCtrl.generatePhysicalLink);
+router.post('/:id/physical-link', requireApprovedPartnerOrAdmin, appCtrl.generatePhysicalLink);
 
 // Dashboards, Search, and Analytics
 router.get('/dashboard', requireApprovedPartnerOrAdmin, appCtrl.getApplicationsDashboard);

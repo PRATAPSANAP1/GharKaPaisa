@@ -92,6 +92,12 @@ const migrate = async () => {
   await addEnumValue('application_status', 'application_number_received');
   await addEnumValue('application_status', 'vkyc_pending');
   await addEnumValue('application_status', 'vkyc_completed');
+  await addEnumValue('application_status', 'details_submitted');
+  await addEnumValue('application_status', 'operational_verified');
+  await addEnumValue('application_status', 'correction_required');
+  await addEnumValue('application_status', 'super_admin_approved');
+  await addEnumValue('application_status', 'commission_processing');
+  await addEnumValue('application_status', 'commission_released');
   await addEnumValue('application_status', 'cancelled');
   await query(`
     DO $$ BEGIN
@@ -3508,14 +3514,41 @@ const migrate = async () => {
         CREATE TABLE IF NOT EXISTS customer_access_tokens (
           id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
           application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
-          customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+          customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
           token VARCHAR(255) UNIQUE NOT NULL,
           expires_at TIMESTAMPTZ NOT NULL,
           is_used BOOLEAN DEFAULT FALSE,
+          token_type VARCHAR(50) DEFAULT 'general',
           created_at TIMESTAMPTZ DEFAULT NOW()
         );
         CREATE INDEX IF NOT EXISTS idx_cat_token ON customer_access_tokens(token);
         CREATE INDEX IF NOT EXISTS idx_cat_app ON customer_access_tokens(application_id);
+        ALTER TABLE customer_access_tokens ADD COLUMN IF NOT EXISTS token_type VARCHAR(50) DEFAULT 'general';
+        ALTER TABLE customer_access_tokens ALTER COLUMN customer_id DROP NOT NULL;
+      `);
+
+      // Physical Application Details Table
+      await query(`
+        CREATE TABLE IF NOT EXISTS physical_application_details (
+          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+          application_id UUID UNIQUE NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+          aadhaar_linked_mobile VARCHAR(20),
+          pan_name VARCHAR(255),
+          dob VARCHAR(50),
+          pan_number VARCHAR(20),
+          mother_name VARCHAR(255),
+          personal_email VARCHAR(255),
+          company_name VARCHAR(255),
+          designation VARCHAR(255),
+          flat_no VARCHAR(255),
+          sub_area VARCHAR(255),
+          landmark VARCHAR(255),
+          pincode VARCHAR(20),
+          company_address TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_pad_app ON physical_application_details(application_id);
       `);
 
       // Application Documents
