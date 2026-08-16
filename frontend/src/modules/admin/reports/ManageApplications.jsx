@@ -217,7 +217,11 @@ export default function ManageApplications() {
                       <div style={{ fontSize: "11px", color: C.textLight, textTransform: "capitalize" }}>{app.category} • {app.bank_code}</div>
                     </td>
                     <td style={{ padding: "14px 16px", fontWeight: 600 }}>
-                      ₹{parseFloat(app.loan_amount).toLocaleString("en-IN")}
+                      {app.loan_amount && Number(app.loan_amount) > 0 
+                        ? `₹${parseFloat(app.loan_amount).toLocaleString("en-IN")}`
+                        : (app.monthly_income || app.salary) 
+                          ? `₹${parseFloat(app.monthly_income || app.salary).toLocaleString("en-IN")} / mo` 
+                          : 'N/A'}
                     </td>
                     <td style={{ padding: "14px 16px", color: C.green, fontWeight: 700 }}>
                       ₹{parseFloat(app.commission_amount).toLocaleString("en-IN")}
