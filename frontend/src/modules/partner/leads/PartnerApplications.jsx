@@ -1044,9 +1044,7 @@ export default function PartnerApplications() {
                 ) : isSbi ? (
                   /* ═══ PHYSICAL PROCESS — SBI DETAIL SHEET FORM (ADHAR LINK FIELDS) ═══ */
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ padding: '10px 14px', background: '#F59E0B15', border: '1px solid #F59E0B40', borderRadius: 12, fontSize: 12, fontWeight: 800, color: isDark ? '#FBBF24' : '#B45309' }}>
-                      📋 *SBI DETAIL SHEET* Form
-                    </div>
+
 
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
                       <div>
@@ -1121,13 +1119,11 @@ export default function PartnerApplications() {
                 ) : (
                   /* ═══ PHYSICAL PROCESS — OTHER BANK PROCESS DETAILS SHEET FORM ═══ */
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ padding: '10px 14px', background: '#3B82F615', border: '1px solid #3B82F640', borderRadius: 12, fontSize: 12, fontWeight: 800, color: '#2563EB' }}>
-                      📋 *OTHER BANK DETAIL SHEET* Form
-                    </div>
+
 
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10 }}>
                       <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>✅ CUSTOMER FULL NAME (As per PAN card) *</label>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>CUSTOMER FULL NAME (As per PAN card) *</label>
                         <input type="text" required value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })}
                           style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Full Name as per PAN" />
                       </div>
@@ -1154,40 +1150,40 @@ export default function PartnerApplications() {
                       </div>
 
                       <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>✅ PAN CARD NUMBER *</label>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>PAN CARD NUMBER *</label>
                         <input type="text" maxLength={10} required value={editForm.pan_number} onChange={e => setEditForm({ ...editForm, pan_number: e.target.value.toUpperCase() })}
                           style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="ABCDE1234F" />
                       </div>
                       <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>✅ DOB (as per PAN)</label>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>DOB (as per PAN)</label>
                         <input type="date" value={editForm.dob} onChange={e => setEditForm({ ...editForm, dob: e.target.value })}
                           style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} />
                       </div>
 
                       <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>✅ MOTHER FULL NAME</label>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>MOTHER FULL NAME</label>
                         <input type="text" value={editForm.mother_name} onChange={e => setEditForm({ ...editForm, mother_name: e.target.value })}
                           style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Mother Full Name" />
                       </div>
                       <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>✅ PERSONAL MAIL ID</label>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>PERSONAL MAIL ID</label>
                         <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
                           style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="email@example.com" />
                       </div>
 
                       <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>✅ COMPANY Name (as per payment slip)</label>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>COMPANY Name (as per payment slip)</label>
                         <input type="text" value={editForm.employer} onChange={e => setEditForm({ ...editForm, employer: e.target.value })}
                           style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Company Name" />
                       </div>
                       <div>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>✅ DESIGNATION</label>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>DESIGNATION</label>
                         <input type="text" value={editForm.designation} onChange={e => setEditForm({ ...editForm, designation: e.target.value })}
                           style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="Designation / Role" />
                       </div>
 
                       <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2' }}>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>✅ MOBILE No *</label>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>MOBILE No *</label>
                         <input type="text" required value={editForm.mobile} onChange={e => setEditForm({ ...editForm, mobile: e.target.value })}
                           style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }} placeholder="10-digit mobile" />
                       </div>
