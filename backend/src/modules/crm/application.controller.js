@@ -2477,14 +2477,14 @@ const deleteApplication = async (req, res, next) => {
     if (!id) return error(res, 'Application ID is required', 400);
 
     let { rows: [app] } = await client.query(
-      `SELECT id, partner_id, app_number, status FROM applications WHERE id = $1`, 
+      `SELECT id, partner_id, customer_id, lead_id, app_number, status FROM applications WHERE id = $1`, 
       [id]
     );
 
     let isLeadOnly = false;
     if (!app) {
       const { rows: [leadRec] } = await client.query(
-        `SELECT id, partner_id, COALESCE(NULLIF(lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(id::text, 1, 8)))) as app_number, status FROM leads WHERE id = $1`,
+        `SELECT id, partner_id, customer_id, id as lead_id, COALESCE(NULLIF(lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(id::text, 1, 8)))) as app_number, status FROM leads WHERE id = $1`,
         [id]
       );
       if (leadRec) {
@@ -2509,98 +2509,81 @@ const deleteApplication = async (req, res, next) => {
       }
     }
 
+    const targetCustomerId = app.customer_id || null;
+    const targetLeadId = app.lead_id || null;
+
     await client.query('BEGIN');
 
-    if (isLeadOnly) {
-      // Cascade delete lead related records
-      await client.query(`DELETE FROM lead_documents WHERE lead_id = $1`, [id]).catch(() => {});
-      await client.query(`DELETE FROM lead_timeline WHERE lead_id = $1`, [id]).catch(() => {});
-      await client.query(`DELETE FROM lead_notes WHERE lead_id = $1`, [id]).catch(() => {});
-      await client.query(`DELETE FROM lead_status_history WHERE lead_id = $1`, [id]).catch(() => {});
-      await client.query(`DELETE FROM lead_checklist WHERE lead_id = $1`, [id]).catch(() => {});
-      await client.query(`DELETE FROM lead_sla WHERE lead_id = $1`, [id]).catch(() => {});
-      await client.query(`DELETE FROM bank_assignments WHERE lead_id = $1`, [id]).catch(() => {});
-      await client.query(`DELETE FROM lead_assignments WHERE lead_id = $1`, [id]).catch(() => {});
-      await client.query(`DELETE FROM leads WHERE id = $1`, [id]);
+    // 1. Delete physical_application_details
+    await client.query(`DELETE FROM physical_application_details WHERE application_id = $1`, [id]).catch(() => {});
 
-      await logAction(req, 'DELETE_LEAD', id, { app_number: app.app_number });
+    // 2. Delete customer_access_tokens
+    await client.query(`DELETE FROM customer_access_tokens WHERE application_id = $1 OR customer_id = $2`, [id, targetCustomerId]).catch(() => {});
 
-      await client.query('COMMIT');
-      return success(res, {}, 'Lead record deleted successfully');
+    // 3. Delete partner_share_links
+    await client.query(`DELETE FROM partner_share_links WHERE application_id = $1 OR lead_id = $1 OR lead_id = $2`, [id, targetLeadId]).catch(() => {});
+
+    // 4. Delete application_notes
+    await client.query(`DELETE FROM application_notes WHERE application_id = $1`, [id]).catch(() => {});
+
+    // 5. Delete application_timeline / application_timelines
+    await client.query(`DELETE FROM application_timeline WHERE application_id = $1`, [id]).catch(() => {});
+    await client.query(`DELETE FROM application_timelines WHERE application_id = $1`, [id]).catch(() => {});
+
+    // 6. Delete application_documents
+    await client.query(`DELETE FROM application_documents WHERE application_id = $1`, [id]).catch(() => {});
+
+    // 7. Delete application_history
+    await client.query(`DELETE FROM application_history WHERE application_id = $1`, [id]).catch(() => {});
+
+    // 8. Delete wallet_transactions / commission_ledger linked to application
+    await client.query(`DELETE FROM wallet_transactions WHERE application_id = $1`, [id]).catch(() => {});
+    await client.query(`DELETE FROM commission_ledger WHERE application_id = $1 OR lead_id = $1 OR lead_id = $2`, [id, targetLeadId]).catch(() => {});
+
+    // 9. Cascade delete lead related records
+    const leadIdsToDelete = [id, targetLeadId].filter(Boolean);
+    for (const lId of leadIdsToDelete) {
+      await client.query(`DELETE FROM lead_documents WHERE lead_id = $1`, [lId]).catch(() => {});
+      await client.query(`DELETE FROM lead_timeline WHERE lead_id = $1`, [lId]).catch(() => {});
+      await client.query(`DELETE FROM lead_notes WHERE lead_id = $1`, [lId]).catch(() => {});
+      await client.query(`DELETE FROM lead_status_history WHERE lead_id = $1`, [lId]).catch(() => {});
+      await client.query(`DELETE FROM lead_checklist WHERE lead_id = $1`, [lId]).catch(() => {});
+      await client.query(`DELETE FROM lead_sla WHERE lead_id = $1`, [lId]).catch(() => {});
+      await client.query(`DELETE FROM bank_assignments WHERE lead_id = $1`, [lId]).catch(() => {});
+      await client.query(`DELETE FROM lead_assignments WHERE lead_id = $1`, [lId]).catch(() => {});
     }
 
-    // 1. Delete application_notes
-    try {
-      await client.query('SAVEPOINT sp_notes');
-      await client.query(`DELETE FROM application_notes WHERE application_id = $1`, [id]);
-      await client.query('RELEASE SAVEPOINT sp_notes');
-    } catch (_) {
-      await client.query('ROLLBACK TO SAVEPOINT sp_notes').catch(() => {});
+    // 10. Delete leads table records
+    await client.query(
+      `DELETE FROM leads WHERE id = $1 OR id = $2 OR application_id = $1 OR (app_number IS NOT NULL AND app_number = $3)`,
+      [id, targetLeadId, app.app_number]
+    ).catch(() => {});
+
+    // 11. Delete main applications record
+    if (!isLeadOnly) {
+      await client.query(`DELETE FROM applications WHERE id = $1`, [id]);
     }
 
-    // 2. Delete application_timeline / application_timelines
-    try {
-      await client.query('SAVEPOINT sp_timeline1');
-      await client.query(`DELETE FROM application_timeline WHERE application_id = $1`, [id]);
-      await client.query('RELEASE SAVEPOINT sp_timeline1');
-    } catch (_) {
-      await client.query('ROLLBACK TO SAVEPOINT sp_timeline1').catch(() => {});
-    }
-
-    try {
-      await client.query('SAVEPOINT sp_timeline2');
-      await client.query(`DELETE FROM application_timelines WHERE application_id = $1`, [id]);
-      await client.query('RELEASE SAVEPOINT sp_timeline2');
-    } catch (_) {
-      await client.query('ROLLBACK TO SAVEPOINT sp_timeline2').catch(() => {});
-    }
-
-    // 3. Delete application_documents
-    try {
-      await client.query('SAVEPOINT sp_docs');
-      await client.query(`DELETE FROM application_documents WHERE application_id = $1`, [id]);
-      await client.query('RELEASE SAVEPOINT sp_docs');
-    } catch (_) {
-      await client.query('ROLLBACK TO SAVEPOINT sp_docs').catch(() => {});
-    }
-
-    // 4. Delete application_history
-    try {
-      await client.query('SAVEPOINT sp_hist');
-      await client.query(`DELETE FROM application_history WHERE application_id = $1`, [id]);
-      await client.query('RELEASE SAVEPOINT sp_hist');
-    } catch (_) {
-      await client.query('ROLLBACK TO SAVEPOINT sp_hist').catch(() => {});
-    }
-
-    // 5. Unlink wallet_transactions
-    try {
-      await client.query('SAVEPOINT sp_wallet');
-      await client.query(`UPDATE wallet_transactions SET application_id = NULL WHERE application_id = $1`, [id]);
-      await client.query('RELEASE SAVEPOINT sp_wallet');
-    } catch (_) {
-      await client.query('ROLLBACK TO SAVEPOINT sp_wallet').catch(() => {});
-    }
-
-    // 6. Delete synced leads
-    try {
-      await client.query('SAVEPOINT sp_leads');
-      await client.query(
-        `DELETE FROM leads WHERE id = $1 OR application_id = $1 OR (app_number IS NOT NULL AND app_number = $2)`, 
-        [id, app.app_number]
+    // 12. Delete Customer Details from database
+    if (targetCustomerId) {
+      const { rows: otherApps } = await client.query(
+        `SELECT id FROM applications WHERE customer_id = $1 AND id != $2 LIMIT 1`,
+        [targetCustomerId, id]
       );
-      await client.query('RELEASE SAVEPOINT sp_leads');
-    } catch (_) {
-      await client.query('ROLLBACK TO SAVEPOINT sp_leads').catch(() => {});
+      const { rows: otherLeads } = await client.query(
+        `SELECT id FROM leads WHERE customer_id = $1 AND id != $2 AND id != $3 LIMIT 1`,
+        [targetCustomerId, id, targetLeadId]
+      );
+
+      if (otherApps.length === 0 && otherLeads.length === 0) {
+        await client.query(`DELETE FROM customers WHERE id = $1`, [targetCustomerId]).catch(() => {});
+      }
     }
 
-    // 7. Delete main application record
-    await client.query(`DELETE FROM applications WHERE id = $1`, [id]);
-
-    await logAction(req, 'DELETE_APPLICATION', id, { app_number: app.app_number });
+    await logAction(req, isLeadOnly ? 'DELETE_LEAD' : 'DELETE_APPLICATION', id, { app_number: app.app_number, customer_id: targetCustomerId });
 
     await client.query('COMMIT');
-    return success(res, {}, 'Application and lead deleted successfully');
+    return success(res, {}, 'Application, lead, and customer details deleted successfully from database');
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
