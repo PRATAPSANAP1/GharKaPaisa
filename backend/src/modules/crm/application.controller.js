@@ -1457,16 +1457,18 @@ const markVerificationComplete = async (req, res, next) => {
   }
 };
 
-// PUT /applications/:id/bank-status — Update bank review / approval status
+// PUT /applications/:id/bank-status — Update bank review / approval status & SBI Physical Form fields
 const updateBankProcessingStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { status, bank_ref_number, rejection_reason, approved_amount } = req.body;
+    const { 
+      status, bank_ref_number, rejection_reason, approved_amount,
+      appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
+      bank_remark, final_status, decline_reason, eligible_reqd
+    } = req.body;
 
-    const validStatuses = ['under_review', 'approved', 'rejected', 'disbursed'];
-    if (!validStatuses.includes(status)) {
-      return error(res, `Invalid status. Must be one of: ${validStatuses.join(', ')}`, 400);
-    }
+    const validStatuses = ['under_review', 'approved', 'rejected', 'disbursed', 'in_process', 'app_file_generated', 'decline', 'technical_error'];
+    const currentStatus = (status && validStatuses.includes(status)) ? status : 'under_review';
 
     const parsedAmount = (approved_amount !== undefined && approved_amount !== '' && approved_amount !== null && !isNaN(approved_amount))
       ? parseFloat(approved_amount)
@@ -1490,14 +1492,14 @@ const updateBankProcessingStatus = async (req, res, next) => {
               approved_amount = COALESCE($4, approved_amount),
               updated_at = NOW()
           WHERE id = $5
-        `, [status, bank_ref_number || null, rejection_reason || null, parsedAmount, id]);
+        `, [currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount, id]);
 
         await query(`
           INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
           VALUES ($1, $2, $3, $4, 'admin', $5)
-        `, [id, status, `Bank Card App ${status.toUpperCase()}`, `Status updated to ${status}`, req.user ? req.user.id : null]).catch(() => {});
+        `, [id, currentStatus, `Bank Processing Update (${currentStatus.toUpperCase()})`, `Status updated. Remark: ${bank_remark || 'N/A'}`, req.user ? req.user.id : null]).catch(() => {});
 
-        return success(res, null, `Application status updated to ${status}`);
+        return success(res, null, `Application status updated successfully`);
       }
       return notFound(res, 'Application not found');
     }
@@ -1512,23 +1514,27 @@ const updateBankProcessingStatus = async (req, res, next) => {
           approved_amount = COALESCE($4, approved_amount),
           updated_at = NOW()
       WHERE id = $5
-    `, [status, bank_ref_number || null, rejection_reason || null, parsedAmount, id]);
+    `, [currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount, id]);
 
     const titleMap = {
       under_review: 'Bank Reviewing Application',
       approved: 'Application Approved by Bank',
       rejected: 'Application Rejected by Bank',
-      disbursed: 'Loan Disbursed'
+      disbursed: 'Loan Disbursed',
+      app_file_generated: 'App File Generated (Approved)',
+      decline: 'Application Declined by Bank',
+      in_process: 'Application In Process',
+      technical_error: 'Technical Error'
     };
 
     await query(`
       INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
       VALUES ($1, $2, $3, $4, 'admin', $5)
-    `, [id, status, titleMap[status] || status, `Status updated to ${status}. ${rejection_reason ? 'Reason: ' + rejection_reason : ''}`, req.user ? req.user.id : null]);
+    `, [id, currentStatus, titleMap[currentStatus] || currentStatus, `Status updated to ${currentStatus}. ${bank_remark ? 'Remark: ' + bank_remark : ''}`, req.user ? req.user.id : null]);
 
     const category = app.product_category || 'loan';
-    const isDisbursed = status === 'disbursed';
-    const isApprovedForNonLoan = status === 'approved' && ['credit_card', 'insurance'].includes(category);
+    const isDisbursed = currentStatus === 'disbursed';
+    const isApprovedForNonLoan = (currentStatus === 'approved' || currentStatus === 'app_file_generated') && ['credit_card', 'insurance'].includes(category);
 
     if ((isDisbursed || isApprovedForNonLoan) && app.commission_amount > 0 && app.partner_id) {
       try {
@@ -1546,7 +1552,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
       }
     }
 
-    return success(res, null, `Application status updated to ${status}`);
+    return success(res, null, `Application status updated to ${currentStatus}`);
   } catch (err) {
     next(err);
   }
