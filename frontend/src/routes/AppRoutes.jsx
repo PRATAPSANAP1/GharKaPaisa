@@ -258,6 +258,14 @@ const AppRoutes = () => {
             <Route path="/admin/insurance/:insuranceType/:tab" element={<ManageAdminInsurance />} />
             <Route path="/admin/insurance/:insuranceType" element={<ManageAdminInsurance />} />
             <Route path="/admin/insurance" element={<ManageAdminInsurance />} />
+
+            {/* Admin Extended Features */}
+            <Route path="/admin/commissions" element={<SuperAdminCommission />} />
+            <Route path="/admin/reports" element={<SuperAdminReports />} />
+            <Route path="/admin/sections" element={<ManageSections />} />
+            <Route path="/admin/banners" element={<ManageBanners />} />
+            <Route path="/admin/crm" element={<ManageApplications />} />
+            <Route path="/admin/wallet" element={<ManageWallet />} />
           </Route>
         </Route>
       </Route>

@@ -310,26 +310,56 @@ const AdminLayout = () => {
 
           <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
 
-          {/* 💰 Wallet */}
+          {/* 💰 Wallet & Withdrawals */}
           <NavLink
             to="/admin/withdrawals"
             style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px',
-              fontSize: '13.5px', fontWeight: 700, color: isActive ? '#fff' : 'rgba(255, 255, 255, 0.7)',
-              background: isActive ? `${C.teal}35` : 'transparent', textDecoration: 'none'
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
+              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
+              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
+              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
             })}
           >
             <Icons.wallet size={18} />
-            <span>💰 Wallet</span>
+            <span>💰 Wallet & Payouts</span>
+          </NavLink>
+
+          {/* 💵 Commissions */}
+          <NavLink
+            to="/admin/commissions"
+            style={({ isActive }) => ({
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
+              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
+              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
+              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
+            })}
+          >
+            <Icons.trending size={18} />
+            <span>💵 Commissions</span>
+          </NavLink>
+
+          {/* 📈 Reports & Analytics */}
+          <NavLink
+            to="/admin/reports"
+            style={({ isActive }) => ({
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
+              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
+              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
+              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
+            })}
+          >
+            <Icons.dashboard size={18} />
+            <span>📈 Reports</span>
           </NavLink>
 
           {/* ⚙ Settings */}
           <NavLink
-            to="/super-admin/sections"
+            to="/admin/sections"
             style={({ isActive }) => ({
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '10px',
-              fontSize: '13.5px', fontWeight: 700, color: isActive ? '#fff' : 'rgba(255, 255, 255, 0.7)',
-              background: isActive ? `${C.teal}35` : 'transparent', textDecoration: 'none'
+              display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '12px',
+              fontSize: '13.5px', fontWeight: 800, color: isActive ? '#60a5fa' : 'rgba(255, 255, 255, 0.75)',
+              background: isActive ? 'linear-gradient(90deg, rgba(59,130,246,0.22), rgba(37,99,235,0.08))' : 'transparent',
+              borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', textDecoration: 'none', transition: 'all 0.2s ease'
             })}
           >
             <MdSettings size={18} />
