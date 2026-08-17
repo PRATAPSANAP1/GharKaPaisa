@@ -1060,7 +1060,15 @@ const processWalletReconciliationDailyJob = async () => {
     if (!isMatch) discrepanciesCount++;
   }
 
-  return { total_reconciled: totalReconciled, discrepancies: discrepanciesCount };
+  const { rows: logs } = await query(`
+    SELECT r.*, ap.partner_code, ap.first_name, ap.last_name
+    FROM wallet_reconciliation r
+    JOIN partner_profiles ap ON ap.id = r.partner_id
+    ORDER BY r.created_at DESC
+    LIMIT 50
+  `);
+
+  return { total_reconciled: totalReconciled, discrepancies: discrepanciesCount, records: logs };
 };
 
 /**

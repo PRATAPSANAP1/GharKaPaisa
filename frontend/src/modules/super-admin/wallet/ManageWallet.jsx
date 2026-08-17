@@ -27,6 +27,7 @@ export default function ManageWallet() {
   const [wallets, setWallets] = useState([]);
   const [ledger, setLedger] = useState([]);
   const [commissions, setCommissions] = useState([]);
+  const [reconciliationData, setReconciliationData] = useState(null);
 
   // Loadings
   const [loading, setLoading] = useState(true);
@@ -129,11 +130,26 @@ export default function ManageWallet() {
     }
   };
 
+  const loadReconciliation = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/wallet/reconciliation');
+      if (res.data?.success) {
+        setReconciliationData(res.data.data);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'withdrawals') loadWithdrawals();
     if (activeTab === 'wallets') loadWallets();
     if (activeTab === 'ledger') loadLedger();
     if (activeTab === 'commissions') loadCommissions();
+    if (activeTab === 'reconciliation') loadReconciliation();
   }, [activeTab, wPage, wStatus, oPage, lPage, lType, lStatus, cPage]);
 
   const handleAdjustSubmit = async (e) => {
@@ -457,32 +473,47 @@ export default function ManageWallet() {
 
             {activeTab === 'reconciliation' && (
               <div>
-                <h3 style={{ fontSize: '15px', fontWeight: 800, marginBottom: '16px' }}>Reconciliation Reports</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, margin: 0 }}>System Wallet Reconciliation Audit</h3>
+                  {reconciliationData && (
+                    <div style={{ fontSize: '12px', color: C.textLight }}>
+                      Total Reconciled Partners: <strong>{reconciliationData.total_reconciled || 0}</strong> • Discrepancies: <strong style={{ color: reconciliationData.discrepancies > 0 ? C.red : C.green }}>{reconciliationData.discrepancies || 0}</strong>
+                    </div>
+                  )}
+                </div>
+
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ background: isDark ? '#18181B' : C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
-                      <th style={{ padding: '12px 16px' }}>Ref ID / Partner</th>
-                      <th style={{ padding: '12px 16px' }}>Type / Category</th>
-                      <th style={{ padding: '12px 16px' }}>Description / Remarks</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Amount (INR)</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Reconciliation Status</th>
+                      <th style={{ padding: '12px 16px' }}>Partner</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Wallet Balance</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Ledger Balance</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Discrepancy Drift</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center' }}>Audit Status</th>
+                      <th style={{ padding: '12px 16px' }}>Notes</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '14px 16px', fontWeight: 700 }}>#TXN-984215 • GKP1002</td>
-                      <td style={{ padding: '14px 16px' }}>Credit • Commission Credit</td>
-                      <td style={{ padding: '14px 16px' }}>HDFC LTF Card Commission Disbursement</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 800, color: C.green }}>+₹2,250.00</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right' }}><span style={S.tag(C.green)}>✓ Reconciled Zero Drift</span></td>
-                    </tr>
-                    <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '14px 16px', fontWeight: 700 }}>#TXN-984214 • GKP1004</td>
-                      <td style={{ padding: '14px 16px' }}>Debit • Withdrawal Payout</td>
-                      <td style={{ padding: '14px 16px' }}>Approved Payout Settlement to HDFC Bank A/c</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 800, color: C.red }}>-₹5,000.00</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right' }}><span style={S.tag(C.green)}>✓ Reconciled Zero Drift</span></td>
-                    </tr>
+                    {!reconciliationData?.records || reconciliationData.records.length === 0 ? (
+                      <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: C.textLight }}>No reconciliation discrepancy logs recorded yet. All accounts zero drift.</td></tr>
+                    ) : (
+                      reconciliationData.records.map((r, i) => (
+                        <tr key={r.id || i} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '14px 16px', fontWeight: 700 }}>{r.first_name} {r.last_name} ({r.partner_code})</td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700 }}>₹{parseFloat(r.wallet_balance || 0).toFixed(2)}</td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700 }}>₹{parseFloat(r.ledger_balance || 0).toFixed(2)}</td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 800, color: parseFloat(r.discrepancy || 0) > 0 ? C.red : C.green }}>
+                            ₹{parseFloat(r.discrepancy || 0).toFixed(2)}
+                          </td>
+                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '12px', fontWeight: 800, background: r.status === 'matched' ? `${C.green}15` : `${C.red}15`, color: r.status === 'matched' ? C.green : C.red }}>
+                              {r.status === 'matched' ? '✓ RECONCILED MATCH' : '⚠️ DISCREPANCY DETECTED'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 16px', fontSize: '12px', color: C.textLight }}>{r.notes || 'Daily audit verified'}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

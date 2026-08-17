@@ -19,6 +19,8 @@ router.post('/bank-details', requireApprovedPartnerOrAdmin, validateBankDetails,
 router.put('/bank-details', requireApprovedPartnerOrAdmin, validateBankDetails, walletCtrl.saveBankDetails);
 
 // Withdrawals Routing (Admin & Polymorphic Partner Handlers)
+router.get('/admin/overview', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.getWalletOverview);
+router.post('/admin/adjust', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.adminAdjustWalletController);
 router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
 router.get('/my-withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
 router.get('/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
