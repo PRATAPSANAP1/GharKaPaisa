@@ -3,7 +3,7 @@ const axios = require('axios');
 
 // ── MSG91 Config (Primary SMS Provider) ─────────────────────────────────────
 const msg91AuthKey = process.env.MSG91_AUTH_KEY;
-const msg91SenderId = process.env.MSG91_SENDER_ID || 'GHRKP';
+const msg91SenderId = process.env.MSG91_SENDER_ID || 'GHARKP';
 const msg91Route = process.env.MSG91_ROUTE || '4';
 
 // ── Twilio Config (Fallback SMS Provider) ───────────────────────────────────
@@ -140,17 +140,18 @@ const sendApplyStep1Sms = async (to, customerName, productName, token) => {
 };
 
 /**
- * Send Step 2 Post-Apply Link SMS to Customer
+ * Send Step 2 Post-Apply Link SMS to Customer (DLT Template ID: 1277178655941470854 | Sender: GHARKP)
  */
 const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
   const postApplyUrl = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}/post-apply`;
-  const body = `Dear ${customerName || 'Customer'}, please submit your bank application ref & documents for ${productName || 'Credit Card'}: ${postApplyUrl}`;
+  const body = `Dear ${customerName || 'Customer'}, please submit your bank application ref & documents for ${productName || 'Credit Card'}: ${postApplyUrl} - GharKaPaisa`;
+  const templateId = process.env.MSG91_APPLY_STEP2_TEMPLATE_ID || '1277178655941470854';
   
-  if (msg91AuthKey && process.env.MSG91_APPLY_STEP2_TEMPLATE_ID) {
+  if (msg91AuthKey) {
     try {
       const formattedTo = formatMobile(to);
       await axios.post('https://api.msg91.com/api/v5/flow/', {
-        template_id: process.env.MSG91_APPLY_STEP2_TEMPLATE_ID,
+        template_id: templateId,
         short_url: '0',
         recipients: [{
           mobiles: formattedTo,
@@ -161,7 +162,7 @@ const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
       }, {
         headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
       });
-      logger.info(`[SMS] Step 2 Post-Apply SMS sent to ${formattedTo} via MSG91 Flow`);
+      logger.info(`[SMS] Step 2 Post-Apply SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
       return true;
     } catch (err) {
       logger.error(`[SMS] Failed sending Step 2 Flow SMS: ${err.message}`);
