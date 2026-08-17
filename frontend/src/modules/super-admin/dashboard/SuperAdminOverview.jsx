@@ -157,17 +157,25 @@ export default function SuperAdminOverview() {
 
   // Metrics summary
   const stats = {
-    customers: overviewData?.customers?.total_customers ?? customersList.length ?? 0,
-    partners: overviewData?.Partners?.total ?? partnersList.length ?? 0,
-    activePartners: overviewData?.Partners?.active ?? partnersList.filter(p => (p.account_status || p.status) === 'active').length ?? 0,
+    customers: parseInt(overviewData?.customers?.total_customers ?? customersList.length ?? 0, 10),
+    partners: parseInt(overviewData?.Partners?.total ?? partnersList.length ?? 0, 10),
+    activePartners: parseInt(overviewData?.Partners?.active ?? partnersList.filter(p => (p.account_status || p.status) === 'active').length ?? 0, 10),
+    pendingKycPartners: parseInt(overviewData?.Partners?.pending_kyc ?? overviewData?.partners?.pending_kyc ?? partnersList.filter(p => (p.kyc_status || 'pending') === 'pending').length ?? 0, 10),
     teamMembers: teamList.length || 0,
-    totalApps: overviewData?.applications?.total ?? overviewData?.leads?.total_leads ?? 0,
-    approvedApps: overviewData?.applications?.approved ?? overviewData?.leads?.approved_leads ?? 0,
-    pendingApps: overviewData?.applications?.pending ?? overviewData?.leads?.pending_leads ?? 0,
-    rejectedApps: overviewData?.applications?.rejected ?? overviewData?.leads?.rejected_leads ?? 0,
-    admins: overviewData?.admins?.total_admins ?? adminsList.length ?? 0,
-    totalCommissionPaid: overviewData?.withdrawal?.total_commission_paid ?? 0,
-    pendingWithdrawals: overviewData?.withdrawal?.pending_withdrawals ?? 0,
+
+    totalApps: parseInt(overviewData?.leads?.total_leads ?? overviewData?.applications?.total ?? 0, 10),
+    approvedApps: parseInt(overviewData?.leads?.approved_leads ?? overviewData?.applications?.approved ?? 0, 10),
+    pendingApps: parseInt(overviewData?.leads?.pending_leads ?? overviewData?.applications?.pending ?? 0, 10),
+    rejectedApps: parseInt(overviewData?.leads?.rejected_leads ?? overviewData?.applications?.rejected ?? 0, 10),
+
+    admins: parseInt(overviewData?.admins?.total_admins ?? adminsList.length ?? 0, 10),
+    activeAdmins: parseInt(overviewData?.admins?.active_admins ?? adminsList.filter(a => a.status === 'active' || a.isActive).length ?? 0, 10),
+
+    totalCommissionPaid: parseFloat(overviewData?.withdrawal?.total_commission_paid ?? 0),
+    pendingWithdrawals: parseInt(overviewData?.withdrawal?.pending_withdrawals ?? 0, 10),
+
+    banks: parseInt(overviewData?.banks?.total_banks ?? 0, 10),
+    products: parseInt(overviewData?.products?.total_products ?? 0, 10),
   };
 
   // Top Metric Cards Row (Customers, Partners, Team Members, Applications, Admins, Transactions)
