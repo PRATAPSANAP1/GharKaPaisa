@@ -29,13 +29,13 @@ const getOverview = async (req, res, next) => {
       values.push(from_date, to_date + ' 23:59:59');
     }
 
-    const [apps, Partners, wallet, leads, withdrawal, banks, products, recentPartners] = await Promise.all([
+    const [apps, Partners, wallet, leads, withdrawal, banks, products, recentPartners, adminsRes] = await Promise.all([
       query(sql, values),
       isPartner ? Promise.resolve({rows:[{}]}) : query(`
         SELECT
           COUNT(*) as total,
-          COUNT(*) FILTER (WHERE u.status = 'active') as active,
-          COUNT(*) FILTER (WHERE ap.kyc_status = 'pending' OR ap.kyc_status = 'under_review') as pending_kyc
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(u.status, 'active')) = 'active') as active,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(ap.kyc_status, 'pending')) IN ('pending', 'under_review', 'submitted', 'in_process')) as pending_kyc
         FROM partner_profiles ap JOIN users u ON u.id = ap.user_id
       `),
       query(`
@@ -50,16 +50,16 @@ const getOverview = async (req, res, next) => {
       query(`
         SELECT
           COUNT(*) as total_leads,
-          COUNT(*) FILTER (WHERE status = 'approved') as approved_leads,
-          COUNT(*) FILTER (WHERE status = 'rejected') as rejected_leads,
-          COUNT(*) FILTER (WHERE status = 'pending') as pending_leads,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('approved', 'disbursed', 'super_admin_approved', 'commission_released')) as approved_leads,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('rejected', 'declined')) as rejected_leads,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('pending', 'under_review', 'submitted', 'operational_verified')) as pending_leads,
           COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE) as todays_leads
         FROM leads WHERE 1=1 ${partnerScopeLeads}
       `),
       isPartner ? Promise.resolve({rows:[{}]}) : query(`
         SELECT
-          COUNT(*) FILTER (WHERE status = 'pending') as pending_withdrawals,
-          COALESCE(SUM(amount) FILTER (WHERE status = 'processed'), 0) as total_commission_paid
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status, 'pending')) IN ('pending', 'processing', 'submitted')) as pending_withdrawals,
+          COALESCE(SUM(amount) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('processed', 'completed', 'released', 'approved')), 0) as total_commission_paid
         FROM withdrawal_requests
       `),
       query(`SELECT COUNT(*) as total_banks FROM banks`),
@@ -71,20 +71,47 @@ const getOverview = async (req, res, next) => {
         ORDER BY p.created_at DESC
         LIMIT 5
       `),
+      isPartner ? Promise.resolve({rows:[{total_admins: 0, active_admins: 0}]}) : query(`
+        SELECT
+          COUNT(*) as total_admins,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status, 'active')) = 'active') as active_admins
+        FROM users
+        WHERE UPPER(role) IN ('ADMIN', 'SUPER_ADMIN', 'SUPERADMIN', 'OPERATIONAL_HEAD')
+      `)
     ]);
 
-    // calculate conversion rate
-    const appsData = apps.rows[0];
+    // calculate conversion rate & fallback statistics
+    const appsData = apps.rows[0] || {};
+    const leadsData = leads.rows[0] || {};
+    const withdrawalData = withdrawal.rows[0] || {};
+    const adminData = adminsRes?.rows?.[0] || {};
+
     const conversion_rate = appsData.total > 0 ? ((appsData.approved / appsData.total) * 100).toFixed(2) : 0;
+
+    const totalLeads = (parseInt(leadsData.total_leads || 0, 10) > 0) ? parseInt(leadsData.total_leads, 10) : parseInt(appsData.total || 0, 10);
+    const approvedLeads = (parseInt(leadsData.approved_leads || 0, 10) > 0) ? parseInt(leadsData.approved_leads, 10) : parseInt(appsData.approved || 0, 10);
+    const rejectedLeads = (parseInt(leadsData.rejected_leads || 0, 10) > 0) ? parseInt(leadsData.rejected_leads, 10) : parseInt(appsData.rejected || 0, 10);
+    const pendingLeads = parseInt(appsData.pending_leads || 0, 10) || parseInt(leadsData.pending_leads || 0, 10);
+    const totalCommPaid = parseFloat(withdrawalData.total_commission_paid || 0) || parseFloat(appsData.total_commission || 0);
 
     return success(res, {
       applications: { ...appsData, conversion_rate },
       Partners: Partners.rows[0],
       wallet: wallet.rows[0],
-      leads: leads.rows[0],
-      withdrawal: withdrawal.rows[0],
+      leads: {
+        ...leadsData,
+        total_leads: totalLeads,
+        approved_leads: approvedLeads,
+        rejected_leads: rejectedLeads,
+        pending_leads: pendingLeads
+      },
+      withdrawal: {
+        ...withdrawalData,
+        total_commission_paid: totalCommPaid
+      },
       banks: banks.rows[0],
       products: products.rows[0],
+      admins: adminData,
       recent_partners: recentPartners.rows,
     });
   } catch (err) {
