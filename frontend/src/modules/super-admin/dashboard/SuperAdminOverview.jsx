@@ -303,9 +303,6 @@ export default function SuperAdminOverview() {
               <div style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, lineHeight: 1.2 }}>
                 {card.label}
               </div>
-              <div style={{ fontSize: '10.5px', fontWeight: 600, color: C.textLight, marginTop: '3px' }}>
-                {card.subtext}
-              </div>
             </div>
           </div>
         ))}
