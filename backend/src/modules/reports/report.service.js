@@ -119,7 +119,7 @@ const getCustomersReport = async (partnerId, filters) => {
 
   const { rows } = await query(`
     SELECT 
-      c.id, COALESCE(c.full_name, c.name, 'Customer') as customer_name, c.mobile, c.email, c.city, c.state,
+      c.id, COALESCE(NULLIF(TRIM(c.full_name), ''), 'Customer') as customer_name, c.mobile, c.email, c.city, c.state,
       c.pan_number, c.dob, c.monthly_income, c.employment_type, c.company_name, c.created_at,
       COUNT(a.id) as total_applications,
       COUNT(a.id) FILTER (WHERE a.status IN ('approved', 'disbursed', 'sanctioned')) as approved_cards,
