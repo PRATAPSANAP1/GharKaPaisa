@@ -332,9 +332,30 @@ async function getTeamMembersList(partnerId, options = {}) {
   // Check if viewer is a partner (not admin/super_admin)
   const isPartner = options.viewerRole === 'PARTNER';
 
-  let whereClauses = [`r.parent_partner_id = $1`];
-  let params = [partnerId];
-  let paramIdx = 2;
+  let whereClauses = [];
+  let params = [];
+  let paramIdx = 1;
+
+  let fromClause = '';
+  if (partnerId) {
+    fromClause = `
+      FROM partner_team_relationships r
+      JOIN partner_profiles cp ON cp.id = r.child_partner_id
+      JOIN users u ON u.id = cp.user_id
+      LEFT JOIN partner_profiles parent ON parent.id = cp.parent_partner_id
+    `;
+    whereClauses.push(`r.parent_partner_id = $${paramIdx}`);
+    params.push(partnerId);
+    paramIdx++;
+  } else {
+    fromClause = `
+      FROM partner_profiles cp
+      JOIN users u ON u.id = cp.user_id
+      LEFT JOIN partner_team_relationships r ON r.child_partner_id = cp.id
+      LEFT JOIN partner_profiles parent ON parent.id = cp.parent_partner_id
+    `;
+    whereClauses.push(`1=1`);
+  }
 
   if (options.search) {
     whereClauses.push(`(
@@ -366,7 +387,7 @@ async function getTeamMembersList(partnerId, options = {}) {
     paramIdx++;
   }
 
-  if (options.level) {
+  if (options.level && partnerId) {
     whereClauses.push(`r.level = $${paramIdx}`);
     params.push(parseInt(options.level));
     paramIdx++;
@@ -382,32 +403,27 @@ async function getTeamMembersList(partnerId, options = {}) {
 
   // Total count
   const { rows: [{ total }] } = await query(
-    `SELECT COUNT(*)::int AS total
-     FROM partner_team_relationships r
-     JOIN partner_profiles cp ON cp.id = r.child_partner_id
-     JOIN users u ON u.id = cp.user_id
+    `SELECT COUNT(DISTINCT cp.id)::int AS total
+     ${fromClause}
      WHERE ${whereStr}`,
     params
   );
 
   // Paginated query
   const queryStr = `
-    SELECT 
+    SELECT DISTINCT ON (cp.id, cp.created_at)
       cp.id, cp.user_id, cp.partner_code, cp.first_name, cp.last_name, cp.profile_photo_url,
       cp.rank, cp.kyc_status, COALESCE(cp.commission_rate, 90.00) AS commission_rate, u.status AS user_status, u.mobile, u.email, cp.created_at,
-      r.level,
+      COALESCE(r.level, 1) AS level,
       parent.first_name AS parent_first_name, parent.last_name AS parent_last_name, parent.partner_code AS parent_partner_code,
       (SELECT COUNT(*)::int FROM partner_team_relationships WHERE parent_partner_id = cp.id AND level = 1) AS children_count,
       (SELECT COUNT(*)::int FROM applications WHERE partner_id = cp.id) AS applications_count,
       (SELECT COALESCE(SUM(COALESCE(approved_amount, loan_amount, credit_limit, 0)), 0)::numeric 
        FROM applications WHERE partner_id = cp.id AND status IN ('approved', 'disbursed', 'confirmed')) AS total_business,
       (SELECT COALESCE(SUM(amount), 0)::numeric FROM team_commissions WHERE child_partner_id = cp.id) AS total_commission
-    FROM partner_team_relationships r
-    JOIN partner_profiles cp ON cp.id = r.child_partner_id
-    JOIN users u ON u.id = cp.user_id
-    LEFT JOIN partner_profiles parent ON parent.id = cp.parent_partner_id
+    ${fromClause}
     WHERE ${whereStr}
-    ORDER BY cp.created_at DESC
+    ORDER BY cp.created_at DESC, cp.id
     LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
   `;
 

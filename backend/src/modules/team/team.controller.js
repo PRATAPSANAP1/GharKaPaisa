@@ -6,8 +6,8 @@ const logger = require('../../config/logger');
  */
 async function resolvePartnerId(req) {
   const isElevated = ['ADMIN', 'SUPER_ADMIN'].includes((req.user?.role || '').toUpperCase());
-  if (isElevated && req.query.partner_id) {
-    return req.query.partner_id;
+  if (isElevated) {
+    return req.query.partner_id || null;
   }
   const partnerId = await teamService.getPartnerProfileIdByUserId(req.user.id);
   return partnerId || req.user.id;
