@@ -25,13 +25,19 @@ export default function SuperAdminCommission() {
         params: {
           search: search.trim() || undefined,
           commission_status: statusFilter || undefined,
-          limit: 100
+          limit: 200
         }
       });
       if (res.data?.success) {
         const raw = res.data.data;
         const list = Array.isArray(raw) ? raw : (raw?.items || raw?.rows || []);
-        setApplications(list);
+        // Only show applications where all process steps are complete and Super Admin has approved
+        const approvedOnly = list.filter(app => {
+          const st = (app.status || '').toLowerCase();
+          const cst = (app.commission_status || '').toLowerCase();
+          return ['super_admin_approved', 'approved', 'disbursed', 'commission_released'].includes(st) || ['released', 'approved', 'on_hold', 'held'].includes(cst);
+        });
+        setApplications(approvedOnly);
       }
     } catch (err) {
       console.error('Failed to load commission applications:', err);
