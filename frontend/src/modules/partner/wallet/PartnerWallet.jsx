@@ -535,9 +535,69 @@ const PartnerWallet = () => {
             
             {/* Settlement Form */}
             <div style={{ ...S.card, padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>
-                Request Bank Settlement
-              </h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>
+                  Request Bank Settlement
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('bank')}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#0052FF',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <span>✏️ Edit Bank Details</span>
+                </button>
+              </div>
+
+              {/* Destination Bank Preview Box */}
+              <div style={{
+                background: C.bgSecondary || '#F8FAFC',
+                border: `1px solid ${C.border || '#E2E8F0'}`,
+                borderRadius: '12px',
+                padding: '12px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <MdAccountBalance size={22} style={{ color: '#0052FF' }} />
+                  <div>
+                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: C.text }}>
+                      {bankDetails?.bank_name || 'Bank Details Not Set'}
+                    </div>
+                    <div style={{ fontSize: '11px', color: C.textLight }}>
+                      A/C: {bankDetails?.account_number ? `•••• ${bankDetails.account_number.slice(-4)}` : 'N/A'} • IFSC: {bankDetails?.ifsc_code || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('bank')}
+                  style={{
+                    background: '#0052FF15',
+                    color: '#0052FF',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Edit
+                </button>
+              </div>
+
               <form onSubmit={handleSendWithdrawalOTP} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
                   <label style={{ ...S.label, marginBottom: '6px', display: 'block', fontSize: '13px', fontWeight: 600 }}>Amount (₹)</label>
@@ -571,7 +631,7 @@ const PartnerWallet = () => {
                 </div>
                 <button 
                   type="submit" 
-                  disabled={requestingWithdraw || !availableBal || availableBal < 100 || parseFloat(withdrawAmount) < 100 || parseFloat(withdrawAmount) > 50000 || parseFloat(withdrawAmount) > availableBal}
+                  disabled={requestingWithdraw || !availableBal || availableBal < 100 || parseFloat(withdrawAmount) < 100 || parseFloat(withdrawAmount) > 50000 || parseFloat(withdrawAmount) > availableBal || !bankDetails?.account_number}
                   style={{ 
                     background: '#0052FF',
                     color: '#FFFFFF',
@@ -581,7 +641,7 @@ const PartnerWallet = () => {
                     fontSize: '14px',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    opacity: (requestingWithdraw || !availableBal || availableBal < 100) ? 0.6 : 1
+                    opacity: (requestingWithdraw || !availableBal || availableBal < 100 || !bankDetails?.account_number) ? 0.6 : 1
                   }}
                 >
                   {requestingWithdraw ? 'Sending OTP...' : 'Request Settlement'}
@@ -874,9 +934,55 @@ const PartnerWallet = () => {
         }}>
           <div style={{ ...S.card, maxWidth: '440px', width: '100%', padding: '24px', borderRadius: '16px' }}>
             <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800 }}>Confirm Payout Settlement</h3>
-            <p style={{ margin: '0 0 20px', fontSize: '13px', color: C.textLight }}>
+            <p style={{ margin: '0 0 14px', fontSize: '13px', color: C.textLight }}>
               Enter the 6-digit OTP code sent to <strong>{emailMasked}</strong> to confirm withdrawal of <strong>{formatCurrency(withdrawAmount)}</strong> (Net Payout after 2% TDS: <strong>{formatCurrency(parseFloat(withdrawAmount || 0) * 0.98)}</strong>).
             </p>
+
+            {/* Destination Bank Account Summary Card in OTP Modal */}
+            <div style={{
+              background: C.bgSecondary || '#F8FAFC',
+              border: `1px solid ${C.border || '#E2E8F0'}`,
+              borderRadius: '12px',
+              padding: '12px 14px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <MdAccountBalance size={20} style={{ color: '#0052FF' }} />
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: C.text }}>
+                    Payout Destination: {bankDetails?.bank_name || 'Bank Account'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: C.textLight }}>
+                    A/C: {bankDetails?.account_number ? `•••• ${bankDetails.account_number.slice(-4)}` : 'N/A'} • IFSC: {bankDetails?.ifsc_code || 'N/A'}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOtpModal(false);
+                  setActiveTab('bank');
+                }}
+                style={{
+                  background: '#0052FF15',
+                  color: '#0052FF',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '4px 10px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Edit Bank
+              </button>
+            </div>
+
             <form onSubmit={handleConfirmWithdrawalOTP} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <input 
                 type="text" 

@@ -664,7 +664,10 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
       } else {
         // Razorpay Transfer API call
         const { rows: [partner] } = await client.query(
-          `SELECT first_name, last_name, mobile, email, id, user_id FROM partner_profiles WHERE id = $1`,
+          `SELECT ap.first_name, ap.last_name, COALESCE(u.mobile, '') as mobile, COALESCE(u.email, '') as email, ap.id, ap.user_id 
+           FROM partner_profiles ap 
+           LEFT JOIN users u ON u.id = ap.user_id 
+           WHERE ap.id = $1`,
           [wr.partner_id]
         );
         const { rows: [bank] } = await client.query(
