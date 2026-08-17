@@ -119,12 +119,15 @@ const getCustomersReport = async (partnerId, filters) => {
 
   const { rows } = await query(`
     SELECT 
-      c.id, COALESCE(c.full_name, c.name, 'Customer') as customer_name, c.mobile, c.email, c.city, c.created_at,
-      COUNT(a.id) as total_applications
+      c.id, COALESCE(c.full_name, c.name, 'Customer') as customer_name, c.mobile, c.email, c.city, c.state,
+      c.pan_number, c.dob, c.monthly_income, c.employment_type, c.company_name, c.created_at,
+      COUNT(a.id) as total_applications,
+      COUNT(a.id) FILTER (WHERE a.status IN ('approved', 'disbursed', 'sanctioned')) as approved_cards,
+      COALESCE(SUM(a.commission_amount) FILTER (WHERE a.status IN ('approved', 'disbursed', 'sanctioned')), 0) as total_commission
     FROM customers c
     LEFT JOIN applications a ON a.customer_id = c.id
     ${where}
-    GROUP BY c.id ORDER BY c.created_at DESC LIMIT 100
+    GROUP BY c.id ORDER BY c.created_at DESC LIMIT 200
   `, values);
 
   await setCachedReport('customers', filters, partnerId, rows);

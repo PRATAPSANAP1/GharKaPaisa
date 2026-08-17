@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
-import { Icons } from "../../../components/Icon/PartnerIcons";
 import Lead360Modal from './components/Lead360Modal';
 
 export default function ManageLeads() {
@@ -48,7 +47,7 @@ export default function ManageLeads() {
       const res = await api.get("/leads", {
         params: {
           page,
-          limit: 50,
+          limit: 200,
           search: search || undefined,
           status: status || undefined,
           priority: priority || undefined,
@@ -120,24 +119,6 @@ export default function ManageLeads() {
     }
   };
 
-  const handleStatusChange = async (leadId, newStatus) => {
-    const confirmation = window.confirm(`Are you sure you want to mark this lead as ${newStatus.toUpperCase()}?`);
-    if (!confirmation) return;
-
-    setActionLoading(leadId);
-    try {
-      const res = await api.patch(`/leads/${leadId}/status`, { status: newStatus });
-      if (res.data?.success) {
-        alert(`Lead status updated to ${newStatus} successfully!`);
-        fetchLeads();
-      }
-    } catch (e) {
-      alert(e.response?.data?.message || `Failed to update lead status to ${newStatus}`);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
   const handleExportCSV = () => {
     if (leads.length === 0) return alert('No leads to export.');
 
@@ -158,6 +139,60 @@ export default function ManageLeads() {
     document.body.removeChild(link);
   };
 
+  // Group leads into status categories for top-to-bottom status-wise tables
+  const statusGroups = [
+    {
+      id: 'pending_submitted',
+      title: '⏳ Pending & Submitted Applications',
+      badgeBg: '#EFF6FF',
+      badgeColor: '#2563EB',
+      borderColor: '#3B82F6',
+      statuses: ['submitted', 'pending', 'lead_created', 'created', 'initiated', 'new', 'draft', 'applied']
+    },
+    {
+      id: 'under_review',
+      title: '🔍 Bank Review & Physical Verification',
+      badgeBg: '#FFF7ED',
+      badgeColor: '#EA580C',
+      borderColor: '#F97316',
+      statuses: ['under_review', 'under review', 'verification', 'in_progress', 'bank_verification', 'details_submitted']
+    },
+    {
+      id: 'operational_verified',
+      title: '🛡️ Operational Verified & Admin Approved',
+      badgeBg: '#F0FDFA',
+      badgeColor: '#0D9488',
+      borderColor: '#14B8A6',
+      statuses: ['operational_verified', 'super_admin_approved']
+    },
+    {
+      id: 'approved',
+      title: '✅ Approved & Commission Released',
+      badgeBg: '#ECFDF5',
+      badgeColor: '#059669',
+      borderColor: '#10B981',
+      statuses: ['approved', 'sanctioned', 'disbursed', 'completed', 'commission_released']
+    },
+    {
+      id: 'rejected',
+      title: '❌ Rejected & Declined Applications',
+      badgeBg: '#FEE2E2',
+      badgeColor: '#DC2626',
+      borderColor: '#EF4444',
+      statuses: ['rejected', 'declined', 'cancelled']
+    }
+  ];
+
+  const getLeadsForGroup = (statuses) => {
+    return leads.filter(l => {
+      const st = (l.status || l.pipeline_stage || '').toLowerCase();
+      return statuses.some(s => st === s || st.includes(s));
+    });
+  };
+
+  // Check if any specific status filter is active
+  const isStatusFiltered = !!status;
+
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", paddingBottom: "40px" }}>
       
@@ -165,11 +200,11 @@ export default function ManageLeads() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
         <div>
           <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>
-            {isSuperAdminView ? "All Customer Leads & Details" : "Leads"}
+            {isSuperAdminView ? "All Customer Leads & Status-Wise Applications" : "Leads & Applications Management"}
           </h2>
           <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>
             {isSuperAdminView
-              ? "Comprehensive directory of all customer details and lead records across all statuses"
+              ? "Status-grouped master tables showing all applications from top to bottom (Pending, Under Review, Verified, Approved, Rejected)"
               : "Operations hub, verification checklist engine, bank executive assignments, SLA monitoring & automatic wallet payouts."}
           </p>
         </div>
@@ -213,14 +248,13 @@ export default function ManageLeads() {
           </select>
 
           <select style={{ ...S.input, width: "auto" }} value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="">All Statuses</option>
-            <option value="pending">Pending Review</option>
-            <option value="submitted">Submitted to Bank</option>
-            <option value="under_review">Bank Review</option>
+            <option value="">All Status Tables (Top to Bottom)</option>
+            <option value="pending">Pending Review & Submitted</option>
+            <option value="under_review">Bank Review & Verification</option>
             <option value="operational_verified">Operational Verified</option>
             <option value="super_admin_approved">Super Admin Approved</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="approved">Approved & Commission Released</option>
+            <option value="rejected">Rejected & Declined</option>
           </select>
 
           <select style={{ ...S.input, width: "auto" }} value={priority} onChange={(e) => setPriority(e.target.value)}>
@@ -244,90 +278,145 @@ export default function ManageLeads() {
         </form>
       </div>
 
-      {/* Main Leads Table */}
-      <div style={{ ...S.card, padding: 0, borderRadius: "16px", overflow: "hidden", marginBottom: "24px" }}>
-        <div style={{ padding: "16px 24px", background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>📊 All System Leads ({total})</h3>
+      {loading ? (
+        <div style={{ ...S.card, padding: "40px", textAlign: "center", color: C.textLight }}>
+          Loading status-wise application tables...
         </div>
+      ) : leads.length === 0 ? (
+        <div style={{ ...S.card, padding: "40px", textAlign: "center", color: C.textLight }}>
+          No applications or leads found matching criteria.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {statusGroups.map((group) => {
+            const groupLeads = isStatusFiltered ? leads : getLeadsForGroup(group.statuses);
 
-        {loading ? (
-          <div style={{ padding: "40px", textAlign: "center", color: C.textLight }}>Loading lead queue...</div>
-        ) : leads.length === 0 ? (
-          <div style={{ padding: "40px", textAlign: "center", color: C.textLight }}>No leads found matching criteria.</div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-              <thead>
-                <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, textAlign: "left", color: C.textLight, fontSize: "11px" }}>
-                  <th style={{ padding: "12px 16px" }}>
-                    <input type="checkbox" onChange={toggleSelectAll} checked={selectedLeadIds.length === leads.length && leads.length > 0} />
-                  </th>
-                  <th style={{ padding: "12px 16px" }}>Customer Details</th>
-                  <th style={{ padding: "12px 16px" }}>Product & Bank</th>
-                  <th style={{ padding: "12px 16px" }}>Source & Priority</th>
-                  <th style={{ padding: "12px 16px" }}>Pipeline Stage</th>
-                  <th style={{ padding: "12px 16px" }}>Origin Partner</th>
-                  <th style={{ padding: "12px 16px" }}>Executive</th>
-                  <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody style={{ color: C.text }}>
-                {leads.map((l) => (
-                  <tr key={l.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: "12px 16px" }}>
-                      <input type="checkbox" checked={selectedLeadIds.includes(l.id)} onChange={() => toggleSelectLead(l.id)} />
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <div style={{ fontWeight: 800, color: C.text }}>{l.customer_name}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>{l.mobile} • {l.city || "N/A"}</div>
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <div style={{ fontWeight: 700 }}>{l.product_name}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>{l.bank_name}</div>
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <span style={{ fontSize: "11px", background: C.bgSecondary, padding: "2px 6px", borderRadius: "4px", textTransform: "capitalize", fontWeight: 700 }}>
-                        {l.source || 'partner'}
-                      </span>
-                      <div style={{ fontSize: "11px", color: l.priority === 'high' ? C.red : C.green, fontWeight: 700, marginTop: '2px' }}>
-                        ● {(l.priority || 'medium').toUpperCase()}
-                      </div>
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <span style={{
-                        padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 800,
-                        background: l.status === 'approved' ? '#ECFDF5' : l.status === 'rejected' ? '#FEE2E2' : '#EFF6FF',
-                        color: l.status === 'approved' ? '#059669' : l.status === 'rejected' ? '#DC2626' : '#2563EB'
-                      }}>
-                        {(l.pipeline_stage || l.status).toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <div>{l.partner_first_name} {l.partner_last_name || ''}</div>
-                      <div style={{ fontSize: "10px", color: C.textLight }}>{l.partner_code}</div>
-                    </td>
-                    <td style={{ padding: "12px 16px", fontSize: '12px' }}>
-                      {l.bank_executive_name ? (
-                        <span style={{ color: C.teal, fontWeight: 700 }}>{l.bank_executive_name}</span>
-                      ) : (
-                        <span style={{ color: C.textLight }}>Unassigned</span>
-                      )}
-                    </td>
-                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      <button
-                        onClick={() => setActive360LeadId(l.id)}
-                        style={{ ...S.btn("primary"), padding: "6px 12px", fontSize: "12px", borderRadius: "8px" }}
-                      >
-                        Open 360° Lead
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+            // If a status filter is selected and group has no leads, skip empty groups
+            if (isStatusFiltered && status !== group.id && !group.statuses.includes(status) && groupLeads.length === 0) {
+              return null;
+            }
+
+            return (
+              <div
+                key={group.id}
+                style={{
+                  ...S.card,
+                  padding: 0,
+                  borderRadius: "16px",
+                  overflow: "hidden",
+                  borderLeft: `4px solid ${group.borderColor}`
+                }}
+              >
+                {/* Status Table Header */}
+                <div style={{
+                  padding: "16px 24px",
+                  background: C.bgSecondary,
+                  borderBottom: `1px solid ${C.border}`,
+                  display: "flex",
+                  justify: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "12px"
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>
+                      {group.title}
+                    </h3>
+                    <span style={{
+                      padding: "3px 10px",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      background: group.badgeBg,
+                      color: group.badgeColor
+                    }}>
+                      {groupLeads.length} Records
+                    </span>
+                  </div>
+                </div>
+
+                {groupLeads.length === 0 ? (
+                  <div style={{ padding: "24px 32px", color: C.textLight, fontSize: "13px" }}>
+                    No applications currently in this status stage.
+                  </div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                      <thead>
+                        <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, textAlign: "left", color: C.textLight, fontSize: "11px" }}>
+                          <th style={{ padding: "12px 16px" }}>
+                            <input type="checkbox" onChange={toggleSelectAll} checked={selectedLeadIds.length === leads.length && leads.length > 0} />
+                          </th>
+                          <th style={{ padding: "12px 16px" }}>Customer Details</th>
+                          <th style={{ padding: "12px 16px" }}>Product & Bank</th>
+                          <th style={{ padding: "12px 16px" }}>Source & Priority</th>
+                          <th style={{ padding: "12px 16px" }}>Pipeline Stage</th>
+                          <th style={{ padding: "12px 16px" }}>Origin Partner</th>
+                          <th style={{ padding: "12px 16px" }}>Executive</th>
+                          <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody style={{ color: C.text }}>
+                        {groupLeads.map((l) => (
+                          <tr key={l.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: "12px 16px" }}>
+                              <input type="checkbox" checked={selectedLeadIds.includes(l.id)} onChange={() => toggleSelectLead(l.id)} />
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <div style={{ fontWeight: 800, color: C.text }}>{l.customer_name}</div>
+                              <div style={{ fontSize: "11px", color: C.textLight }}>{l.mobile} • {l.city || "N/A"}</div>
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <div style={{ fontWeight: 700 }}>{l.product_name}</div>
+                              <div style={{ fontSize: "11px", color: C.textLight }}>{l.bank_name}</div>
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <span style={{ fontSize: "11px", background: C.bgSecondary, padding: "2px 6px", borderRadius: "4px", textTransform: "capitalize", fontWeight: 700 }}>
+                                {l.source || 'partner'}
+                              </span>
+                              <div style={{ fontSize: "11px", color: l.priority === 'high' ? C.red : C.green, fontWeight: 700, marginTop: '2px' }}>
+                                ● {(l.priority || 'medium').toUpperCase()}
+                              </div>
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <span style={{
+                                padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 800,
+                                background: group.badgeBg,
+                                color: group.badgeColor
+                              }}>
+                                {(l.pipeline_stage || l.status).toUpperCase()}
+                              </span>
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <div>{l.partner_first_name} {l.partner_last_name || ''}</div>
+                              <div style={{ fontSize: "10px", color: C.textLight }}>{l.partner_code}</div>
+                            </td>
+                            <td style={{ padding: "12px 16px", fontSize: '12px' }}>
+                              {l.bank_executive_name ? (
+                                <span style={{ color: C.teal, fontWeight: 700 }}>{l.bank_executive_name}</span>
+                              ) : (
+                                <span style={{ color: C.textLight }}>Unassigned</span>
+                              )}
+                            </td>
+                            <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                              <button
+                                onClick={() => setActive360LeadId(l.id)}
+                                style={{ ...S.btn("primary"), padding: "6px 12px", fontSize: "12px", borderRadius: "8px" }}
+                              >
+                                Open 360° Lead
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* 360° LEAD ORCHESTRATION MODAL */}
       {active360LeadId && (
