@@ -362,56 +362,121 @@ export default function SuperAdminOverview() {
 
       {/* TAB 1: SYSTEM OVERVIEW */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
-          <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Applications Summary</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                <span>Approved</span>
-                <strong style={{ color: '#10B981' }}>{stats.approvedApps}</strong>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Master 11-KPI Metrics Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+            gap: '14px'
+          }}>
+            {[
+              { label: 'Total Admins', value: stats.admins, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.25)', icon: '🛡️' },
+              { label: 'Active Admins', value: stats.activeAdmins, color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.25)', icon: '⚡' },
+              { label: 'Pending KYC', value: stats.pendingKycPartners, color: '#F97316', bg: 'rgba(249, 115, 22, 0.1)', border: 'rgba(249, 115, 22, 0.25)', icon: '⏳' },
+              { label: 'Total Leads', value: stats.totalApps, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.25)', icon: '📄' },
+              { label: 'Pending Leads', value: stats.pendingApps, color: '#EAB308', bg: 'rgba(234, 179, 8, 0.1)', border: 'rgba(234, 179, 8, 0.25)', icon: '🕒' },
+              { label: 'Approved Leads', value: stats.approvedApps, color: '#059669', bg: 'rgba(5, 150, 105, 0.1)', border: 'rgba(5, 150, 105, 0.25)', icon: '✅' },
+              { label: 'Rejected Leads', value: stats.rejectedApps, color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.25)', icon: '❌' },
+              { label: 'Commission Paid', value: `₹${parseFloat(stats.totalCommissionPaid).toLocaleString('en-IN')}`, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)', border: 'rgba(139, 92, 246, 0.25)', icon: '💰' },
+              { label: 'Pending Withdrawals', value: stats.pendingWithdrawals, color: '#EC4899', bg: 'rgba(236, 72, 153, 0.1)', border: 'rgba(236, 72, 153, 0.25)', icon: '💳' },
+              { label: 'Total Banks', value: stats.banks, color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.1)', border: 'rgba(6, 182, 212, 0.25)', icon: '🏦' },
+              { label: 'Total Products', value: stats.products, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.1)', border: 'rgba(99, 102, 241, 0.25)', icon: '💳' },
+            ].map((kpi, idx) => (
+              <div
+                key={idx}
+                style={{
+                  background: C.card,
+                  borderRadius: '14px',
+                  border: `1px solid ${kpi.border}`,
+                  padding: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px'
+                }}
+              >
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: kpi.bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '20px',
+                  flexShrink: 0
+                }}>
+                  {kpi.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
+                    {loading ? '...' : kpi.value}
+                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, marginTop: '2px' }}>
+                    {kpi.label}
+                  </div>
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                <span>Under Review / Pending</span>
-                <strong style={{ color: '#F59E0B' }}>{stats.pendingApps}</strong>
+            ))}
+          </div>
+
+          {/* Quick Platform Status Breakdown */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
+            <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Applications Summary</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Approved Leads</span>
+                  <strong style={{ color: '#10B981' }}>{stats.approvedApps}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Pending Leads</span>
+                  <strong style={{ color: '#F59E0B' }}>{stats.pendingApps}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Rejected Leads</span>
+                  <strong style={{ color: '#EF4444' }}>{stats.rejectedApps}</strong>
+                </div>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                <span>Rejected</span>
-                <strong style={{ color: '#EF4444' }}>{stats.rejectedApps}</strong>
+            </div>
+
+            <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Partner Network</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Total Partners</span>
+                  <strong>{stats.partners}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Active Partners</span>
+                  <strong style={{ color: '#10B981' }}>{stats.activePartners}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Pending KYC</span>
+                  <strong style={{ color: '#F97316' }}>{stats.pendingKycPartners}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Financial Payouts</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Commission Paid</span>
+                  <strong style={{ color: '#10B981' }}>₹{parseFloat(stats.totalCommissionPaid).toLocaleString('en-IN')}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Pending Withdrawals</span>
+                  <strong style={{ color: '#F59E0B' }}>{stats.pendingWithdrawals} Requests</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Razorpay Live Balance</span>
+                  <strong style={{ color: '#3B82F6' }}>{razorpayBalance !== null ? `₹${parseFloat(razorpayBalance).toLocaleString('en-IN')}` : '₹0.00'}</strong>
+                </div>
               </div>
             </div>
           </div>
 
-          <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Partner Network</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                <span>Total Partners</span>
-                <strong>{stats.partners}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                <span>Active Partners</span>
-                <strong style={{ color: '#10B981' }}>{stats.activePartners}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                <span>Team Members</span>
-                <strong style={{ color: '#06B6D4' }}>{stats.teamMembers}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Financial Payouts</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                <span>Commission Paid</span>
-                <strong style={{ color: '#10B981' }}>₹{parseFloat(stats.totalCommissionPaid).toLocaleString('en-IN')}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                <span>Razorpay Live Balance</span>
-                <strong style={{ color: '#3B82F6' }}>{razorpayBalance !== null ? `₹${parseFloat(razorpayBalance).toLocaleString('en-IN')}` : '₹0.00'}</strong>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
