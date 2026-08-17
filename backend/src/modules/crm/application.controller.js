@@ -952,7 +952,7 @@ const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{
 const listApplications = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
-    const { status, partner_id, partner_id: q_partner_id, product_id, search, bank_id, process_by, operation_head_id, operation_head, member_id } = req.query;
+    const { status, partner_id, partner_id: q_partner_id, product_id, search, bank_id, process_by, operation_head_id, operation_head, member_id, category } = req.query;
     const targetPartnerId = q_partner_id || partner_id;
     const targetOpHeadId = isUuid(operation_head_id) ? operation_head_id : (isUuid(operation_head) ? operation_head : null);
 
@@ -983,6 +983,7 @@ const listApplications = async (req, res, next) => {
     const validUserId = isUuid(userId) ? userId : null;
     const validScope = req.query.scope && req.query.scope.trim() ? req.query.scope.trim() : null;
     const validMemberId = isUuid(member_id) ? member_id : null;
+    const validCategory = category && category.trim() ? category.trim() : null;
 
     let opHeadBankFilterSQL = '';
     const userDesignation = (req.user?.designation || '').toUpperCase();
@@ -1018,7 +1019,7 @@ const listApplications = async (req, res, next) => {
       )
     `;
 
-    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId, isPartnerOrTeam, validScope, validMemberId];
+    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId, isPartnerOrTeam, validScope, validMemberId, validCategory];
 
     const { rows } = await query(`
       SELECT * FROM (
@@ -1146,13 +1147,22 @@ const listApplications = async (req, res, next) => {
           OR ($12::text = 'team' AND NOT (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
         )
         AND ($13::uuid IS NULL OR combined.submitted_by = $13::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $13::uuid OR id = $13::uuid))
+        AND (
+          $14::text IS NULL OR $14::text = '' OR $14::text = 'all'
+          OR ($14::text = 'credit_card' AND (LOWER(combined.category) LIKE '%credit%' OR LOWER(combined.category) LIKE '%card%'))
+          OR ($14::text = 'personal_loan' AND (LOWER(combined.category) LIKE '%personal%'))
+          OR ($14::text = 'business_loan' AND (LOWER(combined.category) LIKE '%business%'))
+          OR ($14::text = 'insurance' AND (LOWER(combined.category) LIKE '%insurance%'))
+          OR ($14::text = 'utility' AND (LOWER(combined.category) LIKE '%utilit%' OR LOWER(combined.category) LIKE '%recharge%'))
+          OR (LOWER(combined.category) = LOWER($14::text))
+        )
         ${opHeadBankFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
 
     // Count query with same filter
-    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId];
+    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory];
 
     const countScopeSQL = `
       WHERE (
@@ -1180,14 +1190,14 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, a.submitted_by, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id
+        SELECT a.id, a.partner_id, a.status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, a.submitted_by, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         UNION ALL
-        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(l.created_by, c.created_by) as submitted_by, COALESCE(l.process_type, l.source, 'linked_share') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id
+        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(l.created_by, c.created_by) as submitted_by, COALESCE(l.process_type, l.source, 'linked_share') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category
         FROM leads l
         LEFT JOIN customers c ON c.id = l.customer_id OR (l.customer_id IS NULL AND c.mobile = l.mobile)
         LEFT JOIN products p ON p.id = l.product_id
@@ -1220,6 +1230,15 @@ const listApplications = async (req, res, next) => {
           OR ($10::text = 'team' AND NOT (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
         )
         AND ($11::uuid IS NULL OR combined.submitted_by = $11::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $11::uuid OR id = $11::uuid))
+        AND (
+          $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
+          OR ($12::text = 'credit_card' AND (LOWER(combined.category) LIKE '%credit%' OR LOWER(combined.category) LIKE '%card%'))
+          OR ($12::text = 'personal_loan' AND (LOWER(combined.category) LIKE '%personal%'))
+          OR ($12::text = 'business_loan' AND (LOWER(combined.category) LIKE '%business%'))
+          OR ($12::text = 'insurance' AND (LOWER(combined.category) LIKE '%insurance%'))
+          OR ($12::text = 'utility' AND (LOWER(combined.category) LIKE '%utilit%' OR LOWER(combined.category) LIKE '%recharge%'))
+          OR (LOWER(combined.category) = LOWER($12::text))
+        )
         ${opHeadBankFilterSQL}
     `, countQueryParams);
 
