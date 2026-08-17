@@ -1329,12 +1329,12 @@ export default function PartnerApplications() {
         const pipelineStage = (trackApp.pipeline_stage || '').toLowerCase();
         
         const STATUS_RANK = {
-          'pending': 1, 'submitted': 1, 'initiated': 1, 'link_pending': 1, 'created': 1, 'bank_application_pending': 1,
-          'details_submitted': 2, 'link_generated': 2, 'app_number_added': 2, 'pan_check': 2,
-          'operational_verified': 3, 'link_sent': 3, 'kyc_pending': 3, 'qd': 3,
-          'super_admin_approved': 4, 'approved': 4, 'customer_started': 4, 'bank_application': 4, 'bank_processing': 4, 'income': 4, 'official_mail': 4, 'vkyc': 4, 'dispatch': 4,
+          'pending': 1, 'initiated': 1, 'link_pending': 1, 'created': 1, 'bank_application_pending': 1,
+          'details_submitted': 2, 'submitted': 2, 'under_review': 2, 'link_generated': 2, 'app_number_added': 2, 'pan_check': 2,
+          'operational_verified': 3, 'operational_approved': 3, 'link_sent': 3, 'kyc_pending': 3, 'qd': 3,
+          'super_admin_approved': 4, 'customer_started': 4, 'bank_application': 4, 'bank_processing': 4, 'income': 4, 'official_mail': 4, 'vkyc': 4, 'dispatch': 4,
           'commission_processing': 5, 'commission_pending': 5, 'commission': 5,
-          'commission_released': 6, 'disbursed': 6
+          'commission_released': 6, 'commission_received': 6, 'approved': 6, 'disbursed': 6
         };
 
         const getStageStatus = (stageId, index) => {
@@ -1367,8 +1367,8 @@ export default function PartnerApplications() {
         }[processType] || '📍 Application Pipeline';
 
         return (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
-            <div style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 12 }}>
+            <div style={{ width: '100%', maxWidth: 560, maxHeight: '90vh', overflowY: 'auto', background: cardBg, border: `1px solid ${border}`, borderRadius: 20, padding: isDark ? 20 : 20, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
               
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: `1px solid ${border}`, paddingBottom: 12 }}>
