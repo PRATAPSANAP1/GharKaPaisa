@@ -22,31 +22,28 @@ const STAGES = [
 // Process-specific lifecycle stages for the TRACK modal
 const PROCESS_STAGES = {
   lead_punching: [
-    { id: 'under_process', label: 'Application Created' },
-    { id: 'pan_check', label: 'PAN Check' },
-    { id: 'qd', label: 'QD (Quality Details)' },
-    { id: 'income', label: 'Income Verification' },
-    { id: 'official_mail', label: 'Official Mail' },
-    { id: 'vkyc', label: 'V-KYC' },
-    { id: 'dispatch', label: 'Dispatch' },
-    { id: 'approved', label: 'Approved' },
+    { id: 'pending', label: 'Application Created' },
+    { id: 'details_submitted', label: 'Lead Form Submitted' },
+    { id: 'operational_verified', label: 'Operational Verified' },
+    { id: 'super_admin_approved', label: 'Super Admin Approved' },
+    { id: 'commission_processing', label: 'Commission Pending' },
+    { id: 'commission_released', label: 'Commission Released' },
   ],
   linked_share: [
-    { id: 'link_pending', label: 'Application Created' },
-    { id: 'link_generated', label: 'Link Generated' },
-    { id: 'link_sent', label: 'Link Sent' },
-    { id: 'customer_started', label: 'Customer Started' },
-    { id: 'bank_application', label: 'Bank Application' },
-    { id: 'approved', label: 'Approved' },
-    { id: 'commission', label: 'Commission' },
+    { id: 'pending', label: 'Application Created' },
+    { id: 'details_submitted', label: 'Share Link Form Submitted' },
+    { id: 'operational_verified', label: 'Operational Verified' },
+    { id: 'super_admin_approved', label: 'Super Admin Approved' },
+    { id: 'commission_processing', label: 'Commission Pending' },
+    { id: 'commission_released', label: 'Commission Released' },
   ],
   direct_bank: [
-    { id: 'bank_application_pending', label: 'Application Created' },
-    { id: 'app_number_added', label: 'Application Number Added' },
-    { id: 'kyc_pending', label: 'KYC Pending' },
-    { id: 'bank_processing', label: 'Bank Processing' },
-    { id: 'approved', label: 'Approved' },
-    { id: 'commission', label: 'Commission' },
+    { id: 'pending', label: 'Application Created' },
+    { id: 'details_submitted', label: 'Bank Form Submitted' },
+    { id: 'operational_verified', label: 'Operational Verified' },
+    { id: 'super_admin_approved', label: 'Super Admin Approved' },
+    { id: 'commission_processing', label: 'Commission Pending' },
+    { id: 'commission_released', label: 'Commission Released' },
   ],
   physical_process: [
     { id: 'pending', label: 'Application Created' },
@@ -1349,12 +1346,6 @@ export default function PartnerApplications() {
           const stageIds = lifecycleStages.map(s => s.id);
           const currIdx = Math.max(stageIds.indexOf(currentStatus), stageIds.indexOf(pipelineStage));
           if (currIdx >= index && currIdx !== -1) return 'completed';
-
-          if (['approved', 'super_admin_approved', 'commission_released', 'disbursed'].includes(currentStatus)) {
-            if (['pending', 'details_submitted', 'operational_verified', 'super_admin_approved', 'approved'].includes(stageId)) {
-              return 'completed';
-            }
-          }
 
           return 'pending';
         };
