@@ -3,11 +3,11 @@ const crypto = require('crypto');
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
-const KEY_ID = process.env.RAZORPAY_KEY_ID;
-const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+const KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_TQq4luJsMjMjXF';
+const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '50gNCr5bmZt7VWZA5POmNh9x';
 const MERCHANT_ACCOUNT = process.env.RAZORPAY_ACCOUNT_NUMBER;
 
-const isLive = !!(KEY_ID && KEY_SECRET && MERCHANT_ACCOUNT);
+const isLive = !!(KEY_ID && KEY_SECRET);
 
 // Helper to log payout API request/responses
 const logPayoutApiCall = async (withdrawalId, request, response, httpStatus, retryCount = 0) => {
