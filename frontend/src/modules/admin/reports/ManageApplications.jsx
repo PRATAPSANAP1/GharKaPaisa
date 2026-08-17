@@ -269,12 +269,12 @@ export default function ManageApplications() {
       {/* Modal detail */}
       {selectedApp && (
         <div style={{
-          position: "fixed", top: 0, left: 0, width: "100%", height: "100%", zIndex: 1000,
-          background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", padding: "20px"
+          position: "fixed", top: 0, left: 0, width: "100%", height: "100%", zIndex: 10000,
+          background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "center", alignItems: "center", padding: "12px"
         }}>
           <div style={{
             background: C.card, borderRadius: "20px", border: `1px solid ${C.border}`,
-            width: "100%", maxWidth: "600px", maxHeight: "90%", overflowY: "auto", padding: "24px", position: "relative"
+            width: "100%", maxWidth: "600px", maxHeight: "92vh", overflowY: "auto", padding: "20px 20px 80px 20px", position: "relative"
           }}>
             {/* Close */}
             <button
@@ -419,7 +419,11 @@ export default function ManageApplications() {
                     />
                   </div>
 
-                  <div style={{ display: "flex", gap: "8px", marginTop: "10px", justifyContent: "flex-end" }}>
+                  <div style={{
+                    display: "flex", gap: "8px", marginTop: "16px", justifyContent: "flex-end",
+                    position: "sticky", bottom: "-20px", background: C.card, paddingTop: "12px", paddingBottom: "12px",
+                    borderTop: `1px solid ${C.border}`, zIndex: 10
+                  }}>
                     <button type="button" onClick={() => setSelectedApp(null)} style={{ ...S.btn("outline"), border: "none", color: C.textLight }}>
                       Cancel
                     </button>

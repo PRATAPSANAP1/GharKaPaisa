@@ -949,9 +949,9 @@ export default function ManageApplications() {
           background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', padding: '16px'
         }}>
           <div style={{
-            background: C.card, width: '100%', maxWidth: '640px', maxHeight: '90vh',
+            background: C.card, width: '100%', maxWidth: '640px', maxHeight: '92vh',
             borderRadius: '24px', overflowY: 'auto', border: `1px solid ${C.border}`,
-            boxShadow: '0 25px 60px rgba(0,0,0,0.35)', padding: '24px'
+            boxShadow: '0 25px 60px rgba(0,0,0,0.35)', padding: '20px 20px 80px 20px'
           }}>
             {/* Modal Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -1216,7 +1216,11 @@ export default function ManageApplications() {
               )}
 
               {/* Modal Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              <div style={{
+                display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px',
+                position: 'sticky', bottom: '-20px', background: C.card, paddingTop: '12px', paddingBottom: '12px',
+                borderTop: `1px solid ${C.border}`, zIndex: 10
+              }}>
                 <button type="button" onClick={() => setCreateModalOpen(false)} style={S.btn('outline')}>
                   Cancel
                 </button>
@@ -1239,9 +1243,9 @@ export default function ManageApplications() {
           background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', padding: '16px'
         }}>
           <div style={{
-            background: C.card, width: '100%', maxWidth: '720px', maxHeight: '90vh',
+            background: C.card, width: '100%', maxWidth: '720px', maxHeight: '92vh',
             borderRadius: '24px', overflowY: 'auto', border: `1px solid ${C.border}`,
-            boxShadow: '0 25px 60px rgba(0,0,0,0.4)', padding: '24px'
+            boxShadow: '0 25px 60px rgba(0,0,0,0.4)', padding: '20px 20px 80px 20px'
           }}>
             {/* Modal Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -1351,7 +1355,11 @@ export default function ManageApplications() {
               </div>
 
               {/* Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              <div style={{
+                display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px',
+                position: 'sticky', bottom: '-20px', background: C.card, paddingTop: '12px', paddingBottom: '12px',
+                borderTop: `1px solid ${C.border}`, zIndex: 10
+              }}>
                 <button type="button" onClick={() => setEditModalOpen(false)} style={S.btn('outline')}>
                   Cancel
                 </button>

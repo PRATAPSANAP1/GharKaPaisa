@@ -23,6 +23,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // User Role & Permissions
   const user = useAuthStore((state) => state.user);
   const role = (user?.role || '').toUpperCase();
@@ -98,16 +105,17 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         if (app.iqa_stage) setIqaStage(app.iqa_stage);
         if (app.dispatch_status) setDispatchStatus(app.dispatch_status);
         if (app.bank_remark) setBankRemark(app.bank_remark);
-        if (app.final_status) setFinalStatus(app.final_status);
+        if (app.final_status || app.status) setFinalStatus(app.final_status || app.status);
         if (app.decline_reason) setDeclineReason(app.decline_reason);
         if (app.eligible_reqd) setEligibleReQd(app.eligible_reqd);
-        if (app.bank_ref_number) setBankRefNumber(app.bank_ref_number);
         if (app.approved_amount) setApprovedAmount(app.approved_amount);
       }
 
-      setTimeline(timelineRes?.data?.data || []);
+      if (timelineRes?.data?.data) {
+        setTimeline(timelineRes.data.data);
+      }
     } catch (err) {
-      console.error('Error loading application details:', err);
+      console.error('Error fetching verification details:', err);
     } finally {
       setLoading(false);
     }
@@ -117,61 +125,45 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
     fetchData();
   }, [application?.id]);
 
-  const handleSaveDetails = async (targetSection = 'all') => {
+  const handleSaveDetails = async (formType) => {
+    setActionLoading(true);
     try {
-      setActionLoading(true);
-      
-      let backendStatus = 'under_review';
-      if (finalStatus.toLowerCase().includes('approved') || finalStatus.toLowerCase().includes('generated')) backendStatus = 'approved';
-      else if (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('rejected')) backendStatus = 'rejected';
-      else if (finalStatus.toLowerCase().includes('process')) backendStatus = 'under_review';
-
-      const payload = {
-        status: backendStatus,
-        bank_ref_number: bankRefNumber || appNumber || undefined,
-        approved_amount: approvedAmount ? Number(approvedAmount) : undefined,
-        rejection_reason: declineReason || undefined,
-        soft_approval_status: softApprovalStatus,
-        vkyc_stage: vkycStage,
-        iqa_stage: iqaStage,
-        dispatch_status: dispatchStatus,
-        bank_remark: bankRemark,
-        final_status: finalStatus,
-        decline_reason: declineReason,
-        eligible_reqd: eligibleReQd,
-        // QD Details
-        customer_mobile: customerMobile,
-        customer_name: customerName,
-        dob: dob,
-        customer_email: customerEmail,
-        pan_number: panNumber,
-        company_name: companyName,
-        designation: designation,
-        address: address,
-        company_address: companyAddress,
-        mother_name: motherName,
-        vkyc_url: vkycUrl
-      };
-
-      let res;
-      try {
-        res = await api.put(`/applications/${application.id}/bank-status`, payload);
-      } catch (putErr) {
-        if (putErr.response?.status === 405 || putErr.response?.status === 403 || putErr.response?.status === 404) {
-          try {
-            res = await api.patch(`/applications/${application.id}/bank-status`, payload);
-          } catch (patchErr) {
-            try {
-              res = await api.post(`/applications/${application.id}/bank-status`, payload);
-            } catch (postErr) {
-              res = await api.put(`/applications/${application.id}`, payload);
-            }
-          }
-        } else {
-          throw putErr;
-        }
+      let payload = {};
+      if (formType === 'qd') {
+        payload = {
+          customer_mobile: customerMobile,
+          customer_name: customerName,
+          dob,
+          customer_email: customerEmail,
+          pan_number: panNumber,
+          company_name: companyName,
+          designation,
+          address,
+          company_address: companyAddress,
+          mother_name: motherName,
+          app_number: appNumber,
+          vkyc_url: vkycUrl
+        };
+      } else if (formType === 'remark') {
+        payload = {
+          soft_approval_status: softApprovalStatus,
+          vkyc_stage: vkycStage,
+          iqa_stage: iqaStage,
+          dispatch_status: dispatchStatus
+        };
+      } else if (formType === 'final') {
+        payload = {
+          bank_remark: bankRemark,
+          final_status: finalStatus,
+          status: finalStatus,
+          decline_reason: declineReason,
+          eligible_reqd: eligibleReQd,
+          bank_ref_number: bankRefNumber,
+          approved_amount: approvedAmount ? parseFloat(approvedAmount) : undefined
+        };
       }
 
+      const res = await api.put(`/applications/${application.id}/verification`, payload);
       if (res?.data?.success) {
         alert(`Application details saved successfully!`);
         fetchData();
@@ -185,34 +177,54 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div style={{ background: '#ffffff', width: '100%', maxWidth: '920px', maxHeight: '94vh', borderRadius: '20px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)' }}>
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 10000,
+      background: 'rgba(15, 23, 42, 0.75)',
+      backdropFilter: 'blur(5px)',
+      display: 'flex',
+      alignItems: isMobile ? 'flex-end' : 'center',
+      justifyContent: 'center',
+      padding: isMobile ? '0' : '16px'
+    }}>
+      <div style={{
+        background: '#ffffff',
+        width: '100%',
+        maxWidth: '920px',
+        maxHeight: isMobile ? '92vh' : '94vh',
+        borderRadius: isMobile ? '20px 20px 0 0' : '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)'
+      }}>
         
         {/* Modal Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ padding: isMobile ? '12px 16px' : '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
                 Application #{appNumber || application.app_number || 'APP-REF'}
               </h3>
               <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: '#ffedd5', color: '#c2410c' }}>
                 {finalStatus ? finalStatus.toUpperCase() : 'UNDER REVIEW'}
               </span>
             </div>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
+            <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
               Customer: <strong>{customerName || application.customer_name || 'Customer'}</strong> | Mobile: {customerMobile || application.customer_mobile} | Bank: {application.bank_name || application.bank_code || 'Partner Bank'}
             </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}>
-              <X size={22} />
+            <button onClick={onClose} style={{ background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', padding: '6px', borderRadius: '50%' }}>
+              <X size={20} />
             </button>
           </div>
         </div>
 
         {/* Modal Body Scrollable */}
-        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+        <div style={{ padding: isMobile ? '16px 16px 90px 16px' : '24px 24px 70px 24px', overflowY: 'auto', flex: 1 }}>
           
           {/* Application Tracker */}
           <div style={{ marginBottom: '24px' }}>
@@ -453,18 +465,30 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                <div style={{
+                  display: 'flex',
+                  justify: 'flex-end',
+                  gap: '12px',
+                  marginTop: '20px',
+                  position: 'sticky',
+                  bottom: 0,
+                  background: '#ffffff',
+                  padding: '12px 0',
+                  borderTop: '1px solid #e2e8f0',
+                  zIndex: 20,
+                  boxShadow: '0 -6px 16px rgba(0,0,0,0.06)'
+                }}>
                   {canEditQd ? (
                     <button
                       type="button"
                       onClick={() => handleSaveDetails('qd')}
                       disabled={actionLoading}
-                      style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+                      style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}
                     >
                       {actionLoading ? 'Saving...' : 'Save QD Details 💾'}
                     </button>
                   ) : (
-                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px', width: '100%', textAlign: 'center' }}>
                       🔒 QD Form is read-only for admin/ops roles. Editable by Partner only.
                     </div>
                   )}
@@ -551,12 +575,24 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                <div style={{
+                  display: 'flex',
+                  justify: 'flex-end',
+                  gap: '12px',
+                  marginTop: '20px',
+                  position: 'sticky',
+                  bottom: 0,
+                  background: '#ffffff',
+                  padding: '12px 0',
+                  borderTop: '1px solid #e2e8f0',
+                  zIndex: 20,
+                  boxShadow: '0 -6px 16px rgba(0,0,0,0.06)'
+                }}>
                   <button
                     type="button"
                     onClick={() => handleSaveDetails('remark')}
                     disabled={actionLoading}
-                    style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+                    style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}
                   >
                     {actionLoading ? 'Saving...' : 'Save Remarks & Stage 💾'}
                   </button>
@@ -687,18 +723,30 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                <div style={{
+                  display: 'flex',
+                  justify: 'flex-end',
+                  gap: '12px',
+                  marginTop: '20px',
+                  position: 'sticky',
+                  bottom: 0,
+                  background: '#ffffff',
+                  padding: '12px 0',
+                  borderTop: '1px solid #e2e8f0',
+                  zIndex: 20,
+                  boxShadow: '0 -6px 16px rgba(0,0,0,0.06)'
+                }}>
                   {canEditFinal ? (
                     <button
                       type="button"
                       onClick={() => handleSaveDetails('final')}
                       disabled={actionLoading}
-                      style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+                      style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}
                     >
                       {actionLoading ? 'Saving...' : 'Save Final Status & Remarks 💾'}
                     </button>
                   ) : (
-                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px', width: '100%', textAlign: 'center' }}>
                       🔒 Final Form is read-only for partner roles. Editable by Admin & Operations only.
                     </div>
                   )}
