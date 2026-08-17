@@ -525,6 +525,7 @@ const migrate = async () => {
 
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS source VARCHAR(100) DEFAULT 'partner_punch'`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS process_type VARCHAR(100) DEFAULT 'lead_punching'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS form_status VARCHAR(100) DEFAULT 'pending'`);
 
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_Partner ON applications(partner_id)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)`);
