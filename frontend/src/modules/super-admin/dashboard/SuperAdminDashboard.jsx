@@ -352,54 +352,6 @@ export default function SuperAdminDashboard() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-      {/* Top Banner / Welcome */}
-      <div className="responsive-header" style={{ marginBottom: "4px", width: "100%" }}>
-        <div>
-          <h2 style={{ fontSize: "28px", fontWeight: 800, color: "#111827", margin: 0, letterSpacing: "-0.5px" }}>System Administrators</h2>
-          <p style={{ fontSize: "14px", color: "#6B7280", margin: "4px 0 0 0" }}>Manage and provision administrator credentials and permission settings.</p>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(5, 1fr)", gap: "10px" }}>
-        {cardData.map((card, idx) => (
-          <div 
-            key={idx} 
-            onClick={() => navigate(card.path)}
-            style={{ 
-              background: C.card, 
-              borderRadius: "12px", 
-              boxShadow: "0 2px 4px rgba(0, 0, 0, 0.04)", 
-              border: `1px solid ${C.border}`,
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-              cursor: "pointer",
-              transition: "transform 0.15s, box-shadow 0.15s",
-              padding: "10px 12px"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = "0 6px 12px rgba(0, 0, 0, 0.08)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 2px 4px rgba(0, 0, 0, 0.04)";
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <div style={{ width: "34px", height: "34px", background: `${card.color}15`, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: card.color, flexShrink: 0 }}>
-                {card.icon}
-              </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: "18px", fontWeight: 800, color: C.text, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.val}</div>
-                <div style={{ fontSize: "11.5px", fontWeight: 700, color: C.textMid, marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.label}</div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Main Container */}
       <div style={{ background: C.card, borderRadius: "16px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)", border: `1px solid ${C.border}`, overflow: "hidden" }}>
           <div style={{ padding: "24px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
