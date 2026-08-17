@@ -17,15 +17,22 @@ const {
 // GET /wallet / GET /wallet/:PartnerId
 const getWallet = async (req, res, next) => {
   try {
-    const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
-    if (!PartnerId) return error(res, 'Partner ID is required');
+    let PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
+    if (!PartnerId && req.user) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) PartnerId = p.id;
+      else PartnerId = req.user.id;
+    }
+
+    if (!PartnerId) return success(res, { available_balance: 0, hold_balance: 0, total_earned: 0, total_withdrawn: 0 });
 
     const wallet = await getWalletSummary(PartnerId);
-    if (!wallet) return notFound(res, 'Wallet not found');
+    if (!wallet) return success(res, { available_balance: 0, hold_balance: 0, total_earned: 0, total_withdrawn: 0 });
 
     const mappedWallet = {
       ...wallet,
-      pending_amount: wallet.hold_balance
+      pending_amount: wallet.hold_balance,
+      razorpay_balance: wallet.available_balance
     };
     return success(res, mappedWallet);
   } catch (err) {
