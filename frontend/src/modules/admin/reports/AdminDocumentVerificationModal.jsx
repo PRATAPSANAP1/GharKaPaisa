@@ -56,7 +56,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const [address, setAddress] = useState(application?.address || application?.residential_address || '');
   const [companyAddress, setCompanyAddress] = useState(application?.company_address || application?.office_address || '');
   const [motherName, setMotherName] = useState(application?.mother_name || '');
-  const [appNumber, setAppNumber] = useState(application?.app_number || application?.bank_ref_number || application?.application_no || '');
+  const [appNumber, setAppNumber] = useState(application?.app_number || application?.application_no || '');
   const [vkycUrl, setVkycUrl] = useState(application?.vkyc_url || application?.vkyc_link || '');
 
   // 2. Remark Form State (Soft Approval, VKYC Stage, IQA Stage, Dispatch Status)
@@ -70,7 +70,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const [finalStatus, setFinalStatus] = useState(application?.final_status || application?.status || 'In Process');
   const [declineReason, setDeclineReason] = useState(application?.decline_reason || application?.rejection_reason || '');
   const [eligibleReQd, setEligibleReQd] = useState(application?.eligible_reqd || 'No');
-  const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || application?.app_number || '');
+  const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || application?.bank_application_number || application?.bank_app_no || '');
   const [approvedAmount, setApprovedAmount] = useState(application?.approved_amount || application?.loan_amount || '');
 
   const fetchData = async () => {
@@ -97,7 +97,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         if (pd.flat_no || app.address) setAddress(pd.flat_no || app.address || app.residential_address || '');
         if (pd.company_address || app.company_address) setCompanyAddress(pd.company_address || app.company_address || app.office_address || '');
         if (pd.mother_name || app.mother_name) setMotherName(pd.mother_name || app.mother_name || '');
-        if (app.bank_ref_number || app.app_number) setAppNumber(app.bank_ref_number || app.app_number || app.application_no || '');
+        if (app.app_number) setAppNumber(app.app_number || app.application_no || '');
+        if (app.bank_ref_number || app.bank_application_number) setBankRefNumber(app.bank_ref_number || app.bank_application_number || app.bank_app_no || '');
         if (app.vkyc_url) setVkycUrl(app.vkyc_url || app.vkyc_link || '');
 
         if (app.soft_approval_status) setSoftApprovalStatus(app.soft_approval_status);
@@ -624,11 +625,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     <input
                       type="text"
                       disabled={!canEditFinal}
-                      value={appNumber || bankRefNumber}
-                      onChange={(e) => {
-                        setAppNumber(e.target.value);
-                        setBankRefNumber(e.target.value);
-                      }}
+                      value={bankRefNumber}
+                      onChange={(e) => setBankRefNumber(e.target.value)}
                       placeholder="Enter Bank Application Ref No."
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditFinal ? '#f8fafc' : '#fff' }}
                     />
