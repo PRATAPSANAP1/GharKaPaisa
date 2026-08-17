@@ -10,6 +10,7 @@ export default function ManageApplications() {
 
   // Verification Modal State
   const [verifyModalApp, setVerifyModalApp] = useState(null);
+  const [verifyModalTab, setVerifyModalTab] = useState('qd');
 
   // Listing State
   const [apps, setApps] = useState([]);
@@ -236,24 +237,24 @@ export default function ManageApplications() {
                       </span>
                     </td>
                     <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                      <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", alignItems: "center" }}>
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
                         <button
-                          onClick={() => setVerifyModalApp(app)}
-                          style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                          onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
+                          style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                         >
-                          ✏️ Edit Form
+                          📋 QD
                         </button>
                         <button
-                          onClick={() => setVerifyModalApp(app)}
-                          style={{ background: "#f97316", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}
+                          onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
+                          style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                         >
-                          Verify Details
+                          ⚙️ Remark
                         </button>
                         <button
-                          onClick={() => handleViewDetails(app)}
-                          style={{ background: "none", border: "none", color: C.teal, fontWeight: 700, cursor: "pointer" }}
+                          onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }}
+                          style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                         >
-                          Edit Status
+                          🏦 Final
                         </button>
                       </div>
                     </td>
@@ -437,6 +438,7 @@ export default function ManageApplications() {
       {verifyModalApp && (
         <AdminDocumentVerificationModal
           application={verifyModalApp}
+          initialTab={verifyModalTab}
           onClose={() => setVerifyModalApp(null)}
           onRefresh={fetchApplications}
         />

@@ -25,6 +25,7 @@ export default function ManageApplications() {
 
   // Verification modal state
   const [verifyModalApp, setVerifyModalApp] = useState(null);
+  const [verifyModalTab, setVerifyModalTab] = useState('qd');
 
   // ── Active Tab ──
   const [activeTab, setActiveTab] = useState('applications'); // 'applications' | 'partner_share'
@@ -655,8 +656,14 @@ export default function ManageApplications() {
                         <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
                           <MdVisibility /> Review
                         </button>
-                        <button onClick={() => setVerifyModalApp(app)} style={{ border: `1px solid ${C.teal}40`, background: `${C.teal}12`, color: C.teal, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                          Verify Details
+                        <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                          📋 QD
+                        </button>
+                        <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                          ⚙️ Remark
+                        </button>
+                        <button onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }} style={{ border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                          🏦 Final
                         </button>
                         <button onClick={() => handleDeleteApplication(app.id, app.app_number)} style={{ border: `1px solid ${C.red}40`, background: `${C.red}12`, color: C.red, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
                           <MdDelete /> Delete
@@ -1362,6 +1369,7 @@ export default function ManageApplications() {
       {verifyModalApp && (
         <AdminDocumentVerificationModal
           application={verifyModalApp}
+          initialTab={verifyModalTab}
           onClose={() => setVerifyModalApp(null)}
           onRefresh={() => {
             setVerifyModalApp(null);

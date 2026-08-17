@@ -1,18 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
+import { useAuthStore } from '../../../app/store/authStore';
 import { 
   X, CheckCircle, XCircle, Eye, Send, ShieldCheck, 
-  Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft
+  Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft, Lock
 } from 'lucide-react';
 import ApplicationTracker from '../../../components/common/ApplicationTracker';
 
-const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => {
-  const [activeTab, setActiveTab] = useState('details'); // 'details' (Form 1) | 'bank' (Form 2) | 'timeline'
+const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initialTab = 'qd' }) => {
+  // Normalize initialTab ('qd' | 'remark' | 'final' | 'timeline' | legacy aliases)
+  const getTabKey = (tab) => {
+    if (tab === 'details' || tab === 'qd') return 'qd';
+    if (tab === 'remark1' || tab === 'remark2' || tab === 'remark') return 'remark';
+    if (tab === 'bank' || tab === 'final') return 'final';
+    if (tab === 'timeline') return 'timeline';
+    return 'qd';
+  };
+
+  const [activeTab, setActiveTab] = useState(getTabKey(initialTab));
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Form 1 Customer Application Details State (Editable & Pre-filled)
+  // User Role & Permissions
+  const user = useAuthStore((state) => state.user);
+  const role = (user?.role || '').toUpperCase();
+
+  // Role Access Rules:
+  // QD Form: Editable ONLY by Partner. Read-only for others.
+  // Remark Form: Editable by Administrative Operator / Operational Head / Partner / Admin / Super Admin.
+  // Final Form: Editable ONLY by Administrative Operator / Operational Head / Admin / Super Admin. Read-only for Partner.
+  const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role);
+  const isOpsOrAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'OPERATOR'].includes(role) || !isPartner;
+
+  const canEditQd = isPartner;
+  const canEditRemark = true;
+  const canEditFinal = isOpsOrAdmin;
+
+  // 1. QD Customer Details State
   const [customerMobile, setCustomerMobile] = useState(application?.customer_mobile || application?.mobile || application?.phone || '');
   const [customerName, setCustomerName] = useState(application?.customer_name || application?.full_name || application?.name || '');
   const [dob, setDob] = useState(application?.dob || application?.date_of_birth || '');
@@ -26,22 +51,19 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
   const [appNumber, setAppNumber] = useState(application?.app_number || application?.bank_ref_number || application?.application_no || '');
   const [vkycUrl, setVkycUrl] = useState(application?.vkyc_url || application?.vkyc_link || '');
 
-  // Form 2 Status & Operations Head Remarks State (Editable & Pre-filled)
-  const [appcodeStatus, setAppcodeStatus] = useState(application?.appcode_status || 'Appcode Pending');
+  // 2. Remark Form State (Soft Approval, VKYC Stage, IQA Stage, Dispatch Status)
   const [softApprovalStatus, setSoftApprovalStatus] = useState(application?.soft_approval_status || 'Approval-income 25k');
   const [vkycStage, setVkycStage] = useState(application?.vkyc_stage || 'VKYC Pending');
   const [iqaStage, setIqaStage] = useState(application?.iqa_stage || 'IQA Pending');
   const [dispatchStatus, setDispatchStatus] = useState(application?.dispatch_status || 'E-sign Pending');
+
+  // 3. Final Status & Bank Remarks State
   const [bankRemark, setBankRemark] = useState(application?.bank_remark || '');
   const [finalStatus, setFinalStatus] = useState(application?.final_status || application?.status || 'In Process');
   const [declineReason, setDeclineReason] = useState(application?.decline_reason || application?.rejection_reason || '');
   const [eligibleReQd, setEligibleReQd] = useState(application?.eligible_reqd || 'No');
-  
   const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || application?.app_number || '');
   const [approvedAmount, setApprovedAmount] = useState(application?.approved_amount || application?.loan_amount || '');
-
-  const bankNameStr = String(application?.bank_name || application?.bank?.name || application?.product_name || application?.product?.name || '').toLowerCase();
-  const isSbi = bankNameStr.includes('sbi');
 
   const fetchData = async () => {
     if (!application?.id) return;
@@ -70,7 +92,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
         if (app.bank_ref_number || app.app_number) setAppNumber(app.bank_ref_number || app.app_number || app.application_no || '');
         if (app.vkyc_url) setVkycUrl(app.vkyc_url || app.vkyc_link || '');
 
-        if (app.appcode_status) setAppcodeStatus(app.appcode_status);
         if (app.soft_approval_status) setSoftApprovalStatus(app.soft_approval_status);
         if (app.vkyc_stage) setVkycStage(app.vkyc_stage);
         if (app.iqa_stage) setIqaStage(app.iqa_stage);
@@ -95,7 +116,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
     fetchData();
   }, [application?.id]);
 
-  const handleSaveDetails = async () => {
+  const handleSaveDetails = async (targetSection = 'all') => {
     try {
       setActionLoading(true);
       
@@ -109,7 +130,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
         bank_ref_number: bankRefNumber || appNumber || undefined,
         approved_amount: approvedAmount ? Number(approvedAmount) : undefined,
         rejection_reason: declineReason || undefined,
-        appcode_status: appcodeStatus,
         soft_approval_status: softApprovalStatus,
         vkyc_stage: vkycStage,
         iqa_stage: iqaStage,
@@ -118,7 +138,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
         final_status: finalStatus,
         decline_reason: declineReason,
         eligible_reqd: eligibleReQd,
-        // Form 1 Details
+        // QD Details
         customer_mobile: customerMobile,
         customer_name: customerName,
         dob: dob,
@@ -152,7 +172,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
       }
 
       if (res?.data?.success) {
-        alert(`Application details & Form status saved successfully to database!`);
+        alert(`Application details saved successfully!`);
         fetchData();
         if (onRefresh) onRefresh();
       }
@@ -164,8 +184,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-      <div style={{ background: '#ffffff', width: '100%', maxWidth: '980px', maxHeight: '94vh', borderRadius: '20px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ background: '#ffffff', width: '100%', maxWidth: '920px', maxHeight: '94vh', borderRadius: '20px', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)' }}>
         
         {/* Modal Header */}
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', flexWrap: 'wrap', gap: '12px' }}>
@@ -174,16 +194,16 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
                 Application #{appNumber || application.app_number || 'APP-REF'}
               </h3>
-              <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 10px', borderRadius: '12px', background: '#ffedd5', color: '#c2410c' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: '#ffedd5', color: '#c2410c' }}>
                 {finalStatus ? finalStatus.toUpperCase() : 'UNDER REVIEW'}
               </span>
             </div>
             <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
-              Customer: <strong>{customerName || application.customer_name || 'pratap'}</strong> | Mobile: {customerMobile || application.customer_mobile} | Bank: {application.bank_name || application.bank_code || 'SBI Bank'}
+              Customer: <strong>{customerName || application.customer_name || 'Customer'}</strong> | Mobile: {customerMobile || application.customer_mobile} | Bank: {application.bank_name || application.bank_code || 'Partner Bank'}
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px' }}>
               <X size={22} />
             </button>
@@ -198,91 +218,87 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
             <ApplicationTracker currentStatus={application.status} />
           </div>
 
-          {/* Navigation Tabs (Form 1 + 3 Parts of Form 2 + Timeline) */}
+          {/* Navigation Tabs (3 Main Action Buttons: QD | Remark | Final + Audit Log) */}
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+            
+            {/* 1. QD Tab */}
             <button
-              onClick={() => setActiveTab('details')}
+              onClick={() => setActiveTab('qd')}
               style={{
-                background: activeTab === 'details' ? '#fff7ed' : 'none',
+                background: activeTab === 'qd' ? '#eff6ff' : 'none',
                 border: 'none',
-                padding: '10px 14px',
+                padding: '10px 16px',
                 borderRadius: '8px',
-                fontWeight: activeTab === 'details' ? 800 : 600,
+                fontWeight: activeTab === 'qd' ? 800 : 600,
                 fontSize: '13px',
-                color: activeTab === 'details' ? '#ea580c' : '#64748b',
-                borderBottom: activeTab === 'details' ? '2.5px solid #ea580c' : '2.5px solid transparent',
+                color: activeTab === 'qd' ? '#2563eb' : '#64748b',
+                borderBottom: activeTab === 'qd' ? '3px solid #2563eb' : '3px solid transparent',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              📋 Form 1: Customer Details
+              📋 QD (Quick Details) {!canEditQd && <Lock size={12} style={{ color: '#94a3b8' }} />}
             </button>
 
+            {/* 2. Remark Tab */}
             <button
-              onClick={() => setActiveTab('remark1')}
+              onClick={() => setActiveTab('remark')}
               style={{
-                background: activeTab === 'remark1' ? '#fff7ed' : 'none',
+                background: activeTab === 'remark' ? '#fff7ed' : 'none',
                 border: 'none',
-                padding: '10px 14px',
+                padding: '10px 16px',
                 borderRadius: '8px',
-                fontWeight: activeTab === 'remark1' ? 800 : 600,
+                fontWeight: activeTab === 'remark' ? 800 : 600,
                 fontSize: '13px',
-                color: activeTab === 'remark1' ? '#ea580c' : '#64748b',
-                borderBottom: activeTab === 'remark1' ? '2.5px solid #ea580c' : '2.5px solid transparent',
+                color: activeTab === 'remark' ? '#ea580c' : '#64748b',
+                borderBottom: activeTab === 'remark' ? '3px solid #ea580c' : '3px solid transparent',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              ⚙️ Form 2 (Part 1): Appcode & VKYC
+              ⚙️ Operational Remarks
             </button>
 
+            {/* 3. Final Tab */}
             <button
-              onClick={() => setActiveTab('remark2')}
+              onClick={() => setActiveTab('final')}
               style={{
-                background: activeTab === 'remark2' ? '#fff7ed' : 'none',
+                background: activeTab === 'final' ? '#f0fdf4' : 'none',
                 border: 'none',
-                padding: '10px 14px',
+                padding: '10px 16px',
                 borderRadius: '8px',
-                fontWeight: activeTab === 'remark2' ? 800 : 600,
+                fontWeight: activeTab === 'final' ? 800 : 600,
                 fontSize: '13px',
-                color: activeTab === 'remark2' ? '#ea580c' : '#64748b',
-                borderBottom: activeTab === 'remark2' ? '2.5px solid #ea580c' : '2.5px solid transparent',
+                color: activeTab === 'final' ? '#16a34a' : '#64748b',
+                borderBottom: activeTab === 'final' ? '3px solid #16a34a' : '3px solid transparent',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              📦 Part 2 Operations & Dispatch Stage
+              🏦 Bank Remark & Final Status {!canEditFinal && <Lock size={12} style={{ color: '#94a3b8' }} />}
             </button>
 
-            <button
-              onClick={() => setActiveTab('bank')}
-              style={{
-                background: activeTab === 'bank' ? '#fff7ed' : 'none',
-                border: 'none',
-                padding: '10px 14px',
-                borderRadius: '8px',
-                fontWeight: activeTab === 'bank' ? 800 : 600,
-                fontSize: '13px',
-                color: activeTab === 'bank' ? '#ea580c' : '#64748b',
-                borderBottom: activeTab === 'bank' ? '2.5px solid #ea580c' : '2.5px solid transparent',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              🏦 Part 3: Bank Remark & Final Status
-            </button>
-
+            {/* 4. Timeline Log */}
             <button
               onClick={() => setActiveTab('timeline')}
               style={{
-                background: activeTab === 'timeline' ? '#fff7ed' : 'none',
+                background: activeTab === 'timeline' ? '#f8fafc' : 'none',
                 border: 'none',
-                padding: '10px 14px',
+                padding: '10px 16px',
                 borderRadius: '8px',
                 fontWeight: activeTab === 'timeline' ? 800 : 600,
                 fontSize: '13px',
-                color: activeTab === 'timeline' ? '#ea580c' : '#64748b',
-                borderBottom: activeTab === 'timeline' ? '2.5px solid #ea580c' : '2.5px solid transparent',
+                color: activeTab === 'timeline' ? '#475569' : '#64748b',
+                borderBottom: activeTab === 'timeline' ? '3px solid #475569' : '3px solid transparent',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap'
               }}
@@ -291,14 +307,20 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
             </button>
           </div>
 
-          {/* FORM 1: CUSTOMER & PHYSICAL APPLICATION DETAILS */}
-          {activeTab === 'details' && (
+          {/* ═════════ TAB 1: QD (QUALIFICATION DETAILS — EDITABLE BY PARTNER ONLY) ═════════ */}
+          {activeTab === 'qd' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 16px 0', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  📋 Form 1: Customer Details & Identification Fields
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#1e3a8a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    📋 QD (Customer Quick Details)
+                  </h4>
+                  {!canEditQd && (
+                    <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Lock size={12} /> Read-Only Mode (Partner Edit Only)
+                    </span>
+                  )}
+                </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', fontSize: '13px' }}>
                   
@@ -306,21 +328,23 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Aadhaar Link Contact Number *</label>
                     <input
                       type="text"
+                      disabled={!canEditQd}
                       value={customerMobile}
                       onChange={(e) => setCustomerMobile(e.target.value)}
-                      placeholder="9370470694"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700 }}
+                      placeholder="9876543210"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Name As Per PAN Card *</label>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Name As Per PAN Card</label>
                     <input
                       type="text"
+                      disabled={!canEditQd}
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="pratap"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700 }}
+                      placeholder="Customer PAN Name"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
@@ -328,10 +352,11 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>DOB As Per PAN Card (dd-mm-yyyy)</label>
                     <input
                       type="text"
+                      disabled={!canEditQd}
                       value={dob}
                       onChange={(e) => setDob(e.target.value)}
                       placeholder="dd-mm-yyyy"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
@@ -339,21 +364,23 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Personal Email ID</label>
                     <input
                       type="email"
+                      disabled={!canEditQd}
                       value={customerEmail}
                       onChange={(e) => setCustomerEmail(e.target.value)}
                       placeholder="email@example.com"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>PAN Card Number *</label>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>PAN Card Number</label>
                     <input
                       type="text"
+                      disabled={!canEditQd}
                       value={panNumber}
                       onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
                       placeholder="ABCDE1234F"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800, fontFamily: 'monospace', textTransform: 'uppercase' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800, fontFamily: 'monospace', textTransform: 'uppercase', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
@@ -361,10 +388,11 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>As Per Salary Slip Company Name</label>
                     <input
                       type="text"
+                      disabled={!canEditQd}
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                       placeholder="Company Name"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
@@ -372,10 +400,11 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Designation</label>
                     <input
                       type="text"
+                      disabled={!canEditQd}
                       value={designation}
                       onChange={(e) => setDesignation(e.target.value)}
                       placeholder="Designation / Role"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
@@ -383,10 +412,11 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Current Home Address with Landmark & Pincode</label>
                     <input
                       type="text"
+                      disabled={!canEditQd}
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Address with landmark & pincode"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      placeholder="Home address with landmark & pincode"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
@@ -394,10 +424,11 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Full Company Address</label>
                     <input
                       type="text"
+                      disabled={!canEditQd}
                       value={companyAddress}
                       onChange={(e) => setCompanyAddress(e.target.value)}
-                      placeholder="Full official company address"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      placeholder="Full official office address"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
@@ -405,126 +436,59 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Mother Name</label>
                     <input
                       type="text"
+                      disabled={!canEditQd}
                       value={motherName}
                       onChange={(e) => setMotherName(e.target.value)}
                       placeholder="Mother Name"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
-                  {isSbi && (
-                    <>
-                      <div>
-                        <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Application Number (Bank Application Ref No.)</label>
-                        <input
-                          type="text"
-                          value={appNumber}
-                          onChange={(e) => setAppNumber(e.target.value)}
-                          placeholder="Bank Application Number"
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800, fontFamily: 'monospace' }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>VKYC Link</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <input
-                            type="text"
-                            value={vkycUrl}
-                            onChange={(e) => setVkycUrl(e.target.value)}
-                            placeholder="https://vkyc..."
-                            style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px' }}
-                          />
-                          {vkycUrl && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const raw = (vkycUrl || '').trim();
-                                if (!raw) return;
-                                const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-                                window.open(target, '_blank', 'noopener,noreferrer');
-                              }}
-                              style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                            >
-                              Open V-KYC
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
                 </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                  {canEditQd ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSaveDetails('qd')}
+                      disabled={actionLoading}
+                      style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+                    >
+                      {actionLoading ? 'Saving...' : 'Save QD Details 💾'}
+                    </button>
+                  ) : (
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px' }}>
+                      🔒 QD Form is read-only for admin/ops roles. Editable by Partner only.
+                    </div>
+                  )}
+                </div>
+
               </div>
-
-              {/* Form Navigation Action Bar */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={handleSaveDetails}
-                  disabled={actionLoading}
-                  style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
-                >
-                  {actionLoading ? 'Saving...' : 'Save Form 1 Details'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('remark1')}
-                  style={{
-                    background: '#f97316',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '10px',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.25)'
-                  }}
-                >
-                  Next: Appcode & VKYC (Part 1) <ArrowRight size={18} />
-                </button>
-              </div>
-
             </div>
           )}
 
-          {/* FORM 2 (PART 1): APPCODE, SOFT APPROVAL, VKYC STAGE */}
-          {activeTab === 'remark1' && (
+          {/* ═════════ TAB 2: REMARK (SOFT APPROVAL, VKYC STAGE, IQA STAGE, DISPATCH STATUS) ═════════ */}
+          {activeTab === 'remark' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 16px 0', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  ⚙️ Form 2 (Part 1): Partners / Operations Remark — Appcode, Soft Approval & VKYC Stage
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#c2410c', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    ⚙️ Operational Remarks & Processing Stage
+                  </h4>
+                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#fff7ed', color: '#c2410c' }}>
+                    Editable by Admin, Operations & Partner
+                  </span>
+                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
                   
-                  {/* 1. Appcode Status */}
-                  {isSbi && (
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Appcode Status</label>
-                      <select
-                        value={appcodeStatus}
-                        onChange={(e) => setAppcodeStatus(e.target.value)}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
-                      >
-                        <option value="Appcode Pending">1. Appcode Pending</option>
-                        <option value="Appcode Submit">2. Appcode Submit</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {/* 2. Soft Approval Status */}
+                  {/* 1. Soft Approval Status */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Soft Approval Status</label>
                     <select
                       value={softApprovalStatus}
                       onChange={(e) => setSoftApprovalStatus(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
                       <option value="Approval-income 25k">1. Approval-income 25k</option>
                       <option value="Approval-income 30k">2. Approval-income 30k</option>
@@ -532,13 +496,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     </select>
                   </div>
 
-                  {/* 3. VKYC Stage */}
+                  {/* 2. VKYC Stage */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Stage</label>
                     <select
                       value={vkycStage}
                       onChange={(e) => setVkycStage(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
                       <option value="VKYC Pending">1. VKYC Pending</option>
                       <option value="VKYC Complete">2. VKYC Complete</option>
@@ -546,44 +510,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     </select>
                   </div>
 
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
-                  <button
-                    onClick={() => setActiveTab('details')}
-                    style={{ background: '#f1f5f9', color: '#475569', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <ArrowLeft size={16} /> Back to Form 1
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab('remark2')}
-                    style={{ background: '#f97316', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    Next: IQA & Dispatch (Part 2) <ArrowRight size={18} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* FORM 2 (PART 2): IQA STAGE & DISPATCH STATUS */}
-          {activeTab === 'remark2' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '0 0 16px 0', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  Part 2 Operations & Dispatch Stage
-                </h4>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
-                  
-                  {/* 4. IQA Stage */}
+                  {/* 3. IQA Stage */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>IQA Stage</label>
                     <select
                       value={iqaStage}
                       onChange={(e) => setIqaStage(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
                       <option value="IQA Sent">1. IQA Sent</option>
                       <option value="IQA Complete">2. IQA Complete</option>
@@ -593,13 +526,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     </select>
                   </div>
 
-                  {/* 5. Dispatch Status */}
+                  {/* 4. Dispatch Status */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Dispatch Status</label>
                     <select
                       value={dispatchStatus}
                       onChange={(e) => setDispatchStatus(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
                       <option value="Dispatch Done">1. DISPATCH DONE</option>
                       <option value="WCP Stage">2. WCP STAGE</option>
@@ -611,61 +544,64 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
 
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
                   <button
-                    onClick={() => setActiveTab('remark1')}
-                    style={{ background: '#f1f5f9', color: '#475569', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    type="button"
+                    onClick={() => handleSaveDetails('remark')}
+                    disabled={actionLoading}
+                    style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
                   >
-                    <ArrowLeft size={16} /> Back to Part 1
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab('bank')}
-                    style={{ background: '#ea580c', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    Next: Bank & Final Status (Part 3) <ArrowRight size={18} />
+                    {actionLoading ? 'Saving...' : 'Save Remarks & Stage 💾'}
                   </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* FORM 2 (PART 3): BANK REMARK & FINAL STATUS (ADMIN & OPERATIONS HEAD ONLY) */}
-          {activeTab === 'bank' && (
+          {/* ═════════ TAB 3: FINAL (BANK REMARK, FINAL STATUS, RE-QD — EDITABLE BY ADMIN & OPS ONLY) ═════════ */}
+          {activeTab === 'final' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#991b1b', margin: '0 0 16px 0', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  Part 3: Bank Remark & Final Status
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#15803d', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    🏦 Bank Remark & Final Status
+                  </h4>
+                  {!canEditFinal && (
+                    <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Lock size={12} /> Read-Only Mode (Operations/Admin Edit Only)
+                    </span>
+                  )}
+                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
                   
-                  {/* Application Number (Bank Application Reference No.) */}
+                  {/* 1. Bank Application Reference Number */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Application Number (Bank Application Ref No.)</label>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Bank Application Ref No.</label>
                     <input
                       type="text"
+                      disabled={!canEditFinal}
                       value={appNumber || bankRefNumber}
                       onChange={(e) => {
                         setAppNumber(e.target.value);
                         setBankRefNumber(e.target.value);
                       }}
                       placeholder="Enter Bank Application Ref No."
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditFinal ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
-                  {/* VKYC Link with Open V-KYC Direct Button */}
+                  {/* 2. VKYC Link with Open V-KYC Button */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Link</label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <input
                         type="text"
+                        disabled={!canEditFinal}
                         value={vkycUrl}
                         onChange={(e) => setVkycUrl(e.target.value)}
                         placeholder="https://vkyc..."
-                        style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px' }}
+                        style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
                       />
                       {vkycUrl && (
                         <button
@@ -684,13 +620,14 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     </div>
                   </div>
 
-                  {/* Final Status from the Bank / Current Stage */}
+                  {/* 3. Final Status from Bank / Current Stage */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Final Status from Bank / Current Stage</label>
                     <select
+                      disabled={!canEditFinal}
                       value={finalStatus}
                       onChange={(e) => setFinalStatus(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 700 }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
                     >
                       <option value="App File Generated (Approved)">1. App file generated (approved)</option>
                       <option value="Decline">2. Decline</option>
@@ -699,28 +636,30 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     </select>
                   </div>
 
-                  {/* Eligible for Re-QD */}
+                  {/* 4. Eligible for Re-QD */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Eligible for Re-QD</label>
                     <select
+                      disabled={!canEditFinal}
                       value={eligibleReQd}
                       onChange={(e) => setEligibleReQd(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
                       <option value="Yes">1. Yes</option>
                       <option value="No">2. No</option>
                     </select>
                   </div>
 
-                  {/* Bank Remark (Operations Head) */}
+                  {/* 5. Bank Remark (Operations Head) */}
                   <div style={{ gridColumn: '1 / -1' }}>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Bank Remark (Operations Head)</label>
                     <textarea
+                      disabled={!canEditFinal}
                       value={bankRemark}
                       onChange={(e) => setBankRemark(e.target.value)}
                       placeholder="Enter detailed bank remark (Operations Head edit only)..."
                       rows={3}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
@@ -729,57 +668,61 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh }) => 
                     <div style={{ gridColumn: '1 / -1' }}>
                       <label style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626', display: 'block', marginBottom: '6px' }}>Decline Reason Remark</label>
                       <textarea
+                        disabled={!canEditFinal}
                         value={declineReason}
                         onChange={(e) => setDeclineReason(e.target.value)}
                         placeholder="Specify reason for decline..."
                         rows={2}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', background: '#fff5f5' }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff5f5' }}
                       />
                     </div>
                   )}
 
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', flexWrap: 'wrap', gap: '12px' }}>
-                  <button
-                    onClick={() => setActiveTab('remark2')}
-                    style={{ background: '#f1f5f9', color: '#475569', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <ArrowLeft size={16} /> Back to Part 2
-                  </button>
-
-                  <button
-                    onClick={handleSaveDetails}
-                    disabled={actionLoading}
-                    style={{ background: '#16a34a', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <CheckCircle size={18} /> {actionLoading ? 'Saving Details...' : 'Save All Details 💾'}
-                  </button>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                  {canEditFinal ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSaveDetails('final')}
+                      disabled={actionLoading}
+                      style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer' }}
+                    >
+                      {actionLoading ? 'Saving...' : 'Save Final Status & Remarks 💾'}
+                    </button>
+                  ) : (
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px' }}>
+                      🔒 Final Form is read-only for partner roles. Editable by Admin & Operations only.
+                    </div>
+                  )}
                 </div>
-
               </div>
-
             </div>
           )}
 
-          {/* TAB 3: TIMELINE */}
+          {/* ═════════ TAB 4: AUDIT LOG / TIMELINE ═════════ */}
           {activeTab === 'timeline' && (
             <div>
-              <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', marginBottom: '16px' }}>Application Timeline Log</h4>
+              <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', marginBottom: '16px' }}>Application Timeline & Audit Log</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {timeline.map((event, idx) => (
-                  <div key={event.id || idx} style={{ display: 'flex', gap: '14px', padding: '12px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ea580c', marginTop: '4px' }} />
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a' }}>{event.title}</div>
-                      <div style={{ fontSize: '13px', color: '#475569', marginTop: '2px' }}>{event.description}</div>
-                      <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>{new Date(event.created_at).toLocaleString()}</div>
+                {timeline.length === 0 ? (
+                  <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '24px' }}>No timeline events recorded.</div>
+                ) : (
+                  timeline.map((event, idx) => (
+                    <div key={event.id || idx} style={{ display: 'flex', gap: '14px', padding: '12px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ea580c', marginTop: '4px' }} />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a' }}>{event.title}</div>
+                        <div style={{ fontSize: '13px', color: '#475569', marginTop: '2px' }}>{event.description}</div>
+                        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>{new Date(event.created_at).toLocaleString()}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>

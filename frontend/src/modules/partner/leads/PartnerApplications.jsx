@@ -132,6 +132,7 @@ export default function PartnerApplications() {
 
   // Edit Application Modal State
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editModalInitialTab, setEditModalInitialTab] = useState('qd');
   const [editApp, setEditApp] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -280,34 +281,26 @@ export default function PartnerApplications() {
     }
   };
 
-  const handleOpenEditModal = (app) => {
+  const handleOpenQdModal = (app) => {
     setEditApp(app);
-    setEditForm({
-      full_name: app.customer_name || app.full_name || '',
-      mobile: app.customer_mobile || app.mobile || '',
-      email: app.customer_email || app.email || '',
-      dob: app.dob ? new Date(app.dob).toISOString().split('T')[0] : '',
-      pan_number: app.pan_number || app.pan || '',
-      employment_type: app.employment_type || 'salaried',
-      monthly_salary: app.monthly_salary || app.monthly_income || app.income || '',
-      employer: app.employer || app.company_name || '',
-      designation: app.designation || '',
-      flat_no: app.flat_no || app.house_no || app.address_line1 || '',
-      sub_area: app.sub_area || '',
-      landmark: app.landmark || '',
-      city: app.city || '',
-      state: app.state || '',
-      pincode: app.pincode || '',
-      mother_name: app.mother_name || '',
-      company_address: app.company_address || '',
-      bank_application_number: app.bank_application_number || app.bank_ref_number || '',
-      loan_amount: app.loan_amount || app.approved_amount || '',
-      status: app.status || 'submitted',
-      vkyc_status: app.vkyc_status || 'Pending',
-      vkyc_url: app.vkyc_url || '',
-      remarks: app.remarks || ''
-    });
+    setEditModalInitialTab('qd');
     setShowEditModal(true);
+  };
+
+  const handleOpenRemarkModal = (app) => {
+    setEditApp(app);
+    setEditModalInitialTab('remark');
+    setShowEditModal(true);
+  };
+
+  const handleOpenFinalModal = (app) => {
+    setEditApp(app);
+    setEditModalInitialTab('final');
+    setShowEditModal(true);
+  };
+
+  const handleOpenEditModal = (app) => {
+    handleOpenQdModal(app);
   };
 
   const handleEditSubmit = async (e) => {
@@ -868,9 +861,17 @@ export default function PartnerApplications() {
                         style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #8b5cf640`, background: '#8b5cf615', color: '#8b5cf6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <Activity size={12} /> Track
                       </button>
-                      <button onClick={() => handleOpenEditModal(app)}
-                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}40`, background: accent + '10', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        ✏️ Edit
+                      <button onClick={() => handleOpenQdModal(app)}
+                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        📋 QD
+                      </button>
+                      <button onClick={() => handleOpenRemarkModal(app)}
+                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        ⚙️ Remark
+                      </button>
+                      <button onClick={() => handleOpenFinalModal(app)}
+                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        🏦 Final
                       </button>
                       {userRole === 'SUPER_ADMIN' && (
                         <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
@@ -986,9 +987,17 @@ export default function PartnerApplications() {
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #8b5cf640`, background: '#8b5cf615', color: '#8b5cf6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               <Activity size={13} /> Track
                             </button>
-                            <button onClick={() => handleOpenEditModal(app)}
-                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${accent}40`, background: accent + '10', color: accent, fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              ✏️ Edit
+                            <button onClick={() => handleOpenQdModal(app)}
+                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              📋 QD
+                            </button>
+                            <button onClick={() => handleOpenRemarkModal(app)}
+                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              ⚙️ Remark
+                            </button>
+                            <button onClick={() => handleOpenFinalModal(app)}
+                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              🏦 Final
                             </button>
                             {userRole === 'SUPER_ADMIN' && (
                               <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
@@ -1096,6 +1105,7 @@ export default function PartnerApplications() {
       {showEditModal && editApp && (
         <AdminDocumentVerificationModal
           application={editApp}
+          initialTab={editModalInitialTab}
           onClose={() => setShowEditModal(false)}
           onRefresh={() => {
             fetchApplicationsList();
