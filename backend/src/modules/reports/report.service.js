@@ -94,7 +94,7 @@ const getApplicationsReport = async (partnerId, filters) => {
     SELECT 
       a.id, a.app_number, a.status, COALESCE(a.commission_amount, 0) as payout_amount, a.created_at,
       p.name as product_name, b.name as bank_name,
-      COALESCE(c.full_name, TRIM(CONCAT(c.first_name, ' ', COALESCE(c.last_name, '')))) as customer_name
+      COALESCE(c.full_name, c.name, 'Customer') as customer_name
     FROM applications a
     LEFT JOIN products p ON p.id = a.product_id
     LEFT JOIN banks b ON b.id = p.bank_id
@@ -119,7 +119,7 @@ const getCustomersReport = async (partnerId, filters) => {
 
   const { rows } = await query(`
     SELECT 
-      c.id, COALESCE(c.full_name, TRIM(CONCAT(c.first_name, ' ', COALESCE(c.last_name, '')))) as customer_name, c.mobile, c.email, c.city, c.created_at,
+      c.id, COALESCE(c.full_name, c.name, 'Customer') as customer_name, c.mobile, c.email, c.city, c.created_at,
       COUNT(a.id) as total_applications
     FROM customers c
     LEFT JOIN applications a ON a.customer_id = c.id
