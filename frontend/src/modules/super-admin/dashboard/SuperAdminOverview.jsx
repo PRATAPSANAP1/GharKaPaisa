@@ -240,17 +240,9 @@ export default function SuperAdminOverview() {
       {/* ── HEADER TITLE & REFRESH ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
-              Master System Overview
-            </h1>
-            <span style={{ background: `${C.teal}20`, color: C.teal, fontSize: '11px', fontWeight: 900, padding: '3px 10px', borderRadius: '20px', textTransform: 'uppercase' }}>
-              Super Admin Control Center
-            </span>
-          </div>
-          <p style={{ fontSize: '14px', color: C.textLight, margin: '4px 0 0 0' }}>
-            Unified real-time dashboard displaying customers, partners, team members, applications, admins, transactions & platform performance.
-          </p>
+          <h1 style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
+            Overview
+          </h1>
         </div>
 
         <button
