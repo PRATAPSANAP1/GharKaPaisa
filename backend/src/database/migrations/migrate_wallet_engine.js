@@ -72,7 +72,18 @@ const runWalletEngineMigrations = async () => {
         approved_at TIMESTAMPTZ,
         approved_by UUID REFERENCES users(id),
         transaction_reference VARCHAR(100)
-      )
+      );
+
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS wallet_id UUID REFERENCES partner_wallets(id);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS tds_rate NUMERIC(5,2) DEFAULT 2.00;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS tds_amount NUMERIC(15,2) DEFAULT 0.00;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS net_amount NUMERIC(15,2);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS bank_name VARCHAR(255);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS account_number VARCHAR(100);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS ifsc_code VARCHAR(50);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS bank_account_id UUID;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS remarks TEXT;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
     `);
 
     // 5. Wallet Withdrawal Events Table
