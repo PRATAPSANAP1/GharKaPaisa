@@ -647,11 +647,11 @@ const SuperAdminLayout = () => {
                     position: 'absolute',
                     top: '46px',
                     right: 0,
-                    width: '160px',
+                    width: '210px',
                     background: C.card,
                     border: `1px solid ${C.border}`,
-                    borderRadius: '10px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
                     padding: '8px',
                     zIndex: 100,
                     display: 'flex',
@@ -659,24 +659,64 @@ const SuperAdminLayout = () => {
                     gap: '4px'
                   }}>
                     <button
-                      onClick={handleLogout}
+                      onClick={() => { setShowProfileDropdown(false); navigate('/super-admin/profile?tab=profile'); }}
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '10px 12px',
-                        borderRadius: '6px',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        color: C.red,
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        width: '100%',
-                        textAlign: 'left'
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '8px',
+                        fontSize: '13px', fontWeight: 700, color: C.text, background: 'transparent', border: 'none',
+                        cursor: 'pointer', width: '100%', textAlign: 'left'
                       }}
                     >
-                      <Icons.logout size={14} />
+                      <Icons.profile size={16} style={{ color: C.teal }} />
+                      <span>My Profile</span>
+                    </button>
+
+                    <button
+                      onClick={() => { setShowProfileDropdown(false); navigate('/super-admin/profile?tab=account'); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '8px',
+                        fontSize: '13px', fontWeight: 700, color: C.text, background: 'transparent', border: 'none',
+                        cursor: 'pointer', width: '100%', textAlign: 'left'
+                      }}
+                    >
+                      <Icons.wallet size={16} style={{ color: '#3B82F6' }} />
+                      <span>Account & Razorpay</span>
+                    </button>
+
+                    <button
+                      onClick={() => { setShowProfileDropdown(false); navigate('/super-admin/profile?tab=settings'); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '8px',
+                        fontSize: '13px', fontWeight: 700, color: C.text, background: 'transparent', border: 'none',
+                        cursor: 'pointer', width: '100%', textAlign: 'left'
+                      }}
+                    >
+                      <Icons.settings size={16} style={{ color: '#F59E0B' }} />
+                      <span>System Settings</span>
+                    </button>
+
+                    <button
+                      onClick={() => { setShowProfileDropdown(false); navigate('/super-admin/profile?tab=security'); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '8px',
+                        fontSize: '13px', fontWeight: 700, color: C.text, background: 'transparent', border: 'none',
+                        cursor: 'pointer', width: '100%', textAlign: 'left'
+                      }}
+                    >
+                      <Icons.clock size={16} style={{ color: '#8B5CF6' }} />
+                      <span>Security & Password</span>
+                    </button>
+
+                    <div style={{ height: '1px', background: C.border, margin: '4px 0' }} />
+
+                    <button
+                      onClick={() => { setShowProfileDropdown(false); handleLogout(); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '8px',
+                        fontSize: '13px', fontWeight: 700, color: C.red, background: `${C.red}10`, border: 'none',
+                        cursor: 'pointer', width: '100%', textAlign: 'left'
+                      }}
+                    >
+                      <Icons.logout size={16} />
                       <span>Log Out</span>
                     </button>
                   </div>
