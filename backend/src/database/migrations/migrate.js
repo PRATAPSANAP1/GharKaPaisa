@@ -526,8 +526,19 @@ const migrate = async () => {
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS source VARCHAR(100) DEFAULT 'partner_punch'`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS process_type VARCHAR(100) DEFAULT 'lead_punching'`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS form_status VARCHAR(100) DEFAULT 'pending'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS lead_id UUID REFERENCES leads(id) ON DELETE SET NULL`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS team_member_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_id UUID REFERENCES banks(id) ON DELETE SET NULL`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50) DEFAULT 'pending'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS application_number VARCHAR(50)`);
+
+  // Sync application_number with app_number if empty
+  await query(`UPDATE applications SET application_number = app_number WHERE application_number IS NULL AND app_number IS NOT NULL`);
 
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_Partner ON applications(partner_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_applications_team_member ON applications(team_member_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_applications_bank ON applications(bank_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_applications_lead ON applications(lead_id)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_created ON applications(created_at DESC)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_customer ON applications(customer_id)`);

@@ -123,15 +123,18 @@ const submitApplication = async (req, res, next) => {
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
     const appNumber = `APP${datePart}${nextval}`;
 
-    // Create application with lead_id link
+    // Create application with all structured metadata (lead_id, customer_id, partner_id, team_member_id, bank_id, product_id, process_type, status, application_number, vkyc_status)
+    const teamMemberId = req.body.team_member_id || null;
+    const vkycStatus = req.body.vkyc_status || 'pending';
+
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
-        (app_number, lead_id, customer_id, product_id, partner_id, parent_partner_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, process_type, submitted_at,
+        (app_number, application_number, lead_id, customer_id, product_id, partner_id, parent_partner_id, team_member_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, process_type, vkyc_status, submitted_at,
          status_history)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'submitted',$12,NOW(),
-        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$13::text)))
-      RETURNING id, app_number
-    `, [appNumber, leadId, customerId, product_id, PartnerId, parentPartnerId, product.bank_id, req.user.id, loan_amount, commission, notes, req.body.process_type || 'lead_punching', req.user.id.toString()]);
+      VALUES ($1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'submitted',$13,$14,NOW(),
+        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$15::text)))
+      RETURNING id, app_number, application_number
+    `, [appNumber, leadId, customerId, product_id, PartnerId, parentPartnerId, teamMemberId, product.bank_id, req.user.id, loan_amount, commission, notes, req.body.process_type || 'lead_punching', vkycStatus, req.user.id.toString()]);
 
     // Link application_id on lead record
     await client.query(`UPDATE leads SET application_id = $1 WHERE id = $2`, [app.id, leadId]);
