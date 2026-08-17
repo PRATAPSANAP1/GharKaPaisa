@@ -3103,10 +3103,8 @@ async function releaseCommission(req, res, next) {
     const { id } = req.params;
 
     const { rows: [app] } = await client.query(
-      `SELECT a.id, a.app_number, a.partner_id, a.commission_amount, a.commission_status, a.status,
-              pp.first_name as partner_name, pp.wallet_balance
+      `SELECT a.id, a.app_number, a.partner_id, a.commission_amount, a.commission_status, a.status
        FROM applications a
-       LEFT JOIN partner_profiles pp ON pp.id = a.partner_id
        WHERE a.id = $1`,
       [id]
     );
@@ -3130,20 +3128,16 @@ async function releaseCommission(req, res, next) {
       [id]
     );
 
-    // 2. Credit partner wallet
-    await client.query(
-      `UPDATE partner_profiles SET wallet_balance = COALESCE(wallet_balance, 0) + $1, updated_at = NOW() WHERE id = $2`,
-      [commissionAmount, app.partner_id]
+    // 2. Call creditCommission to process partner & team split into partner_wallets & wallet_ledger
+    await creditCommission(
+      app.partner_id,
+      id,
+      commissionAmount,
+      `Commission released for application ${app.app_number}`,
+      req.user.id
     );
 
-    // 3. Insert wallet transaction
-    await client.query(
-      `INSERT INTO wallet_transactions (partner_id, amount, type, status, description, application_id)
-       VALUES ($1, $2, 'commission', 'completed', $3, $4)`,
-      [app.partner_id, commissionAmount, `Commission released for application ${app.app_number}`, id]
-    ).catch(() => {});
-
-    // 4. Log timeline
+    // 3. Log timeline
     try {
       await logTimeline(client, id, 'commission_released', 'Commission Released',
         `₹${commissionAmount} commission released and credited to partner wallet by Super Admin.`,
@@ -3153,13 +3147,19 @@ async function releaseCommission(req, res, next) {
 
     await client.query('COMMIT');
 
+    // Fetch updated balance from partner_wallets
+    const { rows: [w] } = await query(
+      `SELECT available_balance FROM partner_wallets WHERE partner_id = $1`,
+      [app.partner_id]
+    );
+
     return success(res, {
       application_id: id,
       app_number: app.app_number,
       commission_amount: commissionAmount,
       commission_status: 'released',
       partner_id: app.partner_id,
-      new_wallet_balance: parseFloat(app.wallet_balance || 0) + commissionAmount
+      new_wallet_balance: parseFloat(w?.available_balance || 0)
     }, 'Commission released and partner wallet credited successfully.');
   } catch (err) {
     await client.query('ROLLBACK');
