@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import ApplicationTracker from '../../../components/common/ApplicationTracker';
 
-const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initialTab = 'qd' }) => {
+const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initialTab = 'qd', showAllTabs = false }) => {
   // Normalize initialTab ('qd' | 'remark' | 'final' | 'timeline' | legacy aliases)
   const getTabKey = (tab) => {
     if (tab === 'details' || tab === 'qd') return 'qd';
@@ -17,7 +17,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
     return 'qd';
   };
 
-  const [activeTab, setActiveTab] = useState(getTabKey(initialTab));
+  const initialTabKey = getTabKey(initialTab);
+  const [activeTab, setActiveTab] = useState(initialTabKey);
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -218,74 +219,80 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
             <ApplicationTracker currentStatus={application.status} />
           </div>
 
-          {/* Navigation Tabs (3 Main Action Buttons: QD | Remark | Final + Audit Log) */}
+          {/* Navigation Tabs (Stage Specific View + Audit Log based on button clicked) */}
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
             
-            {/* 1. QD Tab */}
-            <button
-              onClick={() => setActiveTab('qd')}
-              style={{
-                background: activeTab === 'qd' ? '#eff6ff' : 'none',
-                border: 'none',
-                padding: '10px 16px',
-                borderRadius: '8px',
-                fontWeight: activeTab === 'qd' ? 800 : 600,
-                fontSize: '13px',
-                color: activeTab === 'qd' ? '#2563eb' : '#64748b',
-                borderBottom: activeTab === 'qd' ? '3px solid #2563eb' : '3px solid transparent',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              📋 QD (Quick Details) {!canEditQd && <Lock size={12} style={{ color: '#94a3b8' }} />}
-            </button>
+            {/* 1. QD Tab (Shown only when QD button is clicked) */}
+            {(initialTabKey === 'qd' || showAllTabs) && (
+              <button
+                onClick={() => setActiveTab('qd')}
+                style={{
+                  background: activeTab === 'qd' ? '#eff6ff' : 'none',
+                  border: 'none',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  fontWeight: activeTab === 'qd' ? 800 : 600,
+                  fontSize: '13px',
+                  color: activeTab === 'qd' ? '#2563eb' : '#64748b',
+                  borderBottom: activeTab === 'qd' ? '3px solid #2563eb' : '3px solid transparent',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                📋 QD (Quick Details) {!canEditQd && <Lock size={12} style={{ color: '#94a3b8' }} />}
+              </button>
+            )}
 
-            {/* 2. Remark Tab */}
-            <button
-              onClick={() => setActiveTab('remark')}
-              style={{
-                background: activeTab === 'remark' ? '#fff7ed' : 'none',
-                border: 'none',
-                padding: '10px 16px',
-                borderRadius: '8px',
-                fontWeight: activeTab === 'remark' ? 800 : 600,
-                fontSize: '13px',
-                color: activeTab === 'remark' ? '#ea580c' : '#64748b',
-                borderBottom: activeTab === 'remark' ? '3px solid #ea580c' : '3px solid transparent',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              ⚙️ Operational Remarks
-            </button>
+            {/* 2. Remark Tab (Shown only when Remark button is clicked) */}
+            {(initialTabKey === 'remark' || showAllTabs) && (
+              <button
+                onClick={() => setActiveTab('remark')}
+                style={{
+                  background: activeTab === 'remark' ? '#fff7ed' : 'none',
+                  border: 'none',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  fontWeight: activeTab === 'remark' ? 800 : 600,
+                  fontSize: '13px',
+                  color: activeTab === 'remark' ? '#ea580c' : '#64748b',
+                  borderBottom: activeTab === 'remark' ? '3px solid #ea580c' : '3px solid transparent',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                ⚙️ Operational Remarks
+              </button>
+            )}
 
-            {/* 3. Final Tab */}
-            <button
-              onClick={() => setActiveTab('final')}
-              style={{
-                background: activeTab === 'final' ? '#f0fdf4' : 'none',
-                border: 'none',
-                padding: '10px 16px',
-                borderRadius: '8px',
-                fontWeight: activeTab === 'final' ? 800 : 600,
-                fontSize: '13px',
-                color: activeTab === 'final' ? '#16a34a' : '#64748b',
-                borderBottom: activeTab === 'final' ? '3px solid #16a34a' : '3px solid transparent',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              🏦 Bank Remark & Final Status {!canEditFinal && <Lock size={12} style={{ color: '#94a3b8' }} />}
-            </button>
+            {/* 3. Final Tab (Shown only when Final button is clicked) */}
+            {(initialTabKey === 'final' || showAllTabs) && (
+              <button
+                onClick={() => setActiveTab('final')}
+                style={{
+                  background: activeTab === 'final' ? '#f0fdf4' : 'none',
+                  border: 'none',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  fontWeight: activeTab === 'final' ? 800 : 600,
+                  fontSize: '13px',
+                  color: activeTab === 'final' ? '#16a34a' : '#64748b',
+                  borderBottom: activeTab === 'final' ? '3px solid #16a34a' : '3px solid transparent',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                🏦 Bank Remark & Final Status {!canEditFinal && <Lock size={12} style={{ color: '#94a3b8' }} />}
+              </button>
+            )}
 
             {/* 4. Timeline Log */}
             <button
