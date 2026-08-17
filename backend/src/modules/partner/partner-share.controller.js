@@ -281,12 +281,11 @@ const submitShareLead = async (req, res, next) => {
         UPDATE leads 
         SET customer_name = $1, customer_mobile = $2, mobile = $2, tracking_token = $3,
             customer_id = COALESCE($5, customer_id),
-            monthly_income = COALESCE($6, monthly_income),
-            notes = COALESCE(NULLIF($7, ''), notes),
+            notes = COALESCE(NULLIF($6, ''), notes),
             updated_at = NOW()
         WHERE id = $4
         RETURNING *
-      `, [customerName.trim(), cleanMobile, trackingToken, existingLead.id, customerId, numIncome, remarks?.trim() || null]);
+      `, [customerName.trim(), cleanMobile, trackingToken, existingLead.id, customerId, remarks?.trim() || null]);
 
       // Get product bank link
       const { rows: [product] } = await query(
@@ -310,9 +309,9 @@ const submitShareLead = async (req, res, next) => {
       const { rows } = await query(`
         INSERT INTO leads (
           partner_id, product_id, customer_name, customer_mobile, mobile,
-          tracking_token, source, status, pipeline_stage, customer_id, monthly_income, notes
+          tracking_token, source, status, pipeline_stage, customer_id, notes
         )
-        VALUES ($1, $2, $3, $4, $5, $6, 'partner_share', 'under_review', 'created', $7, $8, $9)
+        VALUES ($1, $2, $3, $4, $5, $6, 'partner_share', 'under_review', 'created', $7, $8)
         RETURNING *
       `, [
         shareLinkData.partner_id,
@@ -322,7 +321,6 @@ const submitShareLead = async (req, res, next) => {
         cleanMobile,
         trackingToken,
         customerId,
-        numIncome,
         remarks?.trim() || null
       ]);
       lead = rows[0];
@@ -331,10 +329,10 @@ const submitShareLead = async (req, res, next) => {
         const { rows: [fallbackLead] } = await query(`
           UPDATE leads
           SET customer_name = $1, tracking_token = $2, customer_id = COALESCE($5, customer_id),
-              monthly_income = COALESCE($6, monthly_income), notes = COALESCE(NULLIF($7, ''), notes), updated_at = NOW()
+              notes = COALESCE(NULLIF($6, ''), notes), updated_at = NOW()
           WHERE product_id = $3 AND (mobile = $4 OR customer_mobile = $4) AND status NOT IN ('rejected', 'cancelled')
           RETURNING *
-        `, [customerName.trim(), trackingToken, shareLinkData.product_id, cleanMobile, customerId, numIncome, remarks?.trim() || null]);
+        `, [customerName.trim(), trackingToken, shareLinkData.product_id, cleanMobile, customerId, remarks?.trim() || null]);
 
         if (fallbackLead) {
           lead = fallbackLead;
