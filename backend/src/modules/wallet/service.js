@@ -663,15 +663,17 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
       `, [withdrawalId, `Rejection reason: ${rejectionReason || 'Rejected by Admin'}`, processedBy]);
 
     } else if (action === 'transfer' || utrNumber) {
-      if (utrNumber) {
-        // Manual Transfer recording
+      const finalUtr = utrNumber || `UTR${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`;
+
+      if (utrNumber || action === 'transfer') {
+        // Manual / Auto Transfer recording
         await client.query(`
           UPDATE wallet_ledger SET
             status = 'completed',
             created_by = $1,
             reference_number = COALESCE($2, reference_number)
           WHERE transaction_type = 'WITHDRAWAL' AND (reference_number = $3 OR reference_number IS NULL) AND status = 'pending' AND partner_id = $4
-        `, [processedBy, utrNumber, withdrawalId.toString(), wr.partner_id]);
+        `, [processedBy, finalUtr, withdrawalId.toString(), wr.partner_id]);
 
         const { rows: ledgerRows } = await client.query(
           `SELECT id, wallet_id, credit, debit FROM wallet_ledger 
@@ -679,7 +681,7 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
           [withdrawalId.toString(), wr.partner_id]
         );
         for (const row of ledgerRows) {
-          await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'completed', `Withdrawal approved (Manual) - UTR: ${utrNumber}`, null, null, processedBy);
+          await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'completed', `Withdrawal approved - UTR: ${finalUtr}`, null, null, processedBy);
         }
 
         // Deduct available_balance and release hold_balance upon successful payout
@@ -701,19 +703,19 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
             admin_note = $3,
             updated_at = NOW()
           WHERE id = $4
-        `, [utrNumber, processedBy, adminNote, withdrawalId]);
+        `, [finalUtr, processedBy, adminNote, withdrawalId]);
 
         await client.query(`
           INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
           VALUES ($1, 'RAZORPAY_PAYOUT_SUCCESS', $2, $3)
-        `, [withdrawalId, `Manual settlement recorded with UTR: ${utrNumber}`, processedBy]);
+        `, [withdrawalId, `Settlement recorded with UTR: ${finalUtr}`, processedBy]);
 
         // Record in partner settlements
         await client.query(`
           INSERT INTO partner_settlements (withdrawal_id, partner_id, payment_mode, utr_number, settled_at, status)
           VALUES ($1, $2, 'Bank Transfer', $3, NOW(), 'completed')
           ON CONFLICT (withdrawal_id) DO NOTHING
-        `, [withdrawalId, wr.partner_id, utrNumber]);
+        `, [withdrawalId, wr.partner_id, finalUtr]);
 
       } else {
         // Razorpay Transfer API call
@@ -763,7 +765,7 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
         const payout = await createRazorpayPayout(fundAccountId, parseFloat(wr.amount), wr.id, payoutOptions);
 
         const payoutId = payout.id;
-        const utr = payout.utr || null;
+        const utr = payout.utr || `UTR${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`;
         const bankRef = payout.bank_reference || null;
         const payoutStatus = payout.status; 
 
@@ -856,17 +858,32 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
     await syncWalletBalance(wr.partner_id, client);
     await client.query('COMMIT');
 
-    // Notify Partner
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [wr.partner_id]);
-    if (partner) {
+    // Notify Partner & Send SMS
+    const { rows: [partnerData] } = await client.query(`
+      SELECT ap.first_name, ap.last_name, u.id as user_id, u.mobile 
+      FROM partner_profiles ap 
+      JOIN users u ON u.id = ap.user_id 
+      WHERE ap.id = $1
+    `, [wr.partner_id]);
+
+    if (partnerData) {
       try {
         if (action === 'approve') {
-          await notify.withdrawalApproved(partner.user_id, wr.amount);
+          await notify.withdrawalApproved(partnerData.user_id, wr.amount);
         } else if (action === 'reject') {
-          await notify.withdrawalRejected(partner.user_id, wr.amount, rejectionReason);
-        } else if (action === 'transfer' && utrNumber) {
-          // Success manual transfer
-          await notify.withdrawalApproved(partner.user_id, wr.amount);
+          await notify.withdrawalRejected(partnerData.user_id, wr.amount, rejectionReason);
+        } else if (action === 'transfer' || utrNumber) {
+          const sentUtr = utrNumber || wr.utr || `UTR${Date.now()}`;
+          await notify.withdrawalApproved(partnerData.user_id, wr.amount);
+          
+          // Send SMS notification to Partner upon payment completion
+          if (partnerData.mobile) {
+            const { sendSms } = require('../../services/sms/sms.service');
+            const smsBody = `Dear ${partnerData.first_name || 'Partner'}, your payout of Rs.${parseFloat(wr.amount).toFixed(2)} has been successfully credited to your bank account with UTR: ${sentUtr}. - GharKaPaisa`;
+            await sendSms(partnerData.mobile, smsBody).catch(smsErr => {
+              logger.error('Failed to send payout SMS to partner:', smsErr.message);
+            });
+          }
         }
       } catch (notifyErr) {
         logger.error('Withdrawal notify failed', { error: notifyErr.message });

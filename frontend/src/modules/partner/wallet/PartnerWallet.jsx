@@ -851,6 +851,11 @@ const PartnerWallet = () => {
                         </div>
                         <div style={{ fontSize: '12px', color: C.textLight, marginTop: '4px' }}>
                           Date: {new Date(w.created_at).toLocaleString()}
+                          {(w.utr || w.utr_number) && (
+                            <span style={{ marginLeft: '10px', color: '#10B981', fontWeight: 700, fontFamily: 'monospace' }}>
+                              • UTR: {w.utr || w.utr_number}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>

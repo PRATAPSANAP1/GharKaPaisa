@@ -62,9 +62,6 @@ export default function ManageWithdrawals() {
 
   const handleProcessSubmit = async (e) => {
     e.preventDefault();
-    if (actionType === "approve" && !utrNumber.trim()) {
-      return alert("UTR number is required to approve the withdrawal.");
-    }
     if (actionType === "reject" && !rejectionReason.trim()) {
       return alert("Rejection reason is required to reject the withdrawal.");
     }
@@ -74,7 +71,7 @@ export default function ManageWithdrawals() {
       if (actionType === "approve") {
         await api.post("/admin/withdrawal/approve", {
           id: selectedReq.id,
-          utr_number: utrNumber.trim(),
+          utr_number: utrNumber.trim() || undefined,
           admin_note: adminNote.trim() || undefined,
         });
       } else {
@@ -210,6 +207,13 @@ export default function ManageWithdrawals() {
                           <button onClick={() => { setSelectedReq(req); setShowBankVerificationModal(true); }} style={{ ...S.btn('outline'), fontSize: "12px", padding: "6px 10px" }}>
                             Bank Verification
                           </button>
+                          
+                          {(status === 'approved' || req.status === 'approved' || req.status === 'processed' || req.status === 'transferred') && (
+                            <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, background: `${C.green}15`, color: C.green, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              ✓ Paid {req.utr_number || req.utr ? `(UTR: ${req.utr_number || req.utr})` : '(Auto-Settled)'}
+                            </span>
+                          )}
+
                           {status === 'pending' && (
                             <>
                               <button 
@@ -219,10 +223,10 @@ export default function ManageWithdrawals() {
                                   setActionLoading(true);
                                   try {
                                     await api.patch(`/wallet/withdrawals/${req.id}/process`, { action: 'transfer' });
-                                    alert('Razorpay bank payout initiated successfully!');
+                                    alert('Razorpay bank payout initiated successfully & SMS sent!');
                                     fetchWithdrawals();
                                   } catch (e) {
-                                    alert(e.response?.data?.message || 'Razorpay payout failed. You can use manual UTR transfer.');
+                                    alert(e.response?.data?.message || 'Razorpay payout failed.');
                                   } finally {
                                     setActionLoading(false);
                                   }
@@ -232,7 +236,7 @@ export default function ManageWithdrawals() {
                                 ⚡ Razorpay
                               </button>
                               <button onClick={() => handleOpenProcess(req, "approve")} style={{ ...S.btn('primary'), background: C.green, fontSize: "11px", padding: "6px 8px" }}>
-                                Manual UTR
+                                Approve Payout
                               </button>
                               <button onClick={() => handleOpenProcess(req, "reject")} style={{ background: "transparent", border: `1px solid ${C.red}`, color: C.red, borderRadius: "6px", fontSize: "11px", fontWeight: 700, padding: "6px 8px" }}>
                                 Reject
@@ -287,8 +291,8 @@ export default function ManageWithdrawals() {
             <form onSubmit={handleProcessSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {actionType === 'approve' ? (
                 <div>
-                  <label style={S.label}>Bank UTR / Reference ID *</label>
-                  <input type="text" required value={utrNumber} onChange={e => setUtrNumber(e.target.value)} placeholder="e.g. HDFC984214552" style={S.input} />
+                  <label style={S.label}>Bank UTR / Reference ID (Optional)</label>
+                  <input type="text" value={utrNumber} onChange={e => setUtrNumber(e.target.value)} placeholder="Leave empty for auto-generated UTR..." style={S.input} />
                 </div>
               ) : (
                 <div>

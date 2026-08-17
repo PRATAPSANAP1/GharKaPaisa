@@ -455,13 +455,21 @@ export default function ManageWallet() {
                             </span>
                           </td>
                           <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap', alignItems: 'center' }}>
                               <button
                                 onClick={() => setSelectedWithdrawal(w)}
                                 style={{ ...S.btn('outline'), padding: '6px 10px', fontSize: '11px', color: C.primary, borderColor: C.primary }}
                               >
                                 Review / Details
                               </button>
+                              
+                              {/* If payment is already done (processed/transferred/approved), hide Mark Paid button and display UTR Badge */}
+                              {(w.status === 'processed' || w.status === 'transferred' || w.status === 'approved') && (
+                                <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, background: `${C.green}15`, color: C.green, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  ✓ Paid {w.utr || w.utr_number ? `(UTR: ${w.utr || w.utr_number})` : '(Auto-Settled)'}
+                                </span>
+                              )}
+
                               {w.status === 'pending' && (
                                 <>
                                   <button
@@ -474,17 +482,16 @@ export default function ManageWallet() {
                                   <button
                                     disabled={actionLoading}
                                     onClick={async () => {
-                                      const utr = prompt('Enter UTR Number to mark as manually paid:');
-                                      if (utr === null) return;
-                                      if (!utr.trim()) return alert('UTR number is required');
+                                      const utrInput = prompt('Enter UTR Number to mark as paid (or leave blank to auto-generate):');
+                                      if (utrInput === null) return;
                                       setActionLoading(true);
                                       try {
-                                        await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'transfer', utr_number: utr.trim() });
-                                        alert('Withdrawal settled manually!');
+                                        const res = await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'transfer', utr_number: utrInput.trim() || undefined });
+                                        alert(res.data?.message || 'Withdrawal settled automatically & SMS sent to partner!');
                                         loadWithdrawals();
                                         loadRazorpayAccount();
                                       } catch (e) {
-                                        alert(e.response?.data?.message || 'Failed to process manual settlement');
+                                        alert(e.response?.data?.message || 'Failed to process settlement');
                                       } finally {
                                         setActionLoading(false);
                                       }
