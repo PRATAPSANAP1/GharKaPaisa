@@ -58,6 +58,33 @@ export default function ReferralAnalyticsView() {
     top_performing_teams = []
   } = data;
 
+  // Partner Team Hierarchy State for Super Admin inspection
+  const [selectedPartnerId, setSelectedPartnerId] = useState('');
+  const [partnerMembers, setPartnerMembers] = useState([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
+  const fetchTeamMembersForPartner = async (pId) => {
+    if (!pId) return;
+    setLoadingMembers(true);
+    try {
+      const res = await api.get(`/team/members?partner_id=${pId}&limit=50`);
+      if (res.data?.success) {
+        setPartnerMembers(res.data.data || []);
+      }
+    } catch (e) {
+      console.error('Failed to load partner team members:', e);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
+  useEffect(() => {
+    if (top_performing_teams.length > 0 && !selectedPartnerId) {
+      setSelectedPartnerId(top_performing_teams[0].id);
+      fetchTeamMembersForPartner(top_performing_teams[0].id);
+    }
+  }, [top_performing_teams]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
@@ -121,6 +148,76 @@ export default function ReferralAnalyticsView() {
             <div style={{ fontSize: '22px', fontWeight: 800, color: C.green, marginTop: '4px' }}>+{monthly_registrations}</div>
           </div>
         </div>
+      </div>
+
+      {/* Super Admin Partner Team Commission Inspector */}
+      <div style={{ ...S.card, padding: '20px', background: C.bgSecondary, border: `1px solid ${C.blue}30` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+          <div>
+            <h4 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MdPeople style={{ color: C.blue }} /> Partner Team Commission Split Hierarchy
+            </h4>
+            <span style={{ fontSize: '12px', color: C.textMid }}>
+              Inspect Partner → Team Member percentages set by partners (Super Admin controls overall product rules)
+            </span>
+          </div>
+
+          {top_performing_teams.length > 0 && (
+            <select
+              value={selectedPartnerId}
+              onChange={(e) => {
+                setSelectedPartnerId(e.target.value);
+                fetchTeamMembersForPartner(e.target.value);
+              }}
+              style={{ ...S.input, width: 'auto', padding: '8px 14px', fontSize: '13px', fontWeight: 700 }}
+            >
+              {top_performing_teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  Partner: {t.first_name} {t.last_name} ({t.partner_code})
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {loadingMembers ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: C.textLight, fontSize: '13px' }}>Loading downline team members...</div>
+        ) : partnerMembers.length === 0 ? (
+          <div style={{ padding: '20px', textAlign: 'center', color: C.textLight, fontSize: '13px' }}>No team members in this partner's downline network yet.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ padding: '10px 14px', background: C.card, borderRadius: '10px', fontWeight: 800, fontSize: '13px', color: C.blue, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>👔 Parent Partner</span>
+              <span>↓</span>
+              <span>Downline Team Member Split Breakdown</span>
+            </div>
+            
+            {partnerMembers.map((m) => {
+              const memberPct = parseFloat(m.commission_rate || 90);
+              const partnerPct = parseFloat((100 - memberPct).toFixed(2));
+              return (
+                <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: C.card, borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '14px', color: C.textLight }}>├──</span>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>{m.full_name} ({m.partner_code})</div>
+                      <div style={{ fontSize: '11px', color: C.textLight }}>Mobile: {m.mobile} • Joined: {new Date(m.joined_at).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: C.green, background: `${C.green}15`, padding: '4px 10px', borderRadius: '6px', border: `1px solid ${C.green}30` }}>
+                      Member: {memberPct}% (₹{((1000 * memberPct) / 100).toFixed(0)})
+                    </span>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: C.purple, background: `${C.purple}15`, padding: '4px 10px', borderRadius: '6px', border: `1px solid ${C.purple}30` }}>
+                      Partner Split: {partnerPct}% (₹{((1000 * partnerPct) / 100).toFixed(0)})
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Leaderboards */}
