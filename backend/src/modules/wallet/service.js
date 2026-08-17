@@ -565,7 +565,7 @@ const releaseCommission = async (partnerId, walletId, txnId, amount) => {
 };
 
 // Process withdrawal request
-const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = null, rejectionReason = null, adminNote = null) => {
+const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = null, rejectionReason = null, adminNote = null, payoutOptions = {}) => {
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -741,7 +741,7 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
           await client.query(`UPDATE partner_bank_details SET razorpay_fund_account_id = $1 WHERE partner_id = $2 AND (id = $3 OR $3 IS NULL)`, [fundAccountId, wr.partner_id, wr.bank_account_id || null]);
         }
 
-        const payout = await createRazorpayPayout(fundAccountId, parseFloat(wr.amount), wr.id);
+        const payout = await createRazorpayPayout(fundAccountId, parseFloat(wr.amount), wr.id, payoutOptions);
 
         const payoutId = payout.id;
         const utr = payout.utr || null;

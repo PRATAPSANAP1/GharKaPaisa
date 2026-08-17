@@ -29,6 +29,16 @@ export default function ManageWallet() {
   const [commissions, setCommissions] = useState([]);
   const [reconciliationData, setReconciliationData] = useState(null);
 
+  // RazorpayX Account & Payout State
+  const [razorpayData, setRazorpayData] = useState(null);
+  const [razorpayLoading, setRazorpayLoading] = useState(false);
+  const [razorpayModalOpen, setRazorpayModalOpen] = useState(false);
+  const [payForm, setPayForm] = useState({
+    withdrawal: null,
+    mode: 'IMPS',
+    narration: 'GharKaPaisa Commission'
+  });
+
   // Loadings
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -56,6 +66,20 @@ export default function ManageWallet() {
     txn_type: 'credit',
     description: ''
   });
+
+  const loadRazorpayAccount = async () => {
+    setRazorpayLoading(true);
+    try {
+      const res = await api.get('/wallet/admin/razorpay/balance');
+      if (res.data?.success) {
+        setRazorpayData(res.data.data);
+      }
+    } catch (e) {
+      console.error('Failed to load Razorpay account summary', e);
+    } finally {
+      setRazorpayLoading(false);
+    }
+  };
 
   const loadWithdrawals = async () => {
     setLoading(true);
@@ -146,29 +170,60 @@ export default function ManageWallet() {
   };
 
   useEffect(() => {
+    loadRazorpayAccount();
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 'withdrawals') loadWithdrawals();
     if (activeTab === 'wallets') loadWallets();
     if (activeTab === 'ledger') loadLedger();
     if (activeTab === 'commissions') loadCommissions();
     if (activeTab === 'reconciliation') loadReconciliation();
-  }, [activeTab, wPage, wStatus, oPage, lPage, lType, lStatus, cPage]);
+  }, [activeTab, wPage, wStatus, oPage, oSearch, lPage, lType, lStatus, lSearch, cPage]);
+
+  const handleOpenPayModal = (withdrawal) => {
+    setPayForm({
+      withdrawal,
+      mode: 'IMPS',
+      narration: 'GharKaPaisa Commission'
+    });
+    setRazorpayModalOpen(true);
+  };
+
+  const handleConfirmRazorpayPayment = async () => {
+    if (!payForm.withdrawal) return;
+    setActionLoading(true);
+    try {
+      await api.patch(`/wallet/withdrawals/${payForm.withdrawal.id}/process`, {
+        action: 'transfer',
+        mode: payForm.mode,
+        narration: payForm.narration
+      });
+      alert('Razorpay bank payout initiated successfully!');
+      setRazorpayModalOpen(false);
+      if (selectedWithdrawal) setSelectedWithdrawal(null);
+      loadWithdrawals();
+      loadRazorpayAccount();
+    } catch (e) {
+      alert(e.response?.data?.message || 'Razorpay payout failed.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleAdjustSubmit = async (e) => {
     e.preventDefault();
-    const amt = parseFloat(adjustForm.amount);
-    if (!adjustForm.partner_id) return alert('Please enter Partner Code or ID');
-    if (isNaN(amt) || amt <= 0) return alert('Amount must be positive');
-
     setActionLoading(true);
     try {
-      await api.post('/superadmin/wallet/adjust', adjustForm);
-      alert('Wallet balance & ledger audit updated successfully!');
+      await api.post('/wallet/admin/adjust', adjustForm);
+      alert('Wallet adjustment applied successfully!');
       setAdjustModalOpen(false);
+      setAdjustForm({ partner_id: '', amount: '', txn_type: 'credit', description: '' });
       if (activeTab === 'wallets') loadWallets();
       if (activeTab === 'ledger') loadLedger();
+      loadRazorpayAccount();
     } catch (err) {
-      alert(err.response?.data?.message || 'Wallet balance & audit trail updated.');
-      setAdjustModalOpen(false);
+      alert(err.response?.data?.message || 'Adjustment failed');
     } finally {
       setActionLoading(false);
     }
@@ -206,16 +261,23 @@ export default function ManageWallet() {
   };
 
   const handleExportLedgerCSV = () => {
-    if (!ledger.length) return alert('No ledger records to export.');
-    const headers = ['Transaction ID', 'Partner ID', 'Type', 'Amount (INR)', 'Description', 'Status', 'Date'];
+    if (!ledger.length) return alert('No ledger data to export');
+    const headers = ['ID', 'Date', 'Partner Code', 'Type', 'Credit', 'Debit', 'Status', 'Description'];
     const rows = ledger.map(l => [
-      l.id, l.partner_id, l.type || l.transaction_type,
-      l.credit > 0 ? l.credit : `-${l.debit}`, l.description, l.status, new Date(l.created_at).toLocaleDateString()
+      l.id,
+      new Date(l.created_at).toLocaleString(),
+      l.partner_code || '',
+      l.transaction_type,
+      l.credit || 0,
+      l.debit || 0,
+      l.status,
+      `"${(l.description || '').replace(/"/g, '""')}"`
     ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
-    link.href = encodeURI(csvContent);
-    link.download = `Wallet_Ledger_Export_${new Date().toISOString().split('T')[0]}.csv`;
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `GharKaPaisa_Ledger_Export_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -239,6 +301,75 @@ export default function ManageWallet() {
             <MdFileDownload size={18} /> Export Ledger CSV
           </button>
         </div>
+      </div>
+
+      {/* RazorpayX & Ledger Wallet Overview Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+        
+        {/* Card 1: Company RazorpayX Payout Account Balance */}
+        <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFFFFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, right: 0, width: '6px', height: '100%', background: C.teal }}></div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: C.teal, letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>⚡ RAZORPAYX PAYOUT ACCOUNT</span>
+                <span style={{ fontSize: '10px', background: '#DCFCE7', color: '#15803D', padding: '2px 8px', borderRadius: '12px', fontWeight: 700 }}>
+                  {razorpayData?.account_status || 'CONNECTED'}
+                </span>
+              </div>
+              <button
+                onClick={loadRazorpayAccount}
+                disabled={razorpayLoading}
+                style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer', color: C.textMid }}
+              >
+                {razorpayLoading ? 'Syncing...' : '↻ Refresh'}
+              </button>
+            </div>
+            <div style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: '6px 0 2px 0' }}>
+              ₹{parseFloat(razorpayData?.available_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </div>
+            <div style={{ fontSize: '12px', color: C.textLight }}>
+              Actual liquid funds available in company's RazorpayX account for payouts
+            </div>
+          </div>
+          
+          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: C.textMid }}>
+            <div>Account: <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{razorpayData?.account_number || 'RAZORPAYX_ACC'}</span></div>
+            <div>Mode: <strong>{razorpayData?.is_simulated ? 'Simulator Mode' : 'Live API'}</strong></div>
+          </div>
+        </div>
+
+        {/* Card 2: Internal GharKaPaisa Partner Liability Wallet */}
+        <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFFFFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, right: 0, width: '6px', height: '100%', background: C.gold }}></div>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: C.gold, letterSpacing: '0.5px', marginBottom: '8px' }}>
+              🏛️ GHARKAPAISA PARTNER LIABILITY
+            </div>
+            <div style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: '6px 0 2px 0' }}>
+              ₹{parseFloat(razorpayData?.partner_liability || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </div>
+            <div style={{ fontSize: '12px', color: C.textLight }}>
+              Total partner available balances owed across GharKaPaisa internal ledger
+            </div>
+          </div>
+
+          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: `1px solid ${C.border}`, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', fontSize: '11px', textAlign: 'center' }}>
+            <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '6px', borderRadius: '6px' }}>
+              <div style={{ color: C.textLight, fontSize: '10px' }}>TODAY'S PAYOUTS</div>
+              <strong style={{ color: C.green }}>₹{parseFloat(razorpayData?.todays_payouts || 0).toLocaleString('en-IN')}</strong>
+            </div>
+            <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '6px', borderRadius: '6px' }}>
+              <div style={{ color: C.textLight, fontSize: '10px' }}>PENDING</div>
+              <strong style={{ color: C.gold }}>₹{parseFloat(razorpayData?.pending_payouts || 0).toLocaleString('en-IN')}</strong>
+            </div>
+            <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '6px', borderRadius: '6px' }}>
+              <div style={{ color: C.textLight, fontSize: '10px' }}>FAILED</div>
+              <strong style={{ color: C.red }}>₹{parseFloat(razorpayData?.failed_payouts || 0).toLocaleString('en-IN')}</strong>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* Tabs */}
@@ -335,19 +466,7 @@ export default function ManageWallet() {
                                 <>
                                   <button
                                     disabled={actionLoading}
-                                    onClick={async () => {
-                                      if (!window.confirm(`Initiate automated Razorpay bank transfer of ₹${w.amount} to ${w.first_name}?`)) return;
-                                      setActionLoading(true);
-                                      try {
-                                        await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'transfer' });
-                                        alert('Razorpay bank payout initiated successfully!');
-                                        loadWithdrawals();
-                                      } catch (e) {
-                                        alert(e.response?.data?.message || 'Razorpay payout failed. You can use manual UTR transfer.');
-                                      } finally {
-                                        setActionLoading(false);
-                                      }
-                                    }}
+                                    onClick={() => handleOpenPayModal(w)}
                                     style={{ ...S.btn('primary'), padding: '6px 10px', fontSize: '11px', background: C.teal, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                                   >
                                     ⚡ Pay via Razorpay
@@ -363,6 +482,7 @@ export default function ManageWallet() {
                                         await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'transfer', utr_number: utr.trim() });
                                         alert('Withdrawal settled manually!');
                                         loadWithdrawals();
+                                        loadRazorpayAccount();
                                       } catch (e) {
                                         alert(e.response?.data?.message || 'Failed to process manual settlement');
                                       } finally {
@@ -711,26 +831,117 @@ export default function ManageWallet() {
                   </button>
                   <button
                     disabled={actionLoading}
-                    onClick={async () => {
-                      if (!window.confirm(`Approve & process Razorpay payout of ₹${selectedWithdrawal.amount} to ${selectedWithdrawal.first_name}?`)) return;
-                      setActionLoading(true);
-                      try {
-                        await api.patch(`/wallet/withdrawals/${selectedWithdrawal.id}/process`, { action: 'transfer' });
-                        alert('Razorpay payout executed successfully!');
-                        setSelectedWithdrawal(null);
-                        loadWithdrawals();
-                      } catch (e) {
-                        alert(e.response?.data?.message || 'Payout failed');
-                      } finally {
-                        setActionLoading(false);
-                      }
-                    }}
+                    onClick={() => handleOpenPayModal(selectedWithdrawal)}
                     style={{ ...S.btn('primary'), background: C.teal, padding: '8px 14px', fontSize: '12px' }}
                   >
                     ⚡ Approve & Pay Payout
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL: CONFIRM RAZORPAY PAYMENT ═══ */}
+      {razorpayModalOpen && payForm.withdrawal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '16px' }}>
+          <div style={{ ...S.card, background: isDark ? '#18181B' : '#FFFFFF', maxWidth: '520px', width: '100%', padding: '24px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: C.text }}>Confirm Razorpay Payment</h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>Business Account to Beneficiary Bank Payout</span>
+              </div>
+              <button onClick={() => setRazorpayModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={22} /></button>
+            </div>
+
+            {/* Breakdown Grid */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '12px', borderRadius: '10px' }}>
+                  <div style={{ fontSize: '11px', color: C.textLight, textTransform: 'uppercase', fontWeight: 700 }}>Partner</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: C.text }}>{payForm.withdrawal.first_name} {payForm.withdrawal.last_name}</div>
+                  <div style={{ fontSize: '11px', color: C.textLight, fontFamily: 'monospace' }}>{payForm.withdrawal.partner_code}</div>
+                </div>
+                <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '12px', borderRadius: '10px' }}>
+                  <div style={{ fontSize: '11px', color: C.textLight, textTransform: 'uppercase', fontWeight: 700 }}>Payout Amount</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: C.primary }}>₹{parseFloat(payForm.withdrawal.amount).toFixed(2)}</div>
+                  <div style={{ fontSize: '11px', color: C.green }}>Net: ₹{parseFloat(payForm.withdrawal.net_amount || (payForm.withdrawal.amount * 0.98)).toFixed(2)}</div>
+                </div>
+              </div>
+
+              {/* Bank & Razorpay Identifiers */}
+              <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '12px', borderRadius: '10px', fontSize: '12px' }}>
+                <div style={{ fontSize: '11px', color: C.textLight, textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>Destination Bank Account</div>
+                <div><strong>Bank:</strong> {payForm.withdrawal.bank_name || 'N/A'}</div>
+                <div><strong>Account:</strong> <span style={{ fontFamily: 'monospace' }}>{payForm.withdrawal.account_number || 'N/A'}</span></div>
+                <div><strong>IFSC:</strong> <span style={{ fontFamily: 'monospace' }}>{payForm.withdrawal.ifsc_code || payForm.withdrawal.ifsc || 'N/A'}</span></div>
+                {payForm.withdrawal.razorpay_contact_id && (
+                  <div style={{ marginTop: '4px', fontSize: '11px', color: C.textLight, fontFamily: 'monospace' }}>Contact ID: {payForm.withdrawal.razorpay_contact_id}</div>
+                )}
+              </div>
+
+              {/* Mode Selector */}
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: C.text, display: 'block', marginBottom: '6px' }}>Transfer Mode</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  {['IMPS', 'NEFT', 'RTGS'].map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setPayForm({ ...payForm, mode: m })}
+                      style={{
+                        padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                        border: `1px solid ${payForm.mode === m ? C.teal : C.border}`,
+                        background: payForm.mode === m ? `${C.teal}15` : (isDark ? '#27272A' : '#FFF'),
+                        color: payForm.mode === m ? C.teal : C.text,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Narration */}
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: C.text, display: 'block', marginBottom: '4px' }}>Payout Narration</label>
+                <input
+                  type="text"
+                  value={payForm.narration}
+                  onChange={e => setPayForm({ ...payForm, narration: e.target.value })}
+                  style={{ ...S.input, fontSize: '13px' }}
+                />
+              </div>
+
+              {/* Razorpay Balance Indicator */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', background: isDark ? '#27272A' : '#EFF6FF', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
+                <span style={{ color: C.textLight }}>Available RazorpayX Balance:</span>
+                <strong style={{ color: (razorpayData?.available_balance || 0) < payForm.withdrawal.amount ? C.red : C.green }}>
+                  ₹{parseFloat(razorpayData?.available_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </strong>
+              </div>
+
+              {/* Warning Notice */}
+              <div style={{ fontSize: '12px', color: '#D97706', background: '#FEF3C7', padding: '10px 12px', borderRadius: '8px', border: '1px solid #FCD34D' }}>
+                ⚠ <strong>This payment will transfer real money to the partner's bank account.</strong>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setRazorpayModalOpen(false)} style={{ ...S.btn('outline'), padding: '10px 16px', fontSize: '13px' }}>Cancel</button>
+              <button
+                disabled={actionLoading || (razorpayData?.available_balance || 0) < payForm.withdrawal.amount}
+                onClick={handleConfirmRazorpayPayment}
+                style={{ ...S.btn('primary'), background: C.teal, padding: '10px 20px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                {actionLoading ? 'Initiating Payout...' : 'Confirm & Pay'}
+              </button>
             </div>
           </div>
         </div>

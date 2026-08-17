@@ -563,21 +563,59 @@ const listWithdrawals = async (req, res, next) => {
   }
 };
 
+// GET /wallet/admin/razorpay/balance (Super Admin Razorpay Account details & live balance)
+const getRazorpayAccountSummary = async (req, res, next) => {
+  try {
+    const { getRazorpayBalance } = require('../../utils/helpers/razorpay');
+    const balData = await getRazorpayBalance();
+
+    const [liabilityRes, payoutsRes, todayRes, pendingRes, failedRes] = await Promise.all([
+      query(`SELECT COALESCE(SUM(available_balance), 0) as total FROM partner_wallets`),
+      query(`SELECT COALESCE(SUM(amount), 0) as total FROM wallet_withdrawals WHERE status IN ('transferred', 'processed', 'successful', 'SUCCESS')`),
+      query(`SELECT COALESCE(SUM(amount), 0) as total FROM wallet_withdrawals WHERE status IN ('transferred', 'processed', 'successful', 'SUCCESS') AND created_at >= CURRENT_DATE`),
+      query(`SELECT COALESCE(SUM(amount), 0) as total FROM wallet_withdrawals WHERE status = 'pending'`),
+      query(`SELECT COALESCE(SUM(amount), 0) as total FROM wallet_withdrawals WHERE status IN ('failed', 'rejected')`)
+    ]);
+
+    return success(res, {
+      account_status: 'Connected',
+      account_number: balData.account_number,
+      available_balance: parseFloat(balData.balance || 0),
+      is_simulated: balData.is_simulated || false,
+      currency: balData.currency || 'INR',
+      partner_liability: parseFloat(liabilityRes.rows[0].total || 0),
+      total_payouts: parseFloat(payoutsRes.rows[0].total || 0),
+      todays_payouts: parseFloat(todayRes.rows[0].total || 0),
+      pending_payouts: parseFloat(pendingRes.rows[0].total || 0),
+      failed_payouts: parseFloat(failedRes.rows[0].total || 0),
+      last_synced: balData.updated_at || new Date().toISOString()
+    }, 'Razorpay account summary loaded successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 // PATCH /wallet/withdrawals/:id/process (Super Admin / Admin approval)
 const processWithdrawalRequest = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { approved, utr_number, rejection_reason, admin_note, action } = req.body;
+    const { approved, utr_number, rejection_reason, admin_note, action, mode, narration } = req.body;
 
     let determinedAction = action;
     if (!determinedAction) {
       determinedAction = approved ? (utr_number ? 'transfer' : 'approve') : 'reject';
     }
 
-    await processWithdrawal(id, determinedAction, req.user.id, utr_number, rejection_reason, admin_note);
+    const payoutOptions = {
+      mode: mode || 'IMPS',
+      narration: narration || 'GharKaPaisa Commission',
+      purpose: 'payout'
+    };
+
+    await processWithdrawal(id, determinedAction, req.user.id, utr_number, rejection_reason, admin_note, payoutOptions);
 
     const actionName = determinedAction === 'transfer' ? 'TRANSFER_WITHDRAWAL' : (determinedAction === 'approve' ? 'APPROVE_WITHDRAWAL' : 'REJECT_WITHDRAWAL');
-    await logAction(req, actionName, id, { utr_number, rejection_reason, admin_note });
+    await logAction(req, actionName, id, { utr_number, rejection_reason, admin_note, mode, narration });
 
     return success(res, {}, `Withdrawal successfully processed: ${determinedAction}`);
   } catch (err) {
@@ -1775,6 +1813,7 @@ module.exports = {
   requestWithdrawal,
   listWithdrawals,
   processWithdrawalRequest,
+  getRazorpayAccountSummary,
   getCaseSummary,
   getSelfWallet,
   getSelfTransactions,

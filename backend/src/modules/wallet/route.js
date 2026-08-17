@@ -20,6 +20,7 @@ router.put('/bank-details', requireApprovedPartnerOrAdmin, validateBankDetails, 
 
 // Withdrawals Routing (Admin & Polymorphic Partner Handlers)
 router.get('/admin/overview', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.getWalletOverview);
+router.get('/admin/razorpay/balance', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.getRazorpayAccountSummary);
 router.post('/admin/adjust', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.adminAdjustWalletController);
 router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
 router.get('/my-withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
