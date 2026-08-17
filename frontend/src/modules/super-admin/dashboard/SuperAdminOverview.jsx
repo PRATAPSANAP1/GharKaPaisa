@@ -368,20 +368,21 @@ export default function SuperAdminOverview() {
             gap: '14px'
           }}>
             {[
-              { label: 'Total Admins', value: stats.admins, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.25)', icon: '🛡️' },
-              { label: 'Active Admins', value: stats.activeAdmins, color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)', border: 'rgba(16, 185, 129, 0.25)', icon: '⚡' },
-              { label: 'Pending KYC', value: stats.pendingKycPartners, color: '#F97316', bg: 'rgba(249, 115, 22, 0.1)', border: 'rgba(249, 115, 22, 0.25)', icon: '⏳' },
-              { label: 'Total Leads', value: stats.totalApps, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.25)', icon: '📄' },
-              { label: 'Pending Leads', value: stats.pendingApps, color: '#EAB308', bg: 'rgba(234, 179, 8, 0.1)', border: 'rgba(234, 179, 8, 0.25)', icon: '🕒' },
-              { label: 'Approved Leads', value: stats.approvedApps, color: '#059669', bg: 'rgba(5, 150, 105, 0.1)', border: 'rgba(5, 150, 105, 0.25)', icon: '✅' },
-              { label: 'Rejected Leads', value: stats.rejectedApps, color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.25)', icon: '❌' },
-              { label: 'Commission Paid', value: `₹${parseFloat(stats.totalCommissionPaid).toLocaleString('en-IN')}`, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)', border: 'rgba(139, 92, 246, 0.25)', icon: '💰' },
-              { label: 'Pending Withdrawals', value: stats.pendingWithdrawals, color: '#EC4899', bg: 'rgba(236, 72, 153, 0.1)', border: 'rgba(236, 72, 153, 0.25)', icon: '💳' },
-              { label: 'Total Banks', value: stats.banks, color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.1)', border: 'rgba(6, 182, 212, 0.25)', icon: '🏦' },
-              { label: 'Total Products', value: stats.products, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.1)', border: 'rgba(99, 102, 241, 0.25)', icon: '💳' },
+              { label: 'Total Admins', value: stats.admins, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)', icon: '🛡️', action: () => setActiveTab('admins') },
+              { label: 'Active Admins', value: stats.activeAdmins, color: '#10B981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)', icon: '⚡', action: () => setActiveTab('admins') },
+              { label: 'Pending KYC', value: stats.pendingKycPartners, color: '#F97316', bg: 'rgba(249, 115, 22, 0.12)', border: 'rgba(249, 115, 22, 0.3)', icon: '⏳', action: () => navigate('/super-admin/partners?kyc_status=pending') },
+              { label: 'Total Leads', value: stats.totalApps, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.3)', icon: '📄', action: () => navigate('/super-admin/leads') },
+              { label: 'Pending Leads', value: stats.pendingApps, color: '#EAB308', bg: 'rgba(234, 179, 8, 0.12)', border: 'rgba(234, 179, 8, 0.3)', icon: '🕒', action: () => navigate('/super-admin/leads?status=pending') },
+              { label: 'Approved Leads', value: stats.approvedApps, color: '#059669', bg: 'rgba(5, 150, 105, 0.12)', border: 'rgba(5, 150, 105, 0.3)', icon: '✅', action: () => navigate('/super-admin/leads?status=approved') },
+              { label: 'Rejected Leads', value: stats.rejectedApps, color: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.3)', icon: '❌', action: () => navigate('/super-admin/leads?status=rejected') },
+              { label: 'Commission Paid', value: `₹${parseFloat(stats.totalCommissionPaid).toLocaleString('en-IN')}`, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.3)', icon: '💰', action: () => setActiveTab('financials') },
+              { label: 'Pending Withdrawals', value: stats.pendingWithdrawals, color: '#EC4899', bg: 'rgba(236, 72, 153, 0.12)', border: 'rgba(236, 72, 153, 0.3)', icon: '💳', action: () => navigate('/super-admin/wallet?tab=withdrawals') },
+              { label: 'Total Banks', value: stats.banks, color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.3)', icon: '🏦', action: () => navigate('/super-admin/banks') },
+              { label: 'Total Products', value: stats.products, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.3)', icon: '📦', action: () => navigate('/super-admin/products') },
             ].map((kpi, idx) => (
               <div
                 key={idx}
+                onClick={kpi.action}
                 style={{
                   background: C.card,
                   borderRadius: '14px',
@@ -389,29 +390,53 @@ export default function SuperAdminOverview() {
                   padding: '16px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '14px'
+                  gap: '14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = `0 8px 16px ${kpi.color}25`;
+                  e.currentTarget.style.borderColor = kpi.color;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderColor = kpi.border;
                 }}
               >
                 <div style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '10px',
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
                   background: kpi.bg,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '20px',
-                  flexShrink: 0
+                  fontSize: '22px',
+                  flexShrink: 0,
+                  boxShadow: `inset 0 0 0 1px ${kpi.border}`
                 }}>
                   {kpi.icon}
                 </div>
-                <div>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: '20px', fontWeight: 900, color: C.text, lineHeight: 1.1 }}>
                     {loading ? '...' : kpi.value}
                   </div>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, marginTop: '2px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, marginTop: '3px' }}>
                     {kpi.label}
                   </div>
+                </div>
+                <div style={{
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  color: kpi.color,
+                  opacity: 0.8,
+                  alignSelf: 'flex-start'
+                }}>
+                  ➔
                 </div>
               </div>
             ))}
