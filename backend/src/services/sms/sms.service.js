@@ -171,8 +171,23 @@ const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
   return await sendSms(to, body);
 };
 
+/**
+ * Generic Transactional SMS Template function usable anywhere on the platform
+ * 
+ * @param {string} to - Recipient mobile number
+ * @param {string} recipientName - Name of the user/partner/customer
+ * @param {string} messageContent - Main update/alert message
+ * @returns {Promise<boolean>}
+ */
+const sendGenericNotificationSms = async (to, recipientName, messageContent) => {
+  const name = recipientName ? recipientName.trim() : 'User';
+  const body = `Dear ${name}, ${messageContent} - GharKaPaisa`;
+  return await sendSms(to, body);
+};
+
 module.exports = { 
   sendSms,
+  sendGenericNotificationSms,
   sendApplyStep1Sms,
   sendPostApplyStep2Sms
 };
