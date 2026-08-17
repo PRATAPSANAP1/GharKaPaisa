@@ -156,7 +156,7 @@ export default function SuperAdminCommission() {
                 {applications.map((app) => {
                   const commStatus = (app.commission_status || 'pending').toLowerCase();
                   const isReleased = commStatus === 'released';
-                  const isHeld = commStatus === 'held';
+                  const isHeld = commStatus === 'held' || commStatus === 'on_hold';
                   const isProc = processingId === app.id;
 
                   return (

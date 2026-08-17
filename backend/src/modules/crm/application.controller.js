@@ -3183,14 +3183,14 @@ async function holdCommission(req, res, next) {
     }
 
     await query(
-      `UPDATE applications SET commission_status = 'held', updated_at = NOW() WHERE id = $1`,
+      `UPDATE applications SET commission_status = 'on_hold', updated_at = NOW() WHERE id = $1`,
       [id]
     );
 
     return success(res, {
       application_id: id,
       app_number: app.app_number,
-      commission_status: 'held'
+      commission_status: 'on_hold'
     }, 'Commission has been put on hold.');
   } catch (err) {
     next(err);

@@ -650,9 +650,6 @@ export default function ManageApplications() {
                         <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
                           <MdVisibility /> Review
                         </button>
-                        <button onClick={() => setVerifyModalApp(app)} style={{ border: `1px solid ${C.primary}40`, background: `${C.primary}12`, color: C.primary, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                          ✏️ Edit
-                        </button>
                         <button onClick={() => setVerifyModalApp(app)} style={{ border: `1px solid ${C.teal}40`, background: `${C.teal}12`, color: C.teal, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
                           Verify Details
                         </button>
@@ -804,126 +801,27 @@ export default function ManageApplications() {
 
             </div>
 
-            {/* Dual Column details */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px' }}>
-              
-              {/* Left Column: Timeline Logs & Uploaded Docs */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                
-                {/* Timeline activity stream */}
-                <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.text, margin: '0 0 12px' }}>Verification Lifecycle Log</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderLeft: `2px solid ${C.border}`, paddingLeft: '14px' }}>
-                    {timelines.length === 0 ? (
-                      <span style={{ fontSize: '12.5px', color: C.textLight }}>No activity logs yet.</span>
-                    ) : (
-                      timelines.map((t, idx) => (
-                        <div key={idx} style={{ position: 'relative', fontSize: '12.5px' }}>
-                          <div style={{ position: 'absolute', left: '-20px', top: '4px', width: '8px', height: '8px', borderRadius: '50%', background: C.primary }} />
-                          <div style={{ fontWeight: 700, color: C.text }}>{t.activity}</div>
-                          <div style={{ color: C.textLight, margin: '2px 0' }}>{t.remarks || '—'}</div>
-                          <span style={{ fontSize: '10.5px', color: C.textLight }}>
-                            {new Date(t.performed_at).toLocaleString()} • By {t.performed_by_name || 'System'}
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Documents Management */}
-                <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.text, margin: '0 0 12px' }}>Customer Documents Verified</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {documents.length === 0 ? (
-                      <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '8px', textAlign: 'center', fontSize: '12.5px', color: C.textLight }}>
-                        No files uploaded for this application yet.
-                      </div>
-                    ) : (
-                      documents.map((doc) => (
-                        <div key={doc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '10px 14px', borderRadius: '8px' }}>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: 700 }}>{doc.document_type}</div>
-                            <span style={{ fontSize: '10.5px', color: C.textLight }}>
-                              Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <span style={{
-                              fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '10px',
-                              background: doc.status === 'verified' ? `${C.green}15` : `${C.gold}15`,
-                              color: doc.status === 'verified' ? C.green : C.gold
-                            }}>{doc.status.toUpperCase()}</span>
-                            <a href={doc.file_url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: C.primary, textDecoration: 'none', fontWeight: 700 }}>
-                              Download
-                            </a>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
+            {/* Verification Lifecycle Log Stream */}
+            <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+              <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                📜 Verification Lifecycle Log
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderLeft: `2px solid ${C.primary}`, paddingLeft: '14px' }}>
+                {timelines.length === 0 ? (
+                  <span style={{ fontSize: '12.5px', color: C.textLight }}>No activity logs recorded yet.</span>
+                ) : (
+                  timelines.map((t, idx) => (
+                    <div key={idx} style={{ position: 'relative', fontSize: '12.5px' }}>
+                      <div style={{ position: 'absolute', left: '-20px', top: '4px', width: '8px', height: '8px', borderRadius: '50%', background: C.primary }} />
+                      <div style={{ fontWeight: 700, color: C.text }}>{t.activity}</div>
+                      <div style={{ color: C.textLight, margin: '2px 0' }}>{t.remarks || '—'}</div>
+                      <span style={{ fontSize: '10.5px', color: C.textLight }}>
+                        {new Date(t.performed_at).toLocaleString()} • By {t.performed_by_name || 'System'}
+                      </span>
+                    </div>
+                  ))
+                )}
               </div>
-
-              {/* Right Column: Private, Internal and Public Notes */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.text, margin: 0 }}>Internal & External Notes Audit</h4>
-                
-                {/* Notes Stream */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '250px', overflowY: 'auto' }}>
-                  {notes.length === 0 ? (
-                    <span style={{ fontSize: '12px', color: C.textLight }}>No notes found.</span>
-                  ) : (
-                    notes.map((n) => (
-                      <div key={n.id} style={{
-                        background: n.visibility === 'private' ? `${C.red}08` : n.visibility === 'internal' ? `${C.gold}08` : C.bgSecondary,
-                        borderLeft: `3px solid ${n.visibility === 'private' ? C.red : n.visibility === 'internal' ? C.gold : C.primary}`,
-                        padding: '10px', borderRadius: '6px', fontSize: '12.5px'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: C.textLight, marginBottom: '2px' }}>
-                          <strong>{n.writer_name} ({n.writer_role})</strong>
-                          <span>{new Date(n.created_at).toLocaleDateString()}</span>
-                        </div>
-                        <div style={{ color: C.text }}>{n.note}</div>
-                        <span style={{ display: 'inline-block', marginTop: '4px', fontSize: '9.5px', textTransform: 'uppercase', fontWeight: 700, color: C.textLight }}>
-                          Visibility: {n.visibility}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Add Note Form */}
-                <form onSubmit={handleAddNote} style={{ display: 'flex', flexDirection: 'column', gap: '10px', background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
-                  <div>
-                    <label style={S.label}>Note Content *</label>
-                    <textarea 
-                      required 
-                      rows={2} 
-                      placeholder="Type details..." 
-                      style={S.input}
-                      value={noteForm.note}
-                      onChange={e => setNoteForm({ ...noteForm, note: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label style={S.label}>Visibility Scope</label>
-                    <select 
-                      style={S.input} 
-                      value={noteForm.visibility}
-                      onChange={e => setNoteForm({ ...noteForm, visibility: e.target.value })}
-                    >
-                      {VISIBILITY_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
-                    </select>
-                  </div>
-                  <button type="submit" disabled={postingNote} style={{ ...S.btn('primary'), alignSelf: 'flex-end', padding: '6px 14px', fontSize: '12.5px' }}>
-                    {postingNote ? 'Saving...' : 'Save Note'}
-                  </button>
-                </form>
-
-              </div>
-
             </div>
 
           </div>
