@@ -1687,7 +1687,7 @@ const getPendingCommissions = async (req, res, next) => {
       query(`
         SELECT COUNT(DISTINCT wl.id) as count
         FROM wallet_ledger wl
-        WHERE wl.status = 'Pending Approval' AND wl.credit > 0
+        WHERE LOWER(COALESCE(wl.status::text, '')) IN ('pending', 'pending approval', 'on_hold', 'held', 'processing') AND wl.credit > 0
       `),
       query(`
         SELECT wl.id, wl.credit, wl.created_at, wl.status, wl.description,
@@ -1697,7 +1697,7 @@ const getPendingCommissions = async (req, res, next) => {
         JOIN partner_profiles ap ON ap.id = wl.partner_id
         LEFT JOIN applications a ON a.id = wl.application_id
         LEFT JOIN products p ON p.id = a.product_id
-        WHERE wl.status = 'Pending Approval' AND wl.credit > 0
+        WHERE LOWER(COALESCE(wl.status::text, '')) IN ('pending', 'pending approval', 'on_hold', 'held', 'processing') AND wl.credit > 0
         ORDER BY wl.created_at DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset])
