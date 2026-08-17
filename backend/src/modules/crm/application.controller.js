@@ -1051,7 +1051,7 @@ const listApplications = async (req, res, next) => {
           c.employment_type,
           c.monthly_income,
           p.name as product_name,
-          p.category,
+          p.category::text as category,
           b.name as bank_name,
           b.short_code as bank_code,
           ap.partner_code,
@@ -1101,7 +1101,7 @@ const listApplications = async (req, res, next) => {
           c.employment_type,
           c.monthly_income,
           p.name as product_name,
-          p.category,
+          p.category::text as category,
           COALESCE(b.name, 'Bank Partner') as bank_name,
           COALESCE(b.short_code, 'LEAD') as bank_code,
           ap.partner_code,
@@ -1149,12 +1149,12 @@ const listApplications = async (req, res, next) => {
         AND ($13::uuid IS NULL OR combined.submitted_by = $13::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $13::uuid OR id = $13::uuid))
         AND (
           $14::text IS NULL OR $14::text = '' OR $14::text = 'all'
-          OR ($14::text = 'credit_card' AND (LOWER(combined.category) LIKE '%credit%' OR LOWER(combined.category) LIKE '%card%'))
-          OR ($14::text = 'personal_loan' AND (LOWER(combined.category) LIKE '%personal%'))
-          OR ($14::text = 'business_loan' AND (LOWER(combined.category) LIKE '%business%'))
-          OR ($14::text = 'insurance' AND (LOWER(combined.category) LIKE '%insurance%'))
-          OR ($14::text = 'utility' AND (LOWER(combined.category) LIKE '%utilit%' OR LOWER(combined.category) LIKE '%recharge%'))
-          OR (LOWER(combined.category) = LOWER($14::text))
+          OR ($14::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%'))
+          OR ($14::text = 'personal_loan' AND (LOWER(combined.category::text) LIKE '%personal%'))
+          OR ($14::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
+          OR ($14::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
+          OR ($14::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
+          OR (LOWER(combined.category::text) = LOWER($14::text))
         )
         ${opHeadBankFilterSQL}
       ORDER BY combined.created_at DESC
@@ -1190,14 +1190,14 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, a.submitted_by, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category
+        SELECT a.id, a.partner_id, a.status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, a.submitted_by, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         UNION ALL
-        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(l.created_by, c.created_by) as submitted_by, COALESCE(l.process_type, l.source, 'linked_share') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category
+        SELECT l.id, l.partner_id, l.status::text, l.product_id, p.bank_id, COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(l.created_by, c.created_by) as submitted_by, COALESCE(l.process_type, l.source, 'linked_share') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category
         FROM leads l
         LEFT JOIN customers c ON c.id = l.customer_id OR (l.customer_id IS NULL AND c.mobile = l.mobile)
         LEFT JOIN products p ON p.id = l.product_id
@@ -1232,12 +1232,12 @@ const listApplications = async (req, res, next) => {
         AND ($11::uuid IS NULL OR combined.submitted_by = $11::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $11::uuid OR id = $11::uuid))
         AND (
           $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
-          OR ($12::text = 'credit_card' AND (LOWER(combined.category) LIKE '%credit%' OR LOWER(combined.category) LIKE '%card%'))
-          OR ($12::text = 'personal_loan' AND (LOWER(combined.category) LIKE '%personal%'))
-          OR ($12::text = 'business_loan' AND (LOWER(combined.category) LIKE '%business%'))
-          OR ($12::text = 'insurance' AND (LOWER(combined.category) LIKE '%insurance%'))
-          OR ($12::text = 'utility' AND (LOWER(combined.category) LIKE '%utilit%' OR LOWER(combined.category) LIKE '%recharge%'))
-          OR (LOWER(combined.category) = LOWER($12::text))
+          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%'))
+          OR ($12::text = 'personal_loan' AND (LOWER(combined.category::text) LIKE '%personal%'))
+          OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
+          OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
+          OR ($12::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
+          OR (LOWER(combined.category::text) = LOWER($12::text))
         )
         ${opHeadBankFilterSQL}
     `, countQueryParams);
