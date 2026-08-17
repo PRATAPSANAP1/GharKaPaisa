@@ -460,6 +460,12 @@ export default function SuperAdminOverview() {
                   <strong style={{ color: '#EF4444' }}>{stats.rejectedApps}</strong>
                 </div>
               </div>
+              <button 
+                onClick={() => navigate('/super-admin/crm')} 
+                style={{ marginTop: '14px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: C.teal, color: '#fff', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                Open Applications CRM →
+              </button>
             </div>
 
             <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
