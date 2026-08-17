@@ -71,6 +71,8 @@ const PartnerWallet = () => {
     branch_name: '',
     is_verified: false
   });
+  const [allBankAccounts, setAllBankAccounts] = useState([]);
+  const [selectedBankId, setSelectedBankId] = useState('');
   const [loadingBank, setLoadingBank] = useState(true);
   const [savingBank, setSavingBank] = useState(false);
   const [kycStatus, setKycStatus] = useState('draft');
@@ -135,6 +137,12 @@ const PartnerWallet = () => {
       const res = await api.get('/wallet/bank-details');
       if (res.data?.success && res.data.data) {
         setBankDetails(prev => ({ ...prev, ...res.data.data }));
+      }
+      const allRes = await api.get('/wallet/bank-details/all');
+      if (allRes.data?.success && Array.isArray(allRes.data.data) && allRes.data.data.length > 0) {
+        setAllBankAccounts(allRes.data.data);
+        const primary = allRes.data.data.find(b => b.is_primary) || allRes.data.data[0];
+        if (primary && !selectedBankId) setSelectedBankId(primary.id);
       }
     } catch (e) {
       console.error('Failed to fetch bank details:', e);
@@ -236,7 +244,8 @@ const PartnerWallet = () => {
       const res = await api.post('/wallet/withdraw/otp/verify', {
         otp: otpCode,
         amount: parseFloat(withdrawAmount),
-        remarks: withdrawRemarks
+        remarks: withdrawRemarks,
+        bank_account_id: selectedBankId || undefined
       });
       if (res.data?.success) {
         alert(res.data.message || 'Withdrawal requested successfully!');
@@ -558,44 +567,54 @@ const PartnerWallet = () => {
                 </button>
               </div>
 
-              {/* Destination Bank Preview Box */}
+              {/* Destination Bank Selection Box */}
               <div style={{
                 background: C.bgSecondary || '#F8FAFC',
                 border: `1px solid ${C.border || '#E2E8F0'}`,
                 borderRadius: '12px',
                 padding: '12px 14px',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px'
+                flexDirection: 'column',
+                gap: '8px'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <MdAccountBalance size={22} style={{ color: '#0052FF' }} />
-                  <div>
-                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: C.text }}>
-                      {bankDetails?.bank_name || 'Bank Details Not Set'}
-                    </div>
-                    <div style={{ fontSize: '11px', color: C.textLight }}>
-                      A/C: {bankDetails?.account_number ? `•••• ${bankDetails.account_number.slice(-4)}` : 'N/A'} • IFSC: {bankDetails?.ifsc_code || 'N/A'}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Select Destination Bank Account
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('bank')}
+                    style={{ background: 'transparent', border: 'none', color: '#0052FF', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    + Add / Edit Bank
+                  </button>
+                </div>
+
+                {allBankAccounts && allBankAccounts.length > 1 ? (
+                  <select
+                    value={selectedBankId}
+                    onChange={(e) => setSelectedBankId(e.target.value)}
+                    style={{ ...S.input, margin: 0, padding: '8px 12px', fontSize: '13px', fontWeight: 600 }}
+                  >
+                    {allBankAccounts.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.bank_name} • A/C: •••• {b.account_number ? b.account_number.slice(-4) : 'N/A'} {b.is_primary ? '(Primary)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <MdAccountBalance size={22} style={{ color: '#0052FF' }} />
+                    <div>
+                      <div style={{ fontSize: '12.5px', fontWeight: 700, color: C.text }}>
+                        {bankDetails?.bank_name || 'Bank Details Not Set'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: C.textLight }}>
+                        A/C: {bankDetails?.account_number ? `•••• ${bankDetails.account_number.slice(-4)}` : 'N/A'} • IFSC: {bankDetails?.ifsc_code || 'N/A'}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('bank')}
-                  style={{
-                    background: '#0052FF15',
-                    color: '#0052FF',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '4px 10px',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    cursor: 'pointer'
-                  }}
-                >
-                  Edit
-                </button>
+                )}
               </div>
 
               <form onSubmit={handleSendWithdrawalOTP} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

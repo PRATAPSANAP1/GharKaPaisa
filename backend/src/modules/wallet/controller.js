@@ -345,7 +345,7 @@ const requestWithdrawal = async (req, res, next) => {
   try {
     const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
     if (!PartnerId) return error(res, 'Partner ID is required');
-    const { amount, remarks } = req.body;
+    const { amount, remarks, bank_account_id } = req.body;
 
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount < WITHDRAWAL_MIN_AMOUNT) {
@@ -405,10 +405,13 @@ const requestWithdrawal = async (req, res, next) => {
       return error(res, 'KYC Verification is required before requesting withdrawals. Please ensure your KYC status is Approved.', 403);
     }
 
-    // Get bank/upi details
-    const { rows: [bank] } = await client.query(
-      `SELECT id, bank_name, account_number, ifsc_code, upi_id FROM partner_bank_details WHERE partner_id = $1`, [PartnerId]
-    );
+    // Get bank/upi details (use selected bank_account_id if provided)
+    const bankQuery = bank_account_id
+      ? `SELECT id, bank_name, account_number, ifsc_code, upi_id FROM partner_bank_details WHERE partner_id = $1 AND id = $2`
+      : `SELECT id, bank_name, account_number, ifsc_code, upi_id FROM partner_bank_details WHERE partner_id = $1 ORDER BY is_primary DESC LIMIT 1`;
+    const bankParams = bank_account_id ? [PartnerId, bank_account_id] : [PartnerId];
+
+    const { rows: [bank] } = await client.query(bankQuery, bankParams);
 
     if (!bank || (!bank.account_number && !bank.upi_id)) {
       await client.query('ROLLBACK');
