@@ -287,6 +287,7 @@ const exportPartnersReport = async (req, res, next) => {
   try {
     const { rows: partners } = await query(`
       SELECT 
+        ap.id,
         ap.partner_code,
         ap.first_name,
         ap.last_name,

@@ -591,11 +591,22 @@ export default function SuperAdminOverview() {
               </thead>
               <tbody>
                 {partnersList
-                  .filter(p => !searchQuery || (p.first_name || '').toLowerCase().includes(searchQuery.toLowerCase()) || (p.partner_code || '').toLowerCase().includes(searchQuery.toLowerCase()))
+                  .filter(p => {
+                    if (!searchQuery) return true;
+                    const q = searchQuery.toLowerCase();
+                    const name = `${p.first_name || ''} ${p.last_name || ''} ${p.company_name || ''}`.toLowerCase();
+                    const code = (p.partner_code || '').toLowerCase();
+                    const email = (p.email || '').toLowerCase();
+                    const mobile = (p.mobile || '').toLowerCase();
+                    return name.includes(q) || code.includes(q) || email.includes(q) || mobile.includes(q);
+                  })
                   .map((p, i) => (
                     <tr key={p.id || i} style={{ borderBottom: `1px solid ${C.border}` }}>
                       <td style={{ padding: '12px 16px', fontWeight: 800, color: C.teal }}>{p.partner_code}</td>
-                      <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>{p.first_name} {p.last_name}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>
+                        {p.first_name} {p.last_name}
+                        {p.company_name && <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 500 }}>🏢 {p.company_name}</div>}
+                      </td>
                       <td style={{ padding: '12px 16px', color: C.textMid }}>{p.email}<br/><span style={{ fontSize: '11px', color: C.textLight }}>{p.mobile}</span></td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', background: p.kyc_status === 'approved' ? '#ECFDF5' : '#FFF7ED', color: p.kyc_status === 'approved' ? '#059669' : '#EA580C' }}>
@@ -607,7 +618,10 @@ export default function SuperAdminOverview() {
                           {(p.account_status || 'ACTIVE').toUpperCase()}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>₹{parseFloat(p.available_balance || 0).toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>
+                        ₹{parseFloat(p.available_balance || 0).toLocaleString('en-IN')}
+                        <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 600 }}>Earned: ₹{parseFloat(p.total_earned || 0).toLocaleString('en-IN')}</div>
+                      </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <button
                           onClick={() => handleViewPartner(p)}
