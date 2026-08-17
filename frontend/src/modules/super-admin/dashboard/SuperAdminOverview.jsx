@@ -317,13 +317,13 @@ export default function SuperAdminOverview() {
         paddingBottom: '2px'
       }}>
         {[
-          { id: 'overview', label: '📊 System Overview' },
-          { id: 'customers', label: `👥 Customers (${stats.customers})` },
-          { id: 'partners', label: `🤝 Partners (${stats.partners})` },
-          { id: 'team', label: `👔 Team Members (${stats.teamMembers})` },
-          { id: 'applications', label: `📄 Applications (${stats.totalApps})` },
-          { id: 'admins', label: `🛡️ Admins (${stats.admins})` },
-          { id: 'financials', label: '💳 Financials & Payouts' }
+          { id: 'overview', label: 'System Overview' },
+          { id: 'customers', label: `Customers (${stats.customers})` },
+          { id: 'partners', label: `Partners (${stats.partners})` },
+          { id: 'team', label: `Team Members (${stats.teamMembers})` },
+          { id: 'applications', label: `Applications (${stats.totalApps})` },
+          { id: 'admins', label: `Admins (${stats.admins})` },
+          { id: 'financials', label: 'Financials & Payouts' }
         ].map((tab) => {
           const isActive = activeTab === tab.id;
           return (
