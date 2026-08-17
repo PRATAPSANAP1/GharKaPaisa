@@ -305,6 +305,11 @@ const PartnerWallet = () => {
   const lifetimeEarn = parseFloat(dashboardData?.wallet?.total_earned ?? dashboardData?.lifetime_earnings ?? 0);
   const totalWithdrawnVal = parseFloat(dashboardData?.wallet?.total_withdrawn ?? dashboardData?.total_withdrawn ?? 0);
 
+  const pendingWithdrawalList = withdrawals.filter(w => w.status === 'pending' || w.status === 'processing');
+  const pendingWithdrawalTotal = pendingWithdrawalList.reduce((acc, w) => acc + parseFloat(w.amount || 0), 0);
+  const pendingWithdrawalCount = pendingWithdrawalList.length;
+  const displayPendingVal = pendingWithdrawalTotal > 0 ? pendingWithdrawalTotal : pendingBal;
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '40px' }}>
       
@@ -359,7 +364,7 @@ const PartnerWallet = () => {
           </button>
         </div>
 
-        {/* Pending Approval */}
+        {/* Pending Withdrawals & Approval */}
         <div style={{
           background: isDark ? '#18181B' : '#FFF7ED',
           border: isDark ? '1px solid #3F3F46' : '1px solid #FFEDD5',
@@ -372,15 +377,17 @@ const PartnerWallet = () => {
         }}>
           <div>
             <div style={{ fontSize: '11px', fontWeight: 800, color: isDark ? '#F97316' : '#9A3412', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-              PENDING APPROVAL
+              PENDING WITHDRAWALS
             </div>
             <div style={{ fontSize: '32px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#EA580C', marginTop: '8px' }}>
-              {formatCurrency(pendingBal)}
+              {formatCurrency(displayPendingVal)}
             </div>
           </div>
           <div style={{ fontSize: '11px', fontWeight: 600, color: isDark ? '#A1A1AA' : '#C2410C', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#F97316' }} />
-            Awaiting Admin / Bank Verification
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: pendingWithdrawalCount > 0 ? '#F97316' : '#10B981' }} />
+            {pendingWithdrawalCount > 0 
+              ? `${pendingWithdrawalCount} Pending Withdrawal Request(s)` 
+              : 'No Pending Withdrawal Requests'}
           </div>
         </div>
 
