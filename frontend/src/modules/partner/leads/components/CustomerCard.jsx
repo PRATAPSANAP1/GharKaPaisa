@@ -124,18 +124,6 @@ export default function CustomerCard({ customer, onOpenProfile, onEditCustomer, 
             <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, lineHeight: 1.2 }}>
               {full_name}
             </h3>
-            <span style={{
-              background: badge.bg,
-              color: badge.color,
-              border: `1px solid ${badge.border}40`,
-              padding: '2px 8px',
-              borderRadius: '999px',
-              fontSize: '10px',
-              fontWeight: 700,
-              whiteSpace: 'nowrap'
-            }}>
-              {badge.label}
-            </span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '4px', fontSize: '12px', color: C.textMid }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><MdPhone style={{ color: C.textLight }} /> {mobile}</span>

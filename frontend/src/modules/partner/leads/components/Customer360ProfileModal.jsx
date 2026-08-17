@@ -333,39 +333,6 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
               <span>Edit Details</span>
             </button>
 
-            {/* Status Dropdown & Auto-Sync Indicator */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {applications.length > 0 && (
-                <span title="Status automatically synced based on linked application progress" style={{ fontSize: '11px', background: '#10b98125', color: '#10b981', border: '1px solid #10b98150', padding: '4px 8px', borderRadius: '8px', fontWeight: 800, whiteSpace: 'nowrap' }}>
-                  ⚡ Auto (App Synced)
-                </span>
-              )}
-              <select
-                value={pipelineStatus}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                disabled={updatingStatus}
-                style={{
-                  background: 'rgba(255,255,255,0.15)',
-                  color: '#FFFFFF',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  borderRadius: '10px',
-                  padding: '6px 12px',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
-                <option value="new" style={{ color: '#000' }}>⚪ New Lead</option>
-                <option value="interested" style={{ color: '#000' }}>🔵 Interested</option>
-                <option value="documents_pending" style={{ color: '#000' }}>🟡 Docs Pending</option>
-                <option value="lead_created" style={{ color: '#000' }}>🟣 Lead Created</option>
-                <option value="application_submitted" style={{ color: '#000' }}>🟣 Application Submitted</option>
-                <option value="bank_verification" style={{ color: '#000' }}>🟣 Bank Verification</option>
-                <option value="approved" style={{ color: '#000' }}>🟢 Approved</option>
-                <option value="rejected" style={{ color: '#000' }}>🔴 Rejected</option>
-              </select>
-            </div>
-
             <button
               onClick={onClose}
               style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#FFF', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -452,7 +419,6 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                       <div>City: <strong>{overview.city || 'N/A'}</strong></div>
                       <div>State: <strong>{overview.state || 'N/A'}</strong></div>
                       <div>Pincode: <strong>{overview.pincode || 'N/A'}</strong></div>
-                      <div>Pipeline Status: <strong style={{ color: C.teal }}>{(overview.pipeline_status || 'new').replace('_', ' ').toUpperCase()}</strong></div>
                       <div>Assigned Partner: <strong>{overview.partner_first_name ? `${overview.partner_first_name} ${overview.partner_last_name || ''}` : 'Direct'}</strong></div>
                     </div>
                   </div>
