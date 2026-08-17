@@ -124,15 +124,18 @@ const migrate = async () => {
   await addEnumValue('wallet_txn_status', 'processing');
   await addEnumValue('wallet_txn_status', 'refunded');
   await addEnumValue('wallet_txn_status', 'declined');
+  await addEnumValue('wallet_txn_status', 'held');
+  await addEnumValue('wallet_txn_status', 'on_hold');
 
   await query(`
     DO $$ BEGIN
-      CREATE TYPE commission_status AS ENUM ('pending','approved','rejected','processed','cancelled','released','on_hold');
+      CREATE TYPE commission_status AS ENUM ('pending','approved','rejected','processed','cancelled','released','on_hold','held');
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
   await addEnumValue('commission_status', 'cancelled');
   await addEnumValue('commission_status', 'released');
   await addEnumValue('commission_status', 'on_hold');
+  await addEnumValue('commission_status', 'held');
 
   await query(`
     DO $$ BEGIN
@@ -513,10 +516,10 @@ const migrate = async () => {
     )
   `);
 
-  // Migrate existing commission_status column if needed
+  // Migrate existing commission_status column to VARCHAR(50) to prevent enum type mismatch
   await query(`
     DO $$ BEGIN
-      ALTER TABLE applications ALTER COLUMN commission_status TYPE commission_status USING commission_status::text::commission_status;
+      ALTER TABLE applications ALTER COLUMN commission_status TYPE VARCHAR(50) USING commission_status::text;
     EXCEPTION WHEN OTHERS THEN NULL; END $$
   `);
 
