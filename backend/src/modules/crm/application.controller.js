@@ -1197,6 +1197,7 @@ const listApplications = async (req, res, next) => {
           OR combined.status = $2
           OR ($2 = 'under_review' AND combined.status IN ('under_review', 'under review', 'verification', 'in_progress', 'bank_verification'))
           OR ($2 = 'submitted' AND combined.status IN ('submitted', 'applied', 'lead_created', 'new', 'draft', 'pending'))
+          OR ($2 = 'super_admin_approved' AND combined.status IN ('super_admin_approved', 'approved', 'disbursed'))
           OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned'))
           OR ($2 = 'operational_verified' AND (
             LOWER(combined.status) IN ('approved', 'operational_verified', 'app file generated (approved)', 'approved_by_ops', 'disbursed', 'sanctioned')
