@@ -519,10 +519,11 @@ export default function ManageApplications() {
           <div style={{ width: '180px' }}>
             <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Application Status</label>
             <select style={S.input} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="operational_verified">Operational Verified / Approved</option>
-              <option value="approved">Approved</option>
+              <option value="operational_verified">Operational Verified (Pending Super Admin)</option>
+              <option value="super_admin_approved">Super Admin Approved</option>
+              <option value="approved">Bank Approved</option>
               <option value="disbursed">Disbursed</option>
-              <option value="submitted">Applied</option>
+              <option value="submitted">Applied / Submitted</option>
               <option value="under_review">Under Review</option>
               <option value="rejected">Rejected</option>
               <option value="">All Applications</option>

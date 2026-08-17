@@ -165,7 +165,7 @@ const get360LeadDetails = async (req, res, next) => {
     if (!lead) return notFound(res, 'Lead not found');
 
     // Parallel fetch for 360 details
-    const [docsRes, timelineRes, historyRes, notesRes, assignRes, bankAssignRes, checkRes, slaRes, walletRes] = await Promise.all([
+    const [docsRes, timelineRes, historyRes, notesRes, assignRes, bankAssignRes, checkRes, slaRes, walletRes, customerCardsRes] = await Promise.all([
       query(`SELECT ld.*, u.full_name as uploader_name FROM lead_documents ld LEFT JOIN users u ON u.id = ld.uploaded_by WHERE ld.lead_id = $1 ORDER BY ld.uploaded_at DESC`, [id]),
       query(`SELECT lt.*, u.full_name as author_name FROM lead_timeline lt LEFT JOIN users u ON u.id = lt.created_by WHERE lt.lead_id = $1 ORDER BY lt.created_at DESC`, [id]),
       query(`SELECT sh.*, u.full_name as author_name FROM lead_status_history sh LEFT JOIN users u ON u.id = sh.changed_by WHERE sh.lead_id = $1 ORDER BY sh.created_at DESC`, [id]),
@@ -180,7 +180,24 @@ const get360LeadDetails = async (req, res, next) => {
       query(`SELECT * FROM bank_assignments WHERE lead_id = $1 ORDER BY assigned_at DESC`, [id]),
       query(`SELECT lc.*, u.full_name as verifier_name FROM lead_checklist lc LEFT JOIN users u ON u.id = lc.verified_by WHERE lc.lead_id = $1 ORDER BY lc.item ASC`, [id]),
       query(`SELECT * FROM lead_sla WHERE lead_id = $1 ORDER BY started_at DESC`, [id]),
-      query(`SELECT * FROM commission_ledger WHERE lead_id = $1 OR application_id = $1`, [id]).catch(() => ({ rows: [] }))
+      query(`SELECT * FROM commission_ledger WHERE lead_id = $1 OR application_id = $1`, [id]).catch(() => ({ rows: [] })),
+      query(`
+        SELECT a.id, a.app_number, a.status, a.commission_amount, COALESCE(a.process_type, 'lead_punching') as process_type, a.created_at,
+               p.name as product_name, p.category as product_category, b.name as bank_name
+        FROM applications a
+        LEFT JOIN products p ON p.id = a.product_id
+        LEFT JOIN banks b ON b.id = p.bank_id
+        WHERE a.customer_id IN (SELECT id FROM customers WHERE mobile = $1)
+           OR a.lead_id IN (SELECT id FROM leads WHERE mobile = $1)
+        UNION
+        SELECT l.id, COALESCE(l.lead_number, 'LEAD') as app_number, l.status, 0 as commission_amount, COALESCE(l.process_type, 'lead_punching') as process_type, l.created_at,
+               p.name as product_name, p.category as product_category, b.name as bank_name
+        FROM leads l
+        LEFT JOIN products p ON p.id = l.product_id
+        LEFT JOIN banks b ON b.id = p.bank_id
+        WHERE l.mobile = $1
+        ORDER BY created_at DESC
+      `, [lead.mobile]).catch(() => ({ rows: [] }))
     ]);
 
     await logLeadActivity(null, id, 'view_360_lead', req.user.id, 'lead', id, req);
@@ -195,7 +212,8 @@ const get360LeadDetails = async (req, res, next) => {
       bank_assignment: bankAssignRes.rows[0] || null,
       checklist: checkRes.rows,
       sla_tracker: slaRes.rows,
-      commission_ledger: walletRes.rows[0] || null
+      commission_ledger: walletRes.rows[0] || null,
+      customer_cards: customerCardsRes.rows || []
     }, 'Lead 360 overview loaded');
   } catch (err) {
     next(err);

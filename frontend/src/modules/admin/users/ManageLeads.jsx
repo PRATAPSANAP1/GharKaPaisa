@@ -217,8 +217,9 @@ export default function ManageLeads() {
             <option value="pending">Pending Review</option>
             <option value="submitted">Submitted to Bank</option>
             <option value="under_review">Bank Review</option>
-            <option value="approved">Approved</option>
             <option value="operational_verified">Operational Verified</option>
+            <option value="super_admin_approved">Super Admin Approved</option>
+            <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
           </select>
 

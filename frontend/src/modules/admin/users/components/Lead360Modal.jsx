@@ -137,7 +137,7 @@ export default function Lead360Modal({ leadId, onClose, onRefresh }) {
     }
   };
 
-  const { overview = {}, documents = [], timeline = [], status_history = [], notes = [], bank_assignment = null, checklist = [], commission_ledger = null } = data || {};
+  const { overview = {}, documents = [], timeline = [], status_history = [], notes = [], bank_assignment = null, checklist = [], commission_ledger = null, customer_cards = [] } = data || {};
 
   const getStatusBadge = (st) => {
     switch (st) {
@@ -287,6 +287,7 @@ export default function Lead360Modal({ leadId, onClose, onRefresh }) {
         }}>
           {[
             { id: 'overview', label: 'Lead Details', icon: MdPerson },
+            { id: 'customer_cards', label: `Interested Cards (${customer_cards.length})`, icon: MdCreditCard },
             { id: 'checklist', label: `Checklist (${checklist.filter(c => c.status === 'verified').length}/${checklist.length})`, icon: MdVerifiedUser },
             { id: 'documents', label: `Documents (${documents.length})`, icon: MdDescription },
             { id: 'timeline', label: `Activity Stream (${timeline.length})`, icon: MdTimeline },
@@ -749,6 +750,70 @@ export default function Lead360Modal({ leadId, onClose, onRefresh }) {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* TAB 8: CUSTOMER INTERESTED CARDS */}
+              {activeTab === 'customer_cards' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0 }}>
+                      Cards & Applications for Mobile: {overview.mobile} ({customer_cards.length})
+                    </h3>
+                  </div>
+
+                  {customer_cards.length === 0 ? (
+                    <div style={{ padding: '60px 20px', textAlign: 'center', background: isDark ? '#1E293B' : '#F8FAFC', borderRadius: '16px', border: `1px dashed ${isDark ? '#334155' : '#CBD5E1'}` }}>
+                      <MdCreditCard style={{ fontSize: '40px', color: isDark ? '#64748B' : '#94A3B8', marginBottom: '8px' }} />
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: isDark ? '#94A3B8' : '#64748B' }}>No other cards found for this customer number.</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                      {customer_cards.map((card, idx) => (
+                        <div key={card.id || idx} style={{
+                          background: isDark ? '#1E293B' : '#F8FAFC',
+                          borderRadius: '16px',
+                          padding: '20px',
+                          border: `1px solid ${isDark ? '#334155' : '#E2E8F0'}`,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                              <div style={{ fontSize: '15px', fontWeight: 800, color: isDark ? '#F8FAFC' : '#0F172A' }}>{card.product_name || 'Card Product'}</div>
+                              <div style={{ fontSize: '12px', color: '#10B981', fontWeight: 700, marginTop: '2px' }}>{card.bank_name || 'Bank Partner'}</div>
+                            </div>
+                            <span style={{
+                              fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px',
+                              background: '#2563EB15', color: '#2563EB', textTransform: 'uppercase'
+                            }}>
+                              {(card.status || 'PENDING').replace('_', ' ')}
+                            </span>
+                          </div>
+
+                          <div style={{ fontSize: '12.5px', display: 'flex', flexDirection: 'column', gap: '6px', color: isDark ? '#CBD5E1' : '#475569' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>App / Lead Number:</span>
+                              <strong style={{ color: isDark ? '#F8FAFC' : '#0F172A' }}>#{card.app_number}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Category:</span>
+                              <strong style={{ textTransform: 'capitalize' }}>{(card.product_category || 'Credit Card').replace('_', ' ')}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Process Type:</span>
+                              <strong style={{ textTransform: 'capitalize' }}>{(card.process_type || 'lead_punching').replace('_', ' ')}</strong>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                              <span>Applied Date:</span>
+                              <strong>{card.created_at ? new Date(card.created_at).toLocaleDateString('en-IN') : 'N/A'}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
