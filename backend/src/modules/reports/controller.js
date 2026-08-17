@@ -34,8 +34,8 @@ const getOverview = async (req, res, next) => {
       isPartner ? Promise.resolve({rows:[{}]}) : query(`
         SELECT
           COUNT(*) as total,
-          COUNT(*) FILTER (WHERE LOWER(COALESCE(u.status, 'active')) = 'active') as active,
-          COUNT(*) FILTER (WHERE LOWER(COALESCE(ap.kyc_status, 'pending')) IN ('pending', 'under_review', 'submitted', 'in_process')) as pending_kyc
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(u.status::text, 'active')) = 'active') as active,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(ap.kyc_status::text, 'pending')) IN ('pending', 'under_review', 'submitted', 'in_process')) as pending_kyc
         FROM partner_profiles ap JOIN users u ON u.id = ap.user_id
       `),
       query(`
@@ -50,18 +50,25 @@ const getOverview = async (req, res, next) => {
       query(`
         SELECT
           COUNT(*) as total_leads,
-          COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('approved', 'disbursed', 'super_admin_approved', 'commission_released')) as approved_leads,
-          COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('rejected', 'declined')) as rejected_leads,
-          COUNT(*) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('pending', 'under_review', 'submitted', 'operational_verified')) as pending_leads,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('approved', 'disbursed', 'super_admin_approved', 'commission_released')) as approved_leads,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('rejected', 'declined')) as rejected_leads,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('pending', 'under_review', 'submitted', 'operational_verified')) as pending_leads,
           COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE) as todays_leads
         FROM leads WHERE 1=1 ${partnerScopeLeads}
       `),
       isPartner ? Promise.resolve({rows:[{}]}) : query(`
         SELECT
-          COUNT(*) FILTER (WHERE LOWER(COALESCE(status, 'pending')) IN ('pending', 'processing', 'submitted')) as pending_withdrawals,
-          COALESCE(SUM(amount) FILTER (WHERE LOWER(COALESCE(status, '')) IN ('processed', 'completed', 'released', 'approved')), 0) as total_commission_paid
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, 'pending')) IN ('pending', 'processing', 'submitted')) as pending_withdrawals,
+          COALESCE(SUM(amount) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('processed', 'completed', 'released', 'approved')), 0) as total_commission_paid
         FROM withdrawal_requests
-      `),
+      `).catch(async () => {
+        return await query(`
+          SELECT
+            COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, 'pending')) IN ('pending', 'processing', 'submitted')) as pending_withdrawals,
+            COALESCE(SUM(amount) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('processed', 'transferred', 'completed', 'released', 'approved')), 0) as total_commission_paid
+          FROM wallet_withdrawals
+        `);
+      }),
       query(`SELECT COUNT(*) as total_banks FROM banks`),
       query(`SELECT COUNT(*) as total_products FROM products`),
       isPartner ? Promise.resolve({rows:[]}) : query(`
@@ -74,9 +81,9 @@ const getOverview = async (req, res, next) => {
       isPartner ? Promise.resolve({rows:[{total_admins: 0, active_admins: 0}]}) : query(`
         SELECT
           COUNT(*) as total_admins,
-          COUNT(*) FILTER (WHERE LOWER(COALESCE(status, 'active')) = 'active') as active_admins
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, 'active')) = 'active') as active_admins
         FROM users
-        WHERE UPPER(role) IN ('ADMIN', 'SUPER_ADMIN', 'SUPERADMIN', 'OPERATIONAL_HEAD')
+        WHERE UPPER(role::text) IN ('ADMIN', 'SUPER_ADMIN', 'SUPERADMIN', 'OPERATIONAL_HEAD')
       `)
     ]);
 
