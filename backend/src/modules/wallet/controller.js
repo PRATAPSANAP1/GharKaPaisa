@@ -436,22 +436,35 @@ const requestWithdrawal = async (req, res, next) => {
     await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
 
     // Insert pending withdrawal request
+    const idempotencyKey = `gkp-withdrawal-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const { rows: [wr] } = await client.query(`
-      INSERT INTO wallet_withdrawals (wallet_id, partner_id, amount, tds_rate, tds_amount, net_amount, bank_name, account_number, ifsc_code, status, bank_account_id, remarks)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11) RETURNING id
-    `, [wallet.id, PartnerId, parsedAmount, tdsRate, tdsAmount, netAmount, bank?.bank_name || 'UPI Settlement', bank?.account_number || null, bank?.ifsc_code || null, bank?.id || null, String(remarks || '').trim() || null]);
-    await client.query(`INSERT INTO wallet_withdrawal_events (withdrawal_id,status,remarks,changed_by) VALUES ($1,'pending',$2,$3)`, [wr.id, String(remarks || '').trim() || 'Withdrawal requested', req.user?.id || null]);
+      INSERT INTO wallet_withdrawals (wallet_id, partner_id, amount, tds_rate, tds_amount, net_amount, bank_name, account_number, ifsc_code, status, bank_account_id, remarks, idempotency_key)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12) RETURNING id
+    `, [wallet.id, PartnerId, parsedAmount, tdsRate, tdsAmount, netAmount, bank?.bank_name || 'UPI Settlement', bank?.account_number || null, bank?.ifsc_code || null, bank?.id || null, String(remarks || '').trim() || null, idempotencyKey]);
 
-    await debitAvailable(PartnerId, parsedAmount, {
-      reference_type: 'withdrawal',
-      reference_id: wr.id,
-      bank_name: bank?.bank_name || 'UPI Settlement',
-      description: `Withdrawal request for ₹${parsedAmount} (2% TDS: ₹${tdsAmount}, Net Payable: ₹${netAmount})`
-    }, client);
+    // Audit Event
+    await client.query(`
+      INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+      VALUES ($1, 'WITHDRAWAL_REQUESTED', $2, $3)
+    `, [wr.id, String(remarks || '').trim() || 'Withdrawal requested by partner', req.user?.id || null]);
+
+    // Lock amount into hold_balance (DO NOT deduct available_balance yet)
+    await client.query(`
+      UPDATE partner_wallets 
+      SET hold_balance = COALESCE(hold_balance, 0) + $1,
+          updated_at = NOW() 
+      WHERE partner_id = $2
+    `, [parsedAmount, PartnerId]);
+
+    // Insert pending ledger entry for partner tracking
+    await client.query(`
+      INSERT INTO wallet_ledger (wallet_id, partner_id, transaction_type, debit, balance_after_transaction, description, reference_number, status, created_by)
+      VALUES ($1, $2, 'WITHDRAWAL', $3, $4, $5, $6, 'pending', $7)
+    `, [wallet.id, PartnerId, parsedAmount, wallet.available_balance, `Withdrawal requested for ₹${parsedAmount} (2% TDS: ₹${tdsAmount}, Net Payable: ₹${netAmount})`, wr.id.toString(), req.user?.id || null]);
 
     await client.query('COMMIT');
     await logAction(req, 'REQUEST_WITHDRAWAL', wr.id, { partner_id: PartnerId, amount: parsedAmount, tds_rate: tdsRate, tds_amount: tdsAmount, net_amount: netAmount, remarks: String(remarks || '').trim() || null });
-    return success(res, { withdrawal_id: wr.id, amount: parsedAmount, tds_rate: tdsRate, tds_amount: tdsAmount, net_amount: netAmount }, `Withdrawal request submitted. (Gross: ₹${parsedAmount}, 2% TDS: ₹${tdsAmount}, Net Payout: ₹${netAmount})`);
+    return success(res, { withdrawal_id: wr.id, amount: parsedAmount, tds_rate: tdsRate, tds_amount: tdsAmount, net_amount: netAmount }, `Withdrawal request submitted successfully. (Gross: ₹${parsedAmount}, 2% TDS: ₹${tdsAmount}, Net Payout: ₹${netAmount})`);
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) {}
     if (err.code === '23505') return error(res, 'A withdrawal request is already pending');
@@ -1512,15 +1525,20 @@ const handleRazorpayWebhook = async (req, res, next) => {
         return success(res, {}, 'Payout already marked transferred');
       }
 
-      // Update status to transferred
+      // Deduct available_balance and release hold_balance upon successful payout
       await client.query(`
-        UPDATE wallet_withdrawals SET
-          status = 'transferred',
-          utr = $1,
-          razorpay_payout_id = $2,
-          updated_at = NOW()
-        WHERE id = $3
-      `, [utr, payoutId, withdrawalId]);
+        UPDATE partner_wallets 
+        SET available_balance = available_balance - $1,
+            hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+            total_withdrawn = COALESCE(total_withdrawn, 0) + $1,
+            updated_at = NOW() 
+        WHERE partner_id = $2
+      `, [parseFloat(wr.amount), wr.partner_id]);
+
+      await client.query(`
+        INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+        VALUES ($1, 'RAZORPAY_PAYOUT_SUCCESS', $2, NULL)
+      `, [withdrawalId, `Payout confirmed via Razorpay Webhook (UTR: ${utr || payoutId})`]);
 
       // Complete the ledger transaction
       await client.query(`
@@ -1574,7 +1592,20 @@ const handleRazorpayWebhook = async (req, res, next) => {
         WHERE id = $3
       `, [failureReason, payoutId, withdrawalId]);
 
-      // Reject ledger transaction (unlock available balance)
+      // Release hold_balance back to available balance pool (available_balance remains untouched)
+      await client.query(`
+        UPDATE partner_wallets 
+        SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+            updated_at = NOW() 
+        WHERE partner_id = $2
+      `, [parseFloat(wr.amount), wr.partner_id]);
+
+      await client.query(`
+        INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+        VALUES ($1, 'RAZORPAY_PAYOUT_FAILED', $2, NULL)
+      `, [withdrawalId, `Payout failed via Razorpay Webhook: ${failureReason || 'Bank processing failed'}`]);
+
+      // Reject ledger transaction
       await client.query(`
         UPDATE wallet_ledger SET
           status = 'rejected',

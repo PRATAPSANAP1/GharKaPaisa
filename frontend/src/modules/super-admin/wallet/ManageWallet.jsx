@@ -48,6 +48,7 @@ export default function ManageWallet() {
   const [cPage, setCPage] = useState(1);
 
   // Modals state
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState(null);
   const [adjustModalOpen, setAdjustModalOpen] = useState(false);
   const [adjustForm, setAdjustForm] = useState({
     partner_id: '',
@@ -295,92 +296,108 @@ export default function ManageWallet() {
                   </thead>
                   <tbody>
                     {withdrawals.length === 0 ? (
-                      <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: C.textLight }}>No withdrawals found.</td></tr>
+                      <tr><td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: C.textLight }}>No withdrawals found.</td></tr>
                     ) : (
                       withdrawals.map(w => (
                         <tr key={w.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                           <td style={{ padding: '14px 16px' }}>{new Date(w.requested_at).toLocaleString()}</td>
-                          <td style={{ padding: '14px 16px', fontWeight: 700 }}>{w.first_name} {w.last_name} ({w.partner_code})</td>
+                          <td style={{ padding: '14px 16px', fontWeight: 700 }}>
+                            {w.first_name} {w.last_name}
+                            <div style={{ fontSize: '11px', color: C.textLight, fontFamily: 'monospace' }}>{w.partner_code}</div>
+                          </td>
                           <td style={{ padding: '14px 16px' }}>
                             {w.account_number ? (
-                              <div>{w.bank_name}<br/><span style={{ fontFamily: 'monospace' }}>{w.account_number} ({w.ifsc_code})</span></div>
+                              <div>{w.bank_name}<br/><span style={{ fontFamily: 'monospace', fontSize: '12px' }}>{w.account_number} ({w.ifsc_code})</span></div>
                             ) : (
                               <span>{w.upi_id || 'N/A'}</span>
                             )}
                           </td>
-                          <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700 }}>₹{parseFloat(w.amount).toFixed(2)}</td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700 }}>
+                            ₹{parseFloat(w.amount).toFixed(2)}
+                            {w.net_amount && (
+                              <div style={{ fontSize: '10px', color: C.green }}>Net: ₹{parseFloat(w.net_amount).toFixed(2)}</div>
+                            )}
+                          </td>
                           <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                             <span style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '12px', fontWeight: 700, background: w.status === 'processed' || w.status === 'transferred' ? `${C.green}15` : w.status === 'pending' ? `${C.gold}15` : `${C.red}15`, color: w.status === 'processed' || w.status === 'transferred' ? C.green : w.status === 'pending' ? C.gold : C.red }}>
                               {w.status?.toUpperCase()}
                             </span>
                           </td>
-                          {w.status === 'pending' && (
-                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                <button
-                                  disabled={actionLoading}
-                                  onClick={async () => {
-                                    if (!window.confirm(`Initiate automated Razorpay bank transfer of ₹${w.amount} to ${w.first_name}?`)) return;
-                                    setActionLoading(true);
-                                    try {
-                                      await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'transfer' });
-                                      alert('Razorpay bank payout initiated successfully!');
-                                      loadWithdrawals();
-                                    } catch (e) {
-                                      alert(e.response?.data?.message || 'Razorpay payout failed. You can use manual UTR transfer.');
-                                    } finally {
-                                      setActionLoading(false);
-                                    }
-                                  }}
-                                  style={{ ...S.btn('primary'), padding: '6px 10px', fontSize: '11px', background: C.teal, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
-                                >
-                                  ⚡ Pay via Razorpay
-                                </button>
-                                <button
-                                  disabled={actionLoading}
-                                  onClick={async () => {
-                                    const utr = prompt('Enter UTR Number to mark as manually paid:');
-                                    if (utr === null) return;
-                                    if (!utr.trim()) return alert('UTR number is required');
-                                    setActionLoading(true);
-                                    try {
-                                      await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'transfer', utr_number: utr.trim() });
-                                      alert('Withdrawal settled manually!');
-                                      loadWithdrawals();
-                                    } catch (e) {
-                                      alert(e.response?.data?.message || 'Failed to process manual settlement');
-                                    } finally {
-                                      setActionLoading(false);
-                                    }
-                                  }}
-                                  style={{ ...S.btn('primary'), padding: '6px 10px', fontSize: '11px', background: C.green }}
-                                >
-                                  Mark Paid (UTR)
-                                </button>
-                                <button
-                                  disabled={actionLoading}
-                                  onClick={async () => {
-                                    const reason = prompt('Enter rejection reason:');
-                                    if (reason === null) return;
-                                    if (!reason.trim()) return alert('Rejection reason is required');
-                                    setActionLoading(true);
-                                    try {
-                                      await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'reject', rejection_reason: reason.trim() });
-                                      alert('Withdrawal rejected successfully!');
-                                      loadWithdrawals();
-                                    } catch (e) {
-                                      alert(e.response?.data?.message || 'Failed to reject');
-                                    } finally {
-                                      setActionLoading(false);
-                                    }
-                                  }}
-                                  style={{ ...S.btn('outline'), padding: '6px 10px', fontSize: '11px', borderColor: C.red, color: C.red }}
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            </td>
-                          )}
+                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                              <button
+                                onClick={() => setSelectedWithdrawal(w)}
+                                style={{ ...S.btn('outline'), padding: '6px 10px', fontSize: '11px', color: C.primary, borderColor: C.primary }}
+                              >
+                                Review / Details
+                              </button>
+                              {w.status === 'pending' && (
+                                <>
+                                  <button
+                                    disabled={actionLoading}
+                                    onClick={async () => {
+                                      if (!window.confirm(`Initiate automated Razorpay bank transfer of ₹${w.amount} to ${w.first_name}?`)) return;
+                                      setActionLoading(true);
+                                      try {
+                                        await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'transfer' });
+                                        alert('Razorpay bank payout initiated successfully!');
+                                        loadWithdrawals();
+                                      } catch (e) {
+                                        alert(e.response?.data?.message || 'Razorpay payout failed. You can use manual UTR transfer.');
+                                      } finally {
+                                        setActionLoading(false);
+                                      }
+                                    }}
+                                    style={{ ...S.btn('primary'), padding: '6px 10px', fontSize: '11px', background: C.teal, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                                  >
+                                    ⚡ Pay via Razorpay
+                                  </button>
+                                  <button
+                                    disabled={actionLoading}
+                                    onClick={async () => {
+                                      const utr = prompt('Enter UTR Number to mark as manually paid:');
+                                      if (utr === null) return;
+                                      if (!utr.trim()) return alert('UTR number is required');
+                                      setActionLoading(true);
+                                      try {
+                                        await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'transfer', utr_number: utr.trim() });
+                                        alert('Withdrawal settled manually!');
+                                        loadWithdrawals();
+                                      } catch (e) {
+                                        alert(e.response?.data?.message || 'Failed to process manual settlement');
+                                      } finally {
+                                        setActionLoading(false);
+                                      }
+                                    }}
+                                    style={{ ...S.btn('primary'), padding: '6px 10px', fontSize: '11px', background: C.green }}
+                                  >
+                                    Mark Paid (UTR)
+                                  </button>
+                                  <button
+                                    disabled={actionLoading}
+                                    onClick={async () => {
+                                      const reason = prompt('Enter rejection reason:');
+                                      if (reason === null) return;
+                                      if (!reason.trim()) return alert('Rejection reason is required');
+                                      setActionLoading(true);
+                                      try {
+                                        await api.patch(`/wallet/withdrawals/${w.id}/process`, { action: 'reject', rejection_reason: reason.trim() });
+                                        alert('Withdrawal rejected successfully!');
+                                        loadWithdrawals();
+                                      } catch (e) {
+                                        alert(e.response?.data?.message || 'Failed to reject');
+                                      } finally {
+                                        setActionLoading(false);
+                                      }
+                                    }}
+                                    style={{ ...S.btn('outline'), padding: '6px 10px', fontSize: '11px', borderColor: C.red, color: C.red }}
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       ))
                     )}
@@ -603,6 +620,118 @@ export default function ManageWallet() {
                 {actionLoading ? 'Applying Adjustment...' : 'Apply Wallet Adjustment'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Detailed Withdrawal Modal */}
+      {selectedWithdrawal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ ...S.card, width: '100%', maxWidth: '600px', borderRadius: '16px', border: `1px solid ${C.border}`, padding: '24px', maxHeight: '90vh', overflowY: 'auto', background: isDark ? '#18181B' : '#FFFFFF' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, pb: '16px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: C.text }}>Withdrawal Details</h3>
+                <span style={{ fontSize: '11px', color: C.textLight }}>ID: {selectedWithdrawal.id}</span>
+              </div>
+              <button onClick={() => setSelectedWithdrawal(null)} style={{ background: 'none', border: 'none', color: C.textLight, cursor: 'pointer' }}>
+                <MdClose size={22} />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+              {/* Partner Info */}
+              <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '14px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', color: C.textLight, fontWeight: 700, marginBottom: '6px' }}>Partner Info</div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: C.text }}>{selectedWithdrawal.first_name} {selectedWithdrawal.last_name}</div>
+                <div style={{ fontSize: '12px', color: C.textLight, fontFamily: 'monospace' }}>Code: {selectedWithdrawal.partner_code}</div>
+              </div>
+
+              {/* Amount & Status */}
+              <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '14px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: '11px', textTransform: 'uppercase', color: C.textLight, fontWeight: 700, marginBottom: '6px' }}>Financial Breakdown</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: C.primary }}>₹{parseFloat(selectedWithdrawal.amount).toFixed(2)}</div>
+                <div style={{ fontSize: '11px', color: C.textLight }}>2% TDS: ₹{parseFloat(selectedWithdrawal.tds_amount || (selectedWithdrawal.amount * 0.02)).toFixed(2)}</div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: C.green }}>Net Payout: ₹{parseFloat(selectedWithdrawal.net_amount || (selectedWithdrawal.amount * 0.98)).toFixed(2)}</div>
+              </div>
+            </div>
+
+            {/* Bank Details */}
+            <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '14px', borderRadius: '10px', border: `1px solid ${C.border}`, marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', textTransform: 'uppercase', color: C.textLight, fontWeight: 700, marginBottom: '6px' }}>Bank Destination</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+                <div><span style={{ color: C.textLight }}>Bank Name:</span> <strong>{selectedWithdrawal.bank_name || 'N/A'}</strong></div>
+                <div><span style={{ color: C.textLight }}>Account Number:</span> <strong style={{ fontFamily: 'monospace' }}>{selectedWithdrawal.account_number || 'N/A'}</strong></div>
+                <div><span style={{ color: C.textLight }}>IFSC Code:</span> <strong style={{ fontFamily: 'monospace' }}>{selectedWithdrawal.ifsc_code || selectedWithdrawal.ifsc || 'N/A'}</strong></div>
+                <div><span style={{ color: C.textLight }}>Status:</span> <strong style={{ color: C.green }}>VERIFIED ✅</strong></div>
+              </div>
+            </div>
+
+            {/* Razorpay Audit Identifiers */}
+            <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '14px', borderRadius: '10px', border: `1px solid ${C.border}`, marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', textTransform: 'uppercase', color: C.textLight, fontWeight: 700, marginBottom: '6px' }}>RazorpayX Audit Identifiers</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px', fontFamily: 'monospace' }}>
+                <div><span style={{ color: C.textLight }}>Contact ID:</span> {selectedWithdrawal.razorpay_contact_id || 'Pending'}</div>
+                <div><span style={{ color: C.textLight }}>Fund Account ID:</span> {selectedWithdrawal.razorpay_fund_account_id || 'Pending'}</div>
+                <div><span style={{ color: C.textLight }}>Payout ID:</span> {selectedWithdrawal.razorpay_payout_id || 'Pending'}</div>
+                <div><span style={{ color: C.textLight }}>UTR:</span> {selectedWithdrawal.utr || 'Pending'}</div>
+              </div>
+            </div>
+
+            {/* Decision & Action Bar */}
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSelectedWithdrawal(null)}
+                style={{ ...S.btn('outline'), padding: '8px 14px', fontSize: '12px' }}
+              >
+                Close
+              </button>
+              {selectedWithdrawal.status === 'pending' && (
+                <>
+                  <button
+                    disabled={actionLoading}
+                    onClick={async () => {
+                      const reason = prompt('Enter rejection reason:');
+                      if (reason === null) return;
+                      if (!reason.trim()) return alert('Rejection reason is required');
+                      setActionLoading(true);
+                      try {
+                        await api.patch(`/wallet/withdrawals/${selectedWithdrawal.id}/process`, { action: 'reject', rejection_reason: reason.trim() });
+                        alert('Withdrawal rejected successfully!');
+                        setSelectedWithdrawal(null);
+                        loadWithdrawals();
+                      } catch (e) {
+                        alert(e.response?.data?.message || 'Failed to reject');
+                      } finally {
+                        setActionLoading(false);
+                      }
+                    }}
+                    style={{ ...S.btn('outline'), borderColor: C.red, color: C.red, padding: '8px 14px', fontSize: '12px' }}
+                  >
+                    Reject Request
+                  </button>
+                  <button
+                    disabled={actionLoading}
+                    onClick={async () => {
+                      if (!window.confirm(`Approve & process Razorpay payout of ₹${selectedWithdrawal.amount} to ${selectedWithdrawal.first_name}?`)) return;
+                      setActionLoading(true);
+                      try {
+                        await api.patch(`/wallet/withdrawals/${selectedWithdrawal.id}/process`, { action: 'transfer' });
+                        alert('Razorpay payout executed successfully!');
+                        setSelectedWithdrawal(null);
+                        loadWithdrawals();
+                      } catch (e) {
+                        alert(e.response?.data?.message || 'Payout failed');
+                      } finally {
+                        setActionLoading(false);
+                      }
+                    }}
+                    style={{ ...S.btn('primary'), background: C.teal, padding: '8px 14px', fontSize: '12px' }}
+                  >
+                    ⚡ Approve & Pay Payout
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

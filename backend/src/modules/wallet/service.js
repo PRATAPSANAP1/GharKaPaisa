@@ -583,12 +583,19 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
       await client.query(`
         UPDATE wallet_withdrawals SET
           status = 'approved',
+          approved_by = $1,
+          approved_at = NOW(),
           processed_by = $1,
           processed_at = NOW(),
           admin_note = $2,
           updated_at = NOW()
         WHERE id = $3
       `, [processedBy, adminNote, withdrawalId]);
+
+      await client.query(`
+        INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+        VALUES ($1, 'WITHDRAWAL_APPROVED', $2, $3)
+      `, [withdrawalId, adminNote || 'Approved by Super Admin', processedBy]);
 
     } else if (action === 'reject') {
       if (!['pending', 'approved', 'failed'].includes(wr.status)) {
@@ -612,6 +619,14 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
         await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'rejected', `Withdrawal rejected - Reason: ${rejectionReason}`, null, null, processedBy);
       }
 
+      // Release hold_balance without altering available_balance
+      await client.query(`
+        UPDATE partner_wallets 
+        SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+            updated_at = NOW() 
+        WHERE partner_id = $2
+      `, [parseFloat(wr.amount), wr.partner_id]);
+
       await client.query(`
         UPDATE wallet_withdrawals SET
           status = 'rejected',
@@ -622,6 +637,11 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
           updated_at = NOW()
         WHERE id = $4
       `, [rejectionReason, processedBy, adminNote, withdrawalId]);
+
+      await client.query(`
+        INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+        VALUES ($1, 'WITHDRAWAL_REJECTED', $2, $3)
+      `, [withdrawalId, `Rejection reason: ${rejectionReason || 'Rejected by Admin'}`, processedBy]);
 
     } else if (action === 'transfer' || utrNumber) {
       if (utrNumber) {
@@ -643,6 +663,16 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
           await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'completed', `Withdrawal approved (Manual) - UTR: ${utrNumber}`, null, null, processedBy);
         }
 
+        // Deduct available_balance and release hold_balance upon successful payout
+        await client.query(`
+          UPDATE partner_wallets 
+          SET available_balance = available_balance - $1,
+              hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+              total_withdrawn = COALESCE(total_withdrawn, 0) + $1,
+              updated_at = NOW() 
+          WHERE partner_id = $2
+        `, [parseFloat(wr.amount), wr.partner_id]);
+
         await client.query(`
           UPDATE wallet_withdrawals SET
             status = 'transferred',
@@ -653,6 +683,11 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
             updated_at = NOW()
           WHERE id = $4
         `, [utrNumber, processedBy, adminNote, withdrawalId]);
+
+        await client.query(`
+          INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+          VALUES ($1, 'RAZORPAY_PAYOUT_SUCCESS', $2, $3)
+        `, [withdrawalId, `Manual settlement recorded with UTR: ${utrNumber}`, processedBy]);
 
         // Record in partner settlements
         await client.query(`
@@ -671,8 +706,8 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
           [wr.partner_id]
         );
         const { rows: [bank] } = await client.query(
-          `SELECT id, bank_name, account_number, ifsc_code, account_holder_name FROM partner_bank_details WHERE partner_id = $1`,
-          [wr.partner_id]
+          `SELECT id, bank_name, account_number, ifsc_code, account_holder_name FROM partner_bank_details WHERE partner_id = $1 AND (id = $2 OR $2 IS NULL) ORDER BY is_primary DESC LIMIT 1`,
+          [wr.partner_id, wr.bank_account_id || null]
         );
 
         if (!bank) throw new Error('Partner has not registered bank details');
@@ -696,12 +731,14 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
         if (!contactId) {
           const contact = await createRazorpayContact(partner, wr.id);
           contactId = contact.id;
+          await client.query(`UPDATE partner_bank_details SET razorpay_contact_id = $1 WHERE partner_id = $2`, [contactId, wr.partner_id]);
         }
 
         let fundAccountId = wr.razorpay_fund_account_id;
         if (!fundAccountId) {
           const fundAcc = await createRazorpayFundAccount(contactId, decryptedBank, wr.id);
           fundAccountId = fundAcc.id;
+          await client.query(`UPDATE partner_bank_details SET razorpay_fund_account_id = $1 WHERE partner_id = $2 AND (id = $3 OR $3 IS NULL)`, [fundAccountId, wr.partner_id, wr.bank_account_id || null]);
         }
 
         const payout = await createRazorpayPayout(fundAccountId, parseFloat(wr.amount), wr.id);
@@ -752,12 +789,47 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
             await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'completed', `Withdrawal transferred - UTR: ${utr}`, null, null, processedBy);
           }
 
+          // Deduct available_balance and release hold_balance
+          await client.query(`
+            UPDATE partner_wallets 
+            SET available_balance = available_balance - $1,
+                hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+                total_withdrawn = COALESCE(total_withdrawn, 0) + $1,
+                updated_at = NOW() 
+            WHERE partner_id = $2
+          `, [parseFloat(wr.amount), wr.partner_id]);
+
+          await client.query(`
+            INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+            VALUES ($1, 'RAZORPAY_PAYOUT_SUCCESS', $2, $3)
+          `, [withdrawalId, `Payout processed successfully (UTR: ${utr || payoutId})`, processedBy]);
+
           // Record in partner settlements
           await client.query(`
             INSERT INTO partner_settlements (withdrawal_id, partner_id, payment_mode, utr_number, settled_at, status)
             VALUES ($1, $2, 'Bank Transfer', $3, NOW(), 'completed')
             ON CONFLICT (withdrawal_id) DO NOTHING
           `, [withdrawalId, wr.partner_id, utr || payoutId]);
+
+        } else if (status === 'failed') {
+          // Release hold_balance back to available_balance pool
+          await client.query(`
+            UPDATE partner_wallets 
+            SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+                updated_at = NOW() 
+            WHERE partner_id = $2
+          `, [parseFloat(wr.amount), wr.partner_id]);
+
+          await client.query(`
+            INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+            VALUES ($1, 'RAZORPAY_PAYOUT_FAILED', $2, $3)
+          `, [withdrawalId, `Payout failed: ${payout.failure_reason || 'Processing failed'}`, processedBy]);
+        } else {
+          // Status processing
+          await client.query(`
+            INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+            VALUES ($1, 'RAZORPAY_PAYOUT_PROCESSING', $2, $3)
+          `, [withdrawalId, `Razorpay Payout created (ID: ${payoutId}) and processing`, processedBy]);
         }
       }
     }

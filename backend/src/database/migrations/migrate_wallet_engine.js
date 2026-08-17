@@ -75,6 +75,7 @@ const runWalletEngineMigrations = async () => {
       );
 
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS wallet_id UUID REFERENCES partner_wallets(id);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'INR';
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS tds_rate NUMERIC(5,2) DEFAULT 2.00;
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS tds_amount NUMERIC(15,2) DEFAULT 0.00;
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS net_amount NUMERIC(15,2);
@@ -82,11 +83,30 @@ const runWalletEngineMigrations = async () => {
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS account_number VARCHAR(100);
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS ifsc_code VARCHAR(50);
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS bank_account_id UUID;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(255);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS razorpay_contact_id VARCHAR(100);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS razorpay_fund_account_id VARCHAR(100);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS razorpay_payout_id VARCHAR(100);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS utr VARCHAR(100);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS bank_reference VARCHAR(100);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS failure_reason TEXT;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS remarks TEXT;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS admin_note TEXT;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS processed_by UUID REFERENCES users(id);
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS transferred_at TIMESTAMPTZ;
+      ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS transferred_by UUID REFERENCES users(id);
       ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+      -- Align partner_bank_details columns
+      ALTER TABLE partner_bank_details ADD COLUMN IF NOT EXISTS razorpay_contact_id VARCHAR(100);
+      ALTER TABLE partner_bank_details ADD COLUMN IF NOT EXISTS razorpay_fund_account_id VARCHAR(100);
+      ALTER TABLE partner_bank_details ADD COLUMN IF NOT EXISTS is_primary BOOLEAN DEFAULT TRUE;
+      ALTER TABLE partner_bank_details ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
     `);
 
-    // 5. Wallet Withdrawal Events Table
+    // 5. Wallet Withdrawal Events Table (Audit Trail)
     await query(`
       CREATE TABLE IF NOT EXISTS wallet_withdrawal_events (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
