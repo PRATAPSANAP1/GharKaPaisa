@@ -172,16 +172,56 @@ const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
 };
 
 /**
+ * Standard Catalog of All Platform SMS Templates
+ * Note: Strictly <= 2 variables per template for DLT / MSG91 compliance.
+ */
+const SMS_TEMPLATES = {
+  // 1. Payout Confirmation (2 variables: {name}, {amount})
+  PAYOUT_CONFIRMATION: (name, amount) =>
+    `Dear ${name || 'Partner'}, your payout of Rs.${amount} has been successfully processed. - GharKaPaisa`,
+
+  // 2. Payout UTR Receipt (2 variables: {amount}, {utr})
+  PAYOUT_UTR: (amount, utr) =>
+    `Your payout of Rs.${amount} has been credited to bank account with UTR: ${utr}. - GharKaPaisa`,
+
+  // 3. Application Step 1 Link (2 variables: {name}, {url})
+  APPLY_STEP1: (name, url) =>
+    `Dear ${name || 'Customer'}, complete your prefilled application on GharKaPaisa: ${url}`,
+
+  // 4. Document Submission Step 2 Link (2 variables: {name}, {url})
+  APPLY_STEP2: (name, url) =>
+    `Dear ${name || 'Customer'}, submit bank application ref & documents: ${url} - GharKaPaisa`,
+
+  // 5. Lead Approved (2 variables: {name}, {product})
+  LEAD_APPROVED: (name, product) =>
+    `Dear ${name || 'Customer'}, your application for ${product} has been approved! - GharKaPaisa`,
+
+  // 6. Lead Rejected (2 variables: {name}, {product})
+  LEAD_REJECTED: (name, product) =>
+    `Dear ${name || 'Customer'}, your application for ${product} was not approved. - GharKaPaisa`,
+
+  // 7. Commission Credited (2 variables: {name}, {amount})
+  COMMISSION_CREDITED: (name, amount) =>
+    `Dear ${name || 'Partner'}, commission of Rs.${amount} has been credited to wallet. - GharKaPaisa`,
+
+  // 8. KYC Status Update (2 variables: {name}, {status})
+  KYC_UPDATE: (name, status) =>
+    `Dear ${name || 'Partner'}, your KYC status is updated to ${status}. - GharKaPaisa`,
+
+  // 9. OTP Verification (1 variable: {otp})
+  OTP_VERIFICATION: (otp) =>
+    `Your GharKaPaisa verification OTP is ${otp}. Valid for 10 minutes. Do not share.`,
+
+  // 10. Common Generic Notification (2 variables: {name}, {message})
+  GENERIC_NOTIFICATION: (name, message) =>
+    `Dear ${name || 'User'}, ${message} - GharKaPaisa`
+};
+
+/**
  * Generic Transactional SMS Template function usable anywhere on the platform
- * 
- * @param {string} to - Recipient mobile number
- * @param {string} recipientName - Name of the user/partner/customer
- * @param {string} messageContent - Main update/alert message
- * @returns {Promise<boolean>}
  */
 const sendGenericNotificationSms = async (to, recipientName, messageContent) => {
-  const name = recipientName ? recipientName.trim() : 'User';
-  const body = `Dear ${name}, ${messageContent} - GharKaPaisa`;
+  const body = SMS_TEMPLATES.GENERIC_NOTIFICATION(recipientName, messageContent);
   return await sendSms(to, body);
 };
 
@@ -189,6 +229,7 @@ module.exports = {
   sendSms,
   sendGenericNotificationSms,
   sendApplyStep1Sms,
-  sendPostApplyStep2Sms
+  sendPostApplyStep2Sms,
+  SMS_TEMPLATES
 };
 
