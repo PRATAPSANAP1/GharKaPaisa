@@ -216,6 +216,25 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
         productId = app.product_id || productId;
         bankId = app.bank_id || bankId;
       }
+
+      // Automatically transition application status to approved when commission is added to wallet
+      await client.query(`
+        UPDATE applications 
+        SET status = 'approved',
+            final_status = 'approved',
+            approved_at = COALESCE(approved_at, NOW()),
+            commission_released = TRUE,
+            updated_at = NOW()
+        WHERE id = $1
+      `, [appId]);
+
+      await client.query(`
+        UPDATE leads 
+        SET status = 'approved',
+            pipeline_stage = 'approved',
+            updated_at = NOW()
+        WHERE application_id = $1 OR id = $1
+      `, [appId]);
     }
 
     const { rows: [txn] } = await client.query(`

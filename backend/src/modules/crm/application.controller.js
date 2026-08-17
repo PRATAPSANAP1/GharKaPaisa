@@ -3141,9 +3141,9 @@ async function releaseCommission(req, res, next) {
 
     await client.query('BEGIN');
 
-    // 1. Update application commission status
+    // 1. Update application commission status & set status to approved
     await client.query(
-      `UPDATE applications SET commission_status = 'released', status = 'commission_released', updated_at = NOW() WHERE id = $1`,
+      `UPDATE applications SET status = 'approved', final_status = 'approved', approved_at = COALESCE(approved_at, NOW()), commission_status = 'released', commission_released = TRUE, updated_at = NOW() WHERE id = $1`,
       [id]
     );
 
