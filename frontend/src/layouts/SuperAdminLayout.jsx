@@ -161,6 +161,12 @@ const SuperAdminLayout = () => {
   // Navigation Items Structured by Categories (Corrected /super-admin/ paths)
   const categories = [
     {
+      title: "OVERVIEW",
+      items: [
+        { path: '/super-admin/overview', label: 'Master Overview', icon: <Icons.dashboard size={16} /> },
+      ]
+    },
+    {
       title: "USERS & ACCOUNTS",
       items: [
         { path: '/super-admin/dashboard', label: 'Admins', icon: <Icons.profile size={16} /> },

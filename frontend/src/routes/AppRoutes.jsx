@@ -53,6 +53,7 @@ import ManageWithdrawals from '../modules/admin/users/ManageWithdrawals';
 import ManageLeads from '../modules/admin/users/ManageLeads';
 
 // Super Admin Pages
+import SuperAdminOverview from '../modules/super-admin/dashboard/SuperAdminOverview';
 import SuperAdminDashboard from '../modules/super-admin/dashboard/SuperAdminDashboard';
 import SuperAdminReports from '../modules/super-admin/reports/SuperAdminReports';
 import ReferralAnalyticsView from '../modules/super-admin/reports/ReferralAnalyticsView';
@@ -274,6 +275,7 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute />}>
         <Route element={<RoleRoute allowedRoles={['SUPER_ADMIN']} />}>
           <Route element={<SuperAdminLayout />}>
+            <Route path="/super-admin/overview" element={<SuperAdminOverview />} />
             <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
             <Route path="/super-admin/partners" element={<ManagePartners />} />
             <Route path="/super-admin/leads" element={<ManageLeads />} />

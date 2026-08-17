@@ -29,7 +29,7 @@ const getOverview = async (req, res, next) => {
       values.push(from_date, to_date + ' 23:59:59');
     }
 
-    const [apps, Partners, wallet, leads, withdrawal, banks, products, recentPartners, adminsRes] = await Promise.all([
+    const [apps, Partners, wallet, leads, withdrawal, banks, products, recentPartners, adminsRes, customersRes] = await Promise.all([
       query(sql, values),
       isPartner ? Promise.resolve({rows:[{}]}) : query(`
         SELECT
@@ -84,7 +84,8 @@ const getOverview = async (req, res, next) => {
           COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, 'active')) = 'active') as active_admins
         FROM users
         WHERE UPPER(role::text) IN ('ADMIN', 'SUPER_ADMIN', 'SUPERADMIN', 'OPERATIONAL_HEAD')
-      `)
+      `),
+      query(`SELECT COUNT(*) as total_customers FROM customers`)
     ]);
 
     // calculate conversion rate & fallback statistics
@@ -92,6 +93,7 @@ const getOverview = async (req, res, next) => {
     const leadsData = leads.rows[0] || {};
     const withdrawalData = withdrawal.rows[0] || {};
     const adminData = adminsRes?.rows?.[0] || {};
+    const customerData = customersRes?.rows?.[0] || {};
 
     const conversion_rate = appsData.total > 0 ? ((appsData.approved / appsData.total) * 100).toFixed(2) : 0;
 
@@ -104,6 +106,7 @@ const getOverview = async (req, res, next) => {
     return success(res, {
       applications: { ...appsData, conversion_rate },
       Partners: Partners.rows[0],
+      customers: customerData,
       wallet: wallet.rows[0],
       leads: {
         ...leadsData,
