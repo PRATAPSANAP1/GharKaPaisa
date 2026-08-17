@@ -122,8 +122,8 @@ const getCustomersReport = async (partnerId, filters) => {
       c.id, COALESCE(NULLIF(TRIM(c.full_name), ''), 'Customer') as customer_name, c.mobile, c.email, c.city, c.state,
       c.pan_number, c.dob, c.monthly_income, c.employment_type, c.company_name, c.created_at,
       COUNT(a.id) as total_applications,
-      COUNT(a.id) FILTER (WHERE a.status IN ('approved', 'disbursed', 'sanctioned')) as approved_cards,
-      COALESCE(SUM(a.commission_amount) FILTER (WHERE a.status IN ('approved', 'disbursed', 'sanctioned')), 0) as total_commission
+      COUNT(a.id) FILTER (WHERE a.status::text = 'approved') as approved_cards,
+      COALESCE(SUM(a.commission_amount) FILTER (WHERE a.status::text = 'approved'), 0) as total_commission
     FROM customers c
     LEFT JOIN applications a ON a.customer_id = c.id
     ${where}
