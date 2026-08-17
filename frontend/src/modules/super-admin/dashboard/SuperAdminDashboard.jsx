@@ -324,13 +324,13 @@ export default function SuperAdminDashboard() {
   const cardData = [
     { label: "Total Admins", val: stats.total, icon: <Icons.profile size={18} />, color: "#3B82F6", path: "/super-admin/dashboard" },
     { label: "Active Admins", val: stats.active, icon: <Icons.check size={18} />, color: "#10B981", path: "/super-admin/dashboard" },
-    { label: "Pending KYC", val: bStats.Partners?.pending_kyc ?? bStats.partners?.pending_kyc ?? 0, icon: <Icons.clock size={18} />, color: "#F59E0B", path: "/super-admin/partners" },
-    { label: "Pending Leads", val: bStats.applications?.pending_leads ?? bStats.leads?.pending_leads ?? 0, icon: <Icons.clock size={18} />, color: "#F97316", path: "/super-admin/crm" },
+    { label: "Pending KYC", val: bStats.Partners?.pending_kyc ?? bStats.partners?.pending_kyc ?? 0, icon: <Icons.clock size={18} />, color: "#F59E0B", path: "/super-admin/partners?kyc_status=pending" },
+    { label: "Pending Leads", val: bStats.applications?.pending_leads ?? bStats.leads?.pending_leads ?? 0, icon: <Icons.clock size={18} />, color: "#F97316", path: "/super-admin/crm?status=operational_verified" },
     { label: "Total Leads", val: bStats.leads?.total_leads ?? bStats.applications?.total ?? 0, icon: <Icons.trending size={18} />, color: "#8B5CF6", path: "/super-admin/leads" },
-    { label: "Approved Leads", val: bStats.leads?.approved_leads ?? bStats.applications?.approved ?? 0, icon: <Icons.check size={18} />, color: "#10B981", path: "/super-admin/leads" },
-    { label: "Rejected Leads", val: bStats.leads?.rejected_leads ?? bStats.applications?.rejected ?? 0, icon: <Icons.x size={18} />, color: "#EF4444", path: "/super-admin/leads" },
+    { label: "Approved Leads", val: bStats.leads?.approved_leads ?? bStats.applications?.approved ?? 0, icon: <Icons.check size={18} />, color: "#10B981", path: "/super-admin/crm?status=super_admin_approved" },
+    { label: "Rejected Leads", val: bStats.leads?.rejected_leads ?? bStats.applications?.rejected ?? 0, icon: <Icons.x size={18} />, color: "#EF4444", path: "/super-admin/leads?status=rejected" },
     { label: "Commission Paid", val: `₹${parseFloat(bStats.withdrawal?.total_commission_paid ?? bStats.applications?.total_commission ?? 0).toLocaleString("en-IN")}`, icon: <Icons.wallet size={18} />, color: "#10B981", path: "/super-admin/commissions" },
-    { label: "Pending Withdrawals", val: bStats.withdrawal?.pending_withdrawals ?? 0, icon: <Icons.clock size={18} />, color: "#F59E0B", path: "/super-admin/commissions" },
+    { label: "Pending Withdrawals", val: bStats.withdrawal?.pending_withdrawals ?? 0, icon: <Icons.clock size={18} />, color: "#F59E0B", path: "/super-admin/wallet?tab=withdrawals" },
     { label: "Total Banks", val: bStats.banks?.total_banks ?? 0, icon: <Icons.wallet size={18} />, color: "#3B82F6", path: "/super-admin/banks" },
     { label: "Total Products", val: bStats.products?.total_products ?? 0, icon: <Icons.creditCard size={18} />, color: "#8B5CF6", path: "/super-admin/products" }
   ];

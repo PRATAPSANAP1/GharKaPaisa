@@ -9,6 +9,8 @@ import {
   MdShare, MdTrackChanges, MdDelete
 } from 'react-icons/md';
 
+import { useSearchParams } from 'react-router-dom';
+
 const VISIBILITY_OPTIONS = [
   { id: 'public', label: 'Public (Visible to Partner)' },
   { id: 'internal', label: 'Internal (Admins only)' },
@@ -18,6 +20,8 @@ const VISIBILITY_OPTIONS = [
 export default function ManageApplications() {
   const { C } = useTheme();
   const S = makeS(C);
+  const [searchParams] = useSearchParams();
+  const urlStatus = searchParams.get('status');
 
   // Verification modal state
   const [verifyModalApp, setVerifyModalApp] = useState(null);
@@ -33,7 +37,7 @@ export default function ManageApplications() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('operational_verified');
+  const [statusFilter, setStatusFilter] = useState(urlStatus || 'operational_verified');
   const [commFilter, setCommFilter] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('');
   const [processByFilter, setProcessByFilter] = useState('');

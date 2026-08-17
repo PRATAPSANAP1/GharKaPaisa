@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
@@ -7,6 +8,8 @@ import Lead360Modal from './components/Lead360Modal';
 export default function ManageLeads() {
   const { C } = useTheme();
   const S = makeS(C);
+  const [searchParams] = useSearchParams();
+  const urlStatus = searchParams.get('status');
 
   const isSuperAdminView = typeof window !== 'undefined' && window.location.pathname.includes('/super-admin');
 
@@ -15,7 +18,7 @@ export default function ManageLeads() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(urlStatus || "");
   const [priority, setPriority] = useState("");
   const [source, setSource] = useState("");
   const [loading, setLoading] = useState(true);

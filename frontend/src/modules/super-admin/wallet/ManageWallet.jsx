@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
@@ -16,8 +17,10 @@ const ADJUST_TYPES = [
 export default function ManageWallet() {
   const { C, isDark } = useTheme();
   const S = makeS(C);
+  const [searchParams] = useSearchParams();
+  const urlTab = searchParams.get('tab');
 
-  const [activeTab, setActiveTab] = useState('withdrawals'); // withdrawals, wallets, ledger, reconciliation, commissions
+  const [activeTab, setActiveTab] = useState(urlTab || 'withdrawals'); // withdrawals, wallets, ledger, reconciliation, commissions
 
   // Data lists
   const [withdrawals, setWithdrawals] = useState([]);
