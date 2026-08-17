@@ -108,20 +108,24 @@ const sendSms = async (to, body) => {
 };
 
 /**
- * Send Step 1 Application Link SMS to Customer
+ * Send Step 1 Application Link SMS to Customer (DLT Template ID: 1277178678509565584 | Sender: GHARKP)
  */
 const sendApplyStep1Sms = async (to, customerName, productName, token) => {
   const applyUrl = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}`;
-  const body = `Dear ${customerName || 'Customer'}, complete your prefilled application for ${productName || 'Credit Card'} on GharKaPaisa: ${applyUrl}`;
-  
-  if (msg91AuthKey && process.env.MSG91_APPLY_STEP1_TEMPLATE_ID) {
+  const body = `Dear ${customerName || 'Customer'} , complete your prefilled application for ${productName || 'Credit Card'} on GharKaPaisa: ${applyUrl} - GharKaPaisa`;
+  const templateId = process.env.MSG91_APPLY_STEP1_TEMPLATE_ID || '1277178678509565584';
+
+  if (msg91AuthKey) {
     try {
       const formattedTo = formatMobile(to);
       await axios.post('https://api.msg91.com/api/v5/flow/', {
-        template_id: process.env.MSG91_APPLY_STEP1_TEMPLATE_ID,
+        template_id: templateId,
         short_url: '0',
         recipients: [{
           mobiles: formattedTo,
+          var1: customerName || 'Customer',
+          var2: productName || 'Credit Card',
+          var3: applyUrl,
           name: customerName || 'Customer',
           product: productName || 'Credit Card',
           url: applyUrl
@@ -129,7 +133,7 @@ const sendApplyStep1Sms = async (to, customerName, productName, token) => {
       }, {
         headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
       });
-      logger.info(`[SMS] Step 1 Apply SMS sent to ${formattedTo} via MSG91 Flow`);
+      logger.info(`[SMS] Step 1 Apply SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
       return true;
     } catch (err) {
       logger.error(`[SMS] Failed sending Step 1 Flow SMS: ${err.message}`);
@@ -166,6 +170,70 @@ const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
       return true;
     } catch (err) {
       logger.error(`[SMS] Failed sending Step 2 Flow SMS: ${err.message}`);
+    }
+  }
+
+  return await sendSms(to, body);
+};
+
+/**
+ * Send Upload Documents Reminder SMS (DLT Template ID: 1277178655031889758 | Sender: GHARKP)
+ */
+const sendUploadReminderSms = async (to, customerName, appNumber, uploadUrl) => {
+  const body = `Dear ${customerName || 'Customer'}, please complete your application ${appNumber || ''} by uploading required documents: ${uploadUrl} - Thanks, GharKaPaisa`;
+  const templateId = process.env.MSG91_UPLOAD_REMINDER_TEMPLATE_ID || '1277178655031889758';
+
+  if (msg91AuthKey) {
+    try {
+      const formattedTo = formatMobile(to);
+      await axios.post('https://api.msg91.com/api/v5/flow/', {
+        template_id: templateId,
+        short_url: '0',
+        recipients: [{
+          mobiles: formattedTo,
+          var1: customerName || 'Customer',
+          var2: appNumber || 'ref',
+          var3: uploadUrl
+        }]
+      }, {
+        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
+      });
+      logger.info(`[SMS] Upload Reminder SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
+      return true;
+    } catch (err) {
+      logger.error(`[SMS] Failed sending Upload Reminder SMS: ${err.message}`);
+    }
+  }
+
+  return await sendSms(to, body);
+};
+
+/**
+ * Send Partner / Team Invite SMS (DLT Template ID: 1277178655019181250 | Sender: GHARKP)
+ */
+const sendPartnerInviteSms = async (to, inviterName, loginUrl) => {
+  const targetUrl = loginUrl || `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/login`;
+  const body = `Welcome to GharKaPaisa! You have been added as a Team Member by ${inviterName || 'Partner'}. Login here: ${targetUrl}`;
+  const templateId = process.env.MSG91_PARTNER_INVITES_TEMPLATE_ID || '1277178655019181250';
+
+  if (msg91AuthKey) {
+    try {
+      const formattedTo = formatMobile(to);
+      await axios.post('https://api.msg91.com/api/v5/flow/', {
+        template_id: templateId,
+        short_url: '0',
+        recipients: [{
+          mobiles: formattedTo,
+          var1: targetUrl,
+          var2: inviterName || 'Partner'
+        }]
+      }, {
+        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
+      });
+      logger.info(`[SMS] Partner Invite SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
+      return true;
+    } catch (err) {
+      logger.error(`[SMS] Failed sending Partner Invite SMS: ${err.message}`);
     }
   }
 
@@ -231,6 +299,8 @@ module.exports = {
   sendGenericNotificationSms,
   sendApplyStep1Sms,
   sendPostApplyStep2Sms,
+  sendUploadReminderSms,
+  sendPartnerInviteSms,
   SMS_TEMPLATES
 };
 
