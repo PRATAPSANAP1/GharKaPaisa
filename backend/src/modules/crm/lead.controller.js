@@ -182,7 +182,7 @@ const get360LeadDetails = async (req, res, next) => {
       query(`SELECT * FROM lead_sla WHERE lead_id = $1 ORDER BY started_at DESC`, [id]),
       query(`SELECT * FROM commission_ledger WHERE lead_id = $1 OR application_id = $1`, [id]).catch(() => ({ rows: [] })),
       query(`
-        SELECT a.id, a.app_number, a.status, a.commission_amount, COALESCE(a.process_type, 'lead_punching') as process_type, a.created_at,
+        SELECT a.id::text, a.app_number::text, a.status::text, a.commission_amount, COALESCE(a.process_type::text, 'lead_punching') as process_type, a.created_at,
                p.name as product_name, p.category as product_category, b.name as bank_name
         FROM applications a
         LEFT JOIN products p ON p.id = a.product_id
@@ -190,7 +190,7 @@ const get360LeadDetails = async (req, res, next) => {
         WHERE a.customer_id IN (SELECT id FROM customers WHERE mobile = $1)
            OR a.lead_id IN (SELECT id FROM leads WHERE mobile = $1)
         UNION
-        SELECT l.id, COALESCE(l.lead_number, 'LEAD') as app_number, l.status, 0 as commission_amount, COALESCE(l.process_type, 'lead_punching') as process_type, l.created_at,
+        SELECT l.id::text, COALESCE(l.lead_number::text, 'LEAD') as app_number, l.status::text, 0 as commission_amount, COALESCE(l.process_type::text, 'lead_punching') as process_type, l.created_at,
                p.name as product_name, p.category as product_category, b.name as bank_name
         FROM leads l
         LEFT JOIN products p ON p.id = l.product_id
