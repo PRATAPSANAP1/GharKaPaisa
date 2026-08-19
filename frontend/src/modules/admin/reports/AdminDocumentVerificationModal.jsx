@@ -41,9 +41,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role);
   const isOpsOrAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'OPERATOR'].includes(role) || !isPartner;
 
-  const canEditQd = isPartner;
+  const canEditQd = true;
   const canEditRemark = true;
-  const canEditFinal = isOpsOrAdmin;
+  const canEditFinal = true;
 
   // 1. QD Customer Details State
   const [customerMobile, setCustomerMobile] = useState(application?.customer_mobile || application?.mobile || application?.phone || '');
