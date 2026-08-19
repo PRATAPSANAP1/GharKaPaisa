@@ -412,14 +412,25 @@ const approvePartner = async (req, res, next) => {
       await client.query('COMMIT');
       await logAction(req, 'APPROVE_KYC', PartnerId, { userId: Partner.user_id });
       await notify.kycApproved(Partner.user_id);
+
+      const { rows: [pUser] } = await client.query(`SELECT mobile, full_name FROM users WHERE id = $1`, [Partner.user_id]);
+      if (pUser?.mobile) {
+        const { sendKycStatusUpdateSms } = require('../../services/sms/sms.service');
+        sendKycStatusUpdateSms(pUser.mobile, pUser.full_name || 'Partner', 'Approved').catch(() => {});
+      }
     } else {
       await client.query(`
         UPDATE partner_profiles SET kyc_status = 'rejected', rejection_reason = $1 WHERE id = $2
       `, [rejection_reason, PartnerId]);
-      // await client.query(`UPDATE users SET status = 'inactive'::user_status WHERE id = $1`, [Partner.user_id]);
       await client.query('COMMIT');
       await logAction(req, 'REJECT_KYC', PartnerId, { userId: Partner.user_id, rejection_reason });
       await notify.kycRejected(Partner.user_id, rejection_reason);
+
+      const { rows: [pUser] } = await client.query(`SELECT mobile, full_name FROM users WHERE id = $1`, [Partner.user_id]);
+      if (pUser?.mobile) {
+        const { sendKycStatusUpdateSms } = require('../../services/sms/sms.service');
+        sendKycStatusUpdateSms(pUser.mobile, pUser.full_name || 'Partner', 'Rejected').catch(() => {});
+      }
     }
 
     return success(res, {}, `Partner ${approved ? 'approved' : 'rejected'} successfully`);
@@ -656,9 +667,9 @@ const addTeamMember = async (req, res, next) => {
 
     // Send automated SMS to the invitee's mobile number
     try {
-      const { sendSms } = require('../../services/sms/sms.service');
+      const { sendPartnerInviteSms } = require('../../services/sms/sms.service');
       const smsTo = cleanMobile.startsWith('91') ? `+${cleanMobile}` : `+91${cleanMobile}`;
-      await sendSms(smsTo, messageText);
+      await sendPartnerInviteSms(smsTo, parentPartner.first_name || 'Partner', inviteLink);
     } catch (smsErr) {
       console.warn('[addTeamMember] SMS send error:', smsErr.message);
     }

@@ -3192,6 +3192,19 @@ async function releaseCommission(req, res, next) {
 
     await client.query('COMMIT');
 
+    // Send SMS notification to partner
+    try {
+      const { rows: [partnerUser] } = await client.query(
+        `SELECT u.mobile, COALESCE(p.first_name, u.full_name, 'Partner') as first_name 
+         FROM partner_profiles p JOIN users u ON p.user_id = u.id WHERE p.id = $1`,
+        [app.partner_id]
+      );
+      if (partnerUser?.mobile) {
+        const { sendCommissionCreditedSms } = require('../../services/sms/sms.service');
+        sendCommissionCreditedSms(partnerUser.mobile, partnerUser.first_name, commissionAmount).catch(() => {});
+      }
+    } catch (_) {}
+
     // Fetch updated balance from partner_wallets
     const { rows: [w] } = await query(
       `SELECT available_balance FROM partner_wallets WHERE partner_id = $1`,
