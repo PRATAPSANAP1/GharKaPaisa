@@ -94,7 +94,7 @@ const getApplicationsReport = async (partnerId, filters) => {
     SELECT 
       a.id, a.app_number, a.status, COALESCE(a.commission_amount, 0) as payout_amount, a.created_at,
       p.name as product_name, b.name as bank_name,
-      COALESCE(c.full_name, c.name, 'Customer') as customer_name
+      COALESCE(c.full_name, 'Customer') as customer_name
     FROM applications a
     LEFT JOIN products p ON p.id = a.product_id
     LEFT JOIN banks b ON b.id = p.bank_id
