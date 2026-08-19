@@ -109,15 +109,80 @@ const generateShareLink = async (req, res, next) => {
   }
 };
 
+/**
+ * Helper to resolve share token across partner_share_links, leads, applications, and products tables
+ */
+const resolveShareToken = async (token) => {
+  if (!token) return null;
+
+  // 1. Check partner_share_links
+  const { rows: [linkRes] } = await query(
+    `SELECT product_id, partner_id, application_id, lead_id, created_at 
+     FROM partner_share_links 
+     WHERE tracking_token = $1`,
+    [token]
+  );
+  if (linkRes) return linkRes;
+
+  // 2. Check leads table by tracking_token or ID
+  const { rows: [leadRes] } = await query(
+    `SELECT product_id, partner_id, customer_id, id as lead_id, created_at 
+     FROM leads 
+     WHERE tracking_token = $1 OR id::text = $1 LIMIT 1`,
+    [token]
+  );
+  if (leadRes) {
+    return {
+      product_id: leadRes.product_id,
+      partner_id: leadRes.partner_id,
+      application_id: null,
+      lead_id: leadRes.lead_id,
+      created_at: leadRes.created_at
+    };
+  }
+
+  // 3. Check applications table by app_number or ID
+  const { rows: [appRes] } = await query(
+    `SELECT product_id, partner_id, id as application_id, lead_id, created_at 
+     FROM applications 
+     WHERE app_number = $1 OR id::text = $1 LIMIT 1`,
+    [token]
+  );
+  if (appRes) {
+    return {
+      product_id: appRes.product_id,
+      partner_id: appRes.partner_id,
+      application_id: appRes.application_id,
+      lead_id: appRes.lead_id,
+      created_at: appRes.created_at
+    };
+  }
+
+  // 4. Fallback: Check products table by ID or slug
+  const { rows: [prodRes] } = await query(
+    `SELECT id as product_id FROM products WHERE id::text = $1 OR slug ILIKE $1 LIMIT 1`,
+    [token]
+  );
+  if (prodRes) {
+    const { rows: [pProfile] } = await query(`SELECT id FROM partner_profiles LIMIT 1`);
+    return {
+      product_id: prodRes.product_id,
+      partner_id: pProfile?.id || null,
+      application_id: null,
+      lead_id: null,
+      created_at: new Date()
+    };
+  }
+
+  return null;
+};
+
 // GET /public/share/:trackingToken - Public endpoint to get product details for landing page
 const getShareLinkDetails = async (req, res, next) => {
   try {
     const { trackingToken } = req.params;
 
-    const { rows: [shareLinkData] } = await query(
-      `SELECT product_id, partner_id, application_id, lead_id, created_at FROM partner_share_links WHERE tracking_token = $1 AND expires_at > NOW()`,
-      [trackingToken]
-    );
+    const shareLinkData = await resolveShareToken(trackingToken);
 
     if (!shareLinkData) {
       return error(res, 'Invalid or expired share link', 404);
@@ -136,15 +201,19 @@ const getShareLinkDetails = async (req, res, next) => {
     }
 
     // Get partner info (optional - for attribution display)
-    const { rows: [partner] } = await query(
-      `SELECT partner_code, first_name, last_name FROM partner_profiles WHERE id = $1`,
-      [shareLinkData.partner_id]
-    );
+    let partner = null;
+    if (shareLinkData.partner_id) {
+      const { rows: [p] } = await query(
+        `SELECT partner_code, first_name, last_name FROM partner_profiles WHERE id = $1`,
+        [shareLinkData.partner_id]
+      );
+      partner = p || null;
+    }
 
     let existingApplication = null;
     if (shareLinkData.application_id) {
       const { rows: [app] } = await query(`
-        SELECT a.id, a.app_number, a.bank_application_number, a.vkyc_status, a.vkyc_url, a.monthly_salary, a.pan_number, a.notes,
+        SELECT a.id, a.app_number, a.bank_application_number, a.vkyc_status, a.vkyc_url, a.monthly_salary, a.pan_number,
                c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email
         FROM applications a
         JOIN customers c ON c.id = a.customer_id
@@ -189,10 +258,7 @@ const submitShareLead = async (req, res, next) => {
     }
 
     // Get share link details
-    const { rows: [shareLinkData] } = await query(
-      `SELECT product_id, partner_id, application_id, lead_id FROM partner_share_links WHERE tracking_token = $1 AND expires_at > NOW()`,
-      [trackingToken]
-    );
+    const shareLinkData = await resolveShareToken(trackingToken);
 
     if (!shareLinkData) {
       return error(res, 'Invalid or expired share link', 404);
@@ -426,14 +492,7 @@ const getApplyTokenDetails = async (req, res, next) => {
     if (!token) return error(res, 'Token is required', 400);
 
     // Find share link or lead by token
-    const { rows: [shareData] } = await query(`
-      SELECT psl.product_id, psl.partner_id, l.id as lead_id, l.customer_name, l.mobile, l.status, l.pipeline_stage
-      FROM partner_share_links psl
-      LEFT JOIN leads l ON (l.tracking_token = psl.tracking_token OR l.id::text = psl.tracking_token)
-      WHERE (psl.tracking_token = $1 OR l.tracking_token = $1)
-        AND psl.expires_at > NOW()
-      LIMIT 1
-    `, [token]);
+    const shareData = await resolveShareToken(token);
 
     if (!shareData) {
       return error(res, 'Invalid or expired application link', 404);
