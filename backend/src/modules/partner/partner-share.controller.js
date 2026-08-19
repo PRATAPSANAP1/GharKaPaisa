@@ -163,22 +163,26 @@ const resolveShareToken = async (token) => {
     };
   }
 
-  // 4. Check click_tracking table
-  const { rows: [clickRes] } = await query(
-    `SELECT product_id, partner_id, created_at 
-     FROM click_tracking 
-     WHERE tracking_url ILIKE $1 OR original_url ILIKE $1 
-     ORDER BY created_at DESC LIMIT 1`,
-    [`%${cleanToken}%`]
-  );
-  if (clickRes && clickRes.product_id) {
-    return {
-      product_id: clickRes.product_id,
-      partner_id: clickRes.partner_id,
-      application_id: null,
-      lead_id: null,
-      created_at: clickRes.created_at
-    };
+  // 4. Check click_tracking table safely
+  try {
+    const { rows: [clickRes] } = await query(
+      `SELECT product_id, partner_id 
+       FROM click_tracking 
+       WHERE tracking_url ILIKE $1 OR original_url ILIKE $1 
+       LIMIT 1`,
+      [`%${cleanToken}%`]
+    );
+    if (clickRes && clickRes.product_id) {
+      return {
+        product_id: clickRes.product_id,
+        partner_id: clickRes.partner_id,
+        application_id: null,
+        lead_id: null,
+        created_at: new Date()
+      };
+    }
+  } catch (clickErr) {
+    // Non-blocking fallback if click_tracking has different columns
   }
 
   // 5. Check products table by ID, slug, or name
