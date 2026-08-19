@@ -73,6 +73,9 @@ router.post('/:id/assign', requireApprovedPartnerOrAdmin, appCtrl.reassignApplic
 router.post('/:id/reassign', requireApprovedPartnerOrAdmin, appCtrl.reassignApplication);
 router.put('/:id/documents/:docId/verify', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.verifyDocument);
 router.put('/:id/verification-complete', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.markVerificationComplete);
+router.put('/:id/verification', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);
+router.patch('/:id/verification', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);
+router.post('/:id/verification', requireApprovedPartnerOrAdmin, appCtrl.updateApplicationDetails);
 
 // Basic CRUD (generic /:id defined after all sub-resources)
 router.get('/', requireApprovedPartnerOrAdmin, appCtrl.listApplications);

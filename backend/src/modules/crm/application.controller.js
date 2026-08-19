@@ -2339,6 +2339,7 @@ const updateApplicationDetails = async (req, res, next) => {
     }
 
     // 1. Update applications table
+    const targetStatus = status || req.body.final_status || null;
     const { rows: [updatedApp] } = await client.query(`
       UPDATE applications SET
         bank_application_number = COALESCE(NULLIF($1, ''), bank_application_number),
@@ -2347,27 +2348,45 @@ const updateApplicationDetails = async (req, res, next) => {
         vkyc_url = COALESCE(NULLIF($3, ''), vkyc_url),
         salary_slip_url = COALESCE(NULLIF($4, ''), salary_slip_url),
         pan_card_url = COALESCE(NULLIF($5, ''), pan_card_url),
-        status = COALESCE(NULLIF($6, ''), status::text)::application_status,
+        status = CASE WHEN $6 IS NOT NULL AND $6 != '' AND EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'application_status' AND enumlabel = $6) THEN $6::application_status ELSE status END,
         remarks = COALESCE(NULLIF($7, ''), remarks),
         bank_id = COALESCE($8, bank_id),
         product_id = COALESCE($9, product_id),
         loan_amount = COALESCE($10, loan_amount),
         metadata = COALESCE($11::jsonb, metadata),
+        soft_approval_status = COALESCE(NULLIF($12, ''), soft_approval_status),
+        vkyc_stage = COALESCE(NULLIF($13, ''), vkyc_stage),
+        iqa_stage = COALESCE(NULLIF($14, ''), iqa_stage),
+        dispatch_status = COALESCE(NULLIF($15, ''), dispatch_status),
+        bank_remark = COALESCE(NULLIF($16, ''), bank_remark),
+        final_status = COALESCE(NULLIF($17, ''), final_status),
+        decline_reason = COALESCE(NULLIF($18, ''), decline_reason),
+        eligible_reqd = COALESCE(NULLIF($19, ''), eligible_reqd),
+        approved_amount = COALESCE($20, approved_amount),
         updated_at = NOW()
-      WHERE id = $12
+      WHERE id = $21
       RETURNING *
     `, [
-      appNumToSave || null,
-      vkyc_status || null,
-      vkyc_url || null,
+      appNumToSave || req.body.bank_application_number || null,
+      vkyc_status || req.body.vkyc_status || null,
+      vkyc_url || req.body.vkyc_url || null,
       salary_slip_url || null,
       pan_card_url || null,
-      status || null,
-      remarks || null,
+      targetStatus,
+      remarks || req.body.bank_remark || null,
       bank_id || null,
       product_id || null,
       loan_amount ? parseFloat(loan_amount) : null,
       metadata ? JSON.stringify(metadata) : null,
+      req.body.soft_approval_status || null,
+      req.body.vkyc_stage || null,
+      req.body.iqa_stage || null,
+      req.body.dispatch_status || null,
+      req.body.bank_remark || null,
+      req.body.final_status || null,
+      req.body.decline_reason || null,
+      req.body.eligible_reqd || null,
+      req.body.approved_amount ? parseFloat(req.body.approved_amount) : null,
       id
     ]);
 
