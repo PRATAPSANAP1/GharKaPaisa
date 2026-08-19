@@ -111,7 +111,7 @@ const sendSms = async (to, body) => {
  * Send Step 1 Application Link SMS to Customer (DLT Template ID: 1277178678509565584 | Sender: GHARKP)
  */
 const sendApplyStep1Sms = async (to, customerName, productName, token) => {
-  const applyUrl = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}`;
+  const applyUrl = String(token || '').startsWith('http') ? token : `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}`;
   const body = `Dear ${customerName || 'Customer'} , complete your prefilled application for ${productName || 'Credit Card'} on GharKaPaisa: ${applyUrl} - GharKaPaisa`;
   const templateId = process.env.MSG91_APPLY_STEP1_TEMPLATE_ID || '1277178678509565584';
 

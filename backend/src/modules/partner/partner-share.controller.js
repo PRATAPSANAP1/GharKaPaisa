@@ -93,6 +93,13 @@ const generateShareLink = async (req, res, next) => {
     const shareLink = `${appUrl}/share/${trackingToken}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Apply for ${product.name} directly using your official application link:\n${shareLink}`)}`;
 
+    const targetMobile = req.body.customer_mobile || req.body.mobile;
+    const targetName = req.body.customer_name || req.body.full_name || 'Customer';
+    if (targetMobile) {
+      const { sendApplyStep1Sms } = require('../../services/sms/sms.service');
+      sendApplyStep1Sms(targetMobile, targetName, product.name, shareLink).catch(() => {});
+    }
+
     return success(res, {
       tracking_token: trackingToken,
       share_link: shareLink,

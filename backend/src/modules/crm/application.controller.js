@@ -1963,6 +1963,13 @@ const submitPartnerApplication = async (req, res, next) => {
     await client.query('COMMIT');
 
     if (!is_draft) {
+      if (['linked_share', 'customer_sell'].includes(process_type) && trimmedMobile && shareUrl) {
+        const { sendApplyStep1Sms } = require('../../services/sms/sms.service');
+        sendApplyStep1Sms(trimmedMobile, trimmedName, product.name, shareUrl).catch(err => {
+          logger.warn('[SMS] Failed to send apply_1 linked share SMS:', err.message);
+        });
+      }
+
       const { sendEmail } = require('../../services/email/email.service');
 
       if (trimmedEmail) {
