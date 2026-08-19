@@ -1946,9 +1946,9 @@ const submitPartnerApplication = async (req, res, next) => {
       try {
         await client.query('SAVEPOINT share_link_sp');
         await client.query(`
-          INSERT INTO partner_share_links (partner_id, product_id, tracking_token, created_by, expires_at)
-          VALUES ($1, $2, $3, $4, NOW() + INTERVAL '30 days')
-        `, [partnerId, product_id, trackingToken, req.user.id]);
+          INSERT INTO partner_share_links (partner_id, product_id, tracking_token, application_id, lead_id, expires_at)
+          VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days')
+        `, [partnerId, product_id, trackingToken, app?.id || null, syncedLeadId || null]);
         await client.query('RELEASE SAVEPOINT share_link_sp');
       } catch (shareLinkErr) {
         await client.query('ROLLBACK TO SAVEPOINT share_link_sp').catch(() => {});

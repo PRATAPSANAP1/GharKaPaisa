@@ -2483,6 +2483,7 @@ const migrate = async () => {
       CREATE INDEX IF NOT EXISTS idx_partner_share_links_partner ON partner_share_links(partner_id);
       ALTER TABLE partner_share_links ADD COLUMN IF NOT EXISTS application_id UUID;
       ALTER TABLE partner_share_links ADD COLUMN IF NOT EXISTS lead_id UUID;
+      ALTER TABLE partner_share_links ADD COLUMN IF NOT EXISTS created_by UUID;
     `);
 
     // 2. Lead Documents
