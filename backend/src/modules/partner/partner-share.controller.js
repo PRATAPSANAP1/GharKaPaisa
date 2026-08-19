@@ -110,26 +110,30 @@ const generateShareLink = async (req, res, next) => {
 };
 
 /**
- * Helper to resolve share token across partner_share_links, leads, applications, and products tables
+ * Helper to resolve share token across partner_share_links, leads, applications, click_tracking, and products tables
  */
 const resolveShareToken = async (token) => {
   if (!token) return null;
 
-  // 1. Check partner_share_links
+  const cleanToken = String(token).trim();
+
+  // 1. Check partner_share_links (exact match or prefix match)
   const { rows: [linkRes] } = await query(
     `SELECT product_id, partner_id, application_id, lead_id, created_at 
      FROM partner_share_links 
-     WHERE tracking_token = $1`,
-    [token]
+     WHERE tracking_token = $1 OR tracking_token ILIKE $2
+     ORDER BY created_at DESC LIMIT 1`,
+    [cleanToken, `${cleanToken}%`]
   );
   if (linkRes) return linkRes;
 
-  // 2. Check leads table by tracking_token or ID
+  // 2. Check leads table by tracking_token, lead_number, or ID
   const { rows: [leadRes] } = await query(
     `SELECT product_id, partner_id, customer_id, id as lead_id, created_at 
      FROM leads 
-     WHERE tracking_token = $1 OR id::text = $1 LIMIT 1`,
-    [token]
+     WHERE tracking_token = $1 OR tracking_token ILIKE $2 OR lead_number = $1 OR id::text = $1 
+     ORDER BY created_at DESC LIMIT 1`,
+    [cleanToken, `${cleanToken}%`]
   );
   if (leadRes) {
     return {
@@ -145,8 +149,9 @@ const resolveShareToken = async (token) => {
   const { rows: [appRes] } = await query(
     `SELECT product_id, partner_id, id as application_id, lead_id, created_at 
      FROM applications 
-     WHERE app_number = $1 OR id::text = $1 LIMIT 1`,
-    [token]
+     WHERE app_number = $1 OR id::text = $1 
+     ORDER BY created_at DESC LIMIT 1`,
+    [cleanToken]
   );
   if (appRes) {
     return {
@@ -158,15 +163,50 @@ const resolveShareToken = async (token) => {
     };
   }
 
-  // 4. Fallback: Check products table by ID or slug
+  // 4. Check click_tracking table
+  const { rows: [clickRes] } = await query(
+    `SELECT product_id, partner_id, created_at 
+     FROM click_tracking 
+     WHERE tracking_url ILIKE $1 OR original_url ILIKE $1 
+     ORDER BY created_at DESC LIMIT 1`,
+    [`%${cleanToken}%`]
+  );
+  if (clickRes && clickRes.product_id) {
+    return {
+      product_id: clickRes.product_id,
+      partner_id: clickRes.partner_id,
+      application_id: null,
+      lead_id: null,
+      created_at: clickRes.created_at
+    };
+  }
+
+  // 5. Check products table by ID, slug, or name
   const { rows: [prodRes] } = await query(
-    `SELECT id as product_id FROM products WHERE id::text = $1 OR slug ILIKE $1 LIMIT 1`,
-    [token]
+    `SELECT id as product_id FROM products 
+     WHERE id::text = $1 OR slug ILIKE $2 OR name ILIKE $2 
+     ORDER BY is_active DESC, created_at DESC LIMIT 1`,
+    [cleanToken, `%${cleanToken.replace(/-/g, ' ')}%`]
   );
   if (prodRes) {
     const { rows: [pProfile] } = await query(`SELECT id FROM partner_profiles LIMIT 1`);
     return {
       product_id: prodRes.product_id,
+      partner_id: pProfile?.id || null,
+      application_id: null,
+      lead_id: null,
+      created_at: new Date()
+    };
+  }
+
+  // 6. Fallback: Default to latest active product so user never hits an expired dead end
+  const { rows: [fallbackProd] } = await query(
+    `SELECT id as product_id FROM products WHERE is_active = true ORDER BY created_at DESC LIMIT 1`
+  );
+  if (fallbackProd) {
+    const { rows: [pProfile] } = await query(`SELECT id FROM partner_profiles LIMIT 1`);
+    return {
+      product_id: fallbackProd.product_id,
       partner_id: pProfile?.id || null,
       application_id: null,
       lead_id: null,
