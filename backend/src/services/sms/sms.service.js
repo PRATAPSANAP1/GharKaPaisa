@@ -241,6 +241,99 @@ const sendPartnerInviteSms = async (to, inviterName, loginUrl) => {
 };
 
 /**
+ * Send KYC Status Update SMS (DLT Template ID: 1277178697430872410 | Sender: GHARKP)
+ */
+const sendKycStatusUpdateSms = async (to, partnerName, statusText) => {
+  const body = `Dear ${partnerName || 'Partner'}, your KYC status is updated to ${statusText || 'Updated'} . - GharKaPaisa`;
+  const templateId = process.env.MSG91_KYC_STATUS_TEMPLATE_ID || '1277178697430872410';
+
+  if (msg91AuthKey) {
+    try {
+      const formattedTo = formatMobile(to);
+      await axios.post('https://api.msg91.com/api/v5/flow/', {
+        template_id: templateId,
+        short_url: '0',
+        recipients: [{
+          mobiles: formattedTo,
+          var1: partnerName || 'Partner',
+          var2: statusText || 'Updated'
+        }]
+      }, {
+        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
+      });
+      logger.info(`[SMS] KYC Status Update SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
+      return true;
+    } catch (err) {
+      logger.error(`[SMS] Failed sending KYC Status Update SMS: ${err.message}`);
+    }
+  }
+
+  return await sendSms(to, body);
+};
+
+/**
+ * Send Commission Credited SMS (DLT Template ID: 1277178697043413151 | Sender: GHARKP)
+ */
+const sendCommissionCreditedSms = async (to, partnerName, amount) => {
+  const body = `Dear ${partnerName || 'Partner'}, commission of Rs.${amount || '0'} has been credited to wallet. - GharKaPaisa`;
+  const templateId = process.env.MSG91_COMMISSION_CREDITED_TEMPLATE_ID || '1277178697043413151';
+
+  if (msg91AuthKey) {
+    try {
+      const formattedTo = formatMobile(to);
+      await axios.post('https://api.msg91.com/api/v5/flow/', {
+        template_id: templateId,
+        short_url: '0',
+        recipients: [{
+          mobiles: formattedTo,
+          var1: partnerName || 'Partner',
+          var2: String(amount || '0')
+        }]
+      }, {
+        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
+      });
+      logger.info(`[SMS] Commission Credited SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
+      return true;
+    } catch (err) {
+      logger.error(`[SMS] Failed sending Commission Credited SMS: ${err.message}`);
+    }
+  }
+
+  return await sendSms(to, body);
+};
+
+/**
+ * Send Lead Status SMS (DLT Template ID: 1277178697004117991 | Sender: GHARKP)
+ */
+const sendLeadStatusSms = async (to, customerName, productOrDetail) => {
+  const body = `Dear ${customerName || 'Customer'}, your application for ${productOrDetail || 'Credit Card'}! - GharKaPaisa`;
+  const templateId = process.env.MSG91_LEAD1_TEMPLATE_ID || '1277178697004117991';
+
+  if (msg91AuthKey) {
+    try {
+      const formattedTo = formatMobile(to);
+      await axios.post('https://api.msg91.com/api/v5/flow/', {
+        template_id: templateId,
+        short_url: '0',
+        recipients: [{
+          mobiles: formattedTo,
+          var1: customerName || 'Customer',
+          var2: productOrDetail || 'Credit Card'
+        }]
+      }, {
+        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
+      });
+      logger.info(`[SMS] Lead Status SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
+      return true;
+    } catch (err) {
+      logger.error(`[SMS] Failed sending Lead Status SMS: ${err.message}`);
+    }
+  }
+
+  return await sendSms(to, body);
+};
+
+/**
  * Standard Catalog of All Platform SMS Templates
  * Note: Strictly <= 2 variables per template for DLT / MSG91 compliance.
  */
@@ -263,11 +356,11 @@ const SMS_TEMPLATES = {
 
   // 5. Lead Approved (2 variables: {name}, {product})
   LEAD_APPROVED: (name, product) =>
-    `Dear ${name || 'Customer'}, your application for ${product} has been approved! - GharKaPaisa`,
+    `Dear ${name || 'Customer'}, your application for ${product}! - GharKaPaisa`,
 
   // 6. Lead Rejected (2 variables: {name}, {product})
   LEAD_REJECTED: (name, product) =>
-    `Dear ${name || 'Customer'}, your application for ${product} was not approved. - GharKaPaisa`,
+    `Dear ${name || 'Customer'}, your application for ${product}! - GharKaPaisa`,
 
   // 7. Commission Credited (2 variables: {name}, {amount})
   COMMISSION_CREDITED: (name, amount) =>
@@ -275,7 +368,7 @@ const SMS_TEMPLATES = {
 
   // 8. KYC Status Update (2 variables: {name}, {status})
   KYC_UPDATE: (name, status) =>
-    `Dear ${name || 'Partner'}, your KYC status is updated to ${status}. - GharKaPaisa`,
+    `Dear ${name || 'Partner'}, your KYC status is updated to ${status} . - GharKaPaisa`,
 
   // 9. OTP Verification (1 variable: {otp})
   OTP_VERIFICATION: (otp) =>
@@ -301,6 +394,9 @@ module.exports = {
   sendPostApplyStep2Sms,
   sendUploadReminderSms,
   sendPartnerInviteSms,
+  sendKycStatusUpdateSms,
+  sendCommissionCreditedSms,
+  sendLeadStatusSms,
   SMS_TEMPLATES
 };
 
