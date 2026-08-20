@@ -281,7 +281,7 @@ const createLead = async (req, res, next) => {
 
     // 2. Validate Product
     const { rows: [product] } = await query(`
-      SELECT id, name, is_active FROM products WHERE id = $1
+      SELECT id, name, is_active, bank_id, partner_url, public_url FROM products WHERE id = $1
     `, [targetProductId]);
     if (!product || !product.is_active) {
       return error(res, 'Selected product is inactive or unavailable', 400);
@@ -354,11 +354,13 @@ const createLead = async (req, res, next) => {
       const host = req.get('host') || 'gharkapaisa.in';
       const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
       const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
-      const shareUrl = `${baseUrl.replace(/\/$/, '')}/apply/${trackingToken}`;
+      const defaultShareUrl = `${baseUrl.replace(/\/$/, '')}/apply/${trackingToken}`;
+      const directBankUrl = product?.partner_url || product?.public_url || defaultShareUrl;
+      const shareUrl = directBankUrl;
 
       const partnerName = `${partner.first_name || ''} ${partner.last_name || ''}`.trim() || 'Partner';
       const cleanMobile = trimmedMobile.replace(/\D/g, '');
-      const waText = encodeURIComponent(`Hello ${targetName.trim()},\n\nPlease complete your application for ${product?.name || 'Financial Product'} using this secure link:\n${shareUrl}\n\nShared by ${partnerName} via GharKaPaisa.`);
+      const waText = encodeURIComponent(`Hello ${targetName.trim()},\n\nApply for ${product?.name || 'Financial Product'} directly on official bank portal:\n${directBankUrl}`);
       const whatsappUrl = `https://wa.me/91${cleanMobile}?text=${waText}`;
 
       const { rows: [lead] } = await query(`
