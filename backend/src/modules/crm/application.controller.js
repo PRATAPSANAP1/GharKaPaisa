@@ -2835,8 +2835,9 @@ const deleteApplication = async (req, res, next) => {
     // 7. Delete application_history
     await safeSubDelete(`DELETE FROM application_history WHERE application_id = $1`, [id]);
 
-    // 8. Delete wallet_transactions / commission_ledger linked to application
+    // 8. Delete wallet_transactions / wallet_ledger / commission_ledger linked to application
     await safeSubDelete(`DELETE FROM wallet_transactions WHERE application_id = $1`, [id]);
+    await safeSubDelete(`DELETE FROM wallet_ledger WHERE application_id = $1 OR lead_id = $1 OR lead_id = $2`, [id, targetLeadId]);
     await safeSubDelete(`DELETE FROM commission_ledger WHERE application_id = $1 OR lead_id = $1 OR lead_id = $2`, [id, targetLeadId]);
 
     // 9. Cascade delete lead related records
@@ -2885,6 +2886,9 @@ const deleteApplication = async (req, res, next) => {
     return success(res, {}, 'Application, lead, and customer details deleted successfully from database');
   } catch (err) {
     await client.query('ROLLBACK');
+    if (err.code === '23503') {
+      return error(res, 'Cannot delete this application because it has financial wallet or ledger transactions linked to it.', 400);
+    }
     next(err);
   } finally {
     client.release();
