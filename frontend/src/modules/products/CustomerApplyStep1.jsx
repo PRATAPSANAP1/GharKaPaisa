@@ -4,7 +4,8 @@ import { getApiV1Url } from '../../config/api';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export default function CustomerApplyStep1() {
-  const { token } = useParams();
+  const params = useParams();
+  const activeToken = params.token || params.trackingToken;
   const { C, isDark } = useTheme();
 
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,7 @@ export default function CustomerApplyStep1() {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`${getApiV1Url()}/public/apply/${token}`);
+        const res = await fetch(`${getApiV1Url()}/public/apply/${activeToken}`);
         const json = await res.json();
 
         if (json && json.success && json.data) {
@@ -68,8 +69,8 @@ export default function CustomerApplyStep1() {
       }
     };
 
-    if (token) fetchTokenDetails();
-  }, [token]);
+    if (activeToken) fetchTokenDetails();
+  }, [activeToken]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -104,7 +105,7 @@ export default function CustomerApplyStep1() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`${getApiV1Url()}/public/apply/${token}`, {
+      const res = await fetch(`${getApiV1Url()}/public/apply/${activeToken}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

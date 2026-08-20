@@ -165,7 +165,7 @@ const AppRoutes = () => {
 
         {/* Partner-Shared Product Landing Page (public, captures customer before redirect) */}
         <Route path="/apply/:partnerCode/:productId" element={<ProductApplyLanding />} />
-        <Route path="/share/:trackingToken" element={<PartnerShareLanding />} />
+        <Route path="/share/:trackingToken" element={<CustomerApplyStep1 />} />
       </Route>
 
       {/* Customer Secure Self-Fulfillment & Post-Apply Portals (Standalone Public Routes) */}

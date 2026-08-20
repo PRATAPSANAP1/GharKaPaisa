@@ -90,7 +90,7 @@ const generateShareLink = async (req, res, next) => {
 
     // Generate share link URL
     const appUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
-    const shareLink = `${appUrl}/share/${trackingToken}`;
+    const shareLink = `${appUrl}/apply/${trackingToken}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Apply for ${product.name} directly using your official application link:\n${shareLink}`)}`;
 
     const targetMobile = req.body.customer_mobile || req.body.mobile;
