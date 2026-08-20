@@ -15,7 +15,7 @@ import CardApplyVerificationModal from '../home/components/CreditCards/CardApply
 
 export default function ProductDetails() {
   const { category, slug, id } = useParams();
-  const productIdentifier = slug || id;
+  const productIdentifier = (slug && slug !== 'apply' ? slug : null) || (category && category !== 'apply' ? category : null) || id;
   const navigate = useNavigate();
   const { C, isDark } = useTheme();
   const S = makeS(C);

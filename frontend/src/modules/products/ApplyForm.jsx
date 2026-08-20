@@ -5,7 +5,7 @@ import { useTheme, makeS } from '../../contexts/ThemeContext';
 import { Icons } from '../../components/Icon/PartnerIcons';
 
 export default function ApplyForm() {
-  const { id } = useParams();
+  const { id, slug, category } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { C } = useTheme();
@@ -40,12 +40,16 @@ export default function ApplyForm() {
     const ref = params.get('ref');
     if (ref) setForm(prev => ({ ...prev, partner_code: ref }));
 
-    api.get(`/products/${id}`)
-      .then(res => {
-        if(res.data?.success) setProduct(res.data.data);
-      })
-      .catch(err => console.error(err));
-  }, [id, location]);
+    const targetProductId = (slug && slug !== 'apply' ? slug : null) || (id && id !== 'apply' ? id : null) || (category && category !== 'apply' ? category : null);
+
+    if (targetProductId) {
+      api.get(`/products/${targetProductId}`)
+        .then(res => {
+          if (res.data?.success) setProduct(res.data.data);
+        })
+        .catch(err => console.error(err));
+    }
+  }, [id, slug, category, location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
