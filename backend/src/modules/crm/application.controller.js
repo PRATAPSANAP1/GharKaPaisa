@@ -774,7 +774,7 @@ const updateCommission = async (req, res, next) => {
     // Handle Ledger Splits & Wallet Credits on Approval
     if (status === 'approved') {
       const commValue = amount || app.commission_amount || 0;
-      await creditCommission(app.partner_id, id, commValue, `Approved commission for ${app.app_number}`, req.user.id);
+      await creditCommission(app.partner_id, id, commValue, `Approved commission for ${app.app_number}`, req.user.id, client);
 
       // Create Entry in commission_ledger with Idempotency Guard
       const { rows: existingComm } = await client.query(`

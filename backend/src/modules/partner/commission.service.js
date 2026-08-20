@@ -73,7 +73,7 @@ const releaseCommission = async (applicationId, adminUserId) => {
       reference_type: 'commission',
       reference_id: app.id,
       description: `Commission released for App ${app.app_number}`
-    });
+    }, client);
     
     // Update application status
     await client.query(`

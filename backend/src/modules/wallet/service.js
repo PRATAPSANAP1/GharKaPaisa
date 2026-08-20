@@ -337,9 +337,10 @@ const debitAvailable = async (partnerId, amount, meta = {}, existingClient = nul
   }
 };
 
-// Credit commission helper wrapper for application approval flow
-const creditCommission = async (partnerId, applicationId, amount, description, userId) => {
-  const { rows: [app] } = await query(`
+// Credit commission helper wrapper for application approval flow (supports ACID transactions)
+const creditCommission = async (partnerId, applicationId, amount, description, userId, existingClient = null) => {
+  const db = existingClient || { query };
+  const { rows: [app] } = await db.query(`
     SELECT a.*, p.name as product_name, p.category as product_category, b.name as bank_name
     FROM applications a
     JOIN products p ON p.id = a.product_id
@@ -347,7 +348,7 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
     WHERE a.id = $1
   `, [applicationId]);
 
-  const { rows: [partner] } = await query(`
+  const { rows: [partner] } = await db.query(`
     SELECT parent_partner_id, first_name, last_name, partner_code FROM partner_profiles WHERE id = $1
   `, [partnerId]);
 
@@ -363,7 +364,7 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
   };
 
   if (partner && partner.parent_partner_id && app) {
-    const { rows: [rule] } = await query(`
+    const { rows: [rule] } = await db.query(`
       SELECT partner_percentage, parent_percentage
       FROM commission_rules
       WHERE product_id = $1 AND status = 'active'
@@ -375,7 +376,7 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
     let parentPct = 10;
     
     // Check if team member has custom commission rate set by parent partner
-    const { rows: [memberProfile] } = await query(`
+    const { rows: [memberProfile] } = await db.query(`
       SELECT commission_rate FROM partner_profiles WHERE id = $1 OR user_id = $1
     `, [partnerId]);
 
@@ -386,7 +387,7 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
       childPct = parseFloat(rule.partner_percentage);
       parentPct = parseFloat(rule.parent_percentage);
     } else {
-      const { rows: settingsRows } = await query(`
+      const { rows: settingsRows } = await db.query(`
         SELECT key, value FROM system_settings WHERE key IN ('team_commission_child_pct', 'team_commission_parent_pct')
       `);
       settingsRows.forEach(row => {
@@ -402,17 +403,17 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
       ...meta,
       description: `${description} (Child ${childPct}%)`
     };
-    const childTxn = await creditHold(partnerId, childAmount, childMeta);
+    const childTxn = await creditHold(partnerId, childAmount, childMeta, existingClient);
 
     const parentMeta = {
       ...meta,
       reference_type: 'team_commission',
       description: `Team Commission from ${partner.first_name} ${partner.last_name || ''} (${partner.partner_code}) - Parent ${parentPct}%`
     };
-    await creditHold(partner.parent_partner_id, parentAmount, parentMeta);
+    await creditHold(partner.parent_partner_id, parentAmount, parentMeta, existingClient);
 
     try {
-      const { rows: [parentUser] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partner.parent_partner_id]);
+      const { rows: [parentUser] } = await db.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [partner.parent_partner_id]);
       if (parentUser) {
         const { createNotification } = require('../notifications/service.js');
         await createNotification(
@@ -428,7 +429,7 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
 
     return childTxn;
   } else {
-    return creditHold(partnerId, amount, meta);
+    return creditHold(partnerId, amount, meta, existingClient);
   }
 };
 
