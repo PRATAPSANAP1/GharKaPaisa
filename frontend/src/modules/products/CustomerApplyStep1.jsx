@@ -48,6 +48,11 @@ export default function CustomerApplyStep1() {
           const data = json.data;
           setProduct(data.product || null);
 
+          const bankLink = data.product?.partner_url || data.product?.application_url || data.product?.public_url || data.product?.apply_url || data.product?.redirect_url;
+          if (bankLink) {
+            setRedirectUrl(bankLink);
+          }
+
           if (data.customer) {
             setCustomer(data.customer);
             setFullName(data.customer.full_name || '');
@@ -350,7 +355,7 @@ export default function CustomerApplyStep1() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
                 <a
-                  href={redirectUrl || 'https://gharkapaisa.in'}
+                  href={redirectUrl || product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || 'https://gharkapaisa.in'}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{

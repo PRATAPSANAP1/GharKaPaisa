@@ -621,7 +621,12 @@ const getApplyTokenDetails = async (req, res, next) => {
         welcome_benefits: product.welcome_benefits,
         is_lifetime_free: product.is_lifetime_free,
         image_url: product.image_url,
-        apply_button_text: product.apply_button_text || 'Apply Now'
+        apply_button_text: product.apply_button_text || 'Apply Now',
+        partner_url: product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || '',
+        application_url: product.application_url || product.partner_url || product.public_url || product.apply_url || product.redirect_url || '',
+        public_url: product.public_url || product.partner_url || product.application_url || product.apply_url || product.redirect_url || '',
+        apply_url: product.apply_url || product.partner_url || product.application_url || product.public_url || product.redirect_url || '',
+        redirect_url: product.redirect_url || product.partner_url || product.application_url || product.public_url || product.apply_url || ''
       },
       customer: {
         full_name: fullName,
