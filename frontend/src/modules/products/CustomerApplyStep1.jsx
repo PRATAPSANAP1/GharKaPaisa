@@ -48,7 +48,11 @@ export default function CustomerApplyStep1() {
           const data = json.data;
           setProduct(data.product || null);
 
-          const bankLink = data.product?.partner_url || data.product?.application_url || data.product?.public_url || data.product?.apply_url || data.product?.redirect_url;
+          const bankLink = (data.product?.partner_url && data.product.partner_url.trim())
+            || (data.product?.application_url && data.product.application_url.trim())
+            || (data.product?.public_url && data.product.public_url.trim())
+            || (data.product?.apply_url && data.product.apply_url.trim())
+            || (data.product?.redirect_url && data.product.redirect_url.trim());
           if (bankLink) {
             setRedirectUrl(bankLink);
           }
