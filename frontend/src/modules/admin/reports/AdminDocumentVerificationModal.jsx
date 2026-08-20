@@ -412,30 +412,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       </span>
                     )}
                   </div>
-
-                  {/* Send to Customer Button (Top of QD Form) */}
-                  <button
-                    type="button"
-                    onClick={handleGenerateAndShare}
-                    disabled={shareLoading}
-                    style={{
-                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                      color: '#ffffff',
-                      border: 'none',
-                      padding: '8px 16px',
-                      borderRadius: '8px',
-                      fontWeight: 800,
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {shareLoading ? 'Generating Link...' : 'Send to Customer'}
-                  </button>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', fontSize: '13px' }}>
