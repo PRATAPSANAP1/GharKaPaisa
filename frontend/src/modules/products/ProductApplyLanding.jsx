@@ -64,17 +64,7 @@ export default function ProductApplyLanding() {
     if (productId) fetchProduct();
   }, [productId, partnerCode]);
 
-  // Countdown after submit
-  useEffect(() => {
-    if (!submitted || !redirectUrl) return;
-    if (countdown <= 0) {
-      window.location.href = redirectUrl;
-      return;
-    }
-    const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [submitted, redirectUrl, countdown]);
-
+  // Form submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!customerName.trim()) return alert('Please enter your name');
@@ -137,29 +127,119 @@ export default function ProductApplyLanding() {
     );
   }
 
-  // Success/redirect screen
-  if (submitted && redirectUrl) {
+  // Success screen
+  if (submitted) {
+    const bankPortalUrl = redirectUrl || product?.partner_url || product?.public_url || 'https://gharkapaisa.in';
+    const qdFormUrl = `/products/${product?.category || 'credit-cards'}/${product?.slug || productId}/apply`;
+
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bgPrimary, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif', padding: '24px', textAlign: 'center' }}>
-        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: `${themeColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', animation: 'pulse 1.5s ease-in-out infinite' }}>
-          <span style={{ fontSize: '36px' }}>✅</span>
+      <div style={{ minHeight: '100vh', background: bgPrimary, color: textPrimary, fontFamily: "'Inter', system-ui, -apple-system, sans-serif", padding: isMobile ? '16px 12px' : '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        
+        {/* Top Branding Banner */}
+        <div style={{ width: '100%', maxWidth: '640px', textAlign: 'center', marginBottom: isMobile ? '16px' : '24px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: `${themeColor}18`, border: `1px solid ${themeColor}30`, padding: '6px 14px', borderRadius: '30px', color: themeColor, fontWeight: 800, fontSize: isMobile ? '11px' : '12px', letterSpacing: '0.5px', marginBottom: '10px' }}>
+            🛡️ OFFICIALLY VERIFIED APPLICATION PORTAL
+          </div>
+          <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>{product.name}</h1>
+          <p style={{ fontSize: isMobile ? '13px' : '14px', color: textSecondary, margin: 0 }}>
+            {bank?.name || product.bank_name || 'Bank'} • Self-Fulfillment Link
+          </p>
         </div>
-        <h2 style={{ fontSize: '24px', fontWeight: 900, margin: '0 0 8px' }}>Application Initiated!</h2>
-        <p style={{ fontSize: '15px', color: textSecondary, margin: '0 0 24px', maxWidth: '420px', lineHeight: 1.6 }}>
-          Thank you, <strong style={{ color: themeColor }}>{customerName}</strong>! Redirecting you to the official {bank?.name || 'bank'} application portal in <strong style={{ color: themeColor }}>{countdown}</strong> seconds...
-        </p>
-        <a
-          href={redirectUrl}
-          style={{
-            padding: '14px 32px', background: `linear-gradient(135deg, ${themeColor}, ${themeColor}CC)`, color: '#fff',
-            border: 'none', borderRadius: '14px', fontWeight: 800, textDecoration: 'none', fontSize: '15px',
-            boxShadow: `0 8px 24px ${themeColor}40`, transition: 'all 0.2s'
-          }}
-        >
-          Apply Now on {bank?.name || 'Bank'} Portal →
-        </a>
-        <p style={{ fontSize: '12px', color: textSecondary, marginTop: '16px' }}>Powered by <strong>GharKaPaisa</strong></p>
-        <style>{`@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.85; } } @keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+        {/* TOP CENTER TAB NAVIGATION BUTTONS */}
+        <div style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '440px', marginBottom: isMobile ? '18px' : '24px' }}>
+          <div style={{ display: 'flex', background: '#1E293B', padding: '4px', borderRadius: '16px', width: '100%', border: `1px solid ${borderColor}`, boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+            <button
+              type="button"
+              onClick={() => setSubmitted(false)}
+              style={{
+                flex: 1,
+                padding: isMobile ? '10px 12px' : '12px 16px',
+                borderRadius: '12px',
+                border: 'none',
+                fontSize: isMobile ? '13px' : '14px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                background: 'transparent',
+                color: textSecondary
+              }}
+            >
+              📋 Product Details
+            </button>
+            <button
+              type="button"
+              style={{
+                flex: 1,
+                padding: isMobile ? '10px 12px' : '12px 16px',
+                borderRadius: '12px',
+                border: 'none',
+                fontSize: isMobile ? '13px' : '14px',
+                fontWeight: 800,
+                cursor: 'default',
+                background: `linear-gradient(135deg, ${themeColor}, #1d4ed8)`,
+                color: '#ffffff',
+                boxShadow: `0 4px 14px ${themeColor}40`
+              }}
+            >
+              ✍️ Apply Now
+            </button>
+          </div>
+        </div>
+
+        {/* SUCCESS CARD */}
+        <div style={{ width: '100%', maxWidth: '640px', background: bgCard, borderRadius: isMobile ? '20px' : '24px', border: `1px solid ${borderColor}`, padding: isMobile ? '24px 18px' : '36px 28px', boxShadow: '0 16px 40px rgba(0,0,0,0.3)', textAlign: 'center' }}>
+          <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: '#10b98120', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '34px', marginBottom: '16px' }}>✅</div>
+          <h2 style={{ fontSize: isMobile ? '19px' : '22px', fontWeight: 900, margin: '0 0 8px', color: '#10b981' }}>Details Saved Successfully!</h2>
+          <p style={{ fontSize: '13.5px', color: textSecondary, maxWidth: '480px', margin: '0 auto 24px', lineHeight: '1.5' }}>
+            Your customer details for <strong>{product.name}</strong> have been recorded. Proceed to the bank portal to finish your application.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '12px' }}>
+            <a
+              href={bankPortalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '15px 16px',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#ffffff',
+                fontSize: isMobile ? '14px' : '15px',
+                fontWeight: 900,
+                textDecoration: 'none',
+                boxShadow: '0 6px 20px rgba(16,185,129,0.35)'
+              }}
+            >
+              1. OPEN OFFICIAL BANK APPLICATION PORTAL ➔
+            </a>
+
+            <a
+              href={qdFormUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '15px 16px',
+                borderRadius: '14px',
+                background: `linear-gradient(135deg, ${themeColor}, #1d4ed8)`,
+                color: '#ffffff',
+                fontSize: isMobile ? '14px' : '15px',
+                fontWeight: 900,
+                textDecoration: 'none',
+                boxShadow: `0 6px 20px ${themeColor}35`
+              }}
+            >
+              2. OPEN QD (QUICK DETAILS) FORM IN NEW TAB ↗
+            </a>
+          </div>
+        </div>
+
       </div>
     );
   }

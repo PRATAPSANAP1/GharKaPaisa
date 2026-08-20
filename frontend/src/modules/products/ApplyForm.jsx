@@ -114,11 +114,6 @@ export default function ApplyForm() {
       setRedirectUrl(finalBankUrl);
       setSuccess(true);
 
-      // Automatically redirect to bank portal
-      setTimeout(() => {
-        window.location.href = finalBankUrl;
-      }, 1000);
-
     } catch (err) {
       console.error('Application submit error:', err);
       alert(err.response?.data?.message || 'Failed to submit application. Please check your inputs and try again.');
@@ -132,32 +127,54 @@ export default function ApplyForm() {
       <div style={{ padding: isMobile ? "20px 12px" : "60px 20px", maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
         <div style={{ ...S.card, padding: isMobile ? "28px 16px" : "40px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
           <div style={{ color: '#10b981', fontSize: isMobile ? "48px" : "64px" }}>{Icons.CheckCircle || "✅"}</div>
-          <h2 style={{ color: C.text, margin: 0, fontSize: isMobile ? "20px" : "24px", fontWeight: 900 }}>Application Details Recorded!</h2>
+          <h2 style={{ color: C.text, margin: 0, fontSize: isMobile ? "20px" : "24px", fontWeight: 900 }}>Details Saved Successfully!</h2>
           <p style={{ color: C.textLight, fontSize: isMobile ? "13px" : "14px", margin: 0, lineHeight: 1.5 }}>
-            Your details for <strong>{product?.name || 'this product'}</strong> have been saved successfully.
+            Your customer details for <strong>{product?.name || 'this product'}</strong> have been recorded. Proceed to the bank portal to finish your application.
           </p>
 
-          <a
-            href={redirectUrl || 'https://gharkapaisa.in'}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-block',
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: '14px 20px',
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, #10b981, #059669)',
-              color: '#ffffff',
-              fontSize: isMobile ? '14px' : '15px',
-              fontWeight: 900,
-              textDecoration: 'none',
-              marginTop: '12px',
-              boxShadow: '0 6px 20px rgba(16,185,129,0.35)'
-            }}
-          >
-            PROCEED TO OFFICIAL BANK PORTAL ➔
-          </a>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', marginTop: '12px' }}>
+            <a
+              href={redirectUrl || 'https://gharkapaisa.in'}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '14px 20px',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#ffffff',
+                fontSize: isMobile ? '14px' : '15px',
+                fontWeight: 900,
+                textDecoration: 'none',
+                boxShadow: '0 6px 20px rgba(16,185,129,0.35)'
+              }}
+            >
+              1. OPEN OFFICIAL BANK APPLICATION PORTAL ➔
+            </a>
+
+            <a
+              href={`/products/${product?.category || 'credit-cards'}/${product?.slug || targetProductId}/apply`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '14px 20px',
+                borderRadius: '14px',
+                background: `linear-gradient(135deg, ${C.primary || '#2563eb'}, #1d4ed8)`,
+                color: '#ffffff',
+                fontSize: isMobile ? '14px' : '15px',
+                fontWeight: 900,
+                textDecoration: 'none',
+                boxShadow: '0 6px 20px rgba(37,99,235,0.35)'
+              }}
+            >
+              2. OPEN QD (QUICK DETAILS) FORM IN NEW TAB ↗
+            </a>
+          </div>
         </div>
       </div>
     );

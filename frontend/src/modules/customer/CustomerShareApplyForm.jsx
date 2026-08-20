@@ -15,6 +15,8 @@ export default function CustomerShareApplyForm() {
   const [address, setAddress] = useState('');
   const [employment, setEmployment] = useState('Salaried');
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState('');
 
   useEffect(() => {
     const fetchTokenData = async () => {
@@ -24,6 +26,8 @@ export default function CustomerShareApplyForm() {
         const res = await api.get(`/applications/apply/${token}`);
         if (res.data?.success) {
           setData(res.data.data);
+          const targetUrl = res.data.data?.product?.partner_url || res.data.data?.product?.public_url || 'https://gharkapaisa.in';
+          setRedirectUrl(targetUrl);
         } else {
           setError(res.data?.message || 'Invalid or expired application link.');
         }
@@ -53,11 +57,13 @@ export default function CustomerShareApplyForm() {
         employment
       });
 
-      if (res.data?.success && res.data.data?.redirect_url) {
-        window.location.href = res.data.data.redirect_url;
+      if (res.data?.success) {
+        if (res.data.data?.redirect_url) {
+          setRedirectUrl(res.data.data.redirect_url);
+        }
+        setSubmitted(true);
       } else {
-        alert('Application details updated! Redirecting to official bank website...');
-        window.location.href = 'https://gharkapaisa.in';
+        alert(res.data?.message || 'Failed to update application details.');
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to submit application details. Please check inputs.');
@@ -91,6 +97,64 @@ export default function CustomerShareApplyForm() {
   }
 
   const { product = {}, customer = {} } = data;
+
+  if (submitted) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f8fafc', fontFamily: "'Inter', sans-serif", padding: '24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '100%', maxWidth: 540, background: '#1e293b', border: '1px solid #334155', borderRadius: 24, padding: 32, boxShadow: '0 24px 60px rgba(0,0,0,0.4)', textAlign: 'center' }}>
+          <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: '#10b98120', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '34px', marginBottom: '16px' }}>✅</div>
+          <h2 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 8px', color: '#10b981' }}>Details Saved Successfully!</h2>
+          <p style={{ fontSize: '13.5px', color: '#94a3b8', margin: '0 auto 24px', lineHeight: '1.5' }}>
+            Your customer details for <strong>{product.name || 'this product'}</strong> have been recorded. Proceed to the bank portal to finish your application.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <a
+              href={redirectUrl || 'https://gharkapaisa.in'}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '14px 16px',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                color: '#ffffff',
+                fontSize: '14.5px',
+                fontWeight: 900,
+                textDecoration: 'none',
+                boxShadow: '0 6px 20px rgba(16,185,129,0.35)'
+              }}
+            >
+              1. OPEN OFFICIAL BANK APPLICATION PORTAL ➔
+            </a>
+
+            <a
+              href={`/apply/${token}/post-apply`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                width: '100%',
+                boxSizing: 'border-box',
+                padding: '14px 16px',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                color: '#ffffff',
+                fontSize: '14.5px',
+                fontWeight: 900,
+                textDecoration: 'none',
+                boxShadow: '0 6px 20px rgba(37,99,235,0.35)'
+              }}
+            >
+              2. OPEN QD (QUICK DETAILS) FORM IN NEW TAB ↗
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f8fafc', fontFamily: "'Inter', sans-serif", padding: '24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
