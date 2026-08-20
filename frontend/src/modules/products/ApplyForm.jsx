@@ -8,7 +8,7 @@ export default function ApplyForm() {
   const { id, slug, category } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const S = makeS(C);
 
   const [product, setProduct] = useState(null);
@@ -16,15 +16,21 @@ export default function ApplyForm() {
     full_name: '',
     mobile: '',
     email: '',
-    city: '',
-    partner_code: '',
+    dob: '',
+    occupation: 'Salaried Employee',
     monthly_salary: '',
     company_name: '',
+    pan_number: '',
+    aadhaar_number: '',
+    city: '',
+    state: '',
     pincode: '',
+    partner_code: '',
     process_type: 'lead_punching'
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState('');
 
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
 
@@ -34,49 +40,88 @@ export default function ApplyForm() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    // If they came with a partner code in URL (e.g. ?ref=PARTNER123)
-    const params = new URLSearchParams(location.search);
-    const ref = params.get('ref');
-    if (ref) setForm(prev => ({ ...prev, partner_code: ref }));
+  const targetProductId = (slug && slug !== 'apply' ? slug : null) || (id && id !== 'apply' ? id : null) || (category && category !== 'apply' ? category : null);
 
-    const targetProductId = (slug && slug !== 'apply' ? slug : null) || (id && id !== 'apply' ? id : null) || (category && category !== 'apply' ? category : null);
+  useEffect(() => {
+    // Check partner code from URL query params (e.g. ?ref=PARTNER123 or ?partner_code=PARTNER123)
+    const params = new URLSearchParams(location.search);
+    const ref = params.get('ref') || params.get('partner_code') || params.get('p_code');
+    if (ref) setForm(prev => ({ ...prev, partner_code: ref }));
 
     if (targetProductId) {
       api.get(`/products/${targetProductId}`)
         .then(res => {
-          if (res.data?.success) setProduct(res.data.data);
+          if (res.data?.success) {
+            const prod = res.data.data;
+            setProduct(prod);
+            const targetUrl = prod?.partner_url || prod?.application_url || prod?.public_url || prod?.apply_url || prod?.redirect_url || '';
+            if (targetUrl) setRedirectUrl(targetUrl);
+          }
         })
-        .catch(err => console.error(err));
+        .catch(err => console.error('Fetch product error:', err));
     }
-  }, [id, slug, category, location]);
+  }, [targetProductId, location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await api.post('/applications/public', {
-        product_id: product?.id || id,
+      const payload = {
+        product_id: product?.id || targetProductId,
         customer: {
           full_name: form.full_name,
           mobile: form.mobile,
           email: form.email,
-          city: form.city
+          dob: form.dob,
+          occupation: form.occupation,
+          monthly_income: form.monthly_salary,
+          company_name: form.company_name,
+          pan_number: form.pan_number,
+          aadhaar_number: form.aadhaar_number,
+          city: form.city,
+          state: form.state,
+          pincode: form.pincode
         },
-        partner_code: form.partner_code,
+        full_name: form.full_name,
+        mobile: form.mobile,
+        email: form.email,
+        dob: form.dob,
+        occupation: form.occupation,
         monthly_salary: form.monthly_salary,
+        monthly_income: form.monthly_salary,
         company_name: form.company_name,
+        pan_number: form.pan_number,
+        aadhaar_number: form.aadhaar_number,
+        city: form.city,
+        state: form.state,
         pincode: form.pincode,
+        partner_code: form.partner_code,
         process_type: form.process_type
-      });
+      };
+
+      const res = await api.post('/applications/public', payload);
+      const resData = res.data?.data || {};
+
+      const finalBankUrl = resData.redirect_url
+        || product?.partner_url
+        || product?.application_url
+        || product?.public_url
+        || product?.apply_url
+        || product?.redirect_url
+        || redirectUrl
+        || 'https://gharkapaisa.in';
+
+      setRedirectUrl(finalBankUrl);
       setSuccess(true);
-      if (product?.public_url) {
-        setTimeout(() => {
-          window.location.href = product.public_url;
-        }, 1500);
-      }
+
+      // Automatically redirect to bank portal
+      setTimeout(() => {
+        window.location.href = finalBankUrl;
+      }, 1000);
+
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to submit application');
+      console.error('Application submit error:', err);
+      alert(err.response?.data?.message || 'Failed to submit application. Please check your inputs and try again.');
     } finally {
       setLoading(false);
     }
@@ -85,148 +130,258 @@ export default function ApplyForm() {
   if (success) {
     return (
       <div style={{ padding: isMobile ? "20px 12px" : "60px 20px", maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
-        <div style={{ ...S.card, padding: isMobile ? "24px 16px" : "40px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
-          <div style={{ color: C.green, fontSize: isMobile ? "48px" : "64px" }}>{Icons.CheckCircle || "✅"}</div>
-          <h2 style={{ color: C.text, margin: 0, fontSize: isMobile ? "20px" : "24px" }}>Application Submitted!</h2>
-          <p style={{ color: C.textLight, fontSize: isMobile ? "13px" : "14px" }}>Thank you! Your application for {product?.name} has been received.</p>
-          {product?.public_url ? (
-            <p style={{ color: C.primary, fontWeight: 'bold', fontSize: isMobile ? "13px" : "14px" }}>Redirecting you to the lending partner page...</p>
-          ) : (
-            <button onClick={() => navigate('/')} style={{ ...S.btn("primary"), marginTop: "20px", width: isMobile ? "100%" : "auto" }}>
-              Return to Homepage
-            </button>
-          )}
+        <div style={{ ...S.card, padding: isMobile ? "28px 16px" : "40px", display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+          <div style={{ color: '#10b981', fontSize: isMobile ? "48px" : "64px" }}>{Icons.CheckCircle || "✅"}</div>
+          <h2 style={{ color: C.text, margin: 0, fontSize: isMobile ? "20px" : "24px", fontWeight: 900 }}>Application Details Recorded!</h2>
+          <p style={{ color: C.textLight, fontSize: isMobile ? "13px" : "14px", margin: 0, lineHeight: 1.5 }}>
+            Your details for <strong>{product?.name || 'this product'}</strong> have been saved successfully.
+          </p>
+
+          <a
+            href={redirectUrl || 'https://gharkapaisa.in'}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-block',
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '14px 20px',
+              borderRadius: '14px',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: '#ffffff',
+              fontSize: isMobile ? '14px' : '15px',
+              fontWeight: 900,
+              textDecoration: 'none',
+              marginTop: '12px',
+              boxShadow: '0 6px 20px rgba(16,185,129,0.35)'
+            }}
+          >
+            PROCEED TO OFFICIAL BANK PORTAL ➔
+          </a>
         </div>
       </div>
     );
   }
 
+  const borderCol = isDark ? '#2d3748' : '#e2e8f0';
+  const inputBg = isDark ? '#1a202c' : '#f8fafc';
+
   return (
-    <div style={{ padding: isMobile ? "16px 12px 60px" : "40px 20px", maxWidth: "600px", margin: "0 auto" }}>
-      <button onClick={() => navigate(-1)} style={{ ...S.btn("outline"), marginBottom: "16px", border: "none", padding: 0 }}>
+    <div style={{ padding: isMobile ? "16px 12px 60px" : "40px 20px", maxWidth: "680px", margin: "0 auto", color: C.text }}>
+      <button onClick={() => navigate(-1)} style={{ ...S.btn("outline"), marginBottom: "16px", border: "none", padding: 0, cursor: 'pointer' }}>
         {Icons.ArrowLeft || "←"} Back
       </button>
 
-      <div style={{ ...S.card, padding: isMobile ? "20px 16px" : "32px" }}>
-        <div style={{ marginBottom: isMobile ? "16px" : "24px" }}>
-          <h1 style={{ fontSize: isMobile ? "20px" : "24px", fontWeight: 800, color: C.text, margin: "0 0 6px 0" }}>Apply Now</h1>
-          <p style={{ color: C.textLight, margin: 0, fontSize: isMobile ? "12.5px" : "14px" }}>{product ? `Applying for ${product.name}` : 'Loading product...'}</p>
+      <div style={{ ...S.card, padding: isMobile ? "20px 16px" : "32px", borderRadius: '20px' }}>
+        
+        {/* HEADER / PRODUCT CARD */}
+        <div style={{ marginBottom: isMobile ? "20px" : "28px", borderBottom: `1px solid ${borderCol}`, paddingBottom: '16px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: C.primary || '#2563eb', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+            📋 OFFICIAL APPLICATION PORTAL
+          </div>
+          <h1 style={{ fontSize: isMobile ? "20px" : "24px", fontWeight: 900, color: C.text, margin: "0 0 6px 0" }}>
+            {product?.name || 'Bank Financial Product Application'}
+          </h1>
+          <p style={{ color: C.textLight, margin: 0, fontSize: isMobile ? "12.5px" : "14px" }}>
+            Fill in your verified customer details below to proceed directly to the bank application portal.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+          
+          {/* Customer Name & Mobile */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
+            <div>
+              <label style={S.label}>Customer Name *</label>
+              <input 
+                required
+                type="text"
+                placeholder="Full name as per PAN"
+                style={S.input}
+                value={form.full_name}
+                onChange={e => setForm({...form, full_name: e.target.value})}
+              />
+            </div>
+            <div>
+              <label style={S.label}>Mobile Number *</label>
+              <input 
+                required
+                type="tel"
+                maxLength={10}
+                placeholder="10-Digit Mobile Number"
+                style={S.input}
+                value={form.mobile}
+                onChange={e => setForm({...form, mobile: e.target.value.replace(/\D/g, '')})}
+              />
+            </div>
+          </div>
+
+          {/* Email Address & DOB */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
+            <div>
+              <label style={S.label}>Email Address *</label>
+              <input 
+                required
+                type="email"
+                placeholder="name@example.com"
+                style={S.input}
+                value={form.email}
+                onChange={e => setForm({...form, email: e.target.value})}
+              />
+            </div>
+            <div>
+              <label style={S.label}>Date of Birth (DOB) *</label>
+              <input 
+                required
+                type="date"
+                style={S.input}
+                value={form.dob}
+                onChange={e => setForm({...form, dob: e.target.value})}
+              />
+            </div>
+          </div>
+
+          {/* Occupation & Monthly Income */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
+            <div>
+              <label style={S.label}>Occupation / Employment *</label>
+              <select
+                required
+                style={S.input}
+                value={form.occupation}
+                onChange={e => setForm({...form, occupation: e.target.value})}
+              >
+                <option value="Salaried Employee">Salaried Employee</option>
+                <option value="Self-Employed Professional">Self-Employed Professional</option>
+                <option value="Business Owner">Business Owner</option>
+                <option value="Retired">Retired</option>
+                <option value="Student">Student</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label style={S.label}>Monthly Income (₹) *</label>
+              <input 
+                required
+                type="number"
+                placeholder="e.g. 50000"
+                style={S.input}
+                value={form.monthly_salary}
+                onChange={e => setForm({...form, monthly_salary: e.target.value})}
+              />
+            </div>
+          </div>
+
+          {/* Company Name */}
           <div>
-            <label style={S.label}>Customer Name *</label>
+            <label style={S.label}>Employer / Company Name *</label>
             <input 
               required
               type="text"
-              placeholder="As per PAN card"
-              style={S.input}
-              value={form.full_name}
-              onChange={e => setForm({...form, full_name: e.target.value})}
-            />
-          </div>
-
-          <div>
-            <label style={S.label}>Mobile Number *</label>
-            <input 
-              required
-              type="tel"
-              pattern="[0-9]{10}"
-              placeholder="10-digit mobile number"
-              style={S.input}
-              value={form.mobile}
-              onChange={e => setForm({...form, mobile: e.target.value})}
-            />
-          </div>
-
-          <div>
-            <label style={S.label}>Email Address *</label>
-            <input 
-              required
-              type="email"
-              placeholder="Your email address"
-              style={S.input}
-              value={form.email}
-              onChange={e => setForm({...form, email: e.target.value})}
-            />
-          </div>
-
-          <div>
-            <label style={S.label}>City *</label>
-            <input 
-              required
-              type="text"
-              placeholder="Current city of residence"
-              style={S.input}
-              value={form.city}
-              onChange={e => setForm({...form, city: e.target.value})}
-            />
-          </div>
-
-          <div>
-            <label style={S.label}>Monthly Salary (INR) *</label>
-            <input 
-              required
-              type="number"
-              placeholder="Enter monthly salary"
-              style={S.input}
-              value={form.monthly_salary}
-              onChange={e => setForm({...form, monthly_salary: e.target.value})}
-            />
-          </div>
-
-          <div>
-            <label style={S.label}>Company Name *</label>
-            <input 
-              required
-              type="text"
-              placeholder="Enter employer or business name"
+              placeholder="Enter current employer or business name"
               style={S.input}
               value={form.company_name}
               onChange={e => setForm({...form, company_name: e.target.value})}
             />
           </div>
 
-          <div>
-            <label style={S.label}>Pincode *</label>
-            <input 
-              required
-              type="text"
-              pattern="[0-9]{6}"
-              placeholder="6-digit area pincode"
-              style={S.input}
-              value={form.pincode}
-              onChange={e => setForm({...form, pincode: e.target.value})}
-            />
+          {/* PAN Card & Aadhaar Number */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
+            <div>
+              <label style={S.label}>PAN Card Number *</label>
+              <input 
+                required
+                type="text"
+                maxLength={10}
+                placeholder="ABCDE1234F"
+                style={{ ...S.input, fontFamily: 'monospace', fontWeight: 800, textTransform: 'uppercase' }}
+                value={form.pan_number}
+                onChange={e => setForm({...form, pan_number: e.target.value.toUpperCase()})}
+              />
+            </div>
+            <div>
+              <label style={S.label}>Aadhaar Number *</label>
+              <input 
+                required
+                type="text"
+                maxLength={12}
+                placeholder="12-Digit Aadhaar"
+                style={{ ...S.input, fontFamily: 'monospace', fontWeight: 800 }}
+                value={form.aadhaar_number}
+                onChange={e => setForm({...form, aadhaar_number: e.target.value.replace(/\D/g, '')})}
+              />
+            </div>
           </div>
 
-          <div>
-            <label style={S.label}>Process By *</label>
-            <select
-              required
-              style={S.input}
-              value={form.process_type}
-              onChange={e => setForm({...form, process_type: e.target.value})}
-            >
-              <option value="lead_punching">Lead Punching Only</option>
-              <option value="customer_sell">Customer Sell Process</option>
-              <option value="partner_cell">Partner Sell Process</option>
-            </select>
+          {/* City, State & Pincode */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={S.label}>City *</label>
+              <input 
+                required
+                type="text"
+                placeholder="City"
+                style={S.input}
+                value={form.city}
+                onChange={e => setForm({...form, city: e.target.value})}
+              />
+            </div>
+            <div>
+              <label style={S.label}>State *</label>
+              <input 
+                required
+                type="text"
+                placeholder="State"
+                style={S.input}
+                value={form.state}
+                onChange={e => setForm({...form, state: e.target.value})}
+              />
+            </div>
+            <div>
+              <label style={S.label}>Pincode *</label>
+              <input 
+                required
+                type="text"
+                maxLength={6}
+                placeholder="6 Digits"
+                style={{ ...S.input, fontFamily: 'monospace' }}
+                value={form.pincode}
+                onChange={e => setForm({...form, pincode: e.target.value.replace(/\D/g, '')})}
+              />
+            </div>
           </div>
 
+          {/* Partner / Referral Code */}
           <div>
             <label style={S.label}>Partner / Referral Code (Optional)</label>
             <input 
               type="text"
-              placeholder="If you were referred by a Partner"
+              placeholder="Enter Partner Code if referred"
               style={S.input}
               value={form.partner_code}
               onChange={e => setForm({...form, partner_code: e.target.value})}
             />
           </div>
 
-          <button type="submit" disabled={loading} style={{ ...S.btn("primary"), padding: "14px", fontSize: "16px", marginTop: "10px" }}>
-            {loading ? "Submitting..." : "Submit Application"}
+          {/* Submit Button */}
+          <button 
+            type="submit" 
+            disabled={loading} 
+            style={{
+              width: '100%',
+              padding: '16px',
+              border: 'none',
+              borderRadius: '14px',
+              background: loading ? '#64748b' : `linear-gradient(135deg, ${C.primary || '#2563eb'}, #1d4ed8)`,
+              color: '#ffffff',
+              fontSize: isMobile ? '14.5px' : '16px',
+              fontWeight: 900,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              boxShadow: '0 6px 20px rgba(37,99,235,0.35)',
+              marginTop: '10px'
+            }}
+          >
+            {loading ? "Saving Application Details..." : "SUBMIT DETAILS & PROCEED TO BANK ➔"}
           </button>
         </form>
       </div>

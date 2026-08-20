@@ -169,13 +169,51 @@ const submitApplication = async (req, res, next) => {
   }
 };
 
-// POST /applications/public — Customer submits application from homepage
+// POST /applications/public — Customer submits application from homepage / direct product apply page
 const submitPublicApplication = async (req, res, next) => {
   const client = await getClient();
   try {
     await client.query('BEGIN');
 
-    const { product_id, customer, loan_amount, notes, partner_code, tracking_id, process_type, monthly_salary, company_name, pincode } = req.body;
+    const {
+      product_id,
+      customer = {},
+      loan_amount,
+      notes,
+      partner_code,
+      tracking_id,
+      process_type,
+      monthly_salary,
+      monthly_income,
+      company_name,
+      employer,
+      pincode,
+      city,
+      state,
+      pan_number,
+      pan,
+      aadhaar_number,
+      aadhaar,
+      dob,
+      occupation,
+      employment_type
+    } = req.body;
+
+    const cleanName = (customer.full_name || customer.name || req.body.full_name || req.body.name || '').toString().trim();
+    const cleanMobile = (customer.mobile || req.body.mobile || '').toString().replace(/\D/g, '').slice(-10);
+    const cleanEmail = (customer.email || req.body.email || '').toString().trim().toLowerCase();
+    const cleanCity = (customer.city || city || '').toString().trim();
+    const cleanState = (customer.state || state || '').toString().trim();
+    const cleanPincode = (customer.pincode || pincode || '').toString().replace(/\D/g, '').slice(0, 6);
+    const cleanEmployer = (customer.company_name || customer.employer || company_name || employer || '').toString().trim();
+    const cleanPan = (customer.pan_number || customer.pan || pan_number || pan || '').toString().trim().toUpperCase();
+    const rawAadhaar = (customer.aadhaar_number || customer.aadhaar || aadhaar_number || aadhaar || '').toString().replace(/\D/g, '');
+    const cleanAadhaar = rawAadhaar || null;
+    const cleanDob = customer.dob || dob || null;
+    const cleanOccupation = (customer.occupation || customer.employment_type || occupation || employment_type || 'Salaried').toString().trim();
+
+    const rawSalary = monthly_salary || monthly_income || customer.monthly_income || loan_amount || 0;
+    const salaryVal = parseFloat(rawSalary) || 0;
 
     // Validate product
     const { rows: [product] } = await client.query(
@@ -207,24 +245,52 @@ const submitPublicApplication = async (req, res, next) => {
     const { rows: [sysUser] } = await client.query(`SELECT id FROM users WHERE role='SUPER_ADMIN' LIMIT 1`);
     const sysUserId = sysUser?.id || partnerUserId;
 
+    // Ensure columns exist on customers table dynamically
+    try {
+      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
+      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS occupation VARCHAR(100)`);
+      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
+      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
+      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
+      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(15,2)`);
+      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS dob DATE`);
+      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS pan_number VARCHAR(15)`);
+      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
+    } catch (_) {}
+
     // Upsert customer
     let customerId;
     const { rows: [existingCust] } = await client.query(
-      `SELECT id FROM customers WHERE mobile = $1`, [customer.mobile]
+      `SELECT id FROM customers WHERE mobile = $1`, [cleanMobile]
     );
-
-    const salaryVal = parseFloat(monthly_salary || loan_amount || 0);
 
     if (existingCust) {
       customerId = existingCust.id;
       await client.query(`
-        UPDATE customers SET full_name=$1, email=$2, city=$3, monthly_income=$4, company_name=$5, pincode=$6, updated_at=NOW() WHERE id=$7
-      `, [customer.full_name, customer.email, customer.city, monthly_salary ? parseFloat(monthly_salary) : null, company_name || null, pincode || null, customerId]);
+        UPDATE customers SET
+          full_name = COALESCE(NULLIF($1, ''), full_name),
+          email = COALESCE(NULLIF($2, ''), email),
+          city = COALESCE(NULLIF($3, ''), city),
+          state = COALESCE(NULLIF($4, ''), state),
+          pincode = COALESCE(NULLIF($5, ''), pincode),
+          monthly_income = COALESCE($6, monthly_income),
+          company_name = COALESCE(NULLIF($7, ''), company_name),
+          pan_number = COALESCE(NULLIF($8, ''), pan_number),
+          aadhaar_number = COALESCE(NULLIF($9, ''), aadhaar_number),
+          dob = COALESCE($10, dob),
+          occupation = COALESCE(NULLIF($11, ''), occupation),
+          updated_at = NOW()
+        WHERE id = $12
+      `, [cleanName, cleanEmail, cleanCity, cleanState, cleanPincode, salaryVal || null, cleanEmployer, cleanPan, cleanAadhaar, cleanDob || null, cleanOccupation, customerId]);
     } else {
       const { rows: [newCust] } = await client.query(`
-        INSERT INTO customers (full_name, mobile, email, city, monthly_income, company_name, pincode, created_by)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id
-      `, [customer.full_name, customer.mobile, customer.email, customer.city, monthly_salary ? parseFloat(monthly_salary) : null, company_name || null, pincode || null, sysUserId]);
+        INSERT INTO customers (
+          full_name, mobile, email, city, state, pincode, monthly_income,
+          company_name, pan_number, aadhaar_number, dob, occupation, created_by
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        RETURNING id
+      `, [cleanName, cleanMobile, cleanEmail || null, cleanCity || null, cleanState || null, cleanPincode || null, salaryVal || null, cleanEmployer || null, cleanPan || null, cleanAadhaar, cleanDob || null, cleanOccupation, sysUserId]);
       customerId = newCust.id;
     }
 
@@ -233,12 +299,12 @@ const submitPublicApplication = async (req, res, next) => {
     const { rows: [newLead] } = await client.query(`
       INSERT INTO leads (
         lead_number, partner_id, parent_partner_id, created_by, customer_id,
-        product_id, customer_name, mobile, city, status, process_type,
+        product_id, customer_name, mobile, city, pan_number, status, process_type,
         otp_verified, source, pipeline_stage
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'confirmed', $10, TRUE, 'public_landing', 'submitted')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'confirmed', $11, TRUE, 'public_landing', 'submitted')
       RETURNING id
-    `, [leadNum, partnerId, parentPartnerId, sysUserId, customerId, product_id, customer.full_name, customer.mobile, customer.city || null, process_type || 'lead_punching']);
+    `, [leadNum, partnerId, parentPartnerId, sysUserId, customerId, product_id, cleanName, cleanMobile, cleanCity || null, cleanPan || null, process_type || 'lead_punching']);
     const leadId = newLead.id;
 
     const commission = await calculatePartnerCommission(product_id, partnerId, salaryVal);
@@ -251,11 +317,11 @@ const submitPublicApplication = async (req, res, next) => {
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
         (app_number, lead_id, customer_id, product_id, partner_id, parent_partner_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, tracking_id, submitted_at,
-         status_history, process_type, company_name, pincode, city)
+         status_history, process_type, company_name, pincode, city, pan_number)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'submitted',$12,NOW(),
-        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$13::text)), $14, $15, $16, $17)
+        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$13::text)), $14, $15, $16, $17, $18)
       RETURNING id, app_number
-    `, [appNumber, leadId, customerId, product_id, partnerId, parentPartnerId, product.bank_id, sysUserId, salaryVal, commission, notes, tracking_id || null, sysUserId.toString(), process_type || 'lead_punching', company_name || null, pincode || null, customer.city || null]);
+    `, [appNumber, leadId, customerId, product_id, partnerId, parentPartnerId, product.bank_id, sysUserId, salaryVal, commission, notes, tracking_id || null, sysUserId.toString(), process_type || 'lead_punching', cleanEmployer || null, cleanPincode || null, cleanCity || null, cleanPan || null]);
 
     // Link application_id on lead record
     await client.query(`UPDATE leads SET application_id = $1 WHERE id = $2`, [app.id, leadId]);
@@ -263,12 +329,21 @@ const submitPublicApplication = async (req, res, next) => {
     await logTimeline(client, app.id, 'submitted', 'Application Created', 'Public direct landing application logged.', sysUserId);
     await logTimeline(client, app.id, 'submitted', 'Customer Submitted Form', 'Verified lead details saved.', sysUserId);
 
-    // Public referral clicks updates omitted
-
     await client.query('COMMIT');
 
+    const targetRedirectUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || 'https://gharkapaisa.in';
+
     logger.info(`Public application ${appNumber} submitted routing to Partner ${partnerId}`);
-    return created(res, { application_id: app.id, app_number: app.app_number, commission }, 'Application submitted successfully');
+    return created(res, {
+      application_id: app.id,
+      app_number: app.app_number,
+      lead_id: leadId,
+      customer_id: customerId,
+      partner_id: partnerId,
+      product_id: product.id,
+      redirect_url: targetRedirectUrl,
+      commission
+    }, 'Application submitted successfully');
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
