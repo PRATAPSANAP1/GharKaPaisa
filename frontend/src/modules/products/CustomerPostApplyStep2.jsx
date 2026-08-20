@@ -134,41 +134,10 @@ export default function CustomerPostApplyStep2() {
       {/* Form Card */}
       <div style={{ maxWidth: '540px', margin: '0 auto', background: cardBg, borderRadius: '20px', border: `1px solid ${border}`, padding: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
         
-        {/* Tracked Details Banner */}
-        {bankInfo?.customer && (
-          <div style={{ background: isDark ? '#1f1f23' : '#f8fafc', border: `1px solid ${border}`, borderRadius: '14px', padding: '14px 16px', marginBottom: '20px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 800, color: C.primary || '#2563eb', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
-              📌 Tracked Lead Metadata (Product ID: {bankInfo.product_id || 'N/A'})
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12.5px' }}>
-              <div>
-                <span style={{ color: C.textLight, fontSize: '11px', display: 'block' }}>Applicant Name</span>
-                <strong>{bankInfo.customer.full_name || 'Customer'}</strong>
-              </div>
-              <div>
-                <span style={{ color: C.textLight, fontSize: '11px', display: 'block' }}>Mobile Number</span>
-                <strong style={{ fontFamily: 'monospace' }}>{bankInfo.customer.mobile || 'Registered Mobile'}</strong>
-              </div>
-              {bankInfo.customer.pan_number && (
-                <div>
-                  <span style={{ color: C.textLight, fontSize: '11px', display: 'block' }}>PAN Card</span>
-                  <strong style={{ fontFamily: 'monospace' }}>{bankInfo.customer.pan_number}</strong>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Notice Box */}
-        {bankInfo?.is_sbi_bank ? (
-          <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', padding: '12px 16px', borderRadius: '12px', marginBottom: '20px', fontSize: '12.5px', color: '#991B1B', lineHeight: 1.5 }}>
-            <strong>🔴 Mandatory Rule for SBI Bank:</strong> SBI requires both <strong>Salary Slip</strong> and <strong>PAN Card</strong> uploads alongside the Application Reference Number to credit commissions.
-          </div>
-        ) : (
-          <div style={{ background: isDark ? '#27272a' : '#f1f5f9', padding: '12px 16px', borderRadius: '12px', marginBottom: '20px', fontSize: '12.5px', color: C.textLight, lineHeight: 1.5 }}>
-            💡 Enter your bank application reference number below after completing the application on the official bank site.
-          </div>
-        )}
+        {/* Standard Info Box */}
+        <div style={{ background: isDark ? '#27272a' : '#f1f5f9', padding: '12px 16px', borderRadius: '12px', marginBottom: '20px', fontSize: '12.5px', color: C.textLight, lineHeight: 1.5 }}>
+          💡 Enter your bank application reference number below after completing the application on the official bank site.
+        </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
@@ -201,11 +170,10 @@ export default function CustomerPostApplyStep2() {
           {/* Salary Slip URL / Doc */}
           <div>
             <label style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '6px' }}>
-              Salary Slip Document / Link {bankInfo?.is_sbi_bank ? '*' : <span style={{ fontWeight: 400 }}>(Optional)</span>}
+              Salary Slip Document / Link <span style={{ fontWeight: 400 }}>(Optional)</span>
             </label>
             <input
               type="url"
-              required={bankInfo?.is_sbi_bank}
               placeholder="https://... (URL to Salary Slip PDF / Image)"
               value={salarySlipUrl}
               onChange={(e) => setSalarySlipUrl(e.target.value)}
@@ -216,11 +184,10 @@ export default function CustomerPostApplyStep2() {
           {/* PAN Card URL / Doc */}
           <div>
             <label style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '6px' }}>
-              PAN Card Document / Link {bankInfo?.is_sbi_bank ? '*' : <span style={{ fontWeight: 400 }}>(Optional)</span>}
+              PAN Card Document / Link <span style={{ fontWeight: 400 }}>(Optional)</span>
             </label>
             <input
               type="url"
-              required={bankInfo?.is_sbi_bank}
               placeholder="https://... (URL to PAN Card PDF / Image)"
               value={panCardUrl}
               onChange={(e) => setPanCardUrl(e.target.value)}
