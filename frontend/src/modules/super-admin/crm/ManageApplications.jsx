@@ -38,7 +38,7 @@ export default function ManageApplications() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState(urlStatus || 'operational_verified');
+  const [statusFilter, setStatusFilter] = useState(urlStatus || '');
   const [commFilter, setCommFilter] = useState('');
   const [partnerFilter, setPartnerFilter] = useState('');
   const [processByFilter, setProcessByFilter] = useState('');
@@ -520,6 +520,7 @@ export default function ManageApplications() {
           <div style={{ width: '180px' }}>
             <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Application Status</label>
             <select style={S.input} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="">All Applications</option>
               <option value="operational_verified">Operational Verified (Pending Super Admin)</option>
               <option value="super_admin_approved">Super Admin Approved</option>
               <option value="approved">Bank Approved</option>
@@ -527,7 +528,6 @@ export default function ManageApplications() {
               <option value="submitted">Applied / Submitted</option>
               <option value="under_review">Under Review</option>
               <option value="rejected">Rejected</option>
-              <option value="">All Applications</option>
             </select>
           </div>
 
