@@ -5,7 +5,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 export default function CustomerApplyStep1() {
   const params = useParams();
-  const activeToken = params.token || params.trackingToken;
+  const token = params.token || params.trackingToken;
+  const activeToken = token;
   const { C, isDark } = useTheme();
 
   const [loading, setLoading] = useState(true);
