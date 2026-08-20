@@ -3200,6 +3200,123 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
   }
 };
 
+// POST /applications/:id/release-commission — Super Admin releases commission & credits wallet
+const releaseCommission = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    const { id } = req.params;
+
+    const { rows: [app] } = await client.query(
+      `SELECT a.id, a.app_number, a.partner_id, a.commission_amount, a.commission_status, a.status
+       FROM applications a
+       WHERE a.id = $1`,
+      [id]
+    );
+
+    if (!app) return notFound(res, 'Application not found');
+
+    if (app.commission_status === 'released') {
+      return error(res, 'Commission has already been released for this application', 400);
+    }
+
+    const commissionAmount = parseFloat(app.commission_amount || 0);
+    if (commissionAmount <= 0) {
+      return error(res, 'No commission amount set for this application. Please update commission first.', 400);
+    }
+
+    await client.query('BEGIN');
+
+    // 1. Update application commission status & set status to approved
+    await client.query(
+      `UPDATE applications SET status = 'approved', final_status = 'approved', approved_at = COALESCE(approved_at, NOW()), commission_status = 'released', commission_released = TRUE, updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+
+    // 2. Call creditCommission to process partner & team split into partner_wallets & wallet_ledger
+    await creditCommission(
+      app.partner_id,
+      id,
+      commissionAmount,
+      `Commission released for application ${app.app_number}`,
+      req.user.id
+    );
+
+    // 3. Log timeline
+    try {
+      await logTimeline(client, id, 'commission_released', 'Commission Released',
+        `₹${commissionAmount} commission released and credited to partner wallet by Super Admin.`,
+        req.user.id
+      );
+    } catch (_) {}
+
+    await client.query('COMMIT');
+
+    // Send SMS notification to partner
+    try {
+      const { rows: [partnerUser] } = await client.query(
+        `SELECT u.mobile, COALESCE(p.first_name, u.full_name, 'Partner') as first_name 
+         FROM partner_profiles p JOIN users u ON p.user_id = u.id WHERE p.id = $1`,
+        [app.partner_id]
+      );
+      if (partnerUser?.mobile) {
+        const { sendCommissionCreditedSms } = require('../../services/sms/sms.service');
+        sendCommissionCreditedSms(partnerUser.mobile, partnerUser.first_name, commissionAmount).catch(() => {});
+      }
+    } catch (_) {}
+
+    // Fetch updated balance from partner_wallets
+    const { rows: [w] } = await query(
+      `SELECT available_balance FROM partner_wallets WHERE partner_id = $1`,
+      [app.partner_id]
+    );
+
+    return success(res, {
+      application_id: id,
+      app_number: app.app_number,
+      commission_amount: commissionAmount,
+      commission_status: 'released',
+      partner_id: app.partner_id,
+      new_wallet_balance: parseFloat(w?.available_balance || 0)
+    }, 'Commission released and partner wallet credited successfully.');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+// POST /applications/:id/hold-commission — Super Admin holds commission
+const holdCommission = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { remarks } = req.body;
+
+    const { rows: [app] } = await query(
+      `SELECT id, app_number, commission_status FROM applications WHERE id = $1`,
+      [id]
+    );
+
+    if (!app) return notFound(res, 'Application not found');
+
+    if (app.commission_status === 'released') {
+      return error(res, 'Cannot hold commission that has already been released', 400);
+    }
+
+    await query(
+      `UPDATE applications SET commission_status = 'on_hold', updated_at = NOW() WHERE id = $1`,
+      [id]
+    );
+
+    return success(res, {
+      application_id: id,
+      app_number: app.app_number,
+      commission_status: 'on_hold'
+    }, 'Commission has been put on hold.');
+  } catch (err) {
+    next(err);
+  }
+};
 
 module.exports = {
   submitApplication,
