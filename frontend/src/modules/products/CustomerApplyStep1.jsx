@@ -111,6 +111,8 @@ export default function CustomerApplyStep1() {
     if (!state.trim()) return alert('Please enter your State.');
     if (!pincode.trim() || pincode.trim().length !== 6) return alert('Please enter a valid 6-digit Pincode.');
 
+    const cleanIncomeVal = parseFloat(income.toString().replace(/[^0-9.]/g, '')) || 0;
+
     setSubmitting(true);
     try {
       const res = await fetch(`${getApiV1Url()}/public/apply/${activeToken}`, {
@@ -126,8 +128,8 @@ export default function CustomerApplyStep1() {
           occupation,
           employment: occupation,
           employment_type: occupation,
-          income: parseFloat(income),
-          monthly_income: parseFloat(income),
+          income: cleanIncomeVal,
+          monthly_income: cleanIncomeVal,
           employer: employer.trim(),
           company_name: employer.trim(),
           pan: cleanPan,

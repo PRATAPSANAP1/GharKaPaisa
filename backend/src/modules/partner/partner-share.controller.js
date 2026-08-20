@@ -670,19 +670,36 @@ const updateApplyTokenDetails = async (req, res, next) => {
     const cleanMobile = (mobile || customer_mobile || '').toString().replace(/\D/g, '').slice(-10);
     const cleanPan = (pan_number || pan || '').toString().trim().toUpperCase();
     const cleanEmail = (email || '').toString().trim().toLowerCase();
-    const cleanAadhaar = (aadhaar_number || aadhaar || '').toString().replace(/\D/g, '');
-    const cleanAadhaarLast4 = cleanAadhaar ? cleanAadhaar.slice(-4) : null;
+    const rawAadhaar = (aadhaar_number || aadhaar || '').toString().replace(/\D/g, '');
+    const cleanAadhaar = rawAadhaar || null;
+    const cleanAadhaarLast4 = rawAadhaar.length >= 4 ? rawAadhaar.slice(-4) : null;
     const cleanOccupation = (occupation || employment || employment_type || 'Salaried').toString().trim();
     const cleanEmployer = (employer || company_name || '').toString().trim();
-    const numIncome = (income || monthly_income) ? parseFloat(income || monthly_income) : null;
+
+    const rawInc = (monthly_income !== undefined && monthly_income !== null && monthly_income !== '')
+      ? monthly_income
+      : (income !== undefined && income !== null && income !== '' ? income : null);
+    let numIncome = null;
+    if (rawInc !== null && rawInc !== undefined) {
+      const cleanedInc = rawInc.toString().replace(/[^0-9.]/g, '');
+      if (cleanedInc) {
+        const parsed = parseFloat(cleanedInc);
+        if (!isNaN(parsed)) numIncome = parsed;
+      }
+    }
+
     const cleanCity = (city || '').toString().trim();
     const cleanState = (state || '').toString().trim();
-    const cleanPincode = (pincode || '').toString().trim();
+    const cleanPincode = (pincode || '').toString().replace(/\D/g, '').slice(0, 6);
 
     // Ensure columns exist on customers table dynamically
     try {
       await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
       await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS occupation VARCHAR(100)`);
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(15,2)`);
     } catch (_) {}
 
     // Fetch Product for target redirect URL
@@ -724,7 +741,7 @@ const updateApplyTokenDetails = async (req, res, next) => {
       partnerUserId = adminUser?.id || null;
     }
 
-    // Create or Update customer record in customers table with all 12 fields
+    // Create or Update customer record in customers table with exact 1-to-1 parameter alignment ($1..$14)
     if (targetCustomerId) {
       await query(`
         UPDATE customers
@@ -734,19 +751,31 @@ const updateApplyTokenDetails = async (req, res, next) => {
           dob = COALESCE(NULLIF($3, '')::date, dob),
           pan_number = COALESCE(NULLIF($4, ''), pan_number),
           aadhaar_number = COALESCE(NULLIF($5, ''), aadhaar_number),
-          aadhaar_last4 = COALESCE(RIGHT(NULLIF($5, ''), 4), aadhaar_last4),
-          employment_type = COALESCE(NULLIF($6, ''), employment_type),
-          occupation = COALESCE(NULLIF($6, ''), occupation),
-          monthly_income = COALESCE($7, monthly_income),
-          employer = COALESCE(NULLIF($8, ''), employer),
-          city = COALESCE(NULLIF($9, ''), city),
-          state = COALESCE(NULLIF($10, ''), state),
-          pincode = COALESCE(NULLIF($11, ''), pincode),
+          aadhaar_last4 = COALESCE(NULLIF($6, ''), aadhaar_last4),
+          employment_type = COALESCE(NULLIF($7, ''), employment_type),
+          occupation = COALESCE(NULLIF($8, ''), occupation),
+          monthly_income = COALESCE($9, monthly_income),
+          employer = COALESCE(NULLIF($10, ''), employer),
+          city = COALESCE(NULLIF($11, ''), city),
+          state = COALESCE(NULLIF($12, ''), state),
+          pincode = COALESCE(NULLIF($13, ''), pincode),
           updated_at = NOW()
-        WHERE id = $12
+        WHERE id = $14
       `, [
-        cleanName, cleanEmail, dob || null, cleanPan, cleanAadhaar,
-        cleanOccupation, numIncome, cleanEmployer, cleanCity, cleanState, cleanPincode, targetCustomerId
+        cleanName,
+        cleanEmail,
+        dob || null,
+        cleanPan,
+        cleanAadhaar,
+        cleanAadhaarLast4,
+        cleanOccupation,
+        cleanOccupation,
+        numIncome,
+        cleanEmployer,
+        cleanCity,
+        cleanState,
+        cleanPincode,
+        targetCustomerId
       ]);
     } else if (cleanMobile) {
       const finalName = cleanName || 'Customer';
@@ -759,7 +788,7 @@ const updateApplyTokenDetails = async (req, res, next) => {
         RETURNING id
       `, [
         finalName, cleanMobile, cleanEmail || null, dob || null, cleanPan || null,
-        cleanAadhaar || null, cleanAadhaarLast4 || null, cleanOccupation, cleanOccupation,
+        cleanAadhaar, cleanAadhaarLast4, cleanOccupation, cleanOccupation,
         numIncome, cleanEmployer || null, cleanCity || null, cleanState || null, cleanPincode || null,
         partnerUserId
       ]);

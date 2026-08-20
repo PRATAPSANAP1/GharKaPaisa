@@ -487,6 +487,13 @@ const migrate = async () => {
     )
   `);
 
+  await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
+  await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS occupation VARCHAR(100)`);
+  await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
+  await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
+  await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
+  await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(15,2)`);
+
   // ── Applications ─────────────────────────────────────────────
   await query(`
     CREATE TABLE IF NOT EXISTS applications (
