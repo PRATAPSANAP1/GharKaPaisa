@@ -118,37 +118,37 @@ const EarnCard = ({ title, value, valueColor, bg, color, icon, onClick, isDark, 
     style={{
       background: isDark ? C.card : '#FFFFFF',
       borderRadius: '16px',
-      padding: '14px',
+      padding: '12px 10px',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'space-between',
       cursor: 'pointer',
-      minHeight: '124px',
+      minHeight: '120px',
       boxShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.05)',
       border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`,
       transition: 'transform 0.15s ease, boxShadow 0.15s ease'
     }}
   >
-    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
       <p
         style={{
           fontWeight: 700,
-          fontSize: '14px',
+          fontSize: '13px',
           color: isDark ? C.text : '#111827',
-          lineHeight: 1.25,
-          paddingRight: '4px',
+          lineHeight: 1.2,
+          paddingRight: '2px',
           margin: 0
         }}
       >
         {title}
       </p>
-      <IconCircle bg={bg} color={color} size={40}>
+      <IconCircle bg={bg} color={color} size={36}>
         {icon}
       </IconCircle>
     </div>
-    <div style={{ marginTop: '10px' }}>
-      <p style={{ fontSize: '11px', color: isDark ? C.textLight : '#6B7280', margin: '0 0 2px 0' }}>Earn upto</p>
-      <p style={{ fontWeight: 800, fontSize: '19px', color: valueColor, margin: 0 }}>
+    <div style={{ marginTop: '8px' }}>
+      <p style={{ fontSize: '10.5px', color: isDark ? C.textLight : '#6B7280', margin: '0 0 2px 0' }}>Earn upto</p>
+      <p style={{ fontWeight: 800, fontSize: '17px', color: valueColor, margin: 0, whiteSpace: 'nowrap' }}>
         {value}
       </p>
     </div>
@@ -592,7 +592,7 @@ export default function PartnerDashboardComponent({ partner }) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)',
             gap: '12px',
             paddingLeft: '0',
             paddingRight: '0'
