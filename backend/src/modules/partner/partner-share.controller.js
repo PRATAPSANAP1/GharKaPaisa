@@ -652,7 +652,9 @@ const updateApplyTokenDetails = async (req, res, next) => {
   try {
     const { token } = req.params;
     const {
-      email, dob, occupation, employment, income, monthly_income,
+      full_name, customer_name, name,
+      mobile, customer_mobile,
+      email, dob, occupation, employment, employment_type, income, monthly_income,
       employer, company_name, pan, pan_number, aadhaar_number, aadhaar,
       city, state, pincode, address
     } = req.body;
@@ -664,12 +666,18 @@ const updateApplyTokenDetails = async (req, res, next) => {
       return error(res, 'Invalid or expired application link', 404);
     }
 
+    const cleanName = (full_name || customer_name || name || '').toString().trim();
+    const cleanMobile = (mobile || customer_mobile || '').toString().replace(/\D/g, '').slice(-10);
     const cleanPan = (pan_number || pan || '').toString().trim().toUpperCase();
     const cleanEmail = (email || '').toString().trim().toLowerCase();
-    const cleanAadhaar = (aadhaar_number || aadhaar || '').toString().trim();
-    const cleanOccupation = (occupation || employment || 'Salaried').toString().trim();
+    const cleanAadhaar = (aadhaar_number || aadhaar || '').toString().replace(/\D/g, '');
+    const cleanAadhaarLast4 = cleanAadhaar ? cleanAadhaar.slice(-4) : null;
+    const cleanOccupation = (occupation || employment || employment_type || 'Salaried').toString().trim();
     const cleanEmployer = (employer || company_name || '').toString().trim();
-    const numIncome = income || monthly_income ? parseFloat(income || monthly_income) : null;
+    const numIncome = (income || monthly_income) ? parseFloat(income || monthly_income) : null;
+    const cleanCity = (city || '').toString().trim();
+    const cleanState = (state || '').toString().trim();
+    const cleanPincode = (pincode || '').toString().trim();
 
     // Ensure columns exist on customers table dynamically
     try {
@@ -689,59 +697,73 @@ const updateApplyTokenDetails = async (req, res, next) => {
       const { rows: [leadRec] } = await query(`SELECT customer_id, mobile, customer_name FROM leads WHERE id = $1`, [targetLeadId]);
       if (leadRec?.customer_id) {
         targetCustomerId = leadRec.customer_id;
-      } else if (leadRec?.mobile) {
-        const { rows: [custRec] } = await query(`SELECT id FROM customers WHERE mobile = $1 LIMIT 1`, [leadRec.mobile]);
+      } else if (leadRec?.mobile || cleanMobile) {
+        const checkMobile = cleanMobile || leadRec?.mobile;
+        const { rows: [custRec] } = await query(`SELECT id FROM customers WHERE mobile = $1 LIMIT 1`, [checkMobile]);
         if (custRec) {
           targetCustomerId = custRec.id;
-        } else {
-          // Create new customer record if missing
-          const { rows: [newCust] } = await query(`
-            INSERT INTO customers (full_name, mobile, email, dob, pan_number, aadhaar_number, employment_type, occupation, monthly_income, employer, city, state, pincode, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-            RETURNING id
-          `, [
-            leadRec.customer_name || 'Customer',
-            leadRec.mobile,
-            cleanEmail || null,
-            dob || null,
-            cleanPan || null,
-            cleanAadhaar || null,
-            cleanOccupation,
-            cleanOccupation,
-            numIncome,
-            cleanEmployer || null,
-            city || null,
-            state || null,
-            pincode || null,
-            shareData.partner_id || null
-          ]);
-          targetCustomerId = newCust?.id || null;
         }
       }
     }
 
+    if (!targetCustomerId && cleanMobile) {
+      const { rows: [custRec] } = await query(`SELECT id FROM customers WHERE mobile = $1 LIMIT 1`, [cleanMobile]);
+      if (custRec) {
+        targetCustomerId = custRec.id;
+      }
+    }
+
+    // Resolve Partner User ID for created_by attribution
+    let partnerUserId = null;
+    if (shareData.partner_id) {
+      const { rows: [pUser] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [shareData.partner_id]);
+      partnerUserId = pUser?.user_id || null;
+    }
+    if (!partnerUserId) {
+      const { rows: [adminUser] } = await query(`SELECT id FROM users WHERE role IN ('SUPER_ADMIN', 'ADMIN') ORDER BY created_at ASC LIMIT 1`);
+      partnerUserId = adminUser?.id || null;
+    }
+
+    // Create or Update customer record in customers table with all 12 fields
     if (targetCustomerId) {
       await query(`
         UPDATE customers
         SET 
-          email = COALESCE(NULLIF($1, ''), email),
-          dob = COALESCE(NULLIF($2, '')::date, dob),
-          pan_number = COALESCE(NULLIF($3, ''), pan_number),
-          aadhaar_number = COALESCE(NULLIF($4, ''), aadhaar_number),
-          aadhaar_last4 = COALESCE(RIGHT(NULLIF($4, ''), 4), aadhaar_last4),
-          employment_type = COALESCE(NULLIF($5, ''), employment_type),
-          occupation = COALESCE(NULLIF($5, ''), occupation),
-          monthly_income = COALESCE($6, monthly_income),
-          employer = COALESCE(NULLIF($7, ''), employer),
-          city = COALESCE(NULLIF($8, ''), city),
-          state = COALESCE(NULLIF($9, ''), state),
-          pincode = COALESCE(NULLIF($10, ''), pincode),
+          full_name = COALESCE(NULLIF($1, ''), full_name),
+          email = COALESCE(NULLIF($2, ''), email),
+          dob = COALESCE(NULLIF($3, '')::date, dob),
+          pan_number = COALESCE(NULLIF($4, ''), pan_number),
+          aadhaar_number = COALESCE(NULLIF($5, ''), aadhaar_number),
+          aadhaar_last4 = COALESCE(RIGHT(NULLIF($5, ''), 4), aadhaar_last4),
+          employment_type = COALESCE(NULLIF($6, ''), employment_type),
+          occupation = COALESCE(NULLIF($6, ''), occupation),
+          monthly_income = COALESCE($7, monthly_income),
+          employer = COALESCE(NULLIF($8, ''), employer),
+          city = COALESCE(NULLIF($9, ''), city),
+          state = COALESCE(NULLIF($10, ''), state),
+          pincode = COALESCE(NULLIF($11, ''), pincode),
           updated_at = NOW()
-        WHERE id = $11
+        WHERE id = $12
       `, [
-        cleanEmail, dob || null, cleanPan, cleanAadhaar, cleanOccupation,
-        numIncome, cleanEmployer, city || null, state || null, pincode || null, targetCustomerId
+        cleanName, cleanEmail, dob || null, cleanPan, cleanAadhaar,
+        cleanOccupation, numIncome, cleanEmployer, cleanCity, cleanState, cleanPincode, targetCustomerId
       ]);
+    } else if (cleanMobile) {
+      const finalName = cleanName || 'Customer';
+      const { rows: [newCust] } = await query(`
+        INSERT INTO customers (
+          full_name, mobile, email, dob, pan_number, aadhaar_number, aadhaar_last4,
+          employment_type, occupation, monthly_income, employer, city, state, pincode, created_by
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        RETURNING id
+      `, [
+        finalName, cleanMobile, cleanEmail || null, dob || null, cleanPan || null,
+        cleanAadhaar || null, cleanAadhaarLast4 || null, cleanOccupation, cleanOccupation,
+        numIncome, cleanEmployer || null, cleanCity || null, cleanState || null, cleanPincode || null,
+        partnerUserId
+      ]);
+      targetCustomerId = newCust?.id || null;
     }
 
     // Update lead record stage
@@ -750,10 +772,12 @@ const updateApplyTokenDetails = async (req, res, next) => {
         UPDATE leads
         SET pipeline_stage = 'details_submitted', status = 'in_progress',
             customer_id = COALESCE($2, customer_id),
-            city = COALESCE(NULLIF($3, ''), city),
+            customer_name = COALESCE(NULLIF($3, ''), customer_name),
+            city = COALESCE(NULLIF($4, ''), city),
+            pan_number = COALESCE(NULLIF($5, ''), pan_number),
             updated_at = NOW()
         WHERE id = $1
-      `, [targetLeadId, targetCustomerId, city || null]);
+      `, [targetLeadId, targetCustomerId, cleanName, cleanCity, cleanPan]);
     }
 
     // Update application record if exists
@@ -761,11 +785,12 @@ const updateApplyTokenDetails = async (req, res, next) => {
       await query(`
         UPDATE applications
         SET status = 'details_submitted',
-            pan_number = COALESCE(NULLIF($1, ''), pan_number),
-            monthly_salary = COALESCE($2, monthly_salary),
+            customer_id = COALESCE($1, customer_id),
+            pan_number = COALESCE(NULLIF($2, ''), pan_number),
+            monthly_salary = COALESCE($3, monthly_salary),
             updated_at = NOW()
-        WHERE id = $3
-      `, [cleanPan, numIncome, shareData.application_id]);
+        WHERE id = $4
+      `, [targetCustomerId, cleanPan, numIncome, shareData.application_id]);
     }
 
     const host = req.get('host') || 'gharkapaisa.in';

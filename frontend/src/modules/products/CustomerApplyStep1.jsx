@@ -23,6 +23,8 @@ export default function CustomerApplyStep1() {
   const [customer, setCustomer] = useState(null);
 
   // Form Fields
+  const [fullName, setFullName] = useState('');
+  const [mobileNum, setMobileNum] = useState('');
   const [email, setEmail] = useState('');
   const [dob, setDob] = useState('');
   const [occupation, setOccupation] = useState('Salaried');
@@ -48,6 +50,8 @@ export default function CustomerApplyStep1() {
 
           if (data.customer) {
             setCustomer(data.customer);
+            setFullName(data.customer.full_name || '');
+            setMobileNum(data.customer.mobile || '');
             setEmail(data.customer.email || '');
             setDob(data.customer.dob || '');
             setOccupation(data.customer.occupation || data.customer.employment_type || 'Salaried');
@@ -63,8 +67,8 @@ export default function CustomerApplyStep1() {
           setError(json?.message || 'Invalid or expired application link');
         }
       } catch (err) {
-        console.error('Failed to load application details:', err);
-        setError('Failed to connect to backend server. Please refresh or try again.');
+        console.error('Fetch apply token details error:', err);
+        setError('Network error loading details. Please refresh and try again.');
       } finally {
         setLoading(false);
       }
@@ -76,6 +80,9 @@ export default function CustomerApplyStep1() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!fullName.trim() && !customer?.full_name) {
+      return alert('Please enter your Customer Name.');
+    }
     if (!email.trim() || !/\S+@\S+\.\S+/.test(email.trim())) {
       return alert('Please enter a valid email address.');
     }
@@ -110,10 +117,15 @@ export default function CustomerApplyStep1() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          full_name: fullName.trim() || customer?.full_name || '',
+          customer_name: fullName.trim() || customer?.full_name || '',
+          mobile: mobileNum.trim() || customer?.mobile || '',
+          customer_mobile: mobileNum.trim() || customer?.mobile || '',
           email: email.trim().toLowerCase(),
           dob,
           occupation,
           employment: occupation,
+          employment_type: occupation,
           income: parseFloat(income),
           monthly_income: parseFloat(income),
           employer: employer.trim(),
