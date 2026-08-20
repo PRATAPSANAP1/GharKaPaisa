@@ -392,13 +392,7 @@ export default function CustomerApplyStep1() {
                 </a>
               </div>
 
-              {/* 10-Minute SMS Notice Box */}
-              <div style={{ background: isDark ? '#1f1f23' : '#f1f5f9', border: `1px solid ${borderCol}`, borderRadius: '14px', padding: '14px', textAlign: 'left', fontSize: '12.5px', lineHeight: '1.5', color: mutedCol }}>
-                <div style={{ fontWeight: 800, color: C.primary || '#2563eb', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  📲 Automatic SMS Schedule Notice:
-                </div>
-                An automated SMS containing your <strong>QD (Quick Details / Post-Apply) Form link</strong> will be automatically sent to your mobile number in <strong>10 minutes</strong>. You can click button #2 above to open and submit it right now.
-              </div>
+
             </div>
           ) : (
             /* APPLICATION FORM */

@@ -28,55 +28,44 @@ if (msg91AuthKey) {
 }
 
 /**
- * Format mobile number to E.164 / 91XXXXXXXXXX format
+ * Format mobile number to 91XXXXXXXXXX format (without + symbol for MSG91)
  */
 const formatMobile = (mobile) => {
-  const clean = String(mobile).replace(/\D/g, '');
+  const clean = String(mobile || '').replace(/\D/g, '');
   if (clean.startsWith('91') && clean.length >= 12) return clean;
   if (clean.length === 10) return `91${clean}`;
   return clean;
 };
 
 /**
- * Send SMS via MSG91 Flow API or Twilio (fallback)
+ * Send Plain Text SMS via MSG91 Send SMS API or Twilio (fallback)
  */
 const sendSms = async (to, body) => {
   const formattedTo = formatMobile(to);
+  if (!formattedTo) return false;
   
-  // 1. Try MSG91 first (primary)
+  // 1. Try MSG91 SMS API
   if (msg91AuthKey) {
     try {
-      const templateId = process.env.MSG91_INVITE_TEMPLATE_ID;
-      
-      if (templateId) {
-        // Use MSG91 Flow API with template
-        await axios.post('https://api.msg91.com/api/v5/flow/', {
-          template_id: templateId,
-          short_url: '0',
-          mobiles: formattedTo,
-          VAR1: body,
-        }, {
-          headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
-        });
-      } else {
-        // Use MSG91 Send SMS API (plain text)
-        await axios.post('https://api.msg91.com/api/v5/flow/', {
-          sender: msg91SenderId,
-          route: msg91Route,
-          country: '91',
-          sms: [{
-            message: body,
-            to: [formattedTo]
-          }]
-        }, {
-          headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
-        });
-      }
+      const url = `https://control.msg91.com/api/v5/sms/send?authkey=${encodeURIComponent(msg91AuthKey)}`;
+      const res = await axios.post(url, {
+        sender: msg91SenderId,
+        route: msg91Route,
+        country: '91',
+        sms: [{
+          message: body,
+          to: [formattedTo]
+        }]
+      }, {
+        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
+      });
 
-      logger.info(`[SMS] Message sent to ${formattedTo} via MSG91`);
-      return true;
+      logger.info(`[SMS] Plain Text MSG91 response for ${formattedTo}: ${JSON.stringify(res.data)}`);
+      if (res.data && res.data.type !== 'error' && !res.data.hasError) {
+        return true;
+      }
     } catch (err) {
-      logger.error(`[SMS] MSG91 failed to send message to ${formattedTo}: ${err.response?.data?.message || err.message}`);
+      logger.error(`[SMS] MSG91 failed to send message to ${formattedTo}: ${err.response?.data ? JSON.stringify(err.response.data) : err.message}`);
     }
   }
 
@@ -96,15 +85,48 @@ const sendSms = async (to, body) => {
     }
   }
 
-  // 3. Dev log if no provider available
-  if (!msg91AuthKey && !twilioClient) {
-    logger.warn(`[SMS] No SMS provider available — skipping SMS to ${formattedTo}`);
-  }
-
   if (process.env.NODE_ENV !== 'production') {
     logger.info(`[SMS-DEV-LOG] Send to: ${formattedTo} | Body: ${body}`);
   }
   return false;
+};
+
+/**
+ * Generic MSG91 Flow API Helper with full fallback & detailed logging
+ */
+const sendMsg91FlowSms = async (to, templateId, varsMap, fallbackBody) => {
+  const formattedTo = formatMobile(to);
+  if (!formattedTo) return false;
+
+  if (msg91AuthKey && templateId) {
+    try {
+      const url = `https://api.msg91.com/api/v5/flow/?authkey=${encodeURIComponent(msg91AuthKey)}`;
+      const payload = {
+        template_id: templateId,
+        short_url: '0',
+        recipients: [{
+          mobiles: formattedTo,
+          ...varsMap
+        }]
+      };
+
+      const res = await axios.post(url, payload, {
+        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
+      });
+
+      logger.info(`[SMS-FLOW] MSG91 Flow (${templateId}) response for ${formattedTo}: ${JSON.stringify(res.data)}`);
+
+      if (res.data && res.data.type !== 'error' && !res.data.hasError) {
+        return true;
+      }
+      logger.warn(`[SMS-FLOW] MSG91 Flow returned error: ${JSON.stringify(res.data)}. Executing plain text fallback.`);
+    } catch (err) {
+      logger.error(`[SMS-FLOW] Failed sending MSG91 Flow SMS (${templateId}) to ${formattedTo}: ${err.response?.data ? JSON.stringify(err.response.data) : err.message}`);
+    }
+  }
+
+  // Fallback to standard SMS API
+  return await sendSms(to, fallbackBody);
 };
 
 /**
@@ -115,65 +137,51 @@ const sendApplyStep1Sms = async (to, customerName, productName, token) => {
   const body = `Dear ${customerName || 'Customer'} , complete your prefilled application for ${productName || 'Credit Card'} on GharKaPaisa: ${applyUrl} - GharKaPaisa`;
   const templateId = process.env.MSG91_APPLY_STEP1_TEMPLATE_ID || '1277178678509565584';
 
-  if (msg91AuthKey) {
-    try {
-      const formattedTo = formatMobile(to);
-      await axios.post('https://api.msg91.com/api/v5/flow/', {
-        template_id: templateId,
-        short_url: '0',
-        recipients: [{
-          mobiles: formattedTo,
-          var1: customerName || 'Customer',
-          var2: productName || 'Credit Card',
-          var3: applyUrl,
-          name: customerName || 'Customer',
-          product: productName || 'Credit Card',
-          url: applyUrl
-        }]
-      }, {
-        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
-      });
-      logger.info(`[SMS] Step 1 Apply SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
-      return true;
-    } catch (err) {
-      logger.error(`[SMS] Failed sending Step 1 Flow SMS: ${err.message}`);
-    }
-  }
+  const varsMap = {
+    var1: customerName || 'Customer',
+    var2: productName || 'Credit Card',
+    var3: applyUrl,
+    VAR1: customerName || 'Customer',
+    VAR2: productName || 'Credit Card',
+    VAR3: applyUrl,
+    name: customerName || 'Customer',
+    product: productName || 'Credit Card',
+    url: applyUrl,
+    customer_name: customerName || 'Customer',
+    product_name: productName || 'Credit Card',
+    apply_url: applyUrl,
+    link: applyUrl
+  };
 
-  return await sendSms(to, body);
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
 };
 
 /**
  * Send Step 2 Post-Apply Link SMS to Customer (DLT Template ID: 1277178655941470854 | Sender: GHARKP)
  */
 const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
-  const postApplyUrl = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}/post-apply`;
+  const postApplyUrl = String(token || '').startsWith('http') ? token : `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}/post-apply`;
   const body = `Dear ${customerName || 'Customer'}, please submit your bank application ref & documents for ${productName || 'Credit Card'}: ${postApplyUrl} - GharKaPaisa`;
   const templateId = process.env.MSG91_APPLY_STEP2_TEMPLATE_ID || '1277178655941470854';
-  
-  if (msg91AuthKey) {
-    try {
-      const formattedTo = formatMobile(to);
-      await axios.post('https://api.msg91.com/api/v5/flow/', {
-        template_id: templateId,
-        short_url: '0',
-        recipients: [{
-          mobiles: formattedTo,
-          name: customerName || 'Customer',
-          product: productName || 'Credit Card',
-          url: postApplyUrl
-        }]
-      }, {
-        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
-      });
-      logger.info(`[SMS] Step 2 Post-Apply SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
-      return true;
-    } catch (err) {
-      logger.error(`[SMS] Failed sending Step 2 Flow SMS: ${err.message}`);
-    }
-  }
 
-  return await sendSms(to, body);
+  const varsMap = {
+    var1: customerName || 'Customer',
+    var2: productName || 'Credit Card',
+    var3: postApplyUrl,
+    VAR1: customerName || 'Customer',
+    VAR2: productName || 'Credit Card',
+    VAR3: postApplyUrl,
+    name: customerName || 'Customer',
+    product: productName || 'Credit Card',
+    url: postApplyUrl,
+    customer_name: customerName || 'Customer',
+    product_name: productName || 'Credit Card',
+    post_apply_url: postApplyUrl,
+    qd_link: postApplyUrl,
+    link: postApplyUrl
+  };
+
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
 };
 
 /**
@@ -183,29 +191,17 @@ const sendUploadReminderSms = async (to, customerName, appNumber, uploadUrl) => 
   const body = `Dear ${customerName || 'Customer'}, please complete your application ${appNumber || ''} by uploading required documents: ${uploadUrl} - Thanks, GharKaPaisa`;
   const templateId = process.env.MSG91_UPLOAD_REMINDER_TEMPLATE_ID || '1277178655031889758';
 
-  if (msg91AuthKey) {
-    try {
-      const formattedTo = formatMobile(to);
-      await axios.post('https://api.msg91.com/api/v5/flow/', {
-        template_id: templateId,
-        short_url: '0',
-        recipients: [{
-          mobiles: formattedTo,
-          var1: customerName || 'Customer',
-          var2: appNumber || 'ref',
-          var3: uploadUrl
-        }]
-      }, {
-        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
-      });
-      logger.info(`[SMS] Upload Reminder SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
-      return true;
-    } catch (err) {
-      logger.error(`[SMS] Failed sending Upload Reminder SMS: ${err.message}`);
-    }
-  }
+  const varsMap = {
+    var1: customerName || 'Customer',
+    var2: appNumber || 'ref',
+    var3: uploadUrl,
+    VAR1: customerName || 'Customer',
+    VAR2: appNumber || 'ref',
+    VAR3: uploadUrl,
+    url: uploadUrl
+  };
 
-  return await sendSms(to, body);
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
 };
 
 /**
@@ -216,28 +212,15 @@ const sendPartnerInviteSms = async (to, inviterName, loginUrl) => {
   const body = `Welcome to GharKaPaisa! You have been added as a Team Member by ${inviterName || 'Partner'}. Login here: ${targetUrl}`;
   const templateId = process.env.MSG91_PARTNER_INVITES_TEMPLATE_ID || '1277178655019181250';
 
-  if (msg91AuthKey) {
-    try {
-      const formattedTo = formatMobile(to);
-      await axios.post('https://api.msg91.com/api/v5/flow/', {
-        template_id: templateId,
-        short_url: '0',
-        recipients: [{
-          mobiles: formattedTo,
-          var1: targetUrl,
-          var2: inviterName || 'Partner'
-        }]
-      }, {
-        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
-      });
-      logger.info(`[SMS] Partner Invite SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
-      return true;
-    } catch (err) {
-      logger.error(`[SMS] Failed sending Partner Invite SMS: ${err.message}`);
-    }
-  }
+  const varsMap = {
+    var1: targetUrl,
+    var2: inviterName || 'Partner',
+    VAR1: targetUrl,
+    VAR2: inviterName || 'Partner',
+    url: targetUrl
+  };
 
-  return await sendSms(to, body);
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
 };
 
 /**
@@ -247,28 +230,14 @@ const sendKycStatusUpdateSms = async (to, partnerName, statusText) => {
   const body = `Dear ${partnerName || 'Partner'}, your KYC status is updated to ${statusText || 'Updated'} . - GharKaPaisa`;
   const templateId = process.env.MSG91_KYC_STATUS_TEMPLATE_ID || '1277178697430872410';
 
-  if (msg91AuthKey) {
-    try {
-      const formattedTo = formatMobile(to);
-      await axios.post('https://api.msg91.com/api/v5/flow/', {
-        template_id: templateId,
-        short_url: '0',
-        recipients: [{
-          mobiles: formattedTo,
-          var1: partnerName || 'Partner',
-          var2: statusText || 'Updated'
-        }]
-      }, {
-        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
-      });
-      logger.info(`[SMS] KYC Status Update SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
-      return true;
-    } catch (err) {
-      logger.error(`[SMS] Failed sending KYC Status Update SMS: ${err.message}`);
-    }
-  }
+  const varsMap = {
+    var1: partnerName || 'Partner',
+    var2: statusText || 'Updated',
+    VAR1: partnerName || 'Partner',
+    VAR2: statusText || 'Updated'
+  };
 
-  return await sendSms(to, body);
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
 };
 
 /**
@@ -278,28 +247,14 @@ const sendCommissionCreditedSms = async (to, partnerName, amount) => {
   const body = `Dear ${partnerName || 'Partner'}, commission of Rs.${amount || '0'} has been credited to wallet. - GharKaPaisa`;
   const templateId = process.env.MSG91_COMMISSION_CREDITED_TEMPLATE_ID || '1277178697043413151';
 
-  if (msg91AuthKey) {
-    try {
-      const formattedTo = formatMobile(to);
-      await axios.post('https://api.msg91.com/api/v5/flow/', {
-        template_id: templateId,
-        short_url: '0',
-        recipients: [{
-          mobiles: formattedTo,
-          var1: partnerName || 'Partner',
-          var2: String(amount || '0')
-        }]
-      }, {
-        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
-      });
-      logger.info(`[SMS] Commission Credited SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
-      return true;
-    } catch (err) {
-      logger.error(`[SMS] Failed sending Commission Credited SMS: ${err.message}`);
-    }
-  }
+  const varsMap = {
+    var1: partnerName || 'Partner',
+    var2: String(amount || '0'),
+    VAR1: partnerName || 'Partner',
+    VAR2: String(amount || '0')
+  };
 
-  return await sendSms(to, body);
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
 };
 
 /**
@@ -309,28 +264,14 @@ const sendLeadStatusSms = async (to, customerName, productOrDetail) => {
   const body = `Dear ${customerName || 'Customer'}, your application for ${productOrDetail || 'Credit Card'}! - GharKaPaisa`;
   const templateId = process.env.MSG91_LEAD1_TEMPLATE_ID || '1277178697004117991';
 
-  if (msg91AuthKey) {
-    try {
-      const formattedTo = formatMobile(to);
-      await axios.post('https://api.msg91.com/api/v5/flow/', {
-        template_id: templateId,
-        short_url: '0',
-        recipients: [{
-          mobiles: formattedTo,
-          var1: customerName || 'Customer',
-          var2: productOrDetail || 'Credit Card'
-        }]
-      }, {
-        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
-      });
-      logger.info(`[SMS] Lead Status SMS sent to ${formattedTo} via MSG91 Flow (Template: ${templateId})`);
-      return true;
-    } catch (err) {
-      logger.error(`[SMS] Failed sending Lead Status SMS: ${err.message}`);
-    }
-  }
+  const varsMap = {
+    var1: customerName || 'Customer',
+    var2: productOrDetail || 'Credit Card',
+    VAR1: customerName || 'Customer',
+    VAR2: productOrDetail || 'Credit Card'
+  };
 
-  return await sendSms(to, body);
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
 };
 
 /**
@@ -338,50 +279,28 @@ const sendLeadStatusSms = async (to, customerName, productOrDetail) => {
  * Note: Strictly <= 2 variables per template for DLT / MSG91 compliance.
  */
 const SMS_TEMPLATES = {
-  // 1. Payout Confirmation (2 variables: {name}, {amount})
   PAYOUT_CONFIRMATION: (name, amount) =>
     `Dear ${name || 'Partner'}, your payout of Rs.${amount} has been successfully processed. - GharKaPaisa`,
-
-  // 2. Payout UTR Receipt (2 variables: {amount}, {utr})
   PAYOUT_UTR: (amount, utr) =>
     `Your payout of Rs.${amount} has been credited to bank account with UTR: ${utr}. - GharKaPaisa`,
-
-  // 3. Application Step 1 Link (2 variables: {name}, {url})
   APPLY_STEP1: (name, url) =>
     `Dear ${name || 'Customer'}, complete your prefilled application on GharKaPaisa: ${url}`,
-
-  // 4. Document Submission Step 2 Link (2 variables: {name}, {url})
   APPLY_STEP2: (name, url) =>
     `Dear ${name || 'Customer'}, submit bank application ref & documents: ${url} - GharKaPaisa`,
-
-  // 5. Lead Approved (2 variables: {name}, {product})
   LEAD_APPROVED: (name, product) =>
     `Dear ${name || 'Customer'}, your application for ${product}! - GharKaPaisa`,
-
-  // 6. Lead Rejected (2 variables: {name}, {product})
   LEAD_REJECTED: (name, product) =>
     `Dear ${name || 'Customer'}, your application for ${product}! - GharKaPaisa`,
-
-  // 7. Commission Credited (2 variables: {name}, {amount})
   COMMISSION_CREDITED: (name, amount) =>
     `Dear ${name || 'Partner'}, commission of Rs.${amount} has been credited to wallet. - GharKaPaisa`,
-
-  // 8. KYC Status Update (2 variables: {name}, {status})
   KYC_UPDATE: (name, status) =>
     `Dear ${name || 'Partner'}, your KYC status is updated to ${status} . - GharKaPaisa`,
-
-  // 9. OTP Verification (1 variable: {otp})
   OTP_VERIFICATION: (otp) =>
     `Your GharKaPaisa verification OTP is ${otp}. Valid for 10 minutes. Do not share.`,
-
-  // 10. Common Generic Notification (2 variables: {name}, {message})
   GENERIC_NOTIFICATION: (name, message) =>
     `Dear ${name || 'User'}, ${message} - GharKaPaisa`
 };
 
-/**
- * Generic Transactional SMS Template function usable anywhere on the platform
- */
 const sendGenericNotificationSms = async (to, recipientName, messageContent) => {
   const body = SMS_TEMPLATES.GENERIC_NOTIFICATION(recipientName, messageContent);
   return await sendSms(to, body);
@@ -399,4 +318,3 @@ module.exports = {
   sendLeadStatusSms,
   SMS_TEMPLATES
 };
-
