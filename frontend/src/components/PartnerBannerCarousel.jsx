@@ -72,7 +72,8 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
               boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
               transition: 'transform 0.2s ease, boxShadow 0.2s ease',
               border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`,
-              height: '140px'
+              aspectRatio: '16 / 6',
+              height: 'auto'
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
@@ -109,7 +110,8 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
         overflow: 'hidden',
         borderRadius: '16px',
         cursor: 'pointer',
-        height: '130px',
+        aspectRatio: '16 / 6',
+        height: 'auto',
         boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
         border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`
       }}
