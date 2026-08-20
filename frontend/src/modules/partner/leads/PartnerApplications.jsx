@@ -1215,6 +1215,10 @@ export default function PartnerApplications() {
                       <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.customer_mobile || viewAppDetails?.mobile || viewApp.customer_mobile || 'N/A'}</div>
                     </div>
                     <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PERSONAL EMAIL ID</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.email || viewAppDetails?.customer_email || 'N/A'}</div>
+                    </div>
+                    <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DOB</div>
                       <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.dob || 'N/A'}</div>
                     </div>
@@ -1222,58 +1226,52 @@ export default function PartnerApplications() {
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PAN CARD NUMBER</div>
                       <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pan_number || viewAppDetails?.pan || 'N/A'}</div>
                     </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>MOTHER FULL NAME</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.mother_name || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PERSONAL EMAIL ID</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.email || viewAppDetails?.customer_email || 'N/A'}</div>
-                    </div>
+                    {viewAppDetails?.aadhaar_number && (
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>AADHAAR NUMBER</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails.aadhaar_number}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Section 2: Employment */}
+                {/* Section 2: Employment & Income */}
                 <div style={{ background: isDark ? '#161616' : '#f8fafc', borderRadius: 14, padding: 14, border: `1px solid ${border}` }}>
-                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Employment</h4>
+                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Employment & Income</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                     <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>COMPANY NAME</div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>OCCUPATION / EMPLOYMENT</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.employment_type || viewAppDetails?.occupation || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>MONTHLY INCOME</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>
+                        {viewAppDetails?.monthly_income ? `₹${Number(viewAppDetails.monthly_income).toLocaleString('en-IN')}` : 'N/A'}
+                      </div>
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>EMPLOYER / COMPANY NAME</div>
                       <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.company_name || viewAppDetails?.employer || 'N/A'}</div>
                     </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DESIGNATION</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.designation || 'N/A'}</div>
-                    </div>
                   </div>
                 </div>
 
-                {/* Section 3: Address */}
+                {/* Section 3: Location / Address Details */}
                 <div style={{ background: isDark ? '#161616' : '#f8fafc', borderRadius: 14, padding: 14, border: `1px solid ${border}` }}>
-                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Address</h4>
+                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Location Details</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                     <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FLAT / HOUSE NO</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.flat_no || 'N/A'}</div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>CITY</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.city || 'N/A'}</div>
                     </div>
                     <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>SUB AREA</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.sub_area || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>LANDMARK</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.landmark || 'N/A'}</div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>STATE</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.state || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PINCODE</div>
                       <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pincode || 'N/A'}</div>
                     </div>
-                    {viewAppDetails?.company_address && (
-                      <div style={{ gridColumn: 'span 2' }}>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>COMPANY ADDRESS</div>
-                        <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails.company_address}</div>
-                      </div>
-                    )}
                   </div>
                 </div>
 

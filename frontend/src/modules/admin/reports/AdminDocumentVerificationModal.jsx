@@ -434,8 +434,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       transition: 'all 0.2s ease'
                     }}
                   >
-                    <Share2 size={15} />
-                    {shareLoading ? 'Generating Link...' : '📲 Send to Customer (Share by All Apps)'}
+                    {shareLoading ? 'Generating Link...' : 'Send to Customer'}
                   </button>
                 </div>
 
