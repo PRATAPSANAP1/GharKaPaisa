@@ -262,6 +262,7 @@ const submitPublicApplication = async (req, res, next) => {
       await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
       await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
       await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
+      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS application_id UUID REFERENCES applications(id) ON DELETE SET NULL`);
 
       await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(15)`);
       await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);

@@ -716,6 +716,7 @@ const migrate = async () => {
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS application_id UUID REFERENCES applications(id) ON DELETE SET NULL`);
   await query(`CREATE INDEX IF NOT EXISTS idx_leads_partner ON leads(partner_id)`);
 
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS lead_id UUID REFERENCES leads(id) ON DELETE SET NULL`);

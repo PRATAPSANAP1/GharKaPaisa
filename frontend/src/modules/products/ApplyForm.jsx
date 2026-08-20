@@ -351,18 +351,6 @@ export default function ApplyForm() {
             </div>
           </div>
 
-          {/* Partner / Referral Code */}
-          <div>
-            <label style={S.label}>Partner / Referral Code (Optional)</label>
-            <input 
-              type="text"
-              placeholder="Enter Partner Code if referred"
-              style={S.input}
-              value={form.partner_code}
-              onChange={e => setForm({...form, partner_code: e.target.value})}
-            />
-          </div>
-
           {/* Submit Button */}
           <button 
             type="submit" 
