@@ -230,7 +230,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         payload = {
           bank_remark: bankRemark,
           final_status: finalStatus,
-          status: finalStatus,
+          status: 'bank_form_submitted',
           decline_reason: declineReason,
           eligible_reqd: eligibleReQd,
           bank_ref_number: bankRefNumber,
@@ -716,20 +716,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                         placeholder="https://vkyc..."
                         style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
                       />
-                      {vkycUrl && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const raw = (vkycUrl || '').trim();
-                            if (!raw) return;
-                            const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-                            window.open(target, '_blank', 'noopener,noreferrer');
-                          }}
-                          style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                        >
-                          Open V-KYC
-                        </button>
-                      )}
                     </div>
                   </div>
 

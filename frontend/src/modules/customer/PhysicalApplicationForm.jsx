@@ -433,39 +433,13 @@ export default function PhysicalApplicationForm() {
                   </div>
                   <div>
                     <label style={labelStyle}>VKYC LINK</label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input
-                        type="text"
-                        value={form.vkyc_url}
-                        onChange={e => handleChange('vkyc_url', e.target.value)}
-                        placeholder="https://vkyc..."
-                        style={{ ...inputStyle, flex: 1 }}
-                      />
-                      {form.vkyc_url && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const raw = form.vkyc_url.trim();
-                            if (!raw) return;
-                            const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-                            window.open(target, '_blank', 'noopener,noreferrer');
-                          }}
-                          style={{
-                            padding: '12px 14px',
-                            borderRadius: '12px',
-                            border: 'none',
-                            background: 'linear-gradient(135deg, #10b981, #059669)',
-                            color: '#fff',
-                            fontWeight: 800,
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          Open V-KYC ↗
-                        </button>
-                      )}
-                    </div>
+                    <input
+                      type="text"
+                      value={form.vkyc_url}
+                      onChange={e => handleChange('vkyc_url', e.target.value)}
+                      placeholder="https://vkyc..."
+                      style={inputStyle}
+                    />
                   </div>
                 </div>
               )}
@@ -680,39 +654,13 @@ export default function PhysicalApplicationForm() {
 
                 <div>
                   <label style={labelStyle}>VKYC LINK</label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input
-                      type="url"
-                      value={form.vkyc_url}
-                      onChange={e => handleChange('vkyc_url', e.target.value)}
-                      placeholder="https://vkyc..."
-                      style={{ ...inputStyle, flex: 1 }}
-                    />
-                    {form.vkyc_url && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const raw = (form.vkyc_url || '').trim();
-                          if (!raw) return;
-                          const target = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-                          window.open(target, '_blank', 'noopener,noreferrer');
-                        }}
-                        style={{
-                          background: '#ea580c',
-                          color: '#ffffff',
-                          border: 'none',
-                          padding: '8px 14px',
-                          borderRadius: '12px',
-                          fontWeight: 800,
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        Open V-KYC
-                      </button>
-                    )}
-                  </div>
+                  <input
+                    type="url"
+                    value={form.vkyc_url}
+                    onChange={e => handleChange('vkyc_url', e.target.value)}
+                    placeholder="https://vkyc..."
+                    style={inputStyle}
+                  />
                 </div>
 
                 <div>

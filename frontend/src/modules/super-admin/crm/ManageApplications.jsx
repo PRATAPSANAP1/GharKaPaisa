@@ -931,13 +931,7 @@ export default function ManageApplications() {
                   <div><span style={{ color: C.textLight }}>Application Number:</span> <strong style={{ color: C.text }}>{selectedApp.app_number || selectedApp.bank_ref_number || '—'}</strong></div>
                   <div>
                     <span style={{ color: C.textLight }}>VKYC Link:</span>{' '}
-                    {selectedApp.vkyc_url ? (
-                      <a href={selectedApp.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: C.primary, fontWeight: 700, textDecoration: 'underline', marginLeft: '4px' }}>
-                        🔗 Open V-KYC Link
-                      </a>
-                    ) : (
-                      <strong style={{ color: C.text }}>—</strong>
-                    )}
+                    <strong style={{ color: C.text }}>{selectedApp.vkyc_url || '—'}</strong>
                   </div>
                   <div><span style={{ color: C.textLight }}>Final Status from Bank:</span> <strong style={{ color: C.text }}>{selectedApp.final_status || selectedApp.status || '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Eligible for Re-QD:</span> <strong style={{ color: C.text }}>{selectedApp.eligible_reqd || 'No'}</strong></div>

@@ -270,6 +270,7 @@ const submitPublicApplication = async (req, res, next) => {
       await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
       await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
       await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
+      await client.query(`ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'bank_form_submitted'`);
     } catch (_) {}
 
     // Upsert customer
@@ -2435,7 +2436,7 @@ const updateApplicationDetails = async (req, res, next) => {
     }
 
     // 1. Update applications table
-    const targetStatus = status || req.body.final_status || null;
+    const targetStatus = status || (req.body.bank_remark || req.body.final_status || req.body.bank_ref_number ? 'bank_form_submitted' : null);
     const { rows: [updatedApp] } = await client.query(`
       UPDATE applications SET
         bank_application_number = COALESCE(NULLIF($1, ''), bank_application_number),
@@ -3107,12 +3108,12 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
       ]
     );
 
-    let mainStatus = 'physical_form_submitted';
+    let mainStatus = 'bank_form_submitted';
     if (final_status) {
       const lowerFs = final_status.toLowerCase();
       if (lowerFs.includes('approved') || lowerFs.includes('generated')) mainStatus = 'approved';
       else if (lowerFs.includes('decline') || lowerFs.includes('rejected')) mainStatus = 'rejected';
-      else if (lowerFs.includes('process')) mainStatus = 'under_review';
+      else if (lowerFs.includes('process')) mainStatus = 'bank_form_submitted';
     }
 
     // Sync to applications table
