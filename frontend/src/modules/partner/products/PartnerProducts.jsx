@@ -248,11 +248,13 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
     if (e) e.preventDefault();
 
     const errors = {};
-    if (!customerName.trim() || customerName.trim().length < 2) {
-      errors.customerName = "Customer Name must be at least 2 characters.";
-    }
-    if (!mobile.trim() || !/^[6-9]\d{9}$/.test(mobile.trim())) {
-      errors.mobile = "Please enter a valid 10-digit mobile number.";
+    if (processType === 'lead_punching' || processType === 'physical_process') {
+      if (!customerName.trim() || customerName.trim().length < 2) {
+        errors.customerName = "Customer Name must be at least 2 characters.";
+      }
+      if (!mobile.trim() || !/^[6-9]\d{9}$/.test(mobile.trim())) {
+        errors.mobile = "Please enter a valid 10-digit mobile number.";
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -264,13 +266,44 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
 
     try {
       const code = partnerCode || user?.partner_code || 'PARTNER';
-      const directBankUrl = selectedProduct.application_url || selectedProduct.apply_url || selectedProduct.public_url || selectedProduct.partner_url || selectedProduct.redirect_url || selectedProduct.bank_link || selectedProduct.tracking_url || getBankApplyLink(selectedProduct.name, selectedProduct.bank_code || selectedProduct.bank_name) || `${window.location.origin}/redirect/${selectedProduct.category}?id=${selectedProduct.id}&partner=${code}`;
+      const directBankUrl = selectedProduct.partner_url || selectedProduct.application_url || selectedProduct.public_url || selectedProduct.apply_url || selectedProduct.redirect_url || selectedProduct.bank_link || selectedProduct.tracking_url || getBankApplyLink(selectedProduct.name, selectedProduct.bank_code || selectedProduct.bank_name) || `${window.location.origin}/redirect/${selectedProduct.category}?id=${selectedProduct.id}&partner=${code}`;
+
+      if (processType === 'linked_share') {
+        const shareLink = directBankUrl;
+        const shareMessage = customerName.trim() 
+          ? `Hi ${customerName.trim()},\n\nApply for ${selectedProduct.name} directly on official bank portal: ${shareLink}`
+          : `Apply for ${selectedProduct.name} directly on official bank portal: ${shareLink}`;
+
+        const cleanMob = mobile.trim().replace(/\D/g, '');
+        const waUrl = cleanMob 
+          ? `https://wa.me/91${cleanMob}?text=${encodeURIComponent(shareMessage)}`
+          : `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
+
+        // Open WhatsApp or Web Share
+        if (navigator.share) {
+          navigator.share({
+            title: selectedProduct.name,
+            text: shareMessage,
+            url: shareLink
+          }).catch(() => {
+            window.open(waUrl, '_blank');
+          });
+        } else {
+          window.open(waUrl, '_blank');
+        }
+
+        setShareModalProduct({ ...selectedProduct, shareLink, shareMessage });
+        setSelectedProduct(null);
+        setCustomerName("");
+        setMobile("");
+        return;
+      }
 
       const payload = {
         product_id: selectedProduct.id,
-        full_name: customerName.trim(),
+        full_name: customerName.trim() || 'Customer',
         country_code: countryCode || '+91',
-        mobile: mobile.trim(),
+        mobile: mobile.trim() || '0000000000',
         process_type: processType,
         agree_terms: true
       };
@@ -284,12 +317,6 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
 
       if (processType === 'lead_punching') {
         alert(`✅ Lead punched successfully for ${customerName.trim()} (${mobile.trim()})!\nApplication recorded under your Partner account.`);
-      } else if (processType === 'linked_share') {
-        const shareLink = appData?.share_url || directBankUrl;
-        const waUrl = appData?.whatsapp_url || `https://wa.me/91${mobile.trim()}?text=${encodeURIComponent(`Hi ${customerName.trim()},\n\nYou can apply for ${selectedProduct.name} directly on official bank portal: ${shareLink}`)}`;
-        
-        window.open(waUrl, '_blank');
-        alert(`✅ Share link generated & opened for ${customerName.trim()}!\nTracking Link: ${shareLink}`);
       } else if (processType === 'direct_bank') {
         const targetUrl = appData?.bank_url || directBankUrl;
         window.open(targetUrl, '_blank');

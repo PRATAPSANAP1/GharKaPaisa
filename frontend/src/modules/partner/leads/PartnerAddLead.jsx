@@ -147,11 +147,14 @@ export default function PartnerAddLead() {
     if (!selectedProductId) {
       newErrors.selectedProductId = 'Please select a product/card.';
     }
-    if (!customerName.trim() || customerName.trim().length < 2) {
-      newErrors.customerName = 'Full name must be at least 2 characters.';
-    }
-    if (!mobile.trim() || !/^[6-9]\d{9}$/.test(mobile.trim())) {
-      newErrors.mobile = 'Please enter a valid 10-digit Indian mobile number.';
+
+    if (processType === 'lead_punching' || processType === 'physical_process') {
+      if (!customerName.trim() || customerName.trim().length < 2) {
+        newErrors.customerName = 'Full name must be at least 2 characters.';
+      }
+      if (!mobile.trim() || !/^[6-9]\d{9}$/.test(mobile.trim())) {
+        newErrors.mobile = 'Please enter a valid 10-digit Indian mobile number.';
+      }
     }
     
     if (processType === 'lead_punching') {
@@ -172,12 +175,44 @@ export default function PartnerAddLead() {
       return;
     }
 
+    // Direct bank url resolution for linked_share fallback
+    const selectedProd = products.find(p => p.id === selectedProductId);
+    const directBankUrl = selectedProd?.partner_url || selectedProd?.application_url || selectedProd?.public_url || selectedProd?.apply_url || selectedProd?.redirect_url || selectedProd?.bank_link || 'https://gharkapaisa.in';
+
+    if (processType === 'linked_share' && (!customerName.trim() || !mobile.trim())) {
+      const shareMsg = customerName.trim()
+        ? `Hi ${customerName.trim()},\n\nApply for ${selectedProd?.name || 'this product'} directly on official bank portal: ${directBankUrl}`
+        : `Apply for ${selectedProd?.name || 'this product'} directly on official bank portal: ${directBankUrl}`;
+      
+      const cleanMob = mobile.trim().replace(/\D/g, '');
+      const waUrl = cleanMob ? `https://wa.me/91${cleanMob}?text=${encodeURIComponent(shareMsg)}` : `https://wa.me/?text=${encodeURIComponent(shareMsg)}`;
+
+      if (navigator.share) {
+        navigator.share({
+          title: selectedProd?.name || 'Product Application',
+          text: shareMsg,
+          url: directBankUrl
+        }).catch(() => {
+          window.open(waUrl, '_blank');
+        });
+      } else {
+        window.open(waUrl, '_blank');
+      }
+
+      setShareResult({
+        app_number: 'DIRECT',
+        share_url: directBankUrl,
+        whatsapp_url: waUrl
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
         product_id: selectedProductId,
-        customer_name: customerName.trim(),
-        mobile: mobile.trim(),
+        customer_name: customerName.trim() || 'Customer',
+        mobile: mobile.trim() || '0000000000',
         email: email.trim(),
         monthly_salary: monthlySalary ? parseFloat(monthlySalary) : 0,
         company_name: companyName.trim(),
@@ -196,10 +231,16 @@ export default function PartnerAddLead() {
           setPendingLead(leadData);
           setShowOtpModal(true);
         } else if (processType === 'linked_share' || processType === 'physical_process') {
-          setShareResult(leadData);
-          if (leadData?.whatsapp_url) {
-            window.open(leadData.whatsapp_url, '_blank');
-          }
+          const finalShareUrl = leadData?.share_url || directBankUrl;
+          const shareMsg = `Apply for ${selectedProd?.name || 'this product'} directly on official bank portal: ${finalShareUrl}`;
+          const finalWaUrl = leadData?.whatsapp_url || `https://wa.me/91${mobile.trim()}?text=${encodeURIComponent(shareMsg)}`;
+          
+          setShareResult({
+            ...leadData,
+            share_url: finalShareUrl,
+            whatsapp_url: finalWaUrl
+          });
+          window.open(finalWaUrl, '_blank');
         } else if (processType === 'direct_bank') {
           if (leadData?.bank_url) {
             window.open(leadData.bank_url, '_blank');

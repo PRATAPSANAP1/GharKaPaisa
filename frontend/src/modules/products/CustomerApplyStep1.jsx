@@ -406,6 +406,33 @@ export default function CustomerApplyStep1() {
           ) : (
             /* APPLICATION FORM */
             <div>
+              {/* Direct Bank Application Button */}
+              <div style={{ marginBottom: '18px' }}>
+                <a
+                  href={redirectUrl || product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || 'https://gharkapaisa.in'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '14px 16px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: '#ffffff',
+                    fontSize: isMobile ? '13.5px' : '15px',
+                    fontWeight: 900,
+                    textDecoration: 'none',
+                    boxShadow: '0 6px 20px rgba(16,185,129,0.35)'
+                  }}
+                >
+                  ⚡ OPEN OFFICIAL BANK APPLICATION PORTAL DIRECTLY ➔
+                </a>
+              </div>
+
               {/* Prefilled Customer Banner */}
               <div style={{ background: isDark ? '#1f1f23' : '#f1f5f9', border: `1px solid ${borderCol}`, borderRadius: '14px', padding: '14px', marginBottom: '20px' }}>
                 <div style={{ fontSize: '11px', fontWeight: 800, color: C.primary || '#2563eb', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
