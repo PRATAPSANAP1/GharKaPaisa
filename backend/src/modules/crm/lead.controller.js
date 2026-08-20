@@ -414,7 +414,7 @@ const createLead = async (req, res, next) => {
     }
 
     if (targetProcess === 'direct_bank') {
-      const bankUrl = product?.partner_url || product?.public_url || 'https://gharkapaisa.in/partner/products';
+      const bankUrl = product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || 'https://gharkapaisa.in/partner/products';
 
       const { rows: [lead] } = await query(`
         INSERT INTO leads (

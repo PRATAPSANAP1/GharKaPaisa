@@ -2048,7 +2048,7 @@ const submitPartnerApplication = async (req, res, next) => {
     }
 
     if (['direct_bank', 'punching_process'].includes(process_type)) {
-      bankUrl = product.application_url || product.redirect_url || `${baseUrl}/products/${product.id}/apply`;
+      bankUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || `${baseUrl}/partner/products`;
     }
 
     await client.query('COMMIT');

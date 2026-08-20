@@ -242,8 +242,9 @@ export default function PartnerAddLead() {
           });
           window.open(finalWaUrl, '_blank');
         } else if (processType === 'direct_bank') {
-          if (leadData?.bank_url) {
-            window.open(leadData.bank_url, '_blank');
+          const targetBankUrl = leadData?.bank_url || leadData?.redirect_url || directBankUrl;
+          if (targetBankUrl) {
+            window.open(targetBankUrl, '_blank');
           }
           clearPersistedDraft();
           alert(`Direct Bank Application #${leadData?.app_number || ''} created! Opening official bank portal...`);
@@ -287,8 +288,9 @@ export default function PartnerAddLead() {
             window.open(appData.whatsapp_url, '_blank');
           }
         } else if (processType === 'direct_bank') {
-          if (appData?.bank_url) {
-            window.open(appData.bank_url, '_blank');
+          const targetBankUrl = appData?.bank_url || appData?.redirect_url || directBankUrl;
+          if (targetBankUrl) {
+            window.open(targetBankUrl, '_blank');
           }
           clearPersistedDraft();
           alert(`Lead verified & Application APP#${appData?.app_number || ''} created! Official Bank portal opened.`);
