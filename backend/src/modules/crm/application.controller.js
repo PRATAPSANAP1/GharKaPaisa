@@ -2874,14 +2874,17 @@ const deleteApplication = async (req, res, next) => {
       await safeSubDelete(`DELETE FROM lead_assignments WHERE lead_id = $1`, [lId]);
     }
 
-    // 10. Delete leads table records
+    // 10. Explicitly delete lead records from leads table (specifically for punching processes and linked leads)
     await safeSubDelete(
-      `DELETE FROM leads WHERE id = $1 OR id = $2 OR application_id = $1 OR application_id = $2 OR (app_number IS NOT NULL AND app_number = $3)`,
+      `DELETE FROM leads WHERE id = $1 OR id = $2 OR application_id = $1 OR application_id = $2 OR (app_number IS NOT NULL AND app_number = $3) OR (lead_number IS NOT NULL AND lead_number = $3)`,
       [targetAppId, targetLeadId, app.app_number]
     );
 
-    // 11. Delete main applications record
-    await safeSubDelete(`DELETE FROM applications WHERE id = $1 OR id = $2 OR lead_id = $1 OR lead_id = $2`, [targetAppId, targetLeadId]);
+    // 11. Explicitly delete main application records from applications table
+    await safeSubDelete(
+      `DELETE FROM applications WHERE id = $1 OR id = $2 OR lead_id = $1 OR lead_id = $2 OR (app_number IS NOT NULL AND app_number = $3)`,
+      [targetAppId, targetLeadId, app.app_number]
+    );
 
     // 12. Delete Customer Details from database if no other apps/leads remain
     if (targetCustomerId) {
