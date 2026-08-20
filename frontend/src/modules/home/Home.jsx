@@ -2653,14 +2653,18 @@ export default function Home({ onNavigate }) {
         })()}
 
         {/* ── SECTION 3: Popular Credit Cards ── */}
-        {settings.section_visibility_attractive_cards !== "hide" && !isMobile && (
+        {settings.section_visibility_attractive_cards !== "hide" && (
           <Section 
             title={t('sections.popularCards')} 
             viewAllLabel={t('popularCardsList.viewAll', 'View All Cards')} 
             onViewAll={() => navigate("/credit-cards")}
             C={C}
           >
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "16px" }}>
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(150px, 1fr))", 
+              gap: isMobile ? "8px" : "16px" 
+            }}>
               {((() => {
                 if (popularProducts.length > 0) {
                   return popularProducts;
@@ -2678,9 +2682,16 @@ export default function Home({ onNavigate }) {
                 return popularCards;
               })()).map((card, idx) => (
                 <div key={idx} style={{
-                  background: C.bgSecondary, borderRadius: "18px", border: `1px solid ${C.border}`,
-                  padding: "12px", display: "flex", flexDirection: "column", gap: "12px",
-                  transition: "all 0.2s ease", cursor: "pointer"
+                  background: C.bgSecondary, 
+                  borderRadius: isMobile ? "14px" : "18px", 
+                  border: `1px solid ${C.border}`,
+                  padding: isMobile ? "10px 8px" : "12px", 
+                  display: "flex", 
+                  flexDirection: "column", 
+                  justifyContent: "space-between",
+                  gap: isMobile ? "8px" : "12px",
+                  transition: "all 0.2s ease", 
+                  cursor: "pointer"
                 }}
                 onClick={() => {
                   const cardSlug = card.slug || card.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -2689,16 +2700,17 @@ export default function Home({ onNavigate }) {
                 onMouseEnter={(e) => e.currentTarget.style.borderColor = C.teal}
                 onMouseLeave={(e) => e.currentTarget.style.borderColor = C.border}
                 >
-                  {/* Visual Card Card */}
+                  {/* Visual Card Image */}
                   <div style={{
-                    height: "100px",
-                    borderRadius: "12px",
+                    height: isMobile ? "80px" : "100px",
+                    borderRadius: isMobile ? "10px" : "12px",
                     overflow: "hidden",
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                     background: C.bgSecondary,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center"
+                    justifyContent: "center",
+                    padding: "4px"
                   }}>
                     <img 
                       src={card.image} 
@@ -2715,17 +2727,41 @@ export default function Home({ onNavigate }) {
                   </div>
 
                   {/* Details */}
-                  <div>
-                    <h3 style={{ margin: "0 0 8px 0", fontSize: "13px", fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{card.name}</h3>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "10px" }}>
-                      {(card.features || []).slice(0, 3).map((feat, fi) => (
-                        <span key={fi} style={{
-                          fontSize: "9px", fontWeight: 600, color: C.teal,
-                          background: `${C.teal}12`, border: `1px solid ${C.teal}30`,
-                          borderRadius: "6px", padding: "2px 6px", lineHeight: 1.4,
-                          whiteSpace: "nowrap"
-                        }}>{feat}</span>
-                      ))}
+                  <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between" }}>
+                    <div>
+                      <h3 style={{ 
+                        margin: isMobile ? "0 0 4px 0" : "0 0 8px 0", 
+                        fontSize: isMobile ? "11.5px" : "13px", 
+                        fontWeight: 800, 
+                        color: C.text, 
+                        lineHeight: 1.25,
+                        height: isMobile ? "28px" : "32px",
+                        overflow: "hidden",
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        wordBreak: "break-word"
+                      }}>
+                        {card.name}
+                      </h3>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? "3px" : "4px", marginBottom: isMobile ? "6px" : "10px" }}>
+                        {(card.features || []).slice(0, 3).map((feat, fi) => (
+                          <span key={fi} style={{
+                            fontSize: isMobile ? "8.5px" : "9px", 
+                            fontWeight: 600, 
+                            color: C.teal,
+                            background: `${C.teal}12`, 
+                            border: `1px solid ${C.teal}30`,
+                            borderRadius: isMobile ? "4px" : "6px", 
+                            padding: isMobile ? "2px 5px" : "2px 6px", 
+                            lineHeight: 1.3,
+                            whiteSpace: "nowrap",
+                            maxWidth: "100%",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis"
+                          }}>{feat}</span>
+                        ))}
+                      </div>
                     </div>
                     <button 
                       onClick={(e) => {
@@ -2737,8 +2773,15 @@ export default function Home({ onNavigate }) {
                         });
                       }}
                       style={{
-                        width: "100%", background: `${C.teal}15`, color: C.teal, border: `1px solid ${C.teal}`,
-                        padding: "6px 0", borderRadius: "8px", fontSize: "11px", fontWeight: 800, cursor: "pointer",
+                        width: "100%", 
+                        background: `${C.teal}15`, 
+                        color: C.teal, 
+                        border: `1px solid ${C.teal}`,
+                        padding: isMobile ? "5px 0" : "6px 0", 
+                        borderRadius: isMobile ? "6px" : "8px", 
+                        fontSize: isMobile ? "10.5px" : "11px", 
+                        fontWeight: 800, 
+                        cursor: "pointer",
                         transition: "all 0.2s"
                       }}
                       onMouseEnter={(e) => { e.target.style.background = C.teal; e.target.style.color = "#fff"; }}
