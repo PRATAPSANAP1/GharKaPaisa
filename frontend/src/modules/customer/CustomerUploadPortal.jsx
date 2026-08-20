@@ -5,7 +5,6 @@ import {
   FileText, Upload, CheckCircle, XCircle, Clock, ShieldCheck, 
   AlertTriangle, ArrowUpRight, History, Building2, UserCheck, RefreshCw, File
 } from 'lucide-react';
-import ApplicationTracker from '../../components/common/ApplicationTracker';
 
 const CustomerUploadPortal = () => {
   const { token } = useParams();
@@ -242,11 +241,6 @@ const CustomerUploadPortal = () => {
           </div>
         </div>
 
-        {/* Module 12 — Visual Interactive Tracker */}
-        <div style={{ marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', marginBottom: '12px' }}>Application Tracker</h3>
-          <ApplicationTracker currentStatus={application.status} />
-        </div>
 
         {/* Upload Status Banner */}
         {submitSuccess ? (

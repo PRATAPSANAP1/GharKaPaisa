@@ -5,7 +5,6 @@ import {
   X, CheckCircle, XCircle, Eye, Send, ShieldCheck, 
   Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft, Lock
 } from 'lucide-react';
-import ApplicationTracker from '../../../components/common/ApplicationTracker';
 
 const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initialTab = 'qd', showAllTabs = false }) => {
   // Normalize initialTab ('qd' | 'remark' | 'final' | 'timeline' | legacy aliases)
@@ -227,10 +226,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         {/* Modal Body Scrollable */}
         <div style={{ padding: isMobile ? '16px 16px 90px 16px' : '24px 24px 70px 24px', overflowY: 'auto', flex: 1 }}>
           
-          {/* Application Tracker */}
-          <div style={{ marginBottom: '24px' }}>
-            <ApplicationTracker currentStatus={application.status} />
-          </div>
 
           {/* Navigation Tabs (Stage Specific View + Audit Log based on button clicked) */}
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
