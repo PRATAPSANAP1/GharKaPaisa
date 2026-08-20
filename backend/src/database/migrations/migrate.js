@@ -711,6 +711,11 @@ const migrate = async () => {
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS otp_verified_at TIMESTAMPTZ`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS pan_number VARCHAR(15)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_leads_partner ON leads(partner_id)`);
 
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS lead_id UUID REFERENCES leads(id) ON DELETE SET NULL`);

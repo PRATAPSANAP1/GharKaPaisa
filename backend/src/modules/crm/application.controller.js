@@ -245,7 +245,7 @@ const submitPublicApplication = async (req, res, next) => {
     const { rows: [sysUser] } = await client.query(`SELECT id FROM users WHERE role='SUPER_ADMIN' LIMIT 1`);
     const sysUserId = sysUser?.id || partnerUserId;
 
-    // Ensure columns exist on customers table dynamically
+    // Ensure columns exist on tables dynamically
     try {
       await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
       await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS occupation VARCHAR(100)`);
@@ -256,6 +256,19 @@ const submitPublicApplication = async (req, res, next) => {
       await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS dob DATE`);
       await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS pan_number VARCHAR(15)`);
       await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
+
+      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS pan_number VARCHAR(15)`);
+      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
+      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
+      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
+      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
+
+      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(15)`);
+      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
+      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
+      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
+      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
+      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
     } catch (_) {}
 
     // Upsert customer
