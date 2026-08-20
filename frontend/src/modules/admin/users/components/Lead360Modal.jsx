@@ -6,7 +6,7 @@ import {
   MdNote, MdHistory, MdAccountBalanceWallet, MdCheckCircle,
   MdPhone, MdEmail, MdWork, MdBadge, MdLock,
   MdVerifiedUser, MdAccountBalance, MdLocationOn, MdAssignmentInd,
-  MdOutlineCloudDownload
+  MdCloudDownload
 } from 'react-icons/md';
 
 export default function Lead360Modal({ leadId, onClose, onRefresh }) {
@@ -552,7 +552,7 @@ export default function Lead360Modal({ leadId, onClose, onRefresh }) {
                                 gap: '4px'
                               }}
                             >
-                              Preview <MdOutlineCloudDownload />
+                              Preview <MdCloudDownload />
                             </a>
                           </div>
                         </div>

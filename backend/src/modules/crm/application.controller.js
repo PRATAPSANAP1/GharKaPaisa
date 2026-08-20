@@ -2802,50 +2802,61 @@ const deleteApplication = async (req, res, next) => {
 
     await client.query('BEGIN');
 
+    // Helper for safe sub-queries inside PostgreSQL transaction block
+    const safeSubDelete = async (sql, params) => {
+      try {
+        await client.query('SAVEPOINT del_sp');
+        await client.query(sql, params);
+        await client.query('RELEASE SAVEPOINT del_sp');
+      } catch (_) {
+        await client.query('ROLLBACK TO SAVEPOINT del_sp').catch(() => {});
+      }
+    };
+
     // 1. Delete physical_application_details
-    await client.query(`DELETE FROM physical_application_details WHERE application_id = $1`, [id]).catch(() => {});
+    await safeSubDelete(`DELETE FROM physical_application_details WHERE application_id = $1`, [id]);
 
     // 2. Delete customer_access_tokens
-    await client.query(`DELETE FROM customer_access_tokens WHERE application_id = $1 OR customer_id = $2`, [id, targetCustomerId]).catch(() => {});
+    await safeSubDelete(`DELETE FROM customer_access_tokens WHERE application_id = $1 OR customer_id = $2`, [id, targetCustomerId]);
 
     // 3. Delete partner_share_links
-    await client.query(`DELETE FROM partner_share_links WHERE application_id = $1 OR lead_id = $1 OR lead_id = $2`, [id, targetLeadId]).catch(() => {});
+    await safeSubDelete(`DELETE FROM partner_share_links WHERE application_id = $1 OR lead_id = $1 OR lead_id = $2`, [id, targetLeadId]);
 
     // 4. Delete application_notes
-    await client.query(`DELETE FROM application_notes WHERE application_id = $1`, [id]).catch(() => {});
+    await safeSubDelete(`DELETE FROM application_notes WHERE application_id = $1`, [id]);
 
     // 5. Delete application_timeline / application_timelines
-    await client.query(`DELETE FROM application_timeline WHERE application_id = $1`, [id]).catch(() => {});
-    await client.query(`DELETE FROM application_timelines WHERE application_id = $1`, [id]).catch(() => {});
+    await safeSubDelete(`DELETE FROM application_timeline WHERE application_id = $1`, [id]);
+    await safeSubDelete(`DELETE FROM application_timelines WHERE application_id = $1`, [id]);
 
     // 6. Delete application_documents
-    await client.query(`DELETE FROM application_documents WHERE application_id = $1`, [id]).catch(() => {});
+    await safeSubDelete(`DELETE FROM application_documents WHERE application_id = $1`, [id]);
 
     // 7. Delete application_history
-    await client.query(`DELETE FROM application_history WHERE application_id = $1`, [id]).catch(() => {});
+    await safeSubDelete(`DELETE FROM application_history WHERE application_id = $1`, [id]);
 
     // 8. Delete wallet_transactions / commission_ledger linked to application
-    await client.query(`DELETE FROM wallet_transactions WHERE application_id = $1`, [id]).catch(() => {});
-    await client.query(`DELETE FROM commission_ledger WHERE application_id = $1 OR lead_id = $1 OR lead_id = $2`, [id, targetLeadId]).catch(() => {});
+    await safeSubDelete(`DELETE FROM wallet_transactions WHERE application_id = $1`, [id]);
+    await safeSubDelete(`DELETE FROM commission_ledger WHERE application_id = $1 OR lead_id = $1 OR lead_id = $2`, [id, targetLeadId]);
 
     // 9. Cascade delete lead related records
     const leadIdsToDelete = [id, targetLeadId].filter(Boolean);
     for (const lId of leadIdsToDelete) {
-      await client.query(`DELETE FROM lead_documents WHERE lead_id = $1`, [lId]).catch(() => {});
-      await client.query(`DELETE FROM lead_timeline WHERE lead_id = $1`, [lId]).catch(() => {});
-      await client.query(`DELETE FROM lead_notes WHERE lead_id = $1`, [lId]).catch(() => {});
-      await client.query(`DELETE FROM lead_status_history WHERE lead_id = $1`, [lId]).catch(() => {});
-      await client.query(`DELETE FROM lead_checklist WHERE lead_id = $1`, [lId]).catch(() => {});
-      await client.query(`DELETE FROM lead_sla WHERE lead_id = $1`, [lId]).catch(() => {});
-      await client.query(`DELETE FROM bank_assignments WHERE lead_id = $1`, [lId]).catch(() => {});
-      await client.query(`DELETE FROM lead_assignments WHERE lead_id = $1`, [lId]).catch(() => {});
+      await safeSubDelete(`DELETE FROM lead_documents WHERE lead_id = $1`, [lId]);
+      await safeSubDelete(`DELETE FROM lead_timeline WHERE lead_id = $1`, [lId]);
+      await safeSubDelete(`DELETE FROM lead_notes WHERE lead_id = $1`, [lId]);
+      await safeSubDelete(`DELETE FROM lead_status_history WHERE lead_id = $1`, [lId]);
+      await safeSubDelete(`DELETE FROM lead_checklist WHERE lead_id = $1`, [lId]);
+      await safeSubDelete(`DELETE FROM lead_sla WHERE lead_id = $1`, [lId]);
+      await safeSubDelete(`DELETE FROM bank_assignments WHERE lead_id = $1`, [lId]);
+      await safeSubDelete(`DELETE FROM lead_assignments WHERE lead_id = $1`, [lId]);
     }
 
     // 10. Delete leads table records
-    await client.query(
+    await safeSubDelete(
       `DELETE FROM leads WHERE id = $1 OR id = $2 OR application_id = $1 OR (app_number IS NOT NULL AND app_number = $3)`,
       [id, targetLeadId, app.app_number]
-    ).catch(() => {});
+    );
 
     // 11. Delete main applications record
     if (!isLeadOnly) {
@@ -2864,7 +2875,7 @@ const deleteApplication = async (req, res, next) => {
       );
 
       if (otherApps.length === 0 && otherLeads.length === 0) {
-        await client.query(`DELETE FROM customers WHERE id = $1`, [targetCustomerId]).catch(() => {});
+        await safeSubDelete(`DELETE FROM customers WHERE id = $1`, [targetCustomerId]);
       }
     }
 
@@ -3189,6 +3200,7 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
   }
 };
 
+
 module.exports = {
   submitApplication,
   submitPublicApplication,
@@ -3230,121 +3242,3 @@ module.exports = {
   releaseCommission,
   holdCommission
 };
-
-// POST /applications/:id/release-commission — Super Admin releases commission & credits wallet
-async function releaseCommission(req, res, next) {
-  const client = await getClient();
-  try {
-    const { id } = req.params;
-
-    const { rows: [app] } = await client.query(
-      `SELECT a.id, a.app_number, a.partner_id, a.commission_amount, a.commission_status, a.status
-       FROM applications a
-       WHERE a.id = $1`,
-      [id]
-    );
-
-    if (!app) return notFound(res, 'Application not found');
-
-    if (app.commission_status === 'released') {
-      return error(res, 'Commission has already been released for this application', 400);
-    }
-
-    const commissionAmount = parseFloat(app.commission_amount || 0);
-    if (commissionAmount <= 0) {
-      return error(res, 'No commission amount set for this application. Please update commission first.', 400);
-    }
-
-    await client.query('BEGIN');
-
-    // 1. Update application commission status & set status to approved
-    await client.query(
-      `UPDATE applications SET status = 'approved', final_status = 'approved', approved_at = COALESCE(approved_at, NOW()), commission_status = 'released', commission_released = TRUE, updated_at = NOW() WHERE id = $1`,
-      [id]
-    );
-
-    // 2. Call creditCommission to process partner & team split into partner_wallets & wallet_ledger
-    await creditCommission(
-      app.partner_id,
-      id,
-      commissionAmount,
-      `Commission released for application ${app.app_number}`,
-      req.user.id
-    );
-
-    // 3. Log timeline
-    try {
-      await logTimeline(client, id, 'commission_released', 'Commission Released',
-        `₹${commissionAmount} commission released and credited to partner wallet by Super Admin.`,
-        req.user.id
-      );
-    } catch (_) {}
-
-    await client.query('COMMIT');
-
-    // Send SMS notification to partner
-    try {
-      const { rows: [partnerUser] } = await client.query(
-        `SELECT u.mobile, COALESCE(p.first_name, u.full_name, 'Partner') as first_name 
-         FROM partner_profiles p JOIN users u ON p.user_id = u.id WHERE p.id = $1`,
-        [app.partner_id]
-      );
-      if (partnerUser?.mobile) {
-        const { sendCommissionCreditedSms } = require('../../services/sms/sms.service');
-        sendCommissionCreditedSms(partnerUser.mobile, partnerUser.first_name, commissionAmount).catch(() => {});
-      }
-    } catch (_) {}
-
-    // Fetch updated balance from partner_wallets
-    const { rows: [w] } = await query(
-      `SELECT available_balance FROM partner_wallets WHERE partner_id = $1`,
-      [app.partner_id]
-    );
-
-    return success(res, {
-      application_id: id,
-      app_number: app.app_number,
-      commission_amount: commissionAmount,
-      commission_status: 'released',
-      partner_id: app.partner_id,
-      new_wallet_balance: parseFloat(w?.available_balance || 0)
-    }, 'Commission released and partner wallet credited successfully.');
-  } catch (err) {
-    await client.query('ROLLBACK');
-    next(err);
-  } finally {
-    client.release();
-  }
-}
-
-// POST /applications/:id/hold-commission — Super Admin holds commission
-async function holdCommission(req, res, next) {
-  try {
-    const { id } = req.params;
-    const { remarks } = req.body;
-
-    const { rows: [app] } = await query(
-      `SELECT id, app_number, commission_status FROM applications WHERE id = $1`,
-      [id]
-    );
-
-    if (!app) return notFound(res, 'Application not found');
-
-    if (app.commission_status === 'released') {
-      return error(res, 'Cannot hold commission that has already been released', 400);
-    }
-
-    await query(
-      `UPDATE applications SET commission_status = 'on_hold', updated_at = NOW() WHERE id = $1`,
-      [id]
-    );
-
-    return success(res, {
-      application_id: id,
-      app_number: app.app_number,
-      commission_status: 'on_hold'
-    }, 'Commission has been put on hold.');
-  } catch (err) {
-    next(err);
-  }
-}
