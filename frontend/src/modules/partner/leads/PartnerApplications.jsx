@@ -226,22 +226,24 @@ export default function PartnerApplications() {
         lead_id: app.lead_id,
         product_id: app.product_id || app.productId
       });
-      if (res.data?.success) {
-        setShareData({
-          ...res.data.data,
-          app: app,
-          app_number: app.app_number,
-          customer_name: app.customer_name || 'Customer'
-        });
-        setShareForm({
-          bank_application_number: app.bank_application_number || app.bank_ref_number || '',
-          vkyc_status: app.vkyc_status || 'Pending',
-          vkyc_url: app.vkyc_url || '',
-          pan_number: app.pan_number || app.pan || '',
-          monthly_salary: app.monthly_salary || app.monthly_income || app.income || '',
-          remarks: app.remarks || ''
-        });
-        setShowShareModal(true);
+      if (res.data?.success && res.data.data?.share_url) {
+        const shareUrl = res.data.data.share_url;
+        const custName = app.customer_name || 'Customer';
+
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: `Application for ${custName}`,
+              text: `Hi ${custName}, please complete your application details using this secure link:`,
+              url: shareUrl
+            });
+          } catch (shareErr) {
+            console.log('Native share closed:', shareErr);
+          }
+        } else {
+          await navigator.clipboard.writeText(shareUrl);
+          alert('Link copied to clipboard!');
+        }
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to generate customer share link');
@@ -1114,69 +1116,7 @@ export default function PartnerApplications() {
         />
       )}
 
-      {/* ═══ MODAL 5: CUSTOMER SHARE LINK & APPLICATION DETAILS MODAL ═══ */}
-      {showShareModal && shareData && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
-          <div style={{ width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary }}>🔗 Customer Application Link</h3>
-                <span style={{ fontSize: 11, color: textMuted }}>Application #{shareData.app_number} for {shareData.customer_name}</span>
-              </div>
-              <button onClick={() => setShowShareModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
-            </div>
 
-            {/* Share Link Banner & Actions Only */}
-            <div style={{ background: isDark ? '#1a2234' : '#f0f7ff', border: '1px solid #3b82f640', borderRadius: 14, padding: 16 }}>
-              <div style={{ fontSize: 11, color: textMuted, marginBottom: 4, fontWeight: 700 }}>Direct Customer Application Share URL</div>
-              <div style={{ fontSize: 13, color: '#2563eb', fontWeight: 700, wordBreak: 'break-all', fontFamily: 'monospace', marginBottom: 14, padding: 10, borderRadius: 10, background: isDark ? '#0f172a' : '#ffffff', border: `1px solid ${border}` }}>
-                {shareData.share_url}
-              </div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareData.share_url);
-                    alert('Link copied to clipboard!');
-                  }}
-                  style={{ flex: 1, minWidth: 120, padding: '10px 14px', borderRadius: 12, border: `1px solid ${border}`, background: cardBg, color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                >
-                  <Copy size={14} /> Copy Link
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const text = encodeURIComponent(`Hi ${shareData.customer_name}, please complete your application details using this secure link: ${shareData.share_url}`);
-                    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
-                  }}
-                  style={{ flex: 1, minWidth: 140, padding: '10px 14px', borderRadius: 12, border: 'none', background: '#25D366', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                >
-                  💬 Share via WhatsApp
-                </button>
-                {navigator.share && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.share({
-                        title: `Application for ${shareData.customer_name}`,
-                        text: `Complete your application details using this link:`,
-                        url: shareData.share_url
-                      }).catch(() => {});
-                    }}
-                    style={{ flex: 1, minWidth: 130, padding: '10px 14px', borderRadius: 12, border: `1px solid ${accent}40`, background: accent + '15', color: accent, fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                  >
-                    <Share2 size={14} /> Share to App
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-              <button type="button" onClick={() => setShowShareModal(false)} style={{ padding: '9px 20px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ═══ MODAL 6: READ-ONLY VIEW APPLICATION DETAILS ═══ */}
       {showViewModal && viewApp && (

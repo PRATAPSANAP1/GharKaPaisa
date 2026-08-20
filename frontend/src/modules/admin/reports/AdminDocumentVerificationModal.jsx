@@ -104,8 +104,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         }
       }
 
-      setShowShareModal(true);
-
       if (navigator.share) {
         try {
           await navigator.share({
@@ -114,15 +112,14 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
             url: finalUrl
           });
         } catch (shareErr) {
-          console.log('Native share closed or not supported:', shareErr);
+          console.log('Native share closed:', shareErr);
         }
+      } else {
+        await navigator.clipboard.writeText(finalUrl);
+        alert('Link copied to clipboard!');
       }
     } catch (err) {
-      const fallbackUrl = application.share_token 
-        ? `${window.location.origin}/share/${application.share_token}` 
-        : `${window.location.origin}/share/${application.id}`;
-      setShareUrl(fallbackUrl);
-      setShowShareModal(true);
+      alert(err.response?.data?.message || 'Failed to generate share link');
     } finally {
       setShareLoading(false);
     }
