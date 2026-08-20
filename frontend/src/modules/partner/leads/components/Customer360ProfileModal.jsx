@@ -302,6 +302,7 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                   email: overview.email || '',
                   dob: overview.dob ? new Date(overview.dob).toISOString().split('T')[0] : '',
                   pan_number: overview.pan_number || '',
+                  aadhaar_number: overview.aadhaar_number || '',
                   aadhaar_last4: overview.aadhaar_last4 || '',
                   city: overview.city || '',
                   state: overview.state || '',
@@ -422,7 +423,7 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                     <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>KYC & Address Details</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
                       <div>PAN Card: <strong>{overview.pan_number || 'N/A'}</strong></div>
-                      <div>Aadhaar (Last 4): <strong>{overview.aadhaar_last4 ? `•••• ${overview.aadhaar_last4}` : 'N/A'}</strong></div>
+                      <div>Aadhaar Card: <strong>{overview.aadhaar_number || (overview.aadhaar_last4 ? `•••• ${overview.aadhaar_last4}` : 'N/A')}</strong></div>
                       <div>City: <strong>{overview.city || 'N/A'}</strong></div>
                       <div>State: <strong>{overview.state || 'N/A'}</strong></div>
                       <div>Pincode: <strong>{overview.pincode || 'N/A'}</strong></div>
@@ -899,17 +900,17 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
           backdropFilter: 'blur(5px)',
           display: 'flex',
           alignItems: 'center',
-          justify: 'center',
-          padding: '20px'
+          justifyContent: 'center',
+          padding: '12px'
         }}>
           <div style={{
             width: '100%',
-            maxWidth: '600px',
-            maxHeight: '90vh',
+            maxWidth: '650px',
+            maxHeight: '92vh',
             overflowY: 'auto',
             background: C.card,
             borderRadius: '20px',
-            padding: '28px',
+            padding: '24px 20px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
             border: `1px solid ${C.border}`
           }}>
@@ -940,28 +941,41 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                 <div>
-                  <label style={S.label}>Mobile Number *</label>
+                  <label style={S.label}>Primary Mobile Number *</label>
                   <input
                     style={S.input}
                     value={editForm.mobile || ''}
-                    onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value })}
+                    onChange={(e) => setEditForm({ ...editForm, mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                     required
+                    maxLength={10}
                   />
                 </div>
                 <div>
-                  <label style={S.label}>Email Address</label>
+                  <label style={S.label}>Alternate Mobile Number</label>
                   <input
-                    type="email"
                     style={S.input}
-                    value={editForm.email || ''}
-                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    value={editForm.alternate_mobile || ''}
+                    onChange={(e) => setEditForm({ ...editForm, alternate_mobile: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                    placeholder="e.g. 9876543210"
+                    maxLength={10}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={S.label}>Email Address</label>
+                <input
+                  type="email"
+                  style={S.input}
+                  value={editForm.email || ''}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  placeholder="name@example.com"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                 <div>
                   <label style={S.label}>Date of Birth</label>
                   <input
@@ -972,6 +986,21 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                   />
                 </div>
                 <div>
+                  <label style={S.label}>Employment Type</label>
+                  <select
+                    style={S.input}
+                    value={editForm.employment_type || 'salaried'}
+                    onChange={(e) => setEditForm({ ...editForm, employment_type: e.target.value })}
+                  >
+                    <option value="salaried">Salaried</option>
+                    <option value="self-employed">Self-Employed</option>
+                    <option value="business">Business Owner</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                <div>
                   <label style={S.label}>PAN Card Number</label>
                   <input
                     style={{ ...S.input, textTransform: 'uppercase' }}
@@ -981,9 +1010,19 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                     maxLength={10}
                   />
                 </div>
+                <div>
+                  <label style={S.label}>12-Digit Aadhaar Card Number</label>
+                  <input
+                    style={S.input}
+                    value={editForm.aadhaar_number || ''}
+                    onChange={(e) => setEditForm({ ...editForm, aadhaar_number: e.target.value.replace(/\D/g, '').slice(0, 12) })}
+                    placeholder="12-digit Aadhaar Number"
+                    maxLength={12}
+                  />
+                </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
                 <div>
                   <label style={S.label}>City</label>
                   <input
@@ -1005,25 +1044,13 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                   <input
                     style={S.input}
                     value={editForm.pincode || ''}
-                    onChange={(e) => setEditForm({ ...editForm, pincode: e.target.value })}
+                    onChange={(e) => setEditForm({ ...editForm, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
                     maxLength={6}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={S.label}>Employment Type</label>
-                  <select
-                    style={S.input}
-                    value={editForm.employment_type || 'salaried'}
-                    onChange={(e) => setEditForm({ ...editForm, employment_type: e.target.value })}
-                  >
-                    <option value="salaried">Salaried</option>
-                    <option value="self-employed">Self-Employed</option>
-                    <option value="business">Business Owner</option>
-                  </select>
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
                 <div>
                   <label style={S.label}>Monthly Income (₹)</label>
                   <input
@@ -1034,9 +1061,6 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                     placeholder="e.g. 75000"
                   />
                 </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={S.label}>Employer Name</label>
                   <input
@@ -1046,15 +1070,16 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                     placeholder="Company name"
                   />
                 </div>
-                <div>
-                  <label style={S.label}>Occupation</label>
-                  <input
-                    style={S.input}
-                    value={editForm.occupation || ''}
-                    onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })}
-                    placeholder="Designation / Role"
-                  />
-                </div>
+              </div>
+
+              <div>
+                <label style={S.label}>Occupation / Role</label>
+                <input
+                  style={S.input}
+                  value={editForm.occupation || ''}
+                  onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })}
+                  placeholder="Designation / Profession"
+                />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '14px' }}>

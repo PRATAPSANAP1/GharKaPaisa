@@ -202,13 +202,21 @@ const updateCustomer = async (req, res, next) => {
   try {
     const { id } = req.params;
     const {
-      full_name, mobile, email, dob, pan_number, aadhaar_last4,
+      full_name, mobile, email, dob, pan_number, aadhaar_number, aadhaar_last4,
       city, state, pincode, monthly_income, employer, employment_type,
       alternate_mobile, occupation, nominee_name, nominee_relation, product_interests, pipeline_status
     } = req.body;
 
     const { rows: [existing] } = await query(`SELECT * FROM customers WHERE id = $1`, [id]);
     if (!existing) return notFound(res, 'Customer not found');
+
+    const cleanAadhaar = aadhaar_number ? aadhaar_number.toString().replace(/\D/g, '') : null;
+    const cleanLast4 = cleanAadhaar && cleanAadhaar.length >= 4 ? cleanAadhaar.slice(-4) : (aadhaar_last4 || null);
+
+    try {
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS alternate_mobile VARCHAR(15)`);
+    } catch (_) {}
 
     const { rows: [updated] } = await query(`
       UPDATE customers SET
@@ -217,31 +225,33 @@ const updateCustomer = async (req, res, next) => {
         email = COALESCE($3, email),
         dob = COALESCE($4, dob),
         pan_number = COALESCE($5, pan_number),
-        aadhaar_last4 = COALESCE($6, aadhaar_last4),
-        city = COALESCE($7, city),
-        state = COALESCE($8, state),
-        pincode = COALESCE($9, pincode),
-        monthly_income = COALESCE($10, monthly_income),
-        employer = COALESCE($11, employer),
-        employment_type = COALESCE($12, employment_type),
-        alternate_mobile = COALESCE($13, alternate_mobile),
-        occupation = COALESCE($14, occupation),
-        nominee_name = COALESCE($15, nominee_name),
-        nominee_relation = COALESCE($16, nominee_relation),
-        product_interests = COALESCE($17::jsonb, product_interests),
-        pipeline_status = COALESCE($18, pipeline_status),
+        aadhaar_number = COALESCE($6, aadhaar_number),
+        aadhaar_last4 = COALESCE($7, aadhaar_last4),
+        city = COALESCE($8, city),
+        state = COALESCE($9, state),
+        pincode = COALESCE($10, pincode),
+        monthly_income = COALESCE($11, monthly_income),
+        employer = COALESCE($12, employer),
+        employment_type = COALESCE($13, employment_type),
+        alternate_mobile = COALESCE($14, alternate_mobile),
+        occupation = COALESCE($15, occupation),
+        nominee_name = COALESCE($16, nominee_name),
+        nominee_relation = COALESCE($17, nominee_relation),
+        product_interests = COALESCE($18::jsonb, product_interests),
+        pipeline_status = COALESCE($19, pipeline_status),
         updated_at = NOW()
-      WHERE id = $19
+      WHERE id = $20
       RETURNING *
     `, [
-      full_name, mobile, email, dob, pan_number ? pan_number.toUpperCase() : null, aadhaar_last4,
-      city, state, pincode, monthly_income, employer, employment_type,
-      alternate_mobile, occupation, nominee_name, nominee_relation,
-      product_interests ? JSON.stringify(product_interests) : null, pipeline_status, id
+      full_name || null, mobile || null, email || null, dob || null, pan_number ? pan_number.toUpperCase() : null,
+      cleanAadhaar, cleanLast4, city || null, state || null, pincode || null,
+      monthly_income || null, employer || null, employment_type || null, alternate_mobile || null,
+      occupation || null, nominee_name || null, nominee_relation || null,
+      product_interests ? JSON.stringify(product_interests) : null, pipeline_status || null, id
     ]);
 
-    await logCustomerTimeline(null, id, 'profile_updated', 'Profile Updated', `Updated profile fields by ${req.user.full_name || req.user.email}`, 'customer', id, req.user.id);
-    await logCustomerActivity(null, id, 'update_profile', req.user.id, 'customer', id, req);
+    await logCustomerTimeline(null, id, 'profile_updated', 'Profile Updated', `Updated profile fields by ${req.user?.full_name || req.user?.email || 'User'}`, 'customer', id, req.user?.id);
+    await logCustomerActivity(null, id, 'update_profile', req.user?.id, 'customer', id, req);
 
     return success(res, updated, 'Customer profile updated successfully');
   } catch (err) {
