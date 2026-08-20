@@ -2271,76 +2271,43 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
               </button>
             </div>
 
-            {/* Share across any app options */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginTop: '6px' }}>
-              {/* WhatsApp */}
-              <button
-                type="button"
-                onClick={() => {
-                  const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(`Apply for ${shareModalProduct.name} on GharKaPaisa! Click here: ${shareModalProduct.shareLink}`)}`;
-                  window.open(url, '_blank');
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  padding: '12px', borderRadius: '12px', border: '1px solid #25D36640',
-                  background: '#25D36615', color: '#25D366', fontWeight: 800, fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
-                <span>💬 WhatsApp</span>
-              </button>
-
-              {/* SMS / Messages */}
-              <button
-                type="button"
-                onClick={() => {
-                  const url = `sms:?body=${encodeURIComponent(`Apply for ${shareModalProduct.name} on GharKaPaisa! Click here: ${shareModalProduct.shareLink}`)}`;
-                  window.open(url, '_blank');
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  padding: '12px', borderRadius: '12px', border: '1px solid #3B82F640',
-                  background: '#3B82F615', color: '#3B82F6', fontWeight: 800, fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
-                <span>📱 Messages / SMS</span>
-              </button>
-
-              {/* Telegram */}
-              <button
-                type="button"
-                onClick={() => {
-                  const url = `https://t.me/share/url?url=${encodeURIComponent(shareModalProduct.shareLink)}&text=${encodeURIComponent(`Apply for ${shareModalProduct.name} on GharKaPaisa!`)}`;
-                  window.open(url, '_blank');
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  padding: '12px', borderRadius: '12px', border: '1px solid #0088cc40',
-                  background: '#0088cc15', color: '#0088cc', fontWeight: 800, fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
-                <span>✈️ Telegram</span>
-              </button>
-
-              {/* Email */}
-              <button
-                type="button"
-                onClick={() => {
-                  const url = `mailto:?subject=${encodeURIComponent(`Apply for ${shareModalProduct.name} on GharKaPaisa`)}&body=${encodeURIComponent(`Click here to apply for ${shareModalProduct.name}:\n${shareModalProduct.shareLink}`)}`;
-                  window.open(url, '_blank');
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  padding: '12px', borderRadius: '12px', border: '1px solid #EA433540',
-                  background: '#EA433515', color: '#EA4335', fontWeight: 800, fontSize: '13px',
-                  cursor: 'pointer'
-                }}
-              >
-                <span>✉️ Email</span>
-              </button>
-            </div>
+            {/* Unified Native OS Share Button */}
+            <button
+              type="button"
+              onClick={async () => {
+                const shareData = {
+                  title: `Apply for ${shareModalProduct.name}`,
+                  text: `Apply for ${shareModalProduct.name} on GharKaPaisa! Click here to start:`,
+                  url: shareModalProduct.shareLink
+                };
+                if (navigator.share) {
+                  try {
+                    await navigator.share(shareData);
+                  } catch (err) {
+                    if (err.name !== 'AbortError') {
+                      navigator.clipboard.writeText(shareModalProduct.shareLink);
+                      setCopiedNotice(true);
+                      setTimeout(() => setCopiedNotice(false), 2500);
+                    }
+                  }
+                } else {
+                  navigator.clipboard.writeText(shareModalProduct.shareLink);
+                  setCopiedNotice(true);
+                  setTimeout(() => setCopiedNotice(false), 2500);
+                }
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
+                background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
+                color: '#FFFFFF', fontWeight: 800, fontSize: '15px',
+                cursor: 'pointer', boxShadow: `0 8px 24px ${C.primary}40`,
+                marginTop: '8px'
+              }}
+            >
+              <MdShare size={20} />
+              <span>{copiedNotice ? '✓ Link Copied to Clipboard!' : 'Share Product Link'}</span>
+            </button>
           </div>
         </div>
       )}
