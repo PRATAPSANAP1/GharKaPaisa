@@ -214,7 +214,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           company_address: companyAddress,
           mother_name: motherName,
           app_number: appNumber,
-          vkyc_url: vkycUrl
+          bank_application_number: appNumber,
+          bank_ref_number: appNumber,
+          vkyc_url: vkycUrl,
+          status: 'submitted'
         };
       } else if (formType === 'remark') {
         payload = {
