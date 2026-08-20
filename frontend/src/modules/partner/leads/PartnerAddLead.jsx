@@ -505,7 +505,38 @@ export default function PartnerAddLead() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Share Options */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {navigator.share && (
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.share({
+                    title: `Apply for ${selectedProduct?.name || 'Financial Product'}`,
+                    text: `Hello ${customerName}, please complete your application using this secure link:`,
+                    url: shareResult.share_url
+                  }).catch(() => {});
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                  color: '#FFF',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '10px 18px',
+                  fontSize: '13px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(99,102,241,0.3)'
+                }}
+              >
+                <MdShare size={18} />
+                Share via Any App
+              </button>
+            )}
+
             {shareResult.whatsapp_url && (
               <a
                 href={shareResult.whatsapp_url}
@@ -525,9 +556,14 @@ export default function PartnerAddLead() {
                 }}
               >
                 <MdShare size={18} />
-                Open WhatsApp & Send
+                WhatsApp Share
               </a>
             )}
+
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#10B981', display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#10B98115', padding: '6px 12px', borderRadius: '8px' }}>
+              📲 SMS Dispatched Automatically (Apply 1 Template)
+            </span>
+
             <button
               onClick={() => navigate('/partner/applications')}
               style={{

@@ -387,6 +387,16 @@ const createLead = async (req, res, next) => {
 
       await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
 
+      // Automatically send link via SMS (Template: apply 1 / step 1)
+      try {
+        const { sendApplyStep1Sms } = require('../../services/sms/sms.service');
+        sendApplyStep1Sms(trimmedMobile, targetName.trim(), product?.name || 'Financial Product', shareUrl).catch(err => {
+          console.warn('Auto SMS dispatch failed for linked_share:', err.message);
+        });
+      } catch (smsErr) {
+        console.warn('SMS service invocation error:', smsErr.message);
+      }
+
       return created(res, {
         lead_id: lead.id,
         app_id: app.id,

@@ -535,7 +535,7 @@ const getPartnerShareTracking = async (req, res, next) => {
 };
 
 /**
- * GET /public/apply/:token — Step 1: Get safe prefilled data for customer form
+ * GET /public/apply/:token — Step 1: Get product details and prefilled customer data
  */
 const getApplyTokenDetails = async (req, res, next) => {
   try {
@@ -549,36 +549,95 @@ const getApplyTokenDetails = async (req, res, next) => {
       return error(res, 'Invalid or expired application link', 404);
     }
 
-    // Get Product info
+    // Get Product info with all details for Product Details tab
     const { rows: [product] } = await query(`
-      SELECT p.id, p.name, p.category, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
+      SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
       FROM products p
       LEFT JOIN banks b ON b.id = p.bank_id
       WHERE p.id = $1
     `, [shareData.product_id]);
 
-    // Mask customer mobile & extract first name
-    const rawName = shareData.customer_name || 'Valued Customer';
-    const firstName = rawName.trim().split(' ')[0];
-    const rawMobile = shareData.mobile || '';
-    const maskedMobile = rawMobile.length >= 10 
-      ? `${rawMobile.slice(0, 2)}******${rawMobile.slice(-2)}` 
-      : '98******10';
+    if (!product) {
+      return error(res, 'Product not found', 404);
+    }
+
+    // Resolve prefilled customer data
+    let custRecord = null;
+    let leadRec = null;
+
+    if (shareData.lead_id) {
+      const { rows: [l] } = await query(`SELECT * FROM leads WHERE id = $1`, [shareData.lead_id]);
+      leadRec = l || null;
+    }
+
+    if (shareData.application_id && !leadRec) {
+      const { rows: [a] } = await query(`SELECT * FROM applications WHERE id = $1`, [shareData.application_id]);
+      if (a && a.customer_id) {
+        const { rows: [c] } = await query(`SELECT * FROM customers WHERE id = $1`, [a.customer_id]);
+        custRecord = c || null;
+      }
+    }
+
+    if (!custRecord && leadRec) {
+      if (leadRec.customer_id) {
+        const { rows: [c] } = await query(`SELECT * FROM customers WHERE id = $1`, [leadRec.customer_id]);
+        custRecord = c || null;
+      } else if (leadRec.mobile) {
+        const { rows: [c] } = await query(`SELECT * FROM customers WHERE mobile = $1 LIMIT 1`, [leadRec.mobile]);
+        custRecord = c || null;
+      }
+    }
+
+    const fullName = custRecord?.full_name || leadRec?.customer_name || shareData.customer_name || 'Valued Customer';
+    const mobile = custRecord?.mobile || leadRec?.mobile || leadRec?.customer_mobile || shareData.mobile || '';
+    const firstName = fullName.trim().split(' ')[0];
 
     return success(res, {
       token,
       lead_id: shareData.lead_id || null,
-      pipeline_stage: shareData.pipeline_stage || 'created',
+      application_id: shareData.application_id || null,
+      product_id: product.id,
+      pipeline_stage: leadRec?.pipeline_stage || shareData.pipeline_stage || 'created',
       product: {
-        id: product?.id,
-        name: product?.name || 'Financial Product',
-        category: product?.category,
-        bank_name: product?.bank_name,
-        bank_logo: product?.bank_logo
+        id: product.id,
+        name: product.name,
+        category: product.category,
+        sub_category: product.sub_category,
+        bank_name: product.bank_name,
+        bank_code: product.bank_code,
+        bank_logo: product.bank_logo,
+        annual_fee: product.annual_fee,
+        description: product.description,
+        short_description: product.short_description,
+        features: Array.isArray(product.features) ? product.features : (typeof product.features === 'string' ? JSON.parse(product.features || '[]') : []),
+        eligibility: typeof product.eligibility === 'string' ? JSON.parse(product.eligibility || '{}') : (product.eligibility || {}),
+        eligibility_criteria: product.eligibility_criteria,
+        benefits: product.benefits,
+        fees_charges: product.fees_charges,
+        rewards: product.rewards,
+        cashback: product.cashback,
+        card_variant: product.card_variant,
+        card_network: product.card_network,
+        welcome_benefits: product.welcome_benefits,
+        is_lifetime_free: product.is_lifetime_free,
+        image_url: product.image_url,
+        apply_button_text: product.apply_button_text || 'Apply Now'
       },
       customer: {
+        full_name: fullName,
         first_name: firstName,
-        mobile: maskedMobile
+        mobile: mobile,
+        email: custRecord?.email || '',
+        dob: custRecord?.dob ? new Date(custRecord.dob).toISOString().split('T')[0] : '',
+        pan_number: custRecord?.pan_number || '',
+        aadhaar_number: custRecord?.aadhaar_number || custRecord?.aadhaar_last4 || '',
+        occupation: custRecord?.occupation || custRecord?.employment_type || 'Salaried',
+        employment_type: custRecord?.employment_type || 'Salaried',
+        monthly_income: custRecord?.monthly_income || '',
+        employer: custRecord?.employer || '',
+        city: custRecord?.city || leadRec?.city || '',
+        state: custRecord?.state || '',
+        pincode: custRecord?.pincode || ''
       }
     });
   } catch (err) {
@@ -587,70 +646,162 @@ const getApplyTokenDetails = async (req, res, next) => {
 };
 
 /**
- * PATCH /public/apply/:token — Step 1: Update customer basic KYC fields & redirect to bank
+ * PATCH /public/apply/:token — Step 1: Submit Customer Form & update customer details in DB
  */
 const updateApplyTokenDetails = async (req, res, next) => {
   try {
     const { token } = req.params;
-    const { dob, pan, income, address, employment } = req.body;
+    const {
+      email, dob, occupation, employment, income, monthly_income,
+      employer, company_name, pan, pan_number, aadhaar_number, aadhaar,
+      city, state, pincode, address
+    } = req.body;
 
     if (!token) return error(res, 'Token is required', 400);
-    if (!dob || !pan || !income) {
-      return error(res, 'DOB, PAN, and Annual Income are required fields', 400);
-    }
 
-    // Find share link & lead record
-    const { rows: [shareData] } = await query(`
-      SELECT psl.product_id, psl.partner_id, l.id as lead_id, l.customer_id, l.status, l.pipeline_stage
-      FROM partner_share_links psl
-      LEFT JOIN leads l ON (l.tracking_token = psl.tracking_token OR l.id::text = psl.tracking_token)
-      WHERE (psl.tracking_token = $1 OR l.tracking_token = $1)
-        AND psl.expires_at > NOW()
-      LIMIT 1
-    `, [token]);
-
+    const shareData = await resolveShareToken(token);
     if (!shareData) {
       return error(res, 'Invalid or expired application link', 404);
     }
+
+    const cleanPan = (pan_number || pan || '').toString().trim().toUpperCase();
+    const cleanEmail = (email || '').toString().trim().toLowerCase();
+    const cleanAadhaar = (aadhaar_number || aadhaar || '').toString().trim();
+    const cleanOccupation = (occupation || employment || 'Salaried').toString().trim();
+    const cleanEmployer = (employer || company_name || '').toString().trim();
+    const numIncome = income || monthly_income ? parseFloat(income || monthly_income) : null;
+
+    // Ensure columns exist on customers table dynamically
+    try {
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS occupation VARCHAR(100)`);
+    } catch (_) {}
 
     // Fetch Product for target redirect URL
     const { rows: [product] } = await query(`SELECT * FROM products WHERE id = $1`, [shareData.product_id]);
     const targetRedirectUrl = product?.partner_url || product?.public_url || product?.application_url || product?.apply_url || product?.redirect_url || 'https://gharkapaisa.in';
 
-    // Update customer record if exists or resolved via lead
+    // Find customer ID to update
     let targetCustomerId = shareData.customer_id;
-    if (!targetCustomerId && shareData.lead_id) {
-      const { rows: [leadRec] } = await query(`SELECT customer_id, mobile FROM leads WHERE id = $1`, [shareData.lead_id]);
+    let targetLeadId = shareData.lead_id;
+
+    if (!targetCustomerId && targetLeadId) {
+      const { rows: [leadRec] } = await query(`SELECT customer_id, mobile, customer_name FROM leads WHERE id = $1`, [targetLeadId]);
       if (leadRec?.customer_id) {
         targetCustomerId = leadRec.customer_id;
       } else if (leadRec?.mobile) {
         const { rows: [custRec] } = await query(`SELECT id FROM customers WHERE mobile = $1 LIMIT 1`, [leadRec.mobile]);
-        targetCustomerId = custRec?.id || null;
+        if (custRec) {
+          targetCustomerId = custRec.id;
+        } else {
+          // Create new customer record if missing
+          const { rows: [newCust] } = await query(`
+            INSERT INTO customers (full_name, mobile, email, dob, pan_number, aadhaar_number, employment_type, occupation, monthly_income, employer, city, state, pincode, created_by)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            RETURNING id
+          `, [
+            leadRec.customer_name || 'Customer',
+            leadRec.mobile,
+            cleanEmail || null,
+            dob || null,
+            cleanPan || null,
+            cleanAadhaar || null,
+            cleanOccupation,
+            cleanOccupation,
+            numIncome,
+            cleanEmployer || null,
+            city || null,
+            state || null,
+            pincode || null,
+            shareData.partner_id || null
+          ]);
+          targetCustomerId = newCust?.id || null;
+        }
       }
     }
 
     if (targetCustomerId) {
       await query(`
         UPDATE customers
-        SET dob = $1, pan_number = $2, monthly_income = $3, address = $4, employment_type = $5, updated_at = NOW()
-        WHERE id = $6
-      `, [dob, pan.toUpperCase().trim(), parseFloat(income), address || null, employment || null, targetCustomerId]);
+        SET 
+          email = COALESCE(NULLIF($1, ''), email),
+          dob = COALESCE(NULLIF($2, '')::date, dob),
+          pan_number = COALESCE(NULLIF($3, ''), pan_number),
+          aadhaar_number = COALESCE(NULLIF($4, ''), aadhaar_number),
+          aadhaar_last4 = COALESCE(RIGHT(NULLIF($4, ''), 4), aadhaar_last4),
+          employment_type = COALESCE(NULLIF($5, ''), employment_type),
+          occupation = COALESCE(NULLIF($5, ''), occupation),
+          monthly_income = COALESCE($6, monthly_income),
+          employer = COALESCE(NULLIF($7, ''), employer),
+          city = COALESCE(NULLIF($8, ''), city),
+          state = COALESCE(NULLIF($9, ''), state),
+          pincode = COALESCE(NULLIF($10, ''), pincode),
+          updated_at = NOW()
+        WHERE id = $11
+      `, [
+        cleanEmail, dob || null, cleanPan, cleanAadhaar, cleanOccupation,
+        numIncome, cleanEmployer, city || null, state || null, pincode || null, targetCustomerId
+      ]);
     }
 
-    // Update lead stage
-    if (shareData.lead_id) {
+    // Update lead record stage
+    if (targetLeadId) {
       await query(`
         UPDATE leads
-        SET pipeline_stage = 'details_submitted', status = 'in_progress', updated_at = NOW()
+        SET pipeline_stage = 'details_submitted', status = 'in_progress',
+            customer_id = COALESCE($2, customer_id),
+            city = COALESCE(NULLIF($3, ''), city),
+            updated_at = NOW()
         WHERE id = $1
-      `, [shareData.lead_id]);
+      `, [targetLeadId, targetCustomerId, city || null]);
+    }
+
+    // Update application record if exists
+    if (shareData.application_id) {
+      await query(`
+        UPDATE applications
+        SET status = 'details_submitted',
+            pan_number = COALESCE(NULLIF($1, ''), pan_number),
+            monthly_salary = COALESCE($2, monthly_salary),
+            updated_at = NOW()
+        WHERE id = $3
+      `, [cleanPan, numIncome, shareData.application_id]);
+    }
+
+    const host = req.get('host') || 'gharkapaisa.in';
+    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+    const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
+    const qdFormUrl = `${baseUrl.replace(/\/$/, '')}/apply/${token}/post-apply`;
+
+    // Automatically schedule QD Form link SMS dispatch after 10 minutes for linked_share process
+    if (targetLeadId) {
+      setTimeout(async () => {
+        try {
+          const { rows: [targetLead] } = await query(`
+            SELECT l.customer_name, l.mobile, p.name as product_name
+            FROM leads l
+            LEFT JOIN products p ON p.id = l.product_id
+            WHERE l.id = $1
+          `, [targetLeadId]);
+
+          if (targetLead && targetLead.mobile) {
+            const { sendPostApplyStep2Sms } = require('../../services/sms/sms.service');
+            await sendPostApplyStep2Sms(targetLead.mobile, targetLead.customer_name, targetLead.product_name, token);
+            console.log(`[QD-FORM-SMS] Automatically dispatched QD Form SMS link after 10 mins to ${targetLead.mobile}`);
+          }
+        } catch (timerErr) {
+          console.warn('[QD-FORM-SMS] Delayed SMS timer error:', timerErr.message);
+        }
+      }, 10 * 60 * 1000); // 10 minutes delay
     }
 
     return success(res, {
       token,
-      lead_id: shareData.lead_id,
+      lead_id: targetLeadId,
+      customer_id: targetCustomerId,
       redirect_url: targetRedirectUrl,
-      message: 'Application details updated successfully. Redirecting to official bank portal.'
+      qd_form_url: qdFormUrl,
+      message: 'Application details saved. QD Form link scheduled for SMS dispatch in 10 minutes.'
     });
   } catch (err) {
     next(err);
@@ -658,7 +809,7 @@ const updateApplyTokenDetails = async (req, res, next) => {
 };
 
 /**
- * GET /public/apply/:token/post-apply — Step 2: Get bank details for post-application reference entry
+ * GET /public/apply/:token/post-apply — Step 2: Get bank details & customer metadata for QD Form
  */
 const getPostApplyDetails = async (req, res, next) => {
   try {
@@ -666,7 +817,7 @@ const getPostApplyDetails = async (req, res, next) => {
     if (!token) return error(res, 'Token is required', 400);
 
     const { rows: [shareData] } = await query(`
-      SELECT psl.product_id, l.id as lead_id, l.customer_name, l.status
+      SELECT psl.product_id, psl.partner_id, l.id as lead_id, l.customer_id, l.customer_name, l.mobile, l.status
       FROM partner_share_links psl
       LEFT JOIN leads l ON (l.tracking_token = psl.tracking_token OR l.id::text = psl.tracking_token)
       WHERE (psl.tracking_token = $1 OR l.tracking_token = $1)
@@ -676,11 +827,20 @@ const getPostApplyDetails = async (req, res, next) => {
     if (!shareData) return error(res, 'Invalid application token', 404);
 
     const { rows: [product] } = await query(`
-      SELECT p.id, p.name, b.name as bank_name, b.short_code as bank_code
+      SELECT p.id, p.name, p.category, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
       FROM products p
       LEFT JOIN banks b ON b.id = p.bank_id
       WHERE p.id = $1
     `, [shareData.product_id]);
+
+    let custRecord = null;
+    if (shareData.customer_id) {
+      const { rows: [c] } = await query(`SELECT full_name, mobile, email, pan_number FROM customers WHERE id = $1`, [shareData.customer_id]);
+      custRecord = c || null;
+    } else if (shareData.mobile) {
+      const { rows: [c] } = await query(`SELECT full_name, mobile, email, pan_number FROM customers WHERE mobile = $1 LIMIT 1`, [shareData.mobile]);
+      custRecord = c || null;
+    }
 
     const bankCode = (product?.bank_code || '').toUpperCase();
     const bankName = (product?.bank_name || '').toUpperCase();
@@ -688,10 +848,18 @@ const getPostApplyDetails = async (req, res, next) => {
 
     return success(res, {
       token,
-      lead_id: shareData.lead_id,
+      lead_id: shareData.lead_id || null,
+      product_id: product?.id,
       product_name: product?.name || 'Credit Card / Loan',
       bank_name: product?.bank_name || 'Bank',
+      bank_logo: product?.bank_logo || null,
       is_sbi_bank: isSbiBank,
+      customer: {
+        full_name: custRecord?.full_name || shareData.customer_name || 'Customer',
+        mobile: custRecord?.mobile || shareData.mobile || '',
+        email: custRecord?.email || '',
+        pan_number: custRecord?.pan_number || ''
+      },
       requirements: {
         application_number: 'Mandatory for all banks',
         vkyc_url: 'Optional/Recommended',
@@ -718,7 +886,7 @@ const updatePostApplyDetails = async (req, res, next) => {
     }
 
     const { rows: [shareData] } = await query(`
-      SELECT psl.product_id, l.id as lead_id, l.customer_id
+      SELECT psl.product_id, psl.partner_id, l.id as lead_id, l.customer_id
       FROM partner_share_links psl
       LEFT JOIN leads l ON (l.tracking_token = psl.tracking_token OR l.id::text = psl.tracking_token)
       WHERE (psl.tracking_token = $1 OR l.tracking_token = $1)
@@ -748,6 +916,14 @@ const updatePostApplyDetails = async (req, res, next) => {
       }
     }
 
+    // Dynamic column safety check
+    try {
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_url VARCHAR(500)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS salary_slip_url VARCHAR(500)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_card_url VARCHAR(500)`);
+    } catch (_) {}
+
     // Update existing application or create/update application reference
     if (shareData.lead_id) {
       await query(`
@@ -758,15 +934,17 @@ const updatePostApplyDetails = async (req, res, next) => {
 
       await query(`
         UPDATE applications
-        SET bank_application_number = $1, vkyc_url = $2, salary_slip_url = $3, pan_card_url = $4, status = 'submitted', updated_at = NOW()
+        SET bank_application_number = $1, application_number = COALESCE($1, application_number), vkyc_url = $2, salary_slip_url = $3, pan_card_url = $4, status = 'submitted', updated_at = NOW()
         WHERE lead_id = $5
       `, [bank_application_number.trim(), vkyc_url || null, salary_slip_url || null, pan_card_url || null, shareData.lead_id]);
     }
 
     return success(res, {
       token,
+      product_id: shareData.product_id,
+      customer_id: shareData.customer_id,
       bank_application_number: bank_application_number.trim(),
-      message: 'Bank application reference and documents recorded successfully.'
+      message: 'Bank application reference and QD form details recorded successfully.'
     });
   } catch (err) {
     next(err);
