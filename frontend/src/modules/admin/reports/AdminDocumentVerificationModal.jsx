@@ -3,7 +3,8 @@ import api from '../../../services/api';
 import { useAuthStore } from '../../../app/store/authStore';
 import { 
   X, CheckCircle, XCircle, Eye, Send, ShieldCheck, 
-  Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft, Lock
+  Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft, Lock,
+  Share2, Copy, MessageSquare, Smartphone
 } from 'lucide-react';
 
 const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initialTab = 'qd', showAllTabs = false }) => {
@@ -71,6 +72,80 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const [eligibleReQd, setEligibleReQd] = useState(application?.eligible_reqd || 'No');
   const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || application?.bank_application_number || application?.bank_app_no || '');
   const [approvedAmount, setApprovedAmount] = useState(application?.approved_amount || application?.loan_amount || '');
+
+  // Share / Send to Customer State
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [smsSending, setSmsSending] = useState(false);
+
+  const handleGenerateAndShare = async () => {
+    setShareLoading(true);
+    try {
+      let finalUrl = shareUrl;
+      if (!finalUrl) {
+        const isPhysical = String(application?.process_type || application?.process_by || '').toLowerCase().includes('physical');
+        const endpoint = isPhysical ? '/applications/generate-physical-link' : '/applications/generate-share-link';
+        const res = await api.post(endpoint, {
+          application_id: application.id,
+          lead_id: application.lead_id || application.id,
+          product_id: application.product_id || application.productId
+        });
+        if (res.data?.success && res.data.data?.share_url) {
+          finalUrl = res.data.data.share_url;
+          setShareUrl(finalUrl);
+        } else if (application.share_token) {
+          finalUrl = `${window.location.origin}/share/${application.share_token}`;
+          setShareUrl(finalUrl);
+        } else {
+          finalUrl = `${window.location.origin}/share/${application.id}`;
+          setShareUrl(finalUrl);
+        }
+      }
+
+      setShowShareModal(true);
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'GharKaPaisa Customer Form',
+            text: `Dear ${customerName || 'Customer'}, please click link to submit your Quick Details (QD) for ${application.product_name || 'application'}:`,
+            url: finalUrl
+          });
+        } catch (shareErr) {
+          console.log('Native share closed or not supported:', shareErr);
+        }
+      }
+    } catch (err) {
+      const fallbackUrl = application.share_token 
+        ? `${window.location.origin}/share/${application.share_token}` 
+        : `${window.location.origin}/share/${application.id}`;
+      setShareUrl(fallbackUrl);
+      setShowShareModal(true);
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleSendSmsApi = async () => {
+    if (!customerMobile) return alert('Customer mobile number is missing.');
+    setSmsSending(true);
+    try {
+      const res = await api.post(`/applications/${application.id}/send-link`, {
+        mobile: customerMobile
+      });
+      if (res.data?.success) {
+        alert('SMS containing QD form link dispatched to customer successfully!');
+      } else {
+        alert(res.data?.message || 'Failed to send SMS');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error sending SMS to customer');
+    } finally {
+      setSmsSending(false);
+    }
+  };
 
   const fetchData = async () => {
     if (!application?.id) return;
@@ -326,15 +401,42 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           {activeTab === 'qd' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#1e3a8a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    📋 QD (Customer Quick Details)
-                  </h4>
-                  {!canEditQd && (
-                    <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Lock size={12} /> Read-Only Mode (Partner Edit Only)
-                    </span>
-                  )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#1e3a8a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      📋 QD (Customer Quick Details)
+                    </h4>
+                    {!canEditQd && (
+                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Lock size={12} /> Read-Only Mode (Partner Edit Only)
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Send to Customer Button (Top of QD Form) */}
+                  <button
+                    type="button"
+                    onClick={handleGenerateAndShare}
+                    disabled={shareLoading}
+                    style={{
+                      background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <Share2 size={15} />
+                    {shareLoading ? 'Generating Link...' : '📲 Send to Customer (Share by All Apps)'}
+                  </button>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', fontSize: '13px' }}>
@@ -773,6 +875,134 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
         </div>
       </div>
+
+      {/* ═══ SHARE BY ALL APPS MODAL POPUP ═══ */}
+      {showShareModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 20000,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justify: 'center',
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '460px',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#eff6ff', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Share2 size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Send to Customer</h3>
+                  <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>Share QD & Application link with customer</p>
+                </div>
+              </div>
+              <button onClick={() => setShowShareModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', padding: '6px', cursor: 'pointer', color: '#64748b' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Share URL Box */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Customer Share Link</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={shareUrl}
+                  style={{ flex: 1, padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#ffffff', fontFamily: 'monospace', fontWeight: 600 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareUrl);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                  }}
+                  style={{ background: copySuccess ? '#16a34a' : '#2563eb', color: '#ffffff', border: 'none', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                >
+                  {copySuccess ? <Check size={14} /> : <Copy size={14} />}
+                  {copySuccess ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            </div>
+
+            {/* Share Options Grid */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              
+              {/* Option 1: Native Share Sheet (Share by All Apps) */}
+              {navigator.share && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.share({
+                      title: 'GharKaPaisa Application',
+                      text: `Dear ${customerName || 'Customer'}, please click link to submit your Quick Details (QD) for ${application.product_name || 'application'}:`,
+                      url: shareUrl
+                    }).catch(() => {});
+                  }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(37,99,235,0.2)' }}
+                >
+                  <Share2 size={16} /> Share via All Apps (Native Share Sheet)
+                </button>
+              )}
+
+              {/* Option 2: WhatsApp Share */}
+              <button
+                type="button"
+                onClick={() => {
+                  const msg = encodeURIComponent(`Dear ${customerName || 'Customer'},\n\nPlease click the link below to submit your Quick Details (QD) for ${application.product_name || 'loan application'} with GharKaPaisa:\n\n${shareUrl}\n\nThank you!`);
+                  const phone = customerMobile ? `91${customerMobile.replace(/\D/g, '').slice(-10)}` : '';
+                  window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${msg}`, '_blank');
+                }}
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#25D366', color: '#fff', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                <MessageSquare size={16} /> Share via WhatsApp
+              </button>
+
+              {/* Option 3: Mobile SMS App Share */}
+              <button
+                type="button"
+                onClick={() => {
+                  const msg = encodeURIComponent(`Dear ${customerName || 'Customer'}, click link to submit your details for ${application.product_name || 'application'}: ${shareUrl}`);
+                  const phone = customerMobile ? customerMobile.replace(/\D/g, '').slice(-10) : '';
+                  window.open(`sms:${phone}?body=${msg}`, '_blank');
+                }}
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#0284c7', color: '#fff', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                <Smartphone size={16} /> Send via Mobile SMS App
+              </button>
+
+              {/* Option 4: Dispatch Automatic SMS via MSG91 Gateway */}
+              <button
+                type="button"
+                onClick={handleSendSmsApi}
+                disabled={smsSending}
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', background: '#ea580c', color: '#fff', border: 'none', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                <Send size={16} /> {smsSending ? 'Sending SMS...' : 'Dispatch Automated SMS (MSG91)'}
+              </button>
+
+            </div>
+
+            <div style={{ marginTop: '16px', textAlign: 'right' }}>
+              <button type="button" onClick={() => setShowShareModal(false)} style={{ background: '#f1f5f9', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
