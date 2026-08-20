@@ -239,7 +239,7 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
     }
   };
 
-  const { overview = {}, applications = [], documents = [], timeline = [], notes = [], followups = [], communications = [], activity_logs = [] } = profile || {};
+  const { overview = {}, applications = [], leads = [], documents = [], timeline = [], notes = [], followups = [], communications = [], activity_logs = [], wallet_ledger = [] } = profile || {};
 
   return (
     <div style={{
@@ -287,7 +287,7 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
               {(overview.full_name || 'C')[0]}
             </div>
             <div>
-              <div style={{ fontSize: '12px', color: '#A5B4FC', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>360° Customer Profile</div>
+              <div style={{ fontSize: '12px', color: '#A5B4FC', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>360° Customer Database Profile</div>
               <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: '#FFFFFF' }}>{overview.full_name || 'Loading...'}</h2>
             </div>
           </div>
@@ -309,7 +309,10 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
                   monthly_income: overview.monthly_income || '',
                   employer: overview.employer || '',
                   employment_type: overview.employment_type || 'salaried',
-                  occupation: overview.occupation || ''
+                  occupation: overview.occupation || '',
+                  alternate_mobile: overview.alternate_mobile || '',
+                  nominee_name: overview.nominee_name || '',
+                  nominee_relation: overview.nominee_relation || ''
                 });
                 setEditError('');
                 setIsEditing(true);
@@ -342,7 +345,7 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
           </div>
         </div>
 
-        {/* 9 Profile Tabs Navigation Header */}
+        {/* 10 Profile Tabs Navigation Header */}
         <div style={{
           display: 'flex',
           overflowX: 'auto',
@@ -353,12 +356,14 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
           {[
             { id: 'overview', label: 'Overview', icon: MdPerson },
             { id: 'applications', label: `Applications (${applications.length})`, icon: MdCreditCard },
+            { id: 'leads', label: `Tracked Leads (${leads.length})`, icon: MdBadge },
             { id: 'documents', label: `Documents (${documents.length})`, icon: MdDescription },
             { id: 'timeline', label: `Timeline (${timeline.length})`, icon: MdTimeline },
             { id: 'notes', label: `Notes (${notes.length})`, icon: MdNote },
             { id: 'followups', label: `Follow-ups (${followups.length})`, icon: MdAlarm },
             { id: 'communication', label: `Communication (${communications.length})`, icon: MdChat },
             { id: 'activities', label: 'Activities', icon: MdHistory },
+            { id: 'commission', label: `Commission Ledger (${wallet_ledger.length})`, icon: MdAccountBalanceWallet },
           ].map(tab => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -397,29 +402,43 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
             <>
               {/* TAB 1: OVERVIEW */}
               {activeTab === 'overview' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
                   <div style={{ ...S.card, padding: '20px' }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Personal Info</h3>
+                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Personal & Work Info</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
                       <div>Full Name: <strong>{overview.full_name}</strong></div>
                       <div>Mobile: <strong>{overview.mobile}</strong></div>
+                      <div>Alt Mobile: <strong>{overview.alternate_mobile || 'N/A'}</strong></div>
                       <div>Email: <strong>{overview.email || 'N/A'}</strong></div>
                       <div>Date of Birth: <strong>{overview.dob ? new Date(overview.dob).toLocaleDateString() : 'N/A'}</strong></div>
                       <div>Occupation: <strong>{overview.occupation || 'N/A'}</strong></div>
-                      <div>Monthly Income: <strong>{overview.monthly_income ? `₹${parseFloat(overview.monthly_income).toLocaleString('en-IN')}` : 'N/A'}</strong></div>
+                      <div>Employment Type: <strong style={{ textTransform: 'capitalize' }}>{overview.employment_type || 'Salaried'}</strong></div>
                       <div>Employer: <strong>{overview.employer || 'N/A'}</strong></div>
+                      <div>Monthly Income: <strong>{overview.monthly_income ? `₹${parseFloat(overview.monthly_income).toLocaleString('en-IN')}` : 'N/A'}</strong></div>
                     </div>
                   </div>
 
                   <div style={{ ...S.card, padding: '20px' }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>KYC & Verification</h3>
+                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>KYC & Address Details</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
                       <div>PAN Card: <strong>{overview.pan_number || 'N/A'}</strong></div>
                       <div>Aadhaar (Last 4): <strong>{overview.aadhaar_last4 ? `•••• ${overview.aadhaar_last4}` : 'N/A'}</strong></div>
                       <div>City: <strong>{overview.city || 'N/A'}</strong></div>
                       <div>State: <strong>{overview.state || 'N/A'}</strong></div>
                       <div>Pincode: <strong>{overview.pincode || 'N/A'}</strong></div>
-                      <div>Assigned Partner: <strong>{overview.partner_first_name ? `${overview.partner_first_name} ${overview.partner_last_name || ''}` : 'Direct'}</strong></div>
+                      <div>Nominee Name: <strong>{overview.nominee_name || 'N/A'}</strong></div>
+                      <div>Nominee Relation: <strong>{overview.nominee_relation || 'N/A'}</strong></div>
+                    </div>
+                  </div>
+
+                  <div style={{ ...S.card, padding: '20px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Attribution & Status</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
+                      <div>Pipeline Status: <span style={{ background: `${C.teal}15`, color: C.teal, padding: '3px 8px', borderRadius: '6px', fontWeight: 800, textTransform: 'uppercase', fontSize: '11px' }}>{(overview.pipeline_status || 'new').replace('_', ' ')}</span></div>
+                      <div>Created By / Partner: <strong>{overview.partner_first_name ? `${overview.partner_first_name} ${overview.partner_last_name || ''}` : (overview.created_by_name || 'Direct Customer')}</strong></div>
+                      <div>Partner Code: <strong style={{ color: C.teal }}>{overview.partner_code || 'DIRECT'}</strong></div>
+                      <div>Created On: <strong>{overview.created_at ? new Date(overview.created_at).toLocaleDateString('en-IN') : 'N/A'}</strong></div>
+                      <div>Product Interests: <strong>{Array.isArray(overview.product_interests) && overview.product_interests.length > 0 ? overview.product_interests.join(', ') : 'None specified'}</strong></div>
                     </div>
                   </div>
                 </div>
@@ -784,12 +803,84 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
               {/* TAB 8: ACTIVITIES */}
               {activeTab === 'activities' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {activity_logs.map(log => (
-                    <div key={log.id} style={{ ...S.card, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span><strong>{log.activity_type}</strong> by {log.performer_name || 'System'}</span>
-                      <span style={{ color: C.textLight }}>{new Date(log.created_at).toLocaleString()}</span>
-                    </div>
-                  ))}
+                  {activity_logs.length === 0 ? (
+                    <div style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No audit activities recorded.</div>
+                  ) : (
+                    activity_logs.map(log => (
+                      <div key={log.id} style={{ ...S.card, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span><strong>{log.activity_type}</strong> by {log.performer_name || 'System'}</span>
+                        <span style={{ color: C.textLight }}>{new Date(log.created_at).toLocaleString()}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* TAB 9: TRACKED LEADS */}
+              {activeTab === 'leads' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {leads.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>No separate lead entries logged for this customer.</div>
+                  ) : (
+                    leads.map(ld => (
+                      <div key={ld.id} style={{ ...S.card, padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: C.teal, textTransform: 'uppercase' }}>
+                            {ld.bank_name || 'Bank Partner'} • {(ld.process_by || ld.process_type || 'direct_link').replace('_', ' ').toUpperCase()}
+                          </div>
+                          <div style={{ fontSize: '15px', fontWeight: 800, color: C.text, marginTop: '2px' }}>
+                            {ld.product_name || 'Product Lead'}
+                          </div>
+                          <div style={{ fontSize: '12px', color: C.textMid, marginTop: '4px' }}>
+                            Partner: <strong>{ld.partner_first_name ? `${ld.partner_first_name} ${ld.partner_last_name || ''} (${ld.partner_code || ''})` : 'Direct'}</strong> | Created: {new Date(ld.created_at).toLocaleDateString('en-IN')}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{
+                            background: `${C.teal}18`,
+                            color: C.teal,
+                            padding: '4px 10px',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            textTransform: 'uppercase'
+                          }}>
+                            {ld.status || 'PENDING'}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* TAB 10: COMMISSION & WALLET LEDGER */}
+              {activeTab === 'commission' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {wallet_ledger.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>No payout or commission ledger transactions generated yet for this customer.</div>
+                  ) : (
+                    wallet_ledger.map(tx => (
+                      <div key={tx.id} style={{ ...S.card, padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>
+                            {tx.product_name || 'Application Payout'} (App #{tx.app_number})
+                          </div>
+                          <div style={{ fontSize: '12px', color: C.textLight, marginTop: '2px' }}>
+                            {new Date(tx.created_at).toLocaleString('en-IN')} • Ref: {tx.reference_number || tx.id}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '16px', fontWeight: 800, color: C.green }}>
+                            + ₹{parseFloat(tx.amount || tx.credit || 0).toLocaleString('en-IN')}
+                          </div>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: C.teal, textTransform: 'uppercase' }}>
+                            {tx.status || 'COMPLETED'}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
 

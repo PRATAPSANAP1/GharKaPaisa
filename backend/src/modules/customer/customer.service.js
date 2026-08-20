@@ -130,7 +130,7 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
   if (!customer) return null;
 
   // Parallel fetch for all 360 sub-resources with individual fallback handling
-  const [appsRes, docsRes, timelineRes, notesRes, followupsRes, commsRes, tagsRes, activityRes] = await Promise.all([
+  const [appsRes, leadsRes, docsRes, timelineRes, notesRes, followupsRes, commsRes, tagsRes, activityRes, ledgerRes] = await Promise.all([
     // Applications grouped with product & bank info (LEFT JOINs for max safety)
     query(`
       SELECT a.*, p.name as product_name, p.category as product_category, b.name as bank_name, b.short_code as bank_code
@@ -141,6 +141,21 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
       ORDER BY a.created_at DESC
     `, [customerId]).catch(err => {
       logger.warn(`Error fetching applications for customer ${customerId}:`, err.message);
+      return { rows: [] };
+    }),
+
+    // Leads tracked for this customer
+    query(`
+      SELECT l.*, p.name as product_name, p.category as product_category, b.name as bank_name, b.short_code as bank_code,
+             pr.partner_code, pr.first_name as partner_first_name, pr.last_name as partner_last_name
+      FROM leads l
+      LEFT JOIN products p ON p.id = l.product_id
+      LEFT JOIN banks b ON b.id = p.bank_id
+      LEFT JOIN partner_profiles pr ON pr.id = l.partner_id
+      WHERE l.customer_id = $1 OR l.mobile = (SELECT mobile FROM customers WHERE id = $1)
+      ORDER BY l.created_at DESC
+    `, [customerId]).catch(err => {
+      logger.warn(`Error fetching leads for customer ${customerId}:`, err.message);
       return { rows: [] };
     }),
 
@@ -221,6 +236,19 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
     `, [customerId]).catch(err => {
       logger.warn(`Error fetching activity_logs for customer ${customerId}:`, err.message);
       return { rows: [] };
+    }),
+
+    // Wallet / Commission Ledger entries for this customer's applications
+    query(`
+      SELECT wl.*, a.app_number, p.name as product_name
+      FROM wallet_ledger wl
+      JOIN applications a ON a.id = wl.application_id
+      LEFT JOIN products p ON p.id = a.product_id
+      WHERE a.customer_id = $1
+      ORDER BY wl.created_at DESC
+    `, [customerId]).catch(err => {
+      logger.warn(`Error fetching wallet_ledger for customer ${customerId}:`, err.message);
+      return { rows: [] };
     })
   ]);
 
@@ -267,6 +295,7 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
   return {
     overview: customer,
     applications: appsRes?.rows || [],
+    leads: leadsRes?.rows || [],
     applications_by_category: applicationsByCategory,
     documents: docsRes?.rows || [],
     timeline: timelineRes?.rows || [],
@@ -274,7 +303,8 @@ const get360CustomerProfile = async (customerId, currentUserId = null) => {
     followups: followupsRes?.rows || [],
     communications: commsRes?.rows || [],
     tags: tagsRes?.rows || [],
-    activity_logs: activityRes?.rows || []
+    activity_logs: activityRes?.rows || [],
+    wallet_ledger: ledgerRes?.rows || []
   };
 };
 
