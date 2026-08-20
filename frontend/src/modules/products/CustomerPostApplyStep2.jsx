@@ -18,8 +18,8 @@ export default function CustomerPostApplyStep2() {
   // Form Fields
   const [appNumber, setAppNumber] = useState('');
   const [vkycUrl, setVkycUrl] = useState('');
-  const [salarySlipUrl, setSalarySlipUrl] = useState('');
-  const [panCardUrl, setPanCardUrl] = useState('');
+  const [salaryAmount, setSalaryAmount] = useState('');
+  const [panNumber, setPanNumber] = useState('');
 
   useEffect(() => {
     const fetchPostApplyInfo = async () => {
@@ -29,6 +29,9 @@ export default function CustomerPostApplyStep2() {
         const json = await res.json();
         if (json && json.success && json.data) {
           setBankInfo(json.data);
+          if (json.data.customer) {
+            if (json.data.customer.pan_number) setPanNumber(json.data.customer.pan_number);
+          }
         } else {
           setError(json.message || 'Invalid application link');
         }
@@ -46,9 +49,12 @@ export default function CustomerPostApplyStep2() {
     e.preventDefault();
     if (!appNumber.trim()) return alert('Please enter your Bank Application Reference Number');
 
-    if (bankInfo?.is_sbi_bank) {
-      if (!salarySlipUrl.trim()) return alert('Salary Slip Document / Link is mandatory for SBI Bank applications');
-      if (!panCardUrl.trim()) return alert('PAN Card Document / Link is mandatory for SBI Bank applications');
+    const cleanPan = panNumber.trim().toUpperCase();
+    if (cleanPan) {
+      const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+      if (!panRegex.test(cleanPan)) {
+        return alert('Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).');
+      }
     }
 
     setSubmitting(true);
@@ -59,8 +65,9 @@ export default function CustomerPostApplyStep2() {
         body: JSON.stringify({
           bank_application_number: appNumber.trim(),
           vkyc_url: vkycUrl.trim() || undefined,
-          salary_slip_url: salarySlipUrl.trim() || undefined,
-          pan_card_url: panCardUrl.trim() || undefined
+          salary: salaryAmount ? parseFloat(salaryAmount) : undefined,
+          monthly_income: salaryAmount ? parseFloat(salaryAmount) : undefined,
+          pan_number: cleanPan || undefined
         })
       });
 
@@ -110,7 +117,7 @@ export default function CustomerPostApplyStep2() {
         </div>
         <h2 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 8px' }}>Application Confirmed!</h2>
         <p style={{ fontSize: '14px', color: C.textLight, maxWidth: '400px', lineHeight: 1.5, marginBottom: '24px' }}>
-          Your Bank Application Ref <strong>#{appNumber}</strong> and documents have been recorded. Our verification engine is now tracking your bank status.
+          Your Bank Application Ref <strong>#{appNumber}</strong> has been recorded. Our verification engine is now tracking your bank application status.
         </p>
         <a href="https://gharkapaisa.in" style={{ padding: '12px 24px', background: C.primary, color: '#fff', borderRadius: '12px', fontWeight: 800, textDecoration: 'none', fontSize: '14px' }}>
           Back to GharKaPaisa
@@ -124,11 +131,11 @@ export default function CustomerPostApplyStep2() {
       
       {/* Header */}
       <div style={{ maxWidth: '540px', margin: '0 auto 20px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: bankInfo?.is_sbi_bank ? '#EF444415' : `${C.primary}15`, padding: '6px 14px', borderRadius: '20px', color: bankInfo?.is_sbi_bank ? '#EF4444' : C.primary, fontWeight: 700, fontSize: '12px', marginBottom: '12px' }}>
-          {bankInfo?.is_sbi_bank ? '📌 SBI Bank Strict Rule Verification' : '📋 Post-Application Reference Entry'}
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: `${C.primary}15`, padding: '6px 14px', borderRadius: '20px', color: C.primary, fontWeight: 700, fontSize: '12px', marginBottom: '12px' }}>
+          📋 Quick Details / Application Reference Entry
         </div>
         <h1 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 4px' }}>{bankInfo?.product_name}</h1>
-        <p style={{ fontSize: '13px', color: C.textLight, margin: 0 }}>{bankInfo?.bank_name} • Step 2: Confirmation & Documents</p>
+        <p style={{ fontSize: '13px', color: C.textLight, margin: 0 }}>{bankInfo?.bank_name} • Step 2: Reference & Income Details</p>
       </div>
 
       {/* Form Card */}
@@ -136,7 +143,7 @@ export default function CustomerPostApplyStep2() {
         
         {/* Standard Info Box */}
         <div style={{ background: isDark ? '#27272a' : '#f1f5f9', padding: '12px 16px', borderRadius: '12px', marginBottom: '20px', fontSize: '12.5px', color: C.textLight, lineHeight: 1.5 }}>
-          💡 Enter your bank application reference number below after completing the application on the official bank site.
+          💡 Enter your official bank application reference number below after submitting your application on the bank portal.
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -156,7 +163,7 @@ export default function CustomerPostApplyStep2() {
 
           <div>
             <label style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '6px' }}>
-              Video KYC (VKYC) Link <span style={{ color: C.textLight, fontWeight: 400 }}>(Optional)</span>
+              Bank VKYC Link <span style={{ color: C.textLight, fontWeight: 400 }}>(Optional)</span>
             </label>
             <input
               type="url"
@@ -167,31 +174,32 @@ export default function CustomerPostApplyStep2() {
             />
           </div>
 
-          {/* Salary Slip URL / Doc */}
+          {/* Monthly Income / Salary in numbers */}
           <div>
             <label style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '6px' }}>
-              Salary Slip Document / Link <span style={{ fontWeight: 400 }}>(Optional)</span>
+              Monthly Income / Salary (in numbers ₹) <span style={{ fontWeight: 400 }}>(Optional)</span>
             </label>
             <input
-              type="url"
-              placeholder="https://... (URL to Salary Slip PDF / Image)"
-              value={salarySlipUrl}
-              onChange={(e) => setSalarySlipUrl(e.target.value)}
+              type="number"
+              placeholder="e.g. 50000"
+              value={salaryAmount}
+              onChange={(e) => setSalaryAmount(e.target.value)}
               style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '10px', border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#fff', color: C.text, fontSize: '14px', outline: 'none' }}
             />
           </div>
 
-          {/* PAN Card URL / Doc */}
+          {/* PAN Card Number */}
           <div>
             <label style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '6px' }}>
-              PAN Card Document / Link <span style={{ fontWeight: 400 }}>(Optional)</span>
+              PAN Card Number <span style={{ fontWeight: 400 }}>(Optional)</span>
             </label>
             <input
-              type="url"
-              placeholder="https://... (URL to PAN Card PDF / Image)"
-              value={panCardUrl}
-              onChange={(e) => setPanCardUrl(e.target.value)}
-              style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '10px', border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#fff', color: C.text, fontSize: '14px', outline: 'none' }}
+              type="text"
+              maxLength={10}
+              placeholder="e.g. ABCDE1234F"
+              value={panNumber}
+              onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '10px', border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#fff', color: C.text, fontSize: '14px', fontFamily: 'monospace', fontWeight: 700, outline: 'none' }}
             />
           </div>
 

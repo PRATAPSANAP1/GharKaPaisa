@@ -897,21 +897,24 @@ const getPostApplyDetails = async (req, res, next) => {
   }
 };
 
-/**
- * PATCH /public/apply/:token/post-apply — Step 2: Submit Application Number, VKYC & Document links
- */
 const updatePostApplyDetails = async (req, res, next) => {
   try {
     const { token } = req.params;
-    const { bank_application_number, vkyc_url, salary_slip_url, pan_card_url } = req.body;
+    const {
+      bank_application_number, app_number,
+      vkyc_url,
+      salary_slip_url, salary, monthly_income,
+      pan_card_url, pan, pan_number
+    } = req.body;
 
+    const cleanAppNum = (bank_application_number || app_number || '').toString().trim();
     if (!token) return error(res, 'Token is required', 400);
-    if (!bank_application_number || !bank_application_number.trim()) {
-      return error(res, 'Bank Application Number is required', 400);
+    if (!cleanAppNum) {
+      return error(res, 'Bank Application Reference Number is required', 400);
     }
 
     const { rows: [shareData] } = await query(`
-      SELECT psl.product_id, psl.partner_id, l.id as lead_id, l.customer_id
+      SELECT psl.product_id, psl.partner_id, psl.customer_id, l.id as lead_id, l.customer_id as lead_cust_id
       FROM partner_share_links psl
       LEFT JOIN leads l ON (l.tracking_token = psl.tracking_token OR l.id::text = psl.tracking_token)
       WHERE (psl.tracking_token = $1 OR l.tracking_token = $1)
@@ -920,26 +923,11 @@ const updatePostApplyDetails = async (req, res, next) => {
 
     if (!shareData) return error(res, 'Invalid application token', 404);
 
-    // Verify bank type for mandatory document rules
-    const { rows: [product] } = await query(`
-      SELECT p.id, b.name as bank_name, b.short_code as bank_code
-      FROM products p
-      LEFT JOIN banks b ON b.id = p.bank_id
-      WHERE p.id = $1
-    `, [shareData.product_id]);
-
-    const bankCode = (product?.bank_code || '').toUpperCase();
-    const bankName = (product?.bank_name || '').toUpperCase();
-    const isSbiBank = bankCode === 'SBI' || bankName.includes('SBI') || bankName.includes('STATE BANK');
-
-    if (isSbiBank) {
-      if (!salary_slip_url || !salary_slip_url.trim()) {
-        return error(res, 'Salary Slip is required for SBI Bank applications', 400);
-      }
-      if (!pan_card_url || !pan_card_url.trim()) {
-        return error(res, 'PAN Card Document is required for SBI Bank applications', 400);
-      }
-    }
+    const cleanVkyc = (vkyc_url || '').toString().trim();
+    const cleanPan = (pan_number || pan || '').toString().trim().toUpperCase();
+    const numSalary = (salary || monthly_income) ? parseFloat(salary || monthly_income) : null;
+    const cleanSalarySlipUrl = (salary_slip_url || '').toString().trim();
+    const cleanPanCardUrl = (pan_card_url || '').toString().trim();
 
     // Dynamic column safety check
     try {
@@ -949,26 +937,49 @@ const updatePostApplyDetails = async (req, res, next) => {
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_card_url VARCHAR(500)`);
     } catch (_) {}
 
-    // Update existing application or create/update application reference
+    const targetCustId = shareData.customer_id || shareData.lead_cust_id;
+
+    // Update customer table if PAN or Income provided
+    if (targetCustId) {
+      await query(`
+        UPDATE customers
+        SET pan_number = COALESCE(NULLIF($1, ''), pan_number),
+            monthly_income = COALESCE($2, monthly_income),
+            updated_at = NOW()
+        WHERE id = $3
+      `, [cleanPan, numSalary, targetCustId]);
+    }
+
+    // Update existing lead & application reference
     if (shareData.lead_id) {
       await query(`
         UPDATE leads
-        SET status = 'submitted', pipeline_stage = 'submitted', updated_at = NOW()
+        SET status = 'submitted', pipeline_stage = 'submitted',
+            pan_number = COALESCE(NULLIF($2, ''), pan_number),
+            updated_at = NOW()
         WHERE id = $1
-      `, [shareData.lead_id]);
+      `, [shareData.lead_id, cleanPan]);
 
       await query(`
         UPDATE applications
-        SET bank_application_number = $1, application_number = COALESCE($1, application_number), vkyc_url = $2, salary_slip_url = $3, pan_card_url = $4, status = 'submitted', updated_at = NOW()
-        WHERE lead_id = $5
-      `, [bank_application_number.trim(), vkyc_url || null, salary_slip_url || null, pan_card_url || null, shareData.lead_id]);
+        SET bank_application_number = $1,
+            application_number = COALESCE($1, application_number),
+            vkyc_url = COALESCE(NULLIF($2, ''), vkyc_url),
+            salary_slip_url = COALESCE(NULLIF($3, ''), salary_slip_url),
+            pan_card_url = COALESCE(NULLIF($4, ''), pan_card_url),
+            pan_number = COALESCE(NULLIF($5, ''), pan_number),
+            monthly_salary = COALESCE($6, monthly_salary),
+            status = 'submitted',
+            updated_at = NOW()
+        WHERE lead_id = $7
+      `, [cleanAppNum, cleanVkyc || null, cleanSalarySlipUrl || null, cleanPanCardUrl || null, cleanPan || null, numSalary, shareData.lead_id]);
     }
 
     return success(res, {
       token,
       product_id: shareData.product_id,
-      customer_id: shareData.customer_id,
-      bank_application_number: bank_application_number.trim(),
+      customer_id: targetCustId || null,
+      bank_application_number: cleanAppNum,
       message: 'Bank application reference and QD form details recorded successfully.'
     });
   } catch (err) {
