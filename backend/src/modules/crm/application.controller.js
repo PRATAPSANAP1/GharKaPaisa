@@ -2771,19 +2771,29 @@ const deleteApplication = async (req, res, next) => {
     if (!id) return error(res, 'Application ID is required', 400);
 
     let { rows: [app] } = await client.query(
-      `SELECT id, partner_id, customer_id, lead_id, app_number, status FROM applications WHERE id = $1`, 
+      `SELECT id, partner_id, customer_id, lead_id, app_number, status FROM applications WHERE id = $1 OR lead_id = $1 LIMIT 1`, 
       [id]
     );
 
     let isLeadOnly = false;
-    if (!app) {
+    let targetAppId = null;
+    let targetLeadId = null;
+    let targetCustomerId = null;
+
+    if (app) {
+      targetAppId = app.id;
+      targetLeadId = app.lead_id || id;
+      targetCustomerId = app.customer_id;
+    } else {
       const { rows: [leadRec] } = await client.query(
-        `SELECT id, partner_id, customer_id, id as lead_id, COALESCE(NULLIF(lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(id::text, 1, 8)))) as app_number, status FROM leads WHERE id = $1`,
+        `SELECT id, partner_id, customer_id, id as lead_id, COALESCE(NULLIF(lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(id::text, 1, 8)))) as app_number, status FROM leads WHERE id = $1 OR application_id = $1 LIMIT 1`,
         [id]
       );
       if (leadRec) {
         app = leadRec;
         isLeadOnly = true;
+        targetLeadId = leadRec.id || id;
+        targetCustomerId = leadRec.customer_id;
       }
     }
 
@@ -2796,9 +2806,6 @@ const deleteApplication = async (req, res, next) => {
     if (userRole !== 'SUPER_ADMIN' && userRole !== 'ADMIN') {
       return error(res, 'Access denied: Only Super Admin is authorized to delete application records', 403);
     }
-
-    const targetCustomerId = app.customer_id || null;
-    const targetLeadId = app.lead_id || null;
 
     await client.query('BEGIN');
 
@@ -2813,35 +2820,49 @@ const deleteApplication = async (req, res, next) => {
       }
     };
 
+    const appIdsToDelete = [id, targetAppId].filter(Boolean);
+    const leadIdsToDelete = [id, targetLeadId].filter(Boolean);
+
     // 1. Delete physical_application_details
-    await safeSubDelete(`DELETE FROM physical_application_details WHERE application_id = $1`, [id]);
+    for (const aId of appIdsToDelete) {
+      await safeSubDelete(`DELETE FROM physical_application_details WHERE application_id = $1`, [aId]);
+    }
 
     // 2. Delete customer_access_tokens
-    await safeSubDelete(`DELETE FROM customer_access_tokens WHERE application_id = $1 OR customer_id = $2`, [id, targetCustomerId]);
+    for (const aId of appIdsToDelete) {
+      await safeSubDelete(`DELETE FROM customer_access_tokens WHERE application_id = $1 OR customer_id = $2`, [aId, targetCustomerId]);
+    }
 
     // 3. Delete partner_share_links
-    await safeSubDelete(`DELETE FROM partner_share_links WHERE application_id = $1 OR lead_id = $1 OR lead_id = $2`, [id, targetLeadId]);
+    await safeSubDelete(`DELETE FROM partner_share_links WHERE application_id = $1 OR application_id = $2 OR lead_id = $1 OR lead_id = $2`, [targetAppId, targetLeadId]);
 
     // 4. Delete application_notes
-    await safeSubDelete(`DELETE FROM application_notes WHERE application_id = $1`, [id]);
+    for (const aId of appIdsToDelete) {
+      await safeSubDelete(`DELETE FROM application_notes WHERE application_id = $1`, [aId]);
+    }
 
     // 5. Delete application_timeline / application_timelines
-    await safeSubDelete(`DELETE FROM application_timeline WHERE application_id = $1`, [id]);
-    await safeSubDelete(`DELETE FROM application_timelines WHERE application_id = $1`, [id]);
+    for (const aId of appIdsToDelete) {
+      await safeSubDelete(`DELETE FROM application_timeline WHERE application_id = $1`, [aId]);
+      await safeSubDelete(`DELETE FROM application_timelines WHERE application_id = $1`, [aId]);
+    }
 
     // 6. Delete application_documents
-    await safeSubDelete(`DELETE FROM application_documents WHERE application_id = $1`, [id]);
+    for (const aId of appIdsToDelete) {
+      await safeSubDelete(`DELETE FROM application_documents WHERE application_id = $1`, [aId]);
+    }
 
     // 7. Delete application_history
-    await safeSubDelete(`DELETE FROM application_history WHERE application_id = $1`, [id]);
+    for (const aId of appIdsToDelete) {
+      await safeSubDelete(`DELETE FROM application_history WHERE application_id = $1`, [aId]);
+    }
 
-    // 8. Delete wallet_transactions / wallet_ledger / commission_ledger linked to application
-    await safeSubDelete(`DELETE FROM wallet_transactions WHERE application_id = $1`, [id]);
-    await safeSubDelete(`DELETE FROM wallet_ledger WHERE application_id = $1 OR lead_id = $1 OR lead_id = $2`, [id, targetLeadId]);
-    await safeSubDelete(`DELETE FROM commission_ledger WHERE application_id = $1 OR lead_id = $1 OR lead_id = $2`, [id, targetLeadId]);
+    // 8. Delete wallet_transactions / wallet_ledger / commission_ledger linked to application or lead
+    await safeSubDelete(`DELETE FROM wallet_transactions WHERE application_id = $1 OR application_id = $2`, [targetAppId, targetLeadId]);
+    await safeSubDelete(`DELETE FROM wallet_ledger WHERE application_id = $1 OR application_id = $2 OR lead_id = $1 OR lead_id = $2`, [targetAppId, targetLeadId]);
+    await safeSubDelete(`DELETE FROM commission_ledger WHERE application_id = $1 OR application_id = $2 OR lead_id = $1 OR lead_id = $2`, [targetAppId, targetLeadId]);
 
     // 9. Cascade delete lead related records
-    const leadIdsToDelete = [id, targetLeadId].filter(Boolean);
     for (const lId of leadIdsToDelete) {
       await safeSubDelete(`DELETE FROM lead_documents WHERE lead_id = $1`, [lId]);
       await safeSubDelete(`DELETE FROM lead_timeline WHERE lead_id = $1`, [lId]);
@@ -2855,24 +2876,22 @@ const deleteApplication = async (req, res, next) => {
 
     // 10. Delete leads table records
     await safeSubDelete(
-      `DELETE FROM leads WHERE id = $1 OR id = $2 OR application_id = $1 OR (app_number IS NOT NULL AND app_number = $3)`,
-      [id, targetLeadId, app.app_number]
+      `DELETE FROM leads WHERE id = $1 OR id = $2 OR application_id = $1 OR application_id = $2 OR (app_number IS NOT NULL AND app_number = $3)`,
+      [targetAppId, targetLeadId, app.app_number]
     );
 
     // 11. Delete main applications record
-    if (!isLeadOnly) {
-      await client.query(`DELETE FROM applications WHERE id = $1`, [id]);
-    }
+    await safeSubDelete(`DELETE FROM applications WHERE id = $1 OR id = $2 OR lead_id = $1 OR lead_id = $2`, [targetAppId, targetLeadId]);
 
-    // 12. Delete Customer Details from database
+    // 12. Delete Customer Details from database if no other apps/leads remain
     if (targetCustomerId) {
       const { rows: otherApps } = await client.query(
-        `SELECT id FROM applications WHERE customer_id = $1 AND id != $2 LIMIT 1`,
-        [targetCustomerId, id]
+        `SELECT id FROM applications WHERE customer_id = $1 AND id != $2 AND id != $3 LIMIT 1`,
+        [targetCustomerId, targetAppId || id, targetLeadId || id]
       );
       const { rows: otherLeads } = await client.query(
         `SELECT id FROM leads WHERE customer_id = $1 AND id != $2 AND id != $3 LIMIT 1`,
-        [targetCustomerId, id, targetLeadId]
+        [targetCustomerId, targetAppId || id, targetLeadId || id]
       );
 
       if (otherApps.length === 0 && otherLeads.length === 0) {
