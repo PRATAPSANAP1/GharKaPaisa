@@ -2,10 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getApiV1Url } from '../../config/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuthStore } from '../../app/store/authStore';
 
 export default function CustomerPostApplyStep2() {
   const { token } = useParams();
   const { C, isDark } = useTheme();
+
+  // Auth User check (Admin / SuperAdmin vs Partner)
+  const userFromStore = useAuthStore((state) => state.user);
+  const localUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{}');
+    } catch (_) {
+      return {};
+    }
+  })();
+  const currentUser = userFromStore || localUser || {};
+  const userRole = (currentUser?.role || '').toString().toUpperCase();
+
+  const isAdminOrSuperAdmin = [
+    'SUPER_ADMIN', 'ADMIN', 'EMPLOYEE', 'SUPERADMIN',
+    'CRM_ADMIN', 'OPERATIONS', 'MANAGEMENT'
+  ].includes(userRole);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,13 +44,13 @@ export default function CustomerPostApplyStep2() {
   const [address, setAddress] = useState('');
   const [motherName, setMotherName] = useState('');
 
-  // Section 2: Operational Remarks & Stages
+  // Section 2: Operational Remarks & Stages (Admin/SuperAdmin only editable)
   const [softApprovalStatus, setSoftApprovalStatus] = useState('Approval-income 25k');
   const [vkycStage, setVkycStage] = useState('VKYC Pending');
   const [iqaStage, setIqaStage] = useState('IQA Pending');
   const [dispatchStatus, setDispatchStatus] = useState('E-sign Pending');
 
-  // Section 3: Bank Reference & Final Stage
+  // Section 3: Bank Reference & Final Stage (Admin/SuperAdmin only editable for Final Status & Remarks)
   const [appNumber, setAppNumber] = useState('');
   const [vkycUrl, setVkycUrl] = useState('');
   const [finalStatus, setFinalStatus] = useState('In Process');
@@ -98,29 +116,35 @@ export default function CustomerPostApplyStep2() {
 
     setSubmitting(true);
     try {
+      const payload = {
+        customer_mobile: customerMobile.trim(),
+        customer_name: customerName.trim(),
+        dob: dob.trim(),
+        customer_email: customerEmail.trim(),
+        pan_number: cleanPan,
+        company_name: companyName.trim(),
+        designation: designation.trim(),
+        address: address.trim(),
+        mother_name: motherName.trim(),
+        bank_application_number: appNumber.trim(),
+        vkyc_url: vkycUrl.trim()
+      };
+
+      // Only include operational and final stage edits if user is Admin/SuperAdmin
+      if (isAdminOrSuperAdmin) {
+        payload.soft_approval_status = softApprovalStatus;
+        payload.vkyc_stage = vkycStage;
+        payload.iqa_stage = iqaStage;
+        payload.dispatch_status = dispatchStatus;
+        payload.final_status = finalStatus;
+        payload.decline_reason = declineReason.trim();
+        payload.eligible_reqd = eligibleReqd;
+      }
+
       const res = await fetch(`${getApiV1Url()}/public/apply/${token}/post-apply`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customer_mobile: customerMobile.trim(),
-          customer_name: customerName.trim(),
-          dob: dob.trim(),
-          customer_email: customerEmail.trim(),
-          pan_number: cleanPan,
-          company_name: companyName.trim(),
-          designation: designation.trim(),
-          address: address.trim(),
-          mother_name: motherName.trim(),
-          soft_approval_status: softApprovalStatus,
-          vkyc_stage: vkycStage,
-          iqa_stage: iqaStage,
-          dispatch_status: dispatchStatus,
-          bank_application_number: appNumber.trim(),
-          vkyc_url: vkycUrl.trim(),
-          final_status: finalStatus,
-          decline_reason: declineReason.trim(),
-          eligible_reqd: eligibleReqd
-        })
+        body: JSON.stringify(payload)
       });
 
       const json = await res.json();
@@ -141,6 +165,7 @@ export default function CustomerPostApplyStep2() {
   const cardBg = isDark ? '#18181b' : '#ffffff';
   const border = isDark ? '#27272a' : '#e2e8f0';
   const inputBg = isDark ? '#27272a' : '#ffffff';
+  const disabledBg = isDark ? '#1c1c1f' : '#f1f5f9';
 
   if (loading) {
     return (
@@ -170,7 +195,7 @@ export default function CustomerPostApplyStep2() {
         </div>
         <h2 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 8px' }}>Application Details Submitted!</h2>
         <p style={{ fontSize: '14px', color: C.textLight, maxWidth: '440px', lineHeight: 1.5, marginBottom: '24px' }}>
-          All QD details, processing remarks, and status details for <strong>{bankInfo?.product_name || 'Application'}</strong> have been successfully updated.
+          Quick Details (QD) for <strong>{bankInfo?.product_name || 'Application'}</strong> have been successfully updated.
         </p>
         <a href="https://gharkapaisa.in" style={{ padding: '12px 24px', background: C.primary, color: '#fff', borderRadius: '12px', fontWeight: 800, textDecoration: 'none', fontSize: '14px' }}>
           Back to Home
@@ -192,6 +217,14 @@ export default function CustomerPostApplyStep2() {
     transition: 'border 0.2s ease'
   };
 
+  const disabledInputStyle = {
+    ...inputStyle,
+    background: disabledBg,
+    color: isDark ? '#a1a1aa' : '#64748b',
+    cursor: 'not-allowed',
+    opacity: 0.9
+  };
+
   const labelStyle = {
     fontSize: '12px',
     fontWeight: 700,
@@ -209,7 +242,7 @@ export default function CustomerPostApplyStep2() {
     borderBottom: `1px solid ${border}`,
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
+    justifyContent: 'space-between'
   };
 
   return (
@@ -218,10 +251,10 @@ export default function CustomerPostApplyStep2() {
       {/* Header Banner */}
       <div style={{ maxWidth: '720px', margin: '0 auto 24px', textAlign: 'center' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: `${C.primary}15`, padding: '6px 14px', borderRadius: '20px', color: C.primary, fontWeight: 700, fontSize: '12px', marginBottom: '12px' }}>
-          📋 Post-Apply Master QD & Remark Form
+          📋 Lead Punching • Quick Details (QD) Form
         </div>
         <h1 style={{ fontSize: '24px', fontWeight: 900, margin: '0 0 4px' }}>{bankInfo?.product_name}</h1>
-        <p style={{ fontSize: '13px', color: C.textLight, margin: 0 }}>{bankInfo?.bank_name} • Complete Lead Quick Details & Status Remarks</p>
+        <p style={{ fontSize: '13px', color: C.textLight, margin: 0 }}>{bankInfo?.bank_name} • Partner Lead Punching Quick Details</p>
       </div>
 
       {/* Main Unified Form Container */}
@@ -232,7 +265,12 @@ export default function CustomerPostApplyStep2() {
           {/* SECTION 1: Customer Quick Details (QD) */}
           <div>
             <div style={sectionHeaderStyle}>
-              <span>👤</span> <span>Customer Quick Details (QD)</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>👤</span> <span>Customer Quick Details (QD)</span>
+              </div>
+              <span style={{ fontSize: '11px', background: '#10B98115', color: '#10B981', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
+                Partner Editable
+              </span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
@@ -343,16 +381,22 @@ export default function CustomerPostApplyStep2() {
           {/* SECTION 2: Operational Remarks & Processing Stage */}
           <div>
             <div style={sectionHeaderStyle}>
-              <span>⚙️</span> <span>Operational Remarks & Processing Stages</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>⚙️</span> <span>Operational Remarks & Processing Stages</span>
+              </div>
+              <span style={{ fontSize: '11px', background: isAdminOrSuperAdmin ? '#3B82F615' : '#F59E0B15', color: isAdminOrSuperAdmin ? '#3B82F6' : '#F59E0B', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
+                {isAdminOrSuperAdmin ? 'Admin Editable' : '🔒 Read-Only for Partner'}
+              </span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
               <div>
                 <label style={labelStyle}>Soft Approval Status</label>
                 <select
+                  disabled={!isAdminOrSuperAdmin}
                   value={softApprovalStatus}
                   onChange={(e) => setSoftApprovalStatus(e.target.value)}
-                  style={inputStyle}
+                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
                 >
                   <option value="Approval-income 25k">Approval-income 25k</option>
                   <option value="Approval-income 30k">Approval-income 30k</option>
@@ -363,9 +407,10 @@ export default function CustomerPostApplyStep2() {
               <div>
                 <label style={labelStyle}>Vkyc Stage</label>
                 <select
+                  disabled={!isAdminOrSuperAdmin}
                   value={vkycStage}
                   onChange={(e) => setVkycStage(e.target.value)}
-                  style={inputStyle}
+                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
                 >
                   <option value="VKYC Pending">VKYC Pending</option>
                   <option value="VKYC Complete">VKYC Complete</option>
@@ -376,9 +421,10 @@ export default function CustomerPostApplyStep2() {
               <div>
                 <label style={labelStyle}>IQA Stage</label>
                 <select
+                  disabled={!isAdminOrSuperAdmin}
                   value={iqaStage}
                   onChange={(e) => setIqaStage(e.target.value)}
-                  style={inputStyle}
+                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
                 >
                   <option value="IQA Sent">IQA Sent</option>
                   <option value="IQA Complete">IQA Complete</option>
@@ -391,9 +437,10 @@ export default function CustomerPostApplyStep2() {
               <div>
                 <label style={labelStyle}>Dispatch Status</label>
                 <select
+                  disabled={!isAdminOrSuperAdmin}
                   value={dispatchStatus}
                   onChange={(e) => setDispatchStatus(e.target.value)}
-                  style={inputStyle}
+                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
                 >
                   <option value="Dispatch Done">Dispatch Done</option>
                   <option value="WCP Stage">WCP Stage</option>
@@ -408,7 +455,9 @@ export default function CustomerPostApplyStep2() {
           {/* SECTION 3: Bank Reference & Final Stage */}
           <div>
             <div style={sectionHeaderStyle}>
-              <span>🏦</span> <span>Bank Reference & Final Application Stage</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>🏦</span> <span>Bank Reference & Final Application Stage</span>
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
@@ -435,11 +484,15 @@ export default function CustomerPostApplyStep2() {
               </div>
 
               <div>
-                <label style={labelStyle}>Current Stage / Final Status</label>
+                <label style={labelStyle}>
+                  Current Stage / Final Status
+                  {!isAdminOrSuperAdmin && <span style={{ color: '#F59E0B', marginLeft: '6px', fontSize: '11px' }}>(Read-Only)</span>}
+                </label>
                 <select
+                  disabled={!isAdminOrSuperAdmin}
                   value={finalStatus}
                   onChange={(e) => setFinalStatus(e.target.value)}
-                  style={inputStyle}
+                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
                 >
                   <option value="App File Generated (Approved)">App File Generated (Approved)</option>
                   <option value="Decline">Decline</option>
@@ -449,11 +502,15 @@ export default function CustomerPostApplyStep2() {
               </div>
 
               <div>
-                <label style={labelStyle}>Eligible for Re-QD</label>
+                <label style={labelStyle}>
+                  Eligible for Re-QD
+                  {!isAdminOrSuperAdmin && <span style={{ color: '#F59E0B', marginLeft: '6px', fontSize: '11px' }}>(Read-Only)</span>}
+                </label>
                 <select
+                  disabled={!isAdminOrSuperAdmin}
                   value={eligibleReqd}
                   onChange={(e) => setEligibleReqd(e.target.value)}
-                  style={inputStyle}
+                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
                 >
                   <option value="Yes">Yes</option>
                   <option value="No">No</option>
@@ -464,14 +521,17 @@ export default function CustomerPostApplyStep2() {
             {/* Decline Reason Remark (shown if Decline selected) */}
             {finalStatus === 'Decline' && (
               <div style={{ marginTop: '14px' }}>
-                <label style={labelStyle}>Decline Reason Remark *</label>
+                <label style={labelStyle}>
+                  Decline Reason Remark
+                  {!isAdminOrSuperAdmin && <span style={{ color: '#F59E0B', marginLeft: '6px', fontSize: '11px' }}>(Read-Only)</span>}
+                </label>
                 <textarea
                   rows={2}
-                  required
-                  placeholder="Please enter reason for application decline..."
+                  disabled={!isAdminOrSuperAdmin}
+                  placeholder="Reason for application decline..."
                   value={declineReason}
                   onChange={(e) => setDeclineReason(e.target.value)}
-                  style={{ ...inputStyle, resize: 'vertical' }}
+                  style={{ ...(isAdminOrSuperAdmin ? inputStyle : disabledInputStyle), resize: 'vertical' }}
                 />
               </div>
             )}
@@ -494,7 +554,7 @@ export default function CustomerPostApplyStep2() {
               boxShadow: '0 4px 14px rgba(0,0,0,0.1)'
             }}
           >
-            {submitting ? 'Submitting Form...' : 'Save & Confirm All Details →'}
+            {submitting ? 'Submitting Form...' : 'Save & Confirm Details →'}
           </button>
         </form>
       </div>

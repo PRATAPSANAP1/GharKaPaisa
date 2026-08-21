@@ -945,6 +945,7 @@ const getPostApplyDetails = async (req, res, next) => {
       token,
       lead_id: shareData.lead_id || null,
       application_id: shareData.application_id || null,
+      process_type: shareData.process_type || 'lead_punching',
       product_id: product?.id,
       product_name: product?.name || 'Credit Card / Loan',
       bank_name: product?.bank_name || 'Bank',
