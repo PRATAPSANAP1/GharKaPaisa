@@ -230,7 +230,19 @@ export default function PartnerAddLead() {
         if (leadData.otp_required) {
           setPendingLead(leadData);
           setShowOtpModal(true);
-        } else if (processType === 'linked_share' || processType === 'physical_process') {
+        } else if (processType === 'physical_process') {
+          const token = leadData?.tracking_token || leadData?.token || leadData?.app_id || leadData?.id;
+          const uploadUrl = token ? `${window.location.origin}/physical-application/${token}` : (leadData?.share_url || directBankUrl);
+          const shareMsg = `Hello ${customerName.trim()},\n\nPlease fill your required customer details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n${uploadUrl}\n\nShared via GharKaPaisa.`;
+          const finalWaUrl = leadData?.whatsapp_url || `https://wa.me/91${mobile.trim()}?text=${encodeURIComponent(shareMsg)}`;
+          
+          setShareResult({
+            ...leadData,
+            share_url: uploadUrl,
+            whatsapp_url: finalWaUrl
+          });
+          window.open(finalWaUrl, '_blank');
+        } else if (processType === 'linked_share') {
           const finalShareUrl = leadData?.share_url || directBankUrl;
           const shareMsg = `Apply for ${selectedProd?.name || 'this product'} directly on official bank portal: ${finalShareUrl}`;
           const finalWaUrl = leadData?.whatsapp_url || `https://wa.me/91${mobile.trim()}?text=${encodeURIComponent(shareMsg)}`;

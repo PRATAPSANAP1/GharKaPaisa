@@ -196,6 +196,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   // Physical Process Detail Sheet Modal state
   const [showPhysicalSheetModal, setShowPhysicalSheetModal] = useState(false);
   const [physicalSheetData, setPhysicalSheetData] = useState(null);
+  const [copiedPhysicalNotice, setCopiedPhysicalNotice] = useState(false);
 
   // Benefits & Compare state
   const [showBenefitsProduct, setShowBenefitsProduct] = useState(null);
@@ -323,15 +324,17 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         alert(`✅ Opening direct bank application portal for ${selectedProduct.name}...`);
       } else if (processType === 'physical_process') {
         const cleanMobile = mobile.trim().replace(/\D/g, '');
-        const shareUrl = appData?.share_url || appData?.whatsapp_url || `${window.location.origin}/partner/applications`;
-        const waMsg = `Hello ${customerName.trim()},\n\nPlease fill your application details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n${shareUrl}\n\nShared via GharKaPaisa.`;
-        const waUrl = `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(waMsg)}`;
+        const token = appData?.tracking_token || appData?.token || appData?.application_id || appData?.app_id || appData?.id;
+        const uploadUrl = (token ? `${window.location.origin}/physical-application/${token}` : null) || appData?.share_url || `${window.location.origin}/partner/applications`;
+        const waMsg = `Hello ${customerName.trim()},\n\nPlease fill your required customer details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n${uploadUrl}\n\nShared via GharKaPaisa.`;
+        const waUrl = appData?.whatsapp_url || `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(waMsg)}`;
 
         setPhysicalSheetData({
           customerName: customerName.trim(),
           mobile: mobile.trim(),
-          shareUrl: shareUrl,
+          shareUrl: uploadUrl,
           whatsappUrl: waUrl,
+          token: token,
           app: appData
         });
         setShowPhysicalSheetModal(true);
@@ -2360,8 +2363,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
               <button
                 type="button"
                 onClick={() => {
-                  navigator.clipboard.writeText(physicalSheetData.shareUrl || physicalSheetData.whatsappUrl);
-                  alert('Upload link copied to clipboard!');
+                  const linkToCopy = physicalSheetData.shareUrl || physicalSheetData.whatsappUrl;
+                  navigator.clipboard.writeText(linkToCopy);
+                  setCopiedPhysicalNotice(true);
+                  setTimeout(() => setCopiedPhysicalNotice(false), 2500);
                 }}
                 style={{
                   padding: '12px 16px',
@@ -2378,14 +2383,19 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                   gap: '8px'
                 }}
               >
-                🔗 Copy Customer Upload Link
+                🔗 {copiedPhysicalNotice ? '✓ Customer Upload Link Copied!' : 'Copy Customer Upload Link'}
               </button>
 
               <button
                 type="button"
                 onClick={() => {
                   setShowPhysicalSheetModal(false);
-                  window.location.href = '/partner/applications';
+                  const token = physicalSheetData.token || physicalSheetData.app?.tracking_token || physicalSheetData.app?.token || physicalSheetData.app?.id;
+                  if (token) {
+                    window.open(`/physical-application/${token}`, '_blank');
+                  } else {
+                    window.location.href = '/partner/applications';
+                  }
                 }}
                 style={{
                   padding: '12px 16px',

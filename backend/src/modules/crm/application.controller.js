@@ -2026,13 +2026,20 @@ const submitPartnerApplication = async (req, res, next) => {
 
     const baseUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
 
-    if (['linked_share', 'customer_sell'].includes(process_type)) {
+    if (['linked_share', 'customer_sell', 'physical_process'].includes(process_type)) {
       const crypto = require('crypto');
       const trackingToken = crypto.randomBytes(10).toString('hex');
-      const directBankUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url;
-      shareUrl = directBankUrl || `${baseUrl}/share/${trackingToken}`;
-      const msg = encodeURIComponent(`Hello ${trimmedName},\n\nYou can apply for ${product.name} with ${product.bank_name || 'Bank'} using your official partner application link below:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
-      whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
+      
+      if (process_type === 'physical_process') {
+        shareUrl = `${baseUrl}/physical-application/${trackingToken}`;
+        const msg = encodeURIComponent(`Hello ${trimmedName},\n\nPlease fill your required customer details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
+        whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
+      } else {
+        const directBankUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url;
+        shareUrl = directBankUrl || `${baseUrl}/share/${trackingToken}`;
+        const msg = encodeURIComponent(`Hello ${trimmedName},\n\nYou can apply for ${product.name} with ${product.bank_name || 'Bank'} using your official partner application link below:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
+        whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
+      }
 
       try {
         await client.query('SAVEPOINT share_link_sp');
