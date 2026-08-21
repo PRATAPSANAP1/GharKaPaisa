@@ -704,26 +704,38 @@ export default function PhysicalApplicationForm() {
             </>
           )}
 
-          {/* ═══ STEP 2: APPCODE & VKYC STAGE ═══ */}
+          {/* ═══ STEP 2: APPLICATION REMARK & STAGE TRACKING FORM ═══ */}
           {activeTab === 'step2' && (
             <>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4 }}>
-                ⚙️ {txt('appcodeVkyc')}
+                ⚙️ Application Remark & Stage Tracking Form
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>{txt('appcodeStatus')}</label>
-                  <select
-                    value={form.appcode_status}
-                    onChange={e => handleChange('appcode_status', e.target.value)}
+                  <label style={labelStyle}>{txt('appNumberBank')}</label>
+                  <input
+                    type="text"
+                    value={form.bank_ref_number}
+                    onChange={e => handleChange('bank_ref_number', e.target.value)}
+                    placeholder={txt('appNumberBankPlace')}
                     style={inputStyle}
-                  >
-                    <option value="Appcode Pending">1. Appcode Pending</option>
-                    <option value="Appcode Submit">2. Appcode Submit</option>
-                  </select>
+                  />
                 </div>
 
+                <div>
+                  <label style={labelStyle}>{txt('vkycUrl')}</label>
+                  <input
+                    type="text"
+                    value={form.vkyc_url}
+                    onChange={e => handleChange('vkyc_url', e.target.value)}
+                    placeholder={txt('vkycUrlPlace')}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={labelStyle}>{txt('softApprovalStatus')}</label>
                   <select
@@ -736,22 +748,54 @@ export default function PhysicalApplicationForm() {
                     <option value="Approval-NSDP-Cibil based">3. Approval-NSDP-Cibil based</option>
                   </select>
                 </div>
+
+                <div>
+                  <label style={labelStyle}>{txt('vkycStage')}</label>
+                  <select
+                    value={form.vkyc_stage}
+                    onChange={e => handleChange('vkyc_stage', e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="VKYC Pending">1. VKYC Pending</option>
+                    <option value="VKYC Complete">2. VKYC Complete</option>
+                    <option value="VKYC Failed">3. VKYC Failed</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label style={labelStyle}>{txt('vkycStage')}</label>
-                <select
-                  value={form.vkyc_stage}
-                  onChange={e => handleChange('vkyc_stage', e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="VKYC Pending">1. VKYC Pending</option>
-                  <option value="VKYC Complete">2. VKYC Complete</option>
-                  <option value="VKYC Failed">3. VKYC Failed</option>
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={labelStyle}>{txt('iqaStage')}</label>
+                  <select
+                    value={form.iqa_stage}
+                    onChange={e => handleChange('iqa_stage', e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="IQA SENT">1. IQA SENT</option>
+                    <option value="IQA COMPLETE">2. IQA COMPLETE</option>
+                    <option value="IQA PENDING">3. IQA PENDING</option>
+                    <option value="BLAZE CONTINUE">4. BLAZE CONTINUE</option>
+                    <option value="BLAZE DECLINE">5. BLAZE DECLINE</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={labelStyle}>{txt('dispatchStatus')}</label>
+                  <select
+                    value={form.dispatch_status}
+                    onChange={e => handleChange('dispatch_status', e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="DISPATCH DONE">1. DISPATCH DONE</option>
+                    <option value="WCP STAGE">2. WCP STAGE</option>
+                    <option value="E-sign Done">3. E-sign Done</option>
+                    <option value="E-sign Pending">4. E-sign Pending</option>
+                    <option value="RTB(ERROR)">5. RTB(ERROR)</option>
+                  </select>
+                </div>
               </div>
 
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={() => setActiveTab('step1')}
@@ -772,26 +816,50 @@ export default function PhysicalApplicationForm() {
                   <MdNavigateBefore size={20} /> {txt('backStep')} Step 1
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('step3')}
-                  style={{
-                    padding: '14px 28px',
-                    borderRadius: '16px',
-                    border: 'none',
-                    background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
-                    color: '#ffffff',
-                    fontWeight: 900,
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    boxShadow: `0 6px 20px ${C.primary}35`
-                  }}
-                >
-                  {txt('nextStep')} 3: IQA & Dispatch <MdNavigateNext size={20} />
-                </button>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    style={{
+                      padding: '14px 24px',
+                      borderRadius: '16px',
+                      border: 'none',
+                      background: '#10b981',
+                      color: '#ffffff',
+                      fontWeight: 900,
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      boxShadow: '0 6px 20px rgba(16, 185, 129, 0.35)'
+                    }}
+                  >
+                    {submitting ? 'Submitting...' : 'Submit Details'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('step3')}
+                    style={{
+                      padding: '14px 28px',
+                      borderRadius: '16px',
+                      border: 'none',
+                      background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
+                      color: '#ffffff',
+                      fontWeight: 900,
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      boxShadow: `0 6px 20px ${C.primary}35`
+                    }}
+                  >
+                    {txt('nextStep')} 3: IQA & Dispatch <MdNavigateNext size={20} />
+                  </button>
+                </div>
               </div>
             </>
           )}

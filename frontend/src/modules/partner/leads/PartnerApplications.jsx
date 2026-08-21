@@ -86,6 +86,17 @@ export default function PartnerApplications() {
     );
   };
 
+  const shouldHideFinalButton = (procBy, procType) => {
+    const p = String(procBy || procType || '').toLowerCase();
+    if (p.includes('share') || p.includes('linked_share') || p.includes('share_link')) {
+      return true;
+    }
+    if (isPartnerRole && (p.includes('punch') || p.includes('lead_punching') || p.includes('punching'))) {
+      return true;
+    }
+    return false;
+  };
+
   const border = isDark ? '#1f1f1f' : C.border;
   const cardBg = isDark ? '#0f0f0f' : '#ffffff';
   const pageBg = isDark ? '#000000' : C.bg;
@@ -902,7 +913,7 @@ export default function PartnerApplications() {
                         style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                         ⚙️ Remark
                       </button>
-                      {!(isPartnerRole && isPunchLeadProcess(app.process_by, app.process_type)) && (
+                      {!shouldHideFinalButton(app.process_by, app.process_type) && (
                         <button onClick={() => handleOpenFinalModal(app)}
                           style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                           🏦 Final
@@ -1032,7 +1043,7 @@ export default function PartnerApplications() {
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               ⚙️ Remark
                             </button>
-                            {!(isPartnerRole && isPunchLeadProcess(app.process_by, app.process_type)) && (
+                            {!shouldHideFinalButton(app.process_by, app.process_type) && (
                               <button onClick={() => handleOpenFinalModal(app)}
                                 style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                 🏦 Final
