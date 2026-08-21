@@ -706,21 +706,31 @@ export default function PartnerApplications() {
       {/* ── Analytics Funnel Grid (Max 5 Cards per row) ── */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 14 }}>
         {[
-          { key: '', label: 'Total Leads', val: dashboardStats?.total ?? dashboardStats?.total_applications ?? applications.length, color: accent, icon: FileText },
-          { key: 'pending', label: 'Pending', val: dashboardStats?.pending ?? applications.filter(a => ['pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent'].includes(a.status)).length, color: '#6366f1', icon: Clock },
-          { key: 'under_review', label: 'Under Review', val: dashboardStats?.under_review ?? applications.filter(a => ['under_review', 'under review', 'verification', 'in_progress'].includes(a.status)).length, color: '#f59e0b', icon: Clock },
-          { key: 'approved', label: 'Approved & Disbursed', val: dashboardStats?.approved ?? applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length, color: '#10b981', icon: CheckCircle2 },
-          { key: 'rejected', label: 'Rejected', val: dashboardStats?.rejected ?? applications.filter(a => a.status === 'rejected').length, color: '#ef4444', icon: XCircle },
+          { key: '', commKey: '', label: 'Total Leads', val: dashboardStats?.total ?? dashboardStats?.total_applications ?? applications.length, color: accent, icon: FileText },
+          { key: '', commKey: 'pending', label: 'Commission Pending', val: dashboardStats?.commission_pending ?? applications.filter(a => ['pending', 'unpaid', 'initiated', 'due'].includes(String(a.commission_status || '').toLowerCase()) || a.commission_status === 'pending').length, color: '#f59e0b', icon: Clock },
+          { key: '', commKey: 'released', label: 'Commission Approved', val: dashboardStats?.commission_approved ?? dashboardStats?.commission_released ?? applications.filter(a => ['released', 'approved', 'paid', 'received', 'credited', 'commission_released', 'commission_received'].includes(String(a.commission_status || '').toLowerCase()) || a.commission_status === 'released' || a.commission_status === 'credited').length, color: '#06b6d4', icon: CheckCircle2 },
+          { key: 'approved', commKey: '', label: 'Approved & Disbursed', val: dashboardStats?.approved ?? applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length, color: '#10b981', icon: CheckCircle2 },
+          { key: 'rejected', commKey: '', label: 'Rejected', val: dashboardStats?.rejected ?? applications.filter(a => a.status === 'rejected').length, color: '#ef4444', icon: XCircle },
         ].map((stat) => {
           const Icon = stat.icon;
-          const isSelected = statusFilter === stat.key;
+          const isSelected = stat.commKey
+            ? commFilter === stat.commKey
+            : (statusFilter === stat.key && !commFilter);
           return (
             <div key={stat.label}
               onClick={() => {
-                setStatusFilter(stat.key);
+                if (stat.commKey) {
+                  setCommFilter(stat.commKey);
+                  setStatusFilter('');
+                } else {
+                  setStatusFilter(stat.key);
+                  setCommFilter('');
+                }
                 setSearchParams(prev => {
                   if (stat.key) prev.set('status', stat.key);
                   else prev.delete('status');
+                  if (stat.commKey) prev.set('commission_status', stat.commKey);
+                  else prev.delete('commission_status');
                   return prev;
                 });
               }}
