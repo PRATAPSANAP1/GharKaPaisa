@@ -882,8 +882,8 @@ const getPostApplyDetails = async (req, res, next) => {
         COALESCE(a.customer_id, l.customer_id) as customer_id,
         COALESCE(l.id, a.lead_id) as lead_id,
         a.id as application_id,
-        COALESCE(l.customer_name, a.customer_name, c.full_name) as customer_name,
-        COALESCE(l.mobile, a.customer_mobile, c.mobile) as mobile,
+        COALESCE(l.customer_name, c.full_name) as customer_name,
+        COALESCE(l.mobile, c.mobile) as mobile,
         l.status
       FROM (SELECT $1::text as tok) t
       LEFT JOIN partner_share_links psl ON (psl.tracking_token = t.tok)
