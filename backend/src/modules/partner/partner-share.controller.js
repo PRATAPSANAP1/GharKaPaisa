@@ -405,12 +405,14 @@ const submitShareLead = async (req, res, next) => {
       `, [customerName.trim(), cleanMobile, trackingToken, existingLead.id, customerId]);
 
       // Get product bank link
-      const { rows: [product] } = await query(
-        `SELECT * FROM products WHERE id = $1`,
-        [shareLinkData.product_id]
-      );
+      const { rows: [product] } = await query(`
+        SELECT p.*, b.name AS bank_name, b.short_code AS bank_code
+        FROM products p
+        LEFT JOIN banks b ON b.id = p.bank_id
+        WHERE p.id = $1
+      `, [shareLinkData.product_id]);
 
-      const targetRedirectUrl = product?.partner_url || product?.public_url || product?.application_url || product?.apply_url || product?.redirect_url || null;
+      const targetRedirectUrl = getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code, product) || null;
 
       return success(res, {
         lead_id: updatedLead.id,
@@ -461,12 +463,14 @@ const submitShareLead = async (req, res, next) => {
     }
 
     // Get product bank link for redirect
-    const { rows: [product] } = await query(
-      `SELECT * FROM products WHERE id = $1`,
-      [shareLinkData.product_id]
-    );
+    const { rows: [product] } = await query(`
+      SELECT p.*, b.name AS bank_name, b.short_code AS bank_code
+      FROM products p
+      LEFT JOIN banks b ON b.id = p.bank_id
+      WHERE p.id = $1
+    `, [shareLinkData.product_id]);
 
-    const targetRedirectUrl = product?.partner_url || product?.public_url || product?.application_url || product?.apply_url || product?.redirect_url || null;
+    const targetRedirectUrl = getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code, product) || null;
 
     return created(res, {
       lead_id: lead.id,
