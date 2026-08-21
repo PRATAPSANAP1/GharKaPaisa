@@ -277,7 +277,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
 
     try {
       const code = partnerCode || user?.partner_code || 'PARTNER';
-      const directBankUrl = selectedProduct.partner_url || selectedProduct.application_url || selectedProduct.public_url || selectedProduct.apply_url || selectedProduct.redirect_url || selectedProduct.bank_link || selectedProduct.tracking_url || getBankApplyLink(selectedProduct.name, selectedProduct.bank_code || selectedProduct.bank_name) || `${window.location.origin}/redirect/${selectedProduct.category}?id=${selectedProduct.id}&partner=${code}`;
+      const directBankUrl = getBankApplyLink(selectedProduct.name, selectedProduct.bank_code || selectedProduct.bank_name, selectedProduct) || selectedProduct.partner_url || selectedProduct.application_url || selectedProduct.public_url || selectedProduct.apply_url || selectedProduct.redirect_url || selectedProduct.bank_link || selectedProduct.tracking_url || `${window.location.origin}/redirect/${selectedProduct.category}?id=${selectedProduct.id}&partner=${code}`;
 
       const payload = {
         product_id: selectedProduct.id,

@@ -186,7 +186,7 @@ export default function PartnerAddLead() {
 
     // Direct bank url resolution for linked_share and direct_bank
     const selectedProd = products.find(p => p.id === selectedProductId);
-    const directBankUrl = selectedProd?.partner_url || selectedProd?.application_url || selectedProd?.public_url || selectedProd?.apply_url || selectedProd?.redirect_url || selectedProd?.bank_link || getBankApplyLink(selectedProd?.name, selectedProd?.bank_code || selectedProd?.bank_name) || 'https://gharkapaisa.in';
+    const directBankUrl = getBankApplyLink(selectedProd?.name, selectedProd?.bank_code || selectedProd?.bank_name, selectedProd) || selectedProd?.partner_url || selectedProd?.application_url || selectedProd?.public_url || selectedProd?.apply_url || selectedProd?.redirect_url || selectedProd?.bank_link || 'https://gharkapaisa.in';
 
     if (processType === 'linked_share' && (!customerName.trim() || !mobile.trim())) {
       const shareMsg = customerName.trim()

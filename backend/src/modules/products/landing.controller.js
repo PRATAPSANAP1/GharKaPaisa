@@ -1,6 +1,7 @@
 const { query } = require('../../config/database');
 const { success, error } = require('../../utils/response/response');
 const logger = require('../../config/logger');
+const { getBankApplyLinkBackend } = require('../crm/lead.controller');
 
 /**
  * GET /products/landing/:id
@@ -180,10 +181,8 @@ const applyProductLanding = async (req, res, next) => {
     }
 
     // Determine redirect URL
-    let redirectUrl = (partner && product.partner_url) ? product.partner_url : (product.public_url || product.partner_url);
-    if (!redirectUrl) {
-      redirectUrl = 'https://gharkapaisa.in';
-    }
+    const redirectUrlFromBank = getBankApplyLinkBackend(product.name, product.bank_name, product);
+    let redirectUrl = redirectUrlFromBank || product.public_url || product.partner_url || 'https://gharkapaisa.in';
 
     // Append UTM params
     try {

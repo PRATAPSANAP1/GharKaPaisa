@@ -220,6 +220,71 @@ const get360LeadDetails = async (req, res, next) => {
   }
 };
 
+function getBankApplyLinkBackend(productName, bankName, productObj = null) {
+  const nameLower = String(productName || '').toLowerCase();
+  const bankLower = String(bankName || '').toLowerCase();
+
+  // Axis Bank
+  if (bankLower.includes('axis') || nameLower.includes('axis')) {
+    return "https://web.axis.bank.in/DigitalChannel/WebForm/?ipa68&axisreferralcode=WMMNYOH1_9640841";
+  }
+  // IndusInd Bank
+  if (bankLower.includes('indus') || nameLower.includes('indus')) {
+    return "https://induseasycredit.indusind.bank.in/customer/credit-card/new-lead?utm_source=assisted&utm_medium=IBLV9763WESTIBL131260%20&utm_campaign=Credit-Card&utm_content=1";
+  }
+  // SBI Bank
+  if (bankLower.includes('sbi') || nameLower.includes('sbi') || nameLower.includes('state bank')) {
+    return "https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01";
+  }
+  // IDFC Bank
+  if (bankLower.includes('idfc') || nameLower.includes('idfc')) {
+    return "https://my.idfcfirst.bank.in/apply/cc?utm_source=partner&utm_medium=MywishMarketplaces&utm_campaign=WFYOU01";
+  }
+  // BOB Bank
+  if (bankLower.includes('bob') || nameLower.includes('baroda') || nameLower.includes('bob')) {
+    return "https://mycard.bobcard.tech/?utm_source=urbanmoney&utm_medium=urbanmoney_aq&utm_campaign=APAY1001";
+  }
+  // Federal Bank / Scapia
+  if (bankLower.includes('federal') || nameLower.includes('scapia')) {
+    return "https://apply.scapia.cards/landing_page?utm_source=RKPL_offline&utm_medium=DSA&utm_campaign=VK_MOHYHS1_content=travel&utm_term=card";
+  }
+  // DCB Bank
+  if (bankLower.includes('dcb') || bankLower.includes('bcb') || nameLower.includes('dcb') || nameLower.includes('bcb')) {
+    return "https://get.novio.in/j84P/va2pvtwb";
+  }
+  // SBM Bank
+  if (bankLower.includes('sbm') || nameLower.includes('sbm')) {
+    return "https://get.novio.in/j84P/7tnakuu8";
+  }
+  // HDFC Bank
+  if (bankLower.includes('hdfc') || nameLower.includes('hdfc')) {
+    if (nameLower.includes('freedom') || nameLower.includes('indianoil')) {
+      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=RUPY&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
+    }
+    if (nameLower.includes('swiggy')) {
+      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=SWCC&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
+    }
+    if (nameLower.includes('tataneu') || nameLower.includes('tata neu')) {
+      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
+    }
+    if (nameLower.includes('pixel')) {
+      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
+    }
+    if (nameLower.includes('biz')) {
+      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=BIZC&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
+    }
+    return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb";
+  }
+
+  // FALLBACK: Database URL if no hardcoded rule matched
+  if (productObj && typeof productObj === 'object') {
+    const url = productObj.partner_url || productObj.application_url || productObj.public_url || productObj.apply_url || productObj.redirect_url;
+    if (url && String(url).trim()) return String(url).trim();
+  }
+
+  return "";
+}
+
 // POST /leads — Create Lead with 30-Day Duplicate Check & OTP Generation
 const createLead = async (req, res, next) => {
   try {
@@ -281,7 +346,13 @@ const createLead = async (req, res, next) => {
 
     // 2. Validate Product
     const { rows: [product] } = await query(`
-      SELECT id, name, is_active, bank_id, partner_url, public_url, application_url, apply_url, redirect_url FROM products WHERE id = $1
+      SELECT
+        p.id, p.name, p.is_active, p.bank_id,
+        p.partner_url, p.public_url, p.application_url, p.apply_url, p.redirect_url,
+        b.name AS bank_name, b.short_code AS bank_code
+      FROM products p
+      LEFT JOIN banks b ON b.id = p.bank_id
+      WHERE p.id = $1
     `, [targetProductId]);
     if (!product || !product.is_active) {
       return error(res, 'Selected product is inactive or unavailable', 400);
@@ -355,7 +426,7 @@ const createLead = async (req, res, next) => {
       const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
       const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
       const defaultShareUrl = `${baseUrl.replace(/\/$/, '')}/apply/${trackingToken}`;
-      const directBankUrl = product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || defaultShareUrl;
+      const directBankUrl = getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code, product) || defaultShareUrl;
       const shareUrl = defaultShareUrl;
 
       const partnerName = `${partner.first_name || ''} ${partner.last_name || ''}`.trim() || 'Partner';
@@ -413,43 +484,8 @@ const createLead = async (req, res, next) => {
       }, 'Linked share link generated successfully.');
     }
 
-function getBankApplyLinkBackend(productName, bankName) {
-  const nameLower = String(productName || '').toLowerCase();
-  const bankLower = String(bankName || '').toLowerCase();
-
-  if (bankLower.includes('axis') || nameLower.includes('axis')) {
-    return "https://web.axis.bank.in/DigitalChannel/WebForm/?ipa68&axisreferralcode=WMMNYOH1_9640841";
-  }
-  if (bankLower.includes('indus') || nameLower.includes('indus')) {
-    return "https://induseasycredit.indusind.bank.in/customer/credit-card/new-lead?utm_source=assisted&utm_medium=IBLV9763WESTIBL131260%20&utm_campaign=Credit-Card&utm_content=1";
-  }
-  if (bankLower.includes('sbi') || nameLower.includes('sbi') || nameLower.includes('state bank')) {
-    return "https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01";
-  }
-  if (bankLower.includes('idfc') || nameLower.includes('idfc')) {
-    return "https://my.idfcfirst.bank.in/apply/cc?utm_source=partner&utm_medium=MywishMarketplaces&utm_campaign=WFYOU01";
-  }
-  if (bankLower.includes('bob') || nameLower.includes('baroda')) {
-    return "https://mycard.bobcard.tech/?utm_source=urbanmoney&utm_medium=urbanmoney_aq&utm_campaign=APAY1001";
-  }
-  if (bankLower.includes('federal') || nameLower.includes('scapia')) {
-    return "https://apply.scapia.cards/landing_page?utm_source=RKPL_offline&utm_medium=DSA&utm_campaign=VK_MOHYHS1_content=travel&utm_term=card";
-  }
-  if (bankLower.includes('dcb') || bankLower.includes('bcb')) {
-    return "https://get.novio.in/j84P/va2pvtwb";
-  }
-  if (bankLower.includes('sbm')) {
-    return "https://get.novio.in/j84P/7tnakuu8";
-  }
-  if (bankLower.includes('hdfc') || nameLower.includes('hdfc')) {
-    return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb";
-  }
-
-  return "https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01";
-}
-
     if (targetProcess === 'direct_bank') {
-      const bankUrl = product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code);
+      const bankUrl = getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code, product);
 
       const { rows: [lead] } = await query(`
         INSERT INTO leads (
@@ -1097,6 +1133,7 @@ module.exports = {
   listPartnerShareLeads,
   updateLead,
   updateLeadProcessType,
-  convertLeadToApplication
+  convertLeadToApplication,
+  getBankApplyLinkBackend
 };
 
