@@ -277,6 +277,7 @@ const AppRoutes = () => {
       <Route element={<ProtectedRoute />}>
         <Route element={<RoleRoute allowedRoles={['SUPER_ADMIN']} />}>
           <Route element={<SuperAdminLayout />}>
+            <Route path="/super-admin" element={<Navigate to="/super-admin/overview" replace />} />
             <Route path="/super-admin/overview" element={<SuperAdminOverview />} />
             <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
             <Route path="/super-admin/partners" element={<ManagePartners />} />
@@ -304,7 +305,9 @@ const AppRoutes = () => {
             <Route path="/super-admin/support" element={<ManageSupportTickets />} />
 
             {/* Legacy /superadmin/ URL Redirect Compatibility */}
-            <Route path="/superadmin/dashboard" element={<Navigate to="/super-admin/dashboard" replace />} />
+            <Route path="/superadmin" element={<Navigate to="/super-admin/overview" replace />} />
+            <Route path="/superadmin/overview" element={<Navigate to="/super-admin/overview" replace />} />
+            <Route path="/superadmin/dashboard" element={<Navigate to="/super-admin/overview" replace />} />
             <Route path="/superadmin/partners" element={<Navigate to="/super-admin/partners" replace />} />
             <Route path="/superadmin/leads" element={<Navigate to="/super-admin/leads" replace />} />
             <Route path="/superadmin/applications" element={<Navigate to="/super-admin/crm" replace />} />
@@ -319,7 +322,7 @@ const AppRoutes = () => {
             <Route path="/superadmin/commission-rules" element={<Navigate to="/super-admin/commissions" replace />} />
             <Route path="/superadmin/audit-logs" element={<Navigate to="/super-admin/audit" replace />} />
             <Route path="/superadmin/reports" element={<Navigate to="/super-admin/reports" replace />} />
-            <Route path="/superadmin/*" element={<Navigate to="/super-admin/dashboard" replace />} />
+            <Route path="/superadmin/*" element={<Navigate to="/super-admin/overview" replace />} />
           </Route>
         </Route>
       </Route>

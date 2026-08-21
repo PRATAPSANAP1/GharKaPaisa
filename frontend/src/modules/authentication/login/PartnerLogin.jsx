@@ -286,7 +286,7 @@ export default function PartnerLogin() {
                 const from = location.state?.from?.pathname;
                 const role = profile.role?.toUpperCase();
                 const dest = from || loginRes.redirect ||
-                  (role === 'SUPER_ADMIN' ? '/super-admin/dashboard' :
+                  (role === 'SUPER_ADMIN' ? '/super-admin/overview' :
                    role === 'ADMIN' ? '/admin/dashboard' : '/partner/dashboard');
                 window.location.href = dest;
               }, 1500);
@@ -320,7 +320,7 @@ export default function PartnerLogin() {
           if (loginRes.redirect.startsWith('http')) {
             window.location.href = loginRes.redirect;
           } else {
-            const targetRedirect = loginRes.redirect === '/superadmin/dashboard' ? '/super-admin/dashboard' : loginRes.redirect;
+            const targetRedirect = (loginRes.redirect === '/superadmin/dashboard' || loginRes.redirect === '/super-admin/dashboard') ? '/super-admin/overview' : loginRes.redirect;
             navigate(location.state?.from?.pathname || targetRedirect);
           }
         } else {
@@ -596,7 +596,7 @@ export default function PartnerLogin() {
         navigate('/partner/profile');
       } else {
         const role = profile.role?.toUpperCase();
-        if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/super-admin/dashboard');
+        if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/super-admin/overview');
         else if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
         else navigate(location.state?.from?.pathname || '/partner/dashboard');
       }
