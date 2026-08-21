@@ -7,25 +7,10 @@ const msg91AuthKey = process.env.MSG91_AUTH_KEY || process.env.MSG91_AUTHKEY;
 const msg91SenderId = process.env.MSG91_SENDER_ID || 'GHARKP';
 const msg91Route = process.env.MSG91_ROUTE || '4';
 
-// ── Twilio Config (Fallback SMS Provider) ───────────────────────────────────
-let twilioClient = null;
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const fromPhone = process.env.TWILIO_PHONE_NUMBER;
-
-if (accountSid && authToken && fromPhone) {
-  try {
-    twilioClient = require('twilio')(accountSid, authToken);
-    logger.info('[SMS] Twilio client initialized as fallback');
-  } catch (err) {
-    logger.warn('[SMS] Failed to initialize Twilio client:', err.message);
-  }
-}
-
 if (msg91AuthKey) {
   logger.info('[SMS] MSG91 configured as primary SMS provider');
-} else if (!twilioClient) {
-  logger.warn('[SMS] No SMS provider configured — SMS sending will be disabled. Set MSG91_AUTH_KEY or TWILIO credentials in .env');
+} else {
+  logger.warn('[SMS] MSG91_AUTH_KEY not set in .env — SMS sending will be disabled');
 }
 
 /**
@@ -39,13 +24,13 @@ const formatMobile = (mobile) => {
 };
 
 /**
- * Send Plain Text SMS via MSG91 Send SMS API or Twilio (fallback)
+ * Send Plain Text SMS via MSG91 Send SMS API
  */
 const sendSms = async (to, body) => {
   const formattedTo = formatMobile(to);
   if (!formattedTo) return false;
   
-  // 1. Try MSG91 SMS API
+  // Try MSG91 SMS API
   if (msg91AuthKey) {
     try {
       const url = `https://control.msg91.com/api/v5/sms/send`;
@@ -71,22 +56,6 @@ const sendSms = async (to, body) => {
       }
     } catch (err) {
       logger.warn(`[SMS] MSG91 plain text SMS notice for ${formattedTo}: ${err.response?.data ? JSON.stringify(err.response.data) : err.message}`);
-    }
-  }
-
-  // 2. Fallback to Twilio
-  if (twilioClient && fromPhone) {
-    try {
-      const e164To = `+${formattedTo}`;
-      const message = await twilioClient.messages.create({
-        body,
-        from: fromPhone,
-        to: e164To
-      });
-      logger.info(`[SMS] Message sent to ${e164To} via Twilio, SID: ${message.sid}`);
-      return true;
-    } catch (err) {
-      logger.error(`[SMS] Twilio failed to send message to ${formattedTo}: ${err.message}`);
     }
   }
 
