@@ -243,7 +243,7 @@ export default function PhysicalApplicationForm() {
           landmark: pd.landmark || '',
           pincode: pd.pincode || '',
           company_address: pd.company_address || app.company_address || '',
-          bank_ref_number: app.bank_ref_number || app.app_number || '',
+          bank_ref_number: pd.bank_ref_number || app.bank_ref_number || app.bank_application_number || '',
           vkyc_url: app.vkyc_url || '',
           appcode_status: app.appcode_status || 'Appcode Pending',
           soft_approval_status: app.soft_approval_status || 'Approval-income 25k',

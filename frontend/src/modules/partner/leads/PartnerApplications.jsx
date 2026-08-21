@@ -1336,8 +1336,8 @@ export default function PartnerApplications() {
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', marginBottom: 8 }}>Current Application Information</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
                   <div>
-                    <span style={{ color: textMuted, fontSize: 10 }}>Application Number: </span>
-                    <strong style={{ color: textPrimary }}>{trackApp.bank_application_number || trackApp.app_number}</strong>
+                    <span style={{ color: textMuted, fontSize: 10 }}>Bank Application Number: </span>
+                    <strong style={{ color: textPrimary }}>{trackApp.bank_application_number || trackApp.bank_ref_number || 'Pending'}</strong>
                   </div>
                   <div>
                     <span style={{ color: textMuted, fontSize: 10 }}>VKYC Status: </span>

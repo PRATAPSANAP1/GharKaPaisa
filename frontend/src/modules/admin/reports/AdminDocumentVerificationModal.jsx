@@ -214,8 +214,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           company_address: companyAddress,
           mother_name: motherName,
           app_number: appNumber,
-          bank_application_number: appNumber,
-          bank_ref_number: appNumber,
+          bank_application_number: bankRefNumber || undefined,
+          bank_ref_number: bankRefNumber || undefined,
           vkyc_url: vkycUrl,
           status: 'submitted'
         };
