@@ -2407,6 +2407,31 @@ const updateApplicationDetails = async (req, res, next) => {
       company_name
     } = req.body;
 
+    // Ensure verification & tracking columns exist on applications and leads tables
+    try {
+      await client.query(`
+        ALTER TABLE applications 
+        ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
+        ADD COLUMN IF NOT EXISTS salary_slip_url TEXT,
+        ADD COLUMN IF NOT EXISTS pan_card_url TEXT,
+        ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS bank_remark TEXT,
+        ADD COLUMN IF NOT EXISTS final_status VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS decline_reason TEXT,
+        ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS approved_amount DECIMAL(15,2)
+      `);
+      await client.query(`
+        ALTER TABLE leads 
+        ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS vkyc_url TEXT
+      `);
+    } catch (_) {}
+
     let { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id = $1`, [id]);
     let isLeadOnly = false;
     if (!app) {
