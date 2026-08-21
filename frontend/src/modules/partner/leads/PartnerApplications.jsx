@@ -23,35 +23,39 @@ const STAGES = [
 const PROCESS_STAGES = {
   lead_punching: [
     { id: 'pending', label: 'Application Created' },
-    { id: 'details_submitted', label: 'Lead Form Submitted' },
+    { id: 'details_submitted', label: 'Details Submitted' },
     { id: 'operational_verified', label: 'Operational Verified' },
     { id: 'super_admin_approved', label: 'Super Admin Approved' },
-    { id: 'commission_processing', label: 'Commission Pending' },
+    { id: 'commission_processing', label: 'Commission Hold' },
     { id: 'commission_released', label: 'Commission Released' },
+    { id: 'commission_received', label: 'Commission Received' },
   ],
   linked_share: [
     { id: 'pending', label: 'Application Created' },
-    { id: 'details_submitted', label: 'Share Link Form Submitted' },
+    { id: 'details_submitted', label: 'Details Submitted' },
     { id: 'operational_verified', label: 'Operational Verified' },
     { id: 'super_admin_approved', label: 'Super Admin Approved' },
-    { id: 'commission_processing', label: 'Commission Pending' },
+    { id: 'commission_processing', label: 'Commission Hold' },
     { id: 'commission_released', label: 'Commission Released' },
+    { id: 'commission_received', label: 'Commission Received' },
   ],
   direct_bank: [
     { id: 'pending', label: 'Application Created' },
-    { id: 'details_submitted', label: 'Bank Form Submitted' },
+    { id: 'details_submitted', label: 'Details Submitted' },
     { id: 'operational_verified', label: 'Operational Verified' },
     { id: 'super_admin_approved', label: 'Super Admin Approved' },
-    { id: 'commission_processing', label: 'Commission Pending' },
+    { id: 'commission_processing', label: 'Commission Hold' },
     { id: 'commission_released', label: 'Commission Released' },
+    { id: 'commission_received', label: 'Commission Received' },
   ],
   physical_process: [
     { id: 'pending', label: 'Application Created' },
-    { id: 'details_submitted', label: 'Physical Form Submitted' },
+    { id: 'details_submitted', label: 'Details Submitted' },
     { id: 'operational_verified', label: 'Operational Verified' },
     { id: 'super_admin_approved', label: 'Super Admin Approved' },
-    { id: 'commission_processing', label: 'Commission Pending' },
+    { id: 'commission_processing', label: 'Commission Hold' },
     { id: 'commission_released', label: 'Commission Released' },
+    { id: 'commission_received', label: 'Commission Received' },
   ],
 };
 
@@ -1328,8 +1332,9 @@ export default function PartnerApplications() {
           'details_submitted': 2, 'submitted': 2, 'under_review': 2, 'link_generated': 2, 'app_number_added': 2, 'pan_check': 2,
           'operational_verified': 3, 'operational_approved': 3, 'link_sent': 3, 'kyc_pending': 3, 'qd': 3,
           'super_admin_approved': 4, 'customer_started': 4, 'bank_application': 4, 'bank_processing': 4, 'income': 4, 'official_mail': 4, 'vkyc': 4, 'dispatch': 4,
-          'commission_processing': 5, 'commission_pending': 5, 'commission': 5,
-          'commission_released': 6, 'commission_received': 6, 'approved': 6, 'disbursed': 6
+          'commission_processing': 5, 'commission_pending': 5, 'commission': 5, 'hold': 5,
+          'commission_released': 6, 'released': 6,
+          'commission_received': 7, 'approved': 7, 'disbursed': 7
         };
 
         const getStageStatus = (stageId, index) => {
