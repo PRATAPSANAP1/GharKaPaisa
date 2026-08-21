@@ -1060,6 +1060,16 @@ const updatePostApplyDetails = async (req, res, next) => {
     const cleanDeclineReason = (decline_reason || '').toString().trim();
     const cleanEligibleReqd = (eligible_reqd || '').toString().trim();
 
+    // Safely map cleanFinalStatus to Postgres application_status enum
+    let mappedAppEnumStatus = null;
+    if (cleanFinalStatus) {
+      const lower = cleanFinalStatus.toLowerCase();
+      if (lower.includes('approved')) mappedAppEnumStatus = 'approved';
+      else if (lower.includes('decline') || lower.includes('reject')) mappedAppEnumStatus = 'rejected';
+      else if (lower.includes('process')) mappedAppEnumStatus = 'in_process';
+      else mappedAppEnumStatus = 'submitted';
+    }
+
     // Dynamic column safety check
     try {
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(50)`);
@@ -1133,14 +1143,15 @@ const updatePostApplyDetails = async (req, res, next) => {
             final_status = COALESCE(NULLIF($16, ''), final_status),
             decline_reason = COALESCE(NULLIF($17, ''), decline_reason),
             eligible_reqd = COALESCE(NULLIF($18, ''), eligible_reqd),
-            status = COALESCE(NULLIF($16, ''), status, 'submitted'),
+            status = COALESCE($19::application_status, status),
             updated_at = NOW()
-        WHERE id = $19 OR (lead_id IS NOT NULL AND lead_id = $20)
+        WHERE id = $20 OR (lead_id IS NOT NULL AND lead_id = $21)
       `, [
         cleanMobile, cleanName, cleanDob, cleanEmail, cleanPan,
         cleanCompany, cleanDesignation, cleanAddress, cleanMother,
         cleanSoftApproval, cleanVkycStage, cleanIqaStage, cleanDispatch,
         cleanAppNum, cleanVkyc, cleanFinalStatus, cleanDeclineReason, cleanEligibleReqd,
+        mappedAppEnumStatus,
         shareData.application_id || null, shareData.lead_id || null
       ]);
     }
