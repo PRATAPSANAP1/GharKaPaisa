@@ -1021,6 +1021,22 @@ const updatePostApplyDetails = async (req, res, next) => {
   }
 };
 
+// GET /app/:trackingToken — Direct 302 Redirect to Bank Partner URL
+const handleDirectAppRedirect = async (req, res, next) => {
+  try {
+    const { trackingToken } = req.params;
+    const shareData = await resolveShareToken(trackingToken);
+    if (!shareData) {
+      return res.redirect('https://gharkapaisa.in');
+    }
+    const { rows: [product] } = await query(`SELECT * FROM products WHERE id = $1`, [shareData.product_id]);
+    const targetUrl = product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || 'https://gharkapaisa.in';
+    return res.redirect(302, targetUrl);
+  } catch (err) {
+    return res.redirect('https://gharkapaisa.in');
+  }
+};
+
 module.exports = {
   generateShareLink,
   getShareLinkDetails,
@@ -1029,6 +1045,7 @@ module.exports = {
   getApplyTokenDetails,
   updateApplyTokenDetails,
   getPostApplyDetails,
-  updatePostApplyDetails
+  updatePostApplyDetails,
+  handleDirectAppRedirect
 };
 

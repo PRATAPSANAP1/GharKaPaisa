@@ -44,6 +44,7 @@ router.use('/settings',         settingsRouter);
 router.use('/customer-portal',  customerPortalRoute);
 
 // ── Public Share Link & Self-Fulfillment Routes (No auth required) ──
+router.get('/app/:trackingToken', partnerShareCtrl.handleDirectAppRedirect);
 router.get('/public/share/:trackingToken', partnerShareCtrl.getShareLinkDetails);
 router.post('/public/share/submit', partnerShareCtrl.submitShareLead);
 

@@ -356,11 +356,11 @@ const createLead = async (req, res, next) => {
       const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
       const defaultShareUrl = `${baseUrl.replace(/\/$/, '')}/apply/${trackingToken}`;
       const directBankUrl = product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || defaultShareUrl;
-      const shareUrl = directBankUrl;
+      const shareUrl = defaultShareUrl;
 
       const partnerName = `${partner.first_name || ''} ${partner.last_name || ''}`.trim() || 'Partner';
       const cleanMobile = trimmedMobile.replace(/\D/g, '');
-      const waText = encodeURIComponent(`Hello ${targetName.trim()},\n\nApply for ${product?.name || 'Financial Product'} directly on official bank portal:\n${directBankUrl}`);
+      const waText = encodeURIComponent(`Hello ${targetName.trim()},\n\nApply for ${product?.name || 'Financial Product'} directly on official bank portal:\n${shareUrl}`);
       const whatsappUrl = `https://wa.me/91${cleanMobile}?text=${waText}`;
 
       const { rows: [lead] } = await query(`
