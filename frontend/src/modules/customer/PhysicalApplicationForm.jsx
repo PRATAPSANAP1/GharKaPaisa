@@ -1,18 +1,166 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import logo from '../../assets/logos/logo.png';
+import { useTheme, LightDarkToggle } from '../../contexts/ThemeContext';
+import LanguageSwitcher from '../../components/LanguageSwitcher/LanguageSwitcher';
+import { 
+  MdCheckCircle, MdError, MdLock, MdCloudUpload, 
+  MdNavigateNext, MdNavigateBefore, MdSave, MdRefresh 
+} from 'react-icons/md';
+
+// Multi-language Translation Dictionary for Physical Application Form
+const DICTIONARY = {
+  en: {
+    portalTitle: 'Physical Verification Portal',
+    headerSub: 'Physical Application Verification',
+    appNo: 'Application #',
+    bank: 'Bank Partner',
+    product: 'Product',
+    customerDetails: 'Form 1: Customer Details',
+    appcodeVkyc: 'Form 2 (Part 1): Appcode & VKYC',
+    iqaDispatch: 'Form 2 (Part 2): IQA & Dispatch',
+    bankFinalStatus: 'Part 3: Bank & Final Status',
+    step1Short: 'Customer Info',
+    step2Short: 'Appcode & VKYC',
+    step3Short: 'IQA & Dispatch',
+    step4Short: 'Bank & Final',
+    aadhaarMobile: 'AADHAAR LINKED CONTACT NUMBER *',
+    aadhaarMobilePlace: '10-digit mobile number',
+    dob: 'AS PER PAN CARD DOB (DD-MM-YYYY)',
+    dobPlace: 'DD-MM-YYYY',
+    panName: 'NAME AS PER PAN CARD *',
+    panNamePlace: 'Full Name as on PAN',
+    email: 'PERSONAL EMAIL ID',
+    emailPlace: 'email@example.com',
+    panNumber: 'PAN CARD NUMBER *',
+    panNumberPlace: 'ABCDE1234F',
+    companyName: 'COMPANY NAME (AS PER SALARY SLIP)',
+    companyNamePlace: 'Company Name',
+    designation: 'DESIGNATION',
+    designationPlace: 'Designation / Job Role',
+    homeAddress: 'CURRENT HOME ADDRESS (WITH LANDMARK & PINCODE)',
+    homeAddressPlace: 'Flat No, Building, Street, Landmark, Pincode',
+    companyAddress: 'FULL OFFICIAL COMPANY ADDRESS',
+    companyAddressPlace: 'Company / Office Address with Pincode',
+    motherName: 'MOTHER NAME',
+    motherNamePlace: 'Mother Name',
+    appNumberBank: 'BANK APPLICATION NUMBER',
+    appNumberBankPlace: 'Bank Application Reference Number',
+    vkycUrl: 'VKYC LINK',
+    vkycUrlPlace: 'https://vkyc...',
+    appcodeStatus: 'APPCODE STATUS',
+    softApprovalStatus: 'SOFT APPROVAL STATUS',
+    vkycStage: 'VKYC STAGE',
+    iqaStage: 'IQA STAGE',
+    dispatchStatus: 'DISPATCH STATUS',
+    eligibleReqd: 'ELIGIBLE FOR RE-QD',
+    finalStatus: 'FINAL STATUS FROM BANK',
+    bankRemark: 'BANK REMARK (OPERATIONS / ADMIN)',
+    bankRemarkPlace: 'Operations Head or Bank remark...',
+    declineReason: 'DECLINE REASON REMARK',
+    declineReasonPlace: 'Specify detailed decline reason...',
+    nextStep: 'Next Step',
+    backStep: 'Back',
+    saveDetails: 'SAVE DETAILS 💾',
+    savingDetails: 'Saving Details...',
+    formSavedSuccess: 'Application details & Form status saved successfully!',
+    successSub: 'Application details updated in database.',
+    retry: 'Retry Loading Form',
+    loading: 'Loading Physical Application Form...',
+    errTitle: 'Application Form Error',
+    yes: 'Yes',
+    no: 'No'
+  },
+  hi: {
+    portalTitle: 'भौतिक सत्यापन पोर्टल',
+    headerSub: 'भौतिक आवेदन सत्यापन',
+    appNo: 'आवेदन संख्या #',
+    bank: 'बैंक पार्टनर',
+    product: 'उत्पाद',
+    customerDetails: 'फॉर्म 1: ग्राहक विवरण',
+    appcodeVkyc: 'फॉर्म 2 (भाग 1): ऐपकोड और वीकेवाईसी',
+    iqaDispatch: 'फॉर्म 2 (भाग 2): आईक्यूए और प्रेषण',
+    bankFinalStatus: 'भाग 3: बैंक एवं अंतिम स्थिति',
+    step1Short: 'ग्राहक जानकारी',
+    step2Short: 'ऐपकोड एवं VKYC',
+    step3Short: 'IQA एवं प्रेषण',
+    step4Short: 'बैंक एवं अंतिम स्थिति',
+    aadhaarMobile: 'आधार से जुड़ा मोबाइल नंबर *',
+    aadhaarMobilePlace: '10 अंकों का मोबाइल नंबर',
+    dob: 'पैन कार्ड के अनुसार जन्म तिथि (DD-MM-YYYY)',
+    dobPlace: 'DD-MM-YYYY',
+    panName: 'पैन कार्ड के अनुसार पूरा नाम *',
+    panNamePlace: 'पैन कार्ड का नाम',
+    email: 'व्यक्तिगत ईमेल आईडी',
+    emailPlace: 'email@example.com',
+    panNumber: 'पैन कार्ड नंबर *',
+    panNumberPlace: 'ABCDE1234F',
+    companyName: 'कंपनी का नाम (वेतन पर्ची के अनुसार)',
+    companyNamePlace: 'कंपनी का नाम',
+    designation: 'पदनाम / पद',
+    designationPlace: 'पदनाम / भूमिका',
+    homeAddress: 'वर्तमान घर का पता (लैंडमार्क और पिनकोड के साथ)',
+    homeAddressPlace: 'मकान नं., बिल्डिंग, सड़क, लैंडमार्क, पिनकोड',
+    companyAddress: 'कंपनी का पूरा आधिकारिक पता',
+    companyAddressPlace: 'पिनकोड के साथ कार्यालय का पता',
+    motherName: 'माता का नाम',
+    motherNamePlace: 'माता का नाम',
+    appNumberBank: 'बैंक आवेदन संख्या',
+    appNumberBankPlace: 'बैंक संदर्भ संख्या',
+    vkycUrl: 'वीकेवाईसी लिंक',
+    vkycUrlPlace: 'https://vkyc...',
+    appcodeStatus: 'ऐपकोड स्थिति',
+    softApprovalStatus: 'सॉफ्ट अनुमोदन स्थिति',
+    vkycStage: 'वीकेवाईसी चरण',
+    iqaStage: 'आईक्यूए चरण',
+    dispatchStatus: 'प्रेषण (Dispatch) स्थिति',
+    eligibleReqd: 'पुनः पात्रता (RE-QD) योग्य',
+    finalStatus: 'बैंक से अंतिम स्थिति',
+    bankRemark: 'बैंक टिप्पणी (ऑपरेशन्स / एडमिन)',
+    bankRemarkPlace: 'ऑपरेशन्स हेड या बैंक टिप्पणी...',
+    declineReason: 'अस्वीकृति का कारण',
+    declineReasonPlace: 'अस्वीकृति का विस्तृत कारण लिखें...',
+    nextStep: 'अगला चरण',
+    backStep: 'पीछे',
+    saveDetails: 'विवरण सहेजें 💾',
+    savingDetails: 'सहेजा जा रहा है...',
+    formSavedSuccess: 'आवेदन विवरण सफलतापूर्वक सहेजा गया!',
+    successSub: 'आवेदन विवरण डेटाबेस में अद्यतन हो गया है।',
+    retry: 'पुनः प्रयास करें',
+    loading: 'भौतिक आवेदन फॉर्म लोड हो रहा है...',
+    errTitle: 'आवेदन फॉर्म त्रुटि',
+    yes: 'हाँ',
+    no: 'नहीं'
+  }
+};
 
 export default function PhysicalApplicationForm() {
   const { token } = useParams();
+  const { i18n } = useTranslation();
+  const { C, isDark } = useTheme();
+
+  const currentLang = i18n.language === 'hi' ? 'hi' : 'en';
+  const txt = (key) => DICTIONARY[currentLang]?.[key] || DICTIONARY.en[key] || key;
+
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [appData, setAppData] = useState(null);
-  const [activeTab, setActiveTab] = useState('form1'); // 'form1' | 'form2'
+  const [activeTab, setActiveTab] = useState('step1'); // 'step1' | 'step2' | 'step3' | 'step4'
 
-  // Form states (Form 1 & Form 2)
+  // Responsive state for screen layout
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Form states
   const [form, setForm] = useState({
     aadhaar_linked_mobile: '',
     pan_name: '',
@@ -29,7 +177,6 @@ export default function PhysicalApplicationForm() {
     company_address: '',
     bank_ref_number: '',
     vkyc_url: '',
-    // Form 2 Statuses
     appcode_status: 'Appcode Pending',
     soft_approval_status: 'Approval-income 25k',
     vkyc_stage: 'VKYC Pending',
@@ -120,331 +267,390 @@ export default function PhysicalApplicationForm() {
     setForm(prev => ({ ...prev, [field]: val }));
   };
 
-  // GharKaPaisa Theme Palette
-  const theme = {
-    pageBg: 'linear-gradient(135deg, #0b1329 0%, #152243 50%, #091024 100%)',
-    cardBg: '#131e38',
-    cardBorder: '1px solid rgba(59, 130, 246, 0.25)',
-    cardShadow: '0 24px 60px rgba(0, 0, 0, 0.5)',
-    inputBg: '#0a1122',
-    inputBorder: '1.5px solid #233354',
-    inputFocusBorder: '#3b82f6',
-    textColor: '#f8fafc',
-    mutedText: '#94a3b8',
-    brandBlue: '#2563eb',
-    brandBlueGradient: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-  };
-
+  // Modern input styles using Theme Context C
   const inputStyle = {
     width: '100%',
-    padding: '12px 14px',
+    padding: isMobile ? '12px 14px' : '14px 16px',
     borderRadius: '12px',
-    border: theme.inputBorder,
-    background: theme.inputBg,
-    color: theme.textColor,
-    fontSize: '13.5px',
+    border: `1.5px solid ${C.border}`,
+    background: C.inputBg,
+    color: C.text,
+    fontSize: isMobile ? '13px' : '14px',
     fontWeight: '600',
     outline: 'none',
     boxSizing: 'border-box',
-    transition: 'all 0.2s ease',
-    fontFamily: 'inherit'
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+    fontFamily: "'Inter', sans-serif"
   };
 
   const labelStyle = {
     display: 'block',
-    fontSize: '11px',
+    fontSize: '11.5px',
     fontWeight: '800',
-    color: theme.mutedText,
+    color: C.textMid,
     marginBottom: '6px',
-    letterSpacing: '0.05em',
+    letterSpacing: '0.04em',
     textTransform: 'uppercase'
   };
 
+  // Loading Screen
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: theme.pageBg, color: theme.textColor, fontFamily: "'Inter', sans-serif" }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 44, height: 44, border: '4px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ fontWeight: 800, fontSize: 15, letterSpacing: '0.02em', color: '#93c5fd' }}>Loading Application Form...</p>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, color: C.text, fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ textAlign: 'center', padding: 24 }}>
+          <div style={{ width: 48, height: 48, border: `4px solid ${C.teal}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ fontWeight: 800, fontSize: 15, color: C.text }}>{txt('loading')}</p>
         </div>
       </div>
     );
   }
 
+  // Error Screen
   if (errorMsg && !appData) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: theme.pageBg, color: theme.textColor, padding: 20, fontFamily: "'Inter', sans-serif" }}>
-        <div style={{ maxWidth: 460, width: '100%', background: theme.cardBg, borderRadius: 24, padding: 32, border: theme.cardBorder, textAlign: 'center', boxShadow: theme.cardShadow }}>
-          <div style={{ fontSize: 44, marginBottom: 12 }}>⚠️</div>
-          <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 900, color: '#f87171' }}>Application Form Error</h2>
-          <p style={{ fontSize: 13.5, color: theme.mutedText, margin: '0 0 24px', lineHeight: 1.5 }}>{errorMsg}</p>
-          <button onClick={fetchApplicationDetails} style={{ padding: '12px 24px', borderRadius: 14, border: 'none', background: theme.brandBlueGradient, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37,99,235,0.4)' }}>
-            Retry Loading Form
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, color: C.text, padding: 20, fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ maxWidth: 480, width: '100%', background: C.card, borderRadius: 24, padding: isMobile ? 24 : 36, border: `1px solid ${C.border}`, textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}>
+          <MdError size={56} color={C.red} style={{ marginBottom: 12 }} />
+          <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 900, color: C.red }}>{txt('errTitle')}</h2>
+          <p style={{ fontSize: 13.5, color: C.textMid, margin: '0 0 24px', lineHeight: 1.6 }}>{errorMsg}</p>
+          <button 
+            onClick={fetchApplicationDetails} 
+            style={{ 
+              padding: '12px 28px', 
+              borderRadius: 14, 
+              border: 'none', 
+              background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, 
+              color: '#fff', 
+              fontWeight: 800, 
+              fontSize: 14, 
+              cursor: 'pointer', 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: 8,
+              boxShadow: `0 6px 18px ${C.primary}40` 
+            }}
+          >
+            <MdRefresh size={18} /> {txt('retry')}
           </button>
         </div>
       </div>
     );
   }
 
+  // Success Screen
   if (submitted) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: theme.pageBg, color: theme.textColor, padding: 20, fontFamily: "'Inter', sans-serif" }}>
-        <div style={{ maxWidth: 500, width: '100%', background: theme.cardBg, borderRadius: 28, padding: 36, border: theme.cardBorder, textAlign: 'center', boxShadow: theme.cardShadow }}>
-          <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#10b98120', border: '2px solid #10b981', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 36, fontWeight: 900 }}>
-            ✓
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, color: C.text, padding: 20, fontFamily: "'Inter', sans-serif" }}>
+        <div style={{ maxWidth: 520, width: '100%', background: C.card, borderRadius: 28, padding: isMobile ? 24 : 36, border: `1px solid ${C.border}`, textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.25)' }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.15)', border: `2px solid #10b981`, color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <MdCheckCircle size={44} />
           </div>
-          <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 900, color: '#fff' }}>Application details & Form status saved successfully to database!</h2>
-          <p style={{ fontSize: 13.5, color: theme.mutedText, margin: '0 0 24px', lineHeight: 1.6 }}>
-            Application <strong style={{ color: '#60a5fa' }}>#{appData?.app_number}</strong> has been updated with physical verification details and operations status.
+          <h2 style={{ margin: '0 0 10px', fontSize: 20, fontWeight: 900, color: C.text }}>{txt('formSavedSuccess')}</h2>
+          <p style={{ fontSize: 13.5, color: C.textMid, margin: '0 0 24px', lineHeight: 1.6 }}>
+            {txt('appNo')} <strong style={{ color: C.teal }}>#{appData?.app_number}</strong> {txt('successSub')}
           </p>
-          <div style={{ background: '#0a1122', border: '1px solid #233354', padding: 18, borderRadius: 18, fontSize: 13, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: theme.mutedText }}>Bank Partner:</span>
-              <strong style={{ color: '#f8fafc' }}>{appData?.bank_name || 'SBI Bank'}</strong>
+
+          <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: 20, borderRadius: 20, fontSize: 13.5, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px dashed ${C.border}`, paddingBottom: 8 }}>
+              <span style={{ color: C.textMid }}>{txt('bank')}:</span>
+              <strong style={{ color: C.text }}>{appData?.bank_name || 'SBI Bank'}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: `1px dashed ${C.border}`, paddingBottom: 8 }}>
+              <span style={{ color: C.textMid }}>{txt('product')}:</span>
+              <strong style={{ color: C.text }}>{appData?.product_name || 'Credit Card / Loan'}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: theme.mutedText }}>Product:</span>
-              <strong style={{ color: '#f8fafc' }}>{appData?.product_name || 'Credit Card / Loan'}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: theme.mutedText }}>Final Status:</span>
+              <span style={{ color: C.textMid }}>{txt('finalStatus')}:</span>
               <strong style={{ color: '#10b981', textTransform: 'uppercase' }}>{form.final_status}</strong>
             </div>
           </div>
-          <button onClick={() => setSubmitted(false)} style={{ marginTop: 20, padding: '12px 24px', borderRadius: 14, border: 'none', background: theme.brandBlueGradient, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
-            Edit / View Form Again
+
+          <button 
+            onClick={() => setSubmitted(false)} 
+            style={{ 
+              marginTop: 24, 
+              padding: '14px 28px', 
+              borderRadius: 16, 
+              border: 'none', 
+              background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, 
+              color: '#fff', 
+              fontWeight: 800, 
+              fontSize: 14, 
+              cursor: 'pointer',
+              boxShadow: `0 8px 24px ${C.primary}35`
+            }}
+          >
+            ✏️ {txt('retry')} / View Form Again
           </button>
         </div>
       </div>
     );
   }
 
+  // Main Responsive Layout
+  const steps = [
+    { id: 'step1', num: '1', title: txt('step1Short'), desc: 'Customer Details' },
+    { id: 'step2', num: '2', title: txt('step2Short'), desc: 'Appcode & VKYC' },
+    { id: 'step3', num: '3', title: txt('step3Short'), desc: 'IQA & Dispatch' },
+    { id: 'step4', num: '4', title: txt('step4Short'), desc: 'Bank & Ops Status' }
+  ];
+
   return (
-    <div style={{ minHeight: '100vh', background: theme.pageBg, color: theme.textColor, padding: '24px 16px 48px', fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, padding: isMobile ? '14px 12px 36px' : '24px 20px 48px', fontFamily: "'Inter', sans-serif", transition: 'background 0.3s ease, color 0.3s ease' }}>
       
-      {/* Top Header Navbar */}
-      <div style={{ maxWidth: 720, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'rgba(19, 30, 56, 0.7)', backdropFilter: 'blur(10px)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: 18 }}>
+      {/* ═══ TOP NAVBAR HEADER ═══ */}
+      <div style={{ 
+        maxWidth: 820, 
+        margin: '0 auto 20px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justify: 'space-between', 
+        padding: isMobile ? '10px 14px' : '14px 20px', 
+        background: C.card, 
+        border: `1px solid ${C.border}`, 
+        borderRadius: 20,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+        gap: 12,
+        flexWrap: 'wrap'
+      }}>
+        {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {logo && <img src={logo} alt="GharKaPaisa Logo" style={{ height: 32, width: 'auto' }} />}
-          <span style={{ fontSize: 18, fontWeight: 900, background: 'linear-gradient(90deg, #60a5fa, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          {logo && <img src={logo} alt="GharKaPaisa Logo" style={{ height: isMobile ? 28 : 34, width: 'auto' }} />}
+          <span style={{ fontSize: isMobile ? 16 : 20, fontWeight: 900, background: `linear-gradient(90deg, ${C.primary}, ${C.teal})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             GharKaPaisa
           </span>
         </div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#34d399', background: '#064e3b40', border: '1px solid #05966950', padding: '4px 10px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 4 }}>
-          🔒 Physical Verification Portal
+
+        {/* Right Header Utilities: Portal Badge, Language Switcher, Theme Toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {!isMobile && (
+            <div style={{ fontSize: 11, fontWeight: 800, color: C.teal, background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '5px 12px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <MdLock size={14} color={C.teal} /> {txt('portalTitle')}
+            </div>
+          )}
+          <LanguageSwitcher />
+          <LightDarkToggle />
         </div>
       </div>
 
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
+      {/* ═══ MAIN CONTAINER ═══ */}
+      <div style={{ maxWidth: 820, margin: '0 auto' }}>
 
-        {/* Header Card */}
-        <div style={{ background: theme.cardBg, borderRadius: 24, padding: '24px 28px', border: theme.cardBorder, marginBottom: 20, boxShadow: theme.cardShadow }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
-            ⚡ {isSbi ? 'SBI' : 'Bank'} Physical Verification Sheet
+        {/* Top Summary Banner */}
+        <div style={{ background: C.card, borderRadius: 24, padding: isMobile ? '18px 20px' : '24px 28px', border: `1px solid ${C.border}`, marginBottom: 20, boxShadow: '0 8px 30px rgba(0,0,0,0.08)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+                ⚡ {appData?.bank_name || 'Bank'} {txt('headerSub')}
+              </div>
+              <h1 style={{ margin: '0 0 6px', fontSize: isMobile ? 18 : 22, fontWeight: 900, color: C.text }}>
+                {txt('headerSub')}
+              </h1>
+              <p style={{ margin: 0, fontSize: 13, color: C.textMid, lineHeight: 1.5 }}>
+                {txt('appNo')} <strong style={{ color: C.text }}>#{appData?.app_number}</strong> • {txt('bank')}: <strong style={{ color: C.text }}>{appData?.bank_name || 'SBI Bank'}</strong> • {txt('product')}: <strong style={{ color: C.text }}>{appData?.product_name || 'Credit Card'}</strong>
+              </p>
+            </div>
+            
+            {/* Step Completion Indicator Pill */}
+            <div style={{ padding: '6px 14px', borderRadius: 20, background: C.bgSecondary, border: `1px solid ${C.border}`, fontSize: 12, fontWeight: 800, color: C.primary }}>
+              Step {steps.findIndex(s => s.id === activeTab) + 1} of 4
+            </div>
           </div>
-          <h1 style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 900, color: '#fff' }}>
-            Physical Application Verification
-          </h1>
-          <p style={{ margin: 0, fontSize: 13, color: theme.mutedText }}>
-            Application <strong style={{ color: '#e2e8f0' }}>#{appData?.app_number}</strong> • Bank: <strong style={{ color: '#e2e8f0' }}>{appData?.bank_name || 'SBI Bank'}</strong> • Product: <strong style={{ color: '#e2e8f0' }}>{appData?.product_name || 'Credit Card'}</strong>
-          </p>
         </div>
 
         {errorMsg && (
-          <div style={{ background: '#ef444415', border: '1px solid #ef444440', color: '#ef4444', padding: '14px 18px', borderRadius: 16, fontSize: 13, fontWeight: 700, marginBottom: 20 }}>
-            {errorMsg}
+          <div style={{ background: `${C.red}15`, border: `1px solid ${C.red}40`, color: C.red, padding: '14px 18px', borderRadius: 16, fontSize: 13, fontWeight: 700, marginBottom: 20 }}>
+            ⚠️ {errorMsg}
           </div>
         )}
 
-        {/* Form Tab Navigation (4 Steps) */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
-          {[
-            { id: 'step1', num: '1', title: 'Customer Details', sub: 'Form 1' },
-            { id: 'step2', num: '2', title: 'Appcode & VKYC', sub: 'Remark Part 1' },
-            { id: 'step3', num: '3', title: 'IQA & Dispatch', sub: 'Remark Part 2' },
-            { id: 'step4', num: '4', title: 'Bank & Final Status', sub: 'Ops Head / Admin' }
-          ].map((tab) => {
-            const isActive = activeTab === tab.id || (activeTab === 'form1' && tab.id === 'step1') || (activeTab === 'form2' && tab.id === 'step2');
+        {/* ═══ STEP TAB WIZARD (RESPONSIVE GRID / SCROLL) ═══ */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
+          {steps.map((tab) => {
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
                 style={{
-                  flex: 1,
-                  minWidth: '130px',
-                  padding: '10px 12px',
-                  borderRadius: 14,
-                  border: isActive ? '2px solid #3b82f6' : '1px solid #233354',
-                  background: isActive ? '#1d4ed825' : '#0a1122',
-                  color: isActive ? '#60a5fa' : theme.mutedText,
+                  padding: isMobile ? '10px 12px' : '12px 14px',
+                  borderRadius: 16,
+                  border: isActive ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
+                  background: isActive ? (isDark ? '#1d4ed825' : '#eef2ff') : C.card,
+                  color: isActive ? C.primary : C.textMid,
                   fontWeight: 800,
                   fontSize: 12,
                   cursor: 'pointer',
                   textAlign: 'left',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  boxShadow: isActive ? `0 4px 14px ${C.primary}20` : 'none'
                 }}
               >
-                <div style={{ fontSize: 10, color: isActive ? '#93c5fd' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Step {tab.num} • {tab.sub}</div>
-                <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2 }}>{tab.title}</div>
+                <div style={{ fontSize: 10, color: isActive ? C.primary : C.textLight, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Step {tab.num}
+                </div>
+                <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 2, fontSize: 12.5, fontWeight: 800 }}>
+                  {tab.title}
+                </div>
               </button>
             );
           })}
         </div>
 
-        {/* Form Container */}
-        <form onSubmit={handleSubmit} style={{ background: theme.cardBg, borderRadius: 28, padding: 28, border: theme.cardBorder, display: 'flex', flexDirection: 'column', gap: 18, boxShadow: theme.cardShadow }}>
+        {/* ═══ FORM CONTAINER ═══ */}
+        <form onSubmit={handleSubmit} style={{ background: C.card, borderRadius: 28, padding: isMobile ? 20 : 32, border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 20, boxShadow: '0 12px 40px rgba(0,0,0,0.1)' }}>
 
-          {/* ═══ STEP 1: CUSTOMER & PHYSICAL DETAILS (FORM 1) ═══ */}
-          {(activeTab === 'step1' || activeTab === 'form1') && (
+          {/* ═══ STEP 1: CUSTOMER & PHYSICAL DETAILS ═══ */}
+          {activeTab === 'step1' && (
             <>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #233354', paddingBottom: 10, marginBottom: 6 }}>
-                📋 Form 1: Customer Details & Physical Verification Info
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4 }}>
+                📋 {txt('customerDetails')}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>ADHAR LINK CONTACT NUMBER *</label>
+                  <label style={labelStyle}>{txt('aadhaarMobile')}</label>
                   <input
                     type="text"
                     required
                     value={form.aadhaar_linked_mobile}
                     onChange={e => handleChange('aadhaar_linked_mobile', e.target.value)}
-                    placeholder="9370470694"
+                    placeholder={txt('aadhaarMobilePlace')}
                     style={inputStyle}
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>AS PER PAN CARD DOB (dd-mm-yyyy)</label>
+                  <label style={labelStyle}>{txt('dob')}</label>
                   <input
                     type="text"
                     value={form.dob}
                     onChange={e => handleChange('dob', e.target.value)}
-                    placeholder="dd-mm-yyyy"
+                    placeholder={txt('dobPlace')}
                     style={inputStyle}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={labelStyle}>NAME AS PER PAN CARD *</label>
+                <label style={labelStyle}>{txt('panName')}</label>
                 <input
                   type="text"
                   required
                   value={form.pan_name}
                   onChange={e => handleChange('pan_name', e.target.value)}
-                  placeholder="pratap"
+                  placeholder={txt('panNamePlace')}
                   style={inputStyle}
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>PERSONAL EMAIL ID</label>
+                  <label style={labelStyle}>{txt('email')}</label>
                   <input
                     type="email"
                     value={form.personal_email}
                     onChange={e => handleChange('personal_email', e.target.value)}
-                    placeholder="email@example.com"
+                    placeholder={txt('emailPlace')}
                     style={inputStyle}
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>PAN CARD NUMBER *</label>
+                  <label style={labelStyle}>{txt('panNumber')}</label>
                   <input
                     type="text"
                     maxLength={10}
                     required
                     value={form.pan_number}
                     onChange={e => handleChange('pan_number', e.target.value.toUpperCase())}
-                    placeholder="ABCDE1234F"
+                    placeholder={txt('panNumberPlace')}
                     style={{ ...inputStyle, textTransform: 'uppercase', letterSpacing: '1px' }}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>AS PER SALARY SLIP COMPANY NAME</label>
+                  <label style={labelStyle}>{txt('companyName')}</label>
                   <input
                     type="text"
                     value={form.company_name}
                     onChange={e => handleChange('company_name', e.target.value)}
-                    placeholder="Company Name"
+                    placeholder={txt('companyNamePlace')}
                     style={inputStyle}
                   />
                 </div>
                 <div>
-                  <label style={labelStyle}>DESIGNATION</label>
+                  <label style={labelStyle}>{txt('designation')}</label>
                   <input
                     type="text"
                     value={form.designation}
                     onChange={e => handleChange('designation', e.target.value)}
-                    placeholder="Designation / Role"
+                    placeholder={txt('designationPlace')}
                     style={inputStyle}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={labelStyle}>CURRENT HOME ADDRESS WITH LAND MARK PIN CODE</label>
+                <label style={labelStyle}>{txt('homeAddress')}</label>
                 <input
                   type="text"
                   value={form.flat_no}
                   onChange={e => handleChange('flat_no', e.target.value)}
-                  placeholder="Address with landmark & pincode"
+                  placeholder={txt('homeAddressPlace')}
                   style={inputStyle}
                 />
               </div>
 
               <div>
-                <label style={labelStyle}>FULL COMPANY ADDRESS</label>
+                <label style={labelStyle}>{txt('companyAddress')}</label>
                 <input
                   type="text"
                   value={form.company_address}
                   onChange={e => handleChange('company_address', e.target.value)}
-                  placeholder="Full official company address"
+                  placeholder={txt('companyAddressPlace')}
                   style={inputStyle}
                 />
               </div>
 
               <div>
-                <label style={labelStyle}>MOTHER NAME</label>
+                <label style={labelStyle}>{txt('motherName')}</label>
                 <input
                   type="text"
                   value={form.mother_name}
                   onChange={e => handleChange('mother_name', e.target.value)}
-                  placeholder="Mother Name"
+                  placeholder={txt('motherNamePlace')}
                   style={inputStyle}
                 />
               </div>
 
               {isSbi && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                   <div>
-                    <label style={labelStyle}>APPLICATION NUMBER</label>
+                    <label style={labelStyle}>{txt('appNumberBank')}</label>
                     <input
                       type="text"
                       value={form.bank_ref_number}
                       onChange={e => handleChange('bank_ref_number', e.target.value)}
-                      placeholder="Bank Application Number"
+                      placeholder={txt('appNumberBankPlace')}
                       style={inputStyle}
                     />
                   </div>
                   <div>
-                    <label style={labelStyle}>VKYC LINK</label>
+                    <label style={labelStyle}>{txt('vkycUrl')}</label>
                     <input
                       type="text"
                       value={form.vkyc_url}
                       onChange={e => handleChange('vkyc_url', e.target.value)}
-                      placeholder="https://vkyc..."
+                      placeholder={txt('vkycUrlPlace')}
                       style={inputStyle}
                     />
                   </div>
                 </div>
               )}
 
-              <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
                 <button
                   type="button"
                   onClick={() => setActiveTab('step2')}
@@ -452,84 +658,89 @@ export default function PhysicalApplicationForm() {
                     padding: '14px 28px',
                     borderRadius: '16px',
                     border: 'none',
-                    background: theme.brandBlueGradient,
+                    background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
                     color: '#ffffff',
                     fontWeight: 900,
                     fontSize: '14px',
                     cursor: 'pointer',
-                    boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
-                    letterSpacing: '0.02em'
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    boxShadow: `0 6px 20px ${C.primary}35`
                   }}
                 >
-                  Next Step 2: Appcode & VKYC Remark →
+                  {txt('nextStep')} 2: Appcode & VKYC <MdNavigateNext size={20} />
                 </button>
               </div>
             </>
           )}
 
-          {/* ═══ STEP 2: PARTNERS / OPERATIONS REMARK (PART 1: APPCODE, SOFT APPROVAL, VKYC) ═══ */}
-          {(activeTab === 'step2' || activeTab === 'form2') && (
+          {/* ═══ STEP 2: APPCODE & VKYC STAGE ═══ */}
+          {activeTab === 'step2' && (
             <>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #233354', paddingBottom: 10, marginBottom: 6 }}>
-                ⚙️ Form 2 (Part 1): Partners / Operations Remark — Appcode, Soft Approval & VKYC Stage
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4 }}>
+                ⚙️ {txt('appcodeVkyc')}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>APPCODE STATUS</label>
+                  <label style={labelStyle}>{txt('appcodeStatus')}</label>
                   <select
                     value={form.appcode_status}
                     onChange={e => handleChange('appcode_status', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="Appcode Pending" style={{ background: '#0a1122' }}>1. Appcode Pending</option>
-                    <option value="Appcode Submit" style={{ background: '#0a1122' }}>2. Appcode Submit</option>
+                    <option value="Appcode Pending">1. Appcode Pending</option>
+                    <option value="Appcode Submit">2. Appcode Submit</option>
                   </select>
                 </div>
 
                 <div>
-                  <label style={labelStyle}>SOFT APPROVAL STATUS</label>
+                  <label style={labelStyle}>{txt('softApprovalStatus')}</label>
                   <select
                     value={form.soft_approval_status}
                     onChange={e => handleChange('soft_approval_status', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="Approval-income 25k" style={{ background: '#0a1122' }}>1. Approval-income 25k</option>
-                    <option value="Approval-income 30k" style={{ background: '#0a1122' }}>2. Approval-income 30k</option>
-                    <option value="Approval-NSDP-Cibil based" style={{ background: '#0a1122' }}>3. Approval-NSDP-Cibil based</option>
+                    <option value="Approval-income 25k">1. Approval-income 25k</option>
+                    <option value="Approval-income 30k">2. Approval-income 30k</option>
+                    <option value="Approval-NSDP-Cibil based">3. Approval-NSDP-Cibil based</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label style={labelStyle}>VKYC STAGE</label>
+                <label style={labelStyle}>{txt('vkycStage')}</label>
                 <select
                   value={form.vkyc_stage}
                   onChange={e => handleChange('vkyc_stage', e.target.value)}
                   style={inputStyle}
                 >
-                  <option value="VKYC Pending" style={{ background: '#0a1122' }}>1. VKYC Pending</option>
-                  <option value="VKYC Complete" style={{ background: '#0a1122' }}>2. VKYC Complete</option>
-                  <option value="VKYC Failed" style={{ background: '#0a1122' }}>3. VKYC Failed</option>
+                  <option value="VKYC Pending">1. VKYC Pending</option>
+                  <option value="VKYC Complete">2. VKYC Complete</option>
+                  <option value="VKYC Failed">3. VKYC Failed</option>
                 </select>
               </div>
 
-              <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                 <button
                   type="button"
                   onClick={() => setActiveTab('step1')}
                   style={{
                     padding: '14px 22px',
                     borderRadius: '16px',
-                    border: '1px solid #233354',
-                    background: '#0a1122',
-                    color: theme.mutedText,
+                    border: `1px solid ${C.border}`,
+                    background: C.bgSecondary,
+                    color: C.text,
                     fontWeight: 800,
                     fontSize: '13.5px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
                   }}
                 >
-                  ← Back to Step 1
+                  <MdNavigateBefore size={20} /> {txt('backStep')} Step 1
                 </button>
 
                 <button
@@ -539,76 +750,81 @@ export default function PhysicalApplicationForm() {
                     padding: '14px 28px',
                     borderRadius: '16px',
                     border: 'none',
-                    background: theme.brandBlueGradient,
+                    background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
                     color: '#ffffff',
                     fontWeight: 900,
                     fontSize: '14px',
                     cursor: 'pointer',
-                    boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
-                    letterSpacing: '0.02em'
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    boxShadow: `0 6px 20px ${C.primary}35`
                   }}
                 >
-                  Next Step 3: IQA & Dispatch Stage →
+                  {txt('nextStep')} 3: IQA & Dispatch <MdNavigateNext size={20} />
                 </button>
               </div>
             </>
           )}
 
-          {/* ═══ STEP 3: OPERATIONS & DISPATCH STAGE (PART 2: IQA & DISPATCH) ═══ */}
+          {/* ═══ STEP 3: IQA & DISPATCH STAGE ═══ */}
           {activeTab === 'step3' && (
             <>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #233354', paddingBottom: 10, marginBottom: 6 }}>
-                Part 2 Operations & Dispatch Stage
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4 }}>
+                📦 {txt('iqaDispatch')}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>IQA STAGE</label>
+                  <label style={labelStyle}>{txt('iqaStage')}</label>
                   <select
                     value={form.iqa_stage}
                     onChange={e => handleChange('iqa_stage', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="IQA Sent" style={{ background: '#0a1122' }}>1. IQA Sent</option>
-                    <option value="IQA Complete" style={{ background: '#0a1122' }}>2. IQA Complete</option>
-                    <option value="IQA Pending" style={{ background: '#0a1122' }}>3. IQA Pending</option>
-                    <option value="BLAZE Continue" style={{ background: '#0a1122' }}>4. BLAZE Continue</option>
-                    <option value="BLAZE Decline" style={{ background: '#0a1122' }}>5. BLAZE Decline</option>
+                    <option value="IQA Sent">1. IQA Sent</option>
+                    <option value="IQA Complete">2. IQA Complete</option>
+                    <option value="IQA Pending">3. IQA Pending</option>
+                    <option value="BLAZE Continue">4. BLAZE Continue</option>
+                    <option value="BLAZE Decline">5. BLAZE Decline</option>
                   </select>
                 </div>
 
                 <div>
-                  <label style={labelStyle}>DISPATCH STATUS</label>
+                  <label style={labelStyle}>{txt('dispatchStatus')}</label>
                   <select
                     value={form.dispatch_status}
                     onChange={e => handleChange('dispatch_status', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="DISPATCH DONE" style={{ background: '#0a1122' }}>1. DISPATCH DONE</option>
-                    <option value="WCP STAGE" style={{ background: '#0a1122' }}>2. WCP STAGE</option>
-                    <option value="E-sign Done" style={{ background: '#0a1122' }}>3. E-sign Done</option>
-                    <option value="E-sign Pending" style={{ background: '#0a1122' }}>4. E-sign Pending</option>
-                    <option value="RTB(ERROR)" style={{ background: '#0a1122' }}>5. RTB(ERROR)</option>
+                    <option value="DISPATCH DONE">1. DISPATCH DONE</option>
+                    <option value="WCP STAGE">2. WCP STAGE</option>
+                    <option value="E-sign Done">3. E-sign Done</option>
+                    <option value="E-sign Pending">4. E-sign Pending</option>
+                    <option value="RTB(ERROR)">5. RTB(ERROR)</option>
                   </select>
                 </div>
               </div>
 
-              <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                 <button
                   type="button"
                   onClick={() => setActiveTab('step2')}
                   style={{
                     padding: '14px 22px',
                     borderRadius: '16px',
-                    border: '1px solid #233354',
-                    background: '#0a1122',
-                    color: theme.mutedText,
+                    border: `1px solid ${C.border}`,
+                    background: C.bgSecondary,
+                    color: C.text,
                     fontWeight: 800,
                     fontSize: '13.5px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
                   }}
                 >
-                  ← Back to Step 2
+                  <MdNavigateBefore size={20} /> {txt('backStep')} Step 2
                 </button>
 
                 <button
@@ -618,138 +834,146 @@ export default function PhysicalApplicationForm() {
                     padding: '14px 28px',
                     borderRadius: '16px',
                     border: 'none',
-                    background: theme.brandBlueGradient,
+                    background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
                     color: '#ffffff',
                     fontWeight: 900,
                     fontSize: '14px',
                     cursor: 'pointer',
-                    boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
-                    letterSpacing: '0.02em'
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    boxShadow: `0 6px 20px ${C.primary}35`
                   }}
                 >
-                  Next Step 4: Bank & Final Status →
+                  {txt('nextStep')} 4: Bank & Final Status <MdNavigateNext size={20} />
                 </button>
               </div>
             </>
           )}
 
-          {/* ═══ STEP 4: BANK REMARK & FINAL STATUS (PART 3: EDITABLE BY ADMIN / OPERATIONS HEAD ONLY) ═══ */}
+          {/* ═══ STEP 4: BANK REMARK & FINAL STATUS ═══ */}
           {activeTab === 'step4' && (
             <>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#f97316', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #233354', paddingBottom: 10, marginBottom: 6 }}>
-                Part 3: Bank Remark & Final Status
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4 }}>
+                🏦 {txt('bankFinalStatus')}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>APPLICATION NUMBER (BANK APPLICATION REF NO.)</label>
+                  <label style={labelStyle}>{txt('appNumberBank')}</label>
                   <input
                     type="text"
-                    value={form.application_number}
-                    onChange={e => handleChange('application_number', e.target.value)}
-                    placeholder="Enter Bank Application Number"
+                    value={form.bank_ref_number}
+                    onChange={e => handleChange('bank_ref_number', e.target.value)}
+                    placeholder={txt('appNumberBankPlace')}
                     style={{ ...inputStyle, fontWeight: 'bold', fontFamily: 'monospace' }}
                   />
                 </div>
 
                 <div>
-                  <label style={labelStyle}>VKYC LINK</label>
+                  <label style={labelStyle}>{txt('vkycUrl')}</label>
                   <input
                     type="url"
                     value={form.vkyc_url}
                     onChange={e => handleChange('vkyc_url', e.target.value)}
-                    placeholder="https://vkyc..."
+                    placeholder={txt('vkycUrlPlace')}
                     style={inputStyle}
                   />
                 </div>
 
                 <div>
-                  <label style={labelStyle}>FINAL STATUS FROM BANK / CURRENT STAGE</label>
+                  <label style={labelStyle}>{txt('finalStatus')}</label>
                   <select
                     value={form.final_status}
                     onChange={e => handleChange('final_status', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="App file generated (approved)" style={{ background: '#0a1122' }}>1. App file generated (approved)</option>
-                    <option value="Decline" style={{ background: '#0a1122' }}>2. Decline</option>
-                    <option value="In Process" style={{ background: '#0a1122' }}>3. In Process</option>
-                    <option value="Technical Error" style={{ background: '#0a1122' }}>4. Technical Error</option>
+                    <option value="App file generated (approved)">1. App file generated (approved)</option>
+                    <option value="Decline">2. Decline</option>
+                    <option value="In Process">3. In Process</option>
+                    <option value="Technical Error">4. Technical Error</option>
                   </select>
                 </div>
 
                 <div>
-                  <label style={labelStyle}>ELIGIBLE FOR RE-QD</label>
+                  <label style={labelStyle}>{txt('eligibleReqd')}</label>
                   <select
                     value={form.eligible_reqd}
                     onChange={e => handleChange('eligible_reqd', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="Yes" style={{ background: '#0a1122' }}>1. Yes</option>
-                    <option value="No" style={{ background: '#0a1122' }}>2. No</option>
+                    <option value="Yes">{txt('yes')}</option>
+                    <option value="No">{txt('no')}</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label style={labelStyle}>BANK REMARK (OPERATIONS HEAD ONLY)</label>
+                <label style={labelStyle}>{txt('bankRemark')}</label>
                 <textarea
                   rows={3}
                   value={form.bank_remark}
                   onChange={e => handleChange('bank_remark', e.target.value)}
-                  placeholder="Operations Head / Bank remark..."
+                  placeholder={txt('bankRemarkPlace')}
                   style={{ ...inputStyle, resize: 'vertical' }}
                 />
               </div>
 
               {form.final_status === 'Decline' && (
                 <div>
-                  <label style={{ ...labelStyle, color: '#f87171' }}>DECLINE REASON REMARK</label>
+                  <label style={{ ...labelStyle, color: C.red }}>{txt('declineReason')}</label>
                   <textarea
                     rows={2}
                     value={form.decline_reason}
                     onChange={e => handleChange('decline_reason', e.target.value)}
-                    placeholder="Enter decline reason..."
-                    style={{ ...inputStyle, borderColor: '#ef444450', resize: 'vertical' }}
+                    placeholder={txt('declineReasonPlace')}
+                    style={{ ...inputStyle, borderColor: `${C.red}60`, resize: 'vertical' }}
                   />
                 </div>
               )}
 
-              <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                 <button
                   type="button"
                   onClick={() => setActiveTab('step3')}
                   style={{
                     padding: '14px 22px',
                     borderRadius: '16px',
-                    border: '1px solid #233354',
-                    background: '#0a1122',
-                    color: theme.mutedText,
+                    border: `1px solid ${C.border}`,
+                    background: C.bgSecondary,
+                    color: C.text,
                     fontWeight: 800,
                     fontSize: '13.5px',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
                   }}
                 >
-                  ← Back to Step 3
+                  <MdNavigateBefore size={20} /> {txt('backStep')} Step 3
                 </button>
 
                 <button
                   type="submit"
                   disabled={submitting}
                   style={{
-                    padding: '14px 28px',
+                    padding: '14px 32px',
                     borderRadius: '16px',
                     border: 'none',
-                    background: theme.brandBlueGradient,
+                    background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
                     color: '#ffffff',
                     fontWeight: 900,
                     fontSize: '14px',
                     cursor: submitting ? 'not-allowed' : 'pointer',
                     opacity: submitting ? 0.7 : 1,
-                    boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    boxShadow: `0 8px 24px ${C.primary}40`,
                     letterSpacing: '0.02em'
                   }}
                 >
-                  {submitting ? 'Saving Details...' : 'SAVE DETAILS 💾'}
+                  {submitting ? txt('savingDetails') : txt('saveDetails')}
                 </button>
               </div>
             </>
