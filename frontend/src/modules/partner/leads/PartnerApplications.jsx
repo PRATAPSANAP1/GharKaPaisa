@@ -87,14 +87,8 @@ export default function PartnerApplications() {
   };
 
   const shouldHideFinalButton = (procBy, procType) => {
-    const p = String(procBy || procType || '').toLowerCase();
-    if (p.includes('share') || p.includes('linked_share') || p.includes('share_link')) {
-      return true;
-    }
-    if (isPartnerRole && (p.includes('punch') || p.includes('lead_punching') || p.includes('punching'))) {
-      return true;
-    }
-    return false;
+    // Hide Final button from main applications list page. Final status updates are managed by Operational Head & Super Admin inside the modal/view.
+    return true;
   };
 
   const border = isDark ? '#1f1f1f' : C.border;
