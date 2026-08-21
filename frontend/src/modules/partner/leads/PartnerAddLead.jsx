@@ -74,6 +74,14 @@ export default function PartnerAddLead() {
   const [submitting, setSubmitting] = useState(false);
   const [pincodeLoading, setPincodeLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   // Persist form state across page reload
   const { clearPersistedDraft } = useFormPersistence('partner_add_lead', {
@@ -264,15 +272,24 @@ export default function PartnerAddLead() {
           navigate('/partner/applications');
         } else {
           clearPersistedDraft();
-          alert(`Lead Punching Application #${leadData?.app_number || ''} logged successfully!`);
-          navigate('/partner/applications');
+          setToast({
+            type: 'success',
+            message: `✅ Lead Punching Application #${leadData?.app_number || ''} logged successfully!`
+          });
+          setTimeout(() => navigate('/partner/applications'), 1200);
         }
       }
     } catch (err) {
       if (err.response?.status === 409) {
-        alert(err.response?.data?.message || 'Duplicate lead/application detected within 30 days.');
+        setToast({
+          type: 'error',
+          message: err.response?.data?.message || 'Duplicate lead/application detected within 30 days.'
+        });
       } else {
-        alert(err.response?.data?.message || 'Failed to create lead. Please try again.');
+        setToast({
+          type: 'error',
+          message: err.response?.data?.message || 'Failed to create lead. Please try again.'
+        });
       }
     } finally {
       setSubmitting(false);
@@ -387,6 +404,40 @@ export default function PartnerAddLead() {
           </div>
         </div>
       </div>
+
+      {/* ═══ TOP-RIGHT CORNER TOAST NOTIFICATION ═══ */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: 12000,
+          minWidth: '320px',
+          maxWidth: '440px',
+          padding: '14px 18px',
+          borderRadius: '16px',
+          background: toast.type === 'success' ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)' : 'linear-gradient(135deg, #DC2626 0%, #EF4444 100%)',
+          color: '#FFFFFF',
+          fontWeight: 800,
+          fontSize: '13.5px',
+          boxShadow: '0 12px 35px rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+            <span style={{ fontSize: '20px' }}>{toast.type === 'success' ? '✅' : '❌'}</span>
+            <div style={{ lineHeight: 1.4, wordBreak: 'break-word' }}>{toast.message}</div>
+          </div>
+          <button
+            onClick={() => setToast(null)}
+            style={{ background: 'none', border: 'none', color: '#FFF', fontSize: '18px', cursor: 'pointer', fontWeight: 900, padding: '2px 6px' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* OTP VERIFICATION MODAL */}
       {showOtpModal && (

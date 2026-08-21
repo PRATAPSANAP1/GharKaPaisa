@@ -198,6 +198,16 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   const [physicalSheetData, setPhysicalSheetData] = useState(null);
   const [copiedPhysicalNotice, setCopiedPhysicalNotice] = useState(false);
 
+  // Toast notification state (top-right corner alert)
+  const [toast, setToast] = useState(null); // { type: 'success' | 'error', message: string }
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   // Benefits & Compare state
   const [showBenefitsProduct, setShowBenefitsProduct] = useState(null);
   const [compareList, setCompareList] = useState([]);
@@ -335,8 +345,15 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       usePartnerStore.getState().fetchApplications().catch(() => {});
 
       if (processType === 'lead_punching') {
-        alert(`✅ Lead punched successfully for ${customerName.trim()} (${mobile.trim()})!\nApplication recorded under your Partner account.`);
+        setToast({
+          type: 'success',
+          message: `Lead punched successfully for ${customerName.trim()} (${mobile.trim()})! Application #${appData?.app_number || ''} recorded.`
+        });
       } else if (processType === 'physical_process') {
+        setToast({
+          type: 'success',
+          message: `Physical process lead created for ${customerName.trim()} (${mobile.trim()}).`
+        });
         const cleanMobile = mobile.trim().replace(/\D/g, '');
         const token = appData?.tracking_token || appData?.token || appData?.application_id || appData?.app_id || appData?.id;
         const uploadUrl = (token ? `${window.location.origin}/physical-application/${token}` : null) || appData?.share_url || `${window.location.origin}/partner/applications`;
@@ -358,7 +375,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       setCustomerName("");
       setMobile("");
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to process lead. Please try again.");
+      setToast({
+        type: 'error',
+        message: err.response?.data?.message || err.message || "Failed to process lead. Please try again."
+      });
     } finally {
       setSubmitting(false);
     }
@@ -805,6 +825,40 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       margin: '0 auto',
       boxSizing: 'border-box'
     }}>
+
+      {/* ═══ TOP-RIGHT CORNER TOAST NOTIFICATION ═══ */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: 12000,
+          minWidth: '320px',
+          maxWidth: '440px',
+          padding: '14px 18px',
+          borderRadius: '16px',
+          background: toast.type === 'success' ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)' : 'linear-gradient(135deg, #DC2626 0%, #EF4444 100%)',
+          color: '#FFFFFF',
+          fontWeight: 800,
+          fontSize: '13.5px',
+          boxShadow: '0 12px 35px rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+            <span style={{ fontSize: '20px' }}>{toast.type === 'success' ? '✅' : '❌'}</span>
+            <div style={{ lineHeight: 1.4, wordBreak: 'break-word' }}>{toast.message}</div>
+          </div>
+          <button
+            onClick={() => setToast(null)}
+            style={{ background: 'none', border: 'none', color: '#FFF', fontSize: '18px', cursor: 'pointer', fontWeight: 900, padding: '2px 6px' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
 
       {/* ─── MAIN SIDEBAR + GRID CONTAINER ─── */}
