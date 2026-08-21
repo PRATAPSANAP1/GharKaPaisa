@@ -884,13 +884,7 @@ export default function PartnerApplications() {
                         </button>
                       )}
                       {String(app.process_type || '').toLowerCase() !== 'lead_punching' && (
-                        <button onClick={() => {
-                          if (String(app.process_type || '').toLowerCase() === 'direct_bank' && app.bank_url) {
-                            window.open(app.bank_url, '_blank');
-                          } else {
-                            handleGenerateShareLink(app);
-                          }
-                        }} disabled={generatingShare}
+                        <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
                           style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                           <Share2 size={12} /> Share
                         </button>
@@ -1014,13 +1008,7 @@ export default function PartnerApplications() {
                               </button>
                             )}
                             {String(app.process_type || '').toLowerCase() !== 'lead_punching' && (
-                              <button onClick={() => {
-                                if (String(app.process_type || '').toLowerCase() === 'direct_bank' && app.bank_url) {
-                                  window.open(app.bank_url, '_blank');
-                                } else {
-                                  handleGenerateShareLink(app);
-                                }
-                              }} disabled={generatingShare}
+                              <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
                                 style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                 <Share2 size={13} /> Share
                               </button>

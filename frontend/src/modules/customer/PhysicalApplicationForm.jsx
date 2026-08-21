@@ -259,7 +259,7 @@ export default function PhysicalApplicationForm() {
         });
 
         const procType = String(app.process_type || app.process_by || data.process_type || '').toLowerCase();
-        if (procType.includes('linked') || procType.includes('share')) {
+        if (procType.includes('linked') || procType.includes('share') || procType.includes('direct')) {
           setActiveTab('step2');
         }
       } else {
