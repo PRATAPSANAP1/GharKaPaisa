@@ -413,7 +413,12 @@ const createLead = async (req, res, next) => {
       }, 'Linked share link generated successfully.');
     }
 
-function getBankApplyLinkBackend(productName, bankName) {
+function getBankApplyLinkBackend(productName, bankName, productObj = null) {
+  if (productObj && typeof productObj === 'object') {
+    const url = productObj.partner_url || productObj.application_url || productObj.public_url || productObj.apply_url || productObj.redirect_url;
+    if (url && String(url).trim()) return String(url).trim();
+  }
+
   const nameLower = String(productName || '').toLowerCase();
   const bankLower = String(bankName || '').toLowerCase();
 
@@ -442,6 +447,21 @@ function getBankApplyLinkBackend(productName, bankName) {
     return "https://get.novio.in/j84P/7tnakuu8";
   }
   if (bankLower.includes('hdfc') || nameLower.includes('hdfc')) {
+    if (nameLower.includes('freedom') || nameLower.includes('indianoil')) {
+      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=RUPY&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
+    }
+    if (nameLower.includes('swiggy')) {
+      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=SWCC&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
+    }
+    if (nameLower.includes('tataneu') || nameLower.includes('tata neu')) {
+      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
+    }
+    if (nameLower.includes('pixel')) {
+      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
+    }
+    if (nameLower.includes('biz')) {
+      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=BIZC&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
+    }
     return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb";
   }
 
@@ -1097,6 +1117,7 @@ module.exports = {
   listPartnerShareLeads,
   updateLead,
   updateLeadProcessType,
-  convertLeadToApplication
+  convertLeadToApplication,
+  getBankApplyLinkBackend
 };
 

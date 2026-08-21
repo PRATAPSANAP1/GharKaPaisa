@@ -1,5 +1,6 @@
 const { query } = require('../../config/database');
 const { success, created, error, notFound } = require('../../utils/response/response');
+const { getBankApplyLinkBackend } = require('../crm/lead.controller');
 const crypto = require('crypto');
 
 /**
@@ -622,11 +623,11 @@ const getApplyTokenDetails = async (req, res, next) => {
         is_lifetime_free: product.is_lifetime_free,
         image_url: product.image_url,
         apply_button_text: product.apply_button_text || 'Apply Now',
-        partner_url: product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || '',
-        application_url: product.application_url || product.partner_url || product.public_url || product.apply_url || product.redirect_url || '',
-        public_url: product.public_url || product.partner_url || product.application_url || product.apply_url || product.redirect_url || '',
-        apply_url: product.apply_url || product.partner_url || product.application_url || product.public_url || product.redirect_url || '',
-        redirect_url: product.redirect_url || product.partner_url || product.application_url || product.public_url || product.apply_url || ''
+        partner_url: product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || getBankApplyLinkBackend(product.name, product.bank_code || product.bank_name, product) || '',
+        application_url: product.application_url || product.partner_url || product.public_url || product.apply_url || product.redirect_url || getBankApplyLinkBackend(product.name, product.bank_code || product.bank_name, product) || '',
+        public_url: product.public_url || product.partner_url || product.application_url || product.apply_url || product.redirect_url || getBankApplyLinkBackend(product.name, product.bank_code || product.bank_name, product) || '',
+        apply_url: product.apply_url || product.partner_url || product.application_url || product.public_url || product.redirect_url || getBankApplyLinkBackend(product.name, product.bank_code || product.bank_name, product) || '',
+        redirect_url: product.redirect_url || product.partner_url || product.application_url || product.public_url || product.apply_url || getBankApplyLinkBackend(product.name, product.bank_code || product.bank_name, product) || ''
       },
       customer: {
         full_name: fullName,
