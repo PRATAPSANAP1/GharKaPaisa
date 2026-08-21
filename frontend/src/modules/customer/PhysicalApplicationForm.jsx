@@ -204,14 +204,26 @@ export default function PhysicalApplicationForm() {
         const data = res.data.data;
         setAppData(data);
 
-        const cust = data.customer || {};
-        const pd = data.physical_details || {};
-        const app = data.application || data || {};
+        const formatDobStr = (raw) => {
+          if (!raw) return '';
+          if (typeof raw === 'string' && raw.includes('T')) {
+            try {
+              const d = new Date(raw);
+              if (!isNaN(d.getTime())) {
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                return `${day}-${month}-${year}`;
+              }
+            } catch (e) {}
+          }
+          return raw;
+        };
 
         setForm({
           aadhaar_linked_mobile: pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile || '',
           pan_name: pd.pan_name || cust.full_name || app.customer_name || '',
-          dob: pd.dob || cust.dob || app.dob || '',
+          dob: formatDobStr(pd.dob || cust.dob || app.dob || ''),
           pan_number: pd.pan_number || cust.pan_number || app.pan_number || '',
           mother_name: pd.mother_name || app.mother_name || '',
           personal_email: pd.personal_email || cust.email || app.customer_email || '',
