@@ -50,8 +50,8 @@ const MOBILE_BOTTOM_NAV = [
   { id: 'dashboard', path: '/partner/dashboard', label: 'Dashboard', icon: MdDashboard },
   { id: 'credit_card', path: '/partner/credit-cards', label: 'Credit Card', icon: MdCreditCard },
   { id: 'lead', path: '/partner/sell-and-earn', label: 'Add Lead', icon: MdAdd, isCenter: true },
-  { id: 'insurance', path: '/partner/insurance', label: 'Insurance', icon: MdShield },
-  { id: 'loans', path: '/partner/loans', label: 'Loans', icon: MdAccountBalanceWallet },
+  { id: 'applications', path: '/partner/applications?scope=my', label: 'Applications', icon: MdLeaderboard },
+  { id: 'team', path: '/partner/team', label: 'Team', icon: MdGroup },
 ];
 
 const BRAND = '#0D5CAB';

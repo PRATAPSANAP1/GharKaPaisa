@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
-import { Home, CreditCard, Shield, PiggyBank, Plus } from 'lucide-react';
+import { Home, CreditCard, FileText, Users, Plus } from 'lucide-react';
 
 const NavItem = ({ icon, label, active, onClick }) => (
   <div onClick={onClick} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
@@ -105,16 +105,16 @@ export default function PartnerMobileBottomNav() {
         </div>
 
         <NavItem
-          icon={<Shield size={22} />}
-          label="Insurance"
-          active={isActive('/partner/products?category=insurance')}
-          onClick={() => navigate('/partner/products?category=insurance')}
+          icon={<FileText size={22} />}
+          label="Applications"
+          active={isActive('/partner/applications')}
+          onClick={() => navigate('/partner/applications?scope=my')}
         />
         <NavItem
-          icon={<PiggyBank size={22} />}
-          label="Loans"
-          active={isActive('/partner/products?category=personal_loan')}
-          onClick={() => navigate('/partner/products?category=personal_loan')}
+          icon={<Users size={22} />}
+          label="Team"
+          active={isActive('/partner/team') || isActive('/partner/network')}
+          onClick={() => navigate('/partner/team')}
         />
       </div>
     </div>
