@@ -279,37 +279,6 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       const code = partnerCode || user?.partner_code || 'PARTNER';
       const directBankUrl = selectedProduct.partner_url || selectedProduct.application_url || selectedProduct.public_url || selectedProduct.apply_url || selectedProduct.redirect_url || selectedProduct.bank_link || selectedProduct.tracking_url || getBankApplyLink(selectedProduct.name, selectedProduct.bank_code || selectedProduct.bank_name) || `${window.location.origin}/redirect/${selectedProduct.category}?id=${selectedProduct.id}&partner=${code}`;
 
-      if (processType === 'linked_share') {
-        const shareLink = directBankUrl;
-        const shareMessage = customerName.trim() 
-          ? `Hi ${customerName.trim()},\n\nApply for ${selectedProduct.name} directly on official bank portal: ${shareLink}`
-          : `Apply for ${selectedProduct.name} directly on official bank portal: ${shareLink}`;
-
-        const cleanMob = mobile.trim().replace(/\D/g, '');
-        const waUrl = cleanMob 
-          ? `https://wa.me/91${cleanMob}?text=${encodeURIComponent(shareMessage)}`
-          : `https://wa.me/?text=${encodeURIComponent(shareMessage)}`;
-
-        // Open WhatsApp or Web Share
-        if (navigator.share) {
-          navigator.share({
-            title: selectedProduct.name,
-            text: shareMessage,
-            url: shareLink
-          }).catch(() => {
-            window.open(waUrl, '_blank');
-          });
-        } else {
-          window.open(waUrl, '_blank');
-        }
-
-        setShareModalProduct({ ...selectedProduct, shareLink, shareMessage });
-        setSelectedProduct(null);
-        setCustomerName("");
-        setMobile("");
-        return;
-      }
-
       const payload = {
         product_id: selectedProduct.id,
         full_name: customerName.trim() || 'Customer',
@@ -344,7 +313,41 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       usePartnerStore.getState().fetchCustomers().catch(() => {});
       usePartnerStore.getState().fetchApplications().catch(() => {});
 
-      if (processType === 'lead_punching') {
+      if (processType === 'linked_share') {
+        const shareLink = appData?.share_url || appData?.url || directBankUrl;
+        const shareMessage = customerName.trim() 
+          ? `Hi ${customerName.trim()},\n\nPlease complete your application for ${selectedProduct.name} using this link: ${shareLink}`
+          : `Apply for ${selectedProduct.name} directly on official bank portal: ${shareLink}`;
+
+        const cleanMob = mobile.trim().replace(/\D/g, '');
+        const waUrl = appData?.whatsapp_url || (cleanMob 
+          ? `https://wa.me/91${cleanMob}?text=${encodeURIComponent(shareMessage)}`
+          : `https://wa.me/?text=${encodeURIComponent(shareMessage)}`);
+
+        setToast({
+          type: 'success',
+          message: `Linked share lead created for ${customerName.trim()} (${mobile.trim()})! Application #${appData?.app_number || ''} added to Applications.`
+        });
+
+        // Open WhatsApp or Web Share
+        if (navigator.share) {
+          navigator.share({
+            title: selectedProduct.name,
+            text: shareMessage,
+            url: shareLink
+          }).catch(() => {
+            window.open(waUrl, '_blank');
+          });
+        } else {
+          window.open(waUrl, '_blank');
+        }
+
+        setShareModalProduct({ ...selectedProduct, shareLink, shareMessage });
+        setSelectedProduct(null);
+        setCustomerName("");
+        setMobile("");
+        return;
+      } else if (processType === 'lead_punching') {
         setToast({
           type: 'success',
           message: `Lead punched successfully for ${customerName.trim()} (${mobile.trim()})! Application #${appData?.app_number || ''} recorded.`
