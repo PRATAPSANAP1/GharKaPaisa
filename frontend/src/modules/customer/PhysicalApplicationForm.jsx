@@ -800,11 +800,11 @@ export default function PhysicalApplicationForm() {
                     onChange={e => handleChange('iqa_stage', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="IQA Sent">1. IQA Sent</option>
-                    <option value="IQA Complete">2. IQA Complete</option>
-                    <option value="IQA Pending">3. IQA Pending</option>
-                    <option value="BLAZE Continue">4. BLAZE Continue</option>
-                    <option value="BLAZE Decline">5. BLAZE Decline</option>
+                    <option value="IQA SENT">1. IQA SENT</option>
+                    <option value="IQA COMPLETE">2. IQA COMPLETE</option>
+                    <option value="IQA PENDING">3. IQA PENDING</option>
+                    <option value="BLAZE CONTINUE">4. BLAZE CONTINUE</option>
+                    <option value="BLAZE DECLINE">5. BLAZE DECLINE</option>
                   </select>
                 </div>
 
