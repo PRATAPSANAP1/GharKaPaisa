@@ -413,8 +413,43 @@ const createLead = async (req, res, next) => {
       }, 'Linked share link generated successfully.');
     }
 
+function getBankApplyLinkBackend(productName, bankName) {
+  const nameLower = String(productName || '').toLowerCase();
+  const bankLower = String(bankName || '').toLowerCase();
+
+  if (bankLower.includes('axis') || nameLower.includes('axis')) {
+    return "https://web.axis.bank.in/DigitalChannel/WebForm/?ipa68&axisreferralcode=WMMNYOH1_9640841";
+  }
+  if (bankLower.includes('indus') || nameLower.includes('indus')) {
+    return "https://induseasycredit.indusind.bank.in/customer/credit-card/new-lead?utm_source=assisted&utm_medium=IBLV9763WESTIBL131260%20&utm_campaign=Credit-Card&utm_content=1";
+  }
+  if (bankLower.includes('sbi') || nameLower.includes('sbi') || nameLower.includes('state bank')) {
+    return "https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01";
+  }
+  if (bankLower.includes('idfc') || nameLower.includes('idfc')) {
+    return "https://my.idfcfirst.bank.in/apply/cc?utm_source=partner&utm_medium=MywishMarketplaces&utm_campaign=WFYOU01";
+  }
+  if (bankLower.includes('bob') || nameLower.includes('baroda')) {
+    return "https://mycard.bobcard.tech/?utm_source=urbanmoney&utm_medium=urbanmoney_aq&utm_campaign=APAY1001";
+  }
+  if (bankLower.includes('federal') || nameLower.includes('scapia')) {
+    return "https://apply.scapia.cards/landing_page?utm_source=RKPL_offline&utm_medium=DSA&utm_campaign=VK_MOHYHS1_content=travel&utm_term=card";
+  }
+  if (bankLower.includes('dcb') || bankLower.includes('bcb')) {
+    return "https://get.novio.in/j84P/va2pvtwb";
+  }
+  if (bankLower.includes('sbm')) {
+    return "https://get.novio.in/j84P/7tnakuu8";
+  }
+  if (bankLower.includes('hdfc') || nameLower.includes('hdfc')) {
+    return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb";
+  }
+
+  return "https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01";
+}
+
     if (targetProcess === 'direct_bank') {
-      const bankUrl = product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || 'https://gharkapaisa.in/partner/products';
+      const bankUrl = product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code);
 
       const { rows: [lead] } = await query(`
         INSERT INTO leads (

@@ -2035,8 +2035,8 @@ const submitPartnerApplication = async (req, res, next) => {
         const msg = encodeURIComponent(`Hello ${trimmedName},\n\nPlease fill your required customer details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
         whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
       } else {
-        const directBankUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url;
-        shareUrl = directBankUrl || `${baseUrl}/share/${trackingToken}`;
+        const directBankUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || 'https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01';
+        shareUrl = directBankUrl;
         const msg = encodeURIComponent(`Hello ${trimmedName},\n\nYou can apply for ${product.name} with ${product.bank_name || 'Bank'} using your official partner application link below:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
         whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
       }
@@ -2055,7 +2055,7 @@ const submitPartnerApplication = async (req, res, next) => {
     }
 
     if (['direct_bank', 'punching_process'].includes(process_type)) {
-      bankUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || `${baseUrl}/partner/products`;
+      bankUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || 'https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01';
     }
 
     await client.query('COMMIT');
