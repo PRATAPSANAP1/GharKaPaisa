@@ -124,12 +124,74 @@ export default function ManageApplications() {
     }
   };
 
+  const STATUS_TABS = [
+    { id: '', label: 'All', color: '#6366f1', bg: '#6366f115' },
+    { id: 'pending', label: 'Pending', color: '#f59e0b', bg: '#f59e0b15' },
+    { id: 'details_submitted', label: 'Details Submitted', color: '#3b82f6', bg: '#3b82f615' },
+    { id: 'operational_verified', label: 'Operational Verified', color: '#8b5cf6', bg: '#8b5cf615' },
+    { id: 'approved', label: 'Approved', color: '#10b981', bg: '#10b98115' },
+    { id: 'commission_released', label: 'Commission Released', color: '#06b6d4', bg: '#06b6d415' },
+    { id: 'commission_received', label: 'Commission Received', color: '#16a34a', bg: '#16a34a15' },
+  ];
+
+  // Calculate status counts
+  const statusCounts = apps.reduce((acc, app) => {
+    const s = String(app.status || '').toLowerCase();
+    acc[s] = (acc[s] || 0) + 1;
+    return acc;
+  }, {});
+
+  const getStatusBadgeStyle = (st) => {
+    const s = String(st || '').toLowerCase();
+    switch (s) {
+      case 'pending': return { bg: '#f59e0b15', color: '#f59e0b', border: '#f59e0b40', label: 'Pending' };
+      case 'details_submitted': return { bg: '#3b82f615', color: '#3b82f6', border: '#3b82f640', label: 'Details Submitted' };
+      case 'operational_verified': return { bg: '#8b5cf615', color: '#8b5cf6', border: '#8b5cf640', label: 'Operational Verified' };
+      case 'approved': return { bg: '#10b98115', color: '#10b981', border: '#10b98140', label: 'Approved' };
+      case 'commission_released': return { bg: '#06b6d415', color: '#06b6d4', border: '#06b6d440', label: 'Commission Released' };
+      case 'commission_received': return { bg: '#16a34a15', color: '#16a34a', border: '#16a34a40', label: 'Commission Received' };
+      default: return { bg: `${C.gold}15`, color: C.gold, border: `${C.gold}40`, label: st };
+    }
+  };
+
   return (
     <div>
       {/* Title */}
-      <div style={{ marginBottom: "24px" }}>
+      <div style={{ marginBottom: "20px" }}>
         <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Applications Management</h2>
-        <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Track customer application forms, edit processing status, and credit partner commissions</p>
+        <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Track status-wise customer application forms, edit processing stage, and manage partner commissions</p>
+      </div>
+
+      {/* Status-Wise Summary Tabs */}
+      <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '20px' }}>
+        {STATUS_TABS.map((tab) => {
+          const isActive = status === tab.id;
+          const count = tab.id === '' ? total : (statusCounts[tab.id] || 0);
+          return (
+            <button
+              key={tab.id}
+              onClick={() => { setStatus(tab.id); setPage(1); }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px',
+                background: isActive ? tab.color : C.card,
+                color: isActive ? '#ffffff' : C.text,
+                border: `1px solid ${isActive ? tab.color : C.border}`,
+                fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap',
+                transition: 'all 0.2s ease',
+                boxShadow: isActive ? `0 4px 12px ${tab.color}35` : 'none'
+              }}
+            >
+              <span>{tab.label}</span>
+              <span style={{
+                background: isActive ? 'rgba(255,255,255,0.25)' : tab.bg,
+                color: isActive ? '#ffffff' : tab.color,
+                padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 800
+              }}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Filter Options */}
@@ -144,18 +206,17 @@ export default function ManageApplications() {
             />
           </div>
           <select
-            style={{ ...S.input, width: "auto", minWidth: "160px" }}
+            style={{ ...S.input, width: "auto", minWidth: "180px" }}
             value={status}
             onChange={(e) => { setStatus(e.target.value); setPage(1); }}
           >
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
-            <option value="submitted">Submitted</option>
-            <option value="under_review">Under Review</option>
+            <option value="details_submitted">Details Submitted</option>
+            <option value="operational_verified">Operational Verified</option>
             <option value="approved">Approved</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="disbursed">Disbursed</option>
-            <option value="rejected">Rejected</option>
+            <option value="commission_released">Commission Released</option>
+            <option value="commission_received">Commission Received</option>
           </select>
           <button type="submit" style={{ ...S.btn("primary", false), padding: "10px 20px" }}>
             Search
@@ -177,7 +238,7 @@ export default function ManageApplications() {
             Loading applications...
           </div>
         ) : apps.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>No applications found.</div>
+          <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>No applications found for selected status.</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
@@ -194,72 +255,74 @@ export default function ManageApplications() {
                 </tr>
               </thead>
               <tbody style={{ fontSize: "13.5px", color: C.text }}>
-                {apps.map((app) => (
-                  <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
-                    <td style={{ padding: "14px 16px", fontWeight: 700, fontMono: true }}>{app.app_number}</td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div style={{ fontWeight: 600 }}>{app.customer_name}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>{app.customer_mobile}</div>
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div>{app.Partner_first_name || app.partner_first_name || 'Direct'} {app.Partner_last_name || app.partner_last_name || ''}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>Code: {app.Partner_code || app.partner_code || 'N/A'}</div>
-                      <div style={{
-                        marginTop: "4px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase", display: "inline-block",
-                        padding: "2px 8px", borderRadius: "6px",
-                        background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
-                        color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
-                      }}>
-                        {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? '🔗 Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? '📱 Customer Apply' : '✍️ Partner Punch'}
-                      </div>
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <div style={{ fontWeight: 500 }}>{app.product_name}</div>
-                      <div style={{ fontSize: "11px", color: C.textLight, textTransform: "capitalize" }}>{app.category} • {app.bank_code}</div>
-                    </td>
-                    <td style={{ padding: "14px 16px", fontWeight: 600 }}>
-                      {app.loan_amount && Number(app.loan_amount) > 0 
-                        ? `₹${parseFloat(app.loan_amount).toLocaleString("en-IN")}`
-                        : (app.monthly_income || app.salary) 
-                          ? `₹${parseFloat(app.monthly_income || app.salary).toLocaleString("en-IN")} / mo` 
-                          : 'N/A'}
-                    </td>
-                    <td style={{ padding: "14px 16px", color: C.green, fontWeight: 700 }}>
-                      ₹{parseFloat(app.commission_amount).toLocaleString("en-IN")}
-                    </td>
-                    <td style={{ padding: "14px 16px" }}>
-                      <span style={{
-                        display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, textTransform: "uppercase",
-                        background: app.status === "approved" || app.status === "disbursed" ? `${C.green}15` : app.status === "rejected" ? `${C.red}15` : `${C.gold}15`,
-                        color: app.status === "approved" || app.status === "disbursed" ? C.green : app.status === "rejected" ? C.red : C.gold
-                      }}>
-                        {app.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                      <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
-                        <button
-                          onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
-                          style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                        >
-                          📋 QD
-                        </button>
-                        <button
-                          onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
-                          style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                        >
-                          ⚙️ Remark
-                        </button>
-                        <button
-                          onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }}
-                          style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                        >
-                          🏦 Final
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {apps.map((app) => {
+                  const badge = getStatusBadgeStyle(app.status);
+                  return (
+                    <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
+                      <td style={{ padding: "14px 16px", fontWeight: 700, fontMono: true }}>{app.app_number}</td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <div style={{ fontWeight: 600 }}>{app.customer_name}</div>
+                        <div style={{ fontSize: "11px", color: C.textLight }}>{app.customer_mobile}</div>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <div>{app.Partner_first_name || app.partner_first_name || 'Direct'} {app.Partner_last_name || app.partner_last_name || ''}</div>
+                        <div style={{ fontSize: "11px", color: C.textLight }}>Code: {app.Partner_code || app.partner_code || 'N/A'}</div>
+                        <div style={{
+                          marginTop: "4px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase", display: "inline-block",
+                          padding: "2px 8px", borderRadius: "6px",
+                          background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
+                          color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
+                        }}>
+                          {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? '🔗 Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? '📱 Customer Apply' : '✍️ Partner Punch'}
+                        </div>
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <div style={{ fontWeight: 500 }}>{app.product_name}</div>
+                        <div style={{ fontSize: "11px", color: C.textLight, textTransform: "capitalize" }}>{app.category} • {app.bank_code}</div>
+                      </td>
+                      <td style={{ padding: "14px 16px", fontWeight: 600 }}>
+                        {app.loan_amount && Number(app.loan_amount) > 0 
+                          ? `₹${parseFloat(app.loan_amount).toLocaleString("en-IN")}`
+                          : (app.monthly_income || app.salary) 
+                            ? `₹${parseFloat(app.monthly_income || app.salary).toLocaleString("en-IN")} / mo` 
+                            : 'N/A'}
+                      </td>
+                      <td style={{ padding: "14px 16px", color: C.green, fontWeight: 700 }}>
+                        ₹{parseFloat(app.commission_amount || 0).toLocaleString("en-IN")}
+                      </td>
+                      <td style={{ padding: "14px 16px" }}>
+                        <span style={{
+                          display: "inline-block", padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: 800, textTransform: "uppercase",
+                          background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`
+                        }}>
+                          {badge.label}
+                        </span>
+                      </td>
+                      <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
+                          <button
+                            onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
+                            style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                          >
+                            📋 QD
+                          </button>
+                          <button
+                            onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
+                            style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                          >
+                            ⚙️ Remark
+                          </button>
+                          <button
+                            onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }}
+                            style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                          >
+                            🏦 Final
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -355,18 +418,12 @@ export default function ManageApplications() {
                         onChange={(e) => setNewStatus(e.target.value)}
                         required
                       >
-                        <option value="submitted">Submitted</option>
+                        <option value="pending">Pending</option>
                         <option value="details_submitted">Details Submitted</option>
                         <option value="operational_verified">Operational Verified</option>
-                        <option value="correction_required">Correction Required</option>
-                        <option value="super_admin_approved">Super Admin Approved</option>
-                        <option value="commission_processing">Commission Processing</option>
+                        <option value="approved">Approved</option>
                         <option value="commission_released">Commission Released</option>
-                        <option value="under_review">Under Review</option>
-                        <option value="approved">Approved (Triggers Commission)</option>
-                        <option value="confirmed">Confirmed (Matures Commission)</option>
-                        <option value="disbursed">Disbursed (Triggers Commission)</option>
-                        <option value="rejected">Rejected</option>
+                        <option value="commission_received">Commission Received</option>
                       </select>
                     </div>
 
