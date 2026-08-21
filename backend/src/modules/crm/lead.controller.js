@@ -445,7 +445,7 @@ function getBankApplyLinkBackend(productName, bankName) {
     return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb";
   }
 
-  return "https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01";
+  return "";
 }
 
     if (targetProcess === 'direct_bank') {
