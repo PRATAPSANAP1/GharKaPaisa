@@ -241,43 +241,61 @@ export default function PartnerApplications() {
   const handleGenerateShareLink = async (app) => {
     setGeneratingShare(true);
     try {
-      const isPhysical = String(app.process_type || app.process_by || '').toLowerCase().includes('physical');
-      const isLinked = String(app.process_type || app.process_by || '').toLowerCase().includes('linked');
-      const endpoint = (isPhysical || isLinked) ? '/applications/generate-physical-link' : '/applications/generate-share-link';
+      const procType = String(app.process_type || app.process_by || '').toLowerCase();
+      const isPunching = procType.includes('punch') || procType === 'lead_punching';
+      const isPhysical = procType.includes('physical');
+      const isLinked = procType.includes('linked');
 
-      const res = await api.post(endpoint, {
-        application_id: app.id,
-        lead_id: app.lead_id,
-        product_id: app.product_id || app.productId
-      });
-      if (res.data?.success && (res.data.data?.share_url || res.data.data?.url)) {
-        const shareUrl = res.data.data.share_url || res.data.data.url;
+      let shareUrl = '';
+      let shareTitle = `${app.product_name || 'Credit Card Application'} - GharKaPaisa`;
+      let shareText = '';
+      let tokenVal = app.tracking_token || app.id;
+
+      if (isPunching) {
+        // Punch process: share QD form (post-apply) link
+        shareUrl = `${window.location.origin}/apply/${tokenVal}/post-apply`;
         const custName = app.customer_name || 'Customer';
-        const cleanMobile = (app.customer_mobile || app.mobile || '').replace(/\D/g, '');
-        const shareTitle = `${app.product_name || 'Credit Card Application'} - GharKaPaisa`;
-        const shareText = `Hello ${custName},\n\nPlease complete your application tracking and details form for ${app.product_name || 'Credit Card'} using this link:\n${shareUrl}\n\nShared via GharKaPaisa.`;
-        const waMsg = encodeURIComponent(shareText);
-        const waUrl = `https://wa.me/91${cleanMobile}?text=${waMsg}`;
+        shareText = `Hello ${custName},\n\nPlease complete your Quick Details (QD) form for ${app.product_name || 'Application'} using this link:\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`;
+      } else {
+        const endpoint = (isPhysical || isLinked) ? '/applications/generate-physical-link' : '/applications/generate-share-link';
 
-        setShareData({
-          app,
-          shareUrl,
-          whatsappUrl: waUrl,
-          token: res.data.data.token || app.tracking_token
+        const res = await api.post(endpoint, {
+          application_id: app.id,
+          lead_id: app.lead_id,
+          product_id: app.product_id || app.productId
         });
-
-        // Trigger native device share sheet (Share via any app)
-        if (navigator.share) {
-          navigator.share({
-            title: shareTitle,
-            text: shareText,
-            url: shareUrl
-          }).catch(() => {
-            setShowShareModal(true);
-          });
+        if (res.data?.success && (res.data.data?.share_url || res.data.data?.url)) {
+          shareUrl = res.data.data.share_url || res.data.data.url;
+          tokenVal = res.data.data.token || app.tracking_token || tokenVal;
         } else {
-          setShowShareModal(true);
+          shareUrl = `${window.location.origin}/apply/${tokenVal}`;
         }
+        const custName = app.customer_name || 'Customer';
+        shareText = `Hello ${custName},\n\nPlease complete your application tracking and details form for ${app.product_name || 'Credit Card'} using this link:\n${shareUrl}\n\nShared via GharKaPaisa.`;
+      }
+
+      const cleanMobile = (app.customer_mobile || app.mobile || '').replace(/\D/g, '');
+      const waMsg = encodeURIComponent(shareText);
+      const waUrl = `https://wa.me/91${cleanMobile}?text=${waMsg}`;
+
+      setShareData({
+        app,
+        shareUrl,
+        whatsappUrl: waUrl,
+        token: tokenVal
+      });
+
+      // Trigger native device share sheet (Share via any app)
+      if (navigator.share) {
+        navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl
+        }).catch(() => {
+          setShowShareModal(true);
+        });
+      } else {
+        setShowShareModal(true);
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to generate customer share link');
@@ -1100,12 +1118,10 @@ export default function PartnerApplications() {
                                       <UserPlus size={14} />
                                     </button>
                                   )}
-                                  {String(app.process_type || '').toLowerCase() !== 'lead_punching' && (
-                                    <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
-                                      style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                      <Share2 size={13} /> Share
-                                    </button>
-                                  )}
+                                  <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
+                                    style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <Share2 size={13} /> Share
+                                  </button>
                                   <button onClick={() => handleOpenViewModal(app)}
                                     style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #3b82f640`, background: '#3b82f615', color: '#3b82f6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                     <Eye size={13} /> View
