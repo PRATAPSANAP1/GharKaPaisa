@@ -876,14 +876,25 @@ const getPostApplyDetails = async (req, res, next) => {
     if (!token) return error(res, 'Token is required', 400);
 
     const { rows: [shareData] } = await query(`
-      SELECT psl.product_id, psl.partner_id, l.id as lead_id, l.customer_id, l.customer_name, l.mobile, l.status
-      FROM partner_share_links psl
-      LEFT JOIN leads l ON (l.tracking_token = psl.tracking_token OR l.id::text = psl.tracking_token)
-      WHERE (psl.tracking_token = $1 OR l.tracking_token = $1)
+      SELECT 
+        COALESCE(psl.product_id, a.product_id, l.product_id) as product_id,
+        COALESCE(psl.partner_id, a.partner_id, l.partner_id) as partner_id,
+        COALESCE(psl.customer_id, a.customer_id, l.customer_id) as customer_id,
+        COALESCE(l.id, a.lead_id) as lead_id,
+        a.id as application_id,
+        COALESCE(l.customer_name, a.customer_name, c.full_name) as customer_name,
+        COALESCE(l.mobile, a.customer_mobile, c.mobile) as mobile,
+        l.status
+      FROM (SELECT $1::text as tok) t
+      LEFT JOIN partner_share_links psl ON (psl.tracking_token = t.tok)
+      LEFT JOIN applications a ON (a.tracking_token = t.tok OR a.id::text = t.tok OR a.app_number = t.tok)
+      LEFT JOIN leads l ON (l.tracking_token = t.tok OR l.id::text = t.tok OR l.lead_number = t.tok OR l.id = a.lead_id OR l.id = psl.lead_id)
+      LEFT JOIN customers c ON (c.id = COALESCE(psl.customer_id, a.customer_id, l.customer_id))
+      WHERE psl.id IS NOT NULL OR a.id IS NOT NULL OR l.id IS NOT NULL
       LIMIT 1
     `, [token]);
 
-    if (!shareData) return error(res, 'Invalid application token', 404);
+    if (!shareData || !shareData.product_id) return error(res, 'Invalid application token', 404);
 
     const { rows: [product] } = await query(`
       SELECT p.id, p.name, p.category, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
@@ -908,6 +919,7 @@ const getPostApplyDetails = async (req, res, next) => {
     return success(res, {
       token,
       lead_id: shareData.lead_id || null,
+      application_id: shareData.application_id || null,
       product_id: product?.id,
       product_name: product?.name || 'Credit Card / Loan',
       bank_name: product?.bank_name || 'Bank',
@@ -948,10 +960,18 @@ const updatePostApplyDetails = async (req, res, next) => {
     }
 
     const { rows: [shareData] } = await query(`
-      SELECT psl.product_id, psl.partner_id, psl.customer_id, l.id as lead_id, l.customer_id as lead_cust_id
-      FROM partner_share_links psl
-      LEFT JOIN leads l ON (l.tracking_token = psl.tracking_token OR l.id::text = psl.tracking_token)
-      WHERE (psl.tracking_token = $1 OR l.tracking_token = $1)
+      SELECT 
+        COALESCE(psl.product_id, a.product_id, l.product_id) as product_id,
+        COALESCE(psl.partner_id, a.partner_id, l.partner_id) as partner_id,
+        COALESCE(psl.customer_id, a.customer_id, l.customer_id) as customer_id,
+        COALESCE(l.id, a.lead_id) as lead_id,
+        a.id as application_id,
+        l.customer_id as lead_cust_id
+      FROM (SELECT $1::text as tok) t
+      LEFT JOIN partner_share_links psl ON (psl.tracking_token = t.tok)
+      LEFT JOIN applications a ON (a.tracking_token = t.tok OR a.id::text = t.tok OR a.app_number = t.tok)
+      LEFT JOIN leads l ON (l.tracking_token = t.tok OR l.id::text = t.tok OR l.lead_number = t.tok OR l.id = a.lead_id OR l.id = psl.lead_id)
+      WHERE psl.id IS NOT NULL OR a.id IS NOT NULL OR l.id IS NOT NULL
       LIMIT 1
     `, [token]);
 
@@ -984,7 +1004,7 @@ const updatePostApplyDetails = async (req, res, next) => {
       `, [cleanPan, numSalary, targetCustId]);
     }
 
-    // Update existing lead & application reference
+    // Update existing lead reference
     if (shareData.lead_id) {
       await query(`
         UPDATE leads
@@ -993,7 +1013,10 @@ const updatePostApplyDetails = async (req, res, next) => {
             updated_at = NOW()
         WHERE id = $1
       `, [shareData.lead_id, cleanPan]);
+    }
 
+    // Update application record
+    if (shareData.application_id || shareData.lead_id) {
       await query(`
         UPDATE applications
         SET bank_application_number = $1,
@@ -1005,8 +1028,8 @@ const updatePostApplyDetails = async (req, res, next) => {
             monthly_salary = COALESCE($6, monthly_salary),
             status = 'submitted',
             updated_at = NOW()
-        WHERE lead_id = $7
-      `, [cleanAppNum, cleanVkyc || null, cleanSalarySlipUrl || null, cleanPanCardUrl || null, cleanPan || null, numSalary, shareData.lead_id]);
+        WHERE id = $7 OR (lead_id IS NOT NULL AND lead_id = $8)
+      `, [cleanAppNum, cleanVkyc || null, cleanSalarySlipUrl || null, cleanPanCardUrl || null, cleanPan || null, numSalary, shareData.application_id || null, shareData.lead_id || null]);
     }
 
     return success(res, {
