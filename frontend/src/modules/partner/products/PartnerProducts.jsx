@@ -300,28 +300,31 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         return;
       }
 
-      const payload = {
-        product_id: selectedProduct.id,
-        full_name: customerName.trim() || 'Customer',
-        country_code: countryCode || '+91',
-        mobile: mobile.trim() || '0000000000',
-        process_type: processType,
-        agree_terms: true
-      };
+      if (processType === 'direct_bank') {
+        const bankWin = window.open(directBankUrl, '_blank');
+        const payload = {
+          product_id: selectedProduct.id,
+          full_name: customerName.trim() || 'Customer',
+          country_code: countryCode || '+91',
+          mobile: mobile.trim() || '0000000000',
+          process_type: processType,
+          agree_terms: true
+        };
 
-      const res = await api.post('/applications/partner-apply', payload);
-      const appData = res.data?.data;
+        api.post('/applications/partner-apply', payload).then((res) => {
+          const appData = res.data?.data;
+          const targetUrl = appData?.bank_url || directBankUrl;
+          if (bankWin && !bankWin.closed && targetUrl !== directBankUrl) {
+            bankWin.location.href = targetUrl;
+          }
+          usePartnerStore.getState().fetchCustomers().catch(() => {});
+          usePartnerStore.getState().fetchApplications().catch(() => {});
+        }).catch(() => {});
 
-      // Refresh partner store for real-time CRM table/cards update
-      usePartnerStore.getState().fetchCustomers().catch(() => {});
-      usePartnerStore.getState().fetchApplications().catch(() => {});
-
-      if (processType === 'lead_punching') {
-        alert(`✅ Lead punched successfully for ${customerName.trim()} (${mobile.trim()})!\nApplication recorded under your Partner account.`);
-      } else if (processType === 'direct_bank') {
-        const targetUrl = appData?.bank_url || directBankUrl;
-        window.open(targetUrl, '_blank');
-        alert(`✅ Opening direct bank application portal for ${selectedProduct.name}...`);
+        setSelectedProduct(null);
+        setCustomerName("");
+        setMobile("");
+        return;
       } else if (processType === 'physical_process') {
         const cleanMobile = mobile.trim().replace(/\D/g, '');
         const token = appData?.tracking_token || appData?.token || appData?.application_id || appData?.app_id || appData?.id;
