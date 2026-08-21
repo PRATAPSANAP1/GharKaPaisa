@@ -255,6 +255,11 @@ export default function PhysicalApplicationForm() {
           bank_remark: app.bank_remark || '',
           decline_reason: app.decline_reason || ''
         });
+
+        const procType = String(app.process_type || app.process_by || data.process_type || '').toLowerCase();
+        if (procType.includes('linked') || procType.includes('share')) {
+          setActiveTab('step2');
+        }
       } else {
         setErrorMsg(res.data?.message || 'Unable to load application details.');
       }

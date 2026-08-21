@@ -231,7 +231,9 @@ export default function PartnerApplications() {
         const shareUrl = res.data.data.share_url || res.data.data.url;
         const custName = app.customer_name || 'Customer';
         const cleanMobile = (app.customer_mobile || app.mobile || '').replace(/\D/g, '');
-        const waMsg = encodeURIComponent(`Hello ${custName},\n\nPlease complete your application tracking and details form using this link:\n${shareUrl}\n\nShared via GharKaPaisa.`);
+        const shareTitle = `${app.product_name || 'Credit Card Application'} - GharKaPaisa`;
+        const shareText = `Hello ${custName},\n\nPlease complete your application tracking and details form for ${app.product_name || 'Credit Card'} using this link:\n${shareUrl}\n\nShared via GharKaPaisa.`;
+        const waMsg = encodeURIComponent(shareText);
         const waUrl = `https://wa.me/91${cleanMobile}?text=${waMsg}`;
 
         setShareData({
@@ -240,7 +242,19 @@ export default function PartnerApplications() {
           whatsappUrl: waUrl,
           token: res.data.data.token || app.tracking_token
         });
-        setShowShareModal(true);
+
+        // Trigger native device share sheet (Share via any app)
+        if (navigator.share) {
+          navigator.share({
+            title: shareTitle,
+            text: shareText,
+            url: shareUrl
+          }).catch(() => {
+            setShowShareModal(true);
+          });
+        } else {
+          setShowShareModal(true);
+        }
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to generate customer share link');
