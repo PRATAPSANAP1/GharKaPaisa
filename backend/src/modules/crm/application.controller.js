@@ -10,6 +10,45 @@ const logger = require('../../config/logger');
 const { logAction } = require('../admin/audit.service.js');
 const { processTeamOverrideCommission } = require('../team/team.service.js');
 
+// Helper to parse DOB string formats (e.g. "03091994", "03-09-1994", "1994-09-03") to ISO Date YYYY-MM-DD
+const parseDobToIso = (raw) => {
+  if (!raw || typeof raw !== 'string') return null;
+  const s = raw.trim().replace(/\D/g, '');
+  if (s.length === 8) {
+    const day = s.substring(0, 2);
+    const month = s.substring(2, 4);
+    const year = s.substring(4, 8);
+    const d = parseInt(day, 10);
+    const m = parseInt(month, 10);
+    const y = parseInt(year, 10);
+    if (d >= 1 && d <= 31 && m >= 1 && m <= 12 && y >= 1900 && y <= 2100) {
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+  if (raw.includes('-') || raw.includes('/')) {
+    const parts = raw.split(/[-/]/).map(p => p.trim());
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      } else if (parts[2].length === 4) {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+  }
+  try {
+    const parsed = new Date(raw);
+    if (!isNaN(parsed.getTime())) {
+      const year = parsed.getFullYear();
+      const month = String(parsed.getMonth() + 1).padStart(2, '0');
+      const day = String(parsed.getDate()).padStart(2, '0');
+      if (year >= 1900 && year <= 2100) {
+        return `${year}-${month}-${day}`;
+      }
+    }
+  } catch (e) {}
+  return null;
+};
+
 // Helper to log timeline actions
 const logTimeline = async (client, applicationId, status, activity, remarks, performedBy) => {
   await client.query(`
@@ -2391,6 +2430,7 @@ const updateApplicationDetails = async (req, res, next) => {
 
     const appNumToSave = (bank_application_number || bank_ref_number || '').trim();
     const employerToSave = employer || company_name || null;
+    const parsedDob = parseDobToIso(dob);
 
     if (isLeadOnly) {
       const { rows: [updatedLead] } = await client.query(`
@@ -2426,7 +2466,7 @@ const updateApplicationDetails = async (req, res, next) => {
           full_name || null,
           mobile || null,
           email || null,
-          dob || null,
+          parsedDob || null,
           pan_number || null,
           monthly_salary ? parseFloat(monthly_salary) : null,
           city || null,
@@ -2516,7 +2556,7 @@ const updateApplicationDetails = async (req, res, next) => {
         full_name || null,
         mobile || null,
         email || null,
-        dob || null,
+        parsedDob || null,
         pincode || null,
         city || null,
         state || null,
@@ -3123,6 +3163,7 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
       eligible_reqd
     } = req.body;
 
+    const parsedDob = parseDobToIso(dob);
     const appId = tokenRec.application_id;
 
     await client.query(
@@ -3147,7 +3188,7 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
         company_address = EXCLUDED.company_address,
         updated_at = NOW()`,
       [
-        appId, aadhaar_linked_mobile || null, pan_name || null, dob || null, pan_number || null,
+        appId, aadhaar_linked_mobile || null, pan_name || null, parsedDob || null, pan_number || null,
         mother_name || null, personal_email || null, company_name || null, designation || null, flat_no || null,
         sub_area || null, landmark || null, pincode || null, company_address || null
       ]
@@ -3200,7 +3241,7 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
         `UPDATE customers
          SET mobile = COALESCE(NULLIF($1, ''), mobile),
              full_name = COALESCE(NULLIF($2, ''), full_name),
-             dob = COALESCE(NULLIF($3, ''), dob),
+             dob = COALESCE($3::date, dob),
              email = COALESCE(NULLIF($4, ''), email),
              pan_number = COALESCE(NULLIF($5, ''), pan_number),
              updated_at = NOW()
@@ -3208,7 +3249,7 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
         [
           aadhaar_linked_mobile || null,
           pan_name || null,
-          dob || null,
+          parsedDob || null,
           personal_email || null,
           pan_number || null,
           tokenRec.customer_id
