@@ -879,7 +879,7 @@ const getPostApplyDetails = async (req, res, next) => {
       SELECT 
         COALESCE(psl.product_id, a.product_id, l.product_id) as product_id,
         COALESCE(psl.partner_id, a.partner_id, l.partner_id) as partner_id,
-        COALESCE(psl.customer_id, a.customer_id, l.customer_id) as customer_id,
+        COALESCE(a.customer_id, l.customer_id) as customer_id,
         COALESCE(l.id, a.lead_id) as lead_id,
         a.id as application_id,
         COALESCE(l.customer_name, a.customer_name, c.full_name) as customer_name,
@@ -889,7 +889,7 @@ const getPostApplyDetails = async (req, res, next) => {
       LEFT JOIN partner_share_links psl ON (psl.tracking_token = t.tok)
       LEFT JOIN applications a ON (a.tracking_token = t.tok OR a.id::text = t.tok OR a.app_number = t.tok)
       LEFT JOIN leads l ON (l.tracking_token = t.tok OR l.id::text = t.tok OR l.lead_number = t.tok OR l.id = a.lead_id OR l.id = psl.lead_id)
-      LEFT JOIN customers c ON (c.id = COALESCE(psl.customer_id, a.customer_id, l.customer_id))
+      LEFT JOIN customers c ON (c.id = COALESCE(a.customer_id, l.customer_id))
       WHERE psl.id IS NOT NULL OR a.id IS NOT NULL OR l.id IS NOT NULL
       LIMIT 1
     `, [token]);
@@ -963,7 +963,7 @@ const updatePostApplyDetails = async (req, res, next) => {
       SELECT 
         COALESCE(psl.product_id, a.product_id, l.product_id) as product_id,
         COALESCE(psl.partner_id, a.partner_id, l.partner_id) as partner_id,
-        COALESCE(psl.customer_id, a.customer_id, l.customer_id) as customer_id,
+        COALESCE(a.customer_id, l.customer_id) as customer_id,
         COALESCE(l.id, a.lead_id) as lead_id,
         a.id as application_id,
         l.customer_id as lead_cust_id
