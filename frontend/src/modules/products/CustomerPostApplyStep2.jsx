@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getApiV1Url } from '../../config/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthStore } from '../../app/store/authStore';
+import { FiUser, FiSliders, FiBriefcase, FiFileText, FiAlertCircle } from 'react-icons/fi';
 
 export default function CustomerPostApplyStep2() {
   const { token } = useParams();
@@ -50,7 +51,7 @@ export default function CustomerPostApplyStep2() {
   const [iqaStage, setIqaStage] = useState('IQA Pending');
   const [dispatchStatus, setDispatchStatus] = useState('E-sign Pending');
 
-  // Section 3: Bank Reference & Final Application Stage (READ-ONLY for Partner, Editable by Admin/SuperAdmin)
+  // Section 3: Bank Reference & Final Application Stage (Disabled for Partner, Editable by Admin/SuperAdmin)
   const [appNumber, setAppNumber] = useState('');
   const [vkycUrl, setVkycUrl] = useState('');
   const [finalStatus, setFinalStatus] = useState('In Process');
@@ -134,7 +135,6 @@ export default function CustomerPostApplyStep2() {
         vkyc_url: vkycUrl.trim()
       };
 
-      // Admin & SuperAdmin can update final status & decline reasons
       if (isAdminOrSuperAdmin) {
         payload.final_status = finalStatus;
         payload.decline_reason = declineReason.trim();
@@ -180,7 +180,7 @@ export default function CustomerPostApplyStep2() {
   if (error) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bg, color: C.text, fontFamily: 'Inter, sans-serif', padding: '24px', textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+        <FiAlertCircle size={44} style={{ color: '#EF4444', marginBottom: '16px' }} />
         <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 8px' }}>{error}</h2>
         <a href="https://gharkapaisa.in" style={{ padding: '10px 20px', background: C.primary, color: '#fff', borderRadius: '10px', fontWeight: 700, textDecoration: 'none', fontSize: '13px' }}>Visit GharKaPaisa</a>
       </div>
@@ -190,7 +190,7 @@ export default function CustomerPostApplyStep2() {
   if (submittedSuccess) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bg, color: C.text, fontFamily: 'Inter, sans-serif', padding: '24px', textAlign: 'center' }}>
-        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#10B98115', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '16px' }}>
+        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#10B98115', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', marginBottom: '16px' }}>
           ✓
         </div>
         <h2 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 8px' }}>Application Details Submitted!</h2>
@@ -242,7 +242,7 @@ export default function CustomerPostApplyStep2() {
     borderBottom: `1px solid ${border}`,
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between'
+    gap: '10px'
   };
 
   return (
@@ -250,8 +250,8 @@ export default function CustomerPostApplyStep2() {
       
       {/* Header Banner */}
       <div style={{ maxWidth: '720px', margin: '0 auto 24px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: `${C.primary}15`, padding: '6px 14px', borderRadius: '20px', color: C.primary, fontWeight: 700, fontSize: '12px', marginBottom: '12px' }}>
-          📋 Lead Punching • Quick Details (QD) Form
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: `${C.primary}15`, padding: '6px 14px', borderRadius: '20px', color: C.primary, fontWeight: 700, fontSize: '12px', marginBottom: '12px' }}>
+          <FiFileText size={14} /> Lead Punching • Quick Details (QD) Form
         </div>
         <h1 style={{ fontSize: '24px', fontWeight: 900, margin: '0 0 4px' }}>{bankInfo?.product_name}</h1>
         <p style={{ fontSize: '13px', color: C.textLight, margin: 0 }}>{bankInfo?.bank_name} • Partner Lead Punching Quick Details</p>
@@ -265,12 +265,8 @@ export default function CustomerPostApplyStep2() {
           {/* SECTION 1: Customer Quick Details (QD) */}
           <div>
             <div style={sectionHeaderStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>👤</span> <span>Customer Quick Details (QD)</span>
-              </div>
-              <span style={{ fontSize: '11px', background: '#10B98115', color: '#10B981', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
-                Editable
-              </span>
+              <FiUser size={18} style={{ color: C.primary }} />
+              <span>Customer Quick Details (QD)</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
@@ -381,12 +377,8 @@ export default function CustomerPostApplyStep2() {
           {/* SECTION 2: Operational Remarks & Processing Stage */}
           <div>
             <div style={sectionHeaderStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>⚙️</span> <span>Operational Remarks & Processing Stages</span>
-              </div>
-              <span style={{ fontSize: '11px', background: '#10B98115', color: '#10B981', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
-                Editable
-              </span>
+              <FiSliders size={18} style={{ color: C.primary }} />
+              <span>Operational Remarks & Processing Stages</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
@@ -451,20 +443,13 @@ export default function CustomerPostApplyStep2() {
           {/* SECTION 3: Bank Reference & Final Application Stage */}
           <div>
             <div style={sectionHeaderStyle}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>🏦</span> <span>Bank Reference & Final Application Stage</span>
-              </div>
-              <span style={{ fontSize: '11px', background: isAdminOrSuperAdmin ? '#3B82F615' : '#F59E0B15', color: isAdminOrSuperAdmin ? '#3B82F6' : '#F59E0B', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
-                {isAdminOrSuperAdmin ? 'Admin Editable' : '🔒 Read-Only for Partner'}
-              </span>
+              <FiBriefcase size={18} style={{ color: C.primary }} />
+              <span>Bank Reference & Final Application Stage</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
               <div>
-                <label style={labelStyle}>
-                  Bank Application / Reference Number
-                  {!isAdminOrSuperAdmin && <span style={{ color: '#F59E0B', marginLeft: '6px', fontSize: '11px' }}>(Read-Only)</span>}
-                </label>
+                <label style={labelStyle}>Bank Application / Reference Number</label>
                 <input
                   type="text"
                   disabled={!isAdminOrSuperAdmin}
@@ -476,10 +461,7 @@ export default function CustomerPostApplyStep2() {
               </div>
 
               <div>
-                <label style={labelStyle}>
-                  Bank VKYC Link (Optional)
-                  {!isAdminOrSuperAdmin && <span style={{ color: '#F59E0B', marginLeft: '6px', fontSize: '11px' }}>(Read-Only)</span>}
-                </label>
+                <label style={labelStyle}>Bank VKYC Link (Optional)</label>
                 <input
                   type="url"
                   disabled={!isAdminOrSuperAdmin}
@@ -491,10 +473,7 @@ export default function CustomerPostApplyStep2() {
               </div>
 
               <div>
-                <label style={labelStyle}>
-                  Current Stage / Final Status
-                  {!isAdminOrSuperAdmin && <span style={{ color: '#F59E0B', marginLeft: '6px', fontSize: '11px' }}>(Read-Only)</span>}
-                </label>
+                <label style={labelStyle}>Current Stage / Final Status</label>
                 <select
                   disabled={!isAdminOrSuperAdmin}
                   value={finalStatus}
@@ -509,10 +488,7 @@ export default function CustomerPostApplyStep2() {
               </div>
 
               <div>
-                <label style={labelStyle}>
-                  Eligible for Re-QD
-                  {!isAdminOrSuperAdmin && <span style={{ color: '#F59E0B', marginLeft: '6px', fontSize: '11px' }}>(Read-Only)</span>}
-                </label>
+                <label style={labelStyle}>Eligible for Re-QD</label>
                 <select
                   disabled={!isAdminOrSuperAdmin}
                   value={eligibleReqd}
@@ -528,10 +504,7 @@ export default function CustomerPostApplyStep2() {
             {/* Decline Reason Remark (shown if Decline selected) */}
             {finalStatus === 'Decline' && (
               <div style={{ marginTop: '14px' }}>
-                <label style={labelStyle}>
-                  Decline Reason Remark
-                  {!isAdminOrSuperAdmin && <span style={{ color: '#F59E0B', marginLeft: '6px', fontSize: '11px' }}>(Read-Only)</span>}
-                </label>
+                <label style={labelStyle}>Decline Reason Remark</label>
                 <textarea
                   rows={2}
                   disabled={!isAdminOrSuperAdmin}
