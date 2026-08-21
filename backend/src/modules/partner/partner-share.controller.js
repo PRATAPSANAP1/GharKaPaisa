@@ -875,6 +875,27 @@ const getPostApplyDetails = async (req, res, next) => {
     const { token } = req.params;
     if (!token) return error(res, 'Token is required', 400);
 
+    // Dynamic column safety check
+    try {
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(50)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dob VARCHAR(50)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS designation VARCHAR(255)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address TEXT`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_url VARCHAR(500)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
+    } catch (_) {}
+
     const { rows: [shareData] } = await query(`
       SELECT 
         COALESCE(psl.product_id, a.product_id, l.product_id) as product_id,
@@ -882,9 +903,10 @@ const getPostApplyDetails = async (req, res, next) => {
         COALESCE(a.customer_id, l.customer_id) as customer_id,
         COALESCE(l.id, a.lead_id) as lead_id,
         a.id as application_id,
-        COALESCE(l.customer_name, c.full_name) as customer_name,
-        COALESCE(l.mobile, c.mobile) as mobile,
-        a.dob, a.customer_email, a.pan_number, a.company_name, a.designation, a.address, a.mother_name,
+        COALESCE(a.customer_name, l.customer_name, c.full_name) as customer_name,
+        COALESCE(a.customer_mobile, l.mobile, c.mobile) as mobile,
+        a.dob, COALESCE(a.customer_email, c.email) as customer_email, COALESCE(a.pan_number, c.pan_number) as pan_number,
+        a.company_name, a.designation, a.address, a.mother_name,
         a.soft_approval_status, a.vkyc_stage, a.iqa_stage, a.dispatch_status,
         a.bank_application_number, a.vkyc_url, a.final_status, a.decline_reason, a.eligible_reqd,
         l.status
