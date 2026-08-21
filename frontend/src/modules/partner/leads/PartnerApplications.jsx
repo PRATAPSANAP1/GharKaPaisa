@@ -66,7 +66,13 @@ export default function PartnerApplications() {
   const user = useAuthStore((state) => state.user);
   const userRole = (user?.role || '').toUpperCase();
   const isTeamMember = userRole === 'TEAM_MEMBER';
-  const isAdminOrSuperAdmin = ['ADMIN', 'SUPER_ADMIN'].includes(userRole);
+  const isAdminOrSuperAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR'].includes(userRole);
+  const isPartnerRole = ['PARTNER', 'TEAM_MEMBER'].includes(userRole) && !isAdminOrSuperAdmin;
+
+  const isPunchLeadProcess = (procBy, procType) => {
+    const p = String(procBy || procType || '').toLowerCase();
+    return p.includes('punch') || p.includes('lead_punching') || p.includes('punching');
+  };
 
   const border = isDark ? '#1f1f1f' : C.border;
   const cardBg = isDark ? '#0f0f0f' : '#ffffff';
@@ -882,10 +888,12 @@ export default function PartnerApplications() {
                         style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                         ⚙️ Remark
                       </button>
-                      <button onClick={() => handleOpenFinalModal(app)}
-                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        🏦 Final
-                      </button>
+                      {!(isPartnerRole && isPunchLeadProcess(app.process_by, app.process_type)) && (
+                        <button onClick={() => handleOpenFinalModal(app)}
+                          style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          🏦 Final
+                        </button>
+                      )}
                       {userRole === 'SUPER_ADMIN' && (
                         <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
                           style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ef444440`, background: '#ef444410', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1008,10 +1016,12 @@ export default function PartnerApplications() {
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               ⚙️ Remark
                             </button>
-                            <button onClick={() => handleOpenFinalModal(app)}
-                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              🏦 Final
-                            </button>
+                            {!(isPartnerRole && isPunchLeadProcess(app.process_by, app.process_type)) && (
+                              <button onClick={() => handleOpenFinalModal(app)}
+                                style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                🏦 Final
+                              </button>
+                            )}
                             {userRole === 'SUPER_ADMIN' && (
                               <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
                                 style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ef444440`, background: '#ef444410', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
@@ -1226,19 +1236,13 @@ export default function PartnerApplications() {
                   </div>
                 </div>
 
-                {/* Section 4: Operational Information */}
+                {/* Section 4: Operational Information & Stage Tracking */}
                 <div style={{ background: isDark ? '#1a2234' : '#eff6ff', borderRadius: 14, padding: 14, border: '1px solid #3b82f640' }}>
-                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operational Information</h4>
+                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operational & Stage Tracking Information</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER</div>
                       <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || 'Pending'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>VKYC STATUS</div>
-                      <div style={{ fontWeight: 800, color: viewAppDetails?.vkyc_status === 'Completed' ? '#10b981' : '#f59e0b' }}>
-                        {viewAppDetails?.vkyc_status || 'Pending'}
-                      </div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>CURRENT STAGE</div>
@@ -1247,12 +1251,38 @@ export default function PartnerApplications() {
                       </div>
                     </div>
                     <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>SOFT APPROVAL STAGE</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.soft_approval_status || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>VKYC STAGE</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.vkyc_stage || viewAppDetails?.vkyc_status || 'Pending'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>IQA STAGE</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.iqa_stage || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DISPATCH STATUS</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.dispatch_status || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
+                      <div style={{ fontWeight: 800, color: '#10b981' }}>{viewAppDetails?.final_status || 'In Process'}</div>
+                    </div>
+                    <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>COMMISSION STATUS</div>
                       <div style={{ fontWeight: 800, color: viewAppDetails?.commission_amount > 0 ? '#10b981' : textMuted }}>
                         ₹{viewAppDetails?.commission_amount || viewApp.commission_amount || 0} ({viewAppDetails?.commission_status || 'pending'})
                       </div>
                     </div>
-                    {viewAppDetails?.vkyc_url && (
+                    {viewAppDetails?.bank_remark && (
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>
+                        <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails.bank_remark}</div>
+                      </div>
+                    )}
+                    {viewAppDetails?.vkyc_url && !isPunchLeadProcess(viewApp?.process_by, viewApp?.process_type) && (
                       <div style={{ gridColumn: 'span 2' }}>
                         <div style={{ color: textMuted, fontSize: 10, fontWeight: 700, marginBottom: 4 }}>VKYC LINK</div>
                         <a href={viewAppDetails.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700, fontSize: 12, wordBreak: 'break-all' }}>

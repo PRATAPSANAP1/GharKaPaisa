@@ -33,17 +33,19 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   // User Role & Permissions
   const user = useAuthStore((state) => state.user);
   const role = (user?.role || '').toUpperCase();
+  const isOpsOrAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'OPERATOR'].includes(role);
+  const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
+
+  const processTypeStr = String(application?.process_type || application?.process_by || '').toLowerCase();
+  const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
 
   // Role Access Rules:
-  // QD Form: Editable ONLY by Partner. Read-only for others.
-  // Remark Form: Editable by Administrative Operator / Operational Head / Partner / Admin / Super Admin.
-  // Final Form: Editable ONLY by Administrative Operator / Operational Head / Admin / Super Admin. Read-only for Partner.
-  const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role);
-  const isOpsOrAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'OPERATOR'].includes(role) || !isPartner;
-
-  const canEditQd = true;
+  // QD Form: When process == punch lead, editable ONLY by Super Admin, Operation Head & Administrative Operator. Read-only for Partner.
+  // Remark Form: Editable by Partner, Super Admin, Administrative Operator, Operational Head.
+  // Final Form: Editable ONLY by Super Admin & Operational Head.
+  const canEditQd = isPunchLead ? isOpsOrAdmin : true;
   const canEditRemark = true;
-  const canEditFinal = true;
+  const canEditFinal = isOpsOrAdmin;
 
   // 1. QD Customer Details State
   const [customerMobile, setCustomerMobile] = useState(application?.customer_mobile || application?.mobile || application?.phone || '');
@@ -512,17 +514,19 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     />
                   </div>
 
-                  <div>
-                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Full Company Address</label>
-                    <input
-                      type="text"
-                      disabled={!canEditQd}
-                      value={companyAddress}
-                      onChange={(e) => setCompanyAddress(e.target.value)}
-                      placeholder="Full official office address"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
-                    />
-                  </div>
+                  {!isPunchLead && (
+                    <div>
+                      <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Full Company Address</label>
+                      <input
+                        type="text"
+                        disabled={!canEditQd}
+                        value={companyAddress}
+                        onChange={(e) => setCompanyAddress(e.target.value)}
+                        placeholder="Full official office address"
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Mother Name</label>

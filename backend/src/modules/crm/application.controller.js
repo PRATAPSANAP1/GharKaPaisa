@@ -2423,9 +2423,10 @@ const updateApplicationDetails = async (req, res, next) => {
     }
 
     const userRole = (req.user?.role || '').toUpperCase();
-    if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && status && status !== app.status) {
+    const isRestrictedAdminStatus = ['approved', 'rejected', 'disbursed', 'commission_released', 'super_admin_approved'].includes((status || '').toLowerCase());
+    if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && status && status !== app.status && isRestrictedAdminStatus) {
       await client.query('ROLLBACK');
-      return error(res, 'Application status changes are reserved for Super Admin and Admin.', 403);
+      return error(res, 'Marking application status as Approved or Rejected is reserved for Super Admin and Operations Head.', 403);
     }
 
     const appNumToSave = (bank_application_number || bank_ref_number || '').trim();

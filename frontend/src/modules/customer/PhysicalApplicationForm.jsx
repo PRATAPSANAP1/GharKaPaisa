@@ -195,6 +195,8 @@ export default function PhysicalApplicationForm() {
 
   const bankNameStr = String(appData?.bank_name || appData?.bank?.name || appData?.product_name || appData?.product?.name || '').toLowerCase();
   const isSbi = bankNameStr.includes('sbi');
+  const processTypeStr = String(appData?.process_type || appData?.process_by || '').toLowerCase();
+  const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
 
   useEffect(() => {
     fetchApplicationDetails();
@@ -626,16 +628,18 @@ export default function PhysicalApplicationForm() {
                 />
               </div>
 
-              <div>
-                <label style={labelStyle}>{txt('companyAddress')}</label>
-                <input
-                  type="text"
-                  value={form.company_address}
-                  onChange={e => handleChange('company_address', e.target.value)}
-                  placeholder={txt('companyAddressPlace')}
-                  style={inputStyle}
-                />
-              </div>
+              {!isPunchLead && (
+                <div>
+                  <label style={labelStyle}>{txt('companyAddress')}</label>
+                  <input
+                    type="text"
+                    value={form.company_address}
+                    onChange={e => handleChange('company_address', e.target.value)}
+                    placeholder={txt('companyAddressPlace')}
+                    style={inputStyle}
+                  />
+                </div>
+              )}
 
               <div>
                 <label style={labelStyle}>{txt('motherName')}</label>
@@ -660,16 +664,18 @@ export default function PhysicalApplicationForm() {
                       style={inputStyle}
                     />
                   </div>
-                  <div>
-                    <label style={labelStyle}>{txt('vkycUrl')}</label>
-                    <input
-                      type="text"
-                      value={form.vkyc_url}
-                      onChange={e => handleChange('vkyc_url', e.target.value)}
-                      placeholder={txt('vkycUrlPlace')}
-                      style={inputStyle}
-                    />
-                  </div>
+                  {!isPunchLead && (
+                    <div>
+                      <label style={labelStyle}>{txt('vkycUrl')}</label>
+                      <input
+                        type="text"
+                        value={form.vkyc_url}
+                        onChange={e => handleChange('vkyc_url', e.target.value)}
+                        placeholder={txt('vkycUrlPlace')}
+                        style={inputStyle}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
