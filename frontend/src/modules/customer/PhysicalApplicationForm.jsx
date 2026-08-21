@@ -405,18 +405,15 @@ export default function PhysicalApplicationForm() {
         display: 'flex', 
         alignItems: 'center', 
         justify: 'space-between', 
-        padding: isMobile ? '10px 14px' : '14px 20px', 
-        background: C.card, 
-        border: `1px solid ${C.border}`, 
-        borderRadius: 20,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+        padding: isMobile ? '10px 4px' : '14px 4px', 
+        background: 'transparent', 
         gap: 12,
         flexWrap: 'wrap'
       }}>
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {logo && <img src={logo} alt="GharKaPaisa Logo" style={{ height: isMobile ? 28 : 34, width: 'auto' }} />}
-          <span style={{ fontSize: isMobile ? 16 : 20, fontWeight: 900, background: `linear-gradient(90deg, ${C.primary}, ${C.teal})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ fontSize: isMobile ? 18 : 22, fontWeight: 900, color: C.text }}>
             GharKaPaisa
           </span>
         </div>
