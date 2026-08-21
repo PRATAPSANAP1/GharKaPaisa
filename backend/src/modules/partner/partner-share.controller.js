@@ -1039,6 +1039,19 @@ const updatePostApplyDetails = async (req, res, next) => {
     const cleanAddress = (address || '').toString().trim();
     const cleanMother = (mother_name || '').toString().trim();
 
+    // Safely parse cleanDob for Postgres DATE column in customers table
+    let parsedDobDate = null;
+    if (cleanDob) {
+      const parts = cleanDob.split(/[-/.]/);
+      if (parts.length === 3) {
+        if (parts[0].length === 4) { // YYYY-MM-DD
+          parsedDobDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+        } else if (parts[2].length === 4) { // DD-MM-YYYY
+          parsedDobDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+        }
+      }
+    }
+
     const cleanSoftApproval = (soft_approval_status || '').toString().trim();
     const cleanVkycStage = (vkyc_stage || '').toString().trim();
     const cleanIqaStage = (iqa_stage || '').toString().trim();
@@ -1071,16 +1084,20 @@ const updatePostApplyDetails = async (req, res, next) => {
     const targetCustId = shareData.customer_id || shareData.lead_cust_id;
 
     if (targetCustId) {
-      await query(`
-        UPDATE customers
-        SET full_name = COALESCE(NULLIF($1, ''), full_name),
-            mobile = COALESCE(NULLIF($2, ''), mobile),
-            email = COALESCE(NULLIF($3, ''), email),
-            pan_number = COALESCE(NULLIF($4, ''), pan_number),
-            dob = COALESCE(NULLIF($5, ''), dob),
-            updated_at = NOW()
-        WHERE id = $6
-      `, [cleanName, cleanMobile, cleanEmail, cleanPan, cleanDob, targetCustId]);
+      try {
+        await query(`
+          UPDATE customers
+          SET full_name = COALESCE(NULLIF($1, ''), full_name),
+              mobile = COALESCE(NULLIF($2, ''), mobile),
+              email = COALESCE(NULLIF($3, ''), email),
+              pan_number = COALESCE(NULLIF($4, ''), pan_number),
+              dob = COALESCE($5::date, dob),
+              updated_at = NOW()
+          WHERE id = $6
+        `, [cleanName, cleanMobile, cleanEmail, cleanPan, parsedDobDate, targetCustId]);
+      } catch (errCust) {
+        logger.warn('[POST-APPLY] Update customers table notice:', errCust.message);
+      }
     }
 
     if (shareData.lead_id) {
