@@ -44,6 +44,15 @@ export default function ManageApplications() {
   const [processByFilter, setProcessByFilter] = useState('');
   const [operationHeads, setOperationHeads] = useState([]);
   const [opHeadFilter, setOpHeadFilter] = useState('');
+  const [showMobileFilter, setShowMobileFilter] = useState(false);
+
+  const activeFilterCount = [
+    statusFilter,
+    commFilter,
+    partnerFilter,
+    processByFilter,
+    opHeadFilter
+  ].filter(Boolean).length;
 
   // Selected Application for detail/drawer modals
   const [selectedApp, setSelectedApp] = useState(null);
@@ -503,83 +512,139 @@ export default function ManageApplications() {
 
       {/* Filters Card */}
       <div style={{ ...S.card, padding: '16px', marginBottom: '24px' }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div style={{ flex: 1, minWidth: '220px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Search Lead Info</label>
-            <div style={{ position: 'relative' }}>
+        <form onSubmit={handleSearchSubmit} style={{ margin: 0 }}>
+          {/* Always Visible Search Bar & Mobile Filter Toggle Button */}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '220px', position: 'relative' }}>
               <input 
-                style={{ ...S.input, paddingLeft: '32px' }} 
+                style={{ ...S.input, paddingLeft: '36px', height: '42px', fontSize: '13.5px' }} 
                 placeholder="Search name, phone, application ID..." 
                 value={search} 
                 onChange={e => setSearch(e.target.value)} 
               />
-              <MdSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} />
+              <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight, fontSize: '18px' }} />
             </div>
-          </div>
-          
-          <div style={{ width: '190px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Application Status</label>
-            <select style={S.input} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="details_submitted">Details Submitted</option>
-              <option value="operational_verified">Operational Verified</option>
-              <option value="approved">Approved</option>
-              <option value="commission_released">Commission Released</option>
-              <option value="commission_received">Commission Received</option>
-              <option value="rejected">Rejected / Cancelled</option>
-            </select>
+
+            <button type="submit" style={{ ...S.btn('primary'), height: '42px', padding: '0 20px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MdSearch style={{ fontSize: '18px' }} />
+              <span>Search</span>
+            </button>
+
+            <button 
+              type="button" 
+              onClick={() => setShowMobileFilter(!showMobileFilter)}
+              style={{ 
+                ...S.btn('outline'), 
+                height: '42px',
+                padding: '0 16px',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                fontWeight: 700,
+                background: showMobileFilter ? `${C.teal}15` : 'transparent',
+                borderColor: showMobileFilter ? C.teal : C.border,
+                color: showMobileFilter ? C.teal : C.text
+              }}
+            >
+              <MdFilterList style={{ fontSize: '20px' }} />
+              <span>{showMobileFilter ? 'Hide Filters' : 'Filter Options'}</span>
+              {activeFilterCount > 0 && (
+                <span style={{ 
+                  background: C.teal, 
+                  color: '#fff', 
+                  borderRadius: '12px', 
+                  padding: '2px 8px', 
+                  fontSize: '11px', 
+                  fontWeight: 900 
+                }}>
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
           </div>
 
-          <div style={{ width: '170px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Commission Status</label>
-            <select style={S.input} value={commFilter} onChange={e => setCommFilter(e.target.value)}>
-              <option value="">All Commissions</option>
-              <option value="pending">Pending</option>
-              <option value="released">Commission Released</option>
-              <option value="received">Commission Received</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
+          {/* Collapsible Detailed Filters Options Grid */}
+          {showMobileFilter && (
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${C.border}`, display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end', animation: 'fadeIn 0.2s ease' }}>
+              <div style={{ flex: '1 1 180px', minWidth: '160px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Application Status</label>
+                <select style={{ ...S.input, width: '100%' }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="details_submitted">Details Submitted</option>
+                  <option value="operational_verified">Operational Verified</option>
+                  <option value="approved">Approved</option>
+                  <option value="commission_released">Commission Released</option>
+                  <option value="commission_received">Commission Received</option>
+                  <option value="rejected">Rejected / Cancelled</option>
+                </select>
+              </div>
 
-          <div style={{ width: '180px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Filter by Partner</label>
-            <select style={S.input} value={partnerFilter} onChange={e => setPartnerFilter(e.target.value)}>
-              <option value="">All Partners</option>
-              {partners.map(p => (
-                <option key={p.id || p.partner_id} value={p.partner_id || p.id}>{p.first_name} {p.last_name || ''} ({p.partner_code || p.code || 'PARTNER'})</option>
-              ))}
-            </select>
-          </div>
+              <div style={{ flex: '1 1 160px', minWidth: '150px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Commission Status</label>
+                <select style={{ ...S.input, width: '100%' }} value={commFilter} onChange={e => setCommFilter(e.target.value)}>
+                  <option value="">All Commissions</option>
+                  <option value="pending">Pending</option>
+                  <option value="released">Commission Released</option>
+                  <option value="received">Commission Received</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
 
-          <div style={{ width: '170px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Process By / Channel</label>
-            <select style={S.input} value={processByFilter} onChange={e => setProcessByFilter(e.target.value)}>
-              <option value="">All Process Types</option>
-              <option value="partner_punch">✍️ Partner Punch</option>
-              <option value="partner_share">🔗 Partner Share Link</option>
-              <option value="customer_direct">📱 Customer Direct Apply</option>
-            </select>
-          </div>
+              <div style={{ flex: '1 1 180px', minWidth: '160px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Filter by Partner</label>
+                <select style={{ ...S.input, width: '100%' }} value={partnerFilter} onChange={e => setPartnerFilter(e.target.value)}>
+                  <option value="">All Partners</option>
+                  {partners.map(p => (
+                    <option key={p.id || p.partner_id} value={p.partner_id || p.id}>{p.first_name} {p.last_name || ''} ({p.partner_code || p.code || 'PARTNER'})</option>
+                  ))}
+                </select>
+              </div>
 
-          <div style={{ width: '190px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Operation Head</label>
-            <select style={S.input} value={opHeadFilter} onChange={e => setOpHeadFilter(e.target.value)}>
-              <option value="">All Operation Heads</option>
-              {operationHeads.map(oh => {
-                const bankNames = oh.assigned_banks?.map(b => b.name || b.short_code).join(', ') || 'No banks';
-                return (
-                  <option key={oh.id} value={oh.id}>
-                    {oh.full_name} ({bankNames})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="submit" style={S.btn('primary')}>Search</button>
-            <button type="button" onClick={() => { setSearch(''); setStatusFilter(''); setCommFilter(''); setPartnerFilter(''); setProcessByFilter(''); setOpHeadFilter(''); setPage(1); setTimeout(fetchApplications, 0); }} style={S.btn('outline')}>Reset</button>
-          </div>
+              <div style={{ flex: '1 1 170px', minWidth: '150px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Process By / Channel</label>
+                <select style={{ ...S.input, width: '100%' }} value={processByFilter} onChange={e => setProcessByFilter(e.target.value)}>
+                  <option value="">All Process Types</option>
+                  <option value="partner_punch">✍️ Partner Punch</option>
+                  <option value="partner_share">🔗 Partner Share Link</option>
+                  <option value="customer_direct">📱 Customer Direct Apply</option>
+                </select>
+              </div>
+
+              <div style={{ flex: '1 1 190px', minWidth: '170px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Operation Head</label>
+                <select style={{ ...S.input, width: '100%' }} value={opHeadFilter} onChange={e => setOpHeadFilter(e.target.value)}>
+                  <option value="">All Operation Heads</option>
+                  {operationHeads.map(oh => {
+                    const bankNames = oh.assigned_banks?.map(b => b.name || b.short_code).join(', ') || 'No banks';
+                    return (
+                      <option key={oh.id} value={oh.id}>
+                        {oh.full_name} ({bankNames})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'flex-end', marginTop: '8px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => { 
+                    setSearch(''); setStatusFilter(''); setCommFilter(''); setPartnerFilter(''); setProcessByFilter(''); setOpHeadFilter(''); setPage(1); setTimeout(fetchApplications, 0); 
+                  }} 
+                  style={{ ...S.btn('outline'), height: '38px', padding: '0 16px', fontSize: '12.5px' }}
+                >
+                  Reset
+                </button>
+                <button 
+                  type="submit" 
+                  style={{ ...S.btn('primary'), height: '38px', padding: '0 20px', fontSize: '12.5px', fontWeight: 800 }}
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          )}
         </form>
       </div>
 
