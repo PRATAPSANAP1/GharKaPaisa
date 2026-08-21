@@ -3165,41 +3165,21 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
     await client.query(
       `UPDATE applications 
        SET status = COALESCE($1, status),
-           customer_mobile = COALESCE($2, customer_mobile),
-           customer_name = COALESCE($3, customer_name),
-           dob = COALESCE($4, dob),
-           customer_email = COALESCE($5, customer_email),
-           pan_number = COALESCE($6, pan_number),
-           company_name = COALESCE($7, company_name),
-           designation = COALESCE($8, designation),
-           address = COALESCE($9, address),
-           company_address = COALESCE($10, company_address),
-           mother_name = COALESCE($11, mother_name),
-           bank_ref_number = COALESCE($12, bank_ref_number),
-           vkyc_url = COALESCE($13, vkyc_url),
-           appcode_status = COALESCE($14, appcode_status),
-           soft_approval_status = COALESCE($15, soft_approval_status),
-           vkyc_stage = COALESCE($16, vkyc_stage),
-           iqa_stage = COALESCE($17, iqa_stage),
-           dispatch_status = COALESCE($18, dispatch_status),
-           bank_remark = COALESCE($19, bank_remark),
-           final_status = COALESCE($20, final_status),
-           decline_reason = COALESCE($21, decline_reason),
-           eligible_reqd = COALESCE($22, eligible_reqd),
+           bank_ref_number = COALESCE(NULLIF($2, ''), bank_ref_number),
+           vkyc_url = COALESCE(NULLIF($3, ''), vkyc_url),
+           appcode_status = COALESCE(NULLIF($4, ''), appcode_status),
+           soft_approval_status = COALESCE(NULLIF($5, ''), soft_approval_status),
+           vkyc_stage = COALESCE(NULLIF($6, ''), vkyc_stage),
+           iqa_stage = COALESCE(NULLIF($7, ''), iqa_stage),
+           dispatch_status = COALESCE(NULLIF($8, ''), dispatch_status),
+           bank_remark = COALESCE(NULLIF($9, ''), bank_remark),
+           final_status = COALESCE(NULLIF($10, ''), final_status),
+           decline_reason = COALESCE(NULLIF($11, ''), decline_reason),
+           eligible_reqd = COALESCE(NULLIF($12, ''), eligible_reqd),
            updated_at = NOW()
-       WHERE id = $23`,
+       WHERE id = $13`,
       [
         mainStatus,
-        aadhaar_linked_mobile || null,
-        pan_name || null,
-        dob || null,
-        personal_email || null,
-        pan_number || null,
-        company_name || null,
-        designation || null,
-        flat_no ? `${flat_no} ${sub_area || ''} ${landmark || ''} ${pincode || ''}`.trim() : null,
-        company_address || null,
-        mother_name || null,
         bank_ref_number || null,
         vkyc_url || null,
         appcode_status || null,
@@ -3214,6 +3194,27 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
         appId
       ]
     );
+
+    if (tokenRec.customer_id) {
+      await client.query(
+        `UPDATE customers
+         SET mobile = COALESCE(NULLIF($1, ''), mobile),
+             full_name = COALESCE(NULLIF($2, ''), full_name),
+             dob = COALESCE(NULLIF($3, ''), dob),
+             email = COALESCE(NULLIF($4, ''), email),
+             pan_number = COALESCE(NULLIF($5, ''), pan_number),
+             updated_at = NOW()
+         WHERE id = $6`,
+        [
+          aadhaar_linked_mobile || null,
+          pan_name || null,
+          dob || null,
+          personal_email || null,
+          pan_number || null,
+          tokenRec.customer_id
+        ]
+      );
+    }
 
     await logTimeline(
       client,
