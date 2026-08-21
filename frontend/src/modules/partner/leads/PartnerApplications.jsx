@@ -849,7 +849,7 @@ export default function PartnerApplications() {
                           }
                         }} disabled={generatingShare}
                           style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Share2 size={12} /> Link
+                          <Share2 size={12} /> Share
                         </button>
                       )}
                       <button onClick={() => handleOpenViewModal(app)}
@@ -975,7 +975,7 @@ export default function PartnerApplications() {
                                 }
                               }} disabled={generatingShare}
                                 style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                <Share2 size={13} /> Link
+                                <Share2 size={13} /> Share
                               </button>
                             )}
                             <button onClick={() => handleOpenViewModal(app)}
