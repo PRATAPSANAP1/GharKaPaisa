@@ -1463,25 +1463,31 @@ export default function PartnerApplications() {
               </div>
 
               {/* Operational Summary Header Box */}
-              <div style={{ background: isDark ? '#1a2234' : '#eff6ff', border: '1px solid #3b82f640', borderRadius: 14, padding: 14, marginBottom: 18 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', marginBottom: 8 }}>Current Application Information</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
-                  <div>
-                    <span style={{ color: textMuted, fontSize: 10 }}>Bank Application Number: </span>
-                    <strong style={{ color: textPrimary }}>{trackApp.bank_application_number || trackApp.bank_ref_number || 'Pending'}</strong>
+              {((trackApp.bank_application_number || trackApp.bank_ref_number) || (trackApp.vkyc_status && trackApp.vkyc_status !== 'Pending') || trackApp.vkyc_url) && (
+                <div style={{ background: isDark ? '#1a2234' : '#eff6ff', border: '1px solid #3b82f640', borderRadius: 14, padding: 14, marginBottom: 18 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', marginBottom: 8 }}>Current Application Information</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
+                    {(trackApp.bank_application_number || trackApp.bank_ref_number) && (
+                      <div>
+                        <span style={{ color: textMuted, fontSize: 10 }}>Bank Application Number: </span>
+                        <strong style={{ color: textPrimary }}>{trackApp.bank_application_number || trackApp.bank_ref_number}</strong>
+                      </div>
+                    )}
+                    {trackApp.vkyc_status && trackApp.vkyc_status !== 'Pending' && (
+                      <div>
+                        <span style={{ color: textMuted, fontSize: 10 }}>VKYC Status: </span>
+                        <strong style={{ color: trackApp.vkyc_status === 'Completed' ? '#10b981' : '#f59e0b' }}>{trackApp.vkyc_status}</strong>
+                      </div>
+                    )}
+                    {trackApp.vkyc_url && (
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <span style={{ color: textMuted, fontSize: 10 }}>VKYC Link: </span>
+                        <a href={trackApp.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700 }}>Open VKYC</a>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <span style={{ color: textMuted, fontSize: 10 }}>VKYC Status: </span>
-                    <strong style={{ color: trackApp.vkyc_status === 'Completed' ? '#10b981' : '#f59e0b' }}>{trackApp.vkyc_status || 'Pending'}</strong>
-                  </div>
-                  {trackApp.vkyc_url && (
-                    <div style={{ gridColumn: 'span 2' }}>
-                      <span style={{ color: textMuted, fontSize: 10 }}>VKYC Link: </span>
-                      <a href={trackApp.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700 }}>Open VKYC</a>
-                    </div>
-                  )}
                 </div>
-              </div>
+              )}
 
               {/* 5-Step Progress Timeline */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20, paddingLeft: 8 }}>
