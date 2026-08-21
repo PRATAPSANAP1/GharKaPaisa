@@ -25,8 +25,7 @@ const PROCESS_STAGES = {
     { id: 'pending', label: 'Application Created' },
     { id: 'details_submitted', label: 'Details Submitted' },
     { id: 'operational_verified', label: 'Operational Verified' },
-    { id: 'super_admin_approved', label: 'Super Admin Approved' },
-    { id: 'commission_processing', label: 'Commission Hold' },
+    { id: 'approved', label: 'Approved' },
     { id: 'commission_released', label: 'Commission Released' },
     { id: 'commission_received', label: 'Commission Received' },
   ],
@@ -34,8 +33,7 @@ const PROCESS_STAGES = {
     { id: 'pending', label: 'Application Created' },
     { id: 'details_submitted', label: 'Details Submitted' },
     { id: 'operational_verified', label: 'Operational Verified' },
-    { id: 'super_admin_approved', label: 'Super Admin Approved' },
-    { id: 'commission_processing', label: 'Commission Hold' },
+    { id: 'approved', label: 'Approved' },
     { id: 'commission_released', label: 'Commission Released' },
     { id: 'commission_received', label: 'Commission Received' },
   ],
@@ -43,8 +41,7 @@ const PROCESS_STAGES = {
     { id: 'pending', label: 'Application Created' },
     { id: 'details_submitted', label: 'Details Submitted' },
     { id: 'operational_verified', label: 'Operational Verified' },
-    { id: 'super_admin_approved', label: 'Super Admin Approved' },
-    { id: 'commission_processing', label: 'Commission Hold' },
+    { id: 'approved', label: 'Approved' },
     { id: 'commission_released', label: 'Commission Released' },
     { id: 'commission_received', label: 'Commission Received' },
   ],
@@ -52,8 +49,7 @@ const PROCESS_STAGES = {
     { id: 'pending', label: 'Application Created' },
     { id: 'details_submitted', label: 'Details Submitted' },
     { id: 'operational_verified', label: 'Operational Verified' },
-    { id: 'super_admin_approved', label: 'Super Admin Approved' },
-    { id: 'commission_processing', label: 'Commission Hold' },
+    { id: 'approved', label: 'Approved' },
     { id: 'commission_released', label: 'Commission Released' },
     { id: 'commission_received', label: 'Commission Received' },
   ],
@@ -1328,13 +1324,12 @@ export default function PartnerApplications() {
         const pipelineStage = (trackApp.pipeline_stage || '').toLowerCase();
         
         const STATUS_RANK = {
-          'pending': 1, 'initiated': 1, 'link_pending': 1, 'created': 1, 'bank_application_pending': 1,
+          'pending': 1, 'initiated': 1, 'link_pending': 1, 'created': 1, 'lead_created': 1,
           'details_submitted': 2, 'submitted': 2, 'under_review': 2, 'link_generated': 2, 'app_number_added': 2, 'pan_check': 2,
           'operational_verified': 3, 'operational_approved': 3, 'link_sent': 3, 'kyc_pending': 3, 'qd': 3,
-          'super_admin_approved': 4, 'customer_started': 4, 'bank_application': 4, 'bank_processing': 4, 'income': 4, 'official_mail': 4, 'vkyc': 4, 'dispatch': 4,
-          'commission_processing': 5, 'commission_pending': 5, 'commission': 5, 'hold': 5,
-          'commission_released': 6, 'released': 6,
-          'commission_received': 7, 'approved': 7, 'disbursed': 7
+          'approved': 4, 'super_admin_approved': 4, 'disbursed': 4, 'bank_application': 4, 'bank_processing': 4,
+          'commission_released': 5, 'commission_processing': 5, 'released': 5, 'hold': 5,
+          'commission_received': 6, 'received': 6
         };
 
         const getStageStatus = (stageId, index) => {
