@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import api from '../../../services/api';
+import { getBankApplyLink } from '../../home/components/CreditCards/cardLinkHelper';
 import { MdArrowBack, MdSend, MdContentCopy, MdShare, MdOpenInNew, MdCheckCircle, MdAssignment, MdLink, MdAccountBalance, MdVerifiedUser, MdRefresh } from 'react-icons/md';
 
 const PROCESS_OPTIONS = [
@@ -175,9 +176,9 @@ export default function PartnerAddLead() {
       return;
     }
 
-    // Direct bank url resolution for linked_share fallback
+    // Direct bank url resolution for linked_share and direct_bank
     const selectedProd = products.find(p => p.id === selectedProductId);
-    const directBankUrl = selectedProd?.partner_url || selectedProd?.application_url || selectedProd?.public_url || selectedProd?.apply_url || selectedProd?.redirect_url || selectedProd?.bank_link || 'https://gharkapaisa.in';
+    const directBankUrl = selectedProd?.partner_url || selectedProd?.application_url || selectedProd?.public_url || selectedProd?.apply_url || selectedProd?.redirect_url || selectedProd?.bank_link || getBankApplyLink(selectedProd?.name, selectedProd?.bank_code || selectedProd?.bank_name) || 'https://gharkapaisa.in';
 
     if (processType === 'linked_share' && (!customerName.trim() || !mobile.trim())) {
       const shareMsg = customerName.trim()
