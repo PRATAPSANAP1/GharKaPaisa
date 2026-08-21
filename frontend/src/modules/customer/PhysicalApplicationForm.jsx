@@ -225,6 +225,10 @@ export default function PhysicalApplicationForm() {
           return raw;
         };
 
+        const pd = data.physical_details || data || {};
+        const cust = data.customer || data || {};
+        const app = data.application || data || {};
+
         setForm({
           aadhaar_linked_mobile: pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile || '',
           pan_name: pd.pan_name || cust.full_name || app.customer_name || '',
