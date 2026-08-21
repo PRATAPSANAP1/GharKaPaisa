@@ -884,6 +884,9 @@ const getPostApplyDetails = async (req, res, next) => {
         a.id as application_id,
         COALESCE(l.customer_name, c.full_name) as customer_name,
         COALESCE(l.mobile, c.mobile) as mobile,
+        a.dob, a.customer_email, a.pan_number, a.company_name, a.designation, a.address, a.mother_name,
+        a.soft_approval_status, a.vkyc_stage, a.iqa_stage, a.dispatch_status,
+        a.bank_application_number, a.vkyc_url, a.final_status, a.decline_reason, a.eligible_reqd,
         l.status
       FROM (SELECT $1::text as tok) t
       LEFT JOIN partner_share_links psl ON (psl.tracking_token = t.tok)
@@ -931,11 +934,25 @@ const getPostApplyDetails = async (req, res, next) => {
         email: custRecord?.email || '',
         pan_number: custRecord?.pan_number || ''
       },
-      requirements: {
-        application_number: 'Mandatory for all banks',
-        vkyc_url: 'Optional/Recommended',
-        salary_slip: isSbiBank ? 'Mandatory for SBI Bank' : 'Optional',
-        pan_card: isSbiBank ? 'Mandatory for SBI Bank' : 'Optional'
+      application_details: {
+        customer_mobile: shareData?.mobile || custRecord?.mobile || '',
+        customer_name: shareData?.customer_name || custRecord?.full_name || '',
+        dob: shareData?.dob || '',
+        customer_email: shareData?.customer_email || custRecord?.email || '',
+        pan_number: shareData?.pan_number || custRecord?.pan_number || '',
+        company_name: shareData?.company_name || '',
+        designation: shareData?.designation || '',
+        address: shareData?.address || '',
+        mother_name: shareData?.mother_name || '',
+        soft_approval_status: shareData?.soft_approval_status || 'Approval-income 25k',
+        vkyc_stage: shareData?.vkyc_stage || 'VKYC Pending',
+        iqa_stage: shareData?.iqa_stage || 'IQA Pending',
+        dispatch_status: shareData?.dispatch_status || 'E-sign Pending',
+        bank_application_number: shareData?.bank_application_number || '',
+        vkyc_url: shareData?.vkyc_url || '',
+        final_status: shareData?.final_status || 'In Process',
+        decline_reason: shareData?.decline_reason || '',
+        eligible_reqd: shareData?.eligible_reqd || 'No'
       }
     });
   } catch (err) {
@@ -949,15 +966,25 @@ const updatePostApplyDetails = async (req, res, next) => {
     const {
       bank_application_number, app_number,
       vkyc_url,
-      salary_slip_url, salary, monthly_income,
-      pan_card_url, pan, pan_number
+      customer_mobile, mobile,
+      customer_name, full_name,
+      dob,
+      customer_email, email,
+      pan_number, pan,
+      company_name,
+      designation,
+      address,
+      mother_name,
+      soft_approval_status,
+      vkyc_stage,
+      iqa_stage,
+      dispatch_status,
+      final_status, status,
+      decline_reason,
+      eligible_reqd
     } = req.body;
 
-    const cleanAppNum = (bank_application_number || app_number || '').toString().trim();
     if (!token) return error(res, 'Token is required', 400);
-    if (!cleanAppNum) {
-      return error(res, 'Bank Application Reference Number is required', 400);
-    }
 
     const { rows: [shareData] } = await query(`
       SELECT 
@@ -977,67 +1004,112 @@ const updatePostApplyDetails = async (req, res, next) => {
 
     if (!shareData) return error(res, 'Invalid application token', 404);
 
+    const cleanAppNum = (bank_application_number || app_number || '').toString().trim();
     const cleanVkyc = (vkyc_url || '').toString().trim();
     const cleanPan = (pan_number || pan || '').toString().trim().toUpperCase();
-    const numSalary = (salary || monthly_income) ? parseFloat(salary || monthly_income) : null;
-    const cleanSalarySlipUrl = (salary_slip_url || '').toString().trim();
-    const cleanPanCardUrl = (pan_card_url || '').toString().trim();
+    const cleanMobile = (customer_mobile || mobile || '').toString().trim();
+    const cleanName = (customer_name || full_name || '').toString().trim();
+    const cleanDob = (dob || '').toString().trim();
+    const cleanEmail = (customer_email || email || '').toString().trim();
+    const cleanCompany = (company_name || '').toString().trim();
+    const cleanDesignation = (designation || '').toString().trim();
+    const cleanAddress = (address || '').toString().trim();
+    const cleanMother = (mother_name || '').toString().trim();
+
+    const cleanSoftApproval = (soft_approval_status || '').toString().trim();
+    const cleanVkycStage = (vkyc_stage || '').toString().trim();
+    const cleanIqaStage = (iqa_stage || '').toString().trim();
+    const cleanDispatch = (dispatch_status || '').toString().trim();
+    const cleanFinalStatus = (final_status || status || '').toString().trim();
+    const cleanDeclineReason = (decline_reason || '').toString().trim();
+    const cleanEligibleReqd = (eligible_reqd || '').toString().trim();
 
     // Dynamic column safety check
     try {
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(50)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dob VARCHAR(50)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS designation VARCHAR(255)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address TEXT`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(100)`);
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100)`);
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_url VARCHAR(500)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS salary_slip_url VARCHAR(500)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_card_url VARCHAR(500)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
     } catch (_) {}
 
     const targetCustId = shareData.customer_id || shareData.lead_cust_id;
 
-    // Update customer table if PAN or Income provided
     if (targetCustId) {
       await query(`
         UPDATE customers
-        SET pan_number = COALESCE(NULLIF($1, ''), pan_number),
-            monthly_income = COALESCE($2, monthly_income),
+        SET full_name = COALESCE(NULLIF($1, ''), full_name),
+            mobile = COALESCE(NULLIF($2, ''), mobile),
+            email = COALESCE(NULLIF($3, ''), email),
+            pan_number = COALESCE(NULLIF($4, ''), pan_number),
+            dob = COALESCE(NULLIF($5, ''), dob),
             updated_at = NOW()
-        WHERE id = $3
-      `, [cleanPan, numSalary, targetCustId]);
+        WHERE id = $6
+      `, [cleanName, cleanMobile, cleanEmail, cleanPan, cleanDob, targetCustId]);
     }
 
-    // Update existing lead reference
     if (shareData.lead_id) {
       await query(`
         UPDATE leads
-        SET status = 'submitted', pipeline_stage = 'submitted',
-            pan_number = COALESCE(NULLIF($2, ''), pan_number),
+        SET customer_name = COALESCE(NULLIF($1, ''), customer_name),
+            mobile = COALESCE(NULLIF($2, ''), mobile),
+            pan_number = COALESCE(NULLIF($3, ''), pan_number),
+            status = 'submitted', pipeline_stage = 'submitted',
             updated_at = NOW()
-        WHERE id = $1
-      `, [shareData.lead_id, cleanPan]);
+        WHERE id = $4
+      `, [cleanName, cleanMobile, cleanPan, shareData.lead_id]);
     }
 
-    // Update application record
     if (shareData.application_id || shareData.lead_id) {
       await query(`
         UPDATE applications
-        SET bank_application_number = $1,
-            application_number = COALESCE($1, application_number),
-            vkyc_url = COALESCE(NULLIF($2, ''), vkyc_url),
-            salary_slip_url = COALESCE(NULLIF($3, ''), salary_slip_url),
-            pan_card_url = COALESCE(NULLIF($4, ''), pan_card_url),
+        SET customer_mobile = COALESCE(NULLIF($1, ''), customer_mobile),
+            customer_name = COALESCE(NULLIF($2, ''), customer_name),
+            dob = COALESCE(NULLIF($3, ''), dob),
+            customer_email = COALESCE(NULLIF($4, ''), customer_email),
             pan_number = COALESCE(NULLIF($5, ''), pan_number),
-            monthly_salary = COALESCE($6, monthly_salary),
-            status = 'submitted',
+            company_name = COALESCE(NULLIF($6, ''), company_name),
+            designation = COALESCE(NULLIF($7, ''), designation),
+            address = COALESCE(NULLIF($8, ''), address),
+            mother_name = COALESCE(NULLIF($9, ''), mother_name),
+            soft_approval_status = COALESCE(NULLIF($10, ''), soft_approval_status),
+            vkyc_stage = COALESCE(NULLIF($11, ''), vkyc_stage),
+            iqa_stage = COALESCE(NULLIF($12, ''), iqa_stage),
+            dispatch_status = COALESCE(NULLIF($13, ''), dispatch_status),
+            bank_application_number = COALESCE(NULLIF($14, ''), bank_application_number),
+            vkyc_url = COALESCE(NULLIF($15, ''), vkyc_url),
+            final_status = COALESCE(NULLIF($16, ''), final_status),
+            decline_reason = COALESCE(NULLIF($17, ''), decline_reason),
+            eligible_reqd = COALESCE(NULLIF($18, ''), eligible_reqd),
+            status = COALESCE(NULLIF($16, ''), status, 'submitted'),
             updated_at = NOW()
-        WHERE id = $7 OR (lead_id IS NOT NULL AND lead_id = $8)
-      `, [cleanAppNum, cleanVkyc || null, cleanSalarySlipUrl || null, cleanPanCardUrl || null, cleanPan || null, numSalary, shareData.application_id || null, shareData.lead_id || null]);
+        WHERE id = $19 OR (lead_id IS NOT NULL AND lead_id = $20)
+      `, [
+        cleanMobile, cleanName, cleanDob, cleanEmail, cleanPan,
+        cleanCompany, cleanDesignation, cleanAddress, cleanMother,
+        cleanSoftApproval, cleanVkycStage, cleanIqaStage, cleanDispatch,
+        cleanAppNum, cleanVkyc, cleanFinalStatus, cleanDeclineReason, cleanEligibleReqd,
+        shareData.application_id || null, shareData.lead_id || null
+      ]);
     }
 
     return success(res, {
       token,
       product_id: shareData.product_id,
       customer_id: targetCustId || null,
-      bank_application_number: cleanAppNum,
-      message: 'Bank application reference and QD form details recorded successfully.'
+      message: 'Application Quick Details, Remarks, and Final Status recorded successfully.'
     });
   } catch (err) {
     next(err);
