@@ -243,7 +243,7 @@ export default function ManageApplications() {
           {[
             {
               id: 'pending',
-              title: '⏳ Pending Applications',
+              title: 'Pending Applications',
               color: '#f59e0b',
               badgeBg: '#f59e0b15',
               borderColor: '#f59e0b',

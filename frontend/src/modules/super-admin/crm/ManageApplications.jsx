@@ -745,8 +745,8 @@ export default function ManageApplications() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {[
             {
-              title: '⏳ Pending Applications',
-              icon: '⏳',
+              title: 'Pending Applications',
+              icon: '📋',
               badgeColor: '#F59E0B',
               statuses: ['pending', 'initiated', 'link_pending', 'created', 'lead_created', 'new', 'draft']
             },
