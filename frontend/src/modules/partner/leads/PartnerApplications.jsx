@@ -74,6 +74,18 @@ export default function PartnerApplications() {
     return p.includes('punch') || p.includes('lead_punching') || p.includes('punching');
   };
 
+  const shouldHideQdButton = (procBy, procType) => {
+    const p = String(procBy || procType || '').toLowerCase();
+    return (
+      p.includes('punch') ||
+      p.includes('lead_punching') ||
+      p.includes('share') ||
+      p.includes('linked_share') ||
+      p.includes('direct') ||
+      p.includes('direct_bank')
+    );
+  };
+
   const border = isDark ? '#1f1f1f' : C.border;
   const cardBg = isDark ? '#0f0f0f' : '#ffffff';
   const pageBg = isDark ? '#000000' : C.bg;
@@ -880,10 +892,12 @@ export default function PartnerApplications() {
                         style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #8b5cf640`, background: '#8b5cf615', color: '#8b5cf6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <Activity size={12} /> Track
                       </button>
-                      <button onClick={() => handleOpenQdModal(app)}
-                        style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        📋 QD
-                      </button>
+                      {!shouldHideQdButton(app.process_by, app.process_type) && (
+                        <button onClick={() => handleOpenQdModal(app)}
+                          style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          📋 QD
+                        </button>
+                      )}
                       <button onClick={() => handleOpenRemarkModal(app)}
                         style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                         ⚙️ Remark
@@ -1008,10 +1022,12 @@ export default function PartnerApplications() {
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #8b5cf640`, background: '#8b5cf615', color: '#8b5cf6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               <Activity size={13} /> Track
                             </button>
-                            <button onClick={() => handleOpenQdModal(app)}
-                              style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              📋 QD
-                            </button>
+                            {!shouldHideQdButton(app.process_by, app.process_type) && (
+                              <button onClick={() => handleOpenQdModal(app)}
+                                style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                📋 QD
+                              </button>
+                            )}
                             <button onClick={() => handleOpenRemarkModal(app)}
                               style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                               ⚙️ Remark
