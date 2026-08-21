@@ -1,9 +1,19 @@
 /**
  * Utility to resolve direct application links for various bank cards.
  */
-export const getBankApplyLink = (cardName, bankId) => {
-  const nameLower = (cardName || '').toLowerCase();
-  const bankLower = (bankId || '').toLowerCase();
+export const getBankApplyLink = (cardName, bankId, productObj = null) => {
+  // Extract explicit partner URL if present on any object passed in
+  const extractUrl = (obj) => {
+    if (!obj || typeof obj !== 'object') return null;
+    const url = obj.partner_url || obj.partnerUrl || obj.application_url || obj.applicationUrl || obj.public_url || obj.publicUrl || obj.apply_url || obj.applyUrl || obj.redirect_url || obj.redirectUrl || obj.bank_link;
+    return (url && String(url).trim()) ? String(url).trim() : null;
+  };
+
+  const explicitUrl = extractUrl(productObj) || extractUrl(cardName) || extractUrl(bankId);
+  if (explicitUrl) return explicitUrl;
+
+  const nameLower = (typeof cardName === 'string' ? cardName : (cardName?.name || cardName?.cardName || '')).toLowerCase();
+  const bankLower = (typeof bankId === 'string' ? bankId : (bankId?.bank_name || bankId?.bank_code || bankId?.bankId || '')).toLowerCase();
 
   // Axis Bank Cards (connect all to the Axis referral link)
   if (bankLower === 'axis' || nameLower.includes('axis')) {

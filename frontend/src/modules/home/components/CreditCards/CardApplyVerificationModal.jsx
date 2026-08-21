@@ -191,7 +191,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           if (result.success) {
             setStatus("success");
             setTimeout(() => {
-              const applyLink = card.applyLink || getBankApplyLink(card.cardName, card.bankId);
+              const applyLink = card.partner_url || card.partnerUrl || card.application_url || card.public_url || card.apply_url || card.redirect_url || card.applyLink || getBankApplyLink(card.cardName, card.bankId, card);
               if (applyLink) {
                 window.location.href = applyLink;
               } else {
@@ -207,7 +207,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           console.error(apiErr);
           setStatus("success");
           setTimeout(() => {
-            const applyLink = card.applyLink || getBankApplyLink(card.cardName, card.bankId);
+            const applyLink = card.partner_url || card.partnerUrl || card.application_url || card.public_url || card.apply_url || card.redirect_url || card.applyLink || getBankApplyLink(card.cardName, card.bankId, card);
             if (applyLink) {
               window.location.href = applyLink;
             }
