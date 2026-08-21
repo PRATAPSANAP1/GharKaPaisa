@@ -44,13 +44,13 @@ export default function CustomerPostApplyStep2() {
   const [address, setAddress] = useState('');
   const [motherName, setMotherName] = useState('');
 
-  // Section 2: Operational Remarks & Stages (Admin/SuperAdmin only editable)
+  // Section 2: Operational Remarks & Stages (Editable by Partner & Admin)
   const [softApprovalStatus, setSoftApprovalStatus] = useState('Approval-income 25k');
   const [vkycStage, setVkycStage] = useState('VKYC Pending');
   const [iqaStage, setIqaStage] = useState('IQA Pending');
   const [dispatchStatus, setDispatchStatus] = useState('E-sign Pending');
 
-  // Section 3: Bank Reference & Final Stage (Admin/SuperAdmin only editable for Final Status & Remarks)
+  // Section 3: Bank Reference & Final Application Stage (READ-ONLY for Partner, Editable by Admin/SuperAdmin)
   const [appNumber, setAppNumber] = useState('');
   const [vkycUrl, setVkycUrl] = useState('');
   const [finalStatus, setFinalStatus] = useState('In Process');
@@ -126,16 +126,16 @@ export default function CustomerPostApplyStep2() {
         designation: designation.trim(),
         address: address.trim(),
         mother_name: motherName.trim(),
+        soft_approval_status: softApprovalStatus,
+        vkyc_stage: vkycStage,
+        iqa_stage: iqaStage,
+        dispatch_status: dispatchStatus,
         bank_application_number: appNumber.trim(),
         vkyc_url: vkycUrl.trim()
       };
 
-      // Only include operational and final stage edits if user is Admin/SuperAdmin
+      // Admin & SuperAdmin can update final status & decline reasons
       if (isAdminOrSuperAdmin) {
-        payload.soft_approval_status = softApprovalStatus;
-        payload.vkyc_stage = vkycStage;
-        payload.iqa_stage = iqaStage;
-        payload.dispatch_status = dispatchStatus;
         payload.final_status = finalStatus;
         payload.decline_reason = declineReason.trim();
         payload.eligible_reqd = eligibleReqd;
@@ -222,7 +222,7 @@ export default function CustomerPostApplyStep2() {
     background: disabledBg,
     color: isDark ? '#a1a1aa' : '#64748b',
     cursor: 'not-allowed',
-    opacity: 0.9
+    opacity: 0.95
   };
 
   const labelStyle = {
@@ -269,7 +269,7 @@ export default function CustomerPostApplyStep2() {
                 <span>👤</span> <span>Customer Quick Details (QD)</span>
               </div>
               <span style={{ fontSize: '11px', background: '#10B98115', color: '#10B981', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
-                Partner Editable
+                Editable
               </span>
             </div>
 
@@ -384,8 +384,8 @@ export default function CustomerPostApplyStep2() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>⚙️</span> <span>Operational Remarks & Processing Stages</span>
               </div>
-              <span style={{ fontSize: '11px', background: isAdminOrSuperAdmin ? '#3B82F615' : '#F59E0B15', color: isAdminOrSuperAdmin ? '#3B82F6' : '#F59E0B', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
-                {isAdminOrSuperAdmin ? 'Admin Editable' : '🔒 Read-Only for Partner'}
+              <span style={{ fontSize: '11px', background: '#10B98115', color: '#10B981', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
+                Editable
               </span>
             </div>
 
@@ -393,10 +393,9 @@ export default function CustomerPostApplyStep2() {
               <div>
                 <label style={labelStyle}>Soft Approval Status</label>
                 <select
-                  disabled={!isAdminOrSuperAdmin}
                   value={softApprovalStatus}
                   onChange={(e) => setSoftApprovalStatus(e.target.value)}
-                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
+                  style={inputStyle}
                 >
                   <option value="Approval-income 25k">Approval-income 25k</option>
                   <option value="Approval-income 30k">Approval-income 30k</option>
@@ -407,10 +406,9 @@ export default function CustomerPostApplyStep2() {
               <div>
                 <label style={labelStyle}>Vkyc Stage</label>
                 <select
-                  disabled={!isAdminOrSuperAdmin}
                   value={vkycStage}
                   onChange={(e) => setVkycStage(e.target.value)}
-                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
+                  style={inputStyle}
                 >
                   <option value="VKYC Pending">VKYC Pending</option>
                   <option value="VKYC Complete">VKYC Complete</option>
@@ -421,10 +419,9 @@ export default function CustomerPostApplyStep2() {
               <div>
                 <label style={labelStyle}>IQA Stage</label>
                 <select
-                  disabled={!isAdminOrSuperAdmin}
                   value={iqaStage}
                   onChange={(e) => setIqaStage(e.target.value)}
-                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
+                  style={inputStyle}
                 >
                   <option value="IQA Sent">IQA Sent</option>
                   <option value="IQA Complete">IQA Complete</option>
@@ -437,10 +434,9 @@ export default function CustomerPostApplyStep2() {
               <div>
                 <label style={labelStyle}>Dispatch Status</label>
                 <select
-                  disabled={!isAdminOrSuperAdmin}
                   value={dispatchStatus}
                   onChange={(e) => setDispatchStatus(e.target.value)}
-                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
+                  style={inputStyle}
                 >
                   <option value="Dispatch Done">Dispatch Done</option>
                   <option value="WCP Stage">WCP Stage</option>
@@ -452,34 +448,45 @@ export default function CustomerPostApplyStep2() {
             </div>
           </div>
 
-          {/* SECTION 3: Bank Reference & Final Stage */}
+          {/* SECTION 3: Bank Reference & Final Application Stage */}
           <div>
             <div style={sectionHeaderStyle}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>🏦</span> <span>Bank Reference & Final Application Stage</span>
               </div>
+              <span style={{ fontSize: '11px', background: isAdminOrSuperAdmin ? '#3B82F615' : '#F59E0B15', color: isAdminOrSuperAdmin ? '#3B82F6' : '#F59E0B', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
+                {isAdminOrSuperAdmin ? 'Admin Editable' : '🔒 Read-Only for Partner'}
+              </span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
               <div>
-                <label style={labelStyle}>Bank Application / Reference Number</label>
+                <label style={labelStyle}>
+                  Bank Application / Reference Number
+                  {!isAdminOrSuperAdmin && <span style={{ color: '#F59E0B', marginLeft: '6px', fontSize: '11px' }}>(Read-Only)</span>}
+                </label>
                 <input
                   type="text"
+                  disabled={!isAdminOrSuperAdmin}
                   placeholder="e.g. SBI9842157 / HDFC-APP-1002"
                   value={appNumber}
                   onChange={(e) => setAppNumber(e.target.value)}
-                  style={{ ...inputStyle, fontFamily: 'monospace' }}
+                  style={{ ...(isAdminOrSuperAdmin ? inputStyle : disabledInputStyle), fontFamily: 'monospace' }}
                 />
               </div>
 
               <div>
-                <label style={labelStyle}>Bank VKYC Link (Optional)</label>
+                <label style={labelStyle}>
+                  Bank VKYC Link (Optional)
+                  {!isAdminOrSuperAdmin && <span style={{ color: '#F59E0B', marginLeft: '6px', fontSize: '11px' }}>(Read-Only)</span>}
+                </label>
                 <input
                   type="url"
+                  disabled={!isAdminOrSuperAdmin}
                   placeholder="https://vkyc.sbi.co.in/..."
                   value={vkycUrl}
                   onChange={(e) => setVkycUrl(e.target.value)}
-                  style={inputStyle}
+                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
                 />
               </div>
 
