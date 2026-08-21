@@ -2,7 +2,8 @@ const logger = require('../../config/logger');
 const axios = require('axios');
 
 // ── MSG91 Config (Primary SMS Provider) ─────────────────────────────────────
-const msg91AuthKey = process.env.MSG91_AUTH_KEY;
+// Accepts either MSG91_AUTH_KEY or MSG91_AUTHKEY
+const msg91AuthKey = process.env.MSG91_AUTH_KEY || process.env.MSG91_AUTHKEY;
 const msg91SenderId = process.env.MSG91_SENDER_ID || 'GHARKP';
 const msg91Route = process.env.MSG91_ROUTE || '4';
 
@@ -120,7 +121,7 @@ const sendMsg91FlowSms = async (to, templateId, varsMap, fallbackBody) => {
 
       logger.info(`[SMS-FLOW] MSG91 Flow (${templateId}) response for ${formattedTo}: ${JSON.stringify(res.data)}`);
 
-      if (res.data && res.data.type !== 'error' && !res.data.hasError) {
+      if (res.data && res.data.type !== 'error' && !res.data.hasError && res.data.code !== '400') {
         return true;
       }
       logger.warn(`[SMS-FLOW] MSG91 Flow returned error: ${JSON.stringify(res.data)}. Executing plain text fallback.`);
@@ -135,6 +136,7 @@ const sendMsg91FlowSms = async (to, templateId, varsMap, fallbackBody) => {
 
 /**
  * Send Step 1 Application Link SMS to Customer (DLT Template ID: 1277178678509565584 | Sender: GHARKP)
+ * Uses clean variables: var1, var2, var3
  */
 const sendApplyStep1Sms = async (to, customerName, productName, token) => {
   const applyUrl = String(token || '').startsWith('http') ? token : `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}`;
@@ -144,17 +146,7 @@ const sendApplyStep1Sms = async (to, customerName, productName, token) => {
   const varsMap = {
     var1: customerName || 'Customer',
     var2: productName || 'Credit Card',
-    var3: applyUrl,
-    VAR1: customerName || 'Customer',
-    VAR2: productName || 'Credit Card',
-    VAR3: applyUrl,
-    name: customerName || 'Customer',
-    product: productName || 'Credit Card',
-    url: applyUrl,
-    customer_name: customerName || 'Customer',
-    product_name: productName || 'Credit Card',
-    apply_url: applyUrl,
-    link: applyUrl
+    var3: applyUrl
   };
 
   return await sendMsg91FlowSms(to, templateId, varsMap, body);
@@ -162,6 +154,7 @@ const sendApplyStep1Sms = async (to, customerName, productName, token) => {
 
 /**
  * Send Step 2 Post-Apply Link SMS to Customer (DLT Template ID: 1277178655941470854 | Sender: GHARKP)
+ * Uses clean variables: name, product, url
  */
 const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
   const postApplyUrl = String(token || '').startsWith('http') ? token : `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}/post-apply`;
@@ -169,20 +162,25 @@ const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
   const templateId = process.env.MSG91_APPLY_STEP2_TEMPLATE_ID || '1277178655941470854';
 
   const varsMap = {
-    var1: customerName || 'Customer',
-    var2: productName || 'Credit Card',
-    var3: postApplyUrl,
-    VAR1: customerName || 'Customer',
-    VAR2: productName || 'Credit Card',
-    VAR3: postApplyUrl,
     name: customerName || 'Customer',
     product: productName || 'Credit Card',
-    url: postApplyUrl,
-    customer_name: customerName || 'Customer',
-    product_name: productName || 'Credit Card',
-    post_apply_url: postApplyUrl,
-    qd_link: postApplyUrl,
-    link: postApplyUrl
+    url: postApplyUrl
+  };
+
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
+};
+
+/**
+ * Send Apply 2 SMS (DLT Template ID: 1277178697669731121 | Sender: GHARKP)
+ */
+const sendApply2Sms = async (to, customerName, productName, applyUrl) => {
+  const body = `Dear ${customerName || 'Customer'} , complete your prefilled application for ${productName || 'Credit Card'} on GharKaPaisa: ${applyUrl} - GharKaPaisa`;
+  const templateId = process.env.MSG91_APPLY_2_TEMPLATE_ID || '1277178697669731121';
+
+  const varsMap = {
+    var1: customerName || 'Customer',
+    var2: productName || 'Credit Card',
+    var3: applyUrl
   };
 
   return await sendMsg91FlowSms(to, templateId, varsMap, body);
@@ -198,11 +196,7 @@ const sendUploadReminderSms = async (to, customerName, appNumber, uploadUrl) => 
   const varsMap = {
     var1: customerName || 'Customer',
     var2: appNumber || 'ref',
-    var3: uploadUrl,
-    VAR1: customerName || 'Customer',
-    VAR2: appNumber || 'ref',
-    VAR3: uploadUrl,
-    url: uploadUrl
+    var3: uploadUrl
   };
 
   return await sendMsg91FlowSms(to, templateId, varsMap, body);
@@ -218,10 +212,7 @@ const sendPartnerInviteSms = async (to, inviterName, loginUrl) => {
 
   const varsMap = {
     var1: targetUrl,
-    var2: inviterName || 'Partner',
-    VAR1: targetUrl,
-    VAR2: inviterName || 'Partner',
-    url: targetUrl
+    var2: inviterName || 'Partner'
   };
 
   return await sendMsg91FlowSms(to, templateId, varsMap, body);
@@ -236,9 +227,7 @@ const sendKycStatusUpdateSms = async (to, partnerName, statusText) => {
 
   const varsMap = {
     var1: partnerName || 'Partner',
-    var2: statusText || 'Updated',
-    VAR1: partnerName || 'Partner',
-    VAR2: statusText || 'Updated'
+    var2: statusText || 'Updated'
   };
 
   return await sendMsg91FlowSms(to, templateId, varsMap, body);
@@ -253,9 +242,7 @@ const sendCommissionCreditedSms = async (to, partnerName, amount) => {
 
   const varsMap = {
     var1: partnerName || 'Partner',
-    var2: String(amount || '0'),
-    VAR1: partnerName || 'Partner',
-    VAR2: String(amount || '0')
+    var2: String(amount || '0')
   };
 
   return await sendMsg91FlowSms(to, templateId, varsMap, body);
@@ -270,9 +257,23 @@ const sendLeadStatusSms = async (to, customerName, productOrDetail) => {
 
   const varsMap = {
     var1: customerName || 'Customer',
-    var2: productOrDetail || 'Credit Card',
-    VAR1: customerName || 'Customer',
-    VAR2: productOrDetail || 'Credit Card'
+    var2: productOrDetail || 'Credit Card'
+  };
+
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
+};
+
+/**
+ * Send Payout Receipt SMS (DLT Template ID: 1277178697170936114 | Sender: GHARKP)
+ */
+const sendPayoutReceiptSms = async (to, partnerName, amount, utr) => {
+  const body = `Dear ${partnerName || 'Partner'}, your payout of Rs.${amount || '0'} has been credited to bank account with UTR: ${utr || 'N/A'}. - GharKaPaisa`;
+  const templateId = process.env.MSG91_PAYOUT_RECEIPT_TEMPLATE_ID || '1277178697170936114';
+
+  const varsMap = {
+    var1: partnerName || 'Partner',
+    var2: String(amount || '0'),
+    var3: utr || 'N/A'
   };
 
   return await sendMsg91FlowSms(to, templateId, varsMap, body);
@@ -280,7 +281,6 @@ const sendLeadStatusSms = async (to, customerName, productOrDetail) => {
 
 /**
  * Standard Catalog of All Platform SMS Templates
- * Note: Strictly <= 2 variables per template for DLT / MSG91 compliance.
  */
 const SMS_TEMPLATES = {
   PAYOUT_CONFIRMATION: (name, amount) =>
@@ -315,10 +315,12 @@ module.exports = {
   sendGenericNotificationSms,
   sendApplyStep1Sms,
   sendPostApplyStep2Sms,
+  sendApply2Sms,
   sendUploadReminderSms,
   sendPartnerInviteSms,
   sendKycStatusUpdateSms,
   sendCommissionCreditedSms,
   sendLeadStatusSms,
+  sendPayoutReceiptSms,
   SMS_TEMPLATES
 };
