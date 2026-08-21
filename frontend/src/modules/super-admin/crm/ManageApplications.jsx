@@ -517,28 +517,27 @@ export default function ManageApplications() {
             </div>
           </div>
           
-          <div style={{ width: '180px' }}>
+          <div style={{ width: '190px' }}>
             <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Application Status</label>
             <select style={S.input} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">All Applications</option>
-              <option value="operational_verified">Operational Verified (Pending Super Admin)</option>
-              <option value="super_admin_approved">Super Admin Approved</option>
-              <option value="approved">Bank Approved</option>
-              <option value="disbursed">Disbursed</option>
-              <option value="submitted">Applied / Submitted</option>
-              <option value="under_review">Under Review</option>
-              <option value="rejected">Rejected</option>
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="details_submitted">Details Submitted</option>
+              <option value="operational_verified">Operational Verified</option>
+              <option value="approved">Approved</option>
+              <option value="commission_released">Commission Released</option>
+              <option value="commission_received">Commission Received</option>
+              <option value="rejected">Rejected / Cancelled</option>
             </select>
           </div>
 
-          <div style={{ width: '150px' }}>
+          <div style={{ width: '170px' }}>
             <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Commission Status</label>
             <select style={S.input} value={commFilter} onChange={e => setCommFilter(e.target.value)}>
               <option value="">All Commissions</option>
               <option value="pending">Pending</option>
+              <option value="released">Commission Released</option>
               <option value="received">Commission Received</option>
-              <option value="approved">Wallet Credited (Hold)</option>
-              <option value="processed">Commission Paid</option>
               <option value="cancelled">Cancelled</option>
             </select>
           </div>
@@ -681,43 +680,50 @@ export default function ManageApplications() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {[
             {
-              title: 'Operational Verified (Pending Super Admin Review)',
-              icon: '⚡',
+              title: '⏳ Pending Applications',
+              icon: '⏳',
               badgeColor: '#F59E0B',
-              list: applications.filter(a => ['operational_verified', 'qd_verified', 'lead_in_progress'].includes(a.status))
+              statuses: ['pending', 'initiated', 'link_pending', 'created', 'lead_created', 'new', 'draft']
             },
             {
-              title: 'Super Admin Approved & Bank Sanctioned',
+              title: '📝 Details Submitted Applications',
+              icon: '📝',
+              badgeColor: '#3B82F6',
+              statuses: ['details_submitted', 'submitted', 'under_review', 'under review', 'verification']
+            },
+            {
+              title: '🔍 Operational Verified Applications',
+              icon: '🔍',
+              badgeColor: '#8B5CF6',
+              statuses: ['operational_verified', 'operational_approved']
+            },
+            {
+              title: '✅ Approved Applications',
               icon: '✅',
               badgeColor: '#10B981',
-              list: applications.filter(a => ['super_admin_approved', 'approved', 'sanctioned'].includes(a.status))
+              statuses: ['approved', 'super_admin_approved', 'disbursed', 'sanctioned']
             },
             {
-              title: 'Disbursed Applications',
+              title: '💸 Commission Released Applications',
+              icon: '💸',
+              badgeColor: '#06B6D4',
+              statuses: ['commission_released', 'released']
+            },
+            {
+              title: '💰 Commission Received Applications',
               icon: '💰',
-              badgeColor: '#8B5CF6',
-              list: applications.filter(a => a.status === 'disbursed')
+              badgeColor: '#16A34A',
+              statuses: ['commission_received', 'received']
             },
             {
-              title: 'Pending & Submitted Applications',
-              icon: '🕒',
-              badgeColor: '#3B82F6',
-              list: applications.filter(a => ['pending', 'submitted', 'under_review', 'in_progress', 'document_uploaded'].includes(a.status))
-            },
-            {
-              title: 'Rejected & Cancelled Applications',
+              title: '❌ Rejected & Cancelled Applications',
               icon: '❌',
               badgeColor: '#EF4444',
-              list: applications.filter(a => ['rejected', 'cancelled'].includes(a.status))
-            },
-            {
-              title: 'Other Applications',
-              icon: '📂',
-              badgeColor: '#6B7280',
-              list: applications.filter(a => !['operational_verified', 'qd_verified', 'lead_in_progress', 'super_admin_approved', 'approved', 'sanctioned', 'disbursed', 'pending', 'submitted', 'under_review', 'in_progress', 'document_uploaded', 'rejected', 'cancelled'].includes(a.status))
+              statuses: ['rejected', 'cancelled', 'declined']
             }
           ].map((sec, sIdx) => {
-            if (!sec.list || sec.list.length === 0) return null;
+            const list = applications.filter(a => sec.statuses.includes(String(a.status || '').toLowerCase()));
+            if (!list || list.length === 0) return null;
             return (
               <div key={sIdx} style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '14px 20px', background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -725,7 +731,7 @@ export default function ManageApplications() {
                     <span style={{ fontSize: '18px' }}>{sec.icon}</span>
                     <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0 }}>{sec.title}</h3>
                     <span style={{ fontSize: '11px', fontWeight: 900, background: `${sec.badgeColor}20`, color: sec.badgeColor, padding: '2px 10px', borderRadius: '12px' }}>
-                      {sec.list.length}
+                      {list.length} Applications
                     </span>
                   </div>
                 </div>
@@ -743,7 +749,7 @@ export default function ManageApplications() {
                       </tr>
                     </thead>
                     <tbody style={{ fontSize: '13px' }}>
-                      {sec.list.map((app) => (
+                      {list.map((app) => (
                         <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
                           <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 700 }}>
                             {app.app_number}
