@@ -1424,7 +1424,7 @@ const sendUploadLink = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { v4: uuidv4 } = require('uuid');
-    const { sendSms } = require('../../services/sms/sms.service');
+    const { sendUploadReminderSms, sendSms } = require('../../services/sms/sms.service');
     const { sendEmail } = require('../../services/email/email.service');
 
     let appRes = await query(`
@@ -1465,7 +1465,7 @@ const sendUploadLink = async (req, res, next) => {
     `, [id]);
 
     const smsText = `Dear ${app.customer_name}, please complete your application #${app.app_number} by uploading required documents: ${uploadUrl} - Thanks, GharKaPaisa`;
-    await sendSms(app.customer_mobile, smsText);
+    await sendUploadReminderSms(app.customer_mobile, app.customer_name, app.app_number, uploadUrl).catch(() => sendSms(app.customer_mobile, smsText));
 
     if (app.customer_email) {
       await sendEmail({

@@ -47,7 +47,7 @@ const sendSms = async (to, body) => {
   // 1. Try MSG91 SMS API
   if (msg91AuthKey) {
     try {
-      const url = `https://control.msg91.com/api/v5/sms/send?authkey=${encodeURIComponent(msg91AuthKey)}`;
+      const url = `https://control.msg91.com/api/v5/sms/send`;
       const res = await axios.post(url, {
         sender: msg91SenderId,
         route: msg91Route,
@@ -57,15 +57,19 @@ const sendSms = async (to, body) => {
           to: [formattedTo]
         }]
       }, {
-        headers: { authkey: msg91AuthKey, 'Content-Type': 'application/json' }
+        headers: {
+          authkey: msg91AuthKey,
+          'Content-Type': 'application/json',
+          accept: 'application/json'
+        }
       });
 
       logger.info(`[SMS] Plain Text MSG91 response for ${formattedTo}: ${JSON.stringify(res.data)}`);
-      if (res.data && res.data.type !== 'error' && !res.data.hasError) {
+      if (res.data && res.data.type !== 'error' && !res.data.hasError && res.data.code !== '401') {
         return true;
       }
     } catch (err) {
-      logger.error(`[SMS] MSG91 failed to send message to ${formattedTo}: ${err.response?.data ? JSON.stringify(err.response.data) : err.message}`);
+      logger.warn(`[SMS] MSG91 plain text SMS notice for ${formattedTo}: ${err.response?.data ? JSON.stringify(err.response.data) : err.message}`);
     }
   }
 
