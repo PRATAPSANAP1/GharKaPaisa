@@ -5,6 +5,7 @@ import api from '../../services/api';
 import logo from '../../assets/logos/logo.png';
 import { useTheme, LightDarkToggle } from '../../contexts/ThemeContext';
 import LanguageSwitcher from '../../components/LanguageSwitcher/LanguageSwitcher';
+import { useAuthStore } from '../../app/store/authStore';
 import { 
   MdCheckCircle, MdError, MdLock, MdCloudUpload, 
   MdNavigateNext, MdNavigateBefore, MdSave, MdRefresh 
@@ -143,6 +144,10 @@ export default function PhysicalApplicationForm() {
 
   const currentLang = i18n.language === 'hi' ? 'hi' : 'en';
   const txt = (key) => DICTIONARY[currentLang]?.[key] || DICTIONARY.en[key] || key;
+
+  const user = useAuthStore(state => state.user);
+  const userRole = (user?.role || '').toUpperCase();
+  const isOperationsOrAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD'].includes(userRole);
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -918,13 +923,26 @@ export default function PhysicalApplicationForm() {
               </div>
 
               <div>
-                <label style={labelStyle}>{txt('bankRemark')}</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>{txt('bankRemark')}</label>
+                  <span style={{ fontSize: '10.5px', fontWeight: 800, color: isOperationsOrAdmin ? C.teal : C.textMid }}>
+                    {isOperationsOrAdmin ? '✏️ Operations Head / Admin Edit Access' : '🔒 Read-Only (Operations Head / Admin only)'}
+                  </span>
+                </div>
                 <textarea
                   rows={3}
+                  disabled={!isOperationsOrAdmin}
+                  readOnly={!isOperationsOrAdmin}
                   value={form.bank_remark}
                   onChange={e => handleChange('bank_remark', e.target.value)}
-                  placeholder={txt('bankRemarkPlace')}
-                  style={{ ...inputStyle, resize: 'vertical' }}
+                  placeholder={isOperationsOrAdmin ? txt('bankRemarkPlace') : "Bank remark can only be added or edited by Operations Head or Admin."}
+                  style={{
+                    ...inputStyle,
+                    resize: 'vertical',
+                    opacity: isOperationsOrAdmin ? 1 : 0.8,
+                    cursor: isOperationsOrAdmin ? 'text' : 'not-allowed',
+                    background: isOperationsOrAdmin ? C.inputBg : (isDark ? '#1a1a1a' : '#f1f5f9')
+                  }}
                 />
               </div>
 

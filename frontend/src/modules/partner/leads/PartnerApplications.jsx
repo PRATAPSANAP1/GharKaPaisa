@@ -219,31 +219,28 @@ export default function PartnerApplications() {
     setGeneratingShare(true);
     try {
       const isPhysical = String(app.process_type || app.process_by || '').toLowerCase().includes('physical');
-      const endpoint = isPhysical ? '/applications/generate-physical-link' : '/applications/generate-share-link';
+      const isLinked = String(app.process_type || app.process_by || '').toLowerCase().includes('linked');
+      const endpoint = (isPhysical || isLinked) ? '/applications/generate-physical-link' : '/applications/generate-share-link';
 
       const res = await api.post(endpoint, {
         application_id: app.id,
         lead_id: app.lead_id,
         product_id: app.product_id || app.productId
       });
-      if (res.data?.success && res.data.data?.share_url) {
-        const shareUrl = res.data.data.share_url;
+      if (res.data?.success && (res.data.data?.share_url || res.data.data?.url)) {
+        const shareUrl = res.data.data.share_url || res.data.data.url;
         const custName = app.customer_name || 'Customer';
+        const cleanMobile = (app.customer_mobile || app.mobile || '').replace(/\D/g, '');
+        const waMsg = encodeURIComponent(`Hello ${custName},\n\nPlease complete your application tracking and details form using this link:\n${shareUrl}\n\nShared via GharKaPaisa.`);
+        const waUrl = `https://wa.me/91${cleanMobile}?text=${waMsg}`;
 
-        if (navigator.share) {
-          try {
-            await navigator.share({
-              title: `Application for ${custName}`,
-              text: `Hi ${custName}, please complete your application details using this secure link:`,
-              url: shareUrl
-            });
-          } catch (shareErr) {
-            console.log('Native share closed:', shareErr);
-          }
-        } else {
-          await navigator.clipboard.writeText(shareUrl);
-          alert('Link copied to clipboard!');
-        }
+        setShareData({
+          app,
+          shareUrl,
+          whatsappUrl: waUrl,
+          token: res.data.data.token || app.tracking_token
+        });
+        setShowShareModal(true);
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to generate customer share link');
@@ -1482,6 +1479,116 @@ export default function PartnerApplications() {
               <button type="button" onClick={() => setShowExportModal(false)} style={{ padding: '9px 18px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
               <button type="button" onClick={handleExecuteExportCSV} style={{ padding: '9px 22px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Download size={14} /> Download CSV File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL 6: SHARE APPLICATION DETAIL LINK MODAL ═══ */}
+      {showShareModal && shareData && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 480, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Share2 size={18} color="#10b981" /> Application Detail Sheet Link
+              </h3>
+              <button onClick={() => setShowShareModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
+            </div>
+
+            <div style={{ background: isDark ? '#161616' : '#f8fafc', padding: 14, borderRadius: 14, border: `1px solid ${border}`, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5 }}>
+              <div><strong style={{ color: textMuted }}>Application #:</strong> <span style={{ color: accent, fontWeight: 800 }}>#{shareData.app?.app_number || shareData.app?.lead_number || 'APP-LINK'}</span></div>
+              <div><strong style={{ color: textMuted }}>Customer Name:</strong> <span style={{ color: textPrimary, fontWeight: 700 }}>{shareData.app?.customer_name || 'Customer'}</span></div>
+              <div><strong style={{ color: textMuted }}>Mobile:</strong> <span style={{ color: textPrimary, fontWeight: 700 }}>{shareData.app?.customer_mobile || shareData.app?.mobile || 'N/A'}</span></div>
+              <div><strong style={{ color: textMuted }}>Product:</strong> <span style={{ color: textPrimary, fontWeight: 700 }}>{shareData.app?.product_name || 'Financial Product'}</span></div>
+            </div>
+
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 800, color: textMuted, display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>
+                Customer Application & Status Tracking Link
+              </label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={shareData.shareUrl}
+                  style={{
+                    flex: 1, padding: '10px 12px', borderRadius: 10, border: `1px solid ${border}`,
+                    background: inputBg, color: textPrimary, fontSize: 12, fontWeight: 600, outline: 'none'
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareData.shareUrl);
+                    alert('📋 Application Link copied to clipboard!');
+                  }}
+                  style={{
+                    padding: '10px 14px', borderRadius: 10, border: 'none',
+                    background: `${accent}20`, color: accent, fontWeight: 800, fontSize: 12, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 4
+                  }}
+                >
+                  <Copy size={14} /> Copy
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+              <a
+                href={shareData.whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '11px 16px', borderRadius: 12, border: 'none', background: '#25D366',
+                  color: '#ffffff', fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                }}
+              >
+                <MessageSquare size={16} /> Share via WhatsApp to Customer
+              </a>
+
+              <a
+                href={shareData.shareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: '11px 16px', borderRadius: 12, border: `1.5px solid ${accent}`, background: `${accent}12`,
+                  color: accent, fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                }}
+              >
+                <ArrowUpRight size={16} /> Open & Fill Application Tracking Form
+              </a>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await api.post(`/applications/${shareData.app?.id}/send-link`);
+                    if (res.data?.success) {
+                      alert(`✅ SMS Link dispatched successfully to customer ${shareData.app?.customer_mobile || shareData.app?.mobile}!`);
+                    }
+                  } catch (smsErr) {
+                    alert(smsErr.response?.data?.message || 'Failed to resend SMS to customer');
+                  }
+                }}
+                style={{
+                  padding: '11px 16px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#f1f5f9',
+                  color: textPrimary, fontWeight: 800, fontSize: 12.5, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                }}
+              >
+                <Send size={15} /> Send / Resend Automatic SMS to Customer
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: `1px solid ${border}`, paddingTop: 12 }}>
+              <button
+                type="button"
+                onClick={() => setShowShareModal(false)}
+                style={{ padding: '8px 20px', borderRadius: 10, border: `1px solid ${border}`, background: 'transparent', color: textMuted, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}
+              >
+                Close
               </button>
             </div>
           </div>
