@@ -495,7 +495,7 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
     if (meta.txn_id) {
       await client.query(`
         UPDATE wallet_ledger 
-        SET status = 'Released', updated_at = NOW() 
+        SET status = 'Released' 
         WHERE id::text = $1::text
       `, [String(meta.txn_id)]);
     } else {

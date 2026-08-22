@@ -696,6 +696,7 @@ const migrate = async () => {
       created_at     TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await query(`ALTER TABLE wallet_ledger ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
   await query(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_wallet ON wallet_transactions(wallet_id)`);
   await query(`ALTER TABLE wallet_transactions ADD COLUMN IF NOT EXISTS partner_id UUID REFERENCES partner_profiles(id)`);
   await query(`
