@@ -131,13 +131,31 @@ const migrate = async () => {
 
   await query(`
     DO $$ BEGIN
-      CREATE TYPE commission_status AS ENUM ('pending','approved','rejected','processed','cancelled','released','on_hold','held');
+      CREATE TYPE ledger_transaction_type AS ENUM (
+        'PERSONAL_COMMISSION', 
+        'TEAM_COMMISSION', 
+        'REFERRAL_BONUS', 
+        'CAMPAIGN_BONUS', 
+        'SETTLEMENT', 
+        'WITHDRAWAL', 
+        'ADJUSTMENT', 
+        'REVERSAL', 
+        'REFUND',
+        'TDS_DEDUCTION',
+        'COMMISSION_RELEASE',
+        'OVERRIDE_COMMISSION'
+      );
     EXCEPTION WHEN duplicate_object THEN NULL; END $$
   `);
-  await addEnumValue('commission_status', 'cancelled');
-  await addEnumValue('commission_status', 'released');
-  await addEnumValue('commission_status', 'on_hold');
-  await addEnumValue('commission_status', 'held');
+  await addEnumValue('ledger_transaction_type', 'TDS_DEDUCTION');
+  await addEnumValue('ledger_transaction_type', 'COMMISSION_RELEASE');
+  await addEnumValue('ledger_transaction_type', 'OVERRIDE_COMMISSION');
+
+  await query(`
+    DO $$ BEGIN
+      ALTER TABLE wallet_ledger ALTER COLUMN transaction_type TYPE VARCHAR(100) USING transaction_type::text;
+    EXCEPTION WHEN OTHERS THEN NULL; END $$
+  `);
 
   await query(`
     DO $$ BEGIN

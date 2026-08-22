@@ -19,7 +19,10 @@ const runWalletEngineMigrations = async () => {
             'WITHDRAWAL', 
             'ADJUSTMENT', 
             'REVERSAL', 
-            'REFUND'
+            'REFUND',
+            'TDS_DEDUCTION',
+            'COMMISSION_RELEASE',
+            'OVERRIDE_COMMISSION'
           );
         END IF;
       END $$;
