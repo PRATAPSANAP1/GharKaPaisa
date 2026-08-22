@@ -15,7 +15,9 @@ import {
   MdPayments,
   MdTrendingUp,
   MdReceipt,
-  MdArrowForward
+  MdArrowForward,
+  MdContentCopy,
+  MdCheck
 } from 'react-icons/md';
 import {
   AreaChart,
@@ -49,6 +51,14 @@ const PartnerWallet = () => {
   const [txStatus, setTxStatus] = useState('');
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
+  const [copiedId, setCopiedId] = useState(null);
+
+  const handleCopyId = (id) => {
+    if (!id) return;
+    navigator.clipboard.writeText(id);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   // Withdrawal form states
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -791,7 +801,37 @@ const PartnerWallet = () => {
                       return (
                         <tr key={tx.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                           <td style={{ padding: '14px 16px', fontSize: '12.5px', color: C.text }}>{new Date(tx.created_at).toLocaleString()}</td>
-                          <td style={{ padding: '14px 16px', fontSize: '12.5px', color: C.text, fontFamily: 'monospace' }}>{tx.id.substring(0, 8)}...</td>
+                          <td style={{ padding: '14px 16px', fontSize: '12px', color: C.text, fontFamily: 'monospace' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '280px' }}>
+                              <span title={tx.id} style={{ userSelect: 'all', wordBreak: 'break-all' }}>{tx.id}</span>
+                              <button
+                                onClick={() => handleCopyId(tx.id)}
+                                title="Copy Transaction ID"
+                                style={{
+                                  background: copiedId === tx.id ? '#10B98115' : (C.bgSecondary || '#f1f5f9'),
+                                  border: `1px solid ${copiedId === tx.id ? '#10B981' : (C.border || '#cbd5e1')}`,
+                                  borderRadius: '6px',
+                                  padding: '4px 6px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  fontSize: '11px',
+                                  color: copiedId === tx.id ? '#10B981' : (C.text || '#334155'),
+                                  flexShrink: 0
+                                }}
+                              >
+                                {copiedId === tx.id ? (
+                                  <>
+                                    <MdCheck size={13} color="#10B981" />
+                                    <span style={{ fontSize: '10px', fontWeight: 800 }}>Copied!</span>
+                                  </>
+                                ) : (
+                                  <MdContentCopy size={13} />
+                                )}
+                              </button>
+                            </div>
+                          </td>
                           <td style={{ padding: '14px 16px', fontSize: '12.5px' }}>
                             <span style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '4px', background: isCredit ? '#D1FAE5' : '#FEE2E2', color: isCredit ? '#065F46' : '#991B1B', fontWeight: 700 }}>
                               {tx.transaction_type || tx.type}
@@ -843,8 +883,33 @@ const PartnerWallet = () => {
                   return (
                     <div key={w.id} style={{ padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>Request #{w.id.substring(0, 8)}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>#{w.id}</span>
+                          <button
+                            onClick={() => handleCopyId(w.id)}
+                            title="Copy Withdrawal ID"
+                            style={{
+                              background: copiedId === w.id ? '#10B98115' : (C.bgSecondary || '#f1f5f9'),
+                              border: `1px solid ${copiedId === w.id ? '#10B981' : (C.border || '#cbd5e1')}`,
+                              borderRadius: '6px',
+                              padding: '3px 6px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              fontSize: '11px',
+                              color: copiedId === w.id ? '#10B981' : (C.text || '#334155')
+                            }}
+                          >
+                            {copiedId === w.id ? (
+                              <>
+                                <MdCheck size={12} color="#10B981" />
+                                <span style={{ fontSize: '10px', fontWeight: 800 }}>Copied!</span>
+                              </>
+                            ) : (
+                              <MdContentCopy size={12} />
+                            )}
+                          </button>
                           <span style={{ fontSize: '10px', fontWeight: 800, padding: '3px 8px', borderRadius: '8px', background: `${statusColor}20`, color: statusColor, textTransform: 'uppercase' }}>
                             {w.status}
                           </span>
