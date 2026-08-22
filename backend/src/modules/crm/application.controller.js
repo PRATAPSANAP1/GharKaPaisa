@@ -3339,16 +3339,32 @@ const releaseCommission = async (req, res, next) => {
       [id]
     );
 
-    // 2. Call creditCommission to process partner & team split into partner_wallets & wallet_ledger
-    await creditCommission(
+    // 2. Call creditCommission to process partner & team split into partner_wallets & wallet_ledger (pass client to prevent deadlock)
+    const childTxn = await creditCommission(
       app.partner_id,
       id,
       commissionAmount,
       `Commission released for application ${app.app_number}`,
-      req.user.id
+      req.user.id,
+      client
     );
 
-    // 3. Log timeline
+    // 3. Call releaseHold to transition funds to Available Balance
+    await releaseHold(
+      app.partner_id,
+      commissionAmount,
+      {
+        txn_id: childTxn?.id || null,
+        application_id: id,
+        reference_type: 'commission_release',
+        reference_id: id,
+        description: `Commission released for application ${app.app_number}`,
+        processed_by: req.user.id
+      },
+      client
+    );
+
+    // 4. Log timeline
     try {
       await logTimeline(client, id, 'commission_released', 'Commission Released',
         `₹${commissionAmount} commission released and credited to partner wallet by Super Admin.`,
