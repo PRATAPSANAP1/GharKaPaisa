@@ -1,116 +1,41 @@
 /**
- * Utility to resolve direct application links for various bank cards.
+ * Utility to resolve direct application links for bank products.
+ * Database products table is the single source of truth for partner_url / application_url.
  */
 export const getBankApplyLink = (cardName, bankId, productObj = null) => {
-  const nameLower = (typeof cardName === 'string' ? cardName : (cardName?.name || cardName?.cardName || '')).toLowerCase();
-  const bankLower = (typeof bankId === 'string' ? bankId : (bankId?.bank_name || bankId?.bank_code || bankId?.bankId || '')).toLowerCase();
+  const product = productObj || (typeof cardName === 'object' ? cardName : null) || (typeof bankId === 'object' ? bankId : null);
+  
+  if (!product) return null;
 
-  // Helper to extract DB URL if valid and not mismatched
-  const extractValidDbUrl = (obj) => {
-    if (!obj || typeof obj !== 'object') return null;
-    const url = obj.partner_url || obj.partnerUrl || obj.application_url || obj.applicationUrl || obj.public_url || obj.publicUrl || obj.apply_url || obj.applyUrl || obj.redirect_url || obj.redirectUrl || obj.bank_link;
-    if (!url || !String(url).trim()) return null;
-    const cleanUrl = String(url).trim();
-    const isSbiUrl = cleanUrl.toLowerCase().includes('sbicard.com') || cleanUrl.toLowerCase().includes('sbi.co.in');
-    const isNonSbiBank = (bankLower && !bankLower.includes('sbi')) || (nameLower && !nameLower.includes('sbi') && !nameLower.includes('state bank'));
-    if (isSbiUrl && isNonSbiBank) {
-      return null; // Reject corrupted/placeholder SBI link on non-SBI product
-    }
-    return cleanUrl;
-  };
+  const rawUrl = (
+    product?.partner_url ||
+    product?.partnerUrl ||
+    product?.application_url ||
+    product?.applicationUrl ||
+    product?.apply_url ||
+    product?.applyUrl ||
+    product?.redirect_url ||
+    product?.redirectUrl ||
+    product?.public_url ||
+    product?.publicUrl ||
+    product?.bank_link ||
+    null
+  );
 
-  // 1. HARDCODED BANK MAPPING RULES (Guarantees correct bank portal links)
-  // Axis Bank Cards
-  if (bankLower === 'axis' || nameLower.includes('axis')) {
-    return "https://web.axis.bank.in/DigitalChannel/WebForm/?ipa68&axisreferralcode=WMMNYOH1_9640841";
+  if (!rawUrl || !String(rawUrl).trim()) return null;
+  
+  const cleanUrl = String(rawUrl).trim();
+  const nameLower = String(product?.name || product?.cardName || cardName || '').toLowerCase();
+  const bankLower = String(product?.bank_name || product?.bank_code || bankId || '').toLowerCase();
+
+  // Guard against cross-bank link contamination (e.g. non-SBI bank with SBI domain)
+  const isSbiUrl = cleanUrl.toLowerCase().includes('sbicard.com') || cleanUrl.toLowerCase().includes('sbi.co.in');
+  const isNonSbiBank = (bankLower && !bankLower.includes('sbi')) || (nameLower && !nameLower.includes('sbi') && !nameLower.includes('state bank'));
+  
+  if (isSbiUrl && isNonSbiBank) {
+    console.warn(`[URL_RESOLVER_GUARD] Rejected cross-bank SBI URL on non-SBI product '${product?.name || cardName}'`);
+    return null;
   }
 
-  // IndusInd Bank Cards
-  if (bankLower === 'indusind' || bankLower === 'indus' || nameLower.includes('indusind') || nameLower.includes('indus')) {
-    return "https://induseasycredit.indusind.bank.in/customer/credit-card/new-lead?utm_source=assisted&utm_medium=IBLV9763WESTIBL131260%20&utm_campaign=Credit-Card&utm_content=1";
-  }
-
-  // SBI Bank Cards (dynamically from product database)
-  if (bankLower === 'sbi' || nameLower.includes('sbi') || nameLower.includes('state bank')) {
-    return extractValidDbUrl(productObj) || extractValidDbUrl(cardName) || extractValidDbUrl(bankId);
-  }
-
-  // IDFC Bank Cards
-  if (bankLower === 'idfc' || nameLower.includes('idfc')) {
-    return "https://my.idfcfirst.bank.in/apply/cc?utm_source=partner&utm_medium=MywishMarketplaces&utm_campaign=WFYOU01";
-  }
-
-  // BOB Bank Cards
-  if (bankLower === 'bob' || nameLower.includes('bob') || nameLower.includes('baroda')) {
-    return "https://mycard.bobcard.tech/?utm_source=urbanmoney&utm_medium=urbanmoney_aq&utm_campaign=APAY1001";
-  }
-
-  // Federal Bank / Scapia Cards
-  if (bankLower === 'federal' || nameLower.includes('federal') || nameLower.includes('scapia') || nameLower.includes('scapiya')) {
-    return "https://apply.scapia.cards/landing_page?utm_source=RKPL_offline&utm_medium=DSA&utm_campaign=VK_MOHYHS1_content=travel&utm_term=card";
-  }
-
-  // DCB Bank Cards
-  if (bankLower === 'dcb' || bankLower === 'bcb' || nameLower.includes('dcb') || nameLower.includes('bcb')) {
-    return "https://get.novio.in/j84P/va2pvtwb";
-  }
-
-  // SBM Bank Cards
-  if (bankLower === 'sbm' || nameLower.includes('sbm')) {
-    return "https://get.novio.in/j84P/7tnakuu8";
-  }
-
-  const defaultHdfcLink = "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb";
-
-  // HDFC Card specific links mapping
-  const hdfcLinks = {
-    // Standard / Core Cards
-    "shoppersstop": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=RUPY&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "freedom": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=RUPY&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "indianoil": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=RUPY&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "swiggy": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=SWCC&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "tataneuplus": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "pixelplay": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "bizgrow": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=BIZC&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "bizfirst": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=BIZC&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "bizpower": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=BIZC&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "moneyback": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb",
-    "giga": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=GIGA#nbb&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX11&LC2=DIGIX1&SMcode=S54558%23nbb",
-    "irctc": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=IRCT&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-
-    // Premium Cards
-    "millennia": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb",
-    "dinersprivilege": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=DINE&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "tataneuinfinity": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "pixelgo": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-
-    // Super Premium Cards
-    "regaliagold": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb",
-    "regalia": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb",
-    "marriott": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=MRTB&DEDUPE=N&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "marriot": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=MRTB&DEDUPE=N&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "dinersblack": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=DINE&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-    "dinnerblack": "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=DINE&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb",
-
-    // Secured Cards
-    "securedexistingfd": "https://applyonline.hdfc.bank.in/digital/etb-fixed-deposit-cc?Channel=DSA&LGCode=XYOH&SMCode=SS4558&LC1=GHAR01&LC2=GHAR01&DSACode=XYOH#nbb",
-    "securednewfd": "https://pixel.hdfc.bank.in/pixel-onboard/landing/?flow=FDLien&sourcing.assist.channelCode=DSA&sourcing.assist.branchCode=XYOH&sourcing.assist.employeeCode=S54558&sourcing.assist.dsaCode=XYOH&sourcing.assist.lgCode=GHAR01&sourcing.assist.lc1Code=GHAR01&sourcing.assist.lc2Code=GHAR01&sourcing.assist.dsaCode=XYOH"
-  };
-
-  // Check matching HDFC card names
-  const key = Object.keys(hdfcLinks).find(k => nameLower.replace(/[^a-z0-9]/g, '').includes(k));
-  if (key) {
-    return hdfcLinks[key];
-  }
-
-  // Fallback HDFC link
-  if (bankLower === 'hdfc' || nameLower.includes('hdfc')) {
-    return defaultHdfcLink;
-  }
-
-  // 2. FALLBACK TO DATABASE URL: Check valid database URL if no bank mapping rule matched
-  const explicitUrl = extractValidDbUrl(productObj) || extractValidDbUrl(cardName) || extractValidDbUrl(bankId);
-  if (explicitUrl) return explicitUrl;
-
-  return null;
+  return cleanUrl;
 };

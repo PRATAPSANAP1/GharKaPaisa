@@ -1641,43 +1641,11 @@ const updateBankProcessingStatus = async (req, res, next) => {
       ? parseFloat(approved_amount)
       : null;
 
-    // Ensure DB columns exist for physical form processing fields
-    try {
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_remark TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dob VARCHAR(50)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS designation VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_address TEXT`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS mother_name VARCHAR(100)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_url VARCHAR(500)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(20)`);
-      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
-
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(100)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(100)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(100)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS bank_remark TEXT`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(100)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS dob VARCHAR(50)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS designation VARCHAR(100)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS company_address TEXT`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS mother_name VARCHAR(100)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS vkyc_url VARCHAR(500)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(20)`);
-      await query(`ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
-    } catch (e) {
-      logger.warn('Schema check warning for bank status columns:', e);
+    const userRole = (req.user?.role || '').toUpperCase();
+    
+    // Backend RBAC enforcement: Final Status & Approval updates restricted to OPERATIONS_HEAD, ADMIN, SUPER_ADMIN
+    if (final_status && !['OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
+      return forbidden(res, 'Access denied. Only Operation Head, Admin, or Super Admin can update Final Status.');
     }
 
     let appRes = await query(`

@@ -131,6 +131,9 @@ const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
   const templateId = process.env.MSG91_APPLY_STEP2_TEMPLATE_ID || '1277178655941470854';
 
   const varsMap = {
+    var1: customerName || 'Customer',
+    var2: productName || 'Credit Card',
+    var3: postApplyUrl,
     name: customerName || 'Customer',
     product: productName || 'Credit Card',
     url: postApplyUrl

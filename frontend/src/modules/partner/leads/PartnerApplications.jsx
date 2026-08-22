@@ -69,25 +69,26 @@ export default function PartnerApplications() {
   const isAdminOrSuperAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR'].includes(userRole);
   const isPartnerRole = ['PARTNER', 'TEAM_MEMBER'].includes(userRole) && !isAdminOrSuperAdmin;
 
+  const getProcessFlags = (procType, procBy) => {
+    const pt = String(procType || procBy || '').toLowerCase();
+    const isLeadPunching = pt === 'lead_punching' || pt === 'punching' || (pt.includes('punch') && !pt.includes('direct'));
+    const isLinkedShare = pt === 'linked_share' || pt === 'share_link' || (pt.includes('share') && !pt.includes('direct'));
+    const isDirectBank = pt === 'direct_bank' || pt === 'direct_apply' || pt.includes('direct');
+    const isPhysical = pt === 'physical_process' || pt.includes('physical');
+    return { isLeadPunching, isLinkedShare, isDirectBank, isPhysical };
+  };
+
   const isPunchLeadProcess = (procBy, procType) => {
-    const p = String(procBy || procType || '').toLowerCase();
-    return p.includes('punch') || p.includes('lead_punching') || p.includes('punching');
+    return getProcessFlags(procType, procBy).isLeadPunching;
   };
 
   const shouldHideQdButton = (procBy, procType) => {
-    const p = String(procBy || procType || '').toLowerCase();
-    return (
-      p.includes('punch') ||
-      p.includes('lead_punching') ||
-      p.includes('share') ||
-      p.includes('linked_share') ||
-      p.includes('direct') ||
-      p.includes('direct_bank')
-    );
+    const { isLinkedShare, isDirectBank } = getProcessFlags(procType, procBy);
+    return isLinkedShare || isDirectBank;
   };
 
   const shouldHideFinalButton = (procBy, procType) => {
-    // Hide Final button from main applications list page. Final status updates are managed by Operational Head & Super Admin inside the modal/view.
+    // Hide Final button from main applications list page. Final status updates are managed inside the modal/view by authorized roles.
     return true;
   };
 

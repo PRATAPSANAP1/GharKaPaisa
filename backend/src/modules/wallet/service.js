@@ -208,6 +208,17 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
     const appId = meta.application_id || null;
 
     if (appId) {
+      // ── Duplicate Credit Protection Guard ──────────────────────
+      const { rows: existingTxns } = await client.query(
+        `SELECT id FROM wallet_ledger WHERE application_id = $1 AND transaction_type = $2 AND partner_id = $3 LIMIT 1`,
+        [appId, txnType, resolvedPartnerId]
+      );
+      if (existingTxns.length > 0) {
+        logger.info(`[DUPLICATE_COMMISSION_GUARD] Commission for application ${appId} (${txnType}) already credited to partner ${resolvedPartnerId}. Skipping duplicate.`);
+        if (isInternalTxn) await client.query('COMMIT');
+        return existingTxns[0];
+      }
+
       const { rows: [app] } = await client.query(
         `SELECT product_id, bank_id FROM applications WHERE id = $1`,
         [appId]

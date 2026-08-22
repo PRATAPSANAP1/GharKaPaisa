@@ -221,81 +221,38 @@ const get360LeadDetails = async (req, res, next) => {
 };
 
 function getBankApplyLinkBackend(productName, bankName, productObj = null) {
-  const nameLower = String(productName || '').toLowerCase();
-  const bankLower = String(bankName || '').toLowerCase();
+  const product = productObj || (typeof productName === 'object' ? productName : null);
+  if (!product && !productObj) return "";
 
-  // Helper to extract DB URL if valid and not mismatched
-  const extractValidDbUrl = (obj) => {
-    if (!obj || typeof obj !== 'object') return null;
-    const url = obj.partner_url || obj.application_url || obj.public_url || obj.apply_url || obj.redirect_url;
-    if (!url || !String(url).trim()) return null;
-    const cleanUrl = String(url).trim();
-    const isSbiUrl = cleanUrl.toLowerCase().includes('sbicard.com') || cleanUrl.toLowerCase().includes('sbi.co.in');
-    const isNonSbiBank = (bankLower && !bankLower.includes('sbi')) || (nameLower && !nameLower.includes('sbi') && !nameLower.includes('state bank'));
-    if (isSbiUrl && isNonSbiBank) {
-      return null; // Reject corrupted/placeholder SBI link on non-SBI product
-    }
-    return cleanUrl;
-  };
+  const url = (
+    productObj?.partner_url ||
+    productObj?.application_url ||
+    productObj?.apply_url ||
+    productObj?.redirect_url ||
+    productObj?.public_url ||
+    product?.partner_url ||
+    product?.application_url ||
+    product?.apply_url ||
+    product?.redirect_url ||
+    product?.public_url ||
+    ""
+  );
 
-  // 1. HARDCODED BANK MAPPING RULES
-  // Axis Bank
-  if (bankLower.includes('axis') || nameLower.includes('axis')) {
-    return "https://web.axis.bank.in/DigitalChannel/WebForm/?ipa68&axisreferralcode=WMMNYOH1_9640841";
-  }
-  // IndusInd Bank
-  if (bankLower.includes('indus') || nameLower.includes('indus')) {
-    return "https://induseasycredit.indusind.bank.in/customer/credit-card/new-lead?utm_source=assisted&utm_medium=IBLV9763WESTIBL131260%20&utm_campaign=Credit-Card&utm_content=1";
-  }
-  // SBI Bank (dynamically from product database)
-  if (bankLower.includes('sbi') || nameLower.includes('sbi') || nameLower.includes('state bank')) {
-    return extractValidDbUrl(productObj);
-  }
-  // IDFC Bank
-  if (bankLower.includes('idfc') || nameLower.includes('idfc')) {
-    return "https://my.idfcfirst.bank.in/apply/cc?utm_source=partner&utm_medium=MywishMarketplaces&utm_campaign=WFYOU01";
-  }
-  // BOB Bank
-  if (bankLower.includes('bob') || nameLower.includes('baroda') || nameLower.includes('bob')) {
-    return "https://mycard.bobcard.tech/?utm_source=urbanmoney&utm_medium=urbanmoney_aq&utm_campaign=APAY1001";
-  }
-  // Federal Bank / Scapia
-  if (bankLower.includes('federal') || nameLower.includes('scapia')) {
-    return "https://apply.scapia.cards/landing_page?utm_source=RKPL_offline&utm_medium=DSA&utm_campaign=VK_MOHYHS1_content=travel&utm_term=card";
-  }
-  // DCB Bank
-  if (bankLower.includes('dcb') || bankLower.includes('bcb') || nameLower.includes('dcb') || nameLower.includes('bcb')) {
-    return "https://get.novio.in/j84P/va2pvtwb";
-  }
-  // SBM Bank
-  if (bankLower.includes('sbm') || nameLower.includes('sbm')) {
-    return "https://get.novio.in/j84P/7tnakuu8";
-  }
-  // HDFC Bank
-  if (bankLower.includes('hdfc') || nameLower.includes('hdfc')) {
-    if (nameLower.includes('freedom') || nameLower.includes('indianoil') || nameLower.includes('shoppersstop') || nameLower.includes('shoppers stop')) {
-      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=RUPY&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
-    }
-    if (nameLower.includes('swiggy')) {
-      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=SWCC&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
-    }
-    if (nameLower.includes('tataneu') || nameLower.includes('tata neu')) {
-      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
-    }
-    if (nameLower.includes('pixel')) {
-      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
-    }
-    if (nameLower.includes('biz')) {
-      return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=BIZC&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
-    }
-    return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb";
+  if (!url || !String(url).trim()) return "";
+
+  const cleanUrl = String(url).trim();
+  const nameLower = String(productName || productObj?.name || '').toLowerCase();
+  const bankLower = String(bankName || productObj?.bank_name || '').toLowerCase();
+
+  const isSbiUrl = cleanUrl.toLowerCase().includes('sbicard.com') || cleanUrl.toLowerCase().includes('sbi.co.in');
+  const isNonSbiBank = (bankLower && !bankLower.includes('sbi')) || (nameLower && !nameLower.includes('sbi') && !nameLower.includes('state bank'));
+  
+  if (isSbiUrl && isNonSbiBank) {
+    console.warn(`[URL_RESOLVER_GUARD] Rejected cross-bank SBI link on non-SBI product '${productName || productObj?.name}'`);
+    return "";
   }
 
-  // 2. FALLBACK TO DATABASE URL: Check valid database URL if no bank mapping rule matched
-  const explicitUrl = extractValidDbUrl(productObj);
-  if (explicitUrl) return explicitUrl;
-
-  return "";
+  return cleanUrl;
 }
 
 // POST /leads — Create Lead with 30-Day Duplicate Check & OTP Generation
@@ -453,7 +410,7 @@ const createLead = async (req, res, next) => {
           product_id, customer_name, mobile, city, status, process_type, process_by,
           otp_verified, source, priority, pipeline_stage
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'link_pending', 'linked_share', 'customer_self', TRUE, $10, $11, 'created')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'linked_share', 'customer_self', TRUE, $10, $11, 'created')
         RETURNING *
       `, [
         leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
@@ -467,7 +424,7 @@ const createLead = async (req, res, next) => {
 
       const { rows: [app] } = await query(`
         INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, tracking_token, agree_terms, submitted_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'link_pending', 'linked_share', $9, TRUE, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'linked_share', $9, TRUE, NOW())
         RETURNING *
       `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, trackingToken]);
 
@@ -506,7 +463,7 @@ const createLead = async (req, res, next) => {
           product_id, customer_name, mobile, city, status, process_type, process_by,
           otp_verified, source, priority, pipeline_stage
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'bank_application_pending', 'direct_bank', 'partner_self', TRUE, $10, $11, 'bank_redirected')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'direct_bank', 'partner_self', TRUE, $10, $11, 'bank_redirected')
         RETURNING *
       `, [
         leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
@@ -515,7 +472,7 @@ const createLead = async (req, res, next) => {
 
       const { rows: [app] } = await query(`
         INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, bank_url, agree_terms, submitted_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'bank_application_pending', 'direct_bank', $9, TRUE, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'direct_bank', $9, TRUE, NOW())
         RETURNING *
       `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, bankUrl]);
 
@@ -594,7 +551,7 @@ const createLead = async (req, res, next) => {
         product_id, customer_name, mobile, city, status, process_type, process_by,
         otp_verified, source, priority, pipeline_stage
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'under_process', 'lead_punching', 'punching', TRUE, $10, $11, 'pan_check')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'lead_punching', 'punching', TRUE, $10, $11, 'pan_check')
       RETURNING *
     `, [
       leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
@@ -603,7 +560,7 @@ const createLead = async (req, res, next) => {
 
     const { rows: [app] } = await query(`
       INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, agree_terms, submitted_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'under_process', 'lead_punching', TRUE, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'lead_punching', TRUE, NOW())
       RETURNING *
     `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0]);
 

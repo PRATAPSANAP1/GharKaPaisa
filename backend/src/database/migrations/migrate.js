@@ -4320,6 +4320,40 @@ const migrate = async () => {
     throw task14Err;
   }
 
+  // ── TASK 26: Architectural Consolidation - Tracking Columns & Commission Unique Protection ────
+  try {
+    logger.info('Running Task 26: Architectural Consolidation & Double-Credit Protection...');
+    
+    // Ensure applications table tracking columns exist
+    await query(`
+      ALTER TABLE applications 
+      ADD COLUMN IF NOT EXISTS bank_ref_number VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
+      ADD COLUMN IF NOT EXISTS salary_slip_url TEXT,
+      ADD COLUMN IF NOT EXISTS pan_card_url TEXT,
+      ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS bank_remark TEXT,
+      ADD COLUMN IF NOT EXISTS final_status VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS decline_reason TEXT,
+      ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS approved_amount DECIMAL(15,2);
+    `);
+
+    // Add unique index on wallet_ledger to prevent duplicate commission credits for the same application
+    await query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_wallet_ledger_application_commission 
+      ON wallet_ledger (application_id, transaction_type) 
+      WHERE application_id IS NOT NULL AND transaction_type IN ('PERSONAL_COMMISSION', 'commission', 'COMMISSION');
+    `);
+
+    logger.info('Task 26 completed successfully.');
+  } catch (task26Err) {
+    logger.error('Failed to run Task 26 migration:', task26Err.message);
+  }
+
   logger.info('✅ All migrations completed successfully');
   if (require.main === module) {
     process.exit(0);
