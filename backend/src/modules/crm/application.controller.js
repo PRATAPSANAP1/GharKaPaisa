@@ -1338,7 +1338,32 @@ const listApplications = async (req, res, next) => {
         ${opHeadBankFilterSQL}
     `, countQueryParams);
 
-    return paginate(res, rows, parseInt(count), page, limit);
+    // Compute real-time status counts directly from applications table
+    const { rows: statusCountsRows } = await query(`
+      SELECT status, COUNT(*)::int as count 
+      FROM applications 
+      GROUP BY status
+    `);
+    const statusCountsObj = {};
+    for (const r of statusCountsRows) {
+      let s = String(r.status || '').toLowerCase();
+      if (s === 'commission_released') s = 'commission_received';
+      statusCountsObj[s] = (statusCountsObj[s] || 0) + parseInt(r.count);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Success',
+      data: rows,
+      pagination: {
+        total: parseInt(count),
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(parseInt(count) / limit),
+      },
+      status_counts: statusCountsObj,
+      timestamp: new Date().toISOString(),
+    });
   } catch (err) {
     next(err);
   }

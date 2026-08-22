@@ -16,6 +16,7 @@ export default function ManageApplications() {
   const [apps, setApps] = useState([]);
   const [total, setTotal] = useState(0);
   const [allCount, setAllCount] = useState(0);
+  const [backendStatusCounts, setBackendStatusCounts] = useState(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -51,6 +52,9 @@ export default function ManageApplications() {
         const fetchedTotal = res.data.pagination?.total || res.data.data.length;
         setApps(res.data.data);
         setTotal(fetchedTotal);
+        if (res.data.status_counts) {
+          setBackendStatusCounts(res.data.status_counts);
+        }
         if (!status && !search) {
           setAllCount(fetchedTotal);
         }
@@ -195,7 +199,7 @@ export default function ManageApplications() {
       <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '20px' }}>
         {STATUS_TABS.map((tab) => {
           const isActive = status === tab.id;
-          const count = tab.id === '' ? (allCount || total) : (statusCounts[tab.id] || 0);
+          const count = tab.id === '' ? (allCount || total) : (backendStatusCounts ? (backendStatusCounts[tab.id] || 0) : (statusCounts[tab.id] || 0));
           return (
             <button
               key={tab.id}
