@@ -1203,20 +1203,15 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN users oh ON oh.id = COALESCE(p.operation_head_id, b.operation_head_id)
       ) combined
       ${partnerTeamScopeSQL}
-        AND (
           $2::text IS NULL
           OR combined.status = $2
           OR ($2 = 'pending' AND combined.status IN ('pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent', 'confirmed', 'link_pending'))
-          OR ($2 = 'details_submitted' AND combined.status IN ('details_submitted', 'submitted', 'bank_form_submitted', 'under_review', 'under review', 'verification', 'in_process', 'in_progress'))
-          OR ($2 = 'under_review' AND combined.status IN ('under_review', 'under review', 'verification', 'in_progress', 'bank_verification'))
-          OR ($2 = 'submitted' AND combined.status IN ('submitted', 'applied', 'bank_form_submitted'))
-          OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved'))
-          OR ($2 = 'operational_verified' AND (
-            LOWER(combined.status) IN ('approved', 'operational_verified', 'app file generated (approved)', 'approved_by_ops', 'disbursed', 'sanctioned')
-            OR LOWER(combined.status) LIKE '%approve%' OR LOWER(combined.status) LIKE '%generated%'
-          ))
-          OR ($2 = 'disbursed' AND combined.status IN ('disbursed', 'completed', 'paid'))
-          OR ($2 = 'rejected' AND combined.status IN ('rejected', 'declined', 'cancelled', 'decline', 'technical_error'))
+          OR ($2 = 'details_submitted' AND combined.status IN ('details_submitted', 'submitted', 'bank_form_submitted'))
+          OR ($2 = 'operational_verified' AND combined.status IN ('operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'))
+          OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
+          OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
+          OR ($2 = 'rejected' AND combined.status IN ('rejected', 'declined', 'decline', 'technical_error'))
+          OR ($2 = 'cancelled' AND combined.status IN ('cancelled', 'cancel', 'canceled'))
         )
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
