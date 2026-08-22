@@ -330,15 +330,10 @@ export default function ManageWallet() {
             <div style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: '6px 0 2px 0' }}>
               ₹{parseFloat(razorpayData?.available_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
-            <div style={{ fontSize: '12px', color: C.textLight }}>
-              Actual liquid funds available in company's RazorpayX account for payouts
-            </div>
+
           </div>
           
-          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: C.textMid }}>
-            <div>Account: <span style={{ fontFamily: 'monospace', fontWeight: 700 }}>{razorpayData?.account_number || 'RAZORPAYX_ACC'}</span></div>
-            <div>Mode: <strong>{razorpayData?.is_simulated ? 'Simulator Mode' : 'Live API'}</strong></div>
-          </div>
+
         </div>
 
         {/* Card 2: Internal GharKaPaisa Partner Liability Wallet */}
@@ -860,14 +855,7 @@ export default function ManageWallet() {
             {/* Corporate Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ background: '#0284C715', color: '#0284C7', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    🔒 RazorpayX Enterprise Payout
-                  </span>
-                  <span style={{ background: '#10B98115', color: '#10B981', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
-                    SSL 256-BIT ENCRYPTED
-                  </span>
-                </div>
+
                 <h3 style={{ margin: 0, fontSize: '19px', fontWeight: 800, color: C.text }}>Confirm Razorpay Payment</h3>
                 <span style={{ fontSize: '12px', color: C.textLight }}>Corporate Business Account ➔ Direct Beneficiary Payout</span>
               </div>
