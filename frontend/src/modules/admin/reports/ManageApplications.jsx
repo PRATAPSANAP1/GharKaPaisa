@@ -553,29 +553,61 @@ export default function ManageApplications() {
                   </div>
                 )}
 
-                {/* Status Update Form */}
-                <form onSubmit={handleUpdateStatus} style={{ borderTop: `1px solid ${C.border}`, paddingTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <h4 style={{ fontSize: "14px", fontWeight: 700, color: C.text }}>Modify Processing Status</h4>
+                {/* Status Action Form */}
+                <form onSubmit={handleUpdateStatus} style={{ borderTop: `1px solid ${C.border}`, paddingTop: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <h4 style={{ fontSize: "14px", fontWeight: 800, color: C.text, margin: 0 }}>Modify Processing Status</h4>
                   
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                    <div>
-                      <label style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Application Status</label>
-                      <select
-                        style={S.input}
-                        value={newStatus}
-                        onChange={(e) => setNewStatus(e.target.value)}
-                        required
+                  <div>
+                    <label style={{ fontSize: "11.5px", color: C.textLight, fontWeight: 700, display: "block", marginBottom: "8px" }}>Select Action Stage</label>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setNewStatus("approved")}
+                        style={{
+                          padding: "12px 16px",
+                          borderRadius: "10px",
+                          border: `2px solid ${newStatus === "approved" ? "#10B981" : C.border}`,
+                          background: newStatus === "approved" ? "#10B98115" : C.card,
+                          color: newStatus === "approved" ? "#10B981" : C.text,
+                          fontWeight: 800,
+                          fontSize: "13.5px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          transition: "all 0.2s ease"
+                        }}
                       >
-                        <option value="pending">Pending</option>
-                        <option value="details_submitted">Details Submitted</option>
-                        <option value="operational_verified">Operational Verified</option>
-                        <option value="approved">Approved</option>
-                        <option value="commission_released">Commission Released</option>
-                        <option value="commission_received">Commission Received</option>
-                      </select>
+                        <span>✅ Approve Application</span>
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => setNewStatus("rejected")}
+                        style={{
+                          padding: "12px 16px",
+                          borderRadius: "10px",
+                          border: `2px solid ${newStatus === "rejected" ? "#EF4444" : C.border}`,
+                          background: newStatus === "rejected" ? "#EF444415" : C.card,
+                          color: newStatus === "rejected" ? "#EF4444" : C.text,
+                          fontWeight: 800,
+                          fontSize: "13.5px",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        <span>❌ Reject Application</span>
+                      </button>
                     </div>
+                  </div>
 
-                    {(newStatus === "approved" || newStatus === "disbursed" || newStatus === "confirmed") && (
+                  {newStatus === "approved" && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", animation: "fadeIn 0.2s ease" }}>
                       <div>
                         <label style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Approved Amount (₹)</label>
                         <input
@@ -586,27 +618,24 @@ export default function ManageApplications() {
                           onChange={(e) => setApprovedAmount(e.target.value)}
                         />
                       </div>
-                    )}
-                  </div>
-
-                  {(newStatus === "approved" || newStatus === "disbursed" || newStatus === "confirmed") && (
-                    <div>
-                      <label style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Bank Reference / Loan Account #</label>
-                      <input
-                        style={S.input}
-                        placeholder="Reference number from bank portal"
-                        value={bankRefNumber}
-                        onChange={(e) => setBankRefNumber(e.target.value)}
-                      />
+                      <div>
+                        <label style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Bank Reference / Loan Account #</label>
+                        <input
+                          style={S.input}
+                          placeholder="Reference number from bank portal"
+                          value={bankRefNumber}
+                          onChange={(e) => setBankRefNumber(e.target.value)}
+                        />
+                      </div>
                     </div>
                   )}
 
                   {newStatus === "rejected" && (
-                    <div>
+                    <div style={{ animation: "fadeIn 0.2s ease" }}>
                       <label style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Rejection Reason *</label>
                       <textarea
-                        style={{ ...S.input, minHeight: "50px" }}
-                        placeholder="Why was this rejected?"
+                        style={{ ...S.input, minHeight: "60px" }}
+                        placeholder="State reason for rejecting this application..."
                         value={rejectionReason}
                         onChange={(e) => setRejectionReason(e.target.value)}
                         required
@@ -632,8 +661,17 @@ export default function ManageApplications() {
                     <button type="button" onClick={() => setSelectedApp(null)} style={{ ...S.btn("outline"), border: "none", color: C.textLight }}>
                       Cancel
                     </button>
-                    <button type="submit" disabled={actionLoading} style={{ ...S.btn("primary") }}>
-                      {actionLoading ? "Saving..." : "Update Status"}
+                    <button
+                      type="submit"
+                      disabled={actionLoading}
+                      style={{
+                        ...S.btn(newStatus === "rejected" ? "danger" : "primary"),
+                        background: newStatus === "rejected" ? "#EF4444" : "#10B981",
+                        borderColor: newStatus === "rejected" ? "#EF4444" : "#10B981",
+                        fontWeight: 800
+                      }}
+                    >
+                      {actionLoading ? "Processing..." : newStatus === "rejected" ? "Confirm Rejection" : "Confirm Approval"}
                     </button>
                   </div>
                 </form>
