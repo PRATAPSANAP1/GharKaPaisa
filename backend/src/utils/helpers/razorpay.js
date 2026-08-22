@@ -122,10 +122,20 @@ const createRazorpayFundAccount = async (contactId, bankDetails, withdrawalId) =
 // Fetch Banking Balance from RazorpayX
 const getRazorpayBalance = async () => {
   if (!isLive) {
-    // Simulator Mode
+    // Dynamic Simulator Mode balance based on real database payouts
+    let totalPayouts = 0;
+    try {
+      const { rows: [payoutRes] } = await query(
+        `SELECT COALESCE(SUM(amount), 0) as total FROM wallet_withdrawals WHERE status IN ('transferred', 'processed', 'successful', 'SUCCESS')`
+      );
+      totalPayouts = parseFloat(payoutRes?.total || 0);
+    } catch (_) {}
+
+    const dynamicBalance = Math.max(0, 200000.00 - totalPayouts);
+
     return {
       success: true,
-      balance: 200000.00, // ₹2,00,000.00
+      balance: dynamicBalance,
       currency: 'INR',
       account_number: MERCHANT_ACCOUNT || 'RAZORPAYX_TEST_ACC',
       is_simulated: true,

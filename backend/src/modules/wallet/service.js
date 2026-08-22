@@ -654,10 +654,9 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
       `, [withdrawalId, `Rejection reason: ${rejectionReason || 'Rejected by Admin'}`, processedBy]);
 
     } else if (action === 'transfer' || utrNumber) {
-      const finalUtr = utrNumber || `UTR${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`;
-
-      if (utrNumber || action === 'transfer') {
-        // Manual / Auto Transfer recording
+      if (utrNumber) {
+        // Manual Transfer recording with provided UTR number
+        const finalUtr = utrNumber;
         await client.query(`
           UPDATE wallet_ledger SET
             status = 'completed',
