@@ -10,7 +10,9 @@ import { usePartnerStore } from '../../../app/store/partnerStore';
 
 import { 
   MdFilterList, MdSearch, MdCheckCircle, MdLocalOffer, 
-  MdAccessTime, MdInfoOutline, MdClose, MdShare, MdChevronRight 
+  MdAccessTime, MdInfoOutline, MdClose, MdShare, MdChevronRight,
+  MdCreditCard, MdAccountBalance, MdShield, MdDirectionsCar, MdTrendingUp,
+  MdAccountBalanceWallet
 } from 'react-icons/md';
 import { FaBalanceScale } from 'react-icons/fa';
 import { getCardDetails } from '../../home/components/CreditCards/CardDetailsData';
@@ -26,16 +28,15 @@ const CATEGORIES = [
 
 const BANKS = ['All Banks', 'HDFC', 'SBI', 'AXIS', 'INDUSIND', 'KOTAK', 'YES', 'BOB', 'DCB', 'EQUITAS', 'FEDERAL', 'ICICI', 'IDFC', 'RBL', 'SMB'];
 
-const getCategoryEmoji = (cat) => {
+const getCategoryIcon = (cat, props = { size: 24 }) => {
   const c = cat?.toLowerCase() || '';
-  if (c.includes('card') || c === 'credit_card') return '💳';
-  if (c.includes('loan') || c === 'loans') return '🏦';
-  if (c.includes('insurance')) return '🛡';
-  if (c === 'others') return '📦';
-  if (c.includes('savings')) return '🏛';
-  if (c.includes('fastag')) return '🚗';
-  if (c.includes('demat')) return '📈';
-  return '💰';
+  if (c.includes('card') || c === 'credit_card') return <MdCreditCard color="#0EA5E9" {...props} />;
+  if (c.includes('loan') || c === 'loans') return <MdAccountBalance color="#6366F1" {...props} />;
+  if (c.includes('insurance')) return <MdShield color="#10B981" {...props} />;
+  if (c.includes('savings')) return <MdAccountBalance color="#F59E0B" {...props} />;
+  if (c.includes('fastag')) return <MdDirectionsCar color="#F97316" {...props} />;
+  if (c.includes('demat')) return <MdTrendingUp color="#14B8A6" {...props} />;
+  return <MdAccountBalanceWallet color="#8B5CF6" {...props} />;
 };
 
 const getMarketingBadges = (p) => {
@@ -608,10 +609,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                 outline: 'none'
               }}
             >
-              <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ {t("All Products")}</option>
+              <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>{t("All Products")}</option>
               {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
                 <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                  {getCategoryEmoji(cat.id)} {t(cat.label)}
+                  {t(cat.label)}
                 </option>
               ))}
             </select>
@@ -1025,10 +1026,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                     outline: 'none'
                   }}
                 >
-                  <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🛍️ {t("Products (All)")}</option>
+                  <option value="all" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>{t("Products (All)")}</option>
                   {CATEGORIES.filter(c => c.id !== 'all').map(cat => (
                     <option key={cat.id} value={cat.id} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
-                      {getCategoryEmoji(cat.id)} {t(cat.label)}
+                      {t(cat.label)}
                     </option>
                   ))}
                 </select>
@@ -1271,7 +1272,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                 const cardDetails = getCardDetails(product.id || product.name.toLowerCase().replace(/[^a-z0-9]/g, '-'), product.name);
                 const eligibilityCriteria = cardDetails.eligibility?.criteria || 'Min Age: 21 | Income details apply';
                 const badges = getMarketingBadges(product);
-                const emoji = getCategoryEmoji(product.category);
+                const categoryIcon = getCategoryIcon(product.category, { size: isMobile ? 22 : 26 });
 
                 let keyFeatures = [];
                 if (Array.isArray(product.features) && product.features.length > 0) {
@@ -1357,7 +1358,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                           {product.image_url ? (
                             <img src={getCleanImageUrl(product.image_url)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '3px' }} />
                           ) : (
-                            emoji
+                            categoryIcon
                           )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>

@@ -5,7 +5,9 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { useActiveBanks } from '../../../contexts/BanksContext';
 import { 
   MdSearch, MdArrowForward, MdDashboard, MdStorefront, MdPeople, 
-  MdLeaderboard, MdFolder, MdBarChart, MdAccountBalanceWallet, MdSupportAgent
+  MdLeaderboard, MdFolder, MdBarChart, MdAccountBalanceWallet, MdSupportAgent,
+  MdAccountBalance, MdHome, MdBusinessCenter, MdDirectionsCar, MdShield,
+  MdAssignment, MdReceiptLong, MdLocalHospital, MdCreditCard
 } from 'react-icons/md';
 import api from '../../../services/api';
 
@@ -316,12 +318,12 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
   const loanCategoriesList = useMemo(() => {
     const categories = [
-      { title: "Personal Loan", sub: "Loan Category", slug: "personal-loan", accent: "#2563EB", emoji: "💰", defaultOffers: 12 },
-      { title: "Home Loan", sub: "Loan Category", slug: "home-loan", accent: "#059669", emoji: "🏠", defaultOffers: 8 },
-      { title: "Business Loan", sub: "Loan Category", slug: "business-loan", accent: "#7C3AED", emoji: "💼", defaultOffers: 10 },
-      { title: "Loan Against Property", sub: "Loan Category", slug: "loan-against-property", accent: "#D97706", emoji: "🏢", defaultOffers: 6 },
-      { title: "Gold Loan", sub: "Loan Category", slug: "gold-loan", accent: "#EA580C", emoji: "🪙", defaultOffers: 5 },
-      { title: "Vehicle Loan", sub: "Loan Category", slug: "vehicle-loan", accent: "#0284C7", emoji: "🚗", defaultOffers: 7 }
+      { title: "Personal Loan", sub: "Loan Category", slug: "personal-loan", accent: "#2563EB", icon: <MdAccountBalance size={22} color="#2563EB" />, defaultOffers: 12 },
+      { title: "Home Loan", sub: "Loan Category", slug: "home-loan", accent: "#059669", icon: <MdHome size={22} color="#059669" />, defaultOffers: 8 },
+      { title: "Business Loan", sub: "Loan Category", slug: "business-loan", accent: "#7C3AED", icon: <MdBusinessCenter size={22} color="#7C3AED" />, defaultOffers: 10 },
+      { title: "Loan Against Property", sub: "Loan Category", slug: "loan-against-property", accent: "#D97706", icon: <MdAccountBalance size={22} color="#D97706" />, defaultOffers: 6 },
+      { title: "Gold Loan", sub: "Loan Category", slug: "gold-loan", accent: "#EA580C", icon: <MdAccountBalance size={22} color="#EA580C" />, defaultOffers: 5 },
+      { title: "Vehicle Loan", sub: "Loan Category", slug: "vehicle-loan", accent: "#0284C7", icon: <MdDirectionsCar size={22} color="#0284C7" />, defaultOffers: 7 }
     ];
 
     return categories.map(cat => {
@@ -344,11 +346,11 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
 
   const insuranceCategoriesList = useMemo(() => {
     const categories = [
-      { title: "Health Insurance", sub: "Insurance Policy", slug: "health-insurance", accent: "#059669", emoji: "🏥", defaultOffers: 12 },
-      { title: "Life Insurance", sub: "Insurance Policy", slug: "life-insurance", accent: "#2563EB", emoji: "🛡️", defaultOffers: 8 },
-      { title: "General Insurance", sub: "Insurance Policy", slug: "general-insurance", accent: "#D97706", emoji: "📋", defaultOffers: 15 },
-      { title: "Motor Insurance", sub: "Insurance Policy", slug: "motor-insurance", accent: "#E11D48", emoji: "🏎️", defaultOffers: 9 },
-      { title: "Term Insurance", sub: "Insurance Policy", slug: "term-insurance", accent: "#7C3AED", emoji: "📜", defaultOffers: 7 }
+      { title: "Health Insurance", sub: "Insurance Policy", slug: "health-insurance", accent: "#059669", icon: <MdLocalHospital size={22} color="#059669" />, defaultOffers: 12 },
+      { title: "Life Insurance", sub: "Insurance Policy", slug: "life-insurance", accent: "#2563EB", icon: <MdShield size={22} color="#2563EB" />, defaultOffers: 8 },
+      { title: "General Insurance", sub: "Insurance Policy", slug: "general-insurance", accent: "#D97706", icon: <MdAssignment size={22} color="#D97706" />, defaultOffers: 15 },
+      { title: "Motor Insurance", sub: "Insurance Policy", slug: "motor-insurance", accent: "#E11D48", icon: <MdDirectionsCar size={22} color="#E11D48" />, defaultOffers: 9 },
+      { title: "Term Insurance", sub: "Insurance Policy", slug: "term-insurance", accent: "#7C3AED", icon: <MdReceiptLong size={22} color="#7C3AED" />, defaultOffers: 7 }
     ];
 
     return categories.map(cat => {
@@ -1003,7 +1005,7 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
                           flexShrink: 0,
                           boxShadow: `0 2px 8px ${accentColor}20`
                         }}>
-                          {card.emoji}
+                          {card.icon || card.emoji}
                         </div>
 
                         <div>
