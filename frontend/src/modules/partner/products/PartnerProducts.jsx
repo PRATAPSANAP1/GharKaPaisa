@@ -342,7 +342,6 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
           window.open(waUrl, '_blank');
         }
 
-        setShareModalProduct({ ...selectedProduct, shareLink, shareMessage, directBankUrl });
         setSelectedProduct(null);
         setCustomerName("");
         setMobile("");
@@ -2274,82 +2273,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         }
       `}</style>
 
-      {/* ═══ UNIVERSAL MULTI-APP SHARE MODAL ═══ */}
-      {shareModalProduct && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 1100,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', padding: '16px'
-        }}>
-          <div style={{
-            background: C.card, width: '100%', maxWidth: '480px',
-            borderRadius: '24px', border: `1px solid ${C.border}`,
-            boxShadow: '0 25px 60px rgba(0,0,0,0.35)', position: 'relative',
-            padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px'
-          }}>
-            <button
-              onClick={() => { setShareModalProduct(null); setCopiedNotice(false); }}
-              style={{
-                position: 'absolute', top: '16px', right: '16px',
-                background: C.bgSecondary, border: `1px solid ${C.border}`, cursor: 'pointer',
-                width: 32, height: 32, borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: C.textMid, fontSize: '16px', fontWeight: 700
-              }}
-            >
-              ✕
-            </button>
 
-            <div>
-              <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: `${C.primary}15`, color: C.primary, textTransform: 'uppercase' }}>
-                Partner Share Link
-              </span>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '8px 0 0' }}>
-                Share {shareModalProduct.name}
-              </h3>
-            </div>
-
-            {/* Unified Native OS Share Button - Shares Direct Bank Link to All Apps */}
-            <button
-              type="button"
-              onClick={async () => {
-                const targetUrl = shareModalProduct.directBankUrl || shareModalProduct.partner_url || shareModalProduct.shareLink;
-                const shareData = {
-                  title: `Apply for ${shareModalProduct.name}`,
-                  text: `Apply for ${shareModalProduct.name} directly on official bank portal:`,
-                  url: targetUrl
-                };
-                if (navigator.share) {
-                  try {
-                    await navigator.share(shareData);
-                  } catch (err) {
-                    if (err.name !== 'AbortError') {
-                      navigator.clipboard.writeText(targetUrl);
-                      setCopiedNotice(true);
-                      setTimeout(() => setCopiedNotice(false), 2500);
-                    }
-                  }
-                } else {
-                  navigator.clipboard.writeText(targetUrl);
-                  setCopiedNotice(true);
-                  setTimeout(() => setCopiedNotice(false), 2500);
-                }
-              }}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                width: '100%', padding: '14px', borderRadius: '14px', border: 'none',
-                background: `linear-gradient(135deg, ${C.primary} 0%, ${C.primaryDark} 100%)`,
-                color: '#FFFFFF', fontWeight: 800, fontSize: '15px',
-                cursor: 'pointer', boxShadow: `0 8px 24px ${C.primary}40`,
-                marginTop: '8px'
-              }}
-            >
-              <MdShare size={20} />
-              <span>{copiedNotice ? '✓ Link Copied!' : 'Share Product Link'}</span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ═══ PHYSICAL PROCESS ACTION MODAL ═══ */}
       {showPhysicalSheetModal && physicalSheetData && (
