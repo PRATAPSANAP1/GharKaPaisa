@@ -1201,56 +1201,6 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
         LEFT JOIN users su ON su.id = a.submitted_by
         LEFT JOIN users oh ON oh.id = COALESCE(p.operation_head_id, b.operation_head_id)
-
-        UNION ALL
-
-        SELECT 
-          l.id,
-          COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number,
-          l.status::text,
-          NULL::numeric as loan_amount,
-          NULL::numeric as approved_amount,
-          p.commission_value as commission_amount,
-          'pending'::text as commission_status,
-          l.created_at,
-          l.updated_at,
-          NULL as bank_ref_number,
-          l.created_at as submitted_at,
-          NULL as approved_at,
-          NULL as commission_received_at,
-          NULL as commission_paid_at,
-          COALESCE(l.created_by, c.created_by) as submitted_by,
-          COALESCE(NULLIF(su.full_name, ''), NULLIF(TRIM(CONCAT(ap.first_name, ' ', COALESCE(ap.last_name, ''))), ''), su.email, 'Team Member') as submitted_by_name,
-          COALESCE(l.process_type, l.source, 'linked_share') as process_by,
-          l.process_type,
-          COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
-          COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
-          c.email as customer_email,
-          c.pan_number,
-          COALESCE(l.city, c.city) as city,
-          c.state,
-          c.employment_type,
-          c.monthly_income,
-          p.name as product_name,
-          p.category::text as category,
-          COALESCE(b.name, 'Bank Partner') as bank_name,
-          COALESCE(b.short_code, 'LEAD') as bank_code,
-          ap.partner_code,
-          ap.first_name as partner_first_name,
-          ap.last_name as partner_last_name,
-          l.partner_id,
-          l.product_id,
-          p.bank_id,
-          COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id,
-          oh.full_name as operation_head_name
-        FROM leads l
-        LEFT JOIN customers c ON c.id = l.customer_id OR (l.customer_id IS NULL AND c.mobile = l.mobile)
-        LEFT JOIN products p ON p.id = l.product_id
-        LEFT JOIN banks b ON b.id = p.bank_id
-        LEFT JOIN partner_profiles ap ON ap.id = l.partner_id
-        LEFT JOIN users su ON su.id = COALESCE(l.created_by, c.created_by)
-        LEFT JOIN users oh ON oh.id = COALESCE(p.operation_head_id, b.operation_head_id)
-        WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
       ${partnerTeamScopeSQL}
         AND (

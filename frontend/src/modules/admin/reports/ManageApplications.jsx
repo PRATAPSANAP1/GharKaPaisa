@@ -137,7 +137,8 @@ export default function ManageApplications() {
 
   // Calculate status counts
   const statusCounts = apps.reduce((acc, app) => {
-    const s = String(app.status || '').toLowerCase();
+    let s = String(app.status || '').toLowerCase();
+    if (s === 'commission_released') s = 'commission_received';
     acc[s] = (acc[s] || 0) + 1;
     return acc;
   }, {});
