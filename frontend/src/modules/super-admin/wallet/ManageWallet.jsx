@@ -182,10 +182,12 @@ export default function ManageWallet() {
   }, [activeTab, wPage, wStatus, oPage, oSearch, lPage, lType, lStatus, lSearch, cPage]);
 
   const handleOpenPayModal = (withdrawal) => {
+    const partnerCode = withdrawal.partner_code ? `(${withdrawal.partner_code})` : '';
+    const reqRef = withdrawal.id ? `#${String(withdrawal.id).substring(0, 8)}` : '';
     setPayForm({
       withdrawal,
       mode: 'IMPS',
-      narration: 'GharKaPaisa Commission'
+      narration: `GKP Commission Payout ${partnerCode} ${reqRef}`.trim()
     });
     setRazorpayModalOpen(true);
   };
