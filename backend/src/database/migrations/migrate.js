@@ -4346,7 +4346,7 @@ const migrate = async () => {
     await query(`
       CREATE UNIQUE INDEX IF NOT EXISTS ux_wallet_ledger_application_commission 
       ON wallet_ledger (application_id, transaction_type) 
-      WHERE application_id IS NOT NULL AND transaction_type IN ('PERSONAL_COMMISSION', 'commission', 'COMMISSION');
+      WHERE application_id IS NOT NULL AND transaction_type::text IN ('PERSONAL_COMMISSION', 'TEAM_COMMISSION', 'REFERRAL_BONUS', 'OVERRIDE_COMMISSION', 'commission', 'COMMISSION');
     `);
 
     logger.info('Task 26 completed successfully.');
