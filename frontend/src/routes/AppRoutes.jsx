@@ -174,6 +174,7 @@ const AppRoutes = () => {
       {/* Customer Secure Self-Fulfillment & Post-Apply Portals (Standalone Public Routes) */}
       <Route path="/physical-application/:token" element={<PhysicalApplicationForm />} />
       <Route path="/apply/:token" element={<CustomerApplyStep1 />} />
+      <Route path="/a/:token" element={<CustomerApplyStep1 />} />
       <Route path="/apply/:token/post-apply" element={<CustomerPostApplyStep2 />} />
       <Route path="/customer/upload/:token" element={<CustomerUploadPortal />} />
       <Route path="/customer-upload/:token" element={<PublicCustomerUploadPage />} />

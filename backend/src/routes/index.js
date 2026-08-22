@@ -45,11 +45,14 @@ router.use('/customer-portal',  customerPortalRoute);
 
 // ── Public Share Link & Self-Fulfillment Routes (No auth required) ──
 router.get('/app/:trackingToken', partnerShareCtrl.handleDirectAppRedirect);
+router.get('/a/:trackingToken', partnerShareCtrl.handleDirectAppRedirect);
 router.get('/public/share/:trackingToken', partnerShareCtrl.getShareLinkDetails);
 router.post('/public/share/submit', partnerShareCtrl.submitShareLead);
 
 router.get('/public/apply/:token', partnerShareCtrl.getApplyTokenDetails);
+router.get('/public/a/:token', partnerShareCtrl.getApplyTokenDetails);
 router.patch('/public/apply/:token', partnerShareCtrl.updateApplyTokenDetails);
+router.patch('/public/a/:token', partnerShareCtrl.updateApplyTokenDetails);
 
 router.get('/public/apply/:token/post-apply', partnerShareCtrl.getPostApplyDetails);
 router.patch('/public/apply/:token/post-apply', partnerShareCtrl.updatePostApplyDetails);
