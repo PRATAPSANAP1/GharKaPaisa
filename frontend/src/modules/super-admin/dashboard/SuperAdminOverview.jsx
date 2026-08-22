@@ -161,12 +161,12 @@ export default function SuperAdminOverview() {
     partners: parseInt(overviewData?.Partners?.total ?? partnersList.length ?? 0, 10),
     activePartners: parseInt(overviewData?.Partners?.active ?? partnersList.filter(p => (p.account_status || p.status) === 'active').length ?? 0, 10),
     pendingKycPartners: parseInt(overviewData?.Partners?.pending_kyc ?? overviewData?.partners?.pending_kyc ?? partnersList.filter(p => (p.kyc_status || 'pending') === 'pending').length ?? 0, 10),
-    teamMembers: teamList.length || 0,
+    teamMembers: parseInt(overviewData?.team?.total_team ?? teamList.length ?? 0, 10),
 
-    totalApps: parseInt(overviewData?.leads?.total_leads ?? overviewData?.applications?.total ?? 0, 10),
-    approvedApps: parseInt(overviewData?.leads?.approved_leads ?? overviewData?.applications?.approved ?? 0, 10),
-    pendingApps: parseInt(overviewData?.leads?.pending_leads ?? overviewData?.applications?.pending ?? 0, 10),
-    rejectedApps: parseInt(overviewData?.leads?.rejected_leads ?? overviewData?.applications?.rejected ?? 0, 10),
+    totalApps: parseInt(overviewData?.applications?.total ?? overviewData?.leads?.total_leads ?? applicationsList.length ?? 0, 10),
+    approvedApps: parseInt(overviewData?.applications?.approved ?? overviewData?.leads?.approved_leads ?? 0, 10),
+    pendingApps: parseInt(overviewData?.applications?.pending ?? overviewData?.leads?.pending_leads ?? 0, 10),
+    rejectedApps: parseInt(overviewData?.applications?.rejected ?? overviewData?.leads?.rejected_leads ?? 0, 10),
 
     admins: parseInt(overviewData?.admins?.total_admins ?? adminsList.length ?? 0, 10),
     activeAdmins: parseInt(overviewData?.admins?.active_admins ?? adminsList.filter(a => a.status === 'active' || a.isActive).length ?? 0, 10),

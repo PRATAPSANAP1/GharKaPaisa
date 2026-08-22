@@ -15,12 +15,12 @@ const getOverview = async (req, res, next) => {
     let sql = `
       SELECT
         COUNT(*) as total,
-        COUNT(*) FILTER (WHERE status IN ('approved','disbursed')) as approved,
-        COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
-        COUNT(*) FILTER (WHERE status IN ('submitted','under_review')) as pending,
-        COUNT(*) FILTER (WHERE status::text IN ('operational_verified','operational_approved','Operational Verified','approved')) as pending_leads,
+        COUNT(*) FILTER (WHERE LOWER(status::text) IN ('approved','disbursed','commission_released','commission_received')) as approved,
+        COUNT(*) FILTER (WHERE LOWER(status::text) IN ('rejected','cancelled','declined')) as rejected,
+        COUNT(*) FILTER (WHERE LOWER(status::text) IN ('pending','details_submitted','submitted','under_review','operational_verified')) as pending,
+        COUNT(*) FILTER (WHERE LOWER(status::text) IN ('operational_verified','operational_approved','approved','commission_released','commission_received')) as pending_leads,
         COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE) as todays_apps,
-        COALESCE(SUM(commission_amount) FILTER (WHERE status IN ('approved','disbursed')), 0) as total_commission
+        COALESCE(SUM(commission_amount) FILTER (WHERE LOWER(status::text) IN ('approved','disbursed','commission_released','commission_received')), 0) as total_commission
       FROM applications WHERE 1=1 ${partnerScopeApps}
     `;
     const values = [];
@@ -29,7 +29,7 @@ const getOverview = async (req, res, next) => {
       values.push(from_date, to_date + ' 23:59:59');
     }
 
-    const [apps, Partners, wallet, leads, withdrawal, banks, products, recentPartners, adminsRes, customersRes] = await Promise.all([
+    const [apps, Partners, wallet, leads, withdrawal, banks, products, recentPartners, adminsRes, customersRes, teamRes] = await Promise.all([
       query(sql, values),
       isPartner ? Promise.resolve({rows:[{}]}) : query(`
         SELECT
@@ -50,9 +50,9 @@ const getOverview = async (req, res, next) => {
       query(`
         SELECT
           COUNT(*) as total_leads,
-          COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('approved', 'disbursed', 'super_admin_approved', 'commission_released')) as approved_leads,
-          COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('rejected', 'declined')) as rejected_leads,
-          COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('pending', 'under_review', 'submitted', 'operational_verified')) as pending_leads,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('approved', 'disbursed', 'super_admin_approved', 'commission_released', 'commission_received')) as approved_leads,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('rejected', 'declined', 'cancelled')) as rejected_leads,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('pending', 'details_submitted', 'under_review', 'submitted', 'operational_verified')) as pending_leads,
           COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE) as todays_leads
         FROM leads WHERE 1=1 ${partnerScopeLeads}
       `),
@@ -85,7 +85,12 @@ const getOverview = async (req, res, next) => {
         FROM users
         WHERE UPPER(role::text) IN ('ADMIN', 'SUPER_ADMIN', 'SUPERADMIN', 'OPERATIONAL_HEAD')
       `),
-      query(`SELECT COUNT(*) as total_customers FROM customers`)
+      query(`SELECT COUNT(*) as total_customers FROM customers`),
+      isPartner ? Promise.resolve({rows:[{total_team: 0}]}) : query(`
+        SELECT COUNT(DISTINCT child_partner_id) as total_team FROM partner_team_relationships
+      `).catch(async () => {
+        return await query(`SELECT COUNT(*) as total_team FROM partner_profiles WHERE parent_partner_id IS NOT NULL`);
+      })
     ]);
 
     // calculate conversion rate & fallback statistics
@@ -94,6 +99,7 @@ const getOverview = async (req, res, next) => {
     const withdrawalData = withdrawal.rows[0] || {};
     const adminData = adminsRes?.rows?.[0] || {};
     const customerData = customersRes?.rows?.[0] || {};
+    const teamData = teamRes?.rows?.[0] || {};
 
     const conversion_rate = appsData.total > 0 ? ((appsData.approved / appsData.total) * 100).toFixed(2) : 0;
 
@@ -108,6 +114,7 @@ const getOverview = async (req, res, next) => {
       Partners: Partners.rows[0],
       customers: customerData,
       wallet: wallet.rows[0],
+      team: teamData,
       leads: {
         ...leadsData,
         total_leads: totalLeads,
