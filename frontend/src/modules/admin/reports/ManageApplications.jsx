@@ -473,7 +473,7 @@ export default function ManageApplications() {
                                     onClick={() => handleViewDetails(app)}
                                     style={{ background: "#6366f115", border: "1px solid #6366f140", color: "#6366f1", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                                   >
-                                    👁️ Edit Status
+                                    Edit Status
                                   </button>
                                   <button
                                     onClick={() => {
@@ -603,13 +603,13 @@ export default function ManageApplications() {
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                       <button
                         type="button"
-                        onClick={() => setNewStatus("approved")}
+                        onClick={() => setNewStatus("operational_verified")}
                         style={{
                           padding: "12px 16px",
                           borderRadius: "10px",
-                          border: `2px solid ${newStatus === "approved" ? "#10B981" : C.border}`,
-                          background: newStatus === "approved" ? "#10B98115" : C.card,
-                          color: newStatus === "approved" ? "#10B981" : C.text,
+                          border: `2px solid ${(newStatus === "operational_verified" || newStatus === "approved") ? "#10B981" : C.border}`,
+                          background: (newStatus === "operational_verified" || newStatus === "approved") ? "#10B98115" : C.card,
+                          color: (newStatus === "operational_verified" || newStatus === "approved") ? "#10B981" : C.text,
                           fontWeight: 800,
                           fontSize: "13.5px",
                           cursor: "pointer",
@@ -647,7 +647,7 @@ export default function ManageApplications() {
                     </div>
                   </div>
 
-                  {newStatus === "approved" && (
+                  {(newStatus === "operational_verified" || newStatus === "approved") && (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", animation: "fadeIn 0.2s ease" }}>
                       <div>
                         <label style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Approved Amount (₹)</label>
