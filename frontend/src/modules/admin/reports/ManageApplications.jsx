@@ -160,10 +160,30 @@ export default function ManageApplications() {
 
   return (
     <div>
-      {/* Title */}
-      <div style={{ marginBottom: "20px" }}>
-        <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Applications Management</h2>
-        <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Track status-wise customer application forms, edit processing stage, and manage partner commissions</p>
+      {/* Metric Funnel Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: '14px 16px', borderRadius: '12px' }}>
+          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>Total Leads</div>
+          <div style={{ fontSize: '22px', fontWeight: 800, color: C.primary, marginTop: '4px' }}>{total}</div>
+        </div>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: '14px 16px', borderRadius: '12px' }}>
+          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>Commission Pending</div>
+          <div style={{ fontSize: '22px', fontWeight: 800, color: '#f59e0b', marginTop: '4px' }}>
+            {apps.filter(a => ['pending', 'unpaid', 'initiated', 'due'].includes(String(a.commission_status || '').toLowerCase()) || a.commission_status === 'pending').length}
+          </div>
+        </div>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: '14px 16px', borderRadius: '12px' }}>
+          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>Commission Approved</div>
+          <div style={{ fontSize: '22px', fontWeight: 800, color: '#10b981', marginTop: '4px' }}>
+            {apps.filter(a => ['approved', 'released', 'paid', 'received', 'credited', 'commission_released', 'commission_received'].includes(String(a.commission_status || a.status || '').toLowerCase())).length}
+          </div>
+        </div>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: '14px 16px', borderRadius: '12px' }}>
+          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>Rejected</div>
+          <div style={{ fontSize: '22px', fontWeight: 800, color: '#ef4444', marginTop: '4px' }}>
+            {apps.filter(a => a.status === 'rejected').length}
+          </div>
+        </div>
       </div>
 
       {/* Status-Wise Summary Tabs */}
