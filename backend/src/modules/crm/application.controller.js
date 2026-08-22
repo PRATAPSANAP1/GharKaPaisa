@@ -1203,6 +1203,7 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN users oh ON oh.id = COALESCE(p.operation_head_id, b.operation_head_id)
       ) combined
       ${partnerTeamScopeSQL}
+        AND (
           $2::text IS NULL
           OR combined.status = $2
           OR ($2 = 'pending' AND combined.status IN ('pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent', 'confirmed', 'link_pending'))
