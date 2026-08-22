@@ -1334,17 +1334,43 @@ const listApplications = async (req, res, next) => {
         ${opHeadBankFilterSQL}
     `, countQueryParams);
 
-    // Compute real-time status counts directly from applications table
+    // Compute real-time canonical status counts directly from applications table
     const { rows: statusCountsRows } = await query(`
       SELECT status, COUNT(*)::int as count 
       FROM applications 
       GROUP BY status
     `);
-    const statusCountsObj = {};
+    const statusCountsObj = {
+      pending: 0,
+      details_submitted: 0,
+      operational_verified: 0,
+      approved: 0,
+      commission_received: 0,
+      rejected: 0,
+      cancelled: 0
+    };
+
     for (const r of statusCountsRows) {
-      let s = String(r.status || '').toLowerCase();
-      if (s === 'commission_released') s = 'commission_received';
-      statusCountsObj[s] = (statusCountsObj[s] || 0) + parseInt(r.count);
+      const s = String(r.status || '').toLowerCase();
+      const cnt = parseInt(r.count) || 0;
+
+      if (['pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent', 'confirmed', 'link_pending'].includes(s)) {
+        statusCountsObj.pending += cnt;
+      } else if (['details_submitted', 'submitted', 'bank_form_submitted'].includes(s)) {
+        statusCountsObj.details_submitted += cnt;
+      } else if (['operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'].includes(s)) {
+        statusCountsObj.operational_verified += cnt;
+      } else if (['approved', 'sanctioned', 'super_admin_approved', 'disbursed'].includes(s)) {
+        statusCountsObj.approved += cnt;
+      } else if (['commission_received', 'commission_released', 'released', 'credited', 'paid'].includes(s)) {
+        statusCountsObj.commission_received += cnt;
+      } else if (['rejected', 'declined', 'decline', 'technical_error'].includes(s)) {
+        statusCountsObj.rejected += cnt;
+      } else if (['cancelled', 'cancel', 'canceled'].includes(s)) {
+        statusCountsObj.cancelled += cnt;
+      } else {
+        statusCountsObj[s] = (statusCountsObj[s] || 0) + cnt;
+      }
     }
 
     return res.status(200).json({
