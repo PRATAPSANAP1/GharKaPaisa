@@ -485,9 +485,9 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
     const txnType = 'COMMISSION_RELEASE';
     const status = 'Released';
     const numAmount = parseFloat(amount || 0);
-    const tdsAmount = parseFloat((numAmount * 0.05).toFixed(2));
+    const tdsAmount = 0; // TDS is only deducted at withdrawal time (2%), not at commission release time
     const balanceBefore = parseFloat(wallet.available_balance || 0);
-    const balanceAfter = balanceBefore + (numAmount - tdsAmount);
+    const balanceAfter = balanceBefore + numAmount;
 
     let txnIdToReturn = meta.txn_id || null;
 
@@ -519,32 +519,11 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
       });
     }
 
-    // 2. Insert 5% TDS deduction debit entry into wallet_ledger
-    if (tdsAmount > 0) {
-      const { rows: [tdsTxn] } = await client.query(`
-        INSERT INTO wallet_ledger (
-          wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
-        ) VALUES ($1, $2, 'TDS_DEDUCTION', 0, $3, $4, $5, 'Released', $6)
-        RETURNING id
-      `, [
-        wallet.id, resolvedPartnerId, tdsAmount,
-        `5% TDS Deduction on Commission Release (Ref: ${txnIdToReturn || meta.reference_id || 'direct'})`,
-        meta.reference_id || txnIdToReturn || null,
-        meta.processed_by || null
-      ]);
-
-      await syncTransactionTable(client, tdsTxn.id, wallet.id, resolvedPartnerId, meta.application_id || null, 'TDS_DEDUCTION', tdsAmount, balanceBefore + numAmount, balanceAfter, status, '5% TDS Deduction', 'tds_deduction', meta.reference_id || txnIdToReturn || null, meta.processed_by || null, {
-        tds: tdsAmount,
-        net_amount: numAmount - tdsAmount,
-        remarks: meta.remarks || null
-      });
-    }
-
     await syncWalletBalance(resolvedPartnerId, client);
 
     if (isInternalTxn) await client.query('COMMIT');
-    logger.info(`releaseHold: Released ₹${numAmount} (TDS ₹${tdsAmount}) to available balance for partner ${resolvedPartnerId}`);
-    return { id: txnIdToReturn, net_amount: numAmount - tdsAmount, tds: tdsAmount };
+    logger.info(`releaseHold: Released ₹${numAmount} to available balance for partner ${resolvedPartnerId}`);
+    return { id: txnIdToReturn, net_amount: numAmount, tds: 0 };
   } catch (err) {
     if (isInternalTxn) await client.query('ROLLBACK');
     logger.error('releaseHold failed', err.message);

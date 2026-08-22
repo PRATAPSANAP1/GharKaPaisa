@@ -795,8 +795,9 @@ const PartnerWallet = () => {
                     transactions.map((tx) => {
                       const isCredit = parseFloat(tx.credit || 0) > 0;
                       const amt = isCredit ? parseFloat(tx.credit) : parseFloat(tx.debit || tx.amount || 0);
-                      const tds = amt * 0.02;
-                      const net = amt * 0.98;
+                      const isWithdrawal = (tx.transaction_type || tx.type) === 'WITHDRAWAL';
+                      const tds = isWithdrawal ? parseFloat((amt * 0.02).toFixed(2)) : 0;
+                      const net = isWithdrawal ? parseFloat((amt * 0.98).toFixed(2)) : amt;
 
                       return (
                         <tr key={tx.id} style={{ borderBottom: `1px solid ${C.border}` }}>
