@@ -660,9 +660,9 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
           {[
             { id: 'all', label: t('All Cards') },
-            { id: 'ltf', label: `🎁 ${t('Lifetime Free')}` },
-            { id: 'high_payout', label: `🔥 ${t('High Payout (₹1000+)')}` },
-            { id: 'high_approval', label: `⭐ ${t('High Approval (88%+)')}` }
+            { id: 'ltf', label: t('Lifetime Free') },
+            { id: 'high_payout', label: t('High Payout (₹1000+)') },
+            { id: 'high_approval', label: t('High Approval (88%+)') }
           ].map(feat => {
             const isActive = featureFilter === feat.id;
             return (
@@ -968,12 +968,12 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                     border: `1.5px solid ${C.border}`
                   }}
                 >
-                  <option value="featured">✨ Featured</option>
-                  <option value="highest_commission">💰 Highest Commission</option>
-                  <option value="highest_approval">⭐ Highest Approval</option>
-                  <option value="newest">🆕 Newest</option>
-                  <option value="a_z">🔤 A-Z</option>
-                  <option value="popular">🔥 Popular</option>
+                  <option value="featured">Featured</option>
+                  <option value="highest_commission">Highest Commission</option>
+                  <option value="highest_approval">Highest Approval</option>
+                  <option value="newest">Newest</option>
+                  <option value="a_z">A-Z</option>
+                  <option value="popular">Popular</option>
                 </select>
 
                 <select
@@ -1078,12 +1078,12 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                     border: `1.5px solid ${C.border}`
                   }}
                 >
-                  <option value="featured">✨ {t("Featured")}</option>
-                  <option value="highest_commission">💰 {t("Highest Commission")}</option>
-                  <option value="highest_approval">⭐ {t("Highest Approval")}</option>
-                  <option value="newest">🆕 {t("Newest")}</option>
-                  <option value="a_z">🔤 {t("A-Z")}</option>
-                  <option value="popular">🔥 {t("Popular")}</option>
+                  <option value="featured">{t("Featured")}</option>
+                  <option value="highest_commission">{t("Highest Commission")}</option>
+                  <option value="highest_approval">{t("Highest Approval")}</option>
+                  <option value="newest">{t("Newest")}</option>
+                  <option value="a_z">{t("A-Z")}</option>
+                  <option value="popular">{t("Popular")}</option>
                 </select>
 
                 <button

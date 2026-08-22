@@ -3,43 +3,48 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
-import { MdSearch, MdClose, MdChevronRight, MdCreditCard, MdAccountBalanceWallet, MdShield, MdStorefront, MdPeople, MdDeviceHub, MdVerifiedUser, MdSupportAgent, MdCampaign } from 'react-icons/md';
+import { 
+  MdSearch, MdClose, MdChevronRight, MdCreditCard, MdAccountBalance, 
+  MdShield, MdPeople, MdAccountBalanceWallet, MdVerifiedUser, 
+  MdSupportAgent, MdCampaign, MdDirectionsCar, MdTrendingUp, 
+  MdAddCircle, MdHandshake, MdAssignment, MdBusinessCenter, MdHome, MdLocalOffer
+} from 'react-icons/md';
 
 // Preset static search catalog
 const STATIC_CATALOG = [
   // ── BANKS & CARDS ──
-  { id: 'hdfc-card', title: 'HDFC Credit Cards', category: 'Credit Cards', sub: 'Lifetime Free & Cashback Cards', icon: '💳', route: '/partner/credit-cards', tags: ['hdfc', 'bank', 'credit card', 'ltf', 'pixel'] },
-  { id: 'sbi-card', title: 'SBI Credit Cards', category: 'Credit Cards', sub: 'SimplyClick & Cashback Cards', icon: '💳', route: '/partner/credit-cards', tags: ['sbi', 'bank', 'credit card', 'simplyclick'] },
-  { id: 'axis-card', title: 'Axis Bank Credit Cards', category: 'Credit Cards', sub: 'Flipkart & Rewards Cards', icon: '💳', route: '/partner/credit-cards', tags: ['axis', 'bank', 'credit card', 'flipkart'] },
-  { id: 'icici-card', title: 'ICICI Bank Credit Cards', category: 'Credit Cards', sub: 'Amazon Pay & Coral Cards', icon: '💳', route: '/partner/credit-cards', tags: ['icici', 'bank', 'credit card', 'amazon'] },
-  { id: 'indusind-card', title: 'IndusInd Bank Credit Cards', category: 'Credit Cards', sub: 'Legend & Pinnacle Cards', icon: '💳', route: '/partner/credit-cards', tags: ['indusind', 'bank', 'credit card'] },
-  { id: 'au-card', title: 'AU Small Finance Credit Cards', category: 'Credit Cards', sub: 'Altura & Vetta Cards', icon: '💳', route: '/partner/credit-cards', tags: ['au', 'bank', 'credit card'] },
-  { id: 'bob-card', title: 'Bank of Baroda Credit Cards', category: 'Credit Cards', sub: 'Premier & Select Cards', icon: '💳', route: '/partner/credit-cards', tags: ['bob', 'baroda', 'bank', 'credit card'] },
-  { id: 'idfc-card', title: 'IDFC FIRST Credit Cards', category: 'Credit Cards', sub: 'FIRST Millennia & Wealth Cards', icon: '💳', route: '/partner/credit-cards', tags: ['idfc', 'bank', 'credit card'] },
-  { id: 'ltf-cards', title: 'Lifetime Free (LTF) Credit Cards', category: 'Credit Cards', sub: 'Zero Joining & Annual Fee Cards', icon: '🎁', route: '/partner/credit-cards', tags: ['lifetime free', 'ltf', 'zero fee'] },
+  { id: 'hdfc-card', title: 'HDFC Credit Cards', category: 'Credit Cards', sub: 'Lifetime Free & Cashback Cards', icon: <MdCreditCard size={22} color="#0EA5E9" />, route: '/partner/credit-cards', tags: ['hdfc', 'bank', 'credit card', 'ltf', 'pixel'] },
+  { id: 'sbi-card', title: 'SBI Credit Cards', category: 'Credit Cards', sub: 'SimplyClick & Cashback Cards', icon: <MdCreditCard size={22} color="#0EA5E9" />, route: '/partner/credit-cards', tags: ['sbi', 'bank', 'credit card', 'simplyclick'] },
+  { id: 'axis-card', title: 'Axis Bank Credit Cards', category: 'Credit Cards', sub: 'Flipkart & Rewards Cards', icon: <MdCreditCard size={22} color="#0EA5E9" />, route: '/partner/credit-cards', tags: ['axis', 'bank', 'credit card', 'flipkart'] },
+  { id: 'icici-card', title: 'ICICI Bank Credit Cards', category: 'Credit Cards', sub: 'Amazon Pay & Coral Cards', icon: <MdCreditCard size={22} color="#0EA5E9" />, route: '/partner/credit-cards', tags: ['icici', 'bank', 'credit card', 'amazon'] },
+  { id: 'indusind-card', title: 'IndusInd Bank Credit Cards', category: 'Credit Cards', sub: 'Legend & Pinnacle Cards', icon: <MdCreditCard size={22} color="#0EA5E9" />, route: '/partner/credit-cards', tags: ['indusind', 'bank', 'credit card'] },
+  { id: 'au-card', title: 'AU Small Finance Credit Cards', category: 'Credit Cards', sub: 'Altura & Vetta Cards', icon: <MdCreditCard size={22} color="#0EA5E9" />, route: '/partner/credit-cards', tags: ['au', 'bank', 'credit card'] },
+  { id: 'bob-card', title: 'Bank of Baroda Credit Cards', category: 'Credit Cards', sub: 'Premier & Select Cards', icon: <MdCreditCard size={22} color="#0EA5E9" />, route: '/partner/credit-cards', tags: ['bob', 'baroda', 'bank', 'credit card'] },
+  { id: 'idfc-card', title: 'IDFC FIRST Credit Cards', category: 'Credit Cards', sub: 'FIRST Millennia & Wealth Cards', icon: <MdCreditCard size={22} color="#0EA5E9" />, route: '/partner/credit-cards', tags: ['idfc', 'bank', 'credit card'] },
+  { id: 'ltf-cards', title: 'Lifetime Free (LTF) Credit Cards', category: 'Credit Cards', sub: 'Zero Joining & Annual Fee Cards', icon: <MdLocalOffer size={22} color="#10B981" />, route: '/partner/credit-cards', tags: ['lifetime free', 'ltf', 'zero fee'] },
 
   // ── LOAN PRODUCTS ──
-  { id: 'personal-loan', title: 'Personal Loans', category: 'Loans', sub: 'Instant disbursal up to ₹45 Lakhs', icon: '🏦', route: '/partner/products?category=personal_loan', tags: ['personal loan', 'instant loan', 'borrow', 'loan'] },
-  { id: 'business-loan', title: 'Business Loans', category: 'Loans', sub: 'Collateral-free business capital', icon: '💼', route: '/partner/products?category=business_loan', tags: ['business loan', 'msme', 'working capital'] },
-  { id: 'home-loan', title: 'Home Loans', category: 'Loans', sub: 'Low interest housing loans', icon: '🏠', route: '/partner/products?category=home_loan', tags: ['home loan', 'housing', 'property'] },
-  { id: 'lap-loan', title: 'Loan Against Property (LAP)', category: 'Loans', sub: 'High value property loans', icon: '🏛', route: '/partner/products?category=home_loan', tags: ['lap', 'property loan'] },
-  { id: 'gold-loan', title: 'Gold Loans', category: 'Loans', sub: 'Quick gold evaluation & loan', icon: '🪙', route: '/partner/products?category=personal_loan', tags: ['gold loan'] },
-  { id: 'emi-card', title: 'Smart EMI Cards', category: 'Loans', sub: 'No-cost EMI purchasing cards', icon: '⚡', route: '/partner/products?category=personal_loan', tags: ['emi', 'smart emi', 'card'] },
+  { id: 'personal-loan', title: 'Personal Loans', category: 'Loans', sub: 'Instant disbursal up to ₹45 Lakhs', icon: <MdAccountBalance size={22} color="#6366F1" />, route: '/partner/products?category=personal_loan', tags: ['personal loan', 'instant loan', 'borrow', 'loan'] },
+  { id: 'business-loan', title: 'Business Loans', category: 'Loans', sub: 'Collateral-free business capital', icon: <MdBusinessCenter size={22} color="#8B5CF6" />, route: '/partner/products?category=business_loan', tags: ['business loan', 'msme', 'working capital'] },
+  { id: 'home-loan', title: 'Home Loans', category: 'Loans', sub: 'Low interest housing loans', icon: <MdHome size={22} color="#F59E0B" />, route: '/partner/products?category=home_loan', tags: ['home loan', 'housing', 'property'] },
+  { id: 'lap-loan', title: 'Loan Against Property (LAP)', category: 'Loans', sub: 'High value property loans', icon: <MdAccountBalance size={22} color="#F59E0B" />, route: '/partner/products?category=home_loan', tags: ['lap', 'property loan'] },
+  { id: 'gold-loan', title: 'Gold Loans', category: 'Loans', sub: 'Quick gold evaluation & loan', icon: <MdAccountBalance size={22} color="#EAB308" />, route: '/partner/products?category=personal_loan', tags: ['gold loan'] },
+  { id: 'emi-card', title: 'Smart EMI Cards', category: 'Loans', sub: 'No-cost EMI purchasing cards', icon: <MdCreditCard size={22} color="#EC4899" />, route: '/partner/products?category=personal_loan', tags: ['emi', 'smart emi', 'card'] },
 
   // ── INSURANCE & INVESTMENT ──
-  { id: 'health-insurance', title: 'Health Insurance', category: 'Insurance', sub: 'Medical cover for individuals & family', icon: '🩺', route: '/partner/products?category=insurance', tags: ['health', 'insurance', 'medical'] },
-  { id: 'life-insurance', title: 'Term & Life Insurance', category: 'Insurance', sub: 'High sum assured protection', icon: '🛡', route: '/partner/products?category=insurance', tags: ['life insurance', 'term plan'] },
-  { id: 'motor-insurance', title: 'Car & Bike Insurance', category: 'Insurance', sub: 'Instant vehicle policy renewal', icon: '🚗', route: '/partner/products?category=insurance', tags: ['motor', 'car', 'bike', 'vehicle'] },
-  { id: 'demat-account', title: 'Demat & Trading Accounts', category: 'Investments', sub: 'Free stock trading accounts', icon: '📈', route: '/partner/products?category=demat', tags: ['demat', 'trading', 'stocks'] },
+  { id: 'health-insurance', title: 'Health Insurance', category: 'Insurance', sub: 'Medical cover for individuals & family', icon: <MdShield size={22} color="#10B981" />, route: '/partner/products?category=insurance', tags: ['health', 'insurance', 'medical'] },
+  { id: 'life-insurance', title: 'Term & Life Insurance', category: 'Insurance', sub: 'High sum assured protection', icon: <MdShield size={22} color="#3B82F6" />, route: '/partner/products?category=insurance', tags: ['life insurance', 'term plan'] },
+  { id: 'motor-insurance', title: 'Car & Bike Insurance', category: 'Insurance', sub: 'Instant vehicle policy renewal', icon: <MdDirectionsCar size={22} color="#F97316" />, route: '/partner/products?category=insurance', tags: ['motor', 'car', 'bike', 'vehicle'] },
+  { id: 'demat-account', title: 'Demat & Trading Accounts', category: 'Investments', sub: 'Free stock trading accounts', icon: <MdTrendingUp size={22} color="#14B8A6" />, route: '/partner/products?category=demat', tags: ['demat', 'trading', 'stocks'] },
 
   // ── PARTNER NAVIGATION & TOOLS ──
-  { id: 'add-lead', title: 'Submit New Product Lead', category: 'Quick Action', sub: 'Apply product for customer', icon: '➕', route: '/partner/leads/add', tags: ['lead', 'apply', 'submit', 'customer'] },
-  { id: 'crm-customers', title: 'Customer Management (CRM)', category: 'Partner Portal', sub: 'View customer profiles & leads', icon: '👥', route: '/partner/customers', tags: ['customer', 'crm', 'client'] },
-  { id: 'partner-wallet', title: 'Wallet & Payouts', category: 'Partner Portal', sub: 'Check balance & withdraw earnings', icon: '👛', route: '/partner/wallet', tags: ['wallet', 'payout', 'commission', 'balance'] },
-  { id: 'kyc-centre', title: 'KYC Centre', category: 'Partner Portal', sub: 'Upload & verify PAN, Aadhaar, Bank', icon: '📑', route: '/partner/kyc-centre', tags: ['kyc', 'pan', 'aadhaar', 'verification'] },
-  { id: 'team-network', title: 'Team Referrals & Network', category: 'Partner Portal', sub: 'Invite partners & earn overrides', icon: '🤝', route: '/partner/team-network', tags: ['refer', 'team', 'network', 'invite'] },
-  { id: 'marketing-assets', title: 'Marketing Materials & Banners', category: 'Partner Portal', sub: 'Promotional posters & links', icon: '📢', route: '/partner/marketing', tags: ['marketing', 'banner', 'poster'] },
-  { id: 'partner-support', title: 'Help & Support Desk', category: 'Partner Portal', sub: 'Raise support tickets & query', icon: '🎧', route: '/partner/support', tags: ['support', 'help', 'ticket'] }
+  { id: 'add-lead', title: 'Submit New Product Lead', category: 'Quick Action', sub: 'Apply product for customer', icon: <MdAddCircle size={22} color="#10B981" />, route: '/partner/leads/add', tags: ['lead', 'apply', 'submit', 'customer'] },
+  { id: 'crm-customers', title: 'Customer Management (CRM)', category: 'Partner Portal', sub: 'View customer profiles & leads', icon: <MdPeople size={22} color="#3B82F6" />, route: '/partner/customers', tags: ['customer', 'crm', 'client'] },
+  { id: 'partner-wallet', title: 'Wallet & Payouts', category: 'Partner Portal', sub: 'Check balance & withdraw earnings', icon: <MdAccountBalanceWallet size={22} color="#8B5CF6" />, route: '/partner/wallet', tags: ['wallet', 'payout', 'commission', 'balance'] },
+  { id: 'kyc-centre', title: 'KYC Centre', category: 'Partner Portal', sub: 'Upload & verify PAN, Aadhaar, Bank', icon: <MdAssignment size={22} color="#F59E0B" />, route: '/partner/kyc-centre', tags: ['kyc', 'pan', 'aadhaar', 'verification'] },
+  { id: 'team-network', title: 'Team Referrals & Network', category: 'Partner Portal', sub: 'Invite partners & earn overrides', icon: <MdHandshake size={22} color="#6366F1" />, route: '/partner/team-network', tags: ['refer', 'team', 'network', 'invite'] },
+  { id: 'marketing-assets', title: 'Marketing Materials & Banners', category: 'Partner Portal', sub: 'Promotional posters & links', icon: <MdCampaign size={22} color="#EC4899" />, route: '/partner/marketing', tags: ['marketing', 'banner', 'poster'] },
+  { id: 'partner-support', title: 'Help & Support Desk', category: 'Partner Portal', sub: 'Raise support tickets & query', icon: <MdSupportAgent size={22} color="#0EA5E9" />, route: '/partner/support', tags: ['support', 'help', 'ticket'] }
 ];
 
 export default function PartnerSearchBar() {
@@ -63,7 +68,7 @@ export default function PartnerSearchBar() {
             title: p.name,
             category: p.category ? p.category.replace('_', ' ').toUpperCase() : 'Product',
             sub: p.bank_name ? `${p.bank_name} • Earn ${p.commission_value || ''}` : `Earn ${p.commission_value || ''}`,
-            icon: p.category?.includes('card') ? '💳' : p.category?.includes('loan') ? '🏦' : '💰',
+            icon: p.category?.includes('card') ? <MdCreditCard size={22} color="#0EA5E9" /> : p.category?.includes('loan') ? <MdAccountBalance size={22} color="#6366F1" /> : <MdAccountBalanceWallet size={22} color="#8B5CF6" />,
             route: `/partner/products?search=${encodeURIComponent(p.name)}`,
             tags: [p.name.toLowerCase(), (p.bank_name || '').toLowerCase(), (p.category || '').toLowerCase()]
           }));
