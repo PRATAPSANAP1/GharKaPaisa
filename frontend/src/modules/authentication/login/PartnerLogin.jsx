@@ -325,7 +325,7 @@ export default function PartnerLogin() {
           }
         } else {
           const role = profile.role?.toUpperCase();
-          if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/super-admin/dashboard');
+          if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/super-admin/overview');
           else if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
           else navigate(location.state?.from?.pathname || '/partner/dashboard');
         }
@@ -546,7 +546,7 @@ export default function PartnerLogin() {
                 const from = location.state?.from?.pathname;
                 const role = profile.role?.toUpperCase();
                 const dest = from || loginRes.redirect ||
-                  (role === 'SUPER_ADMIN' ? '/super-admin/dashboard' :
+                  (role === 'SUPER_ADMIN' ? '/super-admin/overview' :
                    role === 'ADMIN' ? '/admin/dashboard' : '/partner/dashboard');
                 window.location.href = dest;
               } catch (errVal) {
@@ -588,7 +588,7 @@ export default function PartnerLogin() {
           window.location.href = loginRes.redirect;
         } else {
           // Normalize superadmin redirect if it comes from the backend without a hyphen
-          const targetRedirect = loginRes.redirect === '/superadmin/dashboard' ? '/super-admin/dashboard' : loginRes.redirect;
+          const targetRedirect = (loginRes.redirect === '/superadmin/dashboard' || loginRes.redirect === '/super-admin/dashboard' || loginRes.redirect === '/superadmin') ? '/super-admin/overview' : loginRes.redirect;
           navigate(location.state?.from?.pathname || targetRedirect);
         }
       } else if (needsProfileCompletion) {

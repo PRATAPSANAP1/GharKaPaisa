@@ -468,7 +468,7 @@ const login = async (req, res, next) => {
       }
     }
 
-    const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
+    const redirectUrl = user.role === 'SUPER_ADMIN' ? '/super-admin/overview' :
       user.role === 'ADMIN' ? '/admin/dashboard' :
         user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
           '/partner/dashboard';
@@ -580,7 +580,7 @@ const loginWithMsg91 = async (req, res, next) => {
       }
     }
 
-    const redirectUrl = user.role === 'SUPER_ADMIN' ? '/superadmin/dashboard' :
+    const redirectUrl = user.role === 'SUPER_ADMIN' ? '/super-admin/overview' :
       user.role === 'ADMIN' ? '/admin/dashboard' :
         user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
           '/partner/dashboard';
