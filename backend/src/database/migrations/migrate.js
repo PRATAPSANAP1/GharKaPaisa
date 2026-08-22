@@ -770,6 +770,7 @@ const migrate = async () => {
   await query(`CREATE INDEX IF NOT EXISTS idx_withdrawal_partner ON withdrawal_requests(partner_id, status)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id, revoked)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_partner_code ON partner_profiles(partner_code)`);
+  await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_wallet_ledger_unique_commission ON wallet_ledger(application_id, transaction_type, partner_id) WHERE application_id IS NOT NULL`);
 
   // ── Audit Logs ────────────────────────────────────────────────
   await query(`

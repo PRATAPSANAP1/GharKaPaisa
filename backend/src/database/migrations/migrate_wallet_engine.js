@@ -44,6 +44,12 @@ const runWalletEngineMigrations = async () => {
       )
     `);
 
+    await query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_wallet_ledger_unique_commission 
+      ON wallet_ledger(application_id, transaction_type, partner_id) 
+      WHERE application_id IS NOT NULL;
+    `);
+
     // 3. Commission Rules Table
     await query(`
       CREATE TABLE IF NOT EXISTS commission_rules (

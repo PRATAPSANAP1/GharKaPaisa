@@ -171,8 +171,8 @@ const submitApplication = async (req, res, next) => {
       INSERT INTO applications
         (app_number, application_number, lead_id, customer_id, product_id, partner_id, parent_partner_id, team_member_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, process_type, vkyc_status, submitted_at,
          status_history)
-      VALUES ($1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'submitted',$13,$14,NOW(),
-        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$15::text)))
+      VALUES ($1,$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'details_submitted',$13,$14,NOW(),
+        jsonb_build_array(jsonb_build_object('status','details_submitted','at',NOW(),'by',$15::text)))
       RETURNING id, app_number, application_number
     `, [appNumber, leadId, customerId, product_id, PartnerId, parentPartnerId, teamMemberId, product.bank_id, req.user.id, loan_amount, commission, notes, req.body.process_type || 'lead_punching', vkycStatus, req.user.id.toString()]);
 
@@ -373,8 +373,8 @@ const submitPublicApplication = async (req, res, next) => {
       INSERT INTO applications
         (app_number, lead_id, customer_id, product_id, partner_id, parent_partner_id, bank_id, submitted_by, loan_amount, commission_amount, notes, status, tracking_id, submitted_at,
          status_history, process_type, company_name, pincode, city, pan_number)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'submitted',$12,NOW(),
-        jsonb_build_array(jsonb_build_object('status','submitted','at',NOW(),'by',$13::text)), $14, $15, $16, $17, $18)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'details_submitted',$12,NOW(),
+        jsonb_build_array(jsonb_build_object('status','details_submitted','at',NOW(),'by',$13::text)), $14, $15, $16, $17, $18)
       RETURNING id, app_number
     `, [appNumber, leadId, customerId, product_id, partnerId, parentPartnerId, product.bank_id, sysUserId, salaryVal, commission, notes, tracking_id || null, sysUserId.toString(), process_type || 'lead_punching', cleanEmployer || null, cleanPincode || null, cleanCity || null, cleanPan || null]);
 

@@ -248,10 +248,10 @@ const uploadCustomerDocument = async (req, res) => {
       tokenData.customer_id
     );
 
-    // Update application status to under_review if currently link_sent or submitted
+    // Update application status to details_submitted if currently pending or draft
     await query(
-      `UPDATE applications SET status = 'under_review', updated_at = NOW() 
-       WHERE id = $1 AND status IN ('submitted', 'link_sent', 'draft')`,
+      `UPDATE applications SET status = 'details_submitted', updated_at = NOW() 
+       WHERE id = $1 AND status IN ('pending', 'draft')`,
       [tokenData.app_id]
     );
 
@@ -289,9 +289,9 @@ const submitDocuments = async (req, res) => {
 
     const tokenData = tokenRes.rows[0];
 
-    // Update application status to under_review / verification_pending
+    // Update application status to details_submitted
     await query(
-      `UPDATE applications SET status = 'under_review', updated_at = NOW() WHERE id = $1`,
+      `UPDATE applications SET status = 'details_submitted', updated_at = NOW() WHERE id = $1`,
       [tokenData.app_id]
     );
 

@@ -698,7 +698,7 @@ const verifyLeadOtp = async (req, res, next) => {
       FROM products WHERE id = $1
     `, [lead.product_id]);
 
-    const initialStatus = lead.process_type === 'direct_bank' ? 'initiated' : 'submitted';
+    const initialStatus = lead.process_type === 'direct_bank' ? 'pending' : 'details_submitted';
 
     // 4. Resolve customer_id and Insert into Applications
     let targetCustomerId = lead.customer_id;

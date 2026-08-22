@@ -175,7 +175,7 @@ async function runEndToEndVerification() {
         app_number, lead_id, customer_id, product_id, partner_id, parent_partner_id,
         submitted_by, status, process_type, commission_amount, commission_status
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, 'submitted', 'lead_punching', $8, 'pending'
+        $1, $2, $3, $4, $5, $6, $7, 'details_submitted', 'lead_punching', $8, 'pending'
       ) RETURNING id
     `, [appNumber, lead.id, customer.id, product.id, childProfile.id, parentProfile.id, childUser.id, baseCommission]);
     logSuccess(`Application Created: ${appNumber} (ID: ${application.id}, Base Commission: ₹${baseCommission})`);

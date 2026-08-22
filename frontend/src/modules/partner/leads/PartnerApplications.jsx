@@ -604,19 +604,25 @@ export default function PartnerApplications() {
 
   const getStatusBadge = (status) => {
     const s = (status || '').toLowerCase();
+    if (s === 'commission_received') {
+      return { label: 'Commission Received', bg: '#05966915', color: '#059669', border: '#05966930', icon: CheckCircle2 };
+    }
+    if (s === 'commission_released') {
+      return { label: 'Commission Released', bg: '#06b6d415', color: '#06b6d4', border: '#06b6d430', icon: CheckCircle2 };
+    }
     if (s === 'approved' || s === 'disbursed') {
-      return { label: s === 'disbursed' ? 'Disbursed' : 'Approved', bg: '#10b98115', color: '#10b981', border: '#10b98130', icon: CheckCircle2 };
+      return { label: 'Approved', bg: '#10b98115', color: '#10b981', border: '#10b98130', icon: CheckCircle2 };
+    }
+    if (s === 'operational_verified') {
+      return { label: 'Operational Verified', bg: '#8b5cf615', color: '#8b5cf6', border: '#8b5cf630', icon: CheckCircle2 };
+    }
+    if (s === 'details_submitted' || s === 'submitted' || s === 'under_review') {
+      return { label: 'Details Submitted', bg: '#3b82f615', color: '#3b82f6', border: '#3b82f630', icon: Clock };
     }
     if (s === 'rejected' || s === 'cancelled') {
       return { label: 'Rejected', bg: '#ef444415', color: '#ef4444', border: '#ef444430', icon: XCircle };
     }
-    if (s === 'pending' || s === 'lead_created' || s === 'new' || s === 'draft' || s === 'initiated' || s === 'link_sent') {
-      return { label: 'Pending', bg: '#6366f115', color: '#6366f1', border: '#6366f130', icon: Clock };
-    }
-    if (s === 'under_review' || s === 'under review' || s === 'verification' || s === 'in_progress') {
-      return { label: 'Under Review', bg: '#f59e0b15', color: '#f59e0b', border: '#f59e0b30', icon: Clock };
-    }
-    return { label: 'Applied', bg: '#3b82f615', color: '#3b82f6', border: '#3b82f630', icon: Clock };
+    return { label: 'Pending', bg: '#6366f115', color: '#6366f1', border: '#6366f130', icon: Clock };
   };
 
   const getProcessByBadge = (processBy, processType) => {
@@ -805,10 +811,11 @@ export default function PartnerApplications() {
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...selectStyle, flex: 1, minWidth: 130 }}>
             <option value="">All Statuses</option>
             <option value="pending">Pending</option>
-            <option value="submitted">Applied / Submitted</option>
-            <option value="under_review">Under Review</option>
+            <option value="details_submitted">Details Submitted</option>
+            <option value="operational_verified">Operational Verified</option>
             <option value="approved">Approved</option>
-            <option value="disbursed">Disbursed</option>
+            <option value="commission_released">Commission Released</option>
+            <option value="commission_received">Commission Received</option>
             <option value="rejected">Rejected</option>
           </select>
 
@@ -1191,8 +1198,9 @@ export default function PartnerApplications() {
                 )}
               </div>
             );
-          })()
-        }</div>
+          });
+        })()}
+        </div>
       )}
 
       {/* ═══ MODAL 1: BULK UPDATE ═══ */}

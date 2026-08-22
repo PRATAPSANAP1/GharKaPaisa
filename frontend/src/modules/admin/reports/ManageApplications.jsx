@@ -240,70 +240,99 @@ export default function ManageApplications() {
         <div style={{ ...S.card, textAlign: "center", padding: "48px", color: C.textLight }}>No applications found matching criteria.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {[
-            {
-              id: 'pending',
-              title: 'Pending Applications',
-              color: '#f59e0b',
-              badgeBg: '#f59e0b15',
-              borderColor: '#f59e0b',
-              statuses: ['pending', 'initiated', 'link_pending', 'created', 'lead_created', 'new', 'draft']
-            },
-            {
-              id: 'details_submitted',
-              title: '📝 Details Submitted Applications',
-              color: '#3b82f6',
-              badgeBg: '#3b82f615',
-              borderColor: '#3b82f6',
-              statuses: ['details_submitted', 'submitted', 'under_review', 'under review', 'verification']
-            },
-            {
-              id: 'operational_verified',
-              title: '🔍 Operational Verified Applications',
-              color: '#8b5cf6',
-              badgeBg: '#8b5cf615',
-              borderColor: '#8b5cf6',
-              statuses: ['operational_verified', 'operational_approved']
-            },
-            {
-              id: 'approved',
-              title: '✅ Approved Applications',
-              color: '#10b981',
-              badgeBg: '#10b98115',
-              borderColor: '#10b981',
-              statuses: ['approved', 'super_admin_approved', 'disbursed']
-            },
-            {
-              id: 'commission_released',
-              title: '💸 Commission Released Applications',
-              color: '#06b6d4',
-              badgeBg: '#06b6d415',
-              borderColor: '#06b6d4',
-              statuses: ['commission_released', 'released']
-            },
-            {
-              id: 'commission_received',
-              title: '💰 Commission Received Applications',
-              color: '#16a34a',
-              badgeBg: '#16a34a15',
-              borderColor: '#16a34a',
-              statuses: ['commission_received', 'received']
-            },
-            {
-              id: 'rejected',
-              title: '❌ Rejected & Cancelled Applications',
-              color: '#ef4444',
-              badgeBg: '#ef444415',
-              borderColor: '#ef4444',
-              statuses: ['rejected', 'cancelled', 'declined']
-            }
-          ].map((group) => {
-            const groupApps = apps.filter(a => group.statuses.includes(String(a.status || '').toLowerCase()));
+          {(() => {
+            const allMatchedStatuses = new Set([
+              'pending', 'initiated', 'link_pending', 'bank_application_pending', 'created', 'lead_created', 'new', 'draft',
+              'details_submitted', 'submitted', 'under_review', 'under review', 'verification', 'in_process', 'in_progress',
+              'operational_verified', 'operational_approved', 'app_file_generated',
+              'approved', 'super_admin_approved', 'disbursed',
+              'commission_released', 'released', 'credited',
+              'commission_received', 'received', 'paid',
+              'rejected', 'cancelled', 'declined', 'decline', 'technical_error'
+            ]);
 
-            // Skip empty groups if status filter is active
-            if (status && status !== group.id && !group.statuses.includes(status) && groupApps.length === 0) {
-              return null;
-            }
+            const groups = [
+              {
+                id: 'pending',
+                title: '⏳ Pending Applications',
+                color: '#f59e0b',
+                badgeBg: '#f59e0b15',
+                borderColor: '#f59e0b',
+                statuses: ['pending', 'initiated', 'link_pending', 'bank_application_pending', 'created', 'lead_created', 'new', 'draft']
+              },
+              {
+                id: 'details_submitted',
+                title: '📝 Details Submitted Applications',
+                color: '#3b82f6',
+                badgeBg: '#3b82f615',
+                borderColor: '#3b82f6',
+                statuses: ['details_submitted', 'submitted', 'under_review', 'under review', 'verification', 'in_process', 'in_progress']
+              },
+              {
+                id: 'operational_verified',
+                title: '🔍 Operational Verified Applications',
+                color: '#8b5cf6',
+                badgeBg: '#8b5cf615',
+                borderColor: '#8b5cf6',
+                statuses: ['operational_verified', 'operational_approved', 'app_file_generated']
+              },
+              {
+                id: 'approved',
+                title: '✅ Approved Applications',
+                color: '#10b981',
+                badgeBg: '#10b98115',
+                borderColor: '#10b981',
+                statuses: ['approved', 'super_admin_approved', 'disbursed']
+              },
+              {
+                id: 'commission_released',
+                title: '💸 Commission Released Applications',
+                color: '#06b6d4',
+                badgeBg: '#06b6d415',
+                borderColor: '#06b6d4',
+                statuses: ['commission_released', 'released', 'credited']
+              },
+              {
+                id: 'commission_received',
+                title: '💰 Commission Received Applications',
+                color: '#16a34a',
+                badgeBg: '#16a34a15',
+                borderColor: '#16a34a',
+                statuses: ['commission_received', 'received', 'paid']
+              },
+              {
+                id: 'rejected',
+                title: '❌ Rejected & Cancelled Applications',
+                color: '#ef4444',
+                badgeBg: '#ef444415',
+                borderColor: '#ef4444',
+                statuses: ['rejected', 'cancelled', 'declined', 'decline', 'technical_error']
+              },
+              {
+                id: 'other',
+                title: '📦 Other Applications',
+                color: '#6b7280',
+                badgeBg: '#6b728015',
+                borderColor: '#6b7280',
+                isOtherFallback: true,
+                statuses: []
+              }
+            ];
+
+            return groups.map((group) => {
+              const groupApps = group.isOtherFallback
+                ? apps.filter(a => !allMatchedStatuses.has(String(a.status || '').toLowerCase()))
+                : apps.filter(a => group.statuses.includes(String(a.status || '').toLowerCase()));
+
+              // Skip empty groups if status filter is active
+              if (status && status !== group.id && !group.statuses.includes(status) && groupApps.length === 0) {
+                return null;
+              }
+
+              // Hide "Other Applications" table if empty
+              if (group.isOtherFallback && groupApps.length === 0) {
+                return null;
+              }
 
             return (
               <div
@@ -443,8 +472,9 @@ export default function ManageApplications() {
                 )}
               </div>
             );
-          })}
-        </div>
+          });
+        })()}
+      </div>
       )}
 
       {/* Modal detail */}
