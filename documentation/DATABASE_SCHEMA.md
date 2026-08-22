@@ -1,6 +1,8 @@
 # Database Schema & Data Dictionary
 
-This document contains the complete database schema definition and data dictionary for all 53 tables across the system's 11 features, including constraints, relationships, indexes, and triggers.
+This document contains the complete database schema definition and data dictionary for all 80+ tables across the system's 15+ features, including constraints, relationships, indexes, and triggers.
+
+**Note**: This schema is dynamically evolving. The actual database structure is defined in `backend/src/database/migrations/migrate.js` and may include additional tables and columns not yet reflected in this documentation.
 
 ---
 
@@ -14,8 +16,8 @@ This document contains the complete database schema definition and data dictiona
 | 3 | `email` | VARCHAR(255) | UNIQUE | User email address |
 | 4 | `mobile` | VARCHAR(15) | UNIQUE | User mobile number |
 | 5 | `password_hash` | VARCHAR(255) | NULLABLE | Bcrypt hashed password |
-| 6 | `role` | user_role ENUM | NOT NULL, DEFAULT 'PARTNER' | SUPER_ADMIN, ADMIN, EMPLOYEE, PARTNER |
-| 7 | `status` | user_status ENUM | NOT NULL, DEFAULT 'pending' | pending, active, suspended, rejected, inactive, blocked |
+| 6 | `role` | user_role ENUM | NOT NULL, DEFAULT 'PARTNER' | SUPER_ADMIN, ADMIN, EMPLOYEE, PARTNER, TEAM_MEMBER |
+| 7 | `status` | user_status ENUM | NOT NULL, DEFAULT 'pending' | pending, active, suspended, rejected, inactive, blocked, pending_verification |
 | 8 | `full_name` | VARCHAR(255) | NULLABLE | User's full name |
 | 9 | `employee_id` | VARCHAR(50) | UNIQUE, NULLABLE | Employee ID for admin/employee roles |
 | 10 | `department` | VARCHAR(100) | NULLABLE | Department for employees |
@@ -28,10 +30,12 @@ This document contains the complete database schema definition and data dictiona
 | 17 | `verification_token_expires_at` | TIMESTAMPTZ | NULLABLE | Token expiry timestamp |
 | 18 | `reset_token` | TEXT | NULLABLE | Password reset token |
 | 19 | `reset_token_expires_at` | TIMESTAMPTZ | NULLABLE | Reset token expiry |
-| 20 | `created_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Creator user ID |
-| 21 | `last_login` | TIMESTAMPTZ | NULLABLE | Last login timestamp |
-| 22 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
-| 23 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
+| 20 | `locked_until` | TIMESTAMPTZ | NULLABLE | Account lock expiry |
+| 21 | `failed_login_attempts` | INTEGER | DEFAULT 0 | Failed login count |
+| 22 | `created_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Creator user ID |
+| 23 | `last_login` | TIMESTAMPTZ | NULLABLE | Last login timestamp |
+| 24 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 25 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
 
 * **Indexes**:
   * `idx_users_firebase_uid` ON (`firebase_uid`) WHERE `firebase_uid IS NOT NULL`
@@ -57,7 +61,7 @@ This document contains the complete database schema definition and data dictiona
 | 11 | `company_type` | VARCHAR(100) | NULLABLE | Type of business entity |
 | 12 | `gst_number` | VARCHAR(20) | NULLABLE | GST registration number |
 | 13 | `pincode` | VARCHAR(10) | NULLABLE | Postal code |
-| 14 | `kyc_status` | kyc_status ENUM | DEFAULT 'pending' | pending, under_review, approved, rejected |
+| 14 | `kyc_status` | kyc_status ENUM | DEFAULT 'draft' | draft, pending, under_review, approved, rejected |
 | 15 | `kyc_submitted_at` | TIMESTAMPTZ | NULLABLE | KYC submission timestamp |
 | 16 | `kyc_reviewed_at` | TIMESTAMPTZ | NULLABLE | KYC review timestamp |
 | 17 | `kyc_reviewed_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Reviewer admin ID |
@@ -82,8 +86,35 @@ This document contains the complete database schema definition and data dictiona
 | 36 | `pan_url` | VARCHAR(500) | NULLABLE | PAN card S3 URL |
 | 37 | `gst_cert_url` | VARCHAR(500) | NULLABLE | GST certificate S3 URL |
 | 38 | `cancel_cheque_url` | VARCHAR(500) | NULLABLE | Cancelled cheque S3 URL |
-| 39 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
-| 40 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
+| 39 | `partner_type` | VARCHAR(50) | DEFAULT 'PARTNER' | Partner type |
+| 40 | `status` | VARCHAR(50) | DEFAULT 'active' | Partner status |
+| 41 | `commission_rate` | DECIMAL(5,2) | DEFAULT 90.00 | Commission rate |
+| 42 | `pan_number` | VARCHAR(10) | UNIQUE, NULLABLE | PAN number |
+| 43 | `aadhaar_number` | VARCHAR(12) | UNIQUE, NULLABLE | Aadhaar number |
+| 44 | `can_create_team` | BOOLEAN | DEFAULT TRUE | Can create team flag |
+| 45 | `rank` | VARCHAR(50) | DEFAULT 'Silver' | Partner rank |
+| 46 | `referral_bonus_paid` | BOOLEAN | DEFAULT FALSE | Referral bonus paid status |
+| 47 | `approved_credit_cards` | INTEGER | DEFAULT 0 | Approved credit cards count |
+| 48 | `referred_by_id` | UUID | FOREIGN KEY → partner_profiles(id), NULLABLE | Referring partner |
+| 49 | `company_logo_url` | VARCHAR(500) | NULLABLE | Company logo S3 URL |
+| 50 | `active_children` | INTEGER | DEFAULT 0 | Active children count |
+| 51 | `inactive_children` | INTEGER | DEFAULT 0 | Inactive children count |
+| 52 | `verified_children` | INTEGER | DEFAULT 0 | Verified children count |
+| 53 | `pending_children` | INTEGER | DEFAULT 0 | Pending children count |
+| 54 | `blocked_children` | INTEGER | DEFAULT 0 | Blocked children count |
+| 55 | `total_leads` | INTEGER | DEFAULT 0 | Total leads count |
+| 56 | `total_applications` | INTEGER | DEFAULT 0 | Total applications count |
+| 57 | `total_approved` | INTEGER | DEFAULT 0 | Total approved count |
+| 58 | `team_commission` | DECIMAL(15,2) | DEFAULT 0.00 | Team commission amount |
+| 59 | `direct_team_count` | INTEGER | DEFAULT 0 | Direct team count |
+| 60 | `active_team_count` | INTEGER | DEFAULT 0 | Active team count |
+| 61 | `last_team_join` | TIMESTAMPTZ | NULLABLE | Last team join timestamp |
+| 62 | `team_enabled` | BOOLEAN | DEFAULT TRUE | Team enabled flag |
+| 63 | `referral_enabled` | BOOLEAN | DEFAULT TRUE | Referral enabled flag |
+| 64 | `referral_message` | TEXT | DEFAULT 'Join my team on GharKaPaisa and earn highest financial commission payouts!' | Referral message |
+| 65 | `referral_banner` | VARCHAR(500) | NULLABLE | Referral banner URL |
+| 66 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 67 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
 
 * **Indexes**:
   * `idx_partner_code` ON (`partner_code`)
@@ -97,21 +128,24 @@ This document contains the complete database schema definition and data dictiona
 | # | Column Name | Data Type | Constraints | Description |
 |---|---|---|---|---|
 | 1 | `id` | UUID | PRIMARY KEY | Unique bank detail identifier |
-| 2 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Link to partner |
+| 2 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Partner reference |
 | 3 | `bank_name` | VARCHAR(100) | NOT NULL | Bank name |
-| 4 | `account_holder_name` | VARCHAR(255) | NOT NULL | Account holder name |
-| 5 | `account_number` | VARCHAR(255) | NOT NULL (AES-256 Encrypted) | Bank account number |
-| 6 | `ifsc_code` | VARCHAR(15) | NOT NULL | IFSC code |
-| 7 | `branch_name` | VARCHAR(100) | NULLABLE | Bank branch name |
-| 8 | `upi_id` | VARCHAR(100) | NULLABLE | UPI ID for payments |
-| 9 | `cancelled_cheque_url` | VARCHAR(500) | NULLABLE | Cancelled cheque S3 URL |
-| 10 | `is_verified` | BOOLEAN | DEFAULT FALSE | Bank verification status |
-| 11 | `is_primary` | BOOLEAN | DEFAULT TRUE | Primary account flag |
-| 12 | `verified_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Verifying admin ID |
-| 13 | `verified_at` | TIMESTAMPTZ | NULLABLE | Verification timestamp |
-| 14 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
-| 15 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
+| 4 | `account_number` | VARCHAR(50) | NOT NULL | Bank account number (encrypted) |
+| 5 | `account_holder_name` | VARCHAR(255) | NOT NULL | Account holder name |
+| 6 | `ifsc_code` | VARCHAR(20) | NOT NULL | IFSC code |
+| 7 | `account_type` | VARCHAR(20) | DEFAULT 'savings' | savings, current |
+| 8 | `is_active` | BOOLEAN | DEFAULT TRUE | Active status |
+| 9 | `is_primary` | BOOLEAN | DEFAULT FALSE | Primary bank flag |
+| 10 | `is_verified` | BOOLEAN | DEFAULT FALSE | Verification status |
+| 11 | `verified_at` | TIMESTAMPTZ | NULLABLE | Verification timestamp |
+| 12 | `branch_name` | VARCHAR(255) | NULLABLE | Bank branch name |
+| 13 | `city` | VARCHAR(100) | NULLABLE | Bank city |
+| 14 | `state` | VARCHAR(100) | NULLABLE | Bank state |
+| 15 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 16 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
 
+* **Indexes**:
+  * `idx_partner_bank_partner` ON (`partner_id`)
 * **Trigger**: `set_updated_at` BEFORE UPDATE
 
 ---
@@ -201,15 +235,15 @@ This document contains the complete database schema definition and data dictiona
 | 10 | `net_amount` | DECIMAL(15,2) | DEFAULT 0 | Amount after tax |
 | 11 | `balance_before` | DECIMAL(15,2) | NULLABLE | Balance before transaction |
 | 12 | `balance_after` | DECIMAL(15,2) | NULLABLE | Balance after transaction |
-| 13 | `status` | VARCHAR(20) | DEFAULT 'pending' | pending, approved, rejected, processed |
-| 14 | `description` | VARCHAR(500) | NULLABLE | Transaction description |
-| 15 | `remarks` | TEXT | NULLABLE | Additional remarks |
-| 16 | `reference_type` | VARCHAR(100) | NULLABLE | Reference category |
-| 17 | `reference_id` | VARCHAR(255) | NULLABLE | Reference identifier |
-| 18 | `bank_name` | VARCHAR(100) | NULLABLE | Associated bank |
-| 19 | `product_type` | VARCHAR(100) | NULLABLE | Product category |
-| 20 | `commission_type` | VARCHAR(50) | NULLABLE | Commission category |
-| 21 | `release_at` | TIMESTAMPTZ | NULLABLE | Scheduled release time |
+| 13 | `balance_after_transaction` | DECIMAL(15,2) | DEFAULT 0.00 | Balance after transaction (backup) |
+| 14 | `status` | VARCHAR(20) | DEFAULT 'pending' | Pending Approval, Released, Rejected, Cancelled |
+| 15 | `description` | VARCHAR(500) | NULLABLE | Transaction description |
+| 16 | `remarks` | TEXT | NULLABLE | Additional remarks |
+| 17 | `reference_type` | VARCHAR(100) | NULLABLE | Reference category |
+| 18 | `reference_id` | VARCHAR(255) | NULLABLE | Reference identifier |
+| 19 | `bank_name` | VARCHAR(100) | NULLABLE | Associated bank |
+| 20 | `product_type` | VARCHAR(100) | NULLABLE | Product category |
+| 21 | `commission_type` | VARCHAR(50) | NULLABLE | Commission category |
 | 22 | `processed_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Processing admin |
 | 23 | `processed_at` | TIMESTAMPTZ | NULLABLE | Processing timestamp |
 | 24 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
@@ -217,7 +251,6 @@ This document contains the complete database schema definition and data dictiona
 * **Indexes**:
   * `idx_wallet_txn_wallet` ON (`wallet_id`)
   * `idx_wallet_txn_status` ON (`status`) WHERE `status = 'pending'`
-  * `idx_wallet_txn_release` ON (`release_at`) WHERE `status = 'pending'`
 
 ---
 
@@ -233,12 +266,16 @@ This document contains the complete database schema definition and data dictiona
 | 5 | `transaction_type` | ledger_transaction_type ENUM | NOT NULL | PERSONAL_COMMISSION, TEAM_COMMISSION, REFERRAL_BONUS, CAMPAIGN_BONUS, SETTLEMENT, WITHDRAWAL, ADJUSTMENT, REVERSAL, REFUND, OVERRIDE_COMMISSION |
 | 6 | `credit` | DECIMAL(15,2) | DEFAULT 0 | Credit amount |
 | 7 | `debit` | DECIMAL(15,2) | DEFAULT 0 | Debit amount |
-| 8 | `balance_after_transaction` | DECIMAL(15,2) | DEFAULT 0 | Balance after entry |
-| 9 | `description` | VARCHAR(500) | NULLABLE | Entry description |
-| 10 | `reference_number` | VARCHAR(100) | NULLABLE | Reference number |
-| 11 | `status` | VARCHAR(50) | DEFAULT 'completed' | Entry status |
-| 12 | `created_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Creator user |
-| 13 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 8 | `balance_after` | DECIMAL(15,2) | DEFAULT 0.00 | Balance after entry |
+| 9 | `balance_after_transaction` | DECIMAL(15,2) | DEFAULT 0.00 | Balance after entry (backup) |
+| 10 | `description` | VARCHAR(500) | NULLABLE | Entry description |
+| 11 | `reference_number` | VARCHAR(100) | NULLABLE | Reference number |
+| 12 | `status` | VARCHAR(50) | DEFAULT 'completed' | Pending Approval, Released, Rejected, Cancelled |
+| 13 | `created_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Creator user |
+| 14 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+
+* **Indexes**:
+  * `ux_wallet_ledger_application_commission` ON (`application_id`, `transaction_type`) WHERE `application_id IS NOT NULL`
 
 ---
 
@@ -340,16 +377,33 @@ This document contains the complete database schema definition and data dictiona
 | # | Column Name | Data Type | Constraints | Description |
 |---|---|---|---|---|
 | 1 | `id` | UUID | PRIMARY KEY | Unique ledger identifier |
-| 2 | `application_id` | UUID | FOREIGN KEY → applications(id) ON DELETE CASCADE, NOT NULL | Link to application |
-| 3 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Child partner |
-| 4 | `parent_partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE SET NULL, NULLABLE | Parent partner |
-| 5 | `commission_amount` | DECIMAL(15,2) | DEFAULT 0 | Child commission amount |
-| 6 | `override_amount` | DECIMAL(15,2) | DEFAULT 0 | Parent override amount |
-| 7 | `status` | VARCHAR(50) | DEFAULT 'pending' | pending, credited, released |
-| 8 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 2 | `application_id` | UUID | FOREIGN KEY → applications(id) ON DELETE SET NULL, NULLABLE | Link to application |
+| 3 | `lead_id` | UUID | FOREIGN KEY → leads(id) ON DELETE CASCADE, NULLABLE | Link to lead |
+| 4 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Child partner |
+| 5 | `parent_partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE SET NULL, NULLABLE | Parent partner |
+| 6 | `commission_amount` | DECIMAL(15,2) | DEFAULT 0 | Child commission amount |
+| 7 | `override_amount` | DECIMAL(15,2) | DEFAULT 0 | Parent override amount |
+| 8 | `status` | VARCHAR(50) | DEFAULT 'pending' | pending, credited, released |
+| 9 | `product_name` | VARCHAR(255) | NULLABLE | Product name |
+| 10 | `transaction_amount` | DECIMAL(15,2) | DEFAULT 0 | Transaction amount |
+| 11 | `commission_rate` | DECIMAL(15,2) | DEFAULT 0 | Commission rate |
+| 12 | `commission_earned` | DECIMAL(15,2) | DEFAULT 0 | Commission earned |
+| 13 | `customer_id` | UUID | NULLABLE | Customer ID |
+| 14 | `bank_id` | UUID | NULLABLE | Bank ID |
+| 15 | `product_id` | UUID | NULLABLE | Product ID |
+| 16 | `team_member_id` | UUID | NULLABLE | Team member ID |
+| 17 | `commission_rule_id` | UUID | NULLABLE | Commission rule ID |
+| 18 | `total_commission` | DECIMAL(15,2) | NULLABLE | Total commission |
+| 19 | `partner_pct` | DECIMAL(5,2) | NULLABLE | Partner percentage |
+| 20 | `team_member_pct` | DECIMAL(5,2) | NULLABLE | Team member percentage |
+| 21 | `partner_amount` | DECIMAL(15,2) | NULLABLE | Partner amount |
+| 22 | `team_member_amount` | DECIMAL(15,2) | NULLABLE | Team member amount |
+| 23 | `approved_at` | TIMESTAMPTZ | NULLABLE | Approval timestamp |
+| 24 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
 
 * **Indexes**:
   * `idx_comm_ledger_app` ON (`application_id`)
+  * `idx_comm_ledger_lead` ON (`lead_id`)
 
 ---
 
@@ -380,31 +434,57 @@ This document contains the complete database schema definition and data dictiona
 | 7 | `bank_id` | UUID | FOREIGN KEY → banks(id) ON DELETE SET NULL, NULLABLE | Target bank |
 | 8 | `submitted_by` | UUID | FOREIGN KEY → users(id), NOT NULL | Submitting user |
 | 9 | `tracking_id` | VARCHAR(100) | NULLABLE | External tracking ID |
-| 10 | `status` | application_status ENUM | DEFAULT 'submitted' | draft, submitted, under_review, approved, rejected, disbursed, confirmed |
+| 10 | `status` | application_status ENUM | DEFAULT 'submitted' | draft, link_sent, submitted, under_review, verification_completed, approved, rejected, disbursed, confirmed |
 | 11 | `bank_ref_number` | VARCHAR(100) | NULLABLE | Bank reference number |
-| 12 | `loan_amount` | DECIMAL(15,2) | NULLABLE | Requested loan amount |
-| 13 | `approved_amount` | DECIMAL(15,2) | NULLABLE | Approved amount |
-| 14 | `credit_limit` | DECIMAL(15,2) | NULLABLE | Credit card limit |
-| 15 | `interest_rate` | DECIMAL(5,2) | NULLABLE | Interest rate |
-| 16 | `tenure_months` | INT | NULLABLE | Loan tenure |
-| 17 | `disbursal_date` | DATE | NULLABLE | Disbursal date |
-| 18 | `rejection_reason` | TEXT | NULLABLE | Rejection reason |
-| 19 | `notes` | TEXT | NULLABLE | Admin notes |
-| 20 | `documents` | JSONB | DEFAULT '[]' | Document references |
-| 21 | `status_history` | JSONB | DEFAULT '[]' | Status change log |
-| 22 | `commission_amount` | DECIMAL(12,2) | NULLABLE | Commission earned |
-| 23 | `commission_status` | commission_status ENUM | DEFAULT 'pending' | pending, approved, rejected, processed |
-| 24 | `submitted_at` | TIMESTAMPTZ | NULLABLE | Submission timestamp |
-| 25 | `approved_at` | TIMESTAMPTZ | NULLABLE | Approval timestamp |
-| 26 | `commission_received_at` | TIMESTAMPTZ | NULLABLE | Commission receipt time |
-| 27 | `commission_paid_at` | TIMESTAMPTZ | NULLABLE | Commission payout time |
-| 28 | `process_type` | VARCHAR(100) | DEFAULT 'lead_punching' | Canonical workflow: lead_punching, linked_share, direct_bank, physical_process |
-| 29 | `process_by` | VARCHAR(50) | DEFAULT 'partner' | Initiator entity: partner, customer, operations |
-| 30 | `source` | VARCHAR(100) | DEFAULT 'partner_portal' | Origin channel: partner_portal, share_link, bank_redirect, physical |
-| 31 | `form_status` | VARCHAR(100) | DEFAULT 'pending' | Customer form progress: pending, in_progress, completed |
-| 32 | `final_status` | VARCHAR(50) | NULLABLE | Bank/ops outcome: pending, approved, rejected, declined, in_process, technical_error |
-| 33 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
-| 34 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
+| 12 | `bank_application_number` | VARCHAR(100) | NULLABLE | Bank application number |
+| 13 | `loan_amount` | DECIMAL(15,2) | NULLABLE | Requested loan amount |
+| 14 | `approved_amount` | DECIMAL(15,2) | NULLABLE | Approved amount |
+| 15 | `credit_limit` | DECIMAL(15,2) | NULLABLE | Credit card limit |
+| 16 | `interest_rate` | DECIMAL(5,2) | NULLABLE | Interest rate |
+| 17 | `tenure_months` | INT | NULLABLE | Loan tenure |
+| 18 | `disbursal_date` | DATE | NULLABLE | Disbursal date |
+| 19 | `rejection_reason` | TEXT | NULLABLE | Rejection reason |
+| 20 | `notes` | TEXT | NULLABLE | Admin notes |
+| 21 | `documents` | JSONB | DEFAULT '[]' | Document references |
+| 22 | `status_history` | JSONB | DEFAULT '[]' | Status change log |
+| 23 | `commission_amount` | DECIMAL(12,2) | NULLABLE | Commission earned |
+| 24 | `commission_status` | commission_status ENUM | DEFAULT 'pending' | pending, approved, rejected, processed |
+| 25 | `submitted_at` | TIMESTAMPTZ | NULLABLE | Submission timestamp |
+| 26 | `approved_at` | TIMESTAMPTZ | NULLABLE | Approval timestamp |
+| 27 | `commission_received_at` | TIMESTAMPTZ | NULLABLE | Commission receipt time |
+| 28 | `commission_paid_at` | TIMESTAMPTZ | NULLABLE | Commission payout time |
+| 29 | `process_type` | VARCHAR(100) | DEFAULT 'partner_cell' | Canonical workflow: partner_cell, punching, linked_share, direct_bank, physical_process |
+| 30 | `process_by` | VARCHAR(50) | DEFAULT 'punching' | Initiator entity: partner, customer, operations |
+| 31 | `source` | VARCHAR(100) | DEFAULT 'partner_portal' | Origin channel: partner_portal, share_link, bank_redirect, physical |
+| 32 | `form_status` | VARCHAR(100) | DEFAULT 'pending' | Customer form progress: pending, in_progress, completed |
+| 33 | `final_status` | VARCHAR(50) | NULLABLE | Bank/ops outcome: pending, approved, rejected, declined, in_process, technical_error |
+| 34 | `business_type` | VARCHAR(100) | NULLABLE | Business type |
+| 35 | `gst_number` | VARCHAR(50) | NULLABLE | GST number |
+| 36 | `trade_license_number` | VARCHAR(50) | NULLABLE | Trade license number |
+| 37 | `company_name` | VARCHAR(255) | NULLABLE | Company name |
+| 38 | `pincode` | VARCHAR(10) | NULLABLE | Pincode |
+| 39 | `city` | VARCHAR(100) | NULLABLE | City |
+| 40 | `state` | VARCHAR(100) | NULLABLE | State |
+| 41 | `country_code` | VARCHAR(10) | DEFAULT '+91' | Country code |
+| 42 | `agree_terms` | BOOLEAN | DEFAULT TRUE | Terms agreed |
+| 43 | `vkyc_status` | VARCHAR(50) | DEFAULT 'Pending' | VKYC status |
+| 44 | `vkyc_url` | VARCHAR(1000) | NULLABLE | VKYC URL |
+| 45 | `salary_slip_url` | VARCHAR(1000) | NULLABLE | Salary slip URL |
+| 46 | `pan_card_url` | VARCHAR(1000) | NULLABLE | PAN card URL |
+| 47 | `pan_number` | VARCHAR(50) | NULLABLE | PAN number |
+| 48 | `monthly_salary` | NUMERIC(15,2) | NULLABLE | Monthly salary |
+| 49 | `metadata` | JSONB | DEFAULT '{}' | Additional metadata |
+| 50 | `remarks` | TEXT | NULLABLE | Additional remarks |
+| 51 | `soft_approval_status` | VARCHAR(50) | NULLABLE | Soft approval status |
+| 52 | `vkyc_stage` | VARCHAR(50) | NULLABLE | VKYC stage |
+| 53 | `iqa_stage` | VARCHAR(50) | NULLABLE | IQA stage |
+| 54 | `dispatch_status` | VARCHAR(50) | NULLABLE | Dispatch status |
+| 55 | `bank_remark` | TEXT | NULLABLE | Bank remarks |
+| 56 | `final_status` | VARCHAR(50) | NULLABLE | Final status |
+| 57 | `decline_reason` | TEXT | NULLABLE | Decline reason |
+| 58 | `eligible_reqd` | VARCHAR(50) | NULLABLE | Eligibility required |
+| 59 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 60 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
 
 * **Indexes**:
   * `idx_applications_partner` ON (`partner_id`)
@@ -423,14 +503,17 @@ This document contains the complete database schema definition and data dictiona
 |---|---|---|---|---|
 | 1 | `id` | UUID | PRIMARY KEY | Unique timeline entry |
 | 2 | `application_id` | UUID | FOREIGN KEY → applications(id) ON DELETE CASCADE, NOT NULL | Link to application |
-| 3 | `status` | VARCHAR(50) | NOT NULL | Application status |
-| 4 | `activity` | VARCHAR(255) | NOT NULL | Activity description |
-| 5 | `remarks` | TEXT | NULLABLE | Additional remarks |
-| 6 | `performed_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL, NULLABLE | Action performer |
-| 7 | `performed_at` | TIMESTAMPTZ | DEFAULT NOW() | Action timestamp |
+| 3 | `event_type` | VARCHAR(100) | NULLABLE | Event type |
+| 4 | `title` | VARCHAR(255) | NULLABLE | Event title |
+| 5 | `description` | TEXT | NULLABLE | Event description |
+| 6 | `actor_type` | VARCHAR(50) | DEFAULT 'system' | Actor type |
+| 7 | `actor_id` | UUID | NULLABLE | Actor ID |
+| 8 | `metadata` | JSONB | DEFAULT '{}' | Additional metadata |
+| 9 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
 
 * **Indexes**:
-  * `idx_timeline_app` ON (`application_id`)
+  * `idx_app_timeline_app` ON (`application_id`)
+  * `idx_app_timeline_created` ON (`created_at` ASC)
 
 ---
 
@@ -441,13 +524,22 @@ This document contains the complete database schema definition and data dictiona
 |---|---|---|---|---|
 | 1 | `id` | UUID | PRIMARY KEY | Unique document identifier |
 | 2 | `application_id` | UUID | FOREIGN KEY → applications(id) ON DELETE CASCADE, NOT NULL | Link to application |
-| 3 | `document_type` | VARCHAR(50) | NOT NULL | Document category |
-| 4 | `file_url` | VARCHAR(1000) | NOT NULL | File URL |
-| 5 | `status` | VARCHAR(50) | DEFAULT 'pending' | Document status |
-| 6 | `uploaded_at` | TIMESTAMPTZ | DEFAULT NOW() | Upload timestamp |
+| 3 | `document_type` | VARCHAR(100) | NOT NULL | Document category |
+| 4 | `file_url` | TEXT | NOT NULL | File URL |
+| 5 | `file_name` | VARCHAR(255) | NOT NULL | File name |
+| 6 | `mime_type` | VARCHAR(100) | NOT NULL | MIME type |
+| 7 | `status` | VARCHAR(50) | DEFAULT 'uploaded' | Document status |
+| 8 | `uploaded_by_customer` | BOOLEAN | DEFAULT TRUE | Uploaded by customer |
+| 9 | `uploaded_at` | TIMESTAMPTZ | DEFAULT NOW() | Upload timestamp |
+| 10 | `verified_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Verifier |
+| 11 | `verified_at` | TIMESTAMPTZ | NULLABLE | Verification timestamp |
+| 12 | `rejection_reason` | TEXT | NULLABLE | Rejection reason |
+| 13 | `version` | INT | DEFAULT 1 | Document version |
+| 14 | `is_latest` | BOOLEAN | DEFAULT TRUE | Latest version flag |
 
 * **Indexes**:
-  * `idx_docs_app` ON (`application_id`)
+  * `idx_app_docs_app` ON (`application_id`)
+  * `idx_app_docs_type` ON (`document_type`)
 
 ---
 
@@ -478,7 +570,7 @@ This document contains the complete database schema definition and data dictiona
 | 3 | `mobile` | VARCHAR(15) | NOT NULL, UNIQUE | Customer mobile number |
 | 4 | `email` | VARCHAR(255) | NULLABLE | Customer email |
 | 5 | `dob` | DATE | NULLABLE | Date of birth |
-| 6 | `pan_number` | VARCHAR(12) | NULLABLE | PAN card number |
+| 6 | `pan_number` | VARCHAR(20) | NULLABLE | PAN card number |
 | 7 | `aadhaar_last4` | VARCHAR(4) | NULLABLE | Last 4 digits of Aadhaar |
 | 8 | `city` | VARCHAR(100) | NULLABLE | City of residence |
 | 9 | `state` | VARCHAR(100) | NULLABLE | State of residence |
@@ -486,9 +578,16 @@ This document contains the complete database schema definition and data dictiona
 | 11 | `monthly_income` | DECIMAL(15,2) | NULLABLE | Monthly income |
 | 12 | `employer` | VARCHAR(255) | NULLABLE | Employer name |
 | 13 | `employment_type` | VARCHAR(50) | NULLABLE | salaried, self_employed, business |
-| 14 | `created_by` | UUID | FOREIGN KEY → users(id), NOT NULL | Creator user |
-| 15 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
-| 16 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
+| 14 | `company_name` | VARCHAR(255) | NULLABLE | Company name |
+| 15 | `business_type` | VARCHAR(100) | NULLABLE | Business type |
+| 16 | `gst_number` | VARCHAR(50) | NULLABLE | GST number |
+| 17 | `trade_license_number` | VARCHAR(50) | NULLABLE | Trade license number |
+| 18 | `income` | DECIMAL(15,2) | NULLABLE | Income |
+| 19 | `address` | TEXT | NULLABLE | Address |
+| 20 | `employment` | VARCHAR(100) | NULLABLE | Employment type |
+| 21 | `created_by` | UUID | FOREIGN KEY → users(id), NOT NULL | Creator user |
+| 22 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 23 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
 
 * **Indexes**:
   * `idx_customers_mobile` UNIQUE ON (`mobile`)
@@ -509,11 +608,17 @@ This document contains the complete database schema definition and data dictiona
 | 5 | `mobile` | VARCHAR(15) | NOT NULL | Customer mobile |
 | 6 | `city` | VARCHAR(100) | NULLABLE | Customer city |
 | 7 | `status` | VARCHAR(50) | DEFAULT 'pending' | pending, contacted, converted, rejected |
-| 8 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
-| 9 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
+| 8 | `process_by` | VARCHAR(50) | DEFAULT 'punching' | Process by |
+| 9 | `process_type` | VARCHAR(50) | DEFAULT 'lead_punching' | Process type |
+| 10 | `otp_attempts` | INT | DEFAULT 0 | OTP attempts |
+| 11 | `otp_sent_count` | INT | DEFAULT 1 | OTP sent count |
+| 12 | `last_otp_sent_at` | TIMESTAMPTZ | DEFAULT NOW() | Last OTP sent |
+| 13 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 14 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
 
 * **Indexes**:
   * `idx_leads_partner` ON (`partner_id`)
+  * `idx_active_lead_product_mobile` ON (`product_id`, `mobile`) WHERE `status NOT IN ('rejected', 'cancelled')`
   * `idx_leads_product` ON (`product_id`)
 * **Trigger**: `set_updated_at` BEFORE UPDATE
 
@@ -543,11 +648,26 @@ This document contains the complete database schema definition and data dictiona
 |---|---|---|---|---|
 | 1 | `id` | UUID | PRIMARY KEY | Unique bank identifier |
 | 2 | `name` | VARCHAR(100) | UNIQUE, NOT NULL | Bank name |
-| 3 | `short_code` | VARCHAR(20) | UNIQUE, NOT NULL | Bank short code |
+| 3 | `short_code` | VARCHAR(100) | UNIQUE, NOT NULL | Bank short code |
 | 4 | `logo_url` | VARCHAR(500) | NULLABLE | Bank logo S3 URL |
-| 5 | `status` | VARCHAR(50) | DEFAULT 'Active' | Bank status |
-| 6 | `is_active` | BOOLEAN | DEFAULT TRUE | Active flag |
-| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 5 | `website_url` | VARCHAR(500) | NULLABLE | Bank website URL |
+| 6 | `bank_code` | VARCHAR(50) | NULLABLE | Bank code |
+| 7 | `status` | VARCHAR(50) | DEFAULT 'Active' | Bank status |
+| 8 | `is_active` | BOOLEAN | DEFAULT TRUE | Active flag |
+| 9 | `display_order` | INT | DEFAULT 0 | Display order |
+| 10 | `hero_title` | VARCHAR(255) | NULLABLE | Hero title |
+| 11 | `hero_description` | TEXT | NULLABLE | Hero description |
+| 12 | `theme_color` | VARCHAR(100) | NULLABLE | Theme color |
+| 13 | `banner` | VARCHAR(500) | NULLABLE | Banner URL |
+| 14 | `seo_title` | VARCHAR(255) | NULLABLE | SEO title |
+| 15 | `seo_description` | TEXT | NULLABLE | SEO description |
+| 16 | `secondary_color` | VARCHAR(100) | NULLABLE | Secondary color |
+| 17 | `gradient` | VARCHAR(255) | NULLABLE | Gradient |
+| 18 | `button_color` | VARCHAR(100) | NULLABLE | Button color |
+| 19 | `accent_color` | VARCHAR(100) | NULLABLE | Accent color |
+| 20 | `operation_head_id` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL, NULLABLE | Operation head |
+| 21 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 22 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
 
 ---
 
@@ -562,54 +682,93 @@ This document contains the complete database schema definition and data dictiona
 | 4 | `category` | product_category ENUM | NOT NULL | credit_card, personal_loan, etc. |
 | 5 | `description` | TEXT | NULLABLE | Product description |
 | 6 | `short_description` | VARCHAR(500) | NULLABLE | Short description |
-| 7 | `features` | JSONB | DEFAULT '[]' | Product features |
-| 8 | `eligibility` | JSONB | DEFAULT '{}' | Eligibility criteria |
-| 9 | `eligibility_criteria` | TEXT | NULLABLE | Text eligibility |
-| 10 | `documents_required` | TEXT | NULLABLE | Required documents |
-| 11 | `benefits` | TEXT | NULLABLE | Product benefits |
-| 12 | `fees_charges` | TEXT | NULLABLE | Fees and charges |
-| 13 | `commission_type` | VARCHAR(20) | DEFAULT 'fixed' | fixed, percentage |
-| 14 | `commission_value` | DECIMAL(12,2) | NOT NULL, DEFAULT 0 | Commission amount/rate |
-| 15 | `commission_enabled` | BOOLEAN | DEFAULT TRUE | Commission flag |
-| 16 | `commission_amount` | DECIMAL(12,2) | DEFAULT 0 | Default commission |
-| 17 | `override_percentage` | DECIMAL(5,2) | DEFAULT 0 | Override % |
-| 18 | `min_age` | INT | NULLABLE | Minimum age |
-| 19 | `max_age` | INT | NULLABLE | Maximum age |
-| 20 | `min_income` | DECIMAL(15,2) | NULLABLE | Minimum income |
-| 21 | `interest_rate` | DECIMAL | NULLABLE | Interest rate |
-| 22 | `processing_fee` | VARCHAR | NULLABLE | Processing fee |
-| 23 | `annual_fee` | VARCHAR(255) | NULLABLE | Annual fee |
-| 24 | `time_period` | VARCHAR(255) | NULLABLE | Offer period |
-| 25 | `image_url` | VARCHAR(500) | NULLABLE | Product image |
-| 26 | `logo` | VARCHAR(500) | NULLABLE | Product logo |
-| 27 | `banner` | VARCHAR(500) | NULLABLE | Banner image |
-| 28 | `image` | VARCHAR(500) | NULLABLE | Image |
-| 29 | `banner_url` | VARCHAR(500) | NULLABLE | Banner URL |
-| 30 | `public_url` | VARCHAR(1000) | NULLABLE | Public page URL |
-| 31 | `partner_url` | VARCHAR(1000) | NULLABLE | Partner page URL |
-| 32 | `tracking_enabled` | BOOLEAN | DEFAULT TRUE | Click tracking |
-| 33 | `button_text` | VARCHAR(100) | DEFAULT 'Apply Now' | Button label |
-| 34 | `apply_button_text` | VARCHAR(100) | DEFAULT 'Apply Now' | Apply button text |
-| 35 | `redirect_type` | VARCHAR(20) | DEFAULT 'new_tab' | Redirect behavior |
-| 36 | `utm_source` | VARCHAR(100) | NULLABLE | UTM source |
-| 37 | `utm_medium` | VARCHAR(100) | NULLABLE | UTM medium |
-| 38 | `utm_campaign` | VARCHAR(100) | NULLABLE | UTM campaign |
-| 39 | `featured` | BOOLEAN | DEFAULT FALSE | Featured flag |
-| 40 | `public_visible` | BOOLEAN | DEFAULT TRUE | Public visibility |
-| 41 | `partner_visible` | BOOLEAN | DEFAULT TRUE | Partner visibility |
-| 42 | `seo_title` | VARCHAR(255) | NULLABLE | SEO title |
-| 43 | `seo_description` | VARCHAR(500) | NULLABLE | SEO description |
-| 44 | `seo_keywords` | VARCHAR(500) | NULLABLE | SEO keywords |
-| 45 | `is_active` | BOOLEAN | DEFAULT TRUE | Active flag |
-| 46 | `status` | VARCHAR(50) | DEFAULT 'Active' | Product status |
-| 47 | `display_order` | INT | DEFAULT 0 | Display ordering |
-| 48 | `priority` | INT | DEFAULT 0 | Priority level |
-| 49 | `created_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Creator |
-| 50 | `updated_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Updater |
-| 51 | `last_updated_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Last updater |
-| 52 | `last_updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Last update time |
-| 53 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
-| 54 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
+| 7 | `long_description` | TEXT | NULLABLE | Long description |
+| 8 | `features` | JSONB | DEFAULT '[]' | Product features |
+| 9 | `features_list` | JSONB | DEFAULT '[]' | Features list |
+| 10 | `eligibility` | JSONB | DEFAULT '{}' | Eligibility criteria |
+| 11 | `eligibility_criteria` | TEXT | NULLABLE | Text eligibility |
+| 12 | `documents_required` | TEXT | NULLABLE | Required documents |
+| 13 | `documents_list` | JSONB | DEFAULT '[]' | Documents list |
+| 14 | `benefits` | TEXT | NULLABLE | Product benefits |
+| 15 | `benefits_list` | JSONB | DEFAULT '[]' | Benefits list |
+| 16 | `fees_charges` | TEXT | NULLABLE | Fees and charges |
+| 17 | `commission_type` | VARCHAR(20) | DEFAULT 'fixed' | fixed, percentage |
+| 18 | `commission_value` | DECIMAL(12,2) | NOT NULL, DEFAULT 0 | Commission amount/rate |
+| 19 | `commission_enabled` | BOOLEAN | DEFAULT TRUE | Commission flag |
+| 20 | `commission_amount` | DECIMAL(12,2) | DEFAULT 0 | Default commission |
+| 21 | `override_percentage` | DECIMAL(5,2) | DEFAULT 0 | Override % |
+| 22 | `min_age` | INT | NULLABLE | Minimum age |
+| 23 | `max_age` | INT | NULLABLE | Maximum age |
+| 24 | `min_income` | DECIMAL(15,2) | NULLABLE | Minimum income |
+| 25 | `max_income` | DECIMAL(15,2) | NULLABLE | Maximum income |
+| 26 | `min_cibil_score` | INT | NULLABLE | Minimum CIBIL score |
+| 27 | `max_cibil_score` | INT | NULLABLE | Maximum CIBIL score |
+| 28 | `interest_rate` | DECIMAL | NULLABLE | Interest rate |
+| 29 | `processing_fee` | VARCHAR | NULLABLE | Processing fee |
+| 30 | `gst_applicable` | BOOLEAN | NULLABLE | GST applicable |
+| 31 | `annual_fee` | VARCHAR(255) | NULLABLE | Annual fee |
+| 32 | `time_period` | VARCHAR(255) | NULLABLE | Offer period |
+| 33 | `joining_fee` | VARCHAR(255) | NULLABLE | Joining fee |
+| 34 | `rewards` | TEXT | NULLABLE | Rewards |
+| 35 | `cashback` | TEXT | NULLABLE | Cashback |
+| 36 | `lounge_access` | TEXT | NULLABLE | Lounge access |
+| 37 | `fuel_surcharge` | TEXT | NULLABLE | Fuel surcharge |
+| 38 | `travel_benefits` | TEXT | NULLABLE | Travel benefits |
+| 39 | `company_margin` | DECIMAL(12,2) | DEFAULT 0 | Company margin |
+| 40 | `hold_days` | INT | DEFAULT 7 | Hold days |
+| 41 | `approval_rate` | INT | DEFAULT 0 | Approval rate |
+| 42 | `trending` | BOOLEAN | DEFAULT FALSE | Trending flag |
+| 43 | `internal_notes` | TEXT | NULLABLE | Internal notes |
+| 44 | `key_features` | TEXT | NULLABLE | Key features |
+| 45 | `seo_keywords` | VARCHAR(500) | NULLABLE | SEO keywords |
+| 46 | `faq_items` | JSONB | DEFAULT '[]' | FAQ items |
+| 47 | `schema_markup` | JSONB | DEFAULT '{}' | Schema markup |
+| 48 | `image_url` | VARCHAR(500) | NULLABLE | Product image |
+| 49 | `logo` | VARCHAR(500) | NULLABLE | Product logo |
+| 50 | `banner` | VARCHAR(500) | NULLABLE | Banner image |
+| 51 | `image` | VARCHAR(500) | NULLABLE | Image |
+| 52 | `banner_url` | VARCHAR(500) | NULLABLE | Banner URL |
+| 53 | `card_image_url` | VARCHAR(500) | NULLABLE | Card image URL |
+| 54 | `thumbnail_url` | VARCHAR(500) | NULLABLE | Thumbnail URL |
+| 55 | `slug` | VARCHAR(255) | NULLABLE | URL slug |
+| 56 | `sub_category` | VARCHAR(100) | NULLABLE | Sub category |
+| 57 | `fees_structure` | JSONB | DEFAULT '{}' | Fees structure |
+| 58 | `eligibility_criteria` | JSONB | DEFAULT '{}' | Eligibility criteria JSON |
+| 59 | `commissions_json` | JSONB | DEFAULT '{}' | Commissions JSON |
+| 60 | `compare_specs` | JSONB | DEFAULT '{}' | Compare specs |
+| 61 | `visibility` | JSONB | DEFAULT '{"show_on_website":true,"show_in_partner":true,"is_featured":false,"is_popular":false}' | Visibility settings |
+| 62 | `seo_metadata` | JSONB | DEFAULT '{}' | SEO metadata |
+| 63 | `public_url` | VARCHAR(1000) | NULLABLE | Public page URL |
+| 64 | `partner_url` | VARCHAR(1000) | NULLABLE | Partner page URL |
+| 65 | `application_url` | VARCHAR(1000) | NULLABLE | Application URL |
+| 66 | `apply_url` | VARCHAR(1000) | NULLABLE | Apply URL |
+| 67 | `redirect_url` | VARCHAR(1000) | NULLABLE | Redirect URL |
+| 68 | `partner_share_value` | DECIMAL(12,2) | DEFAULT 0 | Partner share value |
+| 69 | `team_member_share_value` | DECIMAL(12,2) | DEFAULT 0 | Team member share value |
+| 70 | `tracking_enabled` | BOOLEAN | DEFAULT TRUE | Click tracking |
+| 71 | `button_text` | VARCHAR(100) | DEFAULT 'Apply Now' | Button label |
+| 72 | `apply_button_text` | VARCHAR(100) | DEFAULT 'Apply Now' | Apply button text |
+| 73 | `redirect_type` | VARCHAR(20) | DEFAULT 'new_tab' | Redirect behavior |
+| 74 | `utm_source` | VARCHAR(100) | NULLABLE | UTM source |
+| 75 | `utm_medium` | VARCHAR(100) | NULLABLE | UTM medium |
+| 76 | `utm_campaign` | VARCHAR(100) | NULLABLE | UTM campaign |
+| 77 | `featured` | BOOLEAN | DEFAULT FALSE | Featured flag |
+| 78 | `public_visible` | BOOLEAN | DEFAULT TRUE | Public visibility |
+| 79 | `partner_visible` | BOOLEAN | DEFAULT TRUE | Partner visibility |
+| 80 | `seo_title` | VARCHAR(255) | NULLABLE | SEO title |
+| 81 | `seo_description` | VARCHAR(500) | NULLABLE | SEO description |
+| 82 | `seo_keywords` | VARCHAR(500) | NULLABLE | SEO keywords |
+| 83 | `is_active` | BOOLEAN | DEFAULT TRUE | Active flag |
+| 84 | `status` | VARCHAR(50) | DEFAULT 'Active' | Product status |
+| 85 | `display_order` | INT | DEFAULT 0 | Display ordering |
+| 86 | `priority` | INT | DEFAULT 0 | Priority level |
+| 87 | `operation_head_id` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL, NULLABLE | Operation head |
+| 88 | `created_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Creator |
+| 89 | `updated_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Updater |
+| 90 | `last_updated_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Last updater |
+| 91 | `last_updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Last update time |
+| 92 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 93 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
 
 * **Indexes**:
   * `idx_products_bank_name` UNIQUE ON (`bank_id`, `name`)
@@ -668,20 +827,26 @@ This document contains the complete database schema definition and data dictiona
 |---|---|---|---|---|
 | 1 | `id` | UUID | PRIMARY KEY | Unique notification identifier |
 | 2 | `user_id` | UUID | FOREIGN KEY → users(id) ON DELETE CASCADE, NOT NULL | Target user |
-| 3 | `user_role` | VARCHAR(50) | NULLABLE | Target role filter |
-| 4 | `title` | VARCHAR(255) | NOT NULL | Notification title |
-| 5 | `message` | TEXT | NOT NULL | Notification body |
-| 6 | `type` | VARCHAR(50) | DEFAULT 'info' | info, success, warning, alert |
-| 7 | `category` | VARCHAR(50) | DEFAULT 'system' | Notification category |
-| 8 | `priority` | VARCHAR(20) | DEFAULT 'normal' | normal, high, urgent |
-| 9 | `status` | VARCHAR(20) | DEFAULT 'sent' | sent, delivered, read |
-| 10 | `channel` | VARCHAR(50) | DEFAULT 'in-app' | in-app, email, sms |
-| 11 | `is_read` | BOOLEAN | DEFAULT FALSE | Read status |
-| 12 | `read_at` | TIMESTAMPTZ | NULLABLE | Read timestamp |
-| 13 | `link` | VARCHAR(500) | NULLABLE | Action link |
-| 14 | `redirect_url` | VARCHAR(500) | NULLABLE | Redirect URL |
-| 15 | `icon` | VARCHAR(100) | NULLABLE | Notification icon |
-| 16 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation time |
+| 3 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NULLABLE | Target partner |
+| 4 | `user_role` | VARCHAR(50) | NULLABLE | Target role filter |
+| 5 | `title` | VARCHAR(255) | NOT NULL | Notification title |
+| 6 | `message` | TEXT | NOT NULL | Notification body |
+| 7 | `type` | VARCHAR(50) | DEFAULT 'info' | info, success, warning, alert |
+| 8 | `category` | VARCHAR(50) | DEFAULT 'system' | Notification category |
+| 9 | `priority` | VARCHAR(20) | DEFAULT 'normal' | normal, high, urgent |
+| 10 | `status` | VARCHAR(20) | DEFAULT 'sent' | sent, delivered, read |
+| 11 | `channel` | VARCHAR(50) | DEFAULT 'in-app' | in-app, email, sms |
+| 12 | `is_read` | BOOLEAN | DEFAULT FALSE | Read status |
+| 13 | `read_at` | TIMESTAMPTZ | NULLABLE | Read timestamp |
+| 14 | `link` | VARCHAR(500) | NULLABLE | Action link |
+| 15 | `redirect_url` | VARCHAR(500) | NULLABLE | Redirect URL |
+| 16 | `icon` | VARCHAR(100) | NULLABLE | Notification icon |
+| 17 | `action_url` | TEXT | NULLABLE | Action URL |
+| 18 | `reference_type` | VARCHAR(100) | NULLABLE | Reference type |
+| 19 | `reference_id` | UUID | NULLABLE | Reference ID |
+| 20 | `archived_at` | TIMESTAMPTZ | NULLABLE | Archive timestamp |
+| 21 | `expires_at` | TIMESTAMPTZ | NULLABLE | Expiry timestamp |
+| 22 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation time |
 
 * **Indexes**:
   * `idx_notifications_user` ON (`user_id`, `is_read`)
@@ -693,17 +858,17 @@ This document contains the complete database schema definition and data dictiona
 
 | # | Column Name | Data Type | Constraints | Description |
 |---|---|---|---|---|
-| 1 | `id` | UUID | PRIMARY KEY | Unique preference identifier |
-| 2 | `user_id` | UUID | FOREIGN KEY → users(id) ON DELETE CASCADE, UNIQUE, NOT NULL | Target user |
-| 3 | `email_enabled` | BOOLEAN | DEFAULT TRUE | Email notifications |
-| 4 | `sms_enabled` | BOOLEAN | DEFAULT TRUE | SMS notifications |
-| 5 | `app_enabled` | BOOLEAN | DEFAULT TRUE | In-app notifications |
-| 6 | `marketing_enabled` | BOOLEAN | DEFAULT TRUE | Marketing emails |
-| 7 | `commission_enabled` | BOOLEAN | DEFAULT TRUE | Commission alerts |
-| 8 | `kyc_enabled` | BOOLEAN | DEFAULT TRUE | KYC status alerts |
-| 9 | `application_enabled` | BOOLEAN | DEFAULT TRUE | Application updates |
-| 10 | `language` | VARCHAR(10) | DEFAULT 'en' | Preferred language |
-| 11 | `frequency` | VARCHAR(20) | DEFAULT 'instant' | instant, daily, weekly |
+| 1 | `user_id` | UUID | PRIMARY KEY, FOREIGN KEY → users(id) ON DELETE CASCADE | Target user |
+| 2 | `email_enabled` | BOOLEAN | DEFAULT TRUE | Email notifications |
+| 3 | `sms_enabled` | BOOLEAN | DEFAULT TRUE | SMS notifications |
+| 4 | `browser_enabled` | BOOLEAN | DEFAULT TRUE | Browser notifications |
+| 5 | `push_enabled` | BOOLEAN | DEFAULT TRUE | Push notifications |
+| 6 | `wallet_notifications` | BOOLEAN | DEFAULT TRUE | Wallet alerts |
+| 7 | `commission_notifications` | BOOLEAN | DEFAULT TRUE | Commission alerts |
+| 8 | `application_notifications` | BOOLEAN | DEFAULT TRUE | Application updates |
+| 9 | `marketing_notifications` | BOOLEAN | DEFAULT TRUE | Marketing emails |
+| 10 | `system_notifications` | BOOLEAN | DEFAULT TRUE | System alerts |
+| 11 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
 
 ---
 
@@ -801,14 +966,20 @@ This document contains the complete database schema definition and data dictiona
 |---|---|---|---|---|
 | 1 | `id` | UUID | PRIMARY KEY | Unique audit identifier |
 | 2 | `user_id` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL, NULLABLE | Action performer |
-| 3 | `action` | VARCHAR(100) | NOT NULL | Action name |
-| 4 | `target_id` | UUID | NULLABLE | Target entity ID |
-| 5 | `details` | JSONB | NULLABLE | Action details |
-| 6 | `role` | VARCHAR(50) | NULLABLE | Performer role |
-| 7 | `ip_address` | VARCHAR(45) | NULLABLE | IP address |
-| 8 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation time |
+| 3 | `role` | VARCHAR(50) | NULLABLE | Performer role |
+| 4 | `module` | VARCHAR(100) | NOT NULL | Module name |
+| 5 | `action` | VARCHAR(100) | NOT NULL | Action name |
+| 6 | `old_data` | JSONB | NULLABLE | Previous data |
+| 7 | `new_data` | JSONB | NULLABLE | New data |
+| 8 | `ip` | VARCHAR(45) | NULLABLE | IP address |
+| 9 | `device` | VARCHAR(100) | NULLABLE | Device info |
+| 10 | `browser` | VARCHAR(100) | NULLABLE | Browser info |
+| 11 | `user_agent` | VARCHAR(500) | NULLABLE | User agent |
+| 12 | `request_details` | JSONB | NULLABLE | Request details |
+| 13 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation time |
 
 * **Indexes**:
+  * `idx_audit_logs_user` ON (`user_id`)
   * `idx_audit_logs_created_at` ON (`created_at` DESC)
 
 ---
@@ -828,6 +999,7 @@ This document contains the complete database schema definition and data dictiona
 * **Indexes**:
   * `idx_team_rels_parent` ON (`parent_partner_id`)
   * `idx_team_rels_child` ON (`child_partner_id`)
+  * `idx_team_rels_parent_level` ON (`parent_partner_id`, `level`)
 
 ---
 
@@ -960,7 +1132,11 @@ This document contains the complete database schema definition and data dictiona
 | # | Column Name | Data Type | Constraints | Description |
 |---|---|---|---|---|
 | 1 | `key` | VARCHAR(100) | PRIMARY KEY | Setting key |
-| 2 | `value` | VARCHAR(255) | NOT NULL | Setting value |
+| 2 | `value` | TEXT | NOT NULL | Setting value |
+| 3 | `value_type` | VARCHAR(50) | NULLABLE | Value type |
+| 4 | `description` | TEXT | NULLABLE | Setting description |
+| 5 | `last_updated_by` | UUID | FOREIGN KEY → users(id), NULLABLE | Last updater |
+| 6 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
 
 ---
 
@@ -1137,20 +1313,1190 @@ This document contains the complete database schema definition and data dictiona
 
 ---
 
+## TABLE 54: `report_cache`
+**Feature**: 📊 Analytics
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique cache identifier |
+| 2 | `report_key` | VARCHAR(255) | UNIQUE, NOT NULL | Report cache key |
+| 3 | `report_data` | JSONB | NOT NULL | Cached report data |
+| 4 | `generated_at` | TIMESTAMPTZ | DEFAULT NOW() | Generation timestamp |
+| 5 | `expires_at` | TIMESTAMPTZ | NULLABLE | Expiry timestamp |
+
+---
+
+## TABLE 55: `report_exports`
+**Feature**: 📊 Analytics
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique export identifier |
+| 2 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE | Partner |
+| 3 | `report_type` | VARCHAR(100) | NOT NULL | Report type |
+| 4 | `format` | VARCHAR(20) | NOT NULL | Export format |
+| 5 | `file_name` | VARCHAR(255) | NOT NULL | File name |
+| 6 | `storage_path` | TEXT | NULLABLE | Storage path |
+| 7 | `generated_at` | TIMESTAMPTZ | DEFAULT NOW() | Generation timestamp |
+| 8 | `downloaded_at` | TIMESTAMPTZ | NULLABLE | Download timestamp |
+| 9 | `status` | VARCHAR(20) | DEFAULT 'completed' | Export status |
+
+* **Indexes**: `idx_report_exports_partner` ON (`partner_id`)
+
+---
+
+## TABLE 56: `scheduled_reports`
+**Feature**: 📊 Analytics
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique schedule identifier |
+| 2 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE | Partner |
+| 3 | `report_type` | VARCHAR(100) | NOT NULL | Report type |
+| 4 | `frequency` | VARCHAR(20) | DEFAULT 'monthly' | Report frequency |
+| 5 | `recipient_email` | VARCHAR(255) | NOT NULL | Recipient email |
+| 6 | `next_run` | TIMESTAMPTZ | NULLABLE | Next run time |
+| 7 | `last_run` | TIMESTAMPTZ | NULLABLE | Last run time |
+| 8 | `status` | VARCHAR(20) | DEFAULT 'active' | Schedule status |
+| 9 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_sched_reports_partner` ON (`partner_id`)
+
+---
+
+## TABLE 57: `activity_logs`
+**Feature**: 📊 Analytics
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique log identifier |
+| 2 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Partner |
+| 3 | `activity_type` | VARCHAR(100) | NOT NULL | Activity type |
+| 4 | `module` | VARCHAR(100) | DEFAULT 'system' | Module name |
+| 5 | `title` | VARCHAR(255) | NOT NULL | Activity title |
+| 6 | `description` | TEXT | NULLABLE | Activity description |
+| 7 | `reference_id` | UUID | NULLABLE | Reference ID |
+| 8 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 9 | `performed_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Performer |
+
+* **Indexes**: `idx_act_logs_partner` ON (`partner_id`)
+
+---
+
+## TABLE 58: `broadcast_notifications`
+**Feature**: 🔔 Notifications
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique broadcast identifier |
+| 2 | `title` | VARCHAR(255) | NOT NULL | Broadcast title |
+| 3 | `message` | TEXT | NOT NULL | Broadcast message |
+| 4 | `target` | VARCHAR(50) | DEFAULT 'all' | Target audience |
+| 5 | `priority` | VARCHAR(20) | DEFAULT 'information' | Priority level |
+| 6 | `scheduled_at` | TIMESTAMPTZ | NULLABLE | Schedule time |
+| 7 | `expires_at` | TIMESTAMPTZ | NULLABLE | Expiry time |
+| 8 | `status` | VARCHAR(20) | DEFAULT 'active' | Broadcast status |
+| 9 | `created_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Creator |
+| 10 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+---
+
+## TABLE 59: `login_activity`
+**Feature**: 🔐 Authentication
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique login identifier |
+| 2 | `user_id` | UUID | FOREIGN KEY → users(id) ON DELETE CASCADE, NOT NULL | User |
+| 3 | `ip_address` | VARCHAR(45) | NULLABLE | IP address |
+| 4 | `device` | VARCHAR(100) | NULLABLE | Device info |
+| 5 | `browser` | VARCHAR(100) | NULLABLE | Browser info |
+| 6 | `location` | VARCHAR(100) | NULLABLE | Location |
+| 7 | `status` | VARCHAR(20) | DEFAULT 'success' | Login status |
+| 8 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_login_act_user` ON (`user_id`)
+
+---
+
+## TABLE 60: `referral_campaigns`
+**Feature**: 💼 Partner Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique campaign identifier |
+| 2 | `campaign_name` | VARCHAR(255) | NOT NULL | Campaign name |
+| 3 | `campaign_code` | VARCHAR(100) | UNIQUE, NOT NULL | Campaign code |
+| 4 | `description` | TEXT | NULLABLE | Campaign description |
+| 5 | `start_date` | TIMESTAMPTZ | NULLABLE | Start date |
+| 6 | `end_date` | TIMESTAMPTZ | NULLABLE | End date |
+| 7 | `status` | VARCHAR(50) | DEFAULT 'ACTIVE' | Campaign status |
+| 8 | `target` | INT | DEFAULT 0 | Target count |
+| 9 | `bonus_type` | VARCHAR(50) | NULLABLE | Bonus type |
+| 10 | `bonus_amount` | DECIMAL(15,2) | DEFAULT 0.00 | Bonus amount |
+| 11 | `created_by` | UUID | FOREIGN KEY → users(id) | Creator |
+| 12 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 13 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
+
+---
+
+## TABLE 61: `registration_logs`
+**Feature**: 🔐 Authentication
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique log identifier |
+| 2 | `email` | VARCHAR(255) | NULLABLE | Email address |
+| 3 | `mobile` | VARCHAR(15) | NULLABLE | Mobile number |
+| 4 | `referral_code` | VARCHAR(50) | NULLABLE | Referral code |
+| 5 | `parent_partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE SET NULL | Parent partner |
+| 6 | `status` | VARCHAR(50) | NULLABLE | Registration status |
+| 7 | `failure_reason` | TEXT | NULLABLE | Failure reason |
+| 8 | `ip_address` | VARCHAR(45) | NULLABLE | IP address |
+| 9 | `device` | VARCHAR(255) | NULLABLE | Device info |
+| 10 | `browser` | VARCHAR(255) | NULLABLE | Browser info |
+| 11 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+---
+
+## TABLE 62: `invitation_history`
+**Feature**: 💼 Partner Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique invitation identifier |
+| 2 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE | Partner |
+| 3 | `invite_type` | VARCHAR(50) | NULLABLE | Invitation type |
+| 4 | `recipient_name` | VARCHAR(255) | NULLABLE | Recipient name |
+| 5 | `recipient_email` | VARCHAR(255) | NULLABLE | Recipient email |
+| 6 | `recipient_mobile` | VARCHAR(15) | NULLABLE | Recipient mobile |
+| 7 | `referral_code` | VARCHAR(50) | NULLABLE | Referral code |
+| 8 | `status` | VARCHAR(50) | DEFAULT 'PENDING' | Invitation status |
+| 9 | `sent_at` | TIMESTAMPTZ | DEFAULT NOW() | Sent timestamp |
+| 10 | `opened_at` | TIMESTAMPTZ | NULLABLE | Opened timestamp |
+| 11 | `registered_at` | TIMESTAMPTZ | NULLABLE | Registered timestamp |
+| 12 | `expired_at` | TIMESTAMPTZ | NULLABLE | Expiry timestamp |
+
+---
+
+## TABLE 63: `blacklist`
+**Feature**: 🔐 Authentication
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique entry identifier |
+| 2 | `type` | VARCHAR(50) | NULLABLE | Blacklist type |
+| 3 | `value` | VARCHAR(255) | UNIQUE, NOT NULL | Blacklisted value |
+| 4 | `reason` | TEXT | NULLABLE | Blacklist reason |
+| 5 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+---
+
+## TABLE 64: `product_features`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique feature identifier |
+| 2 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 3 | `title` | VARCHAR(255) | NOT NULL | Feature title |
+| 4 | `description` | TEXT | NULLABLE | Feature description |
+| 5 | `icon` | VARCHAR(100) | NULLABLE | Feature icon |
+| 6 | `display_order` | INT | DEFAULT 0 | Display order |
+| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_prod_features_product` ON (`product_id`)
+
+---
+
+## TABLE 65: `product_documents`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique document identifier |
+| 2 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 3 | `title` | VARCHAR(255) | NOT NULL | Document title |
+| 4 | `document_type` | VARCHAR(50) | DEFAULT 'brochure' | Document type |
+| 5 | `file_url` | VARCHAR(500) | NOT NULL | File URL |
+| 6 | `file_size` | INT | NULLABLE | File size |
+| 7 | `display_order` | INT | DEFAULT 0 | Display order |
+| 8 | `is_active` | BOOLEAN | DEFAULT TRUE | Active flag |
+| 9 | `uploaded_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Uploader |
+| 10 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_prod_docs_product` ON (`product_id`)
+
+---
+
+## TABLE 66: `product_faq`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique FAQ identifier |
+| 2 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 3 | `question` | TEXT | NOT NULL | FAQ question |
+| 4 | `answer` | TEXT | NOT NULL | FAQ answer |
+| 5 | `display_order` | INT | DEFAULT 0 | Display order |
+| 6 | `is_active` | BOOLEAN | DEFAULT TRUE | Active flag |
+| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 8 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
+
+* **Indexes**: `idx_prod_faq_product` ON (`product_id`)
+
+---
+
+## TABLE 67: `product_videos`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique video identifier |
+| 2 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 3 | `title` | VARCHAR(255) | NOT NULL | Video title |
+| 4 | `youtube_url` | VARCHAR(500) | NULLABLE | YouTube URL |
+| 5 | `video_url` | VARCHAR(500) | NULLABLE | Video URL |
+| 6 | `thumbnail_url` | VARCHAR(500) | NULLABLE | Thumbnail URL |
+| 7 | `duration` | VARCHAR(20) | NULLABLE | Video duration |
+| 8 | `display_order` | INT | DEFAULT 0 | Display order |
+| 9 | `is_active` | BOOLEAN | DEFAULT TRUE | Active flag |
+| 10 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_prod_videos_product` ON (`product_id`)
+
+---
+
+## TABLE 68: `product_offers`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique offer identifier |
+| 2 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 3 | `title` | VARCHAR(255) | NOT NULL | Offer title |
+| 4 | `description` | TEXT | NULLABLE | Offer description |
+| 5 | `offer_type` | VARCHAR(50) | DEFAULT 'discount' | Offer type |
+| 6 | `discount_value` | DECIMAL(12,2) | DEFAULT 0 | Discount value |
+| 7 | `start_date` | TIMESTAMPTZ | NOT NULL DEFAULT NOW() | Start date |
+| 8 | `end_date` | TIMESTAMPTZ | NOT NULL | End date |
+| 9 | `badge_text` | VARCHAR(100) | NULLABLE | Badge text |
+| 10 | `banner_url` | VARCHAR(500) | NULLABLE | Banner URL |
+| 11 | `is_active` | BOOLEAN | DEFAULT TRUE | Active flag |
+| 12 | `created_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Creator |
+| 13 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 14 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
+
+* **Indexes**: `idx_prod_offers_product` ON (`product_id`), `idx_prod_offers_active` ON (`is_active`, `start_date`, `end_date`)
+
+---
+
+## TABLE 69: `product_ratings`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique rating identifier |
+| 2 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 3 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Partner |
+| 4 | `rating` | INT | NOT NULL, CHECK (rating >= 1 AND rating <= 5) | Rating (1-5) |
+| 5 | `feedback` | TEXT | NULLABLE | Feedback text |
+| 6 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Constraints**: `UNIQUE(product_id, partner_id)`
+* **Indexes**: `idx_prod_ratings_product` ON (`product_id`)
+
+---
+
+## TABLE 70: `product_share_logs`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique share log identifier |
+| 2 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 3 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Partner |
+| 4 | `share_method` | VARCHAR(50) | NOT NULL | Share method |
+| 5 | `customer_contact` | VARCHAR(255) | NULLABLE | Customer contact |
+| 6 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_prod_share_partner` ON (`partner_id`)
+
+---
+
+## TABLE 71: `partner_saved_products`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique bookmark identifier |
+| 2 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Partner |
+| 3 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 4 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Constraints**: `UNIQUE(partner_id, product_id)`
+* **Indexes**: `idx_saved_partner` ON (`partner_id`)
+
+---
+
+## TABLE 72: `partner_recent_products`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique recent view identifier |
+| 2 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Partner |
+| 3 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 4 | `last_viewed_at` | TIMESTAMPTZ | DEFAULT NOW() | Last viewed timestamp |
+
+* **Constraints**: `UNIQUE(partner_id, product_id)`
+* **Indexes**: `idx_recent_partner` ON (`partner_id`)
+
+---
+
+## TABLE 73: `product_views`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique view identifier |
+| 2 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 3 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE SET NULL | Partner |
+| 4 | `viewer_ip` | VARCHAR(45) | NULLABLE | Viewer IP |
+| 5 | `user_agent` | TEXT | NULLABLE | User agent |
+| 6 | `viewed_at` | TIMESTAMPTZ | DEFAULT NOW() | Viewed timestamp |
+
+* **Indexes**: `idx_prod_views_product` ON (`product_id`), `idx_prod_views_date` ON (`viewed_at`)
+
+---
+
+## TABLE 74: `partner_preferences`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique preference identifier |
+| 2 | `partner_id` | UUID | UNIQUE, FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE | Partner |
+| 3 | `preferred_categories` | JSONB | DEFAULT '[]' | Preferred categories |
+| 4 | `preferred_banks` | JSONB | DEFAULT '[]' | Preferred banks |
+| 5 | `preferred_commission_type` | VARCHAR(20) | NULLABLE | Preferred commission type |
+| 6 | `min_commission` | DECIMAL(12,2) | DEFAULT 0 | Minimum commission |
+| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 8 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
+
+---
+
+## TABLE 75: `customer_access_tokens`
+**Feature**: 📋 CRM
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique token identifier |
+| 2 | `application_id` | UUID | FOREIGN KEY → applications(id) ON DELETE CASCADE, NOT NULL | Application |
+| 3 | `customer_id` | UUID | FOREIGN KEY → customers(id) ON DELETE CASCADE | Customer |
+| 4 | `token` | VARCHAR(255) | UNIQUE, NOT NULL | Access token |
+| 5 | `expires_at` | TIMESTAMPTZ | NOT NULL | Expiry timestamp |
+| 6 | `is_used` | BOOLEAN | DEFAULT FALSE | Used flag |
+| 7 | `token_type` | VARCHAR(50) | DEFAULT 'general' | Token type |
+| 8 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_cat_token` ON (`token`), `idx_cat_app` ON (`application_id`)
+
+---
+
+## TABLE 76: `physical_application_details`
+**Feature**: 📋 CRM
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique detail identifier |
+| 2 | `application_id` | UUID | UNIQUE, FOREIGN KEY → applications(id) ON DELETE CASCADE, NOT NULL | Application |
+| 3 | `aadhaar_linked_mobile` | VARCHAR(20) | NULLABLE | Aadhaar linked mobile |
+| 4 | `pan_name` | VARCHAR(255) | NULLABLE | PAN name |
+| 5 | `dob` | VARCHAR(50) | NULLABLE | Date of birth |
+| 6 | `pan_number` | VARCHAR(20) | NULLABLE | PAN number |
+| 7 | `mother_name` | VARCHAR(255) | NULLABLE | Mother name |
+| 8 | `personal_email` | VARCHAR(255) | NULLABLE | Personal email |
+| 9 | `company_name` | VARCHAR(255) | NULLABLE | Company name |
+| 10 | `designation` | VARCHAR(255) | NULLABLE | Designation |
+| 11 | `flat_no` | VARCHAR(255) | NULLABLE | Flat number |
+| 12 | `sub_area` | VARCHAR(255) | NULLABLE | Sub area |
+| 13 | `landmark` | VARCHAR(255) | NULLABLE | Landmark |
+| 14 | `pincode` | VARCHAR(20) | NULLABLE | Pincode |
+| 15 | `company_address` | TEXT | NULLABLE | Company address |
+| 16 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 17 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
+
+* **Indexes**: `idx_pad_app` ON (`application_id`)
+
+---
+
+## TABLE 77: `loan_applications`
+**Feature**: 📋 CRM
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique loan application identifier |
+| 2 | `loan_type_slug` | VARCHAR(100) | NOT NULL | Loan type slug |
+| 3 | `customer_name` | VARCHAR(255) | NOT NULL | Customer name |
+| 4 | `mobile` | VARCHAR(15) | NOT NULL | Customer mobile |
+| 5 | `email` | VARCHAR(255) | NULLABLE | Customer email |
+| 6 | `loan_amount` | NUMERIC(15,2) | NULLABLE | Loan amount |
+| 7 | `tenure_months` | INT | NULLABLE | Tenure in months |
+| 8 | `interest_rate` | NUMERIC(5,2) | NULLABLE | Interest rate |
+| 9 | `monthly_income` | NUMERIC(15,2) | NULLABLE | Monthly income |
+| 10 | `employer_name` | VARCHAR(255) | NULLABLE | Employer name |
+| 11 | `pincode` | VARCHAR(10) | NULLABLE | Pincode |
+| 12 | `city` | VARCHAR(100) | NULLABLE | City |
+| 13 | `state` | VARCHAR(100) | NULLABLE | State |
+| 14 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) | Partner |
+| 15 | `status` | VARCHAR(50) | DEFAULT 'submitted' | Application status |
+| 16 | `remarks` | TEXT | NULLABLE | Remarks |
+| 17 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 18 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
+
+* **Indexes**: `idx_loan_app_type` ON (`loan_type_slug`), `idx_loan_app_status` ON (`status`)
+
+---
+
+## TABLE 78: `insurance_applications`
+**Feature**: 📋 CRM
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique insurance application identifier |
+| 2 | `insurance_type_slug` | VARCHAR(100) | NOT NULL | Insurance type slug |
+| 3 | `customer_name` | VARCHAR(255) | NOT NULL | Customer name |
+| 4 | `mobile` | VARCHAR(15) | NOT NULL | Customer mobile |
+| 5 | `email` | VARCHAR(255) | NULLABLE | Customer email |
+| 6 | `policy_type` | VARCHAR(100) | NULLABLE | Policy type |
+| 7 | `sum_insured` | NUMERIC(15,2) | NULLABLE | Sum insured |
+| 8 | `premium_amount` | NUMERIC(15,2) | NULLABLE | Premium amount |
+| 9 | `pincode` | VARCHAR(10) | NULLABLE | Pincode |
+| 10 | `city` | VARCHAR(100) | NULLABLE | City |
+| 11 | `state` | VARCHAR(100) | NULLABLE | State |
+| 12 | `nominee_name` | VARCHAR(255) | NULLABLE | Nominee name |
+| 13 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) | Partner |
+| 14 | `status` | VARCHAR(50) | DEFAULT 'submitted' | Application status |
+| 15 | `remarks` | TEXT | NULLABLE | Remarks |
+| 16 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 17 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
+
+* **Indexes**: `idx_ins_app_type` ON (`insurance_type_slug`), `idx_ins_app_status` ON (`status`)
+
+---
+
+## TABLE 79: `bank_card_applications`
+**Feature**: 📋 CRM
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique bank card application identifier |
+| 2 | `application_no` | VARCHAR(30) | UNIQUE, NOT NULL | Application number |
+| 3 | `bank_id` | UUID | FOREIGN KEY → banks(id), NOT NULL | Bank |
+| 4 | `customer_id` | UUID | FOREIGN KEY → customers(id) | Customer |
+| 5 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) | Partner |
+| 6 | `credit_card_category` | VARCHAR(100) | NULLABLE | Card category |
+| 7 | `customer_name` | VARCHAR(255) | NOT NULL | Customer name |
+| 8 | `customer_mobile` | VARCHAR(15) | NOT NULL | Customer mobile |
+| 9 | `pan_number` | VARCHAR(10) | NOT NULL | PAN number |
+| 10 | `resident_pincode` | VARCHAR(10) | NULLABLE | Resident pincode |
+| 11 | `process_by` | UUID | FOREIGN KEY → users(id) | Processor |
+| 12 | `pan_check_comments` | TEXT | NULLABLE | PAN check comments |
+| 13 | `qd_executive_name` | VARCHAR(255) | NULLABLE | QD executive name |
+| 14 | `resident_pin_comments` | TEXT | NULLABLE | PIN comments |
+| 15 | `next_qd_date` | DATE | NULLABLE | Next QD date |
+| 16 | `dob` | DATE | NULLABLE | Date of birth |
+| 17 | `mother_name` | VARCHAR(255) | NULLABLE | Mother name |
+| 18 | `residence_address` | TEXT | NULLABLE | Residence address |
+| 19 | `company_name` | VARCHAR(255) | NULLABLE | Company name |
+| 20 | `designation` | VARCHAR(255) | NULLABLE | Designation |
+| 21 | `email` | VARCHAR(255) | NULLABLE | Email |
+| 22 | `official_email` | VARCHAR(255) | NULLABLE | Official email |
+| 23 | `gross_monthly_income` | DECIMAL(12,2) | NULLABLE | Monthly income |
+| 24 | `pan_check_executive_name` | VARCHAR(255) | NULLABLE | PAN check executive |
+| 25 | `app_code_status` | VARCHAR(50) | NULLABLE | App code status |
+| 26 | `qd_status` | VARCHAR(50) | NULLABLE | QD status |
+| 27 | `surrogate` | VARCHAR(100) | NULLABLE | Surrogate |
+| 28 | `income_status` | VARCHAR(50) | NULLABLE | Income status |
+| 29 | `blaze_status` | VARCHAR(50) | NULLABLE | Blaze status |
+| 30 | `telco_stage` | VARCHAR(50) | NULLABLE | Telco stage |
+| 31 | `official_mail_status` | VARCHAR(50) | NULLABLE | Official mail status |
+| 32 | `vkyc_status` | VARCHAR(50) | NULLABLE | VKYC status |
+| 33 | `dispatch_stage` | VARCHAR(50) | NULLABLE | Dispatch stage |
+| 34 | `final_stage` | VARCHAR(50) | DEFAULT 'Customer Details' | Final stage |
+| 35 | `decline_description` | TEXT | NULLABLE | Decline description |
+| 36 | `decline_code` | VARCHAR(50) | NULLABLE | Decline code |
+| 37 | `curable_solved` | VARCHAR(50) | NULLABLE | Curable solved |
+| 38 | `curable_executive` | VARCHAR(255) | NULLABLE | Curable executive |
+| 39 | `other_comments` | TEXT | NULLABLE | Other comments |
+| 40 | `not_interested_comment` | TEXT | NULLABLE | Not interested comment |
+| 41 | `kyc_pending_comment` | TEXT | NULLABLE | KYC pending comment |
+| 42 | `created_by` | UUID | FOREIGN KEY → users(id) | Creator |
+| 43 | `updated_by` | UUID | FOREIGN KEY → users(id) | Updater |
+| 44 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 45 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
+
+* **Indexes**: `idx_bcca_bank` ON (`bank_id`), `idx_bcca_status` ON (`final_stage`), `idx_bcca_pan` ON (`pan_number`)
+
+---
+
+## TABLE 80: `bank_card_application_timeline`
+**Feature**: 📋 CRM
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique timeline identifier |
+| 2 | `application_id` | UUID | FOREIGN KEY → bank_card_applications(id) ON DELETE CASCADE, NOT NULL | Application |
+| 3 | `stage` | VARCHAR(50) | NOT NULL | Stage |
+| 4 | `note` | TEXT | NULLABLE | Note |
+| 5 | `changed_by` | UUID | FOREIGN KEY → users(id) | Changed by |
+| 6 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_bcat_app` ON (`application_id`)
+
+---
+
+## TABLE 81: `sbi_credit_card_applications`
+**Feature**: 📋 CRM
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique SBI application identifier |
+| 2 | `application_no` | VARCHAR(30) | UNIQUE, NOT NULL | Application number |
+| 3 | `customer_id` | UUID | FOREIGN KEY → customers(id) | Customer |
+| 4 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) | Partner |
+| 5 | `credit_card_category` | VARCHAR(100) | NULLABLE | Card category |
+| 6 | `customer_name` | VARCHAR(255) | NOT NULL | Customer name |
+| 7 | `customer_mobile` | VARCHAR(15) | NOT NULL | Customer mobile |
+| 8 | `pan_number` | VARCHAR(10) | NOT NULL | PAN number |
+| 9 | `resident_pincode` | VARCHAR(10) | NULLABLE | Resident pincode |
+| 10 | `process_by` | UUID | FOREIGN KEY → users(id) | Processor |
+| 11 | `pan_check_comments` | TEXT | NULLABLE | PAN check comments |
+| 12 | `qd_executive_name` | VARCHAR(255) | NULLABLE | QD executive name |
+| 13 | `resident_pin_comments` | TEXT | NULLABLE | PIN comments |
+| 14 | `next_qd_date` | DATE | NULLABLE | Next QD date |
+| 15 | `dob` | DATE | NULLABLE | Date of birth |
+| 16 | `mother_name` | VARCHAR(255) | NULLABLE | Mother name |
+| 17 | `residence_address` | TEXT | NULLABLE | Residence address |
+| 18 | `company_name` | VARCHAR(255) | NULLABLE | Company name |
+| 19 | `designation` | VARCHAR(255) | NULLABLE | Designation |
+| 20 | `email` | VARCHAR(255) | NULLABLE | Email |
+| 21 | `official_email` | VARCHAR(255) | NULLABLE | Official email |
+| 22 | `gross_monthly_income` | DECIMAL(12,2) | NULLABLE | Monthly income |
+| 23 | `resident_pin_comment` | TEXT | NULLABLE | PIN comment |
+| 24 | `pan_check_executive` | VARCHAR(255) | NULLABLE | PAN check executive |
+| 25 | `application_code_status` | VARCHAR(50) | NULLABLE | App code status |
+| 26 | `qd_status` | VARCHAR(50) | NULLABLE | QD status |
+| 27 | `surrogate` | VARCHAR(100) | NULLABLE | Surrogate |
+| 28 | `income_status` | VARCHAR(50) | NULLABLE | Income status |
+| 29 | `blaze_status` | VARCHAR(50) | NULLABLE | Blaze status |
+| 30 | `telco_stage` | VARCHAR(50) | NULLABLE | Telco stage |
+| 31 | `official_mail_status` | VARCHAR(50) | NULLABLE | Official mail status |
+| 32 | `vkyc_status` | VARCHAR(50) | NULLABLE | VKYC status |
+| 33 | `dispatch_stage` | VARCHAR(50) | NULLABLE | Dispatch stage |
+| 34 | `final_stage` | VARCHAR(50) | DEFAULT 'Customer Details' | Final stage |
+| 35 | `decline_description` | TEXT | NULLABLE | Decline description |
+| 36 | `decline_code` | VARCHAR(50) | NULLABLE | Decline code |
+| 37 | `curable_solved` | VARCHAR(50) | NULLABLE | Curable solved |
+| 38 | `curable_executive` | VARCHAR(255) | NULLABLE | Curable executive |
+| 39 | `other_comments` | TEXT | NULLABLE | Other comments |
+| 40 | `created_by` | UUID | FOREIGN KEY → users(id) | Creator |
+| 41 | `updated_by` | UUID | FOREIGN KEY → users(id) | Updater |
+| 42 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 43 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
+
+* **Indexes**: `idx_sbi_cca_pan` ON (`pan_number`), `idx_sbi_cca_status` ON (`final_stage`)
+
+---
+
+## TABLE 82: `sbi_cc_application_timeline`
+**Feature**: 📋 CRM
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique timeline identifier |
+| 2 | `application_id` | UUID | FOREIGN KEY → sbi_credit_card_applications(id) ON DELETE CASCADE, NOT NULL | Application |
+| 3 | `stage` | VARCHAR(50) | NOT NULL | Stage |
+| 4 | `activity` | VARCHAR(100) | NULLABLE | Activity |
+| 5 | `note` | TEXT | NULLABLE | Note |
+| 6 | `changed_by` | UUID | FOREIGN KEY → users(id) | Changed by |
+| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_sbi_ccat_app` ON (`application_id`)
+
+---
+
+## TABLE 83: `customer_notes`
+**Feature**: 📋 Customer 360 Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique note identifier |
+| 2 | `customer_id` | UUID | FOREIGN KEY → customers(id) ON DELETE CASCADE, NOT NULL | Customer |
+| 3 | `created_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Creator |
+| 4 | `note` | TEXT | NOT NULL | Note content |
+| 5 | `visibility` | VARCHAR(20) | DEFAULT 'public' | Visibility |
+| 6 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_customer_notes_customer` ON (`customer_id`)
+
+---
+
+## TABLE 84: `customer_documents`
+**Feature**: 📋 Customer 360 Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique document identifier |
+| 2 | `customer_id` | UUID | FOREIGN KEY → customers(id) ON DELETE CASCADE, NOT NULL | Customer |
+| 3 | `document_type` | VARCHAR(100) | NOT NULL | Document type |
+| 4 | `file_url` | TEXT | NOT NULL | File URL |
+| 5 | `file_name` | VARCHAR(255) | NOT NULL | File name |
+| 6 | `mime_type` | VARCHAR(100) | NOT NULL | MIME type |
+| 7 | `status` | VARCHAR(50) | DEFAULT 'uploaded' | Status |
+| 8 | `uploaded_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Uploader |
+| 9 | `uploaded_at` | TIMESTAMPTZ | DEFAULT NOW() | Upload timestamp |
+| 10 | `verified_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Verifier |
+| 11 | `verified_at` | TIMESTAMPTZ | NULLABLE | Verification timestamp |
+
+* **Indexes**: `idx_customer_docs_customer` ON (`customer_id`)
+
+---
+
+## TABLE 85: `customer_timeline`
+**Feature**: 📋 Customer 360 Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique timeline identifier |
+| 2 | `customer_id` | UUID | FOREIGN KEY → customers(id) ON DELETE CASCADE, NOT NULL | Customer |
+| 3 | `event_type` | VARCHAR(100) | NOT NULL | Event type |
+| 4 | `title` | VARCHAR(255) | NOT NULL | Event title |
+| 5 | `description` | TEXT | NULLABLE | Event description |
+| 6 | `actor_type` | VARCHAR(50) | DEFAULT 'system' | Actor type |
+| 7 | `actor_id` | UUID | NULLABLE | Actor ID |
+| 8 | `metadata` | JSONB | DEFAULT '{}' | Metadata |
+| 9 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_customer_timeline_customer` ON (`customer_id`)
+
+---
+
+## TABLE 86: `customer_followups`
+**Feature**: 📋 Customer 360 Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique followup identifier |
+| 2 | `customer_id` | UUID | FOREIGN KEY → customers(id) ON DELETE CASCADE, NOT NULL | Customer |
+| 3 | `scheduled_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Scheduler |
+| 4 | `follow_up_at` | TIMESTAMPTZ | NOT NULL | Followup time |
+| 5 | `note` | TEXT | NULLABLE | Note |
+| 6 | `status` | VARCHAR(50) | DEFAULT 'pending' | Status |
+| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_customer_followups_customer` ON (`customer_id`)
+
+---
+
+## TABLE 87: `customer_tags`
+**Feature**: 📋 Customer 360 Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique tag identifier |
+| 2 | `customer_id` | UUID | FOREIGN KEY → customers(id) ON DELETE CASCADE, NOT NULL | Customer |
+| 3 | `tag` | VARCHAR(100) | NOT NULL | Tag |
+| 4 | `created_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Creator |
+| 5 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Constraints**: `UNIQUE(customer_id, tag)`
+* **Indexes**: `idx_customer_tags_customer` ON (`customer_id`)
+
+---
+
+## TABLE 88: `customer_activity_logs`
+**Feature**: 📋 Customer 360 Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique log identifier |
+| 2 | `customer_id` | UUID | FOREIGN KEY → customers(id) ON DELETE CASCADE, NOT NULL | Customer |
+| 3 | `activity_type` | VARCHAR(100) | NOT NULL | Activity type |
+| 4 | `description` | TEXT | NULLABLE | Description |
+| 5 | `metadata` | JSONB | DEFAULT '{}' | Metadata |
+| 6 | `ip_address` | VARCHAR(45) | NULLABLE | IP address |
+| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_customer_activity_customer` ON (`customer_id`)
+
+---
+
+## TABLE 89: `customer_communications`
+**Feature**: 📋 Customer 360 Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique communication identifier |
+| 2 | `customer_id` | UUID | FOREIGN KEY → customers(id) ON DELETE CASCADE, NOT NULL | Customer |
+| 3 | `communication_type` | VARCHAR(50) | NOT NULL | Communication type |
+| 4 | `direction` | VARCHAR(20) | NOT NULL | inbound, outbound |
+| 5 | `subject` | VARCHAR(255) | NULLABLE | Subject |
+| 6 | `message` | TEXT | NULLABLE | Message |
+| 7 | `sent_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Sender |
+| 8 | `sent_at` | TIMESTAMPTZ | DEFAULT NOW() | Sent timestamp |
+
+* **Indexes**: `idx_customer_comm_customer` ON (`customer_id`)
+
+---
+
+## TABLE 90: `lead_documents`
+**Feature**: 📋 Lead Management Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique document identifier |
+| 2 | `lead_id` | UUID | FOREIGN KEY → leads(id) ON DELETE CASCADE, NOT NULL | Lead |
+| 3 | `document_type` | VARCHAR(100) | NOT NULL | Document type |
+| 4 | `file_url` | TEXT | NOT NULL | File URL |
+| 5 | `file_name` | VARCHAR(255) | NOT NULL | File name |
+| 6 | `uploaded_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Uploader |
+| 7 | `uploaded_at` | TIMESTAMPTZ | DEFAULT NOW() | Upload timestamp |
+
+* **Indexes**: `idx_lead_docs_lead` ON (`lead_id`)
+
+---
+
+## TABLE 91: `lead_timeline`
+**Feature**: 📋 Lead Management Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique timeline identifier |
+| 2 | `lead_id` | UUID | FOREIGN KEY → leads(id) ON DELETE CASCADE, NOT NULL | Lead |
+| 3 | `event_type` | VARCHAR(100) | NOT NULL | Event type |
+| 4 | `title` | VARCHAR(255) | NOT NULL | Event title |
+| 5 | `description` | TEXT | NULLABLE | Event description |
+| 6 | `actor_type` | VARCHAR(50) | DEFAULT 'system' | Actor type |
+| 7 | `actor_id` | UUID | NULLABLE | Actor ID |
+| 8 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_lead_timeline_lead` ON (`lead_id`)
+
+---
+
+## TABLE 92: `lead_notes`
+**Feature**: 📋 Lead Management Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique note identifier |
+| 2 | `lead_id` | UUID | FOREIGN KEY → leads(id) ON DELETE CASCADE, NOT NULL | Lead |
+| 3 | `created_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Creator |
+| 4 | `note` | TEXT | NOT NULL | Note content |
+| 5 | `visibility` | VARCHAR(20) | DEFAULT 'public' | Visibility |
+| 6 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_lead_notes_lead` ON (`lead_id`)
+
+---
+
+## TABLE 93: `lead_assignments`
+**Feature**: 📋 Lead Management Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique assignment identifier |
+| 2 | `lead_id` | UUID | FOREIGN KEY → leads(id) ON DELETE CASCADE, NOT NULL | Lead |
+| 3 | `assigned_to` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Assignee |
+| 4 | `assigned_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Assigner |
+| 5 | `assigned_at` | TIMESTAMPTZ | DEFAULT NOW() | Assignment timestamp |
+| 6 | `status` | VARCHAR(50) | DEFAULT 'active' | Assignment status |
+
+* **Indexes**: `idx_lead_assignments_lead` ON (`lead_id`)
+
+---
+
+## TABLE 94: `lead_activity_logs`
+**Feature**: 📋 Lead Management Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique log identifier |
+| 2 | `lead_id` | UUID | FOREIGN KEY → leads(id) ON DELETE CASCADE, NOT NULL | Lead |
+| 3 | `activity_type` | VARCHAR(100) | NOT NULL | Activity type |
+| 4 | `description` | TEXT | NULLABLE | Description |
+| 5 | `metadata` | JSONB | DEFAULT '{}' | Metadata |
+| 6 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_lead_activity_lead` ON (`lead_id`)
+
+---
+
+## TABLE 95: `lead_status_history`
+**Feature**: 📋 Lead Management Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique history identifier |
+| 2 | `lead_id` | UUID | FOREIGN KEY → leads(id) ON DELETE CASCADE, NOT NULL | Lead |
+| 3 | `old_status` | VARCHAR(50) | NULLABLE | Old status |
+| 4 | `new_status` | VARCHAR(50) | NOT NULL | New status |
+| 5 | `changed_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Changed by |
+| 6 | `changed_at` | TIMESTAMPTZ | DEFAULT NOW() | Change timestamp |
+
+* **Indexes**: `idx_lead_status_lead` ON (`lead_id`)
+
+---
+
+## TABLE 96: `lead_checklist`
+**Feature**: 📋 Lead Management Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique checklist identifier |
+| 2 | `lead_id` | UUID | FOREIGN KEY → leads(id) ON DELETE CASCADE, NOT NULL | Lead |
+| 3 | `item` | VARCHAR(255) | NOT NULL | Checklist item |
+| 4 | `completed` | BOOLEAN | DEFAULT FALSE | Completion status |
+| 5 | `completed_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Completer |
+| 6 | `completed_at` | TIMESTAMPTZ | NULLABLE | Completion timestamp |
+
+* **Indexes**: `idx_lead_checklist_lead` ON (`lead_id`)
+
+---
+
+## TABLE 97: `lead_sla`
+**Feature**: 📋 Lead Management Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique SLA identifier |
+| 2 | `lead_id` | UUID | FOREIGN KEY → leads(id) ON DELETE CASCADE, NOT NULL | Lead |
+| 3 | `sla_type` | VARCHAR(100) | NOT NULL | SLA type |
+| 4 | `due_at` | TIMESTAMPTZ | NOT NULL | Due time |
+| 5 | `status` | VARCHAR(50) | DEFAULT 'pending' | SLA status |
+| 6 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_lead_sla_lead` ON (`lead_id`)
+
+---
+
+## TABLE 98: `partner_share_links`
+**Feature**: 📋 Lead Management Module
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique link identifier |
+| 2 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Partner |
+| 3 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 4 | `share_code` | VARCHAR(100) | UNIQUE, NOT NULL | Share code |
+| 5 | `share_url` | TEXT | NOT NULL | Share URL |
+| 6 | `expires_at` | TIMESTAMPTZ | NULLABLE | Expiry time |
+| 7 | `click_count` | INT | DEFAULT 0 | Click count |
+| 8 | `conversion_count` | INT | DEFAULT 0 | Conversion count |
+| 9 | `status` | VARCHAR(50) | DEFAULT 'active' | Link status |
+| 10 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_partner_share_partner` ON (`partner_id`)
+
+---
+
+## TABLE 99: `referral_clicks`
+**Feature**: 💼 Partner Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique click identifier |
+| 2 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Partner |
+| 3 | `referral_code` | VARCHAR(50) | NOT NULL | Referral code |
+| 4 | `click_count` | INT | DEFAULT 0 | Click count |
+| 5 | `last_clicked_at` | TIMESTAMPTZ | DEFAULT NOW() | Last clicked |
+| 6 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 7 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
+
+* **Constraints**: `UNIQUE(partner_id, referral_code)`
+
+---
+
+## TABLE 100: `partner_teams`
+**Feature**: 👥 Team Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique team identifier |
+| 2 | `team_name` | VARCHAR(255) | NOT NULL | Team name |
+| 3 | `team_leader_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE SET NULL | Team leader |
+| 4 | `description` | TEXT | NULLABLE | Team description |
+| 5 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 6 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Update timestamp |
+
+---
+
+## TABLE 101: `partner_upgrade_requests`
+**Feature**: 💼 Partner Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique request identifier |
+| 2 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Partner |
+| 3 | `current_rank` | VARCHAR(50) | NULLABLE | Current rank |
+| 4 | `requested_rank` | VARCHAR(50) | NOT NULL | Requested rank |
+| 5 | `reason` | TEXT | NULLABLE | Reason |
+| 6 | `status` | VARCHAR(50) | DEFAULT 'pending' | Request status |
+| 7 | `reviewed_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Reviewer |
+| 8 | `reviewed_at` | TIMESTAMPTZ | NULLABLE | Review timestamp |
+| 9 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_upgrade_requests_partner` ON (`partner_id`)
+
+---
+
+## TABLE 102: `team_commissions`
+**Feature**: 👥 Team Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique commission identifier |
+| 2 | `team_id` | UUID | FOREIGN KEY → partner_teams(id) ON DELETE CASCADE, NOT NULL | Team |
+| 3 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Partner |
+| 4 | `commission_amount` | DECIMAL(15,2) | DEFAULT 0 | Commission amount |
+| 5 | `commission_type` | VARCHAR(50) | NOT NULL | Commission type |
+| 6 | `status` | VARCHAR(50) | DEFAULT 'pending' | Status |
+| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_team_commissions_team` ON (`team_id`)
+
+---
+
+## TABLE 103: `team_activity`
+**Feature**: 👥 Team Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique activity identifier |
+| 2 | `team_id` | UUID | FOREIGN KEY → partner_teams(id) ON DELETE CASCADE, NOT NULL | Team |
+| 3 | `partner_id` | UUID | FOREIGN KEY → partner_profiles(id) ON DELETE CASCADE, NOT NULL | Partner |
+| 4 | `activity_type` | VARCHAR(100) | NOT NULL | Activity type |
+| 5 | `description` | TEXT | NULLABLE | Description |
+| 6 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_team_activity_team` ON (`team_id`)
+
+---
+
+## TABLE 104: `team_goals`
+**Feature**: 👥 Team Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique goal identifier |
+| 2 | `team_id` | UUID | FOREIGN KEY → partner_teams(id) ON DELETE CASCADE, NOT NULL | Team |
+| 3 | `goal_type` | VARCHAR(100) | NOT NULL | Goal type |
+| 4 | `target_value` | DECIMAL(15,2) | NOT NULL | Target value |
+| 5 | `current_value` | DECIMAL(15,2) | DEFAULT 0 | Current value |
+| 6 | `start_date` | TIMESTAMPTZ | NOT NULL | Start date |
+| 7 | `end_date` | TIMESTAMPTZ | NOT NULL | End date |
+| 8 | `status` | VARCHAR(50) | DEFAULT 'active' | Goal status |
+| 9 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_team_goals_team` ON (`team_id`)
+
+---
+
+## TABLE 105: `team_notifications`
+**Feature**: 👥 Team Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique notification identifier |
+| 2 | `team_id` | UUID | FOREIGN KEY → partner_teams(id) ON DELETE CASCADE, NOT NULL | Team |
+| 3 | `title` | VARCHAR(255) | NOT NULL | Notification title |
+| 4 | `message` | TEXT | NOT NULL | Notification message |
+| 5 | `priority` | VARCHAR(20) | DEFAULT 'normal' | Priority |
+| 6 | `status` | VARCHAR(20) | DEFAULT 'unread' | Status |
+| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_team_notifications_team` ON (`team_id`)
+
+---
+
+## TABLE 106: `commission_release_jobs`
+**Feature**: 💰 Commission Engine
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique job identifier |
+| 2 | `commission_ledger_id` | UUID | FOREIGN KEY → commission_ledger(id) ON DELETE CASCADE, NOT NULL | Commission ledger |
+| 3 | `scheduled_at` | TIMESTAMPTZ | NOT NULL | Scheduled time |
+| 4 | `status` | VARCHAR(50) | DEFAULT 'pending' | Job status |
+| 5 | `processed_at` | TIMESTAMPTZ | NULLABLE | Processed time |
+| 6 | `error_message` | TEXT | NULLABLE | Error message |
+| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_comm_release_jobs_ledger` ON (`commission_ledger_id`)
+
+---
+
+## TABLE 107: `withdrawal_audit_logs`
+**Feature**: 💰 Commission Engine
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique audit identifier |
+| 2 | `withdrawal_id` | UUID | FOREIGN KEY → wallet_withdrawals(id) ON DELETE CASCADE, NOT NULL | Withdrawal |
+| 3 | `action` | VARCHAR(50) | NOT NULL | Action |
+| 4 | `old_status` | VARCHAR(50) | NULLABLE | Old status |
+| 5 | `new_status` | VARCHAR(50) | NOT NULL | New status |
+| 6 | `performed_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Performer |
+| 7 | `notes` | TEXT | NULLABLE | Notes |
+| 8 | `created_at` | TEMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_withdrawal_audit_withdrawal` ON (`withdrawal_id`)
+
+---
+
+## TABLE 108: `wallet_reconciliation`
+**Feature**: 💰 Commission Engine
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique reconciliation identifier |
+| 2 | `wallet_id` | UUID | FOREIGN KEY → partner_wallets(id) ON DELETE CASCADE, NOT NULL | Wallet |
+| 3 | `reconciliation_date` | TIMESTAMPTZ | NOT NULL | Reconciliation date |
+| 4 | `expected_balance` | DECIMAL(15,2) | NOT NULL | Expected balance |
+| 5 | `actual_balance` | DECIMAL(15,2) | NOT NULL | Actual balance |
+| 6 | `difference` | DECIMAL(15,2) | NOT NULL | Difference |
+| 7 | `status` | VARCHAR(50) | DEFAULT 'pending' | Reconciliation status |
+| 8 | `notes` | TEXT | NULLABLE | Notes |
+| 9 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_wallet_recon_wallet` ON (`wallet_id`)
+
+---
+
+## TABLE 109: `wallet_bonus`
+**Feature**: 💰 Commission Engine
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique bonus identifier |
+| 2 | `wallet_id` | UUID | FOREIGN KEY → partner_wallets(id) ON DELETE CASCADE, NOT NULL | Wallet |
+| 3 | `bonus_type` | VARCHAR(100) | NOT NULL | Bonus type |
+| 4 | `bonus_amount` | DECIMAL(15,2) | NOT NULL | Bonus amount |
+| 5 | `reason` | TEXT | NULLABLE | Reason |
+| 6 | `status` | VARCHAR(50) | DEFAULT 'pending' | Bonus status |
+| 7 | `created_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Creator |
+| 8 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_wallet_bonus_wallet` ON (`wallet_id`)
+
+---
+
+## TABLE 110: `wallet_adjustments`
+**Feature**: 💰 Commission Engine
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique adjustment identifier |
+| 2 | `wallet_id` | UUID | FOREIGN KEY → partner_wallets(id) ON DELETE CASCADE, NOT NULL | Wallet |
+| 3 | `adjustment_type` | VARCHAR(100) | NOT NULL | Adjustment type |
+| 4 | `adjustment_amount` | DECIMAL(15,2) | NOT NULL | Adjustment amount |
+| 5 | `reason` | TEXT | NOT NULL | Reason |
+| 6 | `status` | VARCHAR(50) | DEFAULT 'pending' | Adjustment status |
+| 7 | `approved_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Approver |
+| 8 | `approved_at` | TIMESTAMPTZ | NULLABLE | Approval timestamp |
+| 9 | `created_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Creator |
+| 10 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_wallet_adj_wallet` ON (`wallet_id`)
+
+---
+
+## TABLE 111: `application_audit_logs`
+**Feature**: 📋 CRM
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique audit identifier |
+| 2 | `application_id` | UUID | FOREIGN KEY → applications(id) ON DELETE CASCADE, NOT NULL | Application |
+| 3 | `action` | VARCHAR(100) | NOT NULL | Action |
+| 4 | `old_data` | JSONB | NULLABLE | Old data |
+| 5 | `new_data` | JSONB | NULLABLE | New data |
+| 6 | `performed_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Performer |
+| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_app_audit_application` ON (`application_id`)
+
+---
+
+## TABLE 112: `application_links`
+**Feature**: 📋 CRM
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique link identifier |
+| 2 | `application_id` | UUID | FOREIGN KEY → applications(id) ON DELETE CASCADE, NOT NULL | Application |
+| 3 | `link_type` | VARCHAR(100) | NOT NULL | Link type |
+| 4 | `link_url` | TEXT | NOT NULL | Link URL |
+| 5 | `expires_at` | TIMESTAMPTZ | NULLABLE | Expiry time |
+| 6 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_app_links_application` ON (`application_id`)
+
+---
+
+## TABLE 113: `admin_bank_assignments`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique assignment identifier |
+| 2 | `bank_id` | UUID | FOREIGN KEY → banks(id) ON DELETE CASCADE, NOT NULL | Bank |
+| 3 | `admin_id` | UUID | FOREIGN KEY → users(id) ON DELETE CASCADE, NOT NULL | Admin |
+| 4 | `assignment_type` | VARCHAR(100) | NOT NULL | Assignment type |
+| 5 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Constraints**: `UNIQUE(bank_id, admin_id, assignment_type)`
+
+---
+
+## TABLE 114: `bank_product_requirements`
+**Feature**: 🏦 Product & Bank Management
+
+| # | Column Name | Data Type | Constraints | Description |
+|---|---|---|---|---|
+| 1 | `id` | UUID | PRIMARY KEY | Unique requirement identifier |
+| 2 | `bank_id` | UUID | FOREIGN KEY → banks(id) ON DELETE CASCADE, NOT NULL | Bank |
+| 3 | `product_id` | UUID | FOREIGN KEY → products(id) ON DELETE CASCADE, NOT NULL | Product |
+| 4 | `requirement_type` | VARCHAR(100) | NOT NULL | Requirement type |
+| 5 | `requirement_value` | TEXT | NOT NULL | Requirement value |
+| 6 | `is_mandatory` | BOOLEAN | DEFAULT TRUE | Mandatory flag |
+| 7 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+
+* **Indexes**: `idx_bank_prod_req_bank` ON (`bank_id`), `idx_bank_prod_req_product` ON (`product_id`)
+
+---
+
 ## Complete Feature-to-Table Summary
 
 | # | Feature | Tables Count | Tables |
 |---|---|---|---|
-| 1 | 🔐 Authentication | 5 | `users`, `refresh_tokens`, `otp_verifications`, `msg91_verified_tokens`, `pre_verified_emails` |
+| 1 | 🔐 Authentication | 8 | `users`, `refresh_tokens`, `otp_verifications`, `msg91_verified_tokens`, `pre_verified_emails`, `login_activity`, `registration_logs`, `blacklist` |
 | 2 | 🛡️ KYC Verification | 4 | `partner_profiles`, `kyc_documents`, `partner_videos`, `partner_bank_details` |
-| 3 | 💼 Partner Management | 5 | `partner_profiles`, `partner_bank_details`, `partner_team_relationships`, `partner_referrals`, `bank_details_history` |
+| 3 | 💼 Partner Management | 9 | `partner_profiles`, `partner_bank_details`, `partner_team_relationships`, `partner_referrals`, `bank_details_history`, `referral_campaigns`, `invitation_history`, `partner_teams`, `partner_upgrade_requests` |
 | 4 | 💰 Wallet & Commission | 13 | `partner_wallets`, `wallet_transactions`, `wallet_ledger`, `wallet_withdrawals`, `wallet_audit_logs`, `commission_structures`, `commission_rules`, `commission_ledger`, `commission_release_queue`, `partner_settlements`, `payout_logs`, `withdrawal_requests (view)`, `wallets (view)` |
-| 5 | 📋 Lead & Application CRM | 9 | `leads`, `lead_followups`, `customers`, `applications`, `application_timeline`, `application_documents`, `application_notes`, `direct_card_applications` |
-| 6 | 🏦 Product & Bank | 5 | `banks`, `products`, `product_application_settings`, `product_link_audits` |
-| 7 | 🔔 Notifications | 4 | `notifications`, `notification_preferences`, `notification_templates`, `announcements` |
-| 8 | 📊 Analytics | 5 | `audit_logs`, `click_tracking`, `application_click_logs`, `service_requests`, `wallet_audit_logs` |
+| 5 | 📋 Lead & Application CRM | 20 | `leads`, `lead_followups`, `customers`, `applications`, `application_timeline`, `application_documents`, `application_notes`, `direct_card_applications`, `customer_access_tokens`, `physical_application_details`, `loan_applications`, `insurance_applications`, `bank_card_applications`, `bank_card_application_timeline`, `sbi_credit_card_applications`, `sbi_cc_application_timeline`, `customer_notes`, `customer_documents`, `customer_timeline`, `customer_followups` |
+| 6 | 🏦 Product & Bank | 20 | `banks`, `products`, `product_application_settings`, `product_link_audits`, `product_features`, `product_documents`, `product_faq`, `product_videos`, `product_offers`, `product_ratings`, `product_share_logs`, `partner_saved_products`, `partner_recent_products`, `product_views`, `partner_preferences`, `product_categories`, `product_eligibility_criteria`, `product_documents_required`, `bank_product_requirements` |
+| 7 | 🔔 Notifications | 5 | `notifications`, `notification_preferences`, `notification_templates`, `announcements`, `broadcast_notifications` |
+| 8 | 📊 Analytics | 10 | `audit_logs`, `click_tracking`, `application_click_logs`, `service_requests`, `wallet_audit_logs`, `report_cache`, `report_exports`, `scheduled_reports`, `activity_logs`, `referral_clicks` |
 | 9 | 🎓 Training | 2 | `training_modules`, `partner_training_progress` |
 | 10 | 🎨 CMS & Marketing | 6 | `banners`, `homepage_sections`, `marketing_materials`, `services_catalog`, `system_settings`, `support_tickets` |
-| 11 | 👥 Team Management | 1 | `partner_team_relationships` |
+| 11 | 👥 Team Management | 5 | `partner_team_relationships`, `partner_teams`, `team_commissions`, `team_activity`, `team_goals`, `team_notifications` |
+| 12 | 📋 Customer 360 Module | 7 | `customers`, `customer_notes`, `customer_documents`, `customer_timeline`, `customer_followups`, `customer_tags`, `customer_activity_logs`, `customer_communications` |
+| 13 | 📋 Lead Management Module | 10 | `leads`, `lead_documents`, `lead_timeline`, `lead_notes`, `lead_assignments`, `lead_activity_logs`, `lead_status_history`, `lead_checklist`, `lead_sla`, `partner_share_links` |
+| 14 | 💰 Commission Engine | 5 | `commission_release_jobs`, `withdrawal_audit_logs`, `wallet_reconciliation`, `wallet_bonus`, `wallet_adjustments` |
+| 15 | 📋 Application Audit | 2 | `application_audit_logs`, `application_links` |
+| 16 | 🏦 Bank Admin | 1 | `admin_bank_assignments` |
 
-> **Total Overview**: 53 tables across 11 features with 60+ foreign key relationships and 25+ indexes for query optimization.
+> **Total Overview**: 114 tables across 16 features with 100+ foreign key relationships and 60+ indexes for query optimization.

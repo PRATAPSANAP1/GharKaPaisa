@@ -1373,6 +1373,14 @@ const listApplications = async (req, res, next) => {
       }
     }
 
+    statusCountsObj.all = (statusCountsObj.pending || 0) +
+      (statusCountsObj.details_submitted || 0) +
+      (statusCountsObj.operational_verified || 0) +
+      (statusCountsObj.approved || 0) +
+      (statusCountsObj.commission_received || 0) +
+      (statusCountsObj.rejected || 0) +
+      (statusCountsObj.cancelled || 0);
+
     return res.status(200).json({
       success: true,
       message: 'Success',

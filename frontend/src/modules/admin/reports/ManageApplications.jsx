@@ -173,7 +173,9 @@ export default function ManageApplications() {
       <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '20px' }}>
         {STATUS_TABS.map((tab) => {
           const isActive = status === tab.id;
-          const count = tab.id === '' ? (allCount || total) : (backendStatusCounts ? (backendStatusCounts[tab.id] || 0) : (statusCounts[tab.id] || 0));
+          const count = tab.id === ''
+            ? (backendStatusCounts?.all !== undefined ? backendStatusCounts.all : (allCount || total))
+            : (backendStatusCounts ? (backendStatusCounts[tab.id] || 0) : (statusCounts[tab.id] || 0));
           return (
             <button
               key={tab.id}
