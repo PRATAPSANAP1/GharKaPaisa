@@ -325,20 +325,12 @@ export default function ManageApplications() {
                 statuses: ['approved', 'super_admin_approved', 'disbursed']
               },
               {
-                id: 'commission_released',
-                title: '💸 Commission Released Applications',
-                color: '#06b6d4',
-                badgeBg: '#06b6d415',
-                borderColor: '#06b6d4',
-                statuses: ['commission_released', 'released', 'credited']
-              },
-              {
                 id: 'commission_received',
                 title: '💰 Commission Received Applications',
                 color: '#16a34a',
                 badgeBg: '#16a34a15',
                 borderColor: '#16a34a',
-                statuses: ['commission_received', 'received', 'paid']
+                statuses: ['commission_received', 'commission_released', 'released', 'credited', 'paid', 'received']
               },
               {
                 id: 'rejected',
@@ -482,6 +474,15 @@ export default function ManageApplications() {
                                     style={{ background: "#6366f115", border: "1px solid #6366f140", color: "#6366f1", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                                   >
                                     👁️ Edit Status
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      handleViewDetails(app);
+                                      setNewStatus('rejected');
+                                    }}
+                                    style={{ background: "#ef444415", border: "1px solid #ef444440", color: "#ef4444", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                  >
+                                    ❌ Reject
                                   </button>
                                   <button
                                     onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
