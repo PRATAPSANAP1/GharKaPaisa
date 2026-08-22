@@ -337,8 +337,17 @@ export default function ManageApplications() {
       if (dRes.data?.success) setDocuments(dRes.data.data || []);
 
       const detailedAppRes = await api.get(`/applications/${app.id}`);
-      if (detailedAppRes.data?.success) {
-        setNotes(detailedAppRes.data.data.notes_list || []);
+      if (detailedAppRes.data?.success && detailedAppRes.data.data) {
+        const fullApp = detailedAppRes.data.data;
+        setSelectedApp(prev => ({
+          ...prev,
+          ...fullApp,
+          ...(fullApp.physical_details || {}),
+          customer_name: fullApp.customer_name || prev?.customer_name,
+          customer_mobile: fullApp.customer_mobile || prev?.customer_mobile,
+          customer_email: fullApp.customer_email || prev?.customer_email
+        }));
+        setNotes(fullApp.notes_list || []);
       }
     } catch (err) {
       console.error(err);
@@ -988,59 +997,104 @@ export default function ManageApplications() {
               </div>
             </div>
 
-            {/* Read-Only Form 1, Part 2 & Part 3 Overview */}
+            {/* Read-Only Form 1 (QD), Part 2 (Remark) & Part 3 (Final) Overview */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
-              {/* Form 1: Customer & Physical Details (Read-Only) */}
+              {/* Form 1: Customer Quick Details (QD Form) */}
               <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
-                <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.primary, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                  📋 Form 1: Customer & Physical Details (Read-Only)
+                <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.primary, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  📋 Form 1: Quick Details (QD Form Information)
                 </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
-                  <div><span style={{ color: C.textLight }}>Customer Name:</span> <strong style={{ color: C.text }}>{selectedApp.customer_name || '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>Mobile:</span> <strong style={{ color: C.text }}>{selectedApp.customer_mobile || selectedApp.mobile || '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>Email:</span> <strong style={{ color: C.text }}>{selectedApp.customer_email || selectedApp.email || '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>PAN Number:</span> <strong style={{ color: C.text }}>{selectedApp.pan_number || '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>Date of Birth:</span> <strong style={{ color: C.text }}>{selectedApp.dob || '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>Company / Employer:</span> <strong style={{ color: C.text }}>{selectedApp.company_name || '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>Occupation / Designation:</span> <strong style={{ color: C.text }}>{selectedApp.designation || '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>Monthly Salary:</span> <strong style={{ color: C.text }}>{selectedApp.monthly_salary ? `₹${parseFloat(selectedApp.monthly_salary).toLocaleString('en-IN')}` : '—'}</strong></div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                  <div><span style={{ color: C.textLight }}>Customer Name:</span> <strong style={{ color: C.text }}>{selectedApp.customer_name || selectedApp.full_name || selectedApp.pan_name || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Mobile Number:</span> <strong style={{ color: C.text }}>{selectedApp.customer_mobile || selectedApp.mobile || selectedApp.aadhaar_linked_mobile || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Email Address:</span> <strong style={{ color: C.text }}>{selectedApp.customer_email || selectedApp.email || selectedApp.personal_email || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>PAN Card Number:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{selectedApp.pan_number || selectedApp.pan || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Date of Birth (DOB):</span> <strong style={{ color: C.text }}>{selectedApp.dob || selectedApp.date_of_birth || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Gender:</span> <strong style={{ color: C.text, textTransform: 'capitalize' }}>{selectedApp.gender || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Marital Status:</span> <strong style={{ color: C.text, textTransform: 'capitalize' }}>{selectedApp.marital_status || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Aadhaar Number:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{selectedApp.aadhaar_number || selectedApp.aadhaar_no || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Father's Name:</span> <strong style={{ color: C.text }}>{selectedApp.father_name || '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Mother's Name:</span> <strong style={{ color: C.text }}>{selectedApp.mother_name || '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>Partner Code / Name:</span> <strong style={{ color: C.text }}>{selectedApp.partner_code ? `${selectedApp.partner_code} (${selectedApp.partner_name || ''})` : '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Qualification / Education:</span> <strong style={{ color: C.text }}>{selectedApp.qualification || selectedApp.education || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Employer / Company Name:</span> <strong style={{ color: C.text }}>{selectedApp.company_name || selectedApp.employer_name || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Occupation / Designation:</span> <strong style={{ color: C.text }}>{selectedApp.designation || selectedApp.occupation || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Monthly Income / Salary:</span> <strong style={{ color: C.green, fontWeight: 800 }}>{(selectedApp.monthly_salary || selectedApp.monthly_income) ? `₹${parseFloat(selectedApp.monthly_salary || selectedApp.monthly_income).toLocaleString('en-IN')}` : '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Residential Address:</span> <strong style={{ color: C.text }}>{[selectedApp.address || selectedApp.residential_address || selectedApp.flat_no, selectedApp.city, selectedApp.state, selectedApp.pincode].filter(Boolean).join(', ') || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Company / Office Address:</span> <strong style={{ color: C.text }}>{[selectedApp.company_address || selectedApp.office_address, selectedApp.office_city, selectedApp.office_state, selectedApp.office_pincode].filter(Boolean).join(', ') || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Bank Account / IFSC:</span> <strong style={{ color: C.text }}>{selectedApp.bank_account_no ? `${selectedApp.bank_account_no} (${selectedApp.ifsc_code || ''})` : '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Partner Code & Name:</span> <strong style={{ color: C.text }}>{selectedApp.partner_code ? `${selectedApp.partner_code} (${selectedApp.partner_first_name || selectedApp.Partner_first_name || ''} ${selectedApp.partner_last_name || selectedApp.Partner_last_name || ''})` : 'Direct / Admin'}</strong></div>
                 </div>
               </div>
 
-              {/* Part 2: Operations & Dispatch Stage (Read-Only) */}
+              {/* Part 2: Operations & Dispatch Stage (Remark Form) */}
               <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
-                <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.teal, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                  ⚙️ Part 2 Operations & Dispatch Stage (Read-Only)
+                <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.teal, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  ⚙️ Part 2: Operational Processing & Remark Form
                 </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
                   <div><span style={{ color: C.textLight }}>Appcode Status:</span> <strong style={{ color: C.text }}>{selectedApp.appcode_status || 'Appcode Pending'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Soft Approval Status:</span> <strong style={{ color: C.text }}>{selectedApp.soft_approval_status || '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>VKYC Stage:</span> <strong style={{ color: C.text }}>{selectedApp.vkyc_stage || '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>IQA Stage:</span> <strong style={{ color: C.text }}>{selectedApp.iqa_stage || '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Dispatch Status:</span> <strong style={{ color: C.text }}>{selectedApp.dispatch_status || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Operational Remarks:</span> <strong style={{ color: C.text }}>{selectedApp.ops_remark || selectedApp.processing_remark || selectedApp.remarks || '—'}</strong></div>
                 </div>
               </div>
 
-              {/* Part 3: Bank Remark & Final Status (Read-Only) */}
+              {/* Part 3: Bank Remark & Final Status (Final Form) */}
               <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
-                <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.purple, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                  🏦 Part 3: Bank Remark & Final Status (Read-Only)
+                <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.purple, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  🏦 Part 3: Bank Remark & Final Form
                 </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
-                  <div><span style={{ color: C.textLight }}>Application Number:</span> <strong style={{ color: C.text }}>{selectedApp.app_number || selectedApp.bank_ref_number || '—'}</strong></div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                  <div><span style={{ color: C.textLight }}>App / Bank Reference #:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{selectedApp.bank_ref_number || selectedApp.bank_application_number || selectedApp.app_number || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Applied Loan Amount:</span> <strong style={{ color: C.text }}>{selectedApp.loan_amount ? `₹${parseFloat(selectedApp.loan_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Approved Amount:</span> <strong style={{ color: C.green, fontWeight: 800 }}>{selectedApp.approved_amount ? `₹${parseFloat(selectedApp.approved_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Commission Amount / Status:</span> <strong style={{ color: C.green, fontWeight: 800 }}>₹{selectedApp.commission_amount || 0} ({selectedApp.commission_status || 'pending'})</strong></div>
                   <div>
-                    <span style={{ color: C.textLight }}>VKYC Link:</span>{' '}
-                    <strong style={{ color: C.text }}>{selectedApp.vkyc_url || '—'}</strong>
+                    <span style={{ color: C.textLight }}>VKYC / Direct Web Link:</span>{' '}
+                    {selectedApp.vkyc_url ? (
+                      <a href={selectedApp.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: C.primary, textDecoration: 'underline', fontWeight: 700 }}>
+                        Open Link 🔗
+                      </a>
+                    ) : <strong style={{ color: C.text }}>—</strong>}
                   </div>
                   <div><span style={{ color: C.textLight }}>Final Status from Bank:</span> <strong style={{ color: C.text }}>{selectedApp.final_status || selectedApp.status || '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Eligible for Re-QD:</span> <strong style={{ color: C.text }}>{selectedApp.eligible_reqd || 'No'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Bank Remark:</span> <strong style={{ color: C.text }}>{selectedApp.bank_remark || '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>Decline Reason Remark:</span> <strong style={{ color: C.text }}>{selectedApp.decline_reason_remark || selectedApp.decline_reason || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Decline / Rejection Reason:</span> <strong style={{ color: C.red, fontWeight: 700 }}>{selectedApp.decline_reason_remark || selectedApp.decline_reason || selectedApp.rejection_reason || '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Super Admin Remark:</span> <strong style={{ color: C.text }}>{selectedApp.super_admin_remark || selectedApp.admin_remark || '—'}</strong></div>
                 </div>
               </div>
+
+              {/* Uploaded Documents Attachments Preview */}
+              {documents && documents.length > 0 && (
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                    📎 Uploaded Application Documents ({documents.length})
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    {documents.map((doc, dIdx) => (
+                      <a
+                        key={dIdx}
+                        href={doc.file_url || doc.url || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
+                          borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`,
+                          fontSize: '12px', fontWeight: 700, color: C.primary, textDecoration: 'none'
+                        }}
+                      >
+                        <span>📄</span>
+                        <span>{doc.doc_type?.replace(/_/g, ' ').toUpperCase() || `DOCUMENT ${dIdx+1}`}</span>
+                        <span style={{ fontSize: '10px', color: C.textLight }}>🔗</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
             </div>
 
