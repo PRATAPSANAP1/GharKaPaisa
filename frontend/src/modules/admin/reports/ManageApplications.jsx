@@ -169,38 +169,6 @@ export default function ManageApplications() {
 
   return (
     <div>
-      {/* Metric Funnel Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px' }}>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: '14px 16px', borderRadius: '12px' }}>
-          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>Total Leads</div>
-          <div style={{ fontSize: '22px', fontWeight: 800, color: C.primary, marginTop: '4px' }}>{allCount || total}</div>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: '14px 16px', borderRadius: '12px' }}>
-          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>Commission Pending</div>
-          <div style={{ fontSize: '22px', fontWeight: 800, color: '#f59e0b', marginTop: '4px' }}>
-            {backendStatusCounts ? (backendStatusCounts['pending'] || 0) : apps.filter(a => ['pending', 'unpaid', 'initiated', 'due'].includes(String(a.commission_status || '').toLowerCase()) || a.commission_status === 'pending').length}
-          </div>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: '14px 16px', borderRadius: '12px' }}>
-          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>Commission Approved</div>
-          <div style={{ fontSize: '22px', fontWeight: 800, color: '#10b981', marginTop: '4px' }}>
-            {backendStatusCounts ? (backendStatusCounts['commission_received'] || 0) : apps.filter(a => ['approved', 'released', 'paid', 'received', 'credited', 'commission_released', 'commission_received'].includes(String(a.commission_status || a.status || '').toLowerCase())).length}
-          </div>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: '14px 16px', borderRadius: '12px' }}>
-          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>Rejected</div>
-          <div style={{ fontSize: '22px', fontWeight: 800, color: '#ef4444', marginTop: '4px' }}>
-            {backendStatusCounts ? (backendStatusCounts['rejected'] || 0) : apps.filter(a => a.status === 'rejected').length}
-          </div>
-        </div>
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, padding: '14px 16px', borderRadius: '12px' }}>
-          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>Cancelled</div>
-          <div style={{ fontSize: '22px', fontWeight: 800, color: '#64748b', marginTop: '4px' }}>
-            {backendStatusCounts ? (backendStatusCounts['cancelled'] || 0) : apps.filter(a => a.status === 'cancelled').length}
-          </div>
-        </div>
-      </div>
-
       {/* Status-Wise Summary Tabs */}
       <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '20px' }}>
         {STATUS_TABS.map((tab) => {
