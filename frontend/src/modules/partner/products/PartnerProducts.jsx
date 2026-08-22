@@ -2309,41 +2309,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
               </h3>
             </div>
 
-            {/* Direct Bank Application Link Box */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              padding: '10px 14px', background: C.bgSecondary, borderRadius: '12px',
-              border: `1px solid ${C.border}`
-            }}>
-              <input
-                type="text"
-                readOnly
-                value={shareModalProduct.directBankUrl || shareModalProduct.partner_url || shareModalProduct.shareLink}
-                style={{
-                  flex: 1, background: 'none', border: 'none', color: C.primary,
-                  fontSize: '12.5px', fontWeight: 700, outline: 'none',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  const targetUrl = shareModalProduct.directBankUrl || shareModalProduct.partner_url || shareModalProduct.shareLink;
-                  navigator.clipboard.writeText(targetUrl);
-                  setCopiedNotice(true);
-                  setTimeout(() => setCopiedNotice(false), 2500);
-                }}
-                style={{
-                  background: C.primary, color: '#fff', border: 'none',
-                  padding: '6px 12px', borderRadius: '8px', fontSize: '12px',
-                  fontWeight: 700, cursor: 'pointer', flexShrink: 0
-                }}
-              >
-                {copiedNotice ? '✓ Copied!' : 'Copy Link'}
-              </button>
-            </div>
-
-            {/* Unified Native OS Share Button */}
+            {/* Unified Native OS Share Button - Shares Direct Bank Link to All Apps */}
             <button
               type="button"
               onClick={async () => {
