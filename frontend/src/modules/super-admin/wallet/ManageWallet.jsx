@@ -790,16 +790,7 @@ export default function ManageWallet() {
               </div>
             </div>
 
-            {/* Razorpay Audit Identifiers */}
-            <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '14px', borderRadius: '10px', border: `1px solid ${C.border}`, marginBottom: '20px' }}>
-              <div style={{ fontSize: '11px', textTransform: 'uppercase', color: C.textLight, fontWeight: 700, marginBottom: '6px' }}>RazorpayX Audit Identifiers</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px', fontFamily: 'monospace' }}>
-                <div><span style={{ color: C.textLight }}>Contact ID:</span> {selectedWithdrawal.razorpay_contact_id || 'Pending'}</div>
-                <div><span style={{ color: C.textLight }}>Fund Account ID:</span> {selectedWithdrawal.razorpay_fund_account_id || 'Pending'}</div>
-                <div><span style={{ color: C.textLight }}>Payout ID:</span> {selectedWithdrawal.razorpay_payout_id || 'Pending'}</div>
-                <div><span style={{ color: C.textLight }}>UTR:</span> {selectedWithdrawal.utr || 'Pending'}</div>
-              </div>
-            </div>
+
 
             {/* Decision & Action Bar */}
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
@@ -898,12 +889,7 @@ export default function ManageWallet() {
                   <div><span style={{ color: C.textLight }}>IFSC Code:</span> <strong style={{ fontFamily: 'monospace', color: C.text }}>{payForm.withdrawal.ifsc_code || payForm.withdrawal.ifsc || 'N/A'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Purpose:</span> <strong style={{ color: C.text }}>Partner Commission</strong></div>
                 </div>
-                {payForm.withdrawal.razorpay_contact_id && (
-                  <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: `1px solid ${C.border}`, fontSize: '11px', color: C.textLight, fontFamily: 'monospace', display: 'flex', gap: '12px' }}>
-                    <span>Contact ID: {payForm.withdrawal.razorpay_contact_id}</span>
-                    {payForm.withdrawal.razorpay_fund_account_id && <span>Fund Acc: {payForm.withdrawal.razorpay_fund_account_id}</span>}
-                  </div>
-                )}
+
               </div>
 
               {/* Mode Selector */}
