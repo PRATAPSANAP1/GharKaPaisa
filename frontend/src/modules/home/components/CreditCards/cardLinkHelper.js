@@ -2,6 +2,17 @@
  * Utility to resolve direct application links for various bank cards.
  */
 export const getBankApplyLink = (cardName, bankId, productObj = null) => {
+  // 1. DYNAMIC DATABASE URL FIRST: Check if product object has explicit database partner_url / application_url
+  const extractUrl = (obj) => {
+    if (!obj || typeof obj !== 'object') return null;
+    const url = obj.partner_url || obj.partnerUrl || obj.application_url || obj.applicationUrl || obj.public_url || obj.publicUrl || obj.apply_url || obj.applyUrl || obj.redirect_url || obj.redirectUrl || obj.bank_link;
+    return (url && String(url).trim()) ? String(url).trim() : null;
+  };
+
+  const explicitUrl = extractUrl(productObj) || extractUrl(cardName) || extractUrl(bankId);
+  if (explicitUrl) return explicitUrl;
+
+  // 2. FALLBACK: Rule-based static bank links if database URL is missing
   const nameLower = (typeof cardName === 'string' ? cardName : (cardName?.name || cardName?.cardName || '')).toLowerCase();
   const bankLower = (typeof bankId === 'string' ? bankId : (bankId?.bank_name || bankId?.bank_code || bankId?.bankId || '')).toLowerCase();
 
@@ -91,16 +102,6 @@ export const getBankApplyLink = (cardName, bankId, productObj = null) => {
   if (bankLower === 'hdfc' || nameLower.includes('hdfc')) {
     return defaultHdfcLink;
   }
-
-  // FALLBACK: Database URL if no hardcoded rule matched
-  const extractUrl = (obj) => {
-    if (!obj || typeof obj !== 'object') return null;
-    const url = obj.partner_url || obj.partnerUrl || obj.application_url || obj.applicationUrl || obj.public_url || obj.publicUrl || obj.apply_url || obj.applyUrl || obj.redirect_url || obj.redirectUrl || obj.bank_link;
-    return (url && String(url).trim()) ? String(url).trim() : null;
-  };
-
-  const explicitUrl = extractUrl(productObj) || extractUrl(cardName) || extractUrl(bankId);
-  if (explicitUrl) return explicitUrl;
 
   return null;
 };

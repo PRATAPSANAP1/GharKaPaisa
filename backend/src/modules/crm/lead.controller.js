@@ -221,6 +221,13 @@ const get360LeadDetails = async (req, res, next) => {
 };
 
 function getBankApplyLinkBackend(productName, bankName, productObj = null) {
+  // 1. DYNAMIC DATABASE URL FIRST
+  if (productObj && typeof productObj === 'object') {
+    const url = productObj.partner_url || productObj.application_url || productObj.public_url || productObj.apply_url || productObj.redirect_url;
+    if (url && String(url).trim()) return String(url).trim();
+  }
+
+  // 2. FALLBACK: Static bank mapping rules if database URL is missing
   const nameLower = String(productName || '').toLowerCase();
   const bankLower = String(bankName || '').toLowerCase();
 
@@ -274,12 +281,6 @@ function getBankApplyLinkBackend(productName, bankName, productObj = null) {
       return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=BIZC&XSELLINS=Y&CHANNEL=DSA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
     }
     return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb";
-  }
-
-  // FALLBACK: Database URL if no hardcoded rule matched
-  if (productObj && typeof productObj === 'object') {
-    const url = productObj.partner_url || productObj.application_url || productObj.public_url || productObj.apply_url || productObj.redirect_url;
-    if (url && String(url).trim()) return String(url).trim();
   }
 
   return "";
