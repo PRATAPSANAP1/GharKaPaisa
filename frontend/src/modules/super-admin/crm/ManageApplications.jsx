@@ -910,7 +910,8 @@ export default function ManageApplications() {
                 </div>
               </div>
             );
-          })()}
+          });
+        })()}
         </div>
       )}
 
