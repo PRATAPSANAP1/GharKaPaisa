@@ -576,7 +576,8 @@ export default function ManageApplications() {
                   <option value="approved">Approved</option>
                   <option value="commission_released">Commission Released</option>
                   <option value="commission_received">Commission Received</option>
-                  <option value="rejected">Rejected / Cancelled</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
               </div>
 

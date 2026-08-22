@@ -125,13 +125,15 @@ export default function ManageApplications() {
   };
 
   const STATUS_TABS = [
-    { id: '', label: 'All', color: '#6366f1', bg: '#6366f115' },
+    { id: '', label: 'All Applications', color: C.primary, bg: `${C.primary}15` },
     { id: 'pending', label: 'Pending', color: '#f59e0b', bg: '#f59e0b15' },
     { id: 'details_submitted', label: 'Details Submitted', color: '#3b82f6', bg: '#3b82f615' },
     { id: 'operational_verified', label: 'Operational Verified', color: '#8b5cf6', bg: '#8b5cf615' },
     { id: 'approved', label: 'Approved', color: '#10b981', bg: '#10b98115' },
     { id: 'commission_released', label: 'Commission Released', color: '#06b6d4', bg: '#06b6d415' },
     { id: 'commission_received', label: 'Commission Received', color: '#16a34a', bg: '#16a34a15' },
+    { id: 'rejected', label: 'Rejected', color: '#ef4444', bg: '#ef444415' },
+    { id: 'cancelled', label: 'Cancelled', color: '#64748b', bg: '#64748b15' },
   ];
 
   // Calculate status counts
@@ -150,6 +152,8 @@ export default function ManageApplications() {
       case 'approved': return { bg: '#10b98115', color: '#10b981', border: '#10b98140', label: 'Approved' };
       case 'commission_released': return { bg: '#06b6d415', color: '#06b6d4', border: '#06b6d440', label: 'Commission Released' };
       case 'commission_received': return { bg: '#16a34a15', color: '#16a34a', border: '#16a34a40', label: 'Commission Received' };
+      case 'rejected': return { bg: '#ef444415', color: '#ef4444', border: '#ef444440', label: 'Rejected' };
+      case 'cancelled': return { bg: '#64748b15', color: '#64748b', border: '#64748b40', label: 'Cancelled' };
       default: return { bg: `${C.gold}15`, color: C.gold, border: `${C.gold}40`, label: st };
     }
   };
@@ -217,6 +221,8 @@ export default function ManageApplications() {
             <option value="approved">Approved</option>
             <option value="commission_released">Commission Released</option>
             <option value="commission_received">Commission Received</option>
+            <option value="rejected">Rejected</option>
+            <option value="cancelled">Cancelled</option>
           </select>
           <button type="submit" style={{ ...S.btn("primary", false), padding: "10px 20px" }}>
             Search
