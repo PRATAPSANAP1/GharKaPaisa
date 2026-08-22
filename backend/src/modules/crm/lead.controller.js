@@ -221,16 +221,24 @@ const get360LeadDetails = async (req, res, next) => {
 };
 
 function getBankApplyLinkBackend(productName, bankName, productObj = null) {
-  // 1. DYNAMIC DATABASE URL FIRST
-  if (productObj && typeof productObj === 'object') {
-    const url = productObj.partner_url || productObj.application_url || productObj.public_url || productObj.apply_url || productObj.redirect_url;
-    if (url && String(url).trim()) return String(url).trim();
-  }
-
-  // 2. FALLBACK: Static bank mapping rules if database URL is missing
   const nameLower = String(productName || '').toLowerCase();
   const bankLower = String(bankName || '').toLowerCase();
 
+  // Helper to extract DB URL if valid and not mismatched
+  const extractValidDbUrl = (obj) => {
+    if (!obj || typeof obj !== 'object') return null;
+    const url = obj.partner_url || obj.application_url || obj.public_url || obj.apply_url || obj.redirect_url;
+    if (!url || !String(url).trim()) return null;
+    const cleanUrl = String(url).trim();
+    const isSbiUrl = cleanUrl.toLowerCase().includes('sbicard.com') || cleanUrl.toLowerCase().includes('sbi.co.in');
+    const isNonSbiBank = (bankLower && !bankLower.includes('sbi')) || (nameLower && !nameLower.includes('sbi') && !nameLower.includes('state bank'));
+    if (isSbiUrl && isNonSbiBank) {
+      return null; // Reject corrupted/placeholder SBI link on non-SBI product
+    }
+    return cleanUrl;
+  };
+
+  // 1. HARDCODED BANK MAPPING RULES
   // Axis Bank
   if (bankLower.includes('axis') || nameLower.includes('axis')) {
     return "https://web.axis.bank.in/DigitalChannel/WebForm/?ipa68&axisreferralcode=WMMNYOH1_9640841";
@@ -265,7 +273,7 @@ function getBankApplyLinkBackend(productName, bankName, productObj = null) {
   }
   // HDFC Bank
   if (bankLower.includes('hdfc') || nameLower.includes('hdfc')) {
-    if (nameLower.includes('freedom') || nameLower.includes('indianoil')) {
+    if (nameLower.includes('freedom') || nameLower.includes('indianoil') || nameLower.includes('shoppersstop') || nameLower.includes('shoppers stop')) {
       return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=RUPY&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb";
     }
     if (nameLower.includes('swiggy')) {
@@ -282,6 +290,10 @@ function getBankApplyLinkBackend(productName, bankName, productObj = null) {
     }
     return "https://applyonline.hdfc.bank.in/cards/credit-cards.html?utm_content=DGPI&Channel=DSA&DSACode=XYOH&SMCode=S54558&LGcode=&LCcode=DIGIX1&LC2=DIGIX1#nbb";
   }
+
+  // 2. FALLBACK TO DATABASE URL: Check valid database URL if no bank mapping rule matched
+  const explicitUrl = extractValidDbUrl(productObj);
+  if (explicitUrl) return explicitUrl;
 
   return "";
 }
