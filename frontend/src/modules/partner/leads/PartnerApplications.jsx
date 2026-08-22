@@ -814,9 +814,9 @@ export default function PartnerApplications() {
             <option value="details_submitted">Details Submitted</option>
             <option value="operational_verified">Operational Verified</option>
             <option value="approved">Approved</option>
-            <option value="commission_released">Commission Released</option>
             <option value="commission_received">Commission Received</option>
             <option value="rejected">Rejected</option>
+            <option value="cancelled">Cancelled</option>
           </select>
 
           <select value={commFilter} onChange={e => setCommFilter(e.target.value)} style={{ ...selectStyle, flex: 1, minWidth: 130 }}>
