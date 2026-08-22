@@ -728,13 +728,12 @@ export default function PartnerApplications() {
         })}
       </div>
 
-      {/* ── Analytics Funnel Grid (Max 5 Cards per row) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 14 }}>
+      {/* ── Analytics Funnel Grid (Max 4 Cards per row) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? 6 : 12, marginBottom: 14 }}>
         {[
           { key: '', commKey: '', label: 'Total Leads', val: dashboardStats?.total ?? dashboardStats?.total_applications ?? applications.length, color: accent, icon: FileText },
           { key: '', commKey: 'pending', label: 'Commission Pending', val: dashboardStats?.commission_pending ?? applications.filter(a => ['pending', 'unpaid', 'initiated', 'due'].includes(String(a.commission_status || '').toLowerCase()) || a.commission_status === 'pending').length, color: '#f59e0b', icon: Clock },
           { key: '', commKey: 'released', label: 'Commission Received', val: dashboardStats?.commission_received ?? dashboardStats?.commission_approved ?? dashboardStats?.commission_released ?? applications.filter(a => ['released', 'paid', 'received', 'credited', 'commission_released', 'commission_received'].includes(String(a.commission_status || '').toLowerCase()) || a.commission_status === 'released' || a.commission_status === 'credited').length, color: '#06b6d4', icon: CheckCircle2 },
-          { key: 'approved', commKey: '', label: 'Approved & Disbursed', val: dashboardStats?.approved ?? applications.filter(a => ['approved', 'disbursed'].includes(a.status)).length, color: '#10b981', icon: CheckCircle2 },
           { key: 'rejected', commKey: '', label: 'Rejected', val: dashboardStats?.rejected ?? applications.filter(a => a.status === 'rejected').length, color: '#ef4444', icon: XCircle },
         ].map((stat) => {
           const Icon = stat.icon;
