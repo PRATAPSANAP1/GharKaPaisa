@@ -15,6 +15,11 @@ const getOverview = async (req, res, next) => {
     let sql = `
       SELECT
         COUNT(*) as total,
+        COUNT(*) FILTER (WHERE LOWER(process_type::text) = 'lead_punching') as lead_punching_count,
+        COUNT(*) FILTER (WHERE LOWER(process_type::text) = 'linked_share') as linked_share_count,
+        COUNT(*) FILTER (WHERE LOWER(process_type::text) = 'direct_bank') as direct_bank_count,
+        COUNT(*) FILTER (WHERE LOWER(process_type::text) = 'physical_process') as physical_process_count,
+        COUNT(*) FILTER (WHERE process_type IS NULL OR LOWER(process_type::text) NOT IN ('lead_punching','linked_share','direct_bank','physical_process')) as invalid_process_count,
         COUNT(*) FILTER (WHERE LOWER(status::text) IN ('approved','disbursed','commission_released','commission_received')) as approved,
         COUNT(*) FILTER (WHERE LOWER(status::text) IN ('rejected','cancelled','declined')) as rejected,
         COUNT(*) FILTER (WHERE LOWER(status::text) IN ('pending','details_submitted','submitted','under_review','operational_verified')) as pending,
@@ -23,6 +28,7 @@ const getOverview = async (req, res, next) => {
         COALESCE(SUM(commission_amount) FILTER (WHERE LOWER(status::text) IN ('approved','disbursed','commission_released','commission_received')), 0) as total_commission
       FROM applications WHERE 1=1 ${partnerScopeApps}
     `;
+
     const values = [];
     if (from_date && to_date) {
       sql += ` AND created_at BETWEEN $1 AND $2`;

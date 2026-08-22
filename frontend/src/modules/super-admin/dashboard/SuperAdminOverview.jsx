@@ -30,12 +30,16 @@ export default function SuperAdminOverview() {
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
+  const [processFilter, setProcessFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
 
   // Modal Detailed View States
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [selectedTeamMember, setSelectedTeamMember] = useState(null);
+  const [selectedAppTrace, setSelectedAppTrace] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [customerApps, setCustomerApps] = useState([]);
   const [partnerApps, setPartnerApps] = useState([]);
@@ -44,46 +48,54 @@ export default function SuperAdminOverview() {
 
   const fetchMasterData = async () => {
     setRefreshing(true);
+    setFetchError(null);
     try {
       const [overviewRes, customersRes, partnersRes, teamRes, appsRes, adminsRes, walletBalRes] = await Promise.allSettled([
         api.get('/reports/overview'),
         api.get('/reports/customers'),
         api.get('/reports/export-partners'),
         api.get('/team/members'),
-        api.get('/applications', { params: { limit: 50 } }),
+        api.get('/applications', { params: { limit: 100 } }),
         api.get('/superadmin/admins'),
         api.get('/wallet/balance')
       ]);
 
+      let hasErrors = false;
+
       if (overviewRes.status === 'fulfilled' && overviewRes.value.data?.success) {
         setOverviewData(overviewRes.value.data.data);
-      }
+      } else { hasErrors = true; }
 
       if (customersRes.status === 'fulfilled' && customersRes.value.data?.success) {
         setCustomersList(customersRes.value.data.data || []);
-      }
+      } else { hasErrors = true; }
 
       if (partnersRes.status === 'fulfilled' && partnersRes.value.data?.success) {
         setPartnersList(partnersRes.value.data.data?.partners || []);
-      }
+      } else { hasErrors = true; }
 
       if (teamRes.status === 'fulfilled' && teamRes.value.data?.success) {
         setTeamList(teamRes.value.data.data?.members || teamRes.value.data.data || []);
-      }
+      } else { hasErrors = true; }
 
       if (appsRes.status === 'fulfilled' && appsRes.value.data?.success) {
         setApplicationsList(appsRes.value.data.data?.applications || appsRes.value.data.data || []);
-      }
+      } else { hasErrors = true; }
 
       if (adminsRes.status === 'fulfilled' && adminsRes.value.data?.success) {
         setAdminsList(adminsRes.value.data.data || []);
-      }
+      } else { hasErrors = true; }
 
       if (walletBalRes.status === 'fulfilled' && walletBalRes.value.data?.success) {
         setRazorpayBalance(walletBalRes.value.data.data?.razorpay_balance);
+      } else { hasErrors = true; }
+
+      if (hasErrors) {
+        setFetchError('Some dashboard metrics could not be loaded from server. Check network connection.');
       }
     } catch (err) {
       console.error('Error fetching master overview data:', err);
+      setFetchError('Failed to synchronize dashboard metrics with server.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -93,6 +105,7 @@ export default function SuperAdminOverview() {
   useEffect(() => {
     fetchMasterData();
   }, []);
+
 
   // View Customer Modal Details Loader
   const handleViewCustomer = async (cust) => {
@@ -155,6 +168,41 @@ export default function SuperAdminOverview() {
     }
   };
 
+  // View Application 360 Modal Details Loader
+  const handleViewApplicationTrace = async (app) => {
+    setModalLoading(true);
+    setSelectedAppTrace(null);
+    try {
+      const res = await api.get(`/applications/${app.id}/trace`);
+      if (res.data?.success) {
+        setSelectedAppTrace(res.data.data);
+      } else {
+        setSelectedAppTrace({ application: app, timeline: [], documents: [], physical_details: null, wallet_ledger: [] });
+      }
+    } catch (err) {
+      console.error(err);
+      setSelectedAppTrace({ application: app, timeline: [], documents: [], physical_details: null, wallet_ledger: [] });
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Process label & style resolver
+  const getProcessMeta = (proc) => {
+    switch (String(proc || '').toLowerCase()) {
+      case 'lead_punching':
+        return { label: 'Partner Punch', color: '#3B82F6', bg: '#EFF6FF', border: '#BFDBFE' };
+      case 'linked_share':
+        return { label: 'Linked Share', color: '#8B5CF6', bg: '#F5F3FF', border: '#DDD6FE' };
+      case 'direct_bank':
+        return { label: 'Direct Bank', color: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC' };
+      case 'physical_process':
+        return { label: 'Physical Process', color: '#F59E0B', bg: '#FEF3C7', border: '#FDE68A' };
+      default:
+        return { label: proc || 'Partner Punch', color: '#6B7280', bg: '#F3F4F6', border: '#E5E7EB' };
+    }
+  };
+
   // Metrics summary
   const stats = {
     customers: parseInt(overviewData?.customers?.total_customers ?? customersList.length ?? 0, 10),
@@ -163,10 +211,16 @@ export default function SuperAdminOverview() {
     pendingKycPartners: parseInt(overviewData?.Partners?.pending_kyc ?? overviewData?.partners?.pending_kyc ?? partnersList.filter(p => (p.kyc_status || 'pending') === 'pending').length ?? 0, 10),
     teamMembers: parseInt(overviewData?.team?.total_team ?? teamList.length ?? 0, 10),
 
-    totalApps: parseInt(overviewData?.applications?.total ?? overviewData?.leads?.total_leads ?? applicationsList.length ?? 0, 10),
-    approvedApps: parseInt(overviewData?.applications?.approved ?? overviewData?.leads?.approved_leads ?? 0, 10),
-    pendingApps: parseInt(overviewData?.applications?.pending ?? overviewData?.leads?.pending_leads ?? 0, 10),
-    rejectedApps: parseInt(overviewData?.applications?.rejected ?? overviewData?.leads?.rejected_leads ?? 0, 10),
+    totalApps: parseInt(overviewData?.applications?.total ?? applicationsList.length ?? 0, 10),
+    leadPunchingApps: parseInt(overviewData?.applications?.lead_punching_count ?? applicationsList.filter(a => (a.process_type || 'lead_punching') === 'lead_punching').length ?? 0, 10),
+    linkedShareApps: parseInt(overviewData?.applications?.linked_share_count ?? applicationsList.filter(a => a.process_type === 'linked_share').length ?? 0, 10),
+    directBankApps: parseInt(overviewData?.applications?.direct_bank_count ?? applicationsList.filter(a => a.process_type === 'direct_bank').length ?? 0, 10),
+    physicalProcessApps: parseInt(overviewData?.applications?.physical_process_count ?? applicationsList.filter(a => a.process_type === 'physical_process').length ?? 0, 10),
+    invalidProcessApps: parseInt(overviewData?.applications?.invalid_process_count ?? 0, 10),
+
+    approvedApps: parseInt(overviewData?.applications?.approved ?? 0, 10),
+    pendingApps: parseInt(overviewData?.applications?.pending ?? 0, 10),
+    rejectedApps: parseInt(overviewData?.applications?.rejected ?? 0, 10),
 
     admins: parseInt(overviewData?.admins?.total_admins ?? adminsList.length ?? 0, 10),
     activeAdmins: parseInt(overviewData?.admins?.active_admins ?? adminsList.filter(a => a.status === 'active' || a.isActive).length ?? 0, 10),
@@ -177,6 +231,11 @@ export default function SuperAdminOverview() {
     banks: parseInt(overviewData?.banks?.total_banks ?? 0, 10),
     products: parseInt(overviewData?.products?.total_products ?? 0, 10),
   };
+
+  // Data Integrity Verification
+  const processSum = stats.leadPunchingApps + stats.linkedShareApps + stats.directBankApps + stats.physicalProcessApps;
+  const isDataIntegrityMismatch = stats.totalApps !== processSum || stats.invalidProcessApps > 0;
+
 
   // Top Metric Cards Row (Customers, Partners, Team Members, Applications, Admins, Transactions)
   const topMetricsRow = [
@@ -275,7 +334,22 @@ export default function SuperAdminOverview() {
         </button>
       </div>
 
+      {/* ── ERROR & DATA INTEGRITY WARNING BANNERS ── */}
+      {fetchError && (
+        <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', padding: '12px 16px', borderRadius: '10px', color: '#991B1B', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>⚠️ {fetchError}</span>
+          <button onClick={fetchMasterData} style={{ background: '#991B1B', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '12px' }}>Retry Sync</button>
+        </div>
+      )}
+
+      {isDataIntegrityMismatch && (
+        <div style={{ background: '#FFFBEB', border: '1px solid #FCD34D', padding: '12px 16px', borderRadius: '10px', color: '#92400E', fontSize: '13px', fontWeight: 700 }}>
+          ⚠️ <strong>Application Data Integrity Warning:</strong> Total Applications ({stats.totalApps}) does not match sum of 4 process types ({processSum}) or contains invalid process types ({stats.invalidProcessApps}).
+        </div>
+      )}
+
       {/* ── TOP METRICS ROW (Single Row Display: Customers, Partners, Team Members, Applications, Admins, Transactions) ── */}
+
       <div style={{
         display: 'grid',
         gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)',
@@ -445,28 +519,39 @@ export default function SuperAdminOverview() {
           {/* Quick Platform Status Breakdown */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
             <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Applications Summary</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Applications Process Breakdown</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                  <span>Approved Leads</span>
-                  <strong style={{ color: '#10B981' }}>{stats.approvedApps}</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
+                  <span>Partner Punch</span>
+                  <strong style={{ color: '#3B82F6' }}>{stats.leadPunchingApps}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                  <span>Pending Leads</span>
-                  <strong style={{ color: '#F59E0B' }}>{stats.pendingApps}</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
+                  <span>Linked Share</span>
+                  <strong style={{ color: '#8B5CF6' }}>{stats.linkedShareApps}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                  <span>Rejected Leads</span>
-                  <strong style={{ color: '#EF4444' }}>{stats.rejectedApps}</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
+                  <span>Direct Bank</span>
+                  <strong style={{ color: '#06B6D4' }}>{stats.directBankApps}</strong>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
+                  <span>Physical Process</span>
+                  <strong style={{ color: '#F59E0B' }}>{stats.physicalProcessApps}</strong>
+                </div>
+                {stats.invalidProcessApps > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: '#FEF2F2', borderRadius: '8px', fontSize: '12px', color: '#EF4444' }}>
+                    <span>Invalid / Unknown</span>
+                    <strong>{stats.invalidProcessApps}</strong>
+                  </div>
+                )}
               </div>
               <button 
-                onClick={() => navigate('/super-admin/crm')} 
+                onClick={() => { setActiveTab('applications'); setProcessFilter('all'); }} 
                 style={{ marginTop: '14px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: C.teal, color: '#fff', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
-                Open Applications CRM →
+                View Applications ({stats.totalApps}) →
               </button>
             </div>
+
 
             <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Partner Network</h3>
@@ -709,46 +794,125 @@ export default function SuperAdminOverview() {
         <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>All Applications Tracking</h3>
-              <p style={{ fontSize: '13px', color: C.textLight, margin: '2px 0 0 0' }}>Real-time status monitoring, bank approvals, and document verifications.</p>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>All Applications Tracking (Unified Single Source of Truth)</h3>
+              <p style={{ fontSize: '13px', color: C.textLight, margin: '2px 0 0 0' }}>Real-time 360° traceability across all 4 application processes.</p>
             </div>
-            <button onClick={() => navigate('/super-admin/crm')} style={{ background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
-              Open Applications CRM →
-            </button>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <select
+                value={processFilter}
+                onChange={e => setProcessFilter(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+              >
+                <option value="all">All Processes ({stats.totalApps})</option>
+                <option value="lead_punching">Partner Punch ({stats.leadPunchingApps})</option>
+                <option value="linked_share">Linked Share ({stats.linkedShareApps})</option>
+                <option value="direct_bank">Direct Bank ({stats.directBankApps})</option>
+                <option value="physical_process">Physical Process ({stats.physicalProcessApps})</option>
+              </select>
+
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="details_submitted">Details Submitted</option>
+                <option value="operational_verified">Operational Verified</option>
+                <option value="approved">Approved</option>
+                <option value="commission_released">Commission Released</option>
+                <option value="commission_received">Commission Received</option>
+                <option value="rejected">Rejected</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+
+              <input
+                type="text"
+                placeholder="Search app#, customer, partner, product..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: '220px' }}
+              />
+
+              <button onClick={() => navigate('/super-admin/crm')} style={{ background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
+                Open Full CRM →
+              </button>
+            </div>
           </div>
+
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
               <thead>
                 <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase' }}>
                   <th style={{ padding: '12px 16px' }}>App Number</th>
                   <th style={{ padding: '12px 16px' }}>Customer / Mobile</th>
-                  <th style={{ padding: '12px 16px' }}>Product</th>
+                  <th style={{ padding: '12px 16px' }}>Partner Code</th>
+                  <th style={{ padding: '12px 16px' }}>Product & Bank</th>
+                  <th style={{ padding: '12px 16px' }}>Process Channel</th>
                   <th style={{ padding: '12px 16px' }}>Status</th>
                   <th style={{ padding: '12px 16px' }}>Commission</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {applicationsList.map((app, i) => (
-                  <tr key={app.id || i} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 800, color: C.teal }}>{app.app_number || app.lead_number || 'APP-REF'}</td>
-                    <td style={{ padding: '12px 16px', fontWeight: 700, color: C.text }}>
-                      {app.customer_name || 'Customer'}<br/>
-                      <span style={{ fontSize: '11px', color: C.textLight }}>{app.customer_mobile || app.mobile}</span>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: C.textMid }}>{app.product_name || 'Credit Card / Loan'}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', background: (app.status === 'approved' || app.status === 'disbursed') ? '#ECFDF5' : (app.status === 'rejected' ? '#FEF2F2' : '#EFF6FF'), color: (app.status === 'approved' || app.status === 'disbursed') ? '#059669' : (app.status === 'rejected' ? '#EF4444' : '#2563EB') }}>
-                        {(app.status || 'UNDER_REVIEW').toUpperCase()}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>₹{parseFloat(app.commission_amount || 0).toLocaleString('en-IN')}</td>
-                  </tr>
-                ))}
+                {applicationsList
+                  .filter(app => {
+                    if (processFilter !== 'all' && (app.process_type || 'lead_punching') !== processFilter) return false;
+                    if (statusFilter !== 'all' && (app.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
+                    if (searchQuery) {
+                      const q = searchQuery.toLowerCase();
+                      const num = (app.app_number || app.lead_number || '').toLowerCase();
+                      const cust = (app.customer_name || app.full_name || '').toLowerCase();
+                      const mob = (app.customer_mobile || app.mobile || '').toLowerCase();
+                      const part = (app.partner_code || '').toLowerCase();
+                      const prod = (app.product_name || '').toLowerCase();
+                      return num.includes(q) || cust.includes(q) || mob.includes(q) || part.includes(q) || prod.includes(q);
+                    }
+                    return true;
+                  })
+                  .map((app, i) => {
+                    const procMeta = getProcessMeta(app.process_type);
+                    return (
+                      <tr key={app.id || i} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '12px 16px', fontWeight: 800, color: C.teal }}>{app.app_number || app.lead_number || 'GKP-APP'}</td>
+                        <td style={{ padding: '12px 16px', fontWeight: 700, color: C.text }}>
+                          {app.customer_name || 'Customer'}<br/>
+                          <span style={{ fontSize: '11px', color: C.textLight }}>{app.customer_mobile || app.mobile || 'N/A'}</span>
+                        </td>
+                        <td style={{ padding: '12px 16px', color: C.purple, fontWeight: 700 }}>{app.partner_code || 'DIRECT'}</td>
+                        <td style={{ padding: '12px 16px', color: C.textMid }}>
+                          <strong>{app.product_name || 'Financial Product'}</strong><br/>
+                          <span style={{ fontSize: '11px', color: C.textLight }}>{app.bank_name || 'Partner Bank'}</span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', background: procMeta.bg, color: procMeta.color, border: `1px solid ${procMeta.border}` }}>
+                            {procMeta.label}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', background: (app.status === 'approved' || app.status === 'commission_released' || app.status === 'commission_received') ? '#ECFDF5' : (app.status === 'rejected' || app.status === 'cancelled' ? '#FEF2F2' : '#EFF6FF'), color: (app.status === 'approved' || app.status === 'commission_released' || app.status === 'commission_received') ? '#059669' : (app.status === 'rejected' || app.status === 'cancelled' ? '#EF4444' : '#2563EB') }}>
+                            {(app.status || 'PENDING').toUpperCase().replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>₹{parseFloat(app.commission_amount || 0).toLocaleString('en-IN')}</td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                          <button
+                            onClick={() => handleViewApplicationTrace(app)}
+                            style={{ background: C.teal, color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            👁️ 360° Trace
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
         </div>
       )}
+
 
       {/* TAB 6: ADMINS */}
       {activeTab === 'admins' && (
@@ -980,7 +1144,139 @@ export default function SuperAdminOverview() {
                   </div>
                 ))}
               </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── APPLICATION 360° TRACEABILITY MODAL ── */}
+
+      {selectedAppTrace && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1300, background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ width: '100%', maxWidth: '900px', maxHeight: '92vh', overflowY: 'auto', background: C.card, borderRadius: '20px', padding: '28px', border: `1px solid ${C.border}`, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '16px', marginBottom: '20px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0 }}>⚡ Application 360° Traceability Record</h3>
+                  <span style={{ fontSize: '12px', fontWeight: 800, padding: '3px 10px', borderRadius: '6px', background: getProcessMeta(selectedAppTrace.application?.application_process_type).bg, color: getProcessMeta(selectedAppTrace.application?.application_process_type).color }}>
+                    {getProcessMeta(selectedAppTrace.application?.application_process_type).label}
+                  </span>
+                </div>
+                <span style={{ fontSize: '13px', color: C.teal, fontWeight: 800, marginTop: '4px', display: 'block' }}>
+                  App Number: {selectedAppTrace.application?.app_number} • ID: {selectedAppTrace.application?.application_id}
+                </span>
+              </div>
+              <button onClick={() => setSelectedAppTrace(null)} style={{ background: C.bg, border: `1px solid ${C.border}`, width: '36px', height: '36px', borderRadius: '50%', fontSize: '18px', color: C.text, cursor: 'pointer' }}>✕</button>
+            </div>
+
+            {/* Relational Mapping Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ background: C.bg, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>👤 Customer Profile</span>
+                <div style={{ fontWeight: 800, color: C.text, fontSize: '14px', marginTop: '4px' }}>{selectedAppTrace.application?.customer_name || 'N/A'}</div>
+                <div style={{ fontSize: '12px', color: C.textMid }}>Mobile: {selectedAppTrace.application?.customer_mobile || 'N/A'}</div>
+                <div style={{ fontSize: '11px', color: C.textLight }}>Email: {selectedAppTrace.application?.customer_email || 'N/A'}</div>
+              </div>
+
+              <div style={{ background: C.bg, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>🤝 Partner & Channel</span>
+                <div style={{ fontWeight: 800, color: C.purple, fontSize: '14px', marginTop: '4px' }}>{selectedAppTrace.application?.partner_code || 'DIRECT'}</div>
+                <div style={{ fontSize: '12px', color: C.textMid }}>{selectedAppTrace.application?.partner_name || 'Direct Bank Flow'}</div>
+                <div style={{ fontSize: '11px', color: C.textLight }}>Lead ID: {selectedAppTrace.application?.lead_id || 'N/A'}</div>
+              </div>
+
+              <div style={{ background: C.bg, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>🏦 Product & Bank URL</span>
+                <div style={{ fontWeight: 800, color: C.text, fontSize: '14px', marginTop: '4px' }}>{selectedAppTrace.application?.product_name || 'Credit Product'}</div>
+                <div style={{ fontSize: '12px', color: C.textMid }}>{selectedAppTrace.application?.bank_name || 'Bank'}</div>
+                {selectedAppTrace.application?.partner_url ? (
+                  <a href={selectedAppTrace.application.partner_url} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: C.teal, fontWeight: 800, display: 'inline-block', marginTop: '4px' }}>
+                    🔗 Open Bank Partner URL ↗
+                  </a>
+                ) : (
+                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', marginTop: '4px' }}>No direct URL configured</span>
+                )}
+              </div>
+            </div>
+
+            {/* Bank Operational Tracking */}
+            <div style={{ background: C.bg, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, marginBottom: '20px' }}>
+              <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.text, margin: '0 0 10px 0', textTransform: 'uppercase' }}>🏦 Bank Processing & Operations Tracking</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', fontSize: '12px' }}>
+                <div><span style={{ color: C.textLight, display: 'block', fontSize: '11px' }}>Bank Ref #</span><strong>{selectedAppTrace.application?.bank_ref_number || 'Not Generated'}</strong></div>
+                <div><span style={{ color: C.textLight, display: 'block', fontSize: '11px' }}>Soft Approval</span><strong>{selectedAppTrace.application?.soft_approval_status || 'N/A'}</strong></div>
+                <div><span style={{ color: C.textLight, display: 'block', fontSize: '11px' }}>VKYC Stage</span><strong>{selectedAppTrace.application?.vkyc_stage || 'N/A'}</strong></div>
+                <div><span style={{ color: C.textLight, display: 'block', fontSize: '11px' }}>Dispatch Status</span><strong>{selectedAppTrace.application?.dispatch_status || 'N/A'}</strong></div>
+              </div>
+              {selectedAppTrace.application?.bank_remark && (
+                <div style={{ marginTop: '8px', fontSize: '12px', color: C.textMid }}>
+                  <strong>Bank Remark:</strong> {selectedAppTrace.application.bank_remark}
+                </div>
+              )}
+            </div>
+
+            {/* Process Specific Detailed Section */}
+            {selectedAppTrace.application?.application_process_type === 'physical_process' && selectedAppTrace.physical_details && (
+              <div style={{ background: '#FFFBEB', padding: '14px', borderRadius: '12px', border: '1px solid #FDE68A', marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#92400E', margin: '0 0 10px 0' }}>📋 Physical Process Application Details</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', fontSize: '12px' }}>
+                  <div><span style={{ color: '#B45309', display: 'block', fontSize: '11px' }}>Employer Company</span><strong>{selectedAppTrace.physical_details.company_name || 'N/A'}</strong></div>
+                  <div><span style={{ color: '#B45309', display: 'block', fontSize: '11px' }}>Net Monthly Income</span><strong>₹{selectedAppTrace.physical_details.monthly_income ? parseFloat(selectedAppTrace.physical_details.monthly_income).toLocaleString('en-IN') : 'N/A'}</strong></div>
+                  <div><span style={{ color: '#B45309', display: 'block', fontSize: '11px' }}>Courier / Docket #</span><strong>{selectedAppTrace.physical_details.courier_docket_number || 'N/A'}</strong></div>
+                </div>
+              </div>
             )}
+
+            {selectedAppTrace.application?.application_process_type === 'linked_share' && (
+              <div style={{ background: '#F5F3FF', padding: '14px', borderRadius: '12px', border: '1px solid #DDD6FE', marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#6D28D9', margin: '0 0 10px 0' }}>🔗 Linked Share Process Details</h4>
+                <div style={{ fontSize: '12px', color: '#5B21B6' }}>
+                  <strong>Share Token:</strong> {selectedAppTrace.application?.share_token || 'N/A'} | 
+                  <strong> SMS Log Count:</strong> {selectedAppTrace.sms_logs?.length || 0} dispatches
+                </div>
+              </div>
+            )}
+
+            {/* Timeline Audit Trail */}
+            <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>⏱️ Application Status Audit Timeline ({selectedAppTrace.timeline?.length || 0})</h4>
+            {selectedAppTrace.timeline?.length === 0 ? (
+              <div style={{ padding: '12px', background: C.bg, borderRadius: '8px', fontSize: '12px', color: C.textLight, marginBottom: '20px' }}>No timeline audit events logged yet.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px', maxHeight: '180px', overflowY: 'auto' }}>
+                {selectedAppTrace.timeline?.map((evt, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
+                    <div>
+                      <strong style={{ color: C.teal }}>{evt.new_status ? evt.new_status.toUpperCase().replace('_',' ') : 'STATUS_CHANGED'}</strong>
+                      {evt.previous_status && <span style={{ color: C.textLight }}> (from {evt.previous_status})</span>}
+                      {evt.remarks && <div style={{ fontSize: '11px', color: C.textMid }}>{evt.remarks}</div>}
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: '11px', color: C.textLight }}>
+                      {evt.performed_by_name || 'System'}<br/>
+                      {new Date(evt.created_at).toLocaleString('en-IN')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Wallet & Financial Ledger */}
+            <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>💰 Wallet Ledger & Commission Entries ({selectedAppTrace.wallet_ledger?.length || 0})</h4>
+            {selectedAppTrace.wallet_ledger?.length === 0 ? (
+              <div style={{ padding: '12px', background: C.bg, borderRadius: '8px', fontSize: '12px', color: C.textLight }}>No wallet transactions logged for this application yet.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {selectedAppTrace.wallet_ledger?.map((w, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
+                    <div>
+                      <strong style={{ color: '#10B981' }}>₹{parseFloat(w.amount || 0).toLocaleString('en-IN')}</strong> — {w.transaction_type} ({w.status})
+                    </div>
+                    <span style={{ fontSize: '11px', color: C.textLight }}>{new Date(w.created_at).toLocaleDateString('en-IN')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
           </div>
         </div>
       )}
@@ -988,3 +1284,4 @@ export default function SuperAdminOverview() {
     </div>
   );
 }
+

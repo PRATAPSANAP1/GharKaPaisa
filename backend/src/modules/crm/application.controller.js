@@ -3388,6 +3388,83 @@ const holdCommission = async (req, res, next) => {
   }
 };
 
+// GET /applications/:id/trace — Complete 360-Degree Traceability Data
+const get360ApplicationTrace = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const { rows: [appTrace] } = await query(`
+      SELECT
+        a.id AS application_id,
+        a.app_number,
+        a.process_type AS application_process_type,
+        a.status AS application_status,
+        a.created_at AS application_created_at,
+        a.updated_at AS application_updated_at,
+        a.bank_ref_number,
+        a.soft_approval_status,
+        a.vkyc_stage,
+        a.vkyc_url,
+        a.iqa_stage,
+        a.dispatch_status,
+        a.remarks AS bank_remark,
+        a.decline_reason,
+        a.commission_amount,
+        
+        c.id AS customer_id,
+        c.full_name AS customer_name,
+        c.mobile AS customer_mobile,
+        c.email AS customer_email,
+        
+        l.id AS lead_id,
+        l.status AS lead_status,
+        l.process_type AS lead_process_type,
+        l.share_token,
+        
+        p.id AS partner_id,
+        p.partner_code,
+        CONCAT(p.first_name, ' ', p.last_name) AS partner_name,
+        
+        prod.id AS product_id,
+        prod.name AS product_name,
+        prod.partner_url,
+        b.id AS bank_id,
+        b.name AS bank_name,
+        b.short_code AS bank_short_code
+      FROM applications a
+      LEFT JOIN customers c ON c.id = a.customer_id
+      LEFT JOIN leads l ON l.id = a.lead_id
+      LEFT JOIN partner_profiles p ON p.id = a.partner_id
+      LEFT JOIN products prod ON prod.id = a.product_id
+      LEFT JOIN banks b ON b.id = prod.bank_id
+      WHERE a.id = $1
+    `, [id]);
+
+    if (!appTrace) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    const [timelineRes, docsRes, physRes, walletRes, smsRes] = await Promise.all([
+      query(`SELECT at.*, u.full_name as performed_by_name, u.role as performed_by_role FROM application_timeline at LEFT JOIN users u ON u.id = at.performed_by WHERE at.application_id = $1 ORDER BY at.created_at DESC`, [id]),
+      query(`SELECT * FROM application_documents WHERE application_id = $1 ORDER BY created_at DESC`, [id]),
+      query(`SELECT * FROM physical_application_details WHERE application_id = $1`, [id]),
+      query(`SELECT * FROM wallet_ledger WHERE application_id = $1 ORDER BY created_at DESC`, [id]),
+      query(`SELECT * FROM sms_logs WHERE application_id = $1 ORDER BY created_at DESC`, [id]).catch(() => ({ rows: [] }))
+    ]);
+
+    return success(res, {
+      application: appTrace,
+      timeline: timelineRes.rows,
+      documents: docsRes.rows,
+      physical_details: physRes.rows[0] || null,
+      wallet_ledger: walletRes.rows,
+      sms_logs: smsRes.rows
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   submitApplication,
   submitPublicApplication,
@@ -3427,5 +3504,8 @@ module.exports = {
   submitPhysicalApplicationByToken,
   deleteApplication,
   releaseCommission,
-  holdCommission
+  holdCommission,
+  get360ApplicationTrace
 };
+
+
