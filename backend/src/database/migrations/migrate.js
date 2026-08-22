@@ -621,6 +621,14 @@ const migrate = async () => {
       status = 'operational_verified', 
       final_status = COALESCE(final_status, 'in_process')
     WHERE status::text = 'under_review';
+
+    -- Global normalization to enforce canonical 8 statuses
+    UPDATE applications SET status = 'pending' WHERE status::text IN ('initiated', 'lead_created', 'created', 'new', 'draft', 'confirmed', 'link_pending', 'link_sent');
+    UPDATE applications SET status = 'details_submitted' WHERE status::text IN ('submitted', 'bank_application_pending', 'application_started', 'bank_form_submitted');
+    UPDATE applications SET status = 'operational_verified' WHERE status::text IN ('under_review', 'under review', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed', 'verification', 'bank_verification');
+    UPDATE applications SET status = 'approved' WHERE status::text IN ('operational_approved', 'super_admin_approved', 'app_file_generated', 'sanctioned', 'disbursed');
+    UPDATE applications SET status = 'commission_received' WHERE status::text IN ('released', 'credited', 'paid', 'received', 'commission_released');
+    UPDATE applications SET status = 'rejected' WHERE status::text IN ('decline', 'declined', 'technical_error');
   `);
 
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_Partner ON applications(partner_id)`);
