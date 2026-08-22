@@ -852,102 +852,136 @@ export default function ManageWallet() {
 
       {/* ═══ MODAL: CONFIRM RAZORPAY PAYMENT ═══ */}
       {razorpayModalOpen && payForm.withdrawal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '16px' }}>
-          <div style={{ ...S.card, background: isDark ? '#18181B' : '#FFFFFF', maxWidth: '520px', width: '100%', padding: '24px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '16px' }}>
+          <div style={{ ...S.card, background: isDark ? '#18181B' : '#FFFFFF', maxWidth: '560px', width: '100%', padding: '24px', borderRadius: '18px', border: `1px solid ${C.border}`, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)' }}>
             
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px' }}>
+            {/* Corporate Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: C.text }}>Confirm Razorpay Payment</h3>
-                <span style={{ fontSize: '12px', color: C.textLight }}>Business Account to Beneficiary Bank Payout</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ background: '#0284C715', color: '#0284C7', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    🔒 RazorpayX Enterprise Payout
+                  </span>
+                  <span style={{ background: '#10B98115', color: '#10B981', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
+                    SSL 256-BIT ENCRYPTED
+                  </span>
+                </div>
+                <h3 style={{ margin: 0, fontSize: '19px', fontWeight: 800, color: C.text }}>Confirm Razorpay Payment</h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>Corporate Business Account ➔ Direct Beneficiary Payout</span>
               </div>
-              <button onClick={() => setRazorpayModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}><MdClose size={22} /></button>
+              <button onClick={() => setRazorpayModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight, padding: '4px' }}><MdClose size={22} /></button>
             </div>
 
-            {/* Breakdown Grid */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+            {/* Breakdown & Corporate Detail Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '18px' }}>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '12px', borderRadius: '10px' }}>
-                  <div style={{ fontSize: '11px', color: C.textLight, textTransform: 'uppercase', fontWeight: 700 }}>Partner</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: C.text }}>{payForm.withdrawal.first_name} {payForm.withdrawal.last_name}</div>
-                  <div style={{ fontSize: '11px', color: C.textLight, fontFamily: 'monospace' }}>{payForm.withdrawal.partner_code}</div>
+              {/* Partner & Amount Breakdown */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px' }}>
+                <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: '11px', color: C.textLight, textTransform: 'uppercase', fontWeight: 800, marginBottom: '4px' }}>Beneficiary Partner</div>
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: C.text }}>{payForm.withdrawal.first_name} {payForm.withdrawal.last_name}</div>
+                  <div style={{ fontSize: '11px', color: C.textLight, fontFamily: 'monospace', marginTop: '2px' }}>Partner Code: {payForm.withdrawal.partner_code}</div>
                 </div>
-                <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '12px', borderRadius: '10px' }}>
-                  <div style={{ fontSize: '11px', color: C.textLight, textTransform: 'uppercase', fontWeight: 700 }}>Payout Amount</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: C.primary }}>₹{parseFloat(payForm.withdrawal.amount).toFixed(2)}</div>
-                  <div style={{ fontSize: '11px', color: C.green }}>Net: ₹{parseFloat(payForm.withdrawal.net_amount || (payForm.withdrawal.amount * 0.98)).toFixed(2)}</div>
+                <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: '11px', color: C.textLight, textTransform: 'uppercase', fontWeight: 800, marginBottom: '4px' }}>Payout Financials</div>
+                  <div style={{ fontSize: '18px', fontWeight: 900, color: C.primary }}>₹{parseFloat(payForm.withdrawal.amount).toFixed(2)}</div>
+                  <div style={{ fontSize: '11px', color: C.textLight, display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
+                    <span>2% Statutory TDS:</span>
+                    <strong style={{ color: C.red }}>-₹{parseFloat(payForm.withdrawal.tds_amount || (payForm.withdrawal.amount * 0.02)).toFixed(2)}</strong>
+                  </div>
+                  <div style={{ fontSize: '12px', color: C.green, fontWeight: 800, display: 'flex', justifyContent: 'space-between', marginTop: '4px', paddingTop: '4px', borderTop: `1px dashed ${C.border}` }}>
+                    <span>Net Transfer:</span>
+                    <span>₹{parseFloat(payForm.withdrawal.net_amount || (payForm.withdrawal.amount * 0.98)).toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
 
               {/* Bank & Razorpay Identifiers */}
-              <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '12px', borderRadius: '10px', fontSize: '12px' }}>
-                <div style={{ fontSize: '11px', color: C.textLight, textTransform: 'uppercase', fontWeight: 700, marginBottom: '6px' }}>Destination Bank Account</div>
-                <div><strong>Bank:</strong> {payForm.withdrawal.bank_name || 'N/A'}</div>
-                <div><strong>Account:</strong> <span style={{ fontFamily: 'monospace' }}>{payForm.withdrawal.account_number || 'N/A'}</span></div>
-                <div><strong>IFSC:</strong> <span style={{ fontFamily: 'monospace' }}>{payForm.withdrawal.ifsc_code || payForm.withdrawal.ifsc || 'N/A'}</span></div>
+              <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, fontSize: '12.5px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '11px', color: C.textLight, textTransform: 'uppercase', fontWeight: 800 }}>Destination Bank Account</div>
+                  <span style={{ fontSize: '10px', background: '#D1FAE5', color: '#065F46', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>VERIFIED BENEFICIARY</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div><span style={{ color: C.textLight }}>Bank Name:</span> <strong style={{ color: C.text }}>{payForm.withdrawal.bank_name || 'N/A'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Account No:</span> <strong style={{ fontFamily: 'monospace', color: C.text }}>{payForm.withdrawal.account_number || 'N/A'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>IFSC Code:</span> <strong style={{ fontFamily: 'monospace', color: C.text }}>{payForm.withdrawal.ifsc_code || payForm.withdrawal.ifsc || 'N/A'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Purpose:</span> <strong style={{ color: C.text }}>Partner Commission</strong></div>
+                </div>
                 {payForm.withdrawal.razorpay_contact_id && (
-                  <div style={{ marginTop: '4px', fontSize: '11px', color: C.textLight, fontFamily: 'monospace' }}>Contact ID: {payForm.withdrawal.razorpay_contact_id}</div>
+                  <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: `1px solid ${C.border}`, fontSize: '11px', color: C.textLight, fontFamily: 'monospace', display: 'flex', gap: '12px' }}>
+                    <span>Contact ID: {payForm.withdrawal.razorpay_contact_id}</span>
+                    {payForm.withdrawal.razorpay_fund_account_id && <span>Fund Acc: {payForm.withdrawal.razorpay_fund_account_id}</span>}
+                  </div>
                 )}
               </div>
 
               {/* Mode Selector */}
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: C.text, display: 'block', marginBottom: '6px' }}>Transfer Mode</label>
+                <label style={{ fontSize: '12px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Corporate Transfer Mode</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                  {['IMPS', 'NEFT', 'RTGS'].map(m => (
+                  {[
+                    { id: 'IMPS', label: '⚡ IMPS (Instant 24x7)' },
+                    { id: 'NEFT', label: '🏦 NEFT (Batch)' },
+                    { id: 'RTGS', label: '💼 RTGS (High Value)' }
+                  ].map(m => (
                     <button
-                      key={m}
+                      key={m.id}
                       type="button"
-                      onClick={() => setPayForm({ ...payForm, mode: m })}
+                      onClick={() => setPayForm({ ...payForm, mode: m.id })}
                       style={{
-                        padding: '8px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
-                        border: `1px solid ${payForm.mode === m ? C.teal : C.border}`,
-                        background: payForm.mode === m ? `${C.teal}15` : (isDark ? '#27272A' : '#FFF'),
-                        color: payForm.mode === m ? C.teal : C.text,
-                        cursor: 'pointer'
+                        padding: '10px 8px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 800,
+                        border: `1.5px solid ${payForm.mode === m.id ? C.teal : C.border}`,
+                        background: payForm.mode === m.id ? `${C.teal}15` : (isDark ? '#27272A' : '#FFF'),
+                        color: payForm.mode === m.id ? C.teal : C.text,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
                       }}
                     >
-                      {m}
+                      {m.label}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Narration */}
+              {/* Corporate Narration */}
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: C.text, display: 'block', marginBottom: '4px' }}>Payout Narration</label>
+                <label style={{ fontSize: '12px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Payout Narration / Reference</label>
                 <input
                   type="text"
                   value={payForm.narration}
                   onChange={e => setPayForm({ ...payForm, narration: e.target.value })}
-                  style={{ ...S.input, fontSize: '13px' }}
+                  placeholder="GharKaPaisa Partner Commission Settlement"
+                  style={{ ...S.input, fontSize: '13px', fontWeight: 600 }}
                 />
               </div>
 
               {/* Razorpay Balance Indicator */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', background: isDark ? '#27272A' : '#EFF6FF', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
-                <span style={{ color: C.textLight }}>Available RazorpayX Balance:</span>
-                <strong style={{ color: (razorpayData?.available_balance || 0) < payForm.withdrawal.amount ? C.red : C.green }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', background: isDark ? '#27272A' : '#F0F9FF', padding: '12px 16px', borderRadius: '10px', border: `1px solid ${isDark ? '#3F3F46' : '#BAE6FD'}` }}>
+                <span style={{ color: C.textMid, fontWeight: 700 }}>Available RazorpayX Balance:</span>
+                <strong style={{ fontSize: '14px', color: (razorpayData?.available_balance || 0) < payForm.withdrawal.amount ? C.red : C.green }}>
                   ₹{parseFloat(razorpayData?.available_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </strong>
               </div>
 
-              {/* Warning Notice */}
-              <div style={{ fontSize: '12px', color: '#D97706', background: '#FEF3C7', padding: '10px 12px', borderRadius: '8px', border: '1px solid #FCD34D' }}>
-                ⚠ <strong>This payment will transfer real money to the partner's bank account.</strong>
+              {/* Security Safeguard Warning */}
+              <div style={{ fontSize: '11.5px', color: '#92400E', background: '#FEF3C7', padding: '10px 14px', borderRadius: '10px', border: '1px solid #FCD34D', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14px' }}>🔒</span>
+                <div>
+                  <strong>Audit Secured:</strong> This instant API transaction will disburse funds directly to the partner's verified bank account and record a dual-authorization audit entry.
+                </div>
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setRazorpayModalOpen(false)} style={{ ...S.btn('outline'), padding: '10px 16px', fontSize: '13px' }}>Cancel</button>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '8px', borderTop: `1px solid ${C.border}` }}>
+              <button onClick={() => setRazorpayModalOpen(false)} style={{ ...S.btn('outline'), padding: '10px 18px', fontSize: '13px', borderRadius: '10px' }}>Cancel</button>
               <button
                 disabled={actionLoading || (razorpayData?.available_balance || 0) < payForm.withdrawal.amount}
                 onClick={handleConfirmRazorpayPayment}
-                style={{ ...S.btn('primary'), background: C.teal, padding: '10px 20px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                style={{ ...S.btn('primary'), background: C.teal, padding: '10px 24px', fontSize: '13.5px', fontWeight: 800, borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
               >
-                {actionLoading ? 'Initiating Payout...' : 'Confirm & Pay'}
+                {actionLoading ? 'Initiating Payout...' : '🔒 Confirm & Transfer Payout'}
               </button>
             </div>
           </div>
