@@ -4,7 +4,7 @@ import { useAuthStore } from '../../../app/store/authStore';
 import { 
   X, CheckCircle, XCircle, Eye, Send, ShieldCheck, 
   Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft, Lock,
-  Share2, Copy, MessageSquare, Smartphone
+  Share2, Copy, MessageSquare, Smartphone, Save, Sliders
 } from 'lucide-react';
 
 const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initialTab = 'qd', showAllTabs = false }) => {
@@ -327,7 +327,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   gap: '6px'
                 }}
               >
-                📋 QD (Quick Details) {!canEditQd && <Lock size={12} style={{ color: '#94a3b8' }} />}
+                <FileText size={14} /> QD (Quick Details) {!canEditQd && <Lock size={12} style={{ color: '#94a3b8' }} />}
               </button>
             )}
 
@@ -351,7 +351,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   gap: '6px'
                 }}
               >
-                ⚙️ Operational Remarks
+                <Sliders size={14} /> Operational Remarks
               </button>
             )}
 
@@ -375,7 +375,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   gap: '6px'
                 }}
               >
-                🏦 Bank Remark & Final Status {!canEditFinal && <Lock size={12} style={{ color: '#94a3b8' }} />}
+                <Building2 size={14} /> Bank Remark & Final Status {!canEditFinal && <Lock size={12} style={{ color: '#94a3b8' }} />}
               </button>
             )}
 
@@ -392,10 +392,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                 color: activeTab === 'timeline' ? '#475569' : '#64748b',
                 borderBottom: activeTab === 'timeline' ? '3px solid #475569' : '3px solid transparent',
                 cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}
             >
-              📜 Audit Log
+              <Clock size={14} /> Audit Log
             </button>
           </div>
 
@@ -405,8 +408,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#1e3a8a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      📋 QD (Customer Quick Details)
+                    <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#1e3a8a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <FileText size={16} /> QD (Customer Quick Details)
                     </h4>
                     {!canEditQd && (
                       <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -560,13 +563,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       type="button"
                       onClick={() => handleSaveDetails('qd')}
                       disabled={actionLoading}
-                      style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}
+                      style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                     >
-                      {actionLoading ? 'Saving...' : 'Save QD Details 💾'}
+                      <Save size={16} /> {actionLoading ? 'Saving...' : 'Save QD Details'}
                     </button>
                   ) : (
-                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px', width: '100%', textAlign: 'center' }}>
-                      🔒 QD Form is read-only for admin/ops roles. Editable by Partner only.
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px', width: '100%', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <Lock size={13} /> QD Form is read-only for admin/ops roles. Editable by Partner only.
                     </div>
                   )}
                 </div>
@@ -580,8 +583,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#c2410c', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    ⚙️ Operational Remarks & Processing Stage
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#c2410c', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Sliders size={16} /> Operational Remarks & Processing Stage
                   </h4>
                   <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#fff7ed', color: '#c2410c' }}>
                     Editable by Admin, Operations & Partner
@@ -669,9 +672,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     type="button"
                     onClick={() => handleSaveDetails('remark')}
                     disabled={actionLoading}
-                    style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}
+                    style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                   >
-                    {actionLoading ? 'Saving...' : 'Save Remarks & Stage 💾'}
+                    <Save size={16} /> {actionLoading ? 'Saving...' : 'Save Remarks & Stage'}
                   </button>
                 </div>
               </div>
@@ -683,8 +686,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#15803d', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    🏦 Bank Remark & Final Status
+                  <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#15803d', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Building2 size={16} /> Bank Remark & Final Status
                   </h4>
                   {!canEditFinal && (
                     <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -801,13 +804,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       type="button"
                       onClick={() => handleSaveDetails('final')}
                       disabled={actionLoading}
-                      style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}
+                      style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                     >
-                      {actionLoading ? 'Saving...' : 'Save Final Status & Remarks 💾'}
+                      <Save size={16} /> {actionLoading ? 'Saving...' : 'Save Final Status & Remarks'}
                     </button>
                   ) : (
-                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px', width: '100%', textAlign: 'center' }}>
-                      🔒 Final Form is read-only for partner roles. Editable by Admin & Operations only.
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px', width: '100%', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <Lock size={13} /> Final Form is read-only for partner roles. Editable by Admin & Operations only.
                     </div>
                   )}
                 </div>
