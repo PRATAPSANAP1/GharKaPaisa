@@ -130,7 +130,6 @@ export default function ManageApplications() {
     { id: 'details_submitted', label: 'Details Submitted', color: '#3b82f6', bg: '#3b82f615' },
     { id: 'operational_verified', label: 'Operational Verified', color: '#8b5cf6', bg: '#8b5cf615' },
     { id: 'approved', label: 'Approved', color: '#10b981', bg: '#10b98115' },
-    { id: 'commission_released', label: 'Commission Released', color: '#06b6d4', bg: '#06b6d415' },
     { id: 'commission_received', label: 'Commission Received', color: '#16a34a', bg: '#16a34a15' },
     { id: 'rejected', label: 'Rejected', color: '#ef4444', bg: '#ef444415' },
     { id: 'cancelled', label: 'Cancelled', color: '#64748b', bg: '#64748b15' },
@@ -150,7 +149,7 @@ export default function ManageApplications() {
       case 'details_submitted': return { bg: '#3b82f615', color: '#3b82f6', border: '#3b82f640', label: 'Details Submitted' };
       case 'operational_verified': return { bg: '#8b5cf615', color: '#8b5cf6', border: '#8b5cf640', label: 'Operational Verified' };
       case 'approved': return { bg: '#10b98115', color: '#10b981', border: '#10b98140', label: 'Approved' };
-      case 'commission_released': return { bg: '#06b6d415', color: '#06b6d4', border: '#06b6d440', label: 'Commission Released' };
+      case 'commission_released':
       case 'commission_received': return { bg: '#16a34a15', color: '#16a34a', border: '#16a34a40', label: 'Commission Received' };
       case 'rejected': return { bg: '#ef444415', color: '#ef4444', border: '#ef444440', label: 'Rejected' };
       case 'cancelled': return { bg: '#64748b15', color: '#64748b', border: '#64748b40', label: 'Cancelled' };
