@@ -384,9 +384,9 @@ export default function AdminProfilePage() {
                   </div>
 
                   <div style={{ background: C.bg, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Merchant Account ID</span>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: C.text, marginTop: '8px' }}>
-                      {razorpayData?.account_number || '2333300582845610'}
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Merchant ID</span>
+                    <div style={{ fontSize: '16px', fontWeight: 900, color: C.text, marginTop: '8px', fontFamily: 'monospace' }}>
+                      T4BVfpEJbKO8WV
                     </div>
                   </div>
 
@@ -396,6 +396,51 @@ export default function AdminProfilePage() {
                       <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
                       <span>{razorpayData?.account_status || 'Active & Connected'}</span>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 1B. Official Razorpay Merchant Profile Details */}
+              <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MdPerson style={{ color: C.teal, fontSize: '20px' }} />
+                    <span>Razorpay Account Owner & Sign-In Details</span>
+                  </h4>
+                  <span style={{ fontSize: '11px', background: `${C.teal}15`, color: C.teal, padding: '3px 10px', borderRadius: '12px', fontWeight: 800 }}>
+                    VERIFIED OWNER
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                  <div style={{ background: C.bgSecondary, padding: '12px 14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Account Owner</span>
+                    <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginTop: '2px' }}>Sharad Kumar</strong>
+                    <span style={{ fontSize: '11px', color: C.teal, fontWeight: 700 }}>Role: Owner</span>
+                  </div>
+
+                  <div style={{ background: C.bgSecondary, padding: '12px 14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Merchant ID</span>
+                    <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginTop: '2px', fontFamily: 'monospace' }}>T4BVfpEJbKO8WV</strong>
+                    <span style={{ fontSize: '11px', color: C.textLight }}>Razorpay Corporate Merchant</span>
+                  </div>
+
+                  <div style={{ background: C.bgSecondary, padding: '12px 14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Phone Number</span>
+                    <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginTop: '2px' }}>+91 8087 179438</strong>
+                    <span style={{ fontSize: '11px', color: C.green, fontWeight: 700 }}>Registered & Verified</span>
+                  </div>
+
+                  <div style={{ background: C.bgSecondary, padding: '12px 14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Login Email</span>
+                    <strong style={{ fontSize: '13.5px', color: C.text, display: 'block', marginTop: '2px' }}>sharadyohesa@gmail.com</strong>
+                    <span style={{ fontSize: '11px', color: C.teal, fontWeight: 700 }}>Primary Admin Auth</span>
+                  </div>
+
+                  <div style={{ background: C.bgSecondary, padding: '12px 14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Security & Sign-In</span>
+                    <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginTop: '2px', letterSpacing: '2px' }}>•••••••••••</strong>
+                    <span style={{ fontSize: '11px', color: C.green, fontWeight: 700 }}>Password Protected</span>
                   </div>
                 </div>
               </div>
