@@ -9,6 +9,7 @@ const { success, created, error, notFound, forbidden, paginate } = require('../.
 const logger = require('../../config/logger');
 const { logAction } = require('../admin/audit.service.js');
 const { processTeamOverrideCommission } = require('../team/team.service.js');
+const { getBankApplyLinkBackend } = require('./lead.controller');
 
 // Helper to parse DOB string formats (e.g. "03091994", "03-09-1994", "1994-09-03") to ISO Date YYYY-MM-DD
 const parseDobToIso = (raw) => {
@@ -2074,8 +2075,7 @@ const submitPartnerApplication = async (req, res, next) => {
         const msg = encodeURIComponent(`Hello ${trimmedName},\n\nPlease fill your required customer details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
         whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
       } else {
-        const directBankUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || 'https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01';
-        shareUrl = directBankUrl;
+        shareUrl = `${baseUrl}/apply/${trackingToken}`;
         const msg = encodeURIComponent(`Hello ${trimmedName},\n\nYou can apply for ${product.name} with ${product.bank_name || 'Bank'} using your official partner application link below:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
         whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
       }
@@ -2094,7 +2094,7 @@ const submitPartnerApplication = async (req, res, next) => {
     }
 
     if (['direct_bank', 'punching_process'].includes(process_type)) {
-      bankUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || 'https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01';
+      bankUrl = getBankApplyLinkBackend(product.name, product.bank_name, product) || 'https://gharkapaisa.in';
     }
 
     await client.query('COMMIT');

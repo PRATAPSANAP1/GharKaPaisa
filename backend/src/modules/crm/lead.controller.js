@@ -247,9 +247,9 @@ function getBankApplyLinkBackend(productName, bankName, productObj = null) {
   if (bankLower.includes('indus') || nameLower.includes('indus')) {
     return "https://induseasycredit.indusind.bank.in/customer/credit-card/new-lead?utm_source=assisted&utm_medium=IBLV9763WESTIBL131260%20&utm_campaign=Credit-Card&utm_content=1";
   }
-  // SBI Bank
+  // SBI Bank (dynamically from product database)
   if (bankLower.includes('sbi') || nameLower.includes('sbi') || nameLower.includes('state bank')) {
-    return "https://www.sbicard.com/corecards/?CHN=OMLG&GEMID1=ABC1&GEMID2=YOH01";
+    return extractValidDbUrl(productObj);
   }
   // IDFC Bank
   if (bankLower.includes('idfc') || nameLower.includes('idfc')) {

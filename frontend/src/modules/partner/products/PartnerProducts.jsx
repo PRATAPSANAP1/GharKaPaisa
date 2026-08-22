@@ -314,10 +314,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       usePartnerStore.getState().fetchApplications().catch(() => {});
 
       if (processType === 'linked_share') {
-        const shareLink = appData?.share_url || appData?.url || directBankUrl;
+        const shareLink = appData?.share_url || appData?.url || (appData?.tracking_token ? `${window.location.origin}/apply/${appData.tracking_token}` : `${window.location.origin}/products/${selectedProduct.slug || selectedProduct.id}`);
         const shareMessage = customerName.trim() 
           ? `Hi ${customerName.trim()},\n\nPlease complete your application for ${selectedProduct.name} using this link: ${shareLink}`
-          : `Apply for ${selectedProduct.name} directly on official bank portal: ${shareLink}`;
+          : `Apply for ${selectedProduct.name} using official partner referral link: ${shareLink}`;
 
         const cleanMob = mobile.trim().replace(/\D/g, '');
         const waUrl = appData?.whatsapp_url || (cleanMob 

@@ -252,8 +252,8 @@ export default function PartnerAddLead() {
           });
           window.open(finalWaUrl, '_blank');
         } else if (processType === 'linked_share') {
-          const finalShareUrl = leadData?.share_url || directBankUrl;
-          const shareMsg = `Apply for ${selectedProd?.name || 'this product'} directly on official bank portal: ${finalShareUrl}`;
+          const finalShareUrl = leadData?.share_url || (leadData?.tracking_token ? `${window.location.origin}/apply/${leadData.tracking_token}` : directBankUrl);
+          const shareMsg = `Apply for ${selectedProd?.name || 'this product'} using official partner referral link: ${finalShareUrl}`;
           const finalWaUrl = leadData?.whatsapp_url || `https://wa.me/91${mobile.trim()}?text=${encodeURIComponent(shareMsg)}`;
           
           setShareResult({
