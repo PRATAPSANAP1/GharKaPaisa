@@ -398,8 +398,13 @@ This document contains the complete database schema definition and data dictiona
 | 25 | `approved_at` | TIMESTAMPTZ | NULLABLE | Approval timestamp |
 | 26 | `commission_received_at` | TIMESTAMPTZ | NULLABLE | Commission receipt time |
 | 27 | `commission_paid_at` | TIMESTAMPTZ | NULLABLE | Commission payout time |
-| 28 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
-| 29 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
+| 28 | `process_type` | VARCHAR(100) | DEFAULT 'lead_punching' | Canonical workflow: lead_punching, linked_share, direct_bank, physical_process |
+| 29 | `process_by` | VARCHAR(50) | DEFAULT 'partner' | Initiator entity: partner, customer, operations |
+| 30 | `source` | VARCHAR(100) | DEFAULT 'partner_portal' | Origin channel: partner_portal, share_link, bank_redirect, physical |
+| 31 | `form_status` | VARCHAR(100) | DEFAULT 'pending' | Customer form progress: pending, in_progress, completed |
+| 32 | `final_status` | VARCHAR(50) | NULLABLE | Bank/ops outcome: pending, approved, rejected, declined, in_process, technical_error |
+| 33 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Record creation time |
+| 34 | `updated_at` | TIMESTAMPTZ | DEFAULT NOW() | Record update time |
 
 * **Indexes**:
   * `idx_applications_partner` ON (`partner_id`)

@@ -741,55 +741,85 @@ export default function ManageApplications() {
           </div>
         </div>
       ) : (
-        /* Status-Wise Vertical Tables Stack */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {[
-            {
-              title: 'Pending Applications',
-              icon: '📋',
-              badgeColor: '#F59E0B',
-              statuses: ['pending', 'initiated', 'link_pending', 'created', 'lead_created', 'new', 'draft']
-            },
-            {
-              title: '📝 Details Submitted Applications',
-              icon: '📝',
-              badgeColor: '#3B82F6',
-              statuses: ['details_submitted', 'submitted', 'under_review', 'under review', 'verification']
-            },
-            {
-              title: '🔍 Operational Verified Applications',
-              icon: '🔍',
-              badgeColor: '#8B5CF6',
-              statuses: ['operational_verified', 'operational_approved']
-            },
-            {
-              title: '✅ Approved Applications',
-              icon: '✅',
-              badgeColor: '#10B981',
-              statuses: ['approved', 'super_admin_approved', 'disbursed', 'sanctioned']
-            },
-            {
-              title: '💸 Commission Released Applications',
-              icon: '💸',
-              badgeColor: '#06B6D4',
-              statuses: ['commission_released', 'released']
-            },
-            {
-              title: '💰 Commission Received Applications',
-              icon: '💰',
-              badgeColor: '#16A34A',
-              statuses: ['commission_received', 'received']
-            },
-            {
-              title: '❌ Rejected & Cancelled Applications',
-              icon: '❌',
-              badgeColor: '#EF4444',
-              statuses: ['rejected', 'cancelled', 'declined']
-            }
-          ].map((sec, sIdx) => {
-            const list = applications.filter(a => sec.statuses.includes(String(a.status || '').toLowerCase()));
-            if (!list || list.length === 0) return null;
-            return (
+          {(() => {
+            const allMatchedStatuses = new Set([
+              'pending', 'initiated', 'link_pending', 'bank_application_pending', 'created', 'lead_created', 'new', 'draft', 'confirmed', 'link_sent',
+              'details_submitted', 'submitted', 'bank_form_submitted', 'under_review', 'under review', 'verification', 'in_process', 'in_progress',
+              'operational_verified', 'operational_approved', 'app_file_generated',
+              'approved', 'super_admin_approved', 'disbursed', 'sanctioned',
+              'commission_released', 'released', 'credited',
+              'commission_received', 'received', 'paid',
+              'rejected', 'cancelled', 'declined', 'decline', 'technical_error'
+            ]);
+
+            const groups = [
+              {
+                id: 'pending',
+                title: 'Pending Applications',
+                icon: '📋',
+                badgeColor: '#F59E0B',
+                statuses: ['pending', 'initiated', 'link_pending', 'bank_application_pending', 'created', 'lead_created', 'new', 'draft', 'confirmed', 'link_sent']
+              },
+              {
+                id: 'details_submitted',
+                title: '📝 Details Submitted Applications',
+                icon: '📝',
+                badgeColor: '#3B82F6',
+                statuses: ['details_submitted', 'submitted', 'bank_form_submitted', 'under_review', 'under review', 'verification', 'in_process', 'in_progress']
+              },
+              {
+                id: 'operational_verified',
+                title: '🔍 Operational Verified Applications',
+                icon: '🔍',
+                badgeColor: '#8B5CF6',
+                statuses: ['operational_verified', 'operational_approved', 'app_file_generated']
+              },
+              {
+                id: 'approved',
+                title: '✅ Approved Applications',
+                icon: '✅',
+                badgeColor: '#10B981',
+                statuses: ['approved', 'super_admin_approved', 'disbursed', 'sanctioned']
+              },
+              {
+                id: 'commission_released',
+                title: '💸 Commission Released Applications',
+                icon: '💸',
+                badgeColor: '#06B6D4',
+                statuses: ['commission_released', 'released', 'credited']
+              },
+              {
+                id: 'commission_received',
+                title: '💰 Commission Received Applications',
+                icon: '💰',
+                badgeColor: '#16A34A',
+                statuses: ['commission_received', 'received', 'paid']
+              },
+              {
+                id: 'rejected',
+                title: '❌ Rejected & Cancelled Applications',
+                icon: '❌',
+                badgeColor: '#EF4444',
+                statuses: ['rejected', 'cancelled', 'declined', 'decline', 'technical_error']
+              },
+              {
+                id: 'other',
+                title: '📦 Other / In Progress Applications',
+                icon: '📦',
+                badgeColor: '#6B7280',
+                isOtherFallback: true,
+                statuses: []
+              }
+            ];
+
+            return groups.map((sec, sIdx) => {
+              const list = sec.isOtherFallback
+                ? applications.filter(a => !allMatchedStatuses.has(String(a.status || '').toLowerCase()))
+                : applications.filter(a => sec.statuses.includes(String(a.status || '').toLowerCase()));
+
+              if (!list || list.length === 0) return null;
+              return (
               <div key={sIdx} style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '14px 20px', background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -880,7 +910,7 @@ export default function ManageApplications() {
                 </div>
               </div>
             );
-          })}
+          })()}
         </div>
       )}
 

@@ -554,8 +554,9 @@ const migrate = async () => {
     EXCEPTION WHEN OTHERS THEN NULL; END $$
   `);
 
-  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS source VARCHAR(100) DEFAULT 'partner_punch'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS source VARCHAR(100) DEFAULT 'partner_portal'`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS process_type VARCHAR(100) DEFAULT 'lead_punching'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS process_by VARCHAR(50) DEFAULT 'partner'`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS form_status VARCHAR(100) DEFAULT 'pending'`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS lead_id UUID REFERENCES leads(id) ON DELETE SET NULL`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS team_member_id UUID REFERENCES partner_profiles(id) ON DELETE SET NULL`);
@@ -565,6 +566,62 @@ const migrate = async () => {
 
   // Sync application_number with app_number if empty
   await query(`UPDATE applications SET application_number = app_number WHERE application_number IS NULL AND app_number IS NOT NULL`);
+
+  // ── Correct process metadata (source and process_by mapping based on process_type) ──
+  await query(`
+    UPDATE applications SET 
+      process_type = 'lead_punching',
+      process_by = 'partner', 
+      source = 'partner_portal' 
+    WHERE process_type = 'lead_punching' OR process_type IS NULL OR process_type = 'partner_punch';
+
+    UPDATE applications SET 
+      process_type = 'linked_share',
+      process_by = 'partner', 
+      source = 'share_link' 
+    WHERE process_type = 'linked_share' OR process_type = 'link_sharing';
+
+    UPDATE applications SET 
+      process_type = 'direct_bank',
+      process_by = 'customer', 
+      source = 'bank_redirect' 
+    WHERE process_type = 'direct_bank' OR process_type = 'customer_sell';
+
+    UPDATE applications SET 
+      process_type = 'physical_process',
+      process_by = 'partner', 
+      source = 'physical' 
+    WHERE process_type = 'physical_process';
+  `);
+
+  // ── Normalize legacy statuses into status, form_status, and final_status ──
+  await query(`
+    UPDATE applications SET 
+      status = 'pending', 
+      form_status = 'pending'
+    WHERE status::text = 'initiated';
+
+    UPDATE applications SET 
+      status = 'pending', 
+      form_status = 'in_progress',
+      source = 'share_link'
+    WHERE status::text = 'link_sent';
+
+    UPDATE applications SET 
+      status = 'details_submitted', 
+      form_status = 'completed'
+    WHERE status::text = 'bank_form_submitted';
+
+    UPDATE applications SET 
+      status = 'details_submitted', 
+      form_status = COALESCE(form_status, 'completed')
+    WHERE status::text = 'submitted';
+
+    UPDATE applications SET 
+      status = 'operational_verified', 
+      final_status = COALESCE(final_status, 'in_process')
+    WHERE status::text = 'under_review';
+  `);
 
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_Partner ON applications(partner_id)`);
   await query(`CREATE INDEX IF NOT EXISTS idx_applications_team_member ON applications(team_member_id)`);
