@@ -342,7 +342,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
           window.open(waUrl, '_blank');
         }
 
-        setShareModalProduct({ ...selectedProduct, shareLink, shareMessage });
+        setShareModalProduct({ ...selectedProduct, shareLink, shareMessage, directBankUrl });
         setSelectedProduct(null);
         setCustomerName("");
         setMobile("");
@@ -2345,27 +2345,68 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
               </button>
             </div>
 
-            {/* Unified Native OS Share Button */}
+            {/* Direct Bank Product Link Box */}
+            {shareModalProduct.directBankUrl && (
+              <div style={{ marginTop: '4px' }}>
+                <p style={{ fontSize: '12px', color: C.textMid, margin: '0 0 6px', fontWeight: 600 }}>
+                  Direct Bank Application Link (No Tracking):
+                </p>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '10px 14px', background: C.bgSecondary, borderRadius: '12px',
+                  border: `1px solid ${C.border}`
+                }}>
+                  <input
+                    type="text"
+                    readOnly
+                    value={shareModalProduct.directBankUrl}
+                    style={{
+                      flex: 1, background: 'none', border: 'none', color: C.text,
+                      fontSize: '12px', outline: 'none',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(shareModalProduct.directBankUrl);
+                      setCopiedNotice(true);
+                      setTimeout(() => setCopiedNotice(false), 2500);
+                    }}
+                    style={{
+                      background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`,
+                      padding: '6px 12px', borderRadius: '8px', fontSize: '12px',
+                      fontWeight: 700, cursor: 'pointer', flexShrink: 0
+                    }}
+                  >
+                    Copy Direct Link
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Unified Native OS Share Button - Shares Direct Bank Product Link */}
             <button
               type="button"
               onClick={async () => {
+                const targetDirectUrl = shareModalProduct.directBankUrl || shareModalProduct.partner_url || shareModalProduct.shareLink;
                 const shareData = {
                   title: `Apply for ${shareModalProduct.name}`,
-                  text: `Apply for ${shareModalProduct.name} on GharKaPaisa! Click here to start:`,
-                  url: shareModalProduct.shareLink
+                  text: `Apply for ${shareModalProduct.name} directly on official bank portal:`,
+                  url: targetDirectUrl
                 };
                 if (navigator.share) {
                   try {
                     await navigator.share(shareData);
                   } catch (err) {
                     if (err.name !== 'AbortError') {
-                      navigator.clipboard.writeText(shareModalProduct.shareLink);
+                      navigator.clipboard.writeText(targetDirectUrl);
                       setCopiedNotice(true);
                       setTimeout(() => setCopiedNotice(false), 2500);
                     }
                   }
                 } else {
-                  navigator.clipboard.writeText(shareModalProduct.shareLink);
+                  navigator.clipboard.writeText(targetDirectUrl);
                   setCopiedNotice(true);
                   setTimeout(() => setCopiedNotice(false), 2500);
                 }
@@ -2380,7 +2421,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
               }}
             >
               <MdShare size={20} />
-              <span>{copiedNotice ? '✓ Link Copied to Clipboard!' : 'Share Product Link'}</span>
+              <span>{copiedNotice ? '✓ Direct Link Copied!' : 'Share Product Link'}</span>
             </button>
           </div>
         </div>
