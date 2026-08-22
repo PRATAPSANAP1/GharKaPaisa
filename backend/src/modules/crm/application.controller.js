@@ -1406,10 +1406,10 @@ const getApplication = async (req, res, next) => {
     const { rows: [app] } = await query(`
       SELECT a.*, 
         COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
-        COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
-        COALESCE(NULLIF(c.email, ''), NULLIF(l.customer_email, ''), l.email) as customer_email,
+        COALESCE(NULLIF(l.mobile, ''), c.mobile) as customer_mobile,
+        COALESCE(NULLIF(c.email, ''), NULLIF(l.email, '')) as customer_email,
         COALESCE(c.pan_number, l.pan_number) as pan_number,
-        COALESCE(TO_CHAR(c.dob, 'YYYY-MM-DD'), TO_CHAR(l.dob, 'YYYY-MM-DD')) as dob,
+        TO_CHAR(c.dob, 'YYYY-MM-DD') as dob,
         COALESCE(c.monthly_income, l.monthly_income, a.loan_amount) as monthly_income,
         c.employment_type,
         COALESCE(c.employer, c.company_name, l.company_name, a.company_name) as company_name,
