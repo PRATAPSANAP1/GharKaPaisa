@@ -2281,7 +2281,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
           <div style={{ background: C.card, width: '100%', maxWidth: '520px', borderRadius: '24px', padding: '24px', border: `1px solid ${C.border}`, boxShadow: '0 25px 60px rgba(0,0,0,0.4)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                📋 Physical Process - Customer Details Needed
+                Physical Process - Customer Details Needed
               </h3>
               <button onClick={() => setShowPhysicalSheetModal(false)} style={{ background: 'none', border: 'none', fontSize: '18px', fontWeight: 700, cursor: 'pointer', color: C.textMid }}>✕</button>
             </div>
@@ -2289,7 +2289,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
             {/* Notification Alert */}
             <div style={{ padding: '14px 16px', background: '#F59E0B15', border: '1px solid #F59E0B40', borderRadius: '14px', color: isDark ? '#FBBF24' : '#B45309' }}>
               <div style={{ fontWeight: 800, fontSize: '13.5px', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                ⚠️ Partner Action Required:
+                Partner Action Required:
               </div>
               <div style={{ fontSize: '12.5px', lineHeight: 1.5 }}>
                 Lead created for <strong>{physicalSheetData.customerName}</strong> ({physicalSheetData.mobile}). Complete the required customer details (DOB, PAN, Address, Mother Name, Email, Company, Designation) or share the secure upload link directly with the customer.
