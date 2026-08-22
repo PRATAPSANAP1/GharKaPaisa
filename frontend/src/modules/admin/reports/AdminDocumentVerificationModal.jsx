@@ -229,10 +229,14 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           dispatch_status: dispatchStatus
         };
       } else if (formType === 'final') {
+        let targetStatus = 'operational_verified';
+        if (finalStatus && (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('reject'))) {
+          targetStatus = 'rejected';
+        }
         payload = {
           bank_remark: bankRemark,
           final_status: finalStatus,
-          status: 'bank_form_submitted',
+          status: targetStatus,
           decline_reason: declineReason,
           eligible_reqd: eligibleReQd,
           bank_ref_number: bankRefNumber,

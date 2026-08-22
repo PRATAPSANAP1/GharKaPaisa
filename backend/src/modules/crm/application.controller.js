@@ -2494,7 +2494,16 @@ const updateApplicationDetails = async (req, res, next) => {
     }
 
     // 1. Update applications table
-    const targetStatus = status || (req.body.bank_remark || req.body.final_status || req.body.bank_ref_number ? 'bank_form_submitted' : null);
+    let targetStatus = status;
+    if (targetStatus === 'bank_form_submitted' || targetStatus === 'under_review') {
+      targetStatus = 'operational_verified';
+    } else if (targetStatus === 'submitted') {
+      targetStatus = 'details_submitted';
+    }
+    if (!targetStatus && (req.body.bank_remark || req.body.final_status || req.body.bank_ref_number)) {
+      const fs = String(req.body.final_status || '').toLowerCase();
+      targetStatus = (fs.includes('decline') || fs.includes('reject')) ? 'rejected' : 'operational_verified';
+    }
     const { rows: [updatedApp] } = await client.query(`
       UPDATE applications SET
         bank_application_number = COALESCE(NULLIF($1, ''), bank_application_number),
@@ -3204,12 +3213,11 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
       ]
     );
 
-    let mainStatus = 'bank_form_submitted';
+    let mainStatus = 'operational_verified';
     if (final_status) {
       const lowerFs = final_status.toLowerCase();
-      if (lowerFs.includes('approved') || lowerFs.includes('generated')) mainStatus = 'approved';
-      else if (lowerFs.includes('decline') || lowerFs.includes('rejected')) mainStatus = 'rejected';
-      else if (lowerFs.includes('process')) mainStatus = 'bank_form_submitted';
+      if (lowerFs.includes('decline') || lowerFs.includes('rejected')) mainStatus = 'rejected';
+      else mainStatus = 'operational_verified';
     }
 
     // Sync to applications table
