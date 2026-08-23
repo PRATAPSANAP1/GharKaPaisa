@@ -396,8 +396,8 @@ const createLead = async (req, res, next) => {
       const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
       const baseUrl = process.env.FRONTEND_URL || `${protocol}://${host}`;
       const defaultShareUrl = `${baseUrl.replace(/\/$/, '')}/apply/${trackingToken}`;
-      const directBankUrl = getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code, product) || defaultShareUrl;
-      const shareUrl = defaultShareUrl;
+      const directBankUrl = product?.partner_url?.trim() || getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code, product) || defaultShareUrl;
+      const shareUrl = directBankUrl;
 
       const partnerName = `${partner.first_name || ''} ${partner.last_name || ''}`.trim() || 'Partner';
       const cleanMobile = trimmedMobile.replace(/\D/g, '');
@@ -410,11 +410,11 @@ const createLead = async (req, res, next) => {
           product_id, customer_name, mobile, city, status, process_type, process_by,
           otp_verified, source, priority, pipeline_stage
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'linked_share', 'customer_self', TRUE, $10, $11, 'created')
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'linked_share', 'partner', TRUE, 'share_link', $10, 'created')
         RETURNING *
       `, [
         leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
-        targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
+        targetProductId, targetName.trim(), trimmedMobile, targetCity, priority || 'medium'
       ]);
 
       await query(`
@@ -423,17 +423,17 @@ const createLead = async (req, res, next) => {
       `, [partner.id, targetProductId, trackingToken]);
 
       const { rows: [app] } = await query(`
-        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, tracking_token, agree_terms, submitted_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'linked_share', $9, TRUE, NOW())
+        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, process_by, source, tracking_token, agree_terms, submitted_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'linked_share', 'partner', 'share_link', $9, TRUE, NOW())
         RETURNING *
       `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, trackingToken]);
 
-      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
+      await initializeLeadPipeline(lead.id, req.user.id, 'share_link', priority || 'medium');
 
-      // Automatically send link via SMS (Template: apply 1 / step 1)
+      // Automatically send link via SMS (Template: Linked_share 6a8b36fe9b6fc4bd54035592)
       try {
-        const { sendApplyStep1Sms } = require('../../services/sms/sms.service');
-        sendApplyStep1Sms(trimmedMobile, targetName.trim(), product?.name || 'Financial Product', shareUrl).catch(err => {
+        const { sendLinkedShareSms } = require('../../services/sms/sms.service');
+        sendLinkedShareSms(trimmedMobile, targetName.trim(), product?.name || 'Financial Product', shareUrl).catch(err => {
           console.warn('Auto SMS dispatch failed for linked_share:', err.message);
         });
       } catch (smsErr) {
@@ -447,7 +447,8 @@ const createLead = async (req, res, next) => {
         customer_id: customer.id,
         mobile: lead.mobile,
         process_type: 'linked_share',
-        process_by: 'customer_self',
+        process_by: 'partner',
+        source: 'share_link',
         otp_required: false,
         share_url: shareUrl,
         whatsapp_url: whatsappUrl
@@ -738,7 +739,7 @@ const verifyLeadOtp = async (req, res, next) => {
     if (lead.process_type === 'linked_share') {
       const trackingToken = 'SH_' + Math.random().toString(36).substring(2, 12).toUpperCase();
       const baseUrl = process.env.PUBLIC_APP_URL || 'https://gharkapaisa.in';
-      shareUrl = `${baseUrl}/share/${trackingToken}`;
+      shareUrl = product?.partner_url?.trim() || getBankApplyLinkBackend(product?.name, product?.bank_name, product) || `${baseUrl}/apply/${trackingToken}`;
 
       const { rows: [partnerProfile] } = await client.query(`
         SELECT first_name, last_name, partner_code FROM partner_profiles WHERE id = $1
@@ -746,7 +747,7 @@ const verifyLeadOtp = async (req, res, next) => {
 
       const partnerName = `${partnerProfile?.first_name || ''} ${partnerProfile?.last_name || ''}`.trim() || 'Your Financial Partner';
       const cleanMobile = lead.mobile.replace(/\D/g, '');
-      const waText = encodeURIComponent(`Hello ${lead.customer_name},\n\nApply for ${product?.name || 'Financial Product'} using your tracked application link:\n${shareUrl}\n\nShared by ${partnerName} via GharKaPaisa.`);
+      const waText = encodeURIComponent(`Hello ${lead.customer_name},\n\nApply for ${product?.name || 'Financial Product'} using your official bank link:\n${shareUrl}\n\nShared by ${partnerName} via GharKaPaisa.`);
       whatsappUrl = `https://wa.me/91${cleanMobile}?text=${waText}`;
 
       await client.query(`

@@ -208,6 +208,26 @@ const sendApplicationStatusSms = async (to, customerName, productName, statusTex
 };
 
 /**
+ * 6. Linked_share (DLT Template ID: 6a8b36fe9b6fc4bd54035592 | Sender: GHARKP)
+ * Preview: Dear ##var1##, your application for ##var2## has been initiated through GharKaPaisa. Please complete your application details using this secure link: ##var3##. Do not share this link with anyone
+ */
+const sendLinkedShareSms = async (to, customerName, productName, shareUrl) => {
+  const nameStr = customerName || 'Customer';
+  const prodStr = productName || 'Credit Card';
+  const urlStr = String(shareUrl || '');
+  const body = `Dear ${nameStr}, your application for ${prodStr} has been initiated through GharKaPaisa. Please complete your application details using this secure link: ${urlStr}. Do not share this link with anyone`;
+  const templateId = process.env.MSG91_LINKED_SHARE_TEMPLATE_ID || '6a8b36fe9b6fc4bd54035592';
+
+  const varsMap = {
+    var1: nameStr,
+    var2: prodStr,
+    var3: urlStr
+  };
+
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
+};
+
+/**
  * Additional Flow API Wrappers
  */
 const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
@@ -310,6 +330,7 @@ module.exports = {
   sendWithdrawalRequestSms,
   sendApply1Sms,
   sendApplyStep1Sms,
+  sendLinkedShareSms,
   sendPostApplyStep2Sms,
   sendTrackSms,
   sendWithdrawalFailedSms,

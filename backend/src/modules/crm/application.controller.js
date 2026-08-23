@@ -1299,13 +1299,6 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
-        UNION ALL
-        SELECT l.id, l.partner_id, l.status::text, 'pending'::text as commission_status, l.product_id, p.bank_id, COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(l.created_by, c.created_by) as submitted_by, COALESCE(l.process_type, l.source, 'linked_share') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category
-        FROM leads l
-        LEFT JOIN customers c ON c.id = l.customer_id OR (l.customer_id IS NULL AND c.mobile = l.mobile)
-        LEFT JOIN products p ON p.id = l.product_id
-        LEFT JOIN banks b ON b.id = p.bank_id
-        WHERE l.id NOT IN (SELECT lead_id FROM applications WHERE lead_id IS NOT NULL)
       ) combined
       ${countScopeSQL}
         AND (
@@ -1922,10 +1915,10 @@ const submitPartnerApplication = async (req, res, next) => {
         return error(res, 'Please enter a valid 6-digit postal pincode', 400);
       }
 
-      const validProcesses = ['lead_punching', 'linked_share', 'direct_bank', 'physical_process', 'partner_cell', 'customer_sell', 'punching_process'];
+      const validProcesses = ['lead_punching', 'linked_share', 'direct_bank', 'physical_process'];
       if (!validProcesses.includes(process_type)) {
         await client.query('ROLLBACK');
-        return error(res, 'Invalid Process Assignment selection', 400);
+        return error(res, 'Invalid Process Assignment selection. Must be one of: lead_punching, linked_share, direct_bank, physical_process', 400);
       }
 
       if (!agree_terms) {
@@ -1937,6 +1930,23 @@ const submitPartnerApplication = async (req, res, next) => {
     const trimmedMobile = mobile ? String(mobile).trim() : null;
     const trimmedName = full_name ? String(full_name).trim() : 'Draft Customer';
     const trimmedEmail = email ? String(email).trim() : null;
+
+    // Resolve canonical process_by and source metadata
+    let processByVal = 'partner';
+    let sourceVal = 'partner_portal';
+    if (process_type === 'linked_share') {
+      processByVal = 'partner';
+      sourceVal = 'share_link';
+    } else if (process_type === 'direct_bank') {
+      processByVal = 'customer';
+      sourceVal = 'bank_redirect';
+    } else if (process_type === 'physical_process') {
+      processByVal = 'partner';
+      sourceVal = 'physical';
+    } else {
+      processByVal = 'partner';
+      sourceVal = 'partner_portal';
+    }
 
     // Check duplicate active lead / application (within 30 days)
     if (!is_draft && trimmedMobile && process_type !== 'linked_share') {
@@ -2013,13 +2023,13 @@ const submitPartnerApplication = async (req, res, next) => {
         const { rows: [newLead] } = await client.query(`
           INSERT INTO leads (
             lead_number, partner_id, product_id, customer_name, customer_mobile, mobile,
-            customer_email, source, status, pipeline_stage, customer_id, created_by, otp_verified
+            customer_email, source, status, process_type, process_by, pipeline_stage, customer_id, created_by, otp_verified
           )
-          VALUES ($1, $2, $3, $4, $5, $5, $6, $7, 'confirmed', 'submitted', $8, $9, TRUE)
+          VALUES ($1, $2, $3, $4, $5, $5, $6, $7, 'confirmed', $8, $9, 'submitted', $10, $11, TRUE)
           RETURNING id
         `, [
           leadNum, partnerId, product_id, trimmedName, trimmedMobile,
-          trimmedEmail, `partner_${process_type}`, customerId, req.user.id
+          trimmedEmail, sourceVal, process_type, processByVal, customerId, req.user.id
         ]);
         syncedLeadId = newLead?.id || null;
         await client.query('RELEASE SAVEPOINT lead_sync_sp');
@@ -2036,17 +2046,17 @@ const submitPartnerApplication = async (req, res, next) => {
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
     const appNumber = `APP${datePart}${nextval}`;
 
-    const appStatus = is_draft ? 'draft' : (['direct_bank', 'punching_process'].includes(process_type) ? 'initiated' : 'submitted');
+    const appStatus = process_type === 'direct_bank' ? 'pending' : 'details_submitted';
 
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
         (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, commission_amount,
-         status, process_type, business_type, gst_number, trade_license_number, company_name, pincode, city, state, country_code, agree_terms, submitted_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW())
+         status, process_type, process_by, source, business_type, gst_number, trade_license_number, company_name, pincode, city, state, country_code, agree_terms, submitted_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW())
       RETURNING *
     `, [
       appNumber, syncedLeadId, customerId, product_id, partnerId, product.bank_id, req.user.id,
-      monthly_salary || 0, commission, appStatus, process_type, business_type || null,
+      monthly_salary || 0, commission, appStatus, process_type, processByVal, sourceVal, business_type || null,
       gst_number || null, trade_license_number || null, company_name || null,
       pincode || null, city || null, state || null, country_code, agree_terms,
     ]);
@@ -2063,10 +2073,10 @@ const submitPartnerApplication = async (req, res, next) => {
       `, [
         app.id,
         appStatus,
-        is_draft ? 'Draft Saved' : 'Application Submitted',
-        is_draft ? 'draft_saved' : 'applied',
-        is_draft ? 'Draft Application Saved' : 'Application Initiated',
-        is_draft ? 'Partner saved application draft' : `Application logged via ${process_type.replace(/_/g, ' ').toUpperCase()}`,
+        'Application Submitted',
+        'applied',
+        'Application Initiated',
+        `Application logged via ${process_type.replace(/_/g, ' ').toUpperCase()}`,
         req.user.id
       ]);
       await client.query('RELEASE SAVEPOINT timeline_sp');
@@ -2075,26 +2085,40 @@ const submitPartnerApplication = async (req, res, next) => {
       logger.warn('Timeline insert non-fatal warn:', timelineErr.message);
     }
 
-    // Process specific metadata generation
+    // Process specific metadata generation - Priority: products.partner_url is Single Source of Truth
     let shareUrl = null;
     let whatsappUrl = null;
     let bankUrl = null;
 
     const baseUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
 
-    if (['linked_share', 'customer_sell', 'physical_process'].includes(process_type)) {
-      const crypto = require('crypto');
-      const trackingToken = crypto.randomBytes(10).toString('hex');
-      
-      if (process_type === 'physical_process') {
-        shareUrl = `${baseUrl}/physical-application/${trackingToken}`;
-        const msg = encodeURIComponent(`Hello ${trimmedName},\n\nPlease fill your required customer details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
-        whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
-      } else {
-        shareUrl = `${baseUrl}/apply/${trackingToken}`;
-        const msg = encodeURIComponent(`Hello ${trimmedName},\n\nYou can apply for ${product.name} with ${product.bank_name || 'Bank'} using your official partner application link below:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
-        whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
+    if (process_type === 'linked_share') {
+      const partnerUrl = product.partner_url?.trim() || getBankApplyLinkBackend(product.name, product.bank_name, product);
+      if (!partnerUrl) {
+        await client.query('ROLLBACK');
+        return error(res, `Partner URL (Bank Apply Link) is missing for ${product.name}`, 400);
       }
+      shareUrl = partnerUrl;
+      const msg = encodeURIComponent(`Hello ${trimmedName},\n\nYou can apply for ${product.name} with ${product.bank_name || 'Bank'} using official partner application link below:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
+      whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
+
+      const trackingToken = 'SH_' + Math.random().toString(36).substring(2, 12).toUpperCase();
+      try {
+        await client.query('SAVEPOINT share_link_sp');
+        await client.query(`
+          INSERT INTO partner_share_links (partner_id, product_id, tracking_token, application_id, lead_id, expires_at)
+          VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days')
+        `, [partnerId, product_id, trackingToken, app?.id || null, syncedLeadId || null]);
+        await client.query('RELEASE SAVEPOINT share_link_sp');
+      } catch (shareLinkErr) {
+        await client.query('ROLLBACK TO SAVEPOINT share_link_sp').catch(() => {});
+        logger.warn('Share link insert non-fatal warn:', shareLinkErr.message);
+      }
+    } else if (process_type === 'physical_process') {
+      const trackingToken = Math.random().toString(36).substring(2, 12);
+      shareUrl = `${baseUrl}/physical-application/${trackingToken}`;
+      const msg = encodeURIComponent(`Hello ${trimmedName},\n\nPlease fill your required customer details using this link:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
+      whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
 
       try {
         await client.query('SAVEPOINT share_link_sp');
@@ -2107,73 +2131,73 @@ const submitPartnerApplication = async (req, res, next) => {
         await client.query('ROLLBACK TO SAVEPOINT share_link_sp').catch(() => {});
         logger.warn('Share link insert non-fatal warn:', shareLinkErr.message);
       }
-    }
-
-    if (['direct_bank', 'punching_process'].includes(process_type)) {
-      bankUrl = getBankApplyLinkBackend(product.name, product.bank_name, product) || 'https://gharkapaisa.in';
+    } else if (process_type === 'direct_bank') {
+      bankUrl = product.partner_url?.trim() || getBankApplyLinkBackend(product.name, product.bank_name, product) || 'https://gharkapaisa.in';
     }
 
     await client.query('COMMIT');
 
-    if (!is_draft) {
-      if (['linked_share', 'customer_sell'].includes(process_type) && trimmedMobile && shareUrl) {
-        const { sendApplyStep1Sms } = require('../../services/sms/sms.service');
-        sendApplyStep1Sms(trimmedMobile, trimmedName, product.name, shareUrl).catch(err => {
-          logger.warn('[SMS] Failed to send apply_1 linked share SMS:', err.message);
-        });
-      }
+    if (process_type === 'linked_share' && trimmedMobile && shareUrl) {
+      const { sendLinkedShareSms } = require('../../services/sms/sms.service');
+      sendLinkedShareSms(trimmedMobile, trimmedName, product.name, shareUrl).catch(err => {
+        logger.warn('[SMS] Failed to send linked share SMS:', err.message);
+      });
+    }
 
-      const { sendEmail } = require('../../services/email/email.service');
+    const { sendEmail } = require('../../services/email/email.service');
 
-      if (trimmedEmail) {
-        sendEmail({
-          to: trimmedEmail,
-          subject: `Application Confirmation - #${appNumber} (${product.name})`,
-          html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #0f172a;">
-              <h2 style="color: #f97316;">Application Received - GharKaPaisa</h2>
-              <p>Dear <strong>${trimmedName}</strong>,</p>
-              <p>Your application for <strong>${product.name}</strong> with <strong>${product.bank_name || 'Bank'}</strong> has been logged by your Partner.</p>
-              <table style="width: 100%; border-collapse: collapse; margin: 16px 0; background: #f8fafc; border: 1px solid #e2e8f0;">
-                <tr><td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: bold;">Application Number</td><td style="padding: 8px 12px; border: 1px solid #e2e8f0;">#${appNumber}</td></tr>
-                <tr><td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: bold;">Product</td><td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${product.name}</td></tr>
-                <tr><td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: bold;">Process Assignment</td><td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${process_type.replace(/_/g, ' ').toUpperCase()}</td></tr>
-              </table>
-              <p>Regards,<br><strong>GharKaPaisa Team</strong></p>
-            </div>
-          `
-        }).catch(err => logger.warn('Applicant email trigger failed:', err.message));
-      }
+    if (trimmedEmail) {
+      sendEmail({
+        to: trimmedEmail,
+        subject: `Application Confirmation - #${appNumber} (${product.name})`,
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #0f172a;">
+            <h2 style="color: #f97316;">Application Received - GharKaPaisa</h2>
+            <p>Dear <strong>${trimmedName}</strong>,</p>
+            <p>Your application for <strong>${product.name}</strong> with <strong>${product.bank_name || 'Bank'}</strong> has been logged by your Partner.</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 16px 0; background: #f8fafc; border: 1px solid #e2e8f0;">
+              <tr><td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: bold;">Application Number</td><td style="padding: 8px 12px; border: 1px solid #e2e8f0;">#${appNumber}</td></tr>
+              <tr><td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: bold;">Product</td><td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${product.name}</td></tr>
+              <tr><td style="padding: 8px 12px; border: 1px solid #e2e8f0; font-weight: bold;">Process Assignment</td><td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${process_type.replace(/_/g, ' ').toUpperCase()}</td></tr>
+            </table>
+            <p>Regards,<br><strong>GharKaPaisa Team</strong></p>
+          </div>
+        `
+      }).catch(err => logger.warn('Applicant email trigger failed:', err.message));
+    }
 
-      const partnerEmail = req.user.email;
-      if (partnerEmail) {
-        sendEmail({
-          to: partnerEmail,
-          subject: `New Lead Logged - #${appNumber} (${trimmedName})`,
-          html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #0f172a;">
-              <h2 style="color: #10b981;">New Lead Application Created</h2>
-              <p>Hello Partner,</p>
-              <p>You have successfully logged a new application for <strong>${trimmedName}</strong>.</p>
-              <ul>
-                <li><strong>App Number:</strong> #${appNumber}</li>
-                <li><strong>Product:</strong> ${product.name}</li>
-                <li><strong>Mobile:</strong> ${country_code} ${trimmedMobile}</li>
-                <li><strong>Process Assignment:</strong> ${process_type.replace(/_/g, ' ').toUpperCase()}</li>
-                <li><strong>Expected Payout:</strong> ₹${parseFloat(commission).toLocaleString('en-IN')}</li>
-              </ul>
-            </div>
-          `
-        }).catch(err => logger.warn('Partner email trigger failed:', err.message));
-      }
+    const partnerEmail = req.user.email;
+    if (partnerEmail) {
+      sendEmail({
+        to: partnerEmail,
+        subject: `New Lead Logged - #${appNumber} (${trimmedName})`,
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; color: #0f172a;">
+            <h2 style="color: #10b981;">New Lead Application Created</h2>
+            <p>Hello Partner,</p>
+            <p>You have successfully logged a new application for <strong>${trimmedName}</strong>.</p>
+            <ul>
+              <li><strong>App Number:</strong> #${appNumber}</li>
+              <li><strong>Product:</strong> ${product.name}</li>
+              <li><strong>Mobile:</strong> ${country_code} ${trimmedMobile}</li>
+              <li><strong>Process Assignment:</strong> ${process_type.replace(/_/g, ' ').toUpperCase()}</li>
+              <li><strong>Expected Payout:</strong> ₹${parseFloat(commission).toLocaleString('en-IN')}</li>
+            </ul>
+          </div>
+        `
+      }).catch(err => logger.warn('Partner email trigger failed:', err.message));
     }
 
     return success(res, {
       ...app,
+      process_type,
+      process_by: processByVal,
+      source: sourceVal,
+      partner_url: shareUrl || product.partner_url || bankUrl || '',
       share_url: shareUrl,
       whatsapp_url: whatsappUrl,
       bank_url: bankUrl
-    }, is_draft ? 'Draft saved successfully' : 'Application submitted successfully');
+    }, 'Application submitted successfully');
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);

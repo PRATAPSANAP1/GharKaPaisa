@@ -7,18 +7,22 @@ const APPLICATION_STATUS = {
   OPERATIONAL_VERIFIED: 'operational_verified',
   APPROVED: 'approved',
   COMMISSION_RELEASED: 'commission_released',
-  COMMISSION_RECEIVED: 'commission_received'
+  COMMISSION_RECEIVED: 'commission_received',
+  REJECTED: 'rejected',
+  CANCELLED: 'cancelled'
 };
 
 const ALLOWED_STATUSES = Object.values(APPLICATION_STATUS);
 
 const VALID_TRANSITIONS = {
-  pending: ['details_submitted'],
-  details_submitted: ['operational_verified', 'approved'],
-  operational_verified: ['approved'],
-  approved: ['commission_released'],
-  commission_released: ['commission_received'],
-  commission_received: []
+  pending: ['details_submitted', 'rejected', 'cancelled'],
+  details_submitted: ['operational_verified', 'approved', 'rejected', 'cancelled'],
+  operational_verified: ['approved', 'rejected', 'cancelled'],
+  approved: ['commission_released', 'commission_received', 'rejected', 'cancelled'],
+  commission_released: ['commission_received', 'rejected', 'cancelled'],
+  commission_received: [],
+  rejected: [],
+  cancelled: []
 };
 
 const ROLE_PERMISSIONS = {
@@ -26,7 +30,9 @@ const ROLE_PERMISSIONS = {
   operational_verified: ['ADMINISTRATIVE_OPERATOR', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN'],
   approved: ['OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN'],
   commission_released: ['SUPER_ADMIN'],
-  commission_received: ['SUPER_ADMIN']
+  commission_received: ['SUPER_ADMIN'],
+  rejected: ['ADMINISTRATIVE_OPERATOR', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN'],
+  cancelled: ['PARTNER', 'ADMINISTRATIVE_OPERATOR', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN']
 };
 
 module.exports = {
@@ -39,6 +45,7 @@ module.exports = {
   DOCUMENTS_PENDING: 'pending',
   UNDER_REVIEW: 'details_submitted',
   APPROVED: 'approved',
-  REJECTED: 'approved', // stored in final_status / decline_reason
-  DISBURSED: 'approved'  // stored in final_status
+  REJECTED: 'rejected',
+  CANCELLED: 'cancelled',
+  DISBURSED: 'approved'
 };

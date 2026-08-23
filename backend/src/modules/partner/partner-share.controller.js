@@ -89,20 +89,21 @@ const generateShareLink = async (req, res, next) => {
       VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days')
     `, [partnerId, productId, trackingToken, applicationId, leadId]);
 
-    // Generate share link URL
-    const appUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
-    const shareLink = `${appUrl}/apply/${trackingToken}`;
+    // Generate share link URL - prioritize products.partner_url as Single Source of Truth
+    const directBankUrl = product.partner_url?.trim() || getBankApplyLinkBackend(product.name, product.bank_name || product.bank_code, product);
+    const shareLink = directBankUrl || `${appUrl}/apply/${trackingToken}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Apply for ${product.name} directly using your official application link:\n${shareLink}`)}`;
 
     const targetMobile = req.body.customer_mobile || req.body.mobile;
     const targetName = req.body.customer_name || req.body.full_name || 'Customer';
     if (targetMobile) {
-      const { sendApplyStep1Sms } = require('../../services/sms/sms.service');
-      sendApplyStep1Sms(targetMobile, targetName, product.name, shareLink).catch(() => {});
+      const { sendLinkedShareSms } = require('../../services/sms/sms.service');
+      sendLinkedShareSms(targetMobile, targetName, product.name, shareLink).catch(() => {});
     }
 
     return success(res, {
       tracking_token: trackingToken,
+      partner_url: directBankUrl || product.partner_url || '',
       share_link: shareLink,
       share_url: shareLink,
       whatsapp_url: whatsappUrl,
@@ -110,7 +111,10 @@ const generateShareLink = async (req, res, next) => {
       product_name: product.name,
       application_id: applicationId,
       lead_id: leadId,
-      partner_code: partnerCode || 'PARTNER'
+      partner_code: partnerCode || 'PARTNER',
+      process_type: 'linked_share',
+      process_by: 'partner',
+      source: 'share_link'
     }, 'Share link generated successfully');
   } catch (err) {
     next(err);
@@ -211,21 +215,7 @@ const resolveShareToken = async (token) => {
     };
   }
 
-  // 6. Fallback: Default to latest active product so user never hits an expired dead end
-  const { rows: [fallbackProd] } = await query(
-    `SELECT id as product_id FROM products WHERE is_active = true ORDER BY created_at DESC LIMIT 1`
-  );
-  if (fallbackProd) {
-    const { rows: [pProfile] } = await query(`SELECT id FROM partner_profiles LIMIT 1`);
-    return {
-      product_id: fallbackProd.product_id,
-      partner_id: pProfile?.id || null,
-      application_id: null,
-      lead_id: null,
-      created_at: new Date()
-    };
-  }
-
+  // NOTE: Token not found -> Return null (404 Invalid or expired share link). Never fall back to latest active product!
   return null;
 };
 
@@ -599,6 +589,9 @@ const getApplyTokenDetails = async (req, res, next) => {
 
     return success(res, {
       token,
+      process_type: 'linked_share',
+      process_by: 'partner',
+      source: 'share_link',
       lead_id: shareData.lead_id || null,
       application_id: shareData.application_id || null,
       product_id: product.id,
