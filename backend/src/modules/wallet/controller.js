@@ -471,6 +471,26 @@ const requestWithdrawal = async (req, res, next) => {
 
     await client.query('COMMIT');
     await logAction(req, 'REQUEST_WITHDRAWAL', wr.id, { partner_id: PartnerId, amount: parsedAmount, tds_rate: tdsRate, tds_amount: tdsAmount, net_amount: netAmount, remarks: String(remarks || '').trim() || null });
+
+    // Send SMS for withdrawal request received
+    try {
+      const { sendWithdrawalRequestSms } = require('../../services/sms/sms.service');
+      const { query: queryDB } = require('../../config/database');
+      const { rows: [pUser] } = await queryDB(`
+        SELECT u.mobile, ap.first_name 
+        FROM partner_profiles ap 
+        JOIN users u ON u.id = ap.user_id 
+        WHERE ap.id = $1
+      `, [PartnerId]);
+      if (pUser && pUser.mobile) {
+        sendWithdrawalRequestSms(pUser.mobile, pUser.first_name, parsedAmount).catch(smsErr => {
+          logger.warn(`Failed to send withdrawal request SMS: ${smsErr.message}`);
+        });
+      }
+    } catch (smsErr) {
+      logger.warn(`Withdrawal request SMS dispatch notice: ${smsErr.message}`);
+    }
+
     return success(res, { withdrawal_id: wr.id, amount: parsedAmount, tds_rate: tdsRate, tds_amount: tdsAmount, net_amount: netAmount }, `Withdrawal request submitted successfully. (Gross: ₹${parsedAmount}, 2% TDS: ₹${tdsAmount}, Net Payout: ₹${netAmount})`);
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) {}

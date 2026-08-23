@@ -775,6 +775,25 @@ const updateStatus = async (req, res, next) => {
       if (status === 'rejected') await notify.applicationRejected(partner.user_id, app.app_number, remarks);
     }
 
+    // Trigger DLT SMS for application_status update
+    try {
+      const { sendApplicationStatusSms } = require('../../services/sms/sms.service');
+      const { rows: [custData] } = await query(`
+        SELECT c.mobile, c.full_name, p.name as product_name 
+        FROM applications a 
+        LEFT JOIN customers c ON c.id = a.customer_id 
+        LEFT JOIN products p ON p.id = a.product_id 
+        WHERE a.id = $1
+      `, [id]);
+      if (custData && custData.mobile) {
+        sendApplicationStatusSms(custData.mobile, custData.full_name, custData.product_name, status).catch(smsErr => {
+          logger.warn(`Failed to send application status SMS: ${smsErr.message}`);
+        });
+      }
+    } catch (smsErr) {
+      logger.warn(`Application status SMS dispatch notice: ${smsErr.message}`);
+    }
+
     return success(res, {}, 'Application status successfully updated');
   } catch (err) {
     await client.query('ROLLBACK');

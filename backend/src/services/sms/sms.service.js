@@ -103,80 +103,126 @@ const sendMsg91FlowSms = async (to, templateId, varsMap, fallbackBody) => {
   return await sendSms(to, fallbackBody);
 };
 
+// ── 5 DLT SMS TEMPLATE IMPLEMENTATIONS ──────────────────────────────────────────
+
 /**
- * Send Step 1 Application Link SMS to Customer (DLT Template ID: 1277178678509565584 | Sender: GHARKP)
- * Uses clean variables: var1, var2, var3
+ * 1. withdrawal_request (DLT Template ID: 6a8b2a55e4efabac9100d504 | Sender: GHARKP)
+ * Preview: Dear ##var1##, your GharKaPaisa withdrawal request of Rs.##var2## has been received and is under processing. -GharKaPaisa -YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED
  */
-const sendApplyStep1Sms = async (to, customerName, productName, token) => {
-  const applyUrl = String(token || '').startsWith('http') ? token : `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}`;
-  const body = `Dear ${customerName || 'Customer'} , complete your prefilled application for ${productName || 'Credit Card'} on GharKaPaisa: ${applyUrl} - GharKaPaisa`;
-  const templateId = process.env.MSG91_APPLY_STEP1_TEMPLATE_ID || '1277178678509565584';
+const sendWithdrawalRequestSms = async (to, partnerName, amount) => {
+  const nameStr = partnerName || 'Partner';
+  const amountStr = parseFloat(amount || 0).toFixed(2);
+  const body = `Dear ${nameStr}, your GharKaPaisa withdrawal request of Rs.${amountStr} has been received and is under processing.\n-GharKaPaisa\n-YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED`;
+  const templateId = process.env.MSG91_WITHDRAWAL_REQUEST_TEMPLATE_ID || '6a8b2a55e4efabac9100d504';
 
   const varsMap = {
-    var1: customerName || 'Customer',
-    var2: productName || 'Credit Card',
-    var3: applyUrl
+    var1: nameStr,
+    var2: amountStr
   };
 
   return await sendMsg91FlowSms(to, templateId, varsMap, body);
 };
 
 /**
- * Send Step 2 Post-Apply Link SMS to Customer (DLT Template ID: 1277178655941470854 | Sender: GHARKP)
- * Uses clean variables: name, product, url
+ * 2. apply_1 (DLT Template ID: 6a8b2b479cac2288a3094b42 | Sender: GHARKP)
+ * Preview: Dear ##var1##, complete your prefilled application for ##var2## on GharKaPaisa: ##var3## - GharKaPaisa -YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED
+ */
+const sendApply1Sms = async (to, customerName, productName, applyUrl) => {
+  const nameStr = customerName || 'Customer';
+  const prodStr = productName || 'Credit Card';
+  const urlStr = String(applyUrl || '');
+  const body = `Dear ${nameStr}, complete your prefilled application for ${prodStr} on GharKaPaisa: ${urlStr} - GharKaPaisa\n-YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED`;
+  const templateId = process.env.MSG91_APPLY_1_TEMPLATE_ID || process.env.MSG91_APPLY_STEP1_TEMPLATE_ID || '6a8b2b479cac2288a3094b42';
+
+  const varsMap = {
+    var1: nameStr,
+    var2: prodStr,
+    var3: urlStr
+  };
+
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
+};
+
+// Aliased wrapper for backwards compatibility
+const sendApplyStep1Sms = async (to, customerName, productName, token) => {
+  const applyUrl = String(token || '').startsWith('http') ? token : `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}`;
+  return await sendApply1Sms(to, customerName, productName, applyUrl);
+};
+
+/**
+ * 3. track (DLT Template ID: 6a8b2ba19aad595e3402bb84 | Sender: GHARKP)
+ * Preview: Dear ##alp##, please track and update your ##var1## application using this link: ##var2## - GharKaPaisa -YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED
+ */
+const sendTrackSms = async (to, name, productName, trackUrl) => {
+  const nameStr = name || 'Customer';
+  const prodStr = productName || 'Credit Card';
+  const urlStr = String(trackUrl || '');
+  const body = `Dear ${nameStr}, please track and update your ${prodStr} application using this link: ${urlStr} - GharKaPaisa\n-YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED`;
+  const templateId = process.env.MSG91_TRACK_TEMPLATE_ID || '6a8b2ba19aad595e3402bb84';
+
+  const varsMap = {
+    alp: nameStr,
+    var1: prodStr,
+    var2: urlStr
+  };
+
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
+};
+
+/**
+ * 4. withdrawal_failed (DLT Template ID: 6a8b2c0786535440540f8554 | Sender: GHARKP)
+ * Preview: Dear ##var1##, your GharKaPaisa withdrawal request of Rs.##var2## could not be processed. Please check your registered bank details. -GharKaPaisa -YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED
+ */
+const sendWithdrawalFailedSms = async (to, partnerName, amount) => {
+  const nameStr = partnerName || 'Partner';
+  const amountStr = parseFloat(amount || 0).toFixed(2);
+  const body = `Dear ${nameStr}, your GharKaPaisa withdrawal request of Rs.${amountStr} could not be processed. Please check your registered bank details.\n-GharKaPaisa\n-YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED`;
+  const templateId = process.env.MSG91_WITHDRAWAL_FAILED_TEMPLATE_ID || '6a8b2c0786535440540f8554';
+
+  const varsMap = {
+    var1: nameStr,
+    var2: amountStr
+  };
+
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
+};
+
+/**
+ * 5. application_status (DLT Template ID: 6a8b2c5e05a2ec7fac0b3909 | Sender: GHARKP)
+ * Preview: Dear ##var1##, your ##var2##application status has been updated to ##var3## -GharKaPaisa -YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED
+ */
+const sendApplicationStatusSms = async (to, customerName, productName, statusText) => {
+  const nameStr = customerName || 'Customer';
+  const prodStr = productName ? (productName.endsWith(' ') ? productName : `${productName} `) : 'Credit Card ';
+  const statusStr = String(statusText || 'Updated').toUpperCase();
+  const body = `Dear ${nameStr}, your ${prodStr}application status has been updated to ${statusStr}\n-GharKaPaisa\n-YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED`;
+  const templateId = process.env.MSG91_APPLICATION_STATUS_TEMPLATE_ID || process.env.MSG91_LEAD1_TEMPLATE_ID || '6a8b2c5e05a2ec7fac0b3909';
+
+  const varsMap = {
+    var1: nameStr,
+    var2: prodStr,
+    var3: statusStr
+  };
+
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
+};
+
+/**
+ * Additional Flow API Wrappers
  */
 const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
   const postApplyUrl = String(token || '').startsWith('http') ? token : `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${token}/post-apply`;
-  const body = `Dear ${customerName || 'Customer'}, please submit your bank application ref & documents for ${productName || 'Credit Card'}: ${postApplyUrl} - GharKaPaisa`;
-  const templateId = process.env.MSG91_APPLY_STEP2_TEMPLATE_ID || '1277178655941470854';
-
-  const varsMap = {
-    var1: customerName || 'Customer',
-    var2: productName || 'Credit Card',
-    var3: postApplyUrl,
-    name: customerName || 'Customer',
-    product: productName || 'Credit Card',
-    url: postApplyUrl
-  };
-
-  return await sendMsg91FlowSms(to, templateId, varsMap, body);
+  return await sendTrackSms(to, customerName, productName, postApplyUrl);
 };
 
-/**
- * Send Apply 2 SMS (DLT Template ID: 1277178697669731121 | Sender: GHARKP)
- */
-const sendApply2Sms = async (to, customerName, productName, applyUrl) => {
-  const body = `Dear ${customerName || 'Customer'} , complete your prefilled application for ${productName || 'Credit Card'} on GharKaPaisa: ${applyUrl} - GharKaPaisa`;
-  const templateId = process.env.MSG91_APPLY_2_TEMPLATE_ID || '1277178697669731121';
-
-  const varsMap = {
-    var1: customerName || 'Customer',
-    var2: productName || 'Credit Card',
-    var3: applyUrl
-  };
-
-  return await sendMsg91FlowSms(to, templateId, varsMap, body);
-};
-
-/**
- * Send Upload Documents Reminder SMS (DLT Template ID: 1277178655031889758 | Sender: GHARKP)
- */
 const sendUploadReminderSms = async (to, customerName, appNumber, uploadUrl) => {
-  const body = `Dear ${customerName || 'Customer'}, please complete your application ${appNumber || ''} by uploading required documents: ${uploadUrl} - Thanks, GharKaPaisa`;
-  const templateId = process.env.MSG91_UPLOAD_REMINDER_TEMPLATE_ID || '1277178655031889758';
-
-  const varsMap = {
-    var1: customerName || 'Customer',
-    var2: appNumber || 'ref',
-    var3: uploadUrl
-  };
-
-  return await sendMsg91FlowSms(to, templateId, varsMap, body);
+  return await sendTrackSms(to, customerName, appNumber || 'Credit Card', uploadUrl);
 };
 
-/**
- * Send Partner / Team Invite SMS (DLT Template ID: 1277178655019181250 | Sender: GHARKP)
- */
+const sendLeadStatusSms = async (to, customerName, productOrDetail, statusText = 'UPDATED') => {
+  return await sendApplicationStatusSms(to, customerName, productOrDetail, statusText);
+};
+
 const sendPartnerInviteSms = async (to, inviterName, loginUrl) => {
   const targetUrl = loginUrl || `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/login`;
   const body = `Welcome to GharKaPaisa! You have been added as a Team Member by ${inviterName || 'Partner'}. Login here: ${targetUrl}`;
@@ -190,9 +236,6 @@ const sendPartnerInviteSms = async (to, inviterName, loginUrl) => {
   return await sendMsg91FlowSms(to, templateId, varsMap, body);
 };
 
-/**
- * Send KYC Status Update SMS (DLT Template ID: 1277178697430872410 | Sender: GHARKP)
- */
 const sendKycStatusUpdateSms = async (to, partnerName, statusText) => {
   const body = `Dear ${partnerName || 'Partner'}, your KYC status is updated to ${statusText || 'Updated'} . - GharKaPaisa`;
   const templateId = process.env.MSG91_KYC_STATUS_TEMPLATE_ID || '1277178697430872410';
@@ -205,9 +248,6 @@ const sendKycStatusUpdateSms = async (to, partnerName, statusText) => {
   return await sendMsg91FlowSms(to, templateId, varsMap, body);
 };
 
-/**
- * Send Commission Credited SMS (DLT Template ID: 1277178697043413151 | Sender: GHARKP)
- */
 const sendCommissionCreditedSms = async (to, partnerName, amount) => {
   const body = `Dear ${partnerName || 'Partner'}, commission of Rs.${amount || '0'} has been credited to wallet. - GharKaPaisa`;
   const templateId = process.env.MSG91_COMMISSION_CREDITED_TEMPLATE_ID || '1277178697043413151';
@@ -220,24 +260,6 @@ const sendCommissionCreditedSms = async (to, partnerName, amount) => {
   return await sendMsg91FlowSms(to, templateId, varsMap, body);
 };
 
-/**
- * Send Lead Status SMS (DLT Template ID: 1277178697004117991 | Sender: GHARKP)
- */
-const sendLeadStatusSms = async (to, customerName, productOrDetail) => {
-  const body = `Dear ${customerName || 'Customer'}, your application for ${productOrDetail || 'Credit Card'}! - GharKaPaisa`;
-  const templateId = process.env.MSG91_LEAD1_TEMPLATE_ID || '1277178697004117991';
-
-  const varsMap = {
-    var1: customerName || 'Customer',
-    var2: productOrDetail || 'Credit Card'
-  };
-
-  return await sendMsg91FlowSms(to, templateId, varsMap, body);
-};
-
-/**
- * Send Payout Receipt SMS (DLT Template ID: 1277178697170936114 | Sender: GHARKP)
- */
 const sendPayoutReceiptSms = async (to, partnerName, amount, utr) => {
   const body = `Dear ${partnerName || 'Partner'}, your payout of Rs.${amount || '0'} has been credited to bank account with UTR: ${utr || 'N/A'}. - GharKaPaisa`;
   const templateId = process.env.MSG91_PAYOUT_RECEIPT_TEMPLATE_ID || '1277178697170936114';
@@ -260,13 +282,13 @@ const SMS_TEMPLATES = {
   PAYOUT_UTR: (amount, utr) =>
     `Your payout of Rs.${amount} has been credited to bank account with UTR: ${utr}. - GharKaPaisa`,
   APPLY_STEP1: (name, url) =>
-    `Dear ${name || 'Customer'}, complete your prefilled application on GharKaPaisa: ${url}`,
+    `Dear ${name || 'Customer'}, complete your prefilled application for Credit Card on GharKaPaisa: ${url} - GharKaPaisa`,
   APPLY_STEP2: (name, url) =>
-    `Dear ${name || 'Customer'}, submit bank application ref & documents: ${url} - GharKaPaisa`,
+    `Dear ${name || 'Customer'}, please track and update your application using this link: ${url} - GharKaPaisa`,
   LEAD_APPROVED: (name, product) =>
-    `Dear ${name || 'Customer'}, your application for ${product}! - GharKaPaisa`,
+    `Dear ${name || 'Customer'}, your ${product} application status has been updated to APPROVED - GharKaPaisa`,
   LEAD_REJECTED: (name, product) =>
-    `Dear ${name || 'Customer'}, your application for ${product}! - GharKaPaisa`,
+    `Dear ${name || 'Customer'}, your ${product} application status has been updated to REJECTED - GharKaPaisa`,
   COMMISSION_CREDITED: (name, amount) =>
     `Dear ${name || 'Partner'}, commission of Rs.${amount} has been credited to wallet. - GharKaPaisa`,
   KYC_UPDATE: (name, status) =>
@@ -285,9 +307,13 @@ const sendGenericNotificationSms = async (to, recipientName, messageContent) => 
 module.exports = { 
   sendSms,
   sendGenericNotificationSms,
+  sendWithdrawalRequestSms,
+  sendApply1Sms,
   sendApplyStep1Sms,
   sendPostApplyStep2Sms,
-  sendApply2Sms,
+  sendTrackSms,
+  sendWithdrawalFailedSms,
+  sendApplicationStatusSms,
   sendUploadReminderSms,
   sendPartnerInviteSms,
   sendKycStatusUpdateSms,
@@ -296,3 +322,4 @@ module.exports = {
   sendPayoutReceiptSms,
   SMS_TEMPLATES
 };
+

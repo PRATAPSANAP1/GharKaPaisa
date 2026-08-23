@@ -821,6 +821,24 @@ const updateLeadStatus = async (req, res, next) => {
       }
     }
 
+    // Send DLT SMS to customer for application_status
+    try {
+      const { sendApplicationStatusSms } = require('../../services/sms/sms.service');
+      const { rows: [leadProd] } = await query(`
+        SELECT l.mobile, l.customer_name, p.name as product_name 
+        FROM leads l 
+        LEFT JOIN products p ON p.id = l.product_id 
+        WHERE l.id = $1
+      `, [id]);
+      if (leadProd && leadProd.mobile) {
+        sendApplicationStatusSms(leadProd.mobile, leadProd.customer_name, leadProd.product_name, newStatus).catch(smsErr => {
+          logger.warn(`Failed to send lead status SMS: ${smsErr.message}`);
+        });
+      }
+    } catch (smsErr) {
+      logger.warn(`Lead status SMS dispatch notice: ${smsErr.message}`);
+    }
+
     return success(res, updated, `Lead status updated to ${newStatus}`);
   } catch (err) {
     next(err);

@@ -862,15 +862,20 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
           await notify.withdrawalApproved(partnerData.user_id, wr.amount);
         } else if (action === 'reject') {
           await notify.withdrawalRejected(partnerData.user_id, wr.amount, rejectionReason);
+          if (partnerData.mobile) {
+            const { sendWithdrawalFailedSms } = require('../../services/sms/sms.service');
+            sendWithdrawalFailedSms(partnerData.mobile, partnerData.first_name, wr.amount).catch(smsErr => {
+              logger.error('Failed to send withdrawal failed SMS to partner:', smsErr.message);
+            });
+          }
         } else if (action === 'transfer' || utrNumber) {
           const sentUtr = utrNumber || wr.utr || `UTR${Date.now()}`;
           await notify.withdrawalApproved(partnerData.user_id, wr.amount);
           
-          // Send SMS notification to Partner upon payment completion
+          // Send SMS notification to Partner upon payment completion using DLT template
           if (partnerData.mobile) {
-            const { sendSms } = require('../../services/sms/sms.service');
-            const smsBody = `Dear ${partnerData.first_name || 'Partner'}, your payout of Rs.${parseFloat(wr.amount).toFixed(2)} has been successfully credited to your bank account with UTR: ${sentUtr}. - GharKaPaisa`;
-            await sendSms(partnerData.mobile, smsBody).catch(smsErr => {
+            const { sendPayoutReceiptSms } = require('../../services/sms/sms.service');
+            sendPayoutReceiptSms(partnerData.mobile, partnerData.first_name, wr.amount, sentUtr).catch(smsErr => {
               logger.error('Failed to send payout SMS to partner:', smsErr.message);
             });
           }
