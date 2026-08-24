@@ -6,7 +6,8 @@ import {
   MdSearch, MdFilterList, MdCheckCircle, MdBlock, 
   MdCompareArrows, MdHistory, MdFileDownload, MdClose,
   MdModeEdit, MdSwapHoriz, MdAssignment, MdVisibility,
-  MdShare, MdTrackChanges, MdDelete
+  MdShare, MdTrackChanges, MdDelete,
+  MdHourglassEmpty, MdVerified, MdMonetizationOn, MdAttachMoney, MdCancel
 } from 'react-icons/md';
 
 import { useSearchParams } from 'react-router-dom';
@@ -614,9 +615,9 @@ export default function ManageApplications() {
                 <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Process By / Channel</label>
                 <select style={{ ...S.input, width: '100%' }} value={processByFilter} onChange={e => setProcessByFilter(e.target.value)}>
                   <option value="">All Process Types</option>
-                  <option value="partner_punch">✍️ Partner Punch</option>
-                  <option value="partner_share">🔗 Partner Share Link</option>
-                  <option value="customer_direct">📱 Customer Direct Apply</option>
+                  <option value="partner_punch">Partner Punch</option>
+                  <option value="partner_share">Partner Share Link</option>
+                  <option value="customer_direct">Customer Direct Apply</option>
                 </select>
               </div>
 
@@ -697,7 +698,7 @@ export default function ManageApplications() {
                         background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
                         color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
                       }}>
-                        {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? '🔗 Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? '📱 Customer Apply' : '✍️ Partner Punch'}
+                        {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? 'Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? 'Customer Apply' : 'Partner Punch'}
                       </div>
                     </td>
                     <td style={{ padding: '14px 16px' }}>
@@ -705,7 +706,7 @@ export default function ManageApplications() {
                       <div style={{ fontSize: '11.5px', color: C.textLight, marginTop: '2px' }}>{app.bank_name} • {app.category}</div>
                       {app.operation_head_name && (
                         <div style={{ fontSize: '10.5px', fontWeight: 700, color: C.purple, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span>👤 Op Head:</span> {app.operation_head_name}
+                          <span>Op Head:</span> {app.operation_head_name}
                         </div>
                       )}
                     </td>
@@ -766,56 +767,56 @@ export default function ManageApplications() {
               {
                 id: 'pending',
                 title: 'Pending Applications',
-                icon: '📋',
+                IconComponent: MdHourglassEmpty,
                 badgeColor: '#F59E0B',
                 statuses: ['pending', 'initiated', 'link_pending', 'bank_application_pending', 'created', 'lead_created', 'new', 'draft', 'confirmed', 'link_sent']
               },
               {
                 id: 'details_submitted',
-                title: '📝 Details Submitted Applications',
-                icon: '📝',
+                title: 'Details Submitted Applications',
+                IconComponent: MdAssignment,
                 badgeColor: '#3B82F6',
                 statuses: ['details_submitted', 'submitted', 'bank_form_submitted', 'under_review', 'under review', 'verification', 'in_process', 'in_progress']
               },
               {
                 id: 'operational_verified',
-                title: '🔍 Operational Verified Applications',
-                icon: '🔍',
+                title: 'Operational Verified Applications',
+                IconComponent: MdSearch,
                 badgeColor: '#8B5CF6',
                 statuses: ['operational_verified', 'operational_approved', 'app_file_generated']
               },
               {
                 id: 'approved',
-                title: '✅ Approved Applications',
-                icon: '✅',
+                title: 'Approved Applications',
+                IconComponent: MdCheckCircle,
                 badgeColor: '#10B981',
                 statuses: ['approved', 'super_admin_approved', 'disbursed', 'sanctioned']
               },
               {
                 id: 'commission_released',
-                title: '💸 Commission Released Applications',
-                icon: '💸',
+                title: 'Commission Released Applications',
+                IconComponent: MdAttachMoney,
                 badgeColor: '#06B6D4',
                 statuses: ['commission_released', 'released', 'credited']
               },
               {
                 id: 'commission_received',
-                title: '💰 Commission Received Applications',
-                icon: '💰',
+                title: 'Commission Received Applications',
+                IconComponent: MdMonetizationOn,
                 badgeColor: '#16A34A',
                 statuses: ['commission_received', 'received', 'paid']
               },
               {
                 id: 'rejected',
-                title: '❌ Rejected & Cancelled Applications',
-                icon: '❌',
+                title: 'Rejected & Cancelled Applications',
+                IconComponent: MdCancel,
                 badgeColor: '#EF4444',
                 statuses: ['rejected', 'cancelled', 'declined', 'decline', 'technical_error']
               },
               {
                 id: 'other',
-                title: '📦 Other / In Progress Applications',
-                icon: '📦',
+                title: 'Other Applications',
+                IconComponent: MdAssignment,
                 badgeColor: '#6B7280',
                 isOtherFallback: true,
                 statuses: []
@@ -828,11 +829,12 @@ export default function ManageApplications() {
                 : applications.filter(a => sec.statuses.includes(String(a.status || '').toLowerCase()));
 
               if (!list || list.length === 0) return null;
+              const HeaderIcon = sec.IconComponent;
               return (
               <div key={sIdx} style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '14px 20px', background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '18px' }}>{sec.icon}</span>
+                    {HeaderIcon && <HeaderIcon size={20} style={{ color: sec.badgeColor }} />}
                     <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0 }}>{sec.title}</h3>
                     <span style={{ fontSize: '11px', fontWeight: 900, background: `${sec.badgeColor}20`, color: sec.badgeColor, padding: '2px 10px', borderRadius: '12px' }}>
                       {list.length} Applications
@@ -871,7 +873,7 @@ export default function ManageApplications() {
                               background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
                               color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
                             }}>
-                              {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? '🔗 Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? '📱 Customer Apply' : '✍️ Partner Punch'}
+                              {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? 'Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? 'Customer Apply' : 'Partner Punch'}
                             </div>
                           </td>
                           <td style={{ padding: '12px 16px' }}>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
-import { FileText, FileEdit, Building2 } from 'lucide-react';
+import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers } from 'lucide-react';
 import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
 
 export default function ManageApplications() {
@@ -265,7 +265,8 @@ export default function ManageApplications() {
             const groups = [
               {
                 id: 'pending',
-                title: '⏳ Pending Applications',
+                title: 'Pending Applications',
+                icon: Clock,
                 color: '#f59e0b',
                 badgeBg: '#f59e0b15',
                 borderColor: '#f59e0b',
@@ -273,7 +274,8 @@ export default function ManageApplications() {
               },
               {
                 id: 'details_submitted',
-                title: '📝 Details Submitted Applications',
+                title: 'Details Submitted Applications',
+                icon: FileEdit,
                 color: '#3b82f6',
                 badgeBg: '#3b82f615',
                 borderColor: '#3b82f6',
@@ -281,7 +283,8 @@ export default function ManageApplications() {
               },
               {
                 id: 'operational_verified',
-                title: '🔍 Operational Verified Applications',
+                title: 'Operational Verified Applications',
+                icon: Search,
                 color: '#8b5cf6',
                 badgeBg: '#8b5cf615',
                 borderColor: '#8b5cf6',
@@ -289,7 +292,8 @@ export default function ManageApplications() {
               },
               {
                 id: 'approved',
-                title: '✅ Approved Applications',
+                title: 'Approved Applications',
+                icon: CheckCircle2,
                 color: '#10b981',
                 badgeBg: '#10b98115',
                 borderColor: '#10b981',
@@ -297,7 +301,8 @@ export default function ManageApplications() {
               },
               {
                 id: 'commission_received',
-                title: '💰 Commission Received Applications',
+                title: 'Commission Received Applications',
+                icon: CheckCircle2,
                 color: '#16a34a',
                 badgeBg: '#16a34a15',
                 borderColor: '#16a34a',
@@ -305,7 +310,8 @@ export default function ManageApplications() {
               },
               {
                 id: 'rejected',
-                title: '❌ Rejected & Cancelled Applications',
+                title: 'Rejected & Cancelled Applications',
+                icon: XCircle,
                 color: '#ef4444',
                 badgeBg: '#ef444415',
                 borderColor: '#ef4444',
@@ -313,7 +319,8 @@ export default function ManageApplications() {
               },
               {
                 id: 'other',
-                title: '📦 Other Applications',
+                title: 'Other Applications',
+                icon: Layers,
                 color: '#6b7280',
                 badgeBg: '#6b728015',
                 borderColor: '#6b7280',
@@ -337,6 +344,8 @@ export default function ManageApplications() {
                 return null;
               }
 
+              const GroupIcon = group.icon;
+
             return (
               <div
                 key={group.id}
@@ -358,6 +367,7 @@ export default function ManageApplications() {
                   alignItems: "center"
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    {GroupIcon && <GroupIcon size={18} style={{ color: group.color }} />}
                     <h3 style={{ fontSize: "15px", fontWeight: 800, color: C.text, margin: 0 }}>
                       {group.title}
                     </h3>

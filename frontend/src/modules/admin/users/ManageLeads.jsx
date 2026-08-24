@@ -143,7 +143,7 @@ export default function ManageLeads() {
   const statusGroups = [
     {
       id: 'pending_submitted',
-      title: '⏳ Pending & Submitted Applications',
+      title: 'Pending & Submitted Applications',
       badgeBg: '#EFF6FF',
       badgeColor: '#2563EB',
       borderColor: '#3B82F6',
@@ -151,7 +151,7 @@ export default function ManageLeads() {
     },
     {
       id: 'under_review',
-      title: '🔍 Bank Review & Physical Verification',
+      title: 'Bank Review & Physical Verification',
       badgeBg: '#FFF7ED',
       badgeColor: '#EA580C',
       borderColor: '#F97316',
@@ -159,7 +159,7 @@ export default function ManageLeads() {
     },
     {
       id: 'operational_verified',
-      title: '🛡️ Operational Verified & Admin Approved',
+      title: 'Operational Verified & Admin Approved',
       badgeBg: '#F0FDFA',
       badgeColor: '#0D9488',
       borderColor: '#14B8A6',
@@ -167,7 +167,7 @@ export default function ManageLeads() {
     },
     {
       id: 'approved',
-      title: '✅ Approved & Commission Released',
+      title: 'Approved & Commission Released',
       badgeBg: '#ECFDF5',
       badgeColor: '#059669',
       borderColor: '#10B981',
@@ -175,7 +175,7 @@ export default function ManageLeads() {
     },
     {
       id: 'rejected',
-      title: '❌ Rejected & Declined Applications',
+      title: 'Rejected & Declined Applications',
       badgeBg: '#FEE2E2',
       badgeColor: '#DC2626',
       borderColor: '#EF4444',

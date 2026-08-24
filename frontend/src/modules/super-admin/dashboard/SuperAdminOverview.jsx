@@ -1220,7 +1220,7 @@ export default function SuperAdminOverview() {
             {/* Process Specific Detailed Section */}
             {selectedAppTrace.application?.application_process_type === 'physical_process' && selectedAppTrace.physical_details && (
               <div style={{ background: '#FFFBEB', padding: '14px', borderRadius: '12px', border: '1px solid #FDE68A', marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#92400E', margin: '0 0 10px 0' }}>📋 Physical Process Application Details</h4>
+                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#92400E', margin: '0 0 10px 0' }}>Physical Process Application Details</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', fontSize: '12px' }}>
                   <div><span style={{ color: '#B45309', display: 'block', fontSize: '11px' }}>Employer Company</span><strong>{selectedAppTrace.physical_details.company_name || 'N/A'}</strong></div>
                   <div><span style={{ color: '#B45309', display: 'block', fontSize: '11px' }}>Net Monthly Income</span><strong>₹{selectedAppTrace.physical_details.monthly_income ? parseFloat(selectedAppTrace.physical_details.monthly_income).toLocaleString('en-IN') : 'N/A'}</strong></div>

@@ -10,7 +10,7 @@ import {
   XCircle, AlertCircle, Phone, MessageSquare, ArrowUpRight, 
   UserPlus, Layers, FileSpreadsheet, ChevronDown, ChevronUp,
   FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send, Share2, Copy, Trash2, Eye, Activity,
-  FileEdit, Building2
+  FileEdit, Building2, User
 } from 'lucide-react';
 
 const STAGES = [
@@ -629,15 +629,15 @@ export default function PartnerApplications() {
   const getProcessByBadge = (processBy, processType) => {
     const p = String(processBy || processType || '').toLowerCase();
     if (p.includes('physical')) {
-      return { label: '📋 Physical Process', color: '#d97706', bg: '#fef3c7', border: '#f59e0b40' };
+      return { label: 'Physical Process', color: '#d97706', bg: '#fef3c7', border: '#f59e0b40' };
     }
     if (p.includes('share') || p.includes('link') || p.includes('customer_self')) {
-      return { label: '🔗 Share Link', color: '#14b8a6', bg: '#14b8a618', border: '#14b8a640' };
+      return { label: 'Share Link', color: '#14b8a6', bg: '#14b8a618', border: '#14b8a640' };
     }
     if (p.includes('direct') || p.includes('bank') || p.includes('partner_self')) {
-      return { label: '📱 Direct Apply', color: '#3b82f6', bg: '#3b82f618', border: '#3b82f640' };
+      return { label: 'Direct Apply', color: '#3b82f6', bg: '#3b82f618', border: '#3b82f640' };
     }
-    return { label: '✍️ Partner Punch', color: '#8b5cf6', bg: '#8b5cf618', border: '#8b5cf640' };
+    return { label: 'Partner Punch', color: '#8b5cf6', bg: '#8b5cf618', border: '#8b5cf640' };
   };
 
   const getStepProgress = (status) => {
@@ -855,7 +855,8 @@ export default function PartnerApplications() {
             const groups = [
               {
                 id: 'pending',
-                title: '⏳ Pending Applications',
+                title: 'Pending Applications',
+                icon: Clock,
                 color: '#f59e0b',
                 badgeBg: '#f59e0b15',
                 borderColor: '#f59e0b',
@@ -863,7 +864,8 @@ export default function PartnerApplications() {
               },
               {
                 id: 'details_submitted',
-                title: '📝 Details Submitted Applications',
+                title: 'Details Submitted Applications',
+                icon: FileEdit,
                 color: '#3b82f6',
                 badgeBg: '#3b82f615',
                 borderColor: '#3b82f6',
@@ -871,7 +873,8 @@ export default function PartnerApplications() {
               },
               {
                 id: 'operational_verified',
-                title: '🔍 Operational Verified Applications',
+                title: 'Operational Verified Applications',
+                icon: Search,
                 color: '#8b5cf6',
                 badgeBg: '#8b5cf615',
                 borderColor: '#8b5cf6',
@@ -879,7 +882,8 @@ export default function PartnerApplications() {
               },
               {
                 id: 'approved',
-                title: '✅ Approved Applications',
+                title: 'Approved Applications',
+                icon: CheckCircle2,
                 color: '#10b981',
                 badgeBg: '#10b98115',
                 borderColor: '#10b981',
@@ -887,7 +891,8 @@ export default function PartnerApplications() {
               },
               {
                 id: 'commission_released',
-                title: '💸 Commission Released Applications',
+                title: 'Commission Released Applications',
+                icon: Sparkles,
                 color: '#06b6d4',
                 badgeBg: '#06b6d415',
                 borderColor: '#06b6d4',
@@ -895,7 +900,8 @@ export default function PartnerApplications() {
               },
               {
                 id: 'commission_received',
-                title: '💰 Commission Received Applications',
+                title: 'Commission Received Applications',
+                icon: CheckCircle2,
                 color: '#16a34a',
                 badgeBg: '#16a34a15',
                 borderColor: '#16a34a',
@@ -903,7 +909,8 @@ export default function PartnerApplications() {
               },
               {
                 id: 'rejected',
-                title: '❌ Rejected & Cancelled Applications',
+                title: 'Rejected & Cancelled Applications',
+                icon: XCircle,
                 color: '#ef4444',
                 badgeBg: '#ef444415',
                 borderColor: '#ef4444',
@@ -911,7 +918,8 @@ export default function PartnerApplications() {
               },
               {
                 id: 'other',
-                title: '📦 Other Applications',
+                title: 'Other Applications',
+                icon: Layers,
                 color: '#6b7280',
                 badgeBg: '#6b728015',
                 borderColor: '#6b7280',
@@ -935,6 +943,8 @@ export default function PartnerApplications() {
                 return null;
               }
 
+              const GroupIcon = group.icon;
+
             return (
               <div key={group.id} style={{
                 borderRadius: 18, background: cardBg, border: `1px solid ${border}`,
@@ -947,6 +957,7 @@ export default function PartnerApplications() {
                   borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {GroupIcon && <GroupIcon size={18} style={{ color: group.color }} />}
                     <h3 style={{ fontSize: 15, fontWeight: 800, color: textPrimary, margin: 0 }}>{group.title}</h3>
                     <span style={{
                       padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800,
@@ -1114,7 +1125,7 @@ export default function PartnerApplications() {
                                 })()}
                                 {(app.submitted_by_name || (app.partner_first_name && `${app.partner_first_name} ${app.partner_last_name || ''}`)) && (
                                   <div style={{ fontSize: 10, color: '#3b82f6', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', gap: 3, background: '#3b82f612', padding: '2px 6px', borderRadius: 4, width: 'fit-content' }}>
-                                    👤 {app.submitted_by_name || `${app.partner_first_name || ''} ${app.partner_last_name || ''}`}
+                                    <User size={12} /> {app.submitted_by_name || `${app.partner_first_name || ''} ${app.partner_last_name || ''}`}
                                   </div>
                                 )}
                               </td>
@@ -1310,7 +1321,7 @@ export default function PartnerApplications() {
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: `1px solid ${border}`, paddingBottom: 12 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>📋 APPLICATION DETAILS</h3>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>APPLICATION DETAILS</h3>
                 <span style={{ fontSize: 11, color: textMuted }}>
                   App #{viewApp.app_number} • Bank: {viewApp.bank_name || viewApp.bank_code || 'Bank'} • Product: {viewApp.product_name}
                 </span>
@@ -1507,11 +1518,11 @@ export default function PartnerApplications() {
         };
 
         const processLabel = {
-          lead_punching: '🏢 Lead Punching Pipeline',
-          linked_share: '🔗 Linked Share Pipeline',
-          direct_bank: '🏦 Direct Bank Pipeline',
-          physical_process: '📋 Physical Process Pipeline',
-        }[processType] || '📍 Application Pipeline';
+          lead_punching: 'Lead Punching Pipeline',
+          linked_share: 'Linked Share Pipeline',
+          direct_bank: 'Direct Bank Pipeline',
+          physical_process: 'Physical Process Pipeline',
+        }[processType] || 'Application Pipeline';
 
         return (
           <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 12 }}>
