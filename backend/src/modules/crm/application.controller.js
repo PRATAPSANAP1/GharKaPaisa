@@ -1415,6 +1415,29 @@ const listApplications = async (req, res, next) => {
 const getApplication = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // Safety check for dynamic columns on customers & applications
+    try {
+      await query(`
+        ALTER TABLE customers 
+          ADD COLUMN IF NOT EXISTS address TEXT,
+          ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS father_name VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS marital_status VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS gender VARCHAR(50),
+          ADD COLUMN IF NOT EXISTS designation VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20);
+        ALTER TABLE applications
+          ADD COLUMN IF NOT EXISTS address TEXT,
+          ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS father_name VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS marital_status VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS gender VARCHAR(50),
+          ADD COLUMN IF NOT EXISTS designation VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20);
+      `);
+    } catch (_) {}
+
     const { rows: [app] } = await query(`
       SELECT a.*, 
         COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
@@ -1428,7 +1451,13 @@ const getApplication = async (req, res, next) => {
         COALESCE(NULLIF(a.city, ''), NULLIF(l.city, ''), NULLIF(c.city, '')) as city,
         COALESCE(NULLIF(a.state, ''), NULLIF(c.state, ''), NULLIF(l.state, '')) as state,
         COALESCE(NULLIF(a.pincode, ''), NULLIF(c.pincode, ''), NULLIF(l.pincode, '')) as pincode,
-        c.address, c.mother_name, c.father_name, c.marital_status, c.gender, COALESCE(c.aadhaar_number, a.aadhaar_number) as aadhaar_number, c.designation,
+        COALESCE(a.address, c.address) as address,
+        COALESCE(a.mother_name, c.mother_name) as mother_name,
+        COALESCE(a.father_name, c.father_name) as father_name,
+        COALESCE(c.marital_status, a.marital_status) as marital_status,
+        COALESCE(c.gender, a.gender) as gender,
+        COALESCE(c.aadhaar_number, a.aadhaar_number) as aadhaar_number,
+        COALESCE(a.designation, c.designation) as designation,
         p.name as product_name, p.category, p.features, p.commission_type, p.commission_value,
         b.name as bank_name, b.short_code as bank_code,
         ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name

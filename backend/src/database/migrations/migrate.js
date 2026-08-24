@@ -4441,17 +4441,43 @@ const migrate = async () => {
     logger.error('Failed to run Task 26 migration:', task26Err.message);
   }
 
+  // ── TASK 27: Customer Profile Columns Safety Check ────────────
+  try {
+    logger.info('Running Task 27 Migration (Customer & Application Profile Columns)...');
+    await query(`
+      ALTER TABLE customers 
+        ADD COLUMN IF NOT EXISTS address TEXT,
+        ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS father_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS marital_status VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS gender VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS designation VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20);
+      ALTER TABLE applications
+        ADD COLUMN IF NOT EXISTS address TEXT,
+        ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS father_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS marital_status VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS gender VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS designation VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20);
+    `);
+    logger.info('Task 27 completed successfully.');
+  } catch (task27Err) {
+    logger.error('Failed to run Task 27 migration:', task27Err.message);
+  }
+
   logger.info('✅ All migrations completed successfully');
   if (require.main === module) {
     process.exit(0);
   }
 };
 
- if (require.main === module) {
-   migrate().catch(err => {
-     logger.error('Migration failed', err);
-     process.exit(1);
-   });
- }
+if (require.main === module) {
+  migrate().catch(err => {
+    logger.error('Migration failed', err);
+    process.exit(1);
+  });
+}
 
- module.exports = { migrate };
+module.exports = { migrate };
