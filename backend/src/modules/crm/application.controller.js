@@ -1508,6 +1508,7 @@ const getApplication = async (req, res, next) => {
       if (!app.iqa_stage && pd.iqa_stage) app.iqa_stage = pd.iqa_stage;
       if (!app.dispatch_status && pd.dispatch_status) app.dispatch_status = pd.dispatch_status;
       if (!app.final_status && pd.final_status) app.final_status = pd.final_status;
+      if (!app.final_status && app.status) app.final_status = app.status;
       if (!app.bank_ref_number && pd.bank_application_number) app.bank_ref_number = pd.bank_application_number;
       if (!app.bank_application_number && pd.bank_application_number) app.bank_application_number = pd.bank_application_number;
       if (!app.dob && pd.dob) app.dob = pd.dob;

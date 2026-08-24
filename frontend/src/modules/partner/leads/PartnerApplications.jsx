@@ -1444,10 +1444,23 @@ export default function PartnerApplications() {
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DISPATCH STATUS</div>
                       <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.dispatch_status || viewAppDetails?.physical_details?.dispatch_status || 'N/A'}</div>
                     </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
-                      <div style={{ fontWeight: 800, color: '#10b981' }}>{viewAppDetails?.final_status || viewAppDetails?.physical_details?.final_status || 'In Process'}</div>
-                    </div>
+                    {(() => {
+                      const finalSt = viewAppDetails?.final_status || viewAppDetails?.physical_details?.final_status || viewAppDetails?.status || viewApp?.status || 'In Process';
+                      const lowerSt = String(finalSt).toLowerCase();
+                      let statusColor = '#3b82f6';
+                      if (lowerSt.includes('approve') || lowerSt.includes('disburs')) statusColor = '#10b981';
+                      else if (lowerSt.includes('decline') || lowerSt.includes('reject')) statusColor = '#ef4444';
+                      else if (lowerSt.includes('etq') || lowerSt.includes('error') || lowerSt.includes('pending')) statusColor = '#f59e0b';
+
+                      return (
+                        <div>
+                          <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
+                          <div style={{ fontWeight: 800, color: statusColor, textTransform: 'capitalize' }}>
+                            {String(finalSt).replace(/_/g, ' ')}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     {(viewAppDetails?.bank_remark || viewAppDetails?.physical_details?.bank_remark) && (
                       <div style={{ gridColumn: 'span 2' }}>
                         <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>
