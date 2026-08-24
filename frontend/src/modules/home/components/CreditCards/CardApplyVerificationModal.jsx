@@ -292,7 +292,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      padding: "12px",
+      padding: "45px 12px 20px 12px",
       backdropFilter: "blur(8px)",
       fontFamily: "'Inter', sans-serif"
     }}>

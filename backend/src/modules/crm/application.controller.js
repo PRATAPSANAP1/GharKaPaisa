@@ -1419,10 +1419,10 @@ const getApplication = async (req, res, next) => {
       SELECT a.*, 
         COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
         COALESCE(NULLIF(l.mobile, ''), c.mobile) as customer_mobile,
-        COALESCE(NULLIF(c.email, ''), NULLIF(l.email, '')) as customer_email,
+        c.email as customer_email,
         COALESCE(c.pan_number, l.pan_number) as pan_number,
         TO_CHAR(c.dob, 'YYYY-MM-DD') as dob,
-        COALESCE(c.monthly_income, l.monthly_income, a.loan_amount) as monthly_income,
+        COALESCE(c.monthly_income, a.loan_amount) as monthly_income,
         c.employment_type,
         COALESCE(c.employer, c.company_name, l.company_name, a.company_name) as company_name,
         COALESCE(l.city, c.city, a.city) as city,
@@ -1684,9 +1684,9 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
     const userRole = (req.user?.role || '').toUpperCase();
     
-    // Backend RBAC enforcement: Final Status & Approval updates restricted to OPERATIONS_HEAD, ADMIN, SUPER_ADMIN
-    if (final_status && !['OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN'].includes(userRole)) {
-      return forbidden(res, 'Access denied. Only Operation Head, Admin, or Super Admin can update Final Status.');
+    // Backend RBAC enforcement: Final Status & Approval updates restricted to OPERATIONS_HEAD, ADMIN, SUPER_ADMIN, ADMINISTRATIVE_OPERATOR
+    if (final_status && !['OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN', 'ADMINISTRATIVE_OPERATOR'].includes(userRole)) {
+      return forbidden(res, 'Access denied. Only Operation Head, Admin, Super Admin, or Administrative Operator can update Final Status.');
     }
 
     let appRes = await query(`

@@ -2350,7 +2350,7 @@ This document contains the complete database schema definition and data dictiona
 | 5 | `new_status` | VARCHAR(50) | NOT NULL | New status |
 | 6 | `performed_by` | UUID | FOREIGN KEY → users(id) ON DELETE SET NULL | Performer |
 | 7 | `notes` | TEXT | NULLABLE | Notes |
-| 8 | `created_at` | TEMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
+| 8 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() | Creation timestamp |
 
 * **Indexes**: `idx_withdrawal_audit_withdrawal` ON (`withdrawal_id`)
 

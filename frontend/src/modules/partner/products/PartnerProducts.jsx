@@ -1592,14 +1592,15 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       {selectedProduct && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
-          display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', padding: isMobile ? '10px 10px 85px 10px' : '16px'
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)', padding: isMobile ? '45px 10px 85px 10px' : '50px 16px 20px 16px'
         }}>
           <div style={{
-            background: C.card, width: '100%', maxWidth: '520px', maxHeight: isMobile ? 'calc(100vh - 100px)' : '90vh',
+            background: C.card, width: '100%', maxWidth: '520px', maxHeight: isMobile ? 'calc(100vh - 110px)' : '85vh',
             borderRadius: '24px', border: `1px solid ${C.border}`,
             boxShadow: '0 25px 60px rgba(0,0,0,0.4)', position: 'relative',
-            display: 'flex', flexDirection: 'column', overflow: 'hidden'
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            marginTop: isMobile ? '0' : '20px'
           }}>
             {/* Modal Header */}
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.border}`, background: C.bgSecondary, position: 'sticky', top: 0, zIndex: 10 }}>

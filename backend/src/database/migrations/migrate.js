@@ -823,6 +823,8 @@ const migrate = async () => {
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS email VARCHAR(255)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(15,2)`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS application_id UUID REFERENCES applications(id) ON DELETE SET NULL`);
   await query(`CREATE INDEX IF NOT EXISTS idx_leads_partner ON leads(partner_id)`);

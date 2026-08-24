@@ -61,7 +61,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const [appNumber, setAppNumber] = useState(application?.app_number || application?.application_no || '');
   const [vkycUrl, setVkycUrl] = useState(application?.vkyc_url || application?.vkyc_link || '');
 
-  // 2. Remark Form State (Soft Approval, VKYC Stage, IQA Stage, Dispatch Status)
+  // 2. Remark Form State (Appcode Status, Soft Approval, VKYC Stage, IQA Stage, Dispatch Status)
+  const isSbi = String(application?.bank_name || application?.bank_code || '').toUpperCase().includes('SBI');
+  const [appcodeStatus, setAppcodeStatus] = useState(application?.appcode_status || (isSbi ? 'Appcode Send' : 'Appcode Pending'));
   const [softApprovalStatus, setSoftApprovalStatus] = useState(application?.soft_approval_status || 'Approval-income 25k');
   const [vkycStage, setVkycStage] = useState(application?.vkyc_stage || 'VKYC Pending');
   const [iqaStage, setIqaStage] = useState(application?.iqa_stage || 'IQA Pending');
@@ -174,6 +176,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         if (app.bank_ref_number || app.bank_application_number) setBankRefNumber(app.bank_ref_number || app.bank_application_number || app.bank_app_no || '');
         if (app.vkyc_url) setVkycUrl(app.vkyc_url || app.vkyc_link || '');
 
+        if (app.appcode_status) setAppcodeStatus(app.appcode_status);
         if (app.soft_approval_status) setSoftApprovalStatus(app.soft_approval_status);
         if (app.vkyc_stage) setVkycStage(app.vkyc_stage);
         if (app.iqa_stage) setIqaStage(app.iqa_stage);
@@ -223,9 +226,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         };
       } else if (formType === 'remark') {
         payload = {
+          appcode_status: appcodeStatus,
           soft_approval_status: softApprovalStatus,
-          vkyc_stage: vkycStage,
           iqa_stage: iqaStage,
+          bank_ref_number: bankRefNumber,
+          bank_application_number: bankRefNumber,
+          vkyc_stage: vkycStage,
+          vkyc_url: vkycUrl,
           dispatch_status: dispatchStatus
         };
       } else if (formType === 'final') {
@@ -597,7 +604,34 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
                   
-                  {/* 1. Soft Approval Status */}
+                  {/* Order 1: APPCODE STATUS */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Appcode Status</label>
+                    <select
+                      value={appcodeStatus}
+                      onChange={(e) => setAppcodeStatus(e.target.value)}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
+                    >
+                      {isSbi ? (
+                        <>
+                          <option value="Appcode Send">1. Appcode Send</option>
+                          <option value="Soft Approval">2. Soft Approval</option>
+                          <option value="Pending">3. Pending</option>
+                          <option value="Submit">4. Submit</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Appcode Pending">1. Appcode Pending</option>
+                          <option value="Appcode Send">2. Appcode Send</option>
+                          <option value="Soft Approval">3. Soft Approval</option>
+                          <option value="Pending">4. Pending</option>
+                          <option value="Submit">5. Submit</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  {/* Order 2: SOFT APPROVAL STATUS */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Soft Approval Status</label>
                     <select
@@ -608,12 +642,41 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       <option value="Approval-income 25k">1. Approval-income 25k</option>
                       <option value="Approval-income 30k">2. Approval-income 30k</option>
                       <option value="Approval-NSDP-Cibil based">3. Approval-NSDP-Cibil based</option>
+                      <option value="Soft Approval">4. Soft Approval</option>
                     </select>
                   </div>
 
-                  {/* 2. VKYC Stage */}
+                  {/* Order 3: IQA STAGE */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Stage</label>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>IQA Stage</label>
+                    <select
+                      value={iqaStage}
+                      onChange={(e) => setIqaStage(e.target.value)}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
+                    >
+                      <option value="IQA SENT">1. IQA SENT</option>
+                      <option value="IQA COMPLETE">2. IQA COMPLETE</option>
+                      <option value="IQA PENDING">3. IQA PENDING</option>
+                      <option value="BLAZE CONTINUE">4. BLAZE CONTINUE</option>
+                      <option value="BLAZE DECLINE">5. BLAZE DECLINE</option>
+                    </select>
+                  </div>
+
+                  {/* Order 4: BANK APPLICATION NUMBER */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Bank Application Ref No.</label>
+                    <input
+                      type="text"
+                      value={bankRefNumber}
+                      onChange={(e) => setBankRefNumber(e.target.value)}
+                      placeholder="Enter Bank Application Ref No."
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: '#fff' }}
+                    />
+                  </div>
+
+                  {/* Order 5: VKYC STATUS */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Status</label>
                     <select
                       value={vkycStage}
                       onChange={(e) => setVkycStage(e.target.value)}
@@ -625,23 +688,19 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     </select>
                   </div>
 
-                  {/* 3. IQA Stage */}
+                  {/* Order 6: VKYC LINK */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>IQA Stage</label>
-                    <select
-                      value={iqaStage}
-                      onChange={(e) => setIqaStage(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
-                    >
-                      <option value="IQA Sent">1. IQA Sent</option>
-                      <option value="IQA Complete">2. IQA Complete</option>
-                      <option value="IQA Pending">3. IQA Pending</option>
-                      <option value="BLAZE Continue">4. BLAZE Continue</option>
-                      <option value="BLAZE Decline">5. BLAZE Decline</option>
-                    </select>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Link</label>
+                    <input
+                      type="url"
+                      value={vkycUrl}
+                      onChange={(e) => setVkycUrl(e.target.value)}
+                      placeholder="https://vkyc..."
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff' }}
+                    />
                   </div>
 
-                  {/* 4. Dispatch Status */}
+                  {/* Order 7: DISPATCH STATUS */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Dispatch Status</label>
                     <select
@@ -649,8 +708,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setDispatchStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
-                      <option value="Dispatch Done">1. DISPATCH DONE</option>
-                      <option value="WCP Stage">2. WCP STAGE</option>
+                      <option value="DISPATCH DONE">1. DISPATCH DONE</option>
+                      <option value="WCP STAGE">2. WCP STAGE</option>
                       <option value="E-sign Done">3. E-sign Done</option>
                       <option value="E-sign Pending">4. E-sign Pending</option>
                       <option value="RTB(ERROR)">5. RTB(ERROR)</option>
@@ -746,19 +805,21 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     </select>
                   </div>
 
-                  {/* 4. Eligible for Re-QD */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Eligible for Re-QD</label>
-                    <select
-                      disabled={!canEditFinal}
-                      value={eligibleReQd}
-                      onChange={(e) => setEligibleReQd(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                    >
-                      <option value="Yes">1. Yes</option>
-                      <option value="No">2. No</option>
-                    </select>
-                  </div>
+                  {/* 4. Eligible for Re-QD - Hide if punching process */}
+                  {!isPunchLead && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Eligible for Re-QD</label>
+                      <select
+                        disabled={!canEditFinal}
+                        value={eligibleReQd}
+                        onChange={(e) => setEligibleReQd(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                      >
+                        <option value="Yes">1. Yes</option>
+                        <option value="No">2. No</option>
+                      </select>
+                    </div>
+                  )}
 
                   {/* 5. Bank Remark (Operations Head) */}
                   <div style={{ gridColumn: '1 / -1' }}>

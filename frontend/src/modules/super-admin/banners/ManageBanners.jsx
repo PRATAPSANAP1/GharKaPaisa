@@ -192,11 +192,11 @@ export default function ManageBanners() {
       </div>
 
       {/* Placement Filter Tabs */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
         {[
           { key: "all", label: "All Banners" },
-          { key: "home", label: "Home Page Banners" },
-          { key: "partner", label: "Partner Dashboard Banners" }
+          { key: "offer", label: "Offer Banners (Home Page)" },
+          { key: "team", label: "Team Banners (Partner Dashboard)" }
         ].map(tab => (
           <button
             key={tab.key}
@@ -272,10 +272,10 @@ export default function ManageBanners() {
                       fontWeight: 800,
                       padding: "2px 6px",
                       borderRadius: "4px",
-                      background: item.target_page === 'home' ? '#3B82F6' : item.target_page === 'partner' ? '#8B5CF6' : '#10B981',
+                      background: (item.target_page === 'offer' || item.target_page === 'home') ? '#3B82F6' : (item.target_page === 'team' || item.target_page === 'partner') ? '#8B5CF6' : '#10B981',
                       color: '#FFFFFF'
                     }}>
-                      {item.target_page === 'home' ? 'Home Page' : item.target_page === 'partner' ? 'Partner Dashboard' : 'Both Pages'}
+                      {(item.target_page === 'offer' || item.target_page === 'home') ? 'Offer Banner' : (item.target_page === 'team' || item.target_page === 'partner') ? 'Team Banner' : 'Both (Offer & Team)'}
                     </span>
                   </div>
                   <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{item.title}</h3>
@@ -393,15 +393,15 @@ export default function ManageBanners() {
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               {/* Target Page Placement Option */}
               <div>
-                <label style={S.label}>Display Location (Target Page) *</label>
+                <label style={S.label}>Banner Category / Placement *</label>
                 <select
                   style={S.input}
                   value={form.target_page}
                   onChange={(e) => setForm({ ...form, target_page: e.target.value })}
                 >
-                  <option value="all">Both (Home Page & Partner Dashboard)</option>
-                  <option value="home">Home Page Only</option>
-                  <option value="partner">Partner Dashboard Only</option>
+                  <option value="offer">Offer Banner (Home Page & Public Offers)</option>
+                  <option value="team">Team Banner (Partner Dashboard & Team Network)</option>
+                  <option value="all">Both (Offer Banner & Team Banner)</option>
                 </select>
               </div>
 

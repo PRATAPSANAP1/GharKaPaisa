@@ -58,7 +58,7 @@ const DICTIONARY = {
     dispatchStatus: 'DISPATCH STATUS',
     eligibleReqd: 'ELIGIBLE FOR RE-QD',
     finalStatus: 'FINAL STATUS FROM BANK',
-    bankRemark: 'BANK REMARK (OPERATIONS / ADMIN)',
+    bankRemark: 'BANK REMARK',
     bankRemarkPlace: 'Operations Head or Bank remark...',
     declineReason: 'DECLINE REASON REMARK',
     declineReasonPlace: 'Specify detailed decline reason...',
@@ -711,31 +711,34 @@ export default function PhysicalApplicationForm() {
                 ⚙️ Application Remark & Stage Tracking Form
               </div>
 
+              {/* Order: 1. Appcode Status, 2. Soft Approval Status */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>{txt('appNumberBank')}</label>
-                  <input
-                    type="text"
-                    value={form.bank_ref_number}
-                    onChange={e => handleChange('bank_ref_number', e.target.value)}
-                    placeholder={txt('appNumberBankPlace')}
+                  <label style={labelStyle}>{txt('appcodeStatus') || 'APPCODE STATUS'}</label>
+                  <select
+                    value={form.appcode_status}
+                    onChange={e => handleChange('appcode_status', e.target.value)}
                     style={inputStyle}
-                  />
+                  >
+                    {isSbi ? (
+                      <>
+                        <option value="Appcode Send">1. Appcode Send</option>
+                        <option value="Soft Approval">2. Soft Approval</option>
+                        <option value="Pending">3. Pending</option>
+                        <option value="Submit">4. Submit</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Appcode Pending">1. Appcode Pending</option>
+                        <option value="Appcode Send">2. Appcode Send</option>
+                        <option value="Soft Approval">3. Soft Approval</option>
+                        <option value="Pending">4. Pending</option>
+                        <option value="Submit">5. Submit</option>
+                      </>
+                    )}
+                  </select>
                 </div>
 
-                <div>
-                  <label style={labelStyle}>{txt('vkycUrl')}</label>
-                  <input
-                    type="text"
-                    value={form.vkyc_url}
-                    onChange={e => handleChange('vkyc_url', e.target.value)}
-                    placeholder={txt('vkycUrlPlace')}
-                    style={inputStyle}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={labelStyle}>{txt('softApprovalStatus')}</label>
                   <select
@@ -746,23 +749,12 @@ export default function PhysicalApplicationForm() {
                     <option value="Approval-income 25k">1. Approval-income 25k</option>
                     <option value="Approval-income 30k">2. Approval-income 30k</option>
                     <option value="Approval-NSDP-Cibil based">3. Approval-NSDP-Cibil based</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={labelStyle}>{txt('vkycStage')}</label>
-                  <select
-                    value={form.vkyc_stage}
-                    onChange={e => handleChange('vkyc_stage', e.target.value)}
-                    style={inputStyle}
-                  >
-                    <option value="VKYC Pending">1. VKYC Pending</option>
-                    <option value="VKYC Complete">2. VKYC Complete</option>
-                    <option value="VKYC Failed">3. VKYC Failed</option>
+                    <option value="Soft Approval">4. Soft Approval</option>
                   </select>
                 </div>
               </div>
 
+              {/* Order: 3. IQA Stage, 4. Bank Application Number */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={labelStyle}>{txt('iqaStage')}</label>
@@ -779,6 +771,47 @@ export default function PhysicalApplicationForm() {
                   </select>
                 </div>
 
+                <div>
+                  <label style={labelStyle}>{txt('appNumberBank')}</label>
+                  <input
+                    type="text"
+                    value={form.bank_ref_number}
+                    onChange={e => handleChange('bank_ref_number', e.target.value)}
+                    placeholder={txt('appNumberBankPlace')}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              {/* Order: 5. VKYC Status, 6. VKYC Link */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+                <div>
+                  <label style={labelStyle}>{txt('vkycStage')}</label>
+                  <select
+                    value={form.vkyc_stage}
+                    onChange={e => handleChange('vkyc_stage', e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="VKYC Pending">1. VKYC Pending</option>
+                    <option value="VKYC Complete">2. VKYC Complete</option>
+                    <option value="VKYC Failed">3. VKYC Failed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={labelStyle}>{txt('vkycUrl')}</label>
+                  <input
+                    type="url"
+                    value={form.vkyc_url}
+                    onChange={e => handleChange('vkyc_url', e.target.value)}
+                    placeholder={txt('vkycUrlPlace')}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+
+              {/* Order: 7. Dispatch Status */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={labelStyle}>{txt('dispatchStatus')}</label>
                   <select
@@ -954,17 +987,17 @@ export default function PhysicalApplicationForm() {
               <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>🏦 {txt('bankFinalStatus')}</span>
                 <span style={{ fontSize: '11px', fontWeight: 800, color: isOperationsOrAdmin ? C.teal : C.red }}>
-                  {isOperationsOrAdmin ? '✏️ Editable (Operations Head / Super Admin / Administrative Operator)' : '🔒 Read-Only (Operations Head / Admin only)'}
+                  {isOperationsOrAdmin ? '✏️ Editable' : '🔒 Read-Only'}
                 </span>
               </div>
 
               {!isOperationsOrAdmin && (
-                <div style={{ background: isDark ? '#1e293b' : '#f8fafc', border: `1.5px solid ${C.border}`, padding: '12px 16px', borderRadius: 14, fontSize: 12.5, fontWeight: 700, color: C.textMid, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ background: isDark ? '#1e293b' : '#f8fafc', border: `1.5px solid ${C.border}`, padding: '10px 14px', borderRadius: 12, fontSize: 12, fontWeight: 700, color: C.red, display: 'flex', alignItems: 'center', gap: 6 }}>
                   🔒 Part 3 (Bank & Final Status) can only be added or edited by Operations Head, Super Admin, or Administrative Operator.
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : (isPunchLead ? '1fr' : '1fr 1fr'), gap: 16 }}>
                 <div>
                   <label style={labelStyle}>{txt('appNumberBank')}</label>
                   <input
@@ -1023,30 +1056,33 @@ export default function PhysicalApplicationForm() {
                   </select>
                 </div>
 
-                <div>
-                  <label style={labelStyle}>{txt('eligibleReqd')}</label>
-                  <select
-                    disabled={!isOperationsOrAdmin}
-                    value={form.eligible_reqd}
-                    onChange={e => handleChange('eligible_reqd', e.target.value)}
-                    style={{
-                      ...inputStyle,
-                      opacity: isOperationsOrAdmin ? 1 : 0.8,
-                      cursor: isOperationsOrAdmin ? 'pointer' : 'not-allowed',
-                      background: isOperationsOrAdmin ? C.inputBg : (isDark ? '#1a1a1a' : '#f1f5f9')
-                    }}
-                  >
-                    <option value="Yes">{txt('yes')}</option>
-                    <option value="No">{txt('no')}</option>
-                  </select>
-                </div>
+                {/* Hide QD / RE-QD if process is punching only */}
+                {!isPunchLead && (
+                  <div>
+                    <label style={labelStyle}>{txt('eligibleReqd')}</label>
+                    <select
+                      disabled={!isOperationsOrAdmin}
+                      value={form.eligible_reqd}
+                      onChange={e => handleChange('eligible_reqd', e.target.value)}
+                      style={{
+                        ...inputStyle,
+                        opacity: isOperationsOrAdmin ? 1 : 0.8,
+                        cursor: isOperationsOrAdmin ? 'pointer' : 'not-allowed',
+                        background: isOperationsOrAdmin ? C.inputBg : (isDark ? '#1a1a1a' : '#f1f5f9')
+                      }}
+                    >
+                      <option value="Yes">{txt('yes')}</option>
+                      <option value="No">{txt('no')}</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label style={{ ...labelStyle, marginBottom: 0 }}>{txt('bankRemark')}</label>
                   <span style={{ fontSize: '10.5px', fontWeight: 800, color: isOperationsOrAdmin ? C.teal : C.textMid }}>
-                    {isOperationsOrAdmin ? '✏️ Operations Head / Admin Operator Edit Access' : '🔒 Read-Only (Operations Head / Admin only)'}
+                    {isOperationsOrAdmin ? '✏️ Editable' : '🔒 Read-Only'}
                   </span>
                 </div>
                 <textarea
@@ -1055,7 +1091,7 @@ export default function PhysicalApplicationForm() {
                   readOnly={!isOperationsOrAdmin}
                   value={form.bank_remark}
                   onChange={e => handleChange('bank_remark', e.target.value)}
-                  placeholder={isOperationsOrAdmin ? txt('bankRemarkPlace') : "Bank remark can only be added or edited by Operations Head, Super Admin, or Administrative Operator."}
+                  placeholder={isOperationsOrAdmin ? txt('bankRemarkPlace') : "Read-Only"}
                   style={{
                     ...inputStyle,
                     resize: 'vertical',

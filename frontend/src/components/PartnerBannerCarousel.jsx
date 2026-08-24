@@ -1,21 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
-import referBanner from '../modules/partner/banner/refer.jpeg';
-import teamBanner from '../modules/partner/banner/team.jpeg';
+import api from '../services/api';
 
-const banners = [
+// Import local fallback partner banner images
+import offerBanner from '../modules/partner/banner/offer.png';
+import referenceBanner from '../modules/partner/banner/reference.png';
+import teamBanner from '../modules/partner/banner/team.png';
+import team2Banner from '../modules/partner/banner/team (2).png';
+
+// Default static fallback banners using the 4 images in partner/banner
+const defaultBanners = [
   {
-    id: 'team',
+    id: 'team-1',
     image: teamBanner,
-    alt: 'Add Team Member - Earn up to 50000/month',
+    alt: 'Add Team Member - Build Your Network',
+    link: '/partner/team'
+  },
+  {
+    id: 'team-2',
+    image: team2Banner,
+    alt: 'Team Growth & Rewards',
     link: '/partner/team'
   },
   {
     id: 'refer',
-    image: referBanner,
-    alt: 'Refer and Earn - Earn up to 500 per referral',
+    image: referenceBanner,
+    alt: 'Refer and Earn',
     link: '/partner/referral'
+  },
+  {
+    id: 'offer',
+    image: offerBanner,
+    alt: 'Special Offers & Rewards',
+    link: '/partner/products'
   }
 ];
 
@@ -23,6 +41,8 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
   const { C, isDark } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [dynamicBanners, setDynamicBanners] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
@@ -33,8 +53,31 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Filter banners based on showOnlyRefer prop
-  const activeBanners = showOnlyRefer ? banners.filter(b => b.id === 'refer') : banners;
+  // Fetch dynamic Team/Partner banners from backend database
+  useEffect(() => {
+    const fetchTeamBanners = async () => {
+      try {
+        const res = await api.get('/banners', { params: { page: 'team' } });
+        if (res.data?.success && res.data.data && res.data.data.length > 0) {
+          const mapped = res.data.data.map((b) => ({
+            id: `dynamic-${b.id}`,
+            image: b.image_url,
+            alt: b.title || 'Partner Banner',
+            link: b.click_url || '/partner/team'
+          }));
+          setDynamicBanners(mapped);
+        }
+      } catch (err) {
+        console.warn('[PartnerBannerCarousel] Using fallback partner banners:', err);
+      }
+    };
+
+    fetchTeamBanners();
+  }, []);
+
+  // Determine active list of banners (Dynamic from Super Admin or Default Fallback)
+  const availableBanners = dynamicBanners.length > 0 ? dynamicBanners : defaultBanners;
+  const activeBanners = showOnlyRefer ? availableBanners.filter(b => b.id.includes('refer')) : availableBanners;
 
   useEffect(() => {
     if (!isMobile || activeBanners.length <= 1) return;
@@ -49,17 +92,20 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
   }, [isPaused, activeBanners.length, isMobile]);
 
   const handleBannerClick = (link) => {
-    if (link) {
+    if (!link) return;
+    if (link.startsWith('http://') || link.startsWith('https://')) {
+      window.open(link, '_blank');
+    } else {
       navigate(link);
     }
   };
 
   if (!activeBanners.length) return null;
 
-  // On desktop, render both team & refer banners side by side in a grid
+  // On desktop, render team & offer banners in a clean responsive grid
   if (!isMobile && activeBanners.length > 1) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', width: '100%' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: activeBanners.length > 2 ? 'repeat(auto-fit, minmax(280px, 1fr))' : 'repeat(2, 1fr)', gap: '16px', width: '100%' }}>
         {activeBanners.map((banner) => (
           <div
             key={banner.id}
@@ -72,8 +118,9 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
               boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
               transition: 'transform 0.2s ease, boxShadow 0.2s ease',
               border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`,
-              aspectRatio: '16 / 6',
-              height: 'auto'
+              aspectRatio: '16 / 7',
+              height: 'auto',
+              background: C.bgSecondary
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-2px)';
@@ -110,18 +157,19 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
         overflow: 'hidden',
         borderRadius: '16px',
         cursor: 'pointer',
-        aspectRatio: '16 / 6',
+        aspectRatio: '16 / 7',
         height: 'auto',
         boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
-        border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`
+        border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`,
+        background: C.bgSecondary
       }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      onClick={() => handleBannerClick(activeBanners[currentIndex].link)}
+      onClick={() => handleBannerClick(activeBanners[currentIndex]?.link)}
     >
       <img
-        src={activeBanners[currentIndex].image}
-        alt={activeBanners[currentIndex].alt}
+        src={activeBanners[currentIndex]?.image}
+        alt={activeBanners[currentIndex]?.alt}
         style={{
           width: '100%',
           height: '100%',
