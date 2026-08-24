@@ -691,7 +691,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     >
                       <option value="approved">1. approved</option>
                       <option value="decline">2. decline</option>
-                      <option value="ATQ">3. ATQ</option>
+                      <option value="ETQ">3. ETQ</option>
                       <option value="technical error">4. technical error</option>
                     </select>
                   </div>

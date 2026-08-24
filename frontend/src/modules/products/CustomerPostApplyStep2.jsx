@@ -482,7 +482,7 @@ export default function CustomerPostApplyStep2() {
                 >
                   <option value="approved">approved</option>
                   <option value="decline">decline</option>
-                  <option value="ATQ">ATQ</option>
+                  <option value="ETQ">ETQ</option>
                   <option value="technical error">technical error</option>
                 </select>
               </div>
