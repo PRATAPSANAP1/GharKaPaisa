@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
-import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers } from 'lucide-react';
+import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers, Eye } from 'lucide-react';
 import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
 import { useAuthStore } from '../../../app/store/authStore';
 
@@ -29,10 +29,13 @@ export default function ManageApplications() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // Detail Modal State
+  // Detail / Review Modal State
   const [selectedApp, setSelectedApp] = useState(null);
   const [appDetail, setAppDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [timelines, setTimelines] = useState([]);
+  const [superAdminRemark, setSuperAdminRemark] = useState("");
+  const [submittingApprove, setSubmittingApprove] = useState(false);
 
   // Status Update State
   const [newStatus, setNewStatus] = useState("");
@@ -87,26 +90,58 @@ export default function ManageApplications() {
     setSelectedApp(app);
     setAppDetail(null);
     setLoadingDetail(true);
+    setSuperAdminRemark("");
+    setTimelines([]);
     setNewStatus("");
     setBankRefNumber("");
     setApprovedAmount("");
     setRejectionReason("");
     setNotes("");
     try {
-      const res = await api.get(`/applications/${app.id}`);
-      if (res.data?.success) {
+      const [res, tRes] = await Promise.all([
+        api.get(`/applications/${app.id}`).catch(() => null),
+        api.get(`/applications/${app.id}/timeline`).catch(() => null)
+      ]);
+      if (res?.data?.success) {
         const det = res.data.data;
-        setAppDetail(det);
+        const pd = det.physical_details || {};
+        const merged = { ...app, ...det, ...pd };
+        setAppDetail(merged);
         setNewStatus(isOpsHeadOrSuperAdmin ? (det.status || "operational_verified") : "operational_verified");
-        setBankRefNumber(det.bank_ref_number || "");
-        setApprovedAmount(det.approved_amount || "");
-        setRejectionReason(det.rejection_reason || "");
+        setBankRefNumber(det.bank_ref_number || pd.bank_ref_number || "");
+        setApprovedAmount(det.approved_amount || pd.approved_amount || "");
+        setRejectionReason(det.rejection_reason || pd.decline_reason || "");
+      } else {
+        setAppDetail(app);
+      }
+      if (tRes?.data?.success) {
+        setTimelines(tRes.data.data || []);
       }
     } catch (e) {
       console.error(e);
-      alert("Failed to load application details.");
+      setAppDetail(app);
     } finally {
       setLoadingDetail(false);
+    }
+  };
+
+  const handleApproveApplication = async (appId) => {
+    setSubmittingApprove(true);
+    try {
+      const res = await api.put(`/applications/${appId}/verification`, {
+        status: 'approved',
+        final_status: 'App File Generated (Approved)',
+        bank_remark: superAdminRemark.trim() || 'Approved by Operation Head / Super Admin'
+      });
+      if (res.data?.success) {
+        alert("Application status updated to APPROVED successfully!");
+        setSelectedApp(null);
+        fetchApplications();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to approve application.");
+    } finally {
+      setSubmittingApprove(false);
     }
   };
 
@@ -351,6 +386,14 @@ export default function ManageApplications() {
                           </td>
                           <td style={{ padding: "14px 16px", textAlign: "right" }}>
                             <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
+                              {isOpsHeadOrSuperAdmin && (
+                                <button
+                                  onClick={() => handleViewDetails(app)}
+                                  style={{ background: "#7c3aed15", border: "1px solid #7c3aed40", color: "#7c3aed", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                >
+                                  <Eye size={12} /> Review
+                                </button>
+                              )}
                               <button
                                 onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
                                 style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
@@ -382,15 +425,16 @@ export default function ManageApplications() {
         })()
       )}
 
-      {/* Modal detail */}
+      {/* Review / Detail Modal */}
       {selectedApp && (
         <div style={{
           position: "fixed", top: 0, left: 0, width: "100%", height: "100%", zIndex: 10000,
-          background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)", display: "flex", justifyContent: "center", alignItems: "center", padding: "12px"
+          background: "rgba(15, 23, 42, 0.75)", backdropFilter: "blur(5px)", display: "flex", justifyContent: "center", alignItems: "center", padding: "16px"
         }}>
           <div style={{
             background: C.card, borderRadius: "20px", border: `1px solid ${C.border}`,
-            width: "100%", maxWidth: "600px", maxHeight: "92vh", overflowY: "auto", padding: "20px 20px 80px 20px", position: "relative"
+            width: "100%", maxWidth: "850px", maxHeight: "92vh", overflowY: "auto", padding: "24px", position: "relative",
+            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.35)"
           }}>
             {/* Close */}
             <button
@@ -400,63 +444,156 @@ export default function ManageApplications() {
               <Icons.x size={20} />
             </button>
 
-            <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, marginBottom: "16px" }}>
-              Application: {selectedApp.app_number}
-            </h3>
-
             {loadingDetail ? (
-              <div style={{ textAlign: "center", padding: "24px", color: C.textLight }}>Loading details...</div>
+              <div style={{ textAlign: "center", padding: "40px", color: C.textLight, fontWeight: 600 }}>Loading details...</div>
             ) : appDetail ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                {/* Customer Info Card */}
-                <div>
-                  <h4 style={{ fontSize: "13px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", marginBottom: "8px" }}>Customer Demographics</h4>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", background: C.bgSecondary, padding: "14px", borderRadius: "12px" }}>
-                    <div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>Full Name</div>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>{appDetail.customer_name}</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                
+                {/* Header Summary */}
+                <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: '14px', marginRight: '40px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, background: `${C.primary}15`, color: C.primary, padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>
+                    {appDetail.app_number || appDetail.application_no || 'APP-REF'}
+                  </span>
+                  <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: '6px 0 2px' }}>
+                    {appDetail.customer_name || appDetail.full_name || 'Customer'}
+                  </h3>
+                  <p style={{ fontSize: '12.5px', color: C.textLight, margin: 0 }}>
+                    Category: <strong>{appDetail.category || 'credit_card'}</strong> • Product: <strong>{appDetail.product_name || 'Credit Card'}</strong> • Bank: <strong>{appDetail.bank_name || 'Partner Bank'}</strong>
+                  </p>
+                </div>
+
+                {/* Super Admin / Ops Head Final Approval & Status Upgrade Card */}
+                <div style={{ background: `${C.primary}08`, border: `1.5px solid ${C.primary}30`, padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '14px', color: C.primary, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CheckCircle2 size={18} /> Super Admin Final Approval & Status Upgrade
                     </div>
-                    <div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>Mobile Phone</div>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>{appDetail.customer_mobile}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>PAN Number</div>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: C.text, textTransform: "uppercase" }}>{appDetail.pan_number || "N/A"}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>Monthly Income</div>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>
-                        {appDetail.monthly_income ? `₹${parseFloat(appDetail.monthly_income).toLocaleString("en-IN")}` : "N/A"}
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>Employment Type</div>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: C.text, textTransform: "capitalize" }}>{appDetail.employment_type || "N/A"}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: "11px", color: C.textLight }}>City / State</div>
-                      <div style={{ fontSize: "13px", fontWeight: 600, color: C.text }}>{appDetail.city || "N/A"}</div>
-                    </div>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '12px',
+                      background: appDetail.status === 'approved' ? '#dcfce7' : '#ffedd5',
+                      color: appDetail.status === 'approved' ? '#15803d' : '#c2410c',
+                      textTransform: 'uppercase'
+                    }}>
+                      Current Status: {(appDetail.status || 'pending').replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Super Admin Remark / Approval Note</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Enter remarks or approval notes..."
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, fontSize: '13px', background: C.bgSecondary, color: C.text, boxSizing: 'border-box' }}
+                      value={superAdminRemark}
+                      onChange={e => setSuperAdminRemark(e.target.value)}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <button
+                      disabled={submittingApprove}
+                      onClick={() => handleApproveApplication(appDetail.id)}
+                      style={{ background: '#16a34a', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <CheckCircle2 size={16} /> {submittingApprove ? 'Approving...' : 'Approve (Super Admin Approved)'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        const targetApp = appDetail;
+                        setSelectedApp(null);
+                        setVerifyModalTab('qd');
+                        setVerifyModalApp(targetApp);
+                      }}
+                      style={{ background: '#2563eb15', border: '1px solid #2563eb40', color: '#2563eb', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      ✏️ Edit Details (Form 1 / 2 / 3)
+                    </button>
                   </div>
                 </div>
 
-                {/* Uploaded App Documents */}
-                {appDetail.documents && appDetail.documents.length > 0 && (
-                  <div>
-                    <h4 style={{ fontSize: "13px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", marginBottom: "8px" }}>Uploaded Files</h4>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      {appDetail.documents.map((doc, idx) => (
-                        <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: C.card, border: `1px solid ${C.border}`, padding: "10px", borderRadius: "10px" }}>
-                          <span style={{ fontSize: "12px", fontWeight: 600, textTransform: "capitalize", color: C.text }}>{doc.doc_type.replace("_", " ")}</span>
-                          <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: "12px", color: C.teal, fontWeight: 700, textDecoration: "none" }}>
-                            Download ↗
-                          </a>
+                {/* Form 1: Quick Details (QD Form Information) */}
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.primary, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                    📋 Form 1: Quick Details (QD Form Information)
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                    <div><span style={{ color: C.textLight }}>Customer Name:</span> <strong style={{ color: C.text }}>{appDetail.customer_name || appDetail.full_name || appDetail.pan_name || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Mobile Number:</span> <strong style={{ color: C.text }}>{appDetail.customer_mobile || appDetail.mobile || appDetail.aadhaar_linked_mobile || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Email Address:</span> <strong style={{ color: C.text }}>{appDetail.customer_email || appDetail.email || appDetail.personal_email || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>PAN Card Number:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.pan_number || appDetail.pan || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Date of Birth (DOB):</span> <strong style={{ color: C.text }}>{appDetail.dob || appDetail.date_of_birth || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Gender:</span> <strong style={{ color: C.text, textTransform: 'capitalize' }}>{appDetail.gender || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Marital Status:</span> <strong style={{ color: C.text, textTransform: 'capitalize' }}>{appDetail.marital_status || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Aadhaar Number:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.aadhaar_number || appDetail.aadhaar_no || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Father's Name:</span> <strong style={{ color: C.text }}>{appDetail.father_name || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Mother's Name:</span> <strong style={{ color: C.text }}>{appDetail.mother_name || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Qualification / Education:</span> <strong style={{ color: C.text }}>{appDetail.qualification || appDetail.education || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Employer / Company Name:</span> <strong style={{ color: C.text }}>{appDetail.company_name || appDetail.employer_name || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Occupation / Designation:</span> <strong style={{ color: C.text }}>{appDetail.designation || appDetail.occupation || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Monthly Income / Salary:</span> <strong style={{ color: '#16a34a', fontWeight: 800 }}>{(appDetail.monthly_salary || appDetail.monthly_income) ? `₹${parseFloat(appDetail.monthly_salary || appDetail.monthly_income).toLocaleString('en-IN')}` : '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Residential Address:</span> <strong style={{ color: C.text }}>{[appDetail.address || appDetail.residential_address || appDetail.flat_no, appDetail.city, appDetail.state, appDetail.pincode].filter(Boolean).join(', ') || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Company / Office Address:</span> <strong style={{ color: C.text }}>{[appDetail.company_address || appDetail.office_address, appDetail.office_city, appDetail.office_state, appDetail.office_pincode].filter(Boolean).join(', ') || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Bank Account / IFSC:</span> <strong style={{ color: C.text }}>{appDetail.bank_account_no ? `${appDetail.bank_account_no} (${appDetail.ifsc_code || ''})` : '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Partner Code & Name:</span> <strong style={{ color: C.text }}>{appDetail.partner_code ? `${appDetail.partner_code} (${appDetail.partner_first_name || ''} ${appDetail.partner_last_name || ''})` : 'Direct / Admin'}</strong></div>
+                  </div>
+                </div>
+
+                {/* Part 2: Operational Processing & Remark Form */}
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0d9488', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                    ⚙️ Part 2: Operational Processing & Remark Form
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                    <div><span style={{ color: C.textLight }}>Appcode Status:</span> <strong style={{ color: C.text }}>{appDetail.appcode_status || 'Appcode Pending'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Soft Approval Status:</span> <strong style={{ color: C.text }}>{appDetail.soft_approval_status || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>VKYC Stage:</span> <strong style={{ color: C.text }}>{appDetail.vkyc_stage || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>IQA Stage:</span> <strong style={{ color: C.text }}>{appDetail.iqa_stage || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Dispatch Status:</span> <strong style={{ color: C.text }}>{appDetail.dispatch_status || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Operational Remarks:</span> <strong style={{ color: C.text }}>{appDetail.ops_remark || appDetail.processing_remark || appDetail.remarks || '—'}</strong></div>
+                  </div>
+                </div>
+
+                {/* Part 3: Bank Remark & Final Form */}
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#9333ea', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                    🏦 Part 3: Bank Remark & Final Form
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
+                    <div><span style={{ color: C.textLight }}>App / Bank Reference #:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.bank_ref_number || appDetail.bank_application_number || appDetail.app_number || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Applied Loan Amount:</span> <strong style={{ color: C.text }}>{appDetail.loan_amount ? `₹${parseFloat(appDetail.loan_amount).toLocaleString('en-IN')}` : '₹0'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Approved Amount:</span> <strong style={{ color: '#16a34a', fontWeight: 800 }}>{appDetail.approved_amount ? `₹${parseFloat(appDetail.approved_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Commission Amount / Status:</span> <strong style={{ color: C.text }}>{appDetail.commission_amount ? `₹${parseFloat(appDetail.commission_amount).toLocaleString('en-IN')}` : '₹500.00'} ({appDetail.commission_status || 'pending'})</strong></div>
+                    <div><span style={{ color: C.textLight }}>VKYC / Direct Web Link:</span> <strong style={{ color: C.text }}>{appDetail.vkyc_url ? <a href={appDetail.vkyc_url} target="_blank" rel="noreferrer" style={{ color: C.primary }}>Open Link ↗</a> : '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Final Status from Bank:</span> <strong style={{ color: C.text }}>{appDetail.final_status || 'pending'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Eligible for Re-QD:</span> <strong style={{ color: C.text }}>{appDetail.eligible_reqd || 'No'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Bank Remark:</span> <strong style={{ color: C.text }}>{appDetail.bank_remark || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Decline / Rejection Reason:</span> <strong style={{ color: '#dc2626' }}>{appDetail.decline_reason || appDetail.rejection_reason || '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Super Admin Remark:</span> <strong style={{ color: C.text }}>{appDetail.super_admin_remark || '—'}</strong></div>
+                  </div>
+                </div>
+
+                {/* Verification Lifecycle Log Stream */}
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
+                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
+                    📜 Verification Lifecycle Log
+                  </h4>
+                  {timelines && timelines.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {timelines.map((t, idx) => (
+                        <div key={idx} style={{ padding: '10px 14px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, fontSize: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: C.textLight, fontSize: '11px', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: 700, color: C.primary }}>{t.activity || t.title || 'Event'}</span>
+                            <span>{new Date(t.created_at || t.timestamp).toLocaleString('en-IN')}</span>
+                          </div>
+                          <div style={{ fontWeight: 600, color: C.text }}>{t.description || t.status}</div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div style={{ fontSize: '12px', color: C.textLight, fontStyle: 'italic' }}>No verification log events recorded yet.</div>
+                  )}
+                </div>
+
               </div>
             ) : null}
           </div>
