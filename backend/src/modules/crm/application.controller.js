@@ -1444,7 +1444,7 @@ const getApplication = async (req, res, next) => {
         COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
         COALESCE(NULLIF(a.customer_email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) as customer_email,
         COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number,
-        COALESCE(NULLIF(a.dob::text, ''), NULLIF(c.dob::text, ''), NULLIF(l.dob::text, '')) as dob,
+        COALESCE(NULLIF(a.dob::text, ''), NULLIF(c.dob::text, '')) as dob,
         COALESCE(a.monthly_income, a.monthly_salary, c.monthly_income, l.monthly_income, a.loan_amount) as monthly_income,
         COALESCE(NULLIF(a.employment_type, ''), NULLIF(c.employment_type, ''), NULLIF(l.employment_type, ''), NULLIF(a.occupation, ''), NULLIF(c.occupation, '')) as employment_type,
         COALESCE(NULLIF(a.company_name, ''), NULLIF(c.employer, ''), NULLIF(c.company_name, ''), NULLIF(l.company_name, '')) as company_name,
