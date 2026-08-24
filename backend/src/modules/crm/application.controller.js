@@ -1516,7 +1516,7 @@ const getApplication = async (req, res, next) => {
           COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, '')) as customer_mobile,
           l.email as customer_email,
           l.pan_number,
-          l.dob::text as dob,
+          c.dob::text as dob,
           l.monthly_income,
           l.employment_type,
           l.company_name,
@@ -1527,6 +1527,7 @@ const getApplication = async (req, res, next) => {
           b.name as bank_name, b.short_code as bank_code,
           ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
         FROM leads l
+        LEFT JOIN customers c ON (c.mobile = l.mobile OR c.id = l.customer_id)
         LEFT JOIN products p ON p.id = l.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
         LEFT JOIN partner_profiles ap ON ap.id = l.partner_id
