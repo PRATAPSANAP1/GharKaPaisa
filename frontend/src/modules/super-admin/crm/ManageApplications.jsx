@@ -994,7 +994,7 @@ export default function ManageApplications() {
                   onClick={() => setVerifyModalApp(selectedApp)}
                   style={{ ...S.btn('outline'), color: C.primary, borderColor: C.primary, padding: '8px 14px', fontSize: '12.5px', fontWeight: 700 }}
                 >
-                  ✏️ Edit Details (Form 1 / 2 / 3)
+                  Edit Details (Form 1 / 2 / 3)
                 </button>
               </div>
             </div>
@@ -1067,7 +1067,6 @@ export default function ManageApplications() {
                     )}
                   </div>
                   <div><span style={{ color: C.textLight }}>Applied Loan Amount:</span> <strong style={{ color: C.text }}>{selectedApp.loan_amount ? `₹${parseFloat(selectedApp.loan_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>Approved Amount:</span> <strong style={{ color: C.green, fontWeight: 800 }}>{selectedApp.approved_amount ? `₹${parseFloat(selectedApp.approved_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Commission Amount / Status:</span> <strong style={{ color: C.green, fontWeight: 800 }}>₹{selectedApp.commission_amount || 0} ({selectedApp.commission_status || 'pending'})</strong></div>
                   <div>
                     <span style={{ color: C.textLight }}>VKYC / Direct Web Link:</span>{' '}
@@ -1080,8 +1079,6 @@ export default function ManageApplications() {
                   <div><span style={{ color: C.textLight }}>Final Status from Bank:</span> <strong style={{ color: C.text }}>{selectedApp.final_status || selectedApp.status || '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Eligible for Re-QD:</span> <strong style={{ color: C.text }}>{selectedApp.eligible_reqd || 'No'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Bank Remark:</span> <strong style={{ color: C.text }}>{selectedApp.bank_remark || '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>Decline / Rejection Reason:</span> <strong style={{ color: C.red, fontWeight: 700 }}>{selectedApp.decline_reason_remark || selectedApp.decline_reason || selectedApp.rejection_reason || '—'}</strong></div>
-                  <div><span style={{ color: C.textLight }}>Super Admin Remark:</span> <strong style={{ color: C.text }}>{selectedApp.super_admin_remark || selectedApp.admin_remark || '—'}</strong></div>
                   <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', marginTop: '8px', paddingTop: '10px', borderTop: `1px solid ${C.border}` }}>
                     <button
                       type="button"
