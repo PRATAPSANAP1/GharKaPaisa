@@ -4,7 +4,7 @@ import { useAuthStore } from '../../../app/store/authStore';
 import { 
   X, CheckCircle, XCircle, Eye, Send, ShieldCheck, 
   Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft, Lock,
-  Share2, Copy, MessageSquare, Smartphone, Save, Sliders
+  Share2, Copy, MessageSquare, Smartphone, Save, Sliders, Activity
 } from 'lucide-react';
 
 const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initialTab = 'qd', showAllTabs = false }) => {
@@ -81,6 +81,17 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const [eligibleReQd, setEligibleReQd] = useState(application?.eligible_reqd || application?.physical_details?.eligible_reqd || 'No');
   const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || application?.bank_application_number || application?.physical_details?.bank_ref_number || '');
   const [approvedAmount, setApprovedAmount] = useState(application?.approved_amount || application?.physical_details?.approved_amount || application?.loan_amount || '');
+
+  // 4. Real Database Status Snapshot (for Real DB Status vs Selected Status UI display)
+  const [realData, setRealData] = useState({
+    appcodeStatus: application?.appcode_status || application?.physical_details?.appcode_status || '',
+    softApprovalStatus: application?.soft_approval_status || application?.physical_details?.soft_approval_status || '',
+    vkycStage: application?.vkyc_stage || application?.vkyc_status || application?.physical_details?.vkyc_stage || '',
+    iqaStage: application?.iqa_stage || application?.physical_details?.iqa_stage || '',
+    dispatchStatus: application?.dispatch_status || application?.physical_details?.dispatch_status || '',
+    finalStatus: application?.final_status || application?.physical_details?.final_status || application?.status || 'In Process',
+    bankRemark: application?.bank_remark || application?.physical_details?.bank_remark || ''
+  });
 
   // Share / Send to Customer State
   const [showShareModal, setShowShareModal] = useState(false);
@@ -186,13 +197,31 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         if (app.bank_ref_number || app.bank_application_number || pd.bank_ref_number || pd.bank_application_number) setBankRefNumber(app.bank_ref_number || app.bank_application_number || pd.bank_ref_number || pd.bank_application_number || '');
         if (app.vkyc_url || pd.vkyc_url) setVkycUrl(app.vkyc_url || pd.vkyc_url || '');
 
-        if (app.appcode_status || pd.appcode_status) setAppcodeStatus(app.appcode_status || pd.appcode_status);
-        if (app.soft_approval_status || pd.soft_approval_status) setSoftApprovalStatus(app.soft_approval_status || pd.soft_approval_status);
-        if (app.vkyc_stage || app.vkyc_status || pd.vkyc_stage) setVkycStage(app.vkyc_stage || app.vkyc_status || pd.vkyc_stage);
-        if (app.iqa_stage || pd.iqa_stage) setIqaStage(app.iqa_stage || pd.iqa_stage);
-        if (app.dispatch_status || pd.dispatch_status) setDispatchStatus(app.dispatch_status || pd.dispatch_status);
-        if (app.bank_remark || pd.bank_remark) setBankRemark(app.bank_remark || pd.bank_remark);
-        if (app.final_status || pd.final_status || app.status) setFinalStatus(app.final_status || pd.final_status || app.status);
+        const realAppcode = app.appcode_status || pd.appcode_status || '';
+        const realSoftApproval = app.soft_approval_status || pd.soft_approval_status || '';
+        const realVkyc = app.vkyc_stage || app.vkyc_status || pd.vkyc_stage || '';
+        const realIqa = app.iqa_stage || pd.iqa_stage || '';
+        const realDispatch = app.dispatch_status || pd.dispatch_status || '';
+        const realFinal = app.final_status || pd.final_status || app.status || 'In Process';
+        const realRemark = app.bank_remark || pd.bank_remark || '';
+
+        setRealData({
+          appcodeStatus: realAppcode,
+          softApprovalStatus: realSoftApproval,
+          vkycStage: realVkyc,
+          iqaStage: realIqa,
+          dispatchStatus: realDispatch,
+          finalStatus: realFinal,
+          bankRemark: realRemark
+        });
+
+        setAppcodeStatus(realAppcode);
+        setSoftApprovalStatus(realSoftApproval);
+        setVkycStage(realVkyc);
+        setIqaStage(realIqa);
+        setDispatchStatus(realDispatch);
+        setBankRemark(realRemark);
+        setFinalStatus(realFinal);
         if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
         if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
         if (app.approved_amount || pd.approved_amount) setApprovedAmount(app.approved_amount || pd.approved_amount);
@@ -663,6 +692,88 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#fff7ed', color: '#c2410c' }}>
                     Editable by Admin, Operations & Partner
                   </span>
+                </div>
+
+                {/* Real Database Status vs Selected Status Banner */}
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px 16px', marginBottom: '18px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Activity size={14} color="#ea580c" /> Database Real Status vs Selected Status
+                    </span>
+                    {(appcodeStatus !== realData.appcodeStatus || softApprovalStatus !== realData.softApprovalStatus || iqaStage !== realData.iqaStage || vkycStage !== realData.vkycStage || dispatchStatus !== realData.dispatchStatus) ? (
+                      <span style={{ fontSize: '10px', background: '#fff7ed', color: '#c2410c', padding: '2px 8px', borderRadius: '12px', fontWeight: 800, border: '1px solid #ffedd5' }}>
+                        ● Live Modified (Unsaved)
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '10px', background: '#f0fdf4', color: '#15803d', padding: '2px 8px', borderRadius: '12px', fontWeight: 800, border: '1px solid #dcfce7' }}>
+                        ✓ Real DB Synced
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '10px' }}>
+                    
+                    <div style={{ background: '#ffffff', padding: '10px 12px', borderRadius: '8px', border: appcodeStatus !== realData.appcodeStatus ? '1px solid #fdba74' : '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700 }}>APPCODE STATUS</div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ color: '#334155' }}>{realData.appcodeStatus || 'None'}</span>
+                        {appcodeStatus !== realData.appcodeStatus && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#c2410c', fontWeight: 800 }}>
+                            <ArrowRight size={12} /> {appcodeStatus || 'None'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#ffffff', padding: '10px 12px', borderRadius: '8px', border: softApprovalStatus !== realData.softApprovalStatus ? '1px solid #fdba74' : '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700 }}>SOFT APPROVAL</div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ color: '#334155' }}>{realData.softApprovalStatus || 'None'}</span>
+                        {softApprovalStatus !== realData.softApprovalStatus && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#c2410c', fontWeight: 800 }}>
+                            <ArrowRight size={12} /> {softApprovalStatus || 'None'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#ffffff', padding: '10px 12px', borderRadius: '8px', border: iqaStage !== realData.iqaStage ? '1px solid #fdba74' : '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700 }}>IQA STAGE</div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ color: '#334155' }}>{realData.iqaStage || 'None'}</span>
+                        {iqaStage !== realData.iqaStage && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#c2410c', fontWeight: 800 }}>
+                            <ArrowRight size={12} /> {iqaStage || 'None'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#ffffff', padding: '10px 12px', borderRadius: '8px', border: vkycStage !== realData.vkycStage ? '1px solid #fdba74' : '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700 }}>VKYC STATUS</div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ color: '#334155' }}>{realData.vkycStage || 'None'}</span>
+                        {vkycStage !== realData.vkycStage && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#c2410c', fontWeight: 800 }}>
+                            <ArrowRight size={12} /> {vkycStage || 'None'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ background: '#ffffff', padding: '10px 12px', borderRadius: '8px', border: dispatchStatus !== realData.dispatchStatus ? '1px solid #fdba74' : '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 700 }}>DISPATCH STATUS</div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ color: '#334155' }}>{realData.dispatchStatus || 'None'}</span>
+                        {dispatchStatus !== realData.dispatchStatus && (
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#c2410c', fontWeight: 800 }}>
+                            <ArrowRight size={12} /> {dispatchStatus || 'None'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
