@@ -2972,11 +2972,16 @@ export default function Home({ onNavigate }) {
         }}>
           <div style={{
             display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr 1fr",
-            gap: "40px", marginBottom: "32px"
+            gap: "36px", marginBottom: "32px"
           }}>
             <div style={{ gridColumn: isMobile ? "1 / -1" : "auto" }}>
-              <h2 style={{ margin: "0 0 12px 0", fontSize: "28px", fontWeight: 900, letterSpacing: "-0.5px", color: "#ffffff" }}>{settings.company_name || "GharKaPaisa"}</h2>
-              <p style={{ margin: "0 0 24px 0", fontSize: "14px", color: "#ffffff", opacity: 0.85, lineHeight: 1.5 }}>
+              <h2 style={{ margin: "0 0 4px 0", fontSize: "28px", fontWeight: 900, letterSpacing: "-0.5px", color: "#ffffff" }}>
+                GharKaPaisa
+              </h2>
+              <p style={{ margin: "0 0 12px 0", fontSize: "13px", fontWeight: 700, color: "#2DD4BF" }}>
+                Financial Product Discovery & Application Platform
+              </p>
+              <p style={{ margin: "0 0 20px 0", fontSize: "13.5px", color: "#ffffff", opacity: 0.85, lineHeight: 1.5 }}>
                 {t('footer.desc', "India's trusted platform for Credit Cards, Loans, Insurance & Financial Services.")}
               </p>
               <div style={{ display: "flex", gap: "12px" }}>
@@ -2999,28 +3004,47 @@ export default function Home({ onNavigate }) {
 
             <div>
               <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>{t('footer.contactUs', 'Contact Us')}</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px", color: "#ffffff", opacity: 0.85 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px", color: "#ffffff", opacity: 0.85 }}>
                 <span style={{ fontWeight: 700 }}>Phone:</span>
-                <span style={{ wordBreak: "break-all" }}>{settings.company_phone || "+91 99999 99999"}</span>
+                <a href="tel:9270319438" style={{ color: "#ffffff", textDecoration: "none" }}>9270319438</a>
                 <span style={{ fontWeight: 700, marginTop: "4px" }}>Email:</span>
-                <span style={{ wordBreak: "break-all" }}>{settings.company_email || "support@gharkapaisa.com"}</span>
+                <a href="mailto:support@gharkapaisa.in" style={{ color: "#ffffff", textDecoration: "none" }}>support@gharkapaisa.in</a>
                 <span style={{ fontWeight: 700, marginTop: "4px" }}>Address:</span>
-                <span style={{ lineHeight: 1.4 }}>{settings.company_address || "Sector 62, Noida, Uttar Pradesh, India"}</span>
+                <span style={{ lineHeight: 1.4 }}>Rajnandini Tower Dighi, Pune 411015</span>
               </div>
             </div>
 
             <div>
-              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>{t('footer.support', 'Support')}</h3>
+              <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>Policies</h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <span onClick={() => navigate("/privacy-policy")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.privacy', 'Privacy Policy')}</span>
-                <span onClick={() => navigate("/terms-and-conditions")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.terms', 'Terms & Conditions')}</span>
-                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>{t('footer.refund', 'Refund Policy')}</span>
+                <span onClick={() => navigate("/terms-and-conditions")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Terms & Conditions</span>
+                <span onClick={() => navigate("/privacy-policy")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Privacy Policy</span>
+                <span onClick={() => navigate("/shipping-and-delivery-policy")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Shipping & Delivery Policy</span>
+                <span onClick={() => navigate("/cancellation-and-refund-policy")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Cancellation & Refund Policy</span>
+                <span onClick={() => navigate("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Contact Us</span>
               </div>
             </div>
           </div>
 
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "20px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#ffffff", opacity: 0.7 }}>
-            <span>{settings.company_copyright || "@2026 OIT_stack"}</span>
+          {/* Quick Links Horizontal Strip */}
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "16px", marginBottom: "16px", fontSize: "12px", color: "rgba(255,255,255,0.75)", display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+            <span style={{ fontWeight: 700, color: "#ffffff" }}>Quick Links:</span>
+            <span onClick={() => navigate("/")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Home</span> |
+            <span onClick={() => navigate("/credit-cards")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Products</span> |
+            <span onClick={() => navigate("/contact")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Contact Us</span> |
+            <span onClick={() => navigate("/terms-and-conditions")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Terms & Conditions</span> |
+            <span onClick={() => navigate("/privacy-policy")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Privacy Policy</span> |
+            <span onClick={() => navigate("/shipping-and-delivery-policy")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Shipping & Delivery Policy</span> |
+            <span onClick={() => navigate("/cancellation-and-refund-policy")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Cancellation & Refund Policy</span>
+          </div>
+
+          {/* Financial Disclaimer */}
+          <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", padding: "14px 18px", marginBottom: "20px", fontSize: "12px", color: "rgba(255,255,255,0.7)", lineHeight: 1.6 }}>
+            <strong>Disclaimer:</strong> GharKaPaisa is not a bank or financial institution. Financial products are offered and approved by respective banks, NBFCs, insurers, and other participating financial institutions, subject to their eligibility criteria and terms.
+          </div>
+
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "16px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#ffffff", opacity: 0.7 }}>
+            <span>© 2026 GharKaPaisa. All Rights Reserved.</span>
           </div>
         </div>
 

@@ -21,6 +21,8 @@ import VerifyEmail from '../modules/authentication/register/VerifyEmail';
 import ResetPassword from '../modules/authentication/reset-password/ResetPassword';
 import TermsAndConditions from '../modules/home/TermsAndConditions';
 import PrivacyPolicy from '../modules/home/PrivacyPolicy';
+import ShippingPolicy from '../modules/home/ShippingPolicy';
+import RefundPolicy from '../modules/home/RefundPolicy';
 import CustomerUploadPortal from '../modules/customer/CustomerUploadPortal';
 import PublicCustomerUploadPage from '../modules/public/PublicCustomerUploadPage';
 import PhysicalApplicationForm from '../modules/customer/PhysicalApplicationForm';
@@ -140,6 +142,10 @@ const AppRoutes = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/shipping-and-delivery-policy" element={<ShippingPolicy />} />
+        <Route path="/shipping-policy" element={<ShippingPolicy />} />
+        <Route path="/cancellation-and-refund-policy" element={<RefundPolicy />} />
+        <Route path="/refund-policy" element={<RefundPolicy />} />
 
         {/* Dynamic CMS Service Pages */}
         <Route path="/recharge" element={<ComingSoon />} />

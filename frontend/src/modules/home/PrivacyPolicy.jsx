@@ -1,239 +1,260 @@
-import React, { useState } from 'react';
-import { useNavigate } from "react-router-dom";
-import { useTheme } from "../../contexts/ThemeContext";
-import { FaArrowLeft, FaShieldAlt, FaBuilding, FaDatabase, FaEye, FaLock, FaUserShield, FaExclamationTriangle, FaEnvelope, FaGlobe } from "react-icons/fa";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../../contexts/ThemeContext';
+import { FaArrowLeft, FaEnvelope, FaPhone, FaMapMarkerAlt, FaGlobe } from 'react-icons/fa';
 
 export default function PrivacyPolicy() {
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState("company");
-
-  const sections = [
-    { id: "company", title: "1. Company Information", icon: <FaBuilding /> },
-    { id: "collect", title: "2. Information We Collect", icon: <FaDatabase /> },
-    { id: "use", title: "3. How We Use Information", icon: <FaEye /> },
-    { id: "share", title: "4. Data Sharing & Disclosure", icon: <FaUserShield /> },
-    { id: "security", title: "5. Data Security", icon: <FaLock /> },
-    { id: "cookies", title: "6. Cookies & Tracking", icon: <FaGlobe /> },
-    { id: "rights", title: "7. User Rights", icon: <FaShieldAlt /> },
-    { id: "changes", title: "8. Changes to this Policy", icon: <FaExclamationTriangle /> },
-    { id: "contact", title: "9. Contact Us", icon: <FaEnvelope /> },
-  ];
-
-  const scrollToSection = (id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      setActiveSection(id);
-    }
-  };
 
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", transition: "all 0.3s ease", padding: "40px 16px" }}>
-      <div className="max-w-6xl mx-auto">
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '40px 16px', fontFamily: "'Inter', sans-serif", color: C.text }}>
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         
-        {/* Back Button & Title */}
-        <div className="flex items-center gap-4 mb-8">
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
           <button 
             onClick={() => navigate('/')}
             style={{ 
-              background: C.card, border: `1px solid ${C.border}`, borderRadius: "50%", 
-              width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer", color: C.textMid, boxShadow: `0 2px 8px rgba(0,0,0,0.05)`
+              background: C.card, border: `1px solid ${C.border}`, borderRadius: '50%', 
+              width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: C.textMid, boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
             }}
           >
             <FaArrowLeft />
           </button>
           <div>
-            <h1 style={{ fontSize: "28px", fontWeight: 900, color: C.text, margin: 0 }}>Privacy Policy</h1>
-            <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Last Updated: June 2026</p>
+            <h1 style={{ fontSize: '28px', fontWeight: 900, color: C.text, margin: 0 }}>Privacy Policy</h1>
+            <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
+              Effective Date: 21/07/2026 | Last Updated: 21/07/2026
+            </p>
           </div>
         </div>
 
-        {/* Main Content Layout */}
-        <div className="flex flex-col lg:flex-row gap-8">
-          
-          {/* Sidebar Navigation Table of Contents (Desktop only) */}
-          <div className="hidden lg:block w-72 shrink-0">
-            <div style={{ 
-              position: "sticky", top: "100px", background: C.card, border: `1px solid ${C.border}`, 
-              borderRadius: "20px", padding: "20px", boxShadow: "0 4px 12px rgba(0,0,0,0.02)" 
-            }}>
-              <h3 style={{ fontSize: "14px", fontWeight: 800, color: C.text, margin: "0 0 16px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>Table of Contents</h3>
-              <div className="flex flex-col gap-2">
-                {sections.map(sec => (
-                  <button
-                    key={sec.id}
-                    onClick={() => scrollToSection(sec.id)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", borderRadius: "10px",
-                      border: "none", background: activeSection === sec.id ? `${C.teal}15` : "transparent",
-                      color: activeSection === sec.id ? C.teal : C.textMid, fontWeight: activeSection === sec.id ? 700 : 500,
-                      fontSize: "13px", textAlign: "left", cursor: "pointer", width: "100%", transition: "all 0.2s"
-                    }}
-                  >
-                    <span style={{ color: activeSection === sec.id ? C.teal : C.textLight }}>{sec.icon}</span>
-                    <span>{sec.title.split(". ")[1]}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Policy Document Content */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "24px" }}>
-            
-            {/* Intro Alert Box */}
-            <div style={{ 
-              background: `${C.teal}08`, border: `1px solid ${C.teal}20`, 
-              borderRadius: "16px", padding: "20px", color: C.textMid, fontSize: "14px", lineHeight: 1.6 
-            }}>
-              GharKaPaisa, operated by <strong>YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED</strong>, is committed to protecting the privacy of users, partners, agents, employees, and customers who access or use our website and services.
-            </div>
-
-            {/* Document body Card */}
-            <div style={{ 
-              background: C.card, border: `1px solid ${C.border}`, borderRadius: "24px", 
-              padding: "28px 24px", boxShadow: "0 4px 12px rgba(0,0,0,0.02)", color: C.text 
-            }}>
-              
-              {/* Section 1 */}
-              <div id="company" style={{ marginBottom: "32px", borderBottom: `1px solid ${C.border}`, paddingBottom: "24px" }}>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: C.teal, display: "flex", alignItems: "center", gap: "10px", margin: "0 0 16px 0" }}>
-                  <FaBuilding /> 1. Company Information
-                </h2>
-                <p style={{ fontWeight: 600, margin: "0 0 10px 0" }}>YOHESA MARKETING AND CONSULTATION PRIVATE LIMITED</p>
-                <p style={{ color: C.textMid, margin: "0 0 8px 0", fontSize: "14px" }}>Registered Address:</p>
-                <pre style={{ 
-                  background: C.bgSecondary, color: C.textMid, padding: "12px 16px", borderRadius: "10px", 
-                  fontSize: "13px", fontFamily: "monospace", margin: "0 0 16px 0", border: `1px solid ${C.border}` 
-                }} className="whitespace-pre-wrap break-words">
-                  GAT NO. 4/1/1B, DIGHIGAON THAN,{"\n"}
-                  Dighi Camp,{"\n"}
-                  Pune, Maharashtra – 411015,{"\n"}
-                  India
-                </pre>
-                <p style={{ color: C.textMid, margin: "0 0 6px 0", fontSize: "14px" }}>
-                  <strong>Email:</strong> <a href="mailto:support@gharkapaisa.in" style={{ color: C.teal, textDecoration: "underline" }}>support@gharkapaisa.in</a>
-                </p>
-                <p style={{ color: C.textMid, margin: 0, fontSize: "14px" }}>
-                  <strong>Website:</strong> <a href="https://gharkapaisa.in" target="_blank" rel="noopener noreferrer" style={{ color: C.teal, textDecoration: "underline" }}>https://gharkapaisa.in</a>
-                </p>
-              </div>
-
-              {/* Section 2 */}
-              <div id="collect" style={{ marginBottom: "32px", borderBottom: `1px solid ${C.border}`, paddingBottom: "24px" }}>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: C.teal, display: "flex", alignItems: "center", gap: "10px", margin: "0 0 16px 0" }}>
-                  <FaDatabase /> 2. Information We Collect
-                </h2>
-                <p style={{ color: C.textMid, fontSize: "14px", lineHeight: 1.6, margin: "0 0 14px 0" }}>
-                  We collect personal and business information when you register, apply for services, or interact with our platform, including:
-                </p>
-                <ul style={{ paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "8px", margin: 0 }}>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>
-                    <strong>Personal Identifiable Information:</strong> Name, Date of Birth, Email, Mobile Number, Gender.
-                  </li>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>
-                    <strong>Financial & KYC Information:</strong> PAN card, Aadhaar details, Bank Account information, income proof, employment details.
-                  </li>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>
-                    <strong>Business Details:</strong> Company name, registration number, GST details, business address.
-                  </li>
-                </ul>
-              </div>
-
-              {/* Section 3 */}
-              <div id="use" style={{ marginBottom: "32px", borderBottom: `1px solid ${C.border}`, paddingBottom: "24px" }}>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: C.teal, display: "flex", alignItems: "center", gap: "10px", margin: "0 0 16px 0" }}>
-                  <FaEye /> 3. How We Use Your Information
-                </h2>
-                <p style={{ color: C.textMid, fontSize: "14px", lineHeight: 1.6, margin: "0 0 14px 0" }}>
-                  Your information is used for the following purposes:
-                </p>
-                <ul style={{ paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "8px", margin: 0 }}>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>Facilitating applications for loans, credit cards, and insurance with financial institutions.</li>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>Performing KYC verification and compliance checks.</li>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>Processing commission payouts and managing partner wallets.</li>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>Sending updates, notifications, and security alerts.</li>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>Improving platform performance and customer support.</li>
-                </ul>
-              </div>
-
-              {/* Section 4 */}
-              <div id="share" style={{ marginBottom: "32px", borderBottom: `1px solid ${C.border}`, paddingBottom: "24px" }}>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: C.teal, display: "flex", alignItems: "center", gap: "10px", margin: "0 0 16px 0" }}>
-                  <FaUserShield /> 4. Data Sharing and Disclosure
-                </h2>
-                <p style={{ color: C.textMid, fontSize: "14px", lineHeight: 1.6, margin: "0 0 14px 0" }}>
-                  We do not sell your personal data. We only share information with:
-                </p>
-                <ul style={{ paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "8px", margin: 0 }}>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>Lending institutions, banks, and insurance providers to process your applications.</li>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>Third-party verification services for KYC audits.</li>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>Law enforcement or regulatory authorities as required by applicable laws.</li>
-                </ul>
-              </div>
-
-              {/* Section 5 */}
-              <div id="security" style={{ marginBottom: "32px", borderBottom: `1px solid ${C.border}`, paddingBottom: "24px" }}>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: C.teal, display: "flex", alignItems: "center", gap: "10px", margin: "0 0 16px 0" }}>
-                  <FaLock /> 5. Data Security
-                </h2>
-                <p style={{ color: C.textMid, fontSize: "14px", lineHeight: 1.6, margin: 0 }}>
-                  We implement industry-standard administrative, technical, and physical security measures to protect your information against unauthorized access, loss, or misuse. All sensitive details (like passwords and bank data) are securely stored and encrypted.
-                </p>
-              </div>
-
-              {/* Section 6 */}
-              <div id="cookies" style={{ marginBottom: "32px", borderBottom: `1px solid ${C.border}`, paddingBottom: "24px" }}>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: C.teal, display: "flex", alignItems: "center", gap: "10px", margin: "0 0 16px 0" }}>
-                  <FaGlobe /> 6. Cookies and Tracking
-                </h2>
-                <p style={{ color: C.textMid, fontSize: "14px", lineHeight: 1.6, margin: 0 }}>
-                  We use cookies and similar tracking technologies to enhance user experience, remember your preferences, and analyze platform traffic. You can modify your browser settings to decline cookies, though some features of the platform may not function properly as a result.
-                </p>
-              </div>
-
-              {/* Section 7 */}
-              <div id="rights" style={{ marginBottom: "32px", borderBottom: `1px solid ${C.border}`, paddingBottom: "24px" }}>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: C.teal, display: "flex", alignItems: "center", gap: "10px", margin: "0 0 16px 0" }}>
-                  <FaShieldAlt /> 7. User Rights
-                </h2>
-                <p style={{ color: C.textMid, fontSize: "14px", lineHeight: 1.6, margin: "0 0 14px 0" }}>
-                  As a user, you have the right to:
-                </p>
-                <ul style={{ paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "8px", margin: 0 }}>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>Access the personal information we hold about you.</li>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>Request correction of inaccurate or incomplete data.</li>
-                  <li style={{ fontSize: "14px", color: C.textMid, lineHeight: 1.5 }}>Request deletion of your account (subject to legal or contractual retention requirements).</li>
-                </ul>
-              </div>
-
-              {/* Section 8 */}
-              <div id="changes" style={{ marginBottom: "32px", borderBottom: `1px solid ${C.border}`, paddingBottom: "24px" }}>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: C.teal, display: "flex", alignItems: "center", gap: "10px", margin: "0 0 16px 0" }}>
-                  <FaExclamationTriangle /> 8. Changes to this Policy
-                </h2>
-                <p style={{ color: C.textMid, fontSize: "14px", lineHeight: 1.6, margin: 0 }}>
-                  We reserve the right to modify this Privacy Policy at any time. Any updates will be posted on this page with an updated "Last Updated" date.
-                </p>
-              </div>
-
-              {/* Section 9 */}
-              <div id="contact" style={{ margin: 0 }}>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: C.teal, display: "flex", alignItems: "center", gap: "10px", margin: "0 0 16px 0" }}>
-                  <FaEnvelope /> 9. Contact Us
-                </h2>
-                <p style={{ color: C.textMid, fontSize: "14px", lineHeight: 1.6, margin: 0 }}>
-                  If you have any questions, concerns, or complaints regarding this Privacy Policy, please contact our support team at <a href="mailto:support@gharkapaisa.in" style={{ color: C.teal, textDecoration: "underline", fontWeight: 600 }}>support@gharkapaisa.in</a>.
-                </p>
-              </div>
-
-            </div>
-          </div>
-
+        {/* Intro Alert Box */}
+        <div style={{ 
+          background: isDark ? '#1e293b' : '#f0fdf4', border: `1px solid ${C.teal}30`, 
+          borderRadius: '16px', padding: '20px', color: C.textMid, fontSize: '14px', lineHeight: 1.6, marginBottom: '24px' 
+        }}>
+          GharKaPaisa respects your privacy and is committed to protecting the personal information you provide while using our website and services.<br /><br />
+          This Privacy Policy explains what information we collect, why we collect it, how we use it, and how we protect it.
         </div>
 
+        {/* Policy Content Card */}
+        <div style={{ 
+          background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', 
+          padding: '32px 28px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '28px' 
+        }}>
+
+          {/* Section 1 */}
+          <section>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>1. Information We Collect</h2>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: '0 0 12px 0' }}>
+              Depending on the service you use, we may collect:
+            </p>
+
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: C.text, margin: '12px 0 6px 0' }}>Personal Information</h3>
+            <ul style={{ paddingLeft: '20px', color: C.textMid, fontSize: '14px', lineHeight: 1.8, margin: '0 0 12px 0' }}>
+              <li>Full name</li>
+              <li>Mobile number</li>
+              <li>Email address</li>
+              <li>Date of birth</li>
+              <li>PAN information</li>
+              <li>Aadhaar-related information where required for an applicable process</li>
+              <li>Residential address</li>
+              <li>City, state and pincode</li>
+            </ul>
+
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: C.text, margin: '12px 0 6px 0' }}>Employment and Financial Information</h3>
+            <p style={{ color: C.textMid, fontSize: '14px', margin: '0 0 6px 0' }}>Where required for a particular application:</p>
+            <ul style={{ paddingLeft: '20px', color: C.textMid, fontSize: '14px', lineHeight: 1.8, margin: '0 0 12px 0' }}>
+              <li>Employer/company name</li>
+              <li>Designation</li>
+              <li>Employment type</li>
+              <li>Monthly income</li>
+              <li>Salary-related information</li>
+              <li>Other application-related information</li>
+            </ul>
+
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: C.text, margin: '12px 0 6px 0' }}>Application Information</h3>
+            <p style={{ color: C.textMid, fontSize: '14px', margin: '0 0 6px 0' }}>We may collect:</p>
+            <ul style={{ paddingLeft: '20px', color: C.textMid, fontSize: '14px', lineHeight: 1.8, margin: 0 }}>
+              <li>Product selected</li>
+              <li>Bank/product provider</li>
+              <li>Application number</li>
+              <li>Application status</li>
+              <li>Application timestamps</li>
+              <li>Bank reference number</li>
+              <li>Application remarks</li>
+              <li>Verification status</li>
+              <li>VKYC-related status or information where applicable</li>
+            </ul>
+          </section>
+
+          {/* Section 2 */}
+          <section style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>2. How We Collect Information</h2>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: '0 0 8px 0' }}>
+              Information may be provided through:
+            </p>
+            <ul style={{ paddingLeft: '20px', color: C.textMid, fontSize: '14px', lineHeight: 1.8, margin: 0 }}>
+              <li>GharKaPaisa website forms</li>
+              <li>Partner applications</li>
+              <li>Shared application links</li>
+              <li>Direct bank application journeys</li>
+              <li>Physical application processes</li>
+              <li>Customer support interactions</li>
+            </ul>
+          </section>
+
+          {/* Section 3 */}
+          <section style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>3. How We Use Information</h2>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: '0 0 8px 0' }}>
+              We may use collected information to:
+            </p>
+            <ul style={{ paddingLeft: '20px', color: C.textMid, fontSize: '14px', lineHeight: 1.8, margin: 0 }}>
+              <li>Create and manage customer profiles.</li>
+              <li>Process financial-product applications.</li>
+              <li>Connect customers with relevant product providers.</li>
+              <li>Track application progress.</li>
+              <li>Communicate application updates.</li>
+              <li>Send OTPs and transactional SMS/email notifications.</li>
+              <li>Perform verification and fraud-prevention checks.</li>
+              <li>Maintain application records.</li>
+              <li>Provide customer support.</li>
+              <li>Improve our services.</li>
+              <li>Maintain security and prevent misuse.</li>
+              <li>Comply with applicable legal and regulatory requirements.</li>
+            </ul>
+          </section>
+
+          {/* Section 4 */}
+          <section style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>4. Sharing of Information</h2>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: '0 0 8px 0' }}>
+              Where necessary to provide the requested service, information may be shared with:
+            </p>
+            <ul style={{ paddingLeft: '20px', color: C.textMid, fontSize: '14px', lineHeight: 1.8, margin: '0 0 12px 0' }}>
+              <li>Banks</li>
+              <li>NBFCs</li>
+              <li>Insurance/product providers</li>
+              <li>Authorized partners</li>
+              <li>Service providers involved in application processing</li>
+              <li>SMS/email service providers</li>
+              <li>Cloud/document storage providers</li>
+              <li>Verification providers</li>
+              <li>Government or regulatory authorities where legally required</li>
+            </ul>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: 0 }}>
+              We do not sell personal information merely for unrelated advertising purposes.
+            </p>
+          </section>
+
+          {/* Section 5 */}
+          <section style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>5. Bank and Third-Party Applications</h2>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: '0 0 12px 0' }}>
+              When you choose to apply for a product through a bank or financial institution, your information may be transferred to that institution for application processing.
+            </p>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: 0 }}>
+              The bank or financial institution may independently process your information under its own privacy policy.
+            </p>
+          </section>
+
+          {/* Section 6 */}
+          <section style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>6. Data Security</h2>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: '0 0 12px 0' }}>
+              We use reasonable technical and organizational safeguards to protect information from unauthorized access, alteration, disclosure, or destruction.
+            </p>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: 0 }}>
+              However, no internet-based system can guarantee absolute security.
+            </p>
+          </section>
+
+          {/* Section 7 */}
+          <section style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>7. Data Retention</h2>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: '0 0 8px 0' }}>
+              We retain information for as long as reasonably necessary for:
+            </p>
+            <ul style={{ paddingLeft: '20px', color: C.textMid, fontSize: '14px', lineHeight: 1.8, margin: 0 }}>
+              <li>Providing services.</li>
+              <li>Maintaining application and transaction records.</li>
+              <li>Resolving disputes.</li>
+              <li>Preventing fraud.</li>
+              <li>Meeting legal and regulatory requirements.</li>
+            </ul>
+          </section>
+
+          {/* Section 8 */}
+          <section style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>8. Cookies</h2>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: '0 0 8px 0' }}>
+              GharKaPaisa may use cookies and similar technologies to:
+            </p>
+            <ul style={{ paddingLeft: '20px', color: C.textMid, fontSize: '14px', lineHeight: 1.8, margin: '0 0 12px 0' }}>
+              <li>Maintain sessions.</li>
+              <li>Improve website functionality.</li>
+              <li>Understand website usage.</li>
+              <li>Improve user experience.</li>
+              <li>Maintain security.</li>
+            </ul>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: 0 }}>
+              You may configure your browser to restrict cookies, although certain website features may not function properly.
+            </p>
+          </section>
+
+          {/* Section 9 */}
+          <section style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>9. Your Rights</h2>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: '0 0 8px 0' }}>
+              Subject to applicable law, you may request:
+            </p>
+            <ul style={{ paddingLeft: '20px', color: C.textMid, fontSize: '14px', lineHeight: 1.8, margin: '0 0 12px 0' }}>
+              <li>Access to your personal information.</li>
+              <li>Correction of inaccurate information.</li>
+              <li>Information regarding processing of your data.</li>
+              <li>Deletion of information where legally permissible.</li>
+            </ul>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: 0 }}>
+              Requests can be sent to: <a href="mailto:support@gharkapaisa.in" style={{ color: C.teal }}>support@gharkapaisa.in</a>
+            </p>
+          </section>
+
+          {/* Section 10 */}
+          <section style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>10. Children's Privacy</h2>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: '0 0 12px 0' }}>
+              GharKaPaisa services are not intended for individuals who are not legally eligible to use the relevant financial services.
+            </p>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: 0 }}>
+              We do not knowingly collect information from children for financial-product applications.
+            </p>
+          </section>
+
+          {/* Section 11 */}
+          <section style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>11. Policy Updates</h2>
+            <p style={{ color: C.textMid, fontSize: '14px', lineHeight: 1.7, margin: 0 }}>
+              We may update this Privacy Policy periodically. The latest version will always be published on this page.
+            </p>
+          </section>
+
+          {/* Section 12 */}
+          <section style={{ borderTop: `1px solid ${C.border}`, paddingTop: '20px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, marginBottom: '12px' }}>12. Contact</h2>
+            <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '16px 20px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px' }}>
+              <div><strong>GharKaPaisa</strong></div>
+              <div><FaGlobe style={{ display: 'inline', marginRight: 8, color: C.teal }} /> <strong>Website:</strong> <a href="https://gharkapaisa.in" target="_blank" rel="noreferrer" style={{ color: C.teal }}>https://gharkapaisa.in</a></div>
+              <div><FaEnvelope style={{ display: 'inline', marginRight: 8, color: C.teal }} /> <strong>Email:</strong> <a href="mailto:support@gharkapaisa.in" style={{ color: C.teal }}>support@gharkapaisa.in</a></div>
+              <div><FaPhone style={{ display: 'inline', marginRight: 8, color: C.teal }} /> <strong>Phone:</strong> <a href="tel:9270319438" style={{ color: C.teal }}>9270319438</a></div>
+              <div><FaMapMarkerAlt style={{ display: 'inline', marginRight: 8, color: C.teal }} /> <strong>Address:</strong> Rajnandini Tower Dighi, Pune 411015</div>
+            </div>
+          </section>
+
+        </div>
       </div>
     </div>
   );
