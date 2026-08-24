@@ -97,8 +97,26 @@ const generateShareLink = async (req, res, next) => {
 
     const targetMobile = req.body.customer_mobile || req.body.mobile;
     const targetName = req.body.customer_name || req.body.full_name || 'Customer';
-    if (targetMobile) {
-      const { sendLinkedShareSms } = require('../../services/sms/sms.service');
+
+    // Dispatch SMS to partner mobile number as well
+    const { sendLinkedShareSms } = require('../../services/sms/sms.service');
+    let partnerMobile = req.user?.mobile || req.user?.phone;
+    if (!partnerMobile && partnerId) {
+      try {
+        const { rows: [pUser] } = await query(`
+          SELECT u.mobile, u.phone, pp.mobile as partner_mobile 
+          FROM partner_profiles pp 
+          LEFT JOIN users u ON u.id = pp.user_id 
+          WHERE pp.id = $1 OR pp.user_id = $1
+        `, [partnerId]);
+        partnerMobile = pUser?.mobile || pUser?.phone || pUser?.partner_mobile;
+      } catch (e) {}
+    }
+
+    if (partnerMobile) {
+      sendLinkedShareSms(partnerMobile, targetName, product.name, shareLink).catch(() => {});
+    }
+    if (targetMobile && targetMobile !== partnerMobile) {
       sendLinkedShareSms(targetMobile, targetName, product.name, shareLink).catch(() => {});
     }
 

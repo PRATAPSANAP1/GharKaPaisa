@@ -430,12 +430,27 @@ const createLead = async (req, res, next) => {
 
       await initializeLeadPipeline(lead.id, req.user.id, 'share_link', priority || 'medium');
 
-      // Automatically send link via SMS (Template: Linked_share 6a8b36fe9b6fc4bd54035592)
+      // Automatically send link via SMS to partner and customer (Template: Linked_share 6a8b36fe9b6fc4bd54035592)
       try {
         const { sendLinkedShareSms } = require('../../services/sms/sms.service');
-        sendLinkedShareSms(trimmedMobile, targetName.trim(), product?.name || 'Financial Product', shareUrl).catch(err => {
-          console.warn('Auto SMS dispatch failed for linked_share:', err.message);
-        });
+        const { rows: [pUser] } = await query(`
+          SELECT u.mobile, u.phone, pp.mobile as partner_mobile 
+          FROM partner_profiles pp 
+          LEFT JOIN users u ON u.id = pp.user_id 
+          WHERE pp.id = $1
+        `, [partner.id]);
+        const partnerMobile = pUser?.mobile || pUser?.phone || pUser?.partner_mobile;
+
+        if (partnerMobile) {
+          sendLinkedShareSms(partnerMobile, targetName.trim(), product?.name || 'Financial Product', shareUrl).catch(err => {
+            console.warn('Auto SMS dispatch to partner failed for linked_share:', err.message);
+          });
+        }
+        if (trimmedMobile && trimmedMobile !== partnerMobile) {
+          sendLinkedShareSms(trimmedMobile, targetName.trim(), product?.name || 'Financial Product', shareUrl).catch(err => {
+            console.warn('Auto SMS dispatch failed for linked_share:', err.message);
+          });
+        }
       } catch (smsErr) {
         console.warn('SMS service invocation error:', smsErr.message);
       }

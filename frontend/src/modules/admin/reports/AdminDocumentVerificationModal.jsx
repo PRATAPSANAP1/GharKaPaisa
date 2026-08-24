@@ -17,7 +17,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
     return 'qd';
   };
 
-  const initialTabKey = getTabKey(initialTab);
+  const processTypeStr = String(application?.process_type || application?.process_by || '').toLowerCase();
+  const isLinkedShare = processTypeStr.includes('linked_share') || processTypeStr.includes('link');
+  const isDirectBank = processTypeStr.includes('direct_bank') || processTypeStr.includes('direct');
+  const isDigitalProcess = isLinkedShare || isDirectBank;
+  const isPhysical = processTypeStr.includes('physical');
+
+  const initialTabKey = isDigitalProcess ? 'remark' : getTabKey(initialTab);
   const [activeTab, setActiveTab] = useState(initialTabKey);
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,22 +36,27 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    if (isDigitalProcess) {
+      setActiveTab('remark');
+    }
+  }, [application?.id, processTypeStr]);
+
   // User Role & Permissions
   const user = useAuthStore((state) => state.user);
   const role = (user?.role || '').toUpperCase();
   const isOpsOrAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'OPERATOR'].includes(role);
   const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
 
-  const processTypeStr = String(application?.process_type || application?.process_by || '').toLowerCase();
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
 
-  // Role Access Rules:
-  // QD Form: Editable by Super Admin, Operation Head & Administrative Operator. Read-only for Partner.
-  // Remark Form: Editable by Partner, Super Admin, Administrative Operator, Operational Head.
-  // Final Form: Editable by Super Admin, Operation Head & Administrative Operator.
-  const canEditQd = isPunchLead ? isOpsOrAdmin : true;
-  const canEditRemark = true;
-  const canEditFinal = isOpsOrAdmin;
+  const isLockedStatus = ['operational_verified', 'super_admin_approved', 'approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed'].includes(String(currentStatus || application?.status || '').toLowerCase());
+
+  // Role & Status Access Rules:
+  // QD, Remark, and Final forms are locked for editing when status is operational_verified or higher.
+  const canEditQd = isLockedStatus ? false : (isPunchLead ? isOpsOrAdmin : true);
+  const canEditRemark = isLockedStatus ? false : true;
+  const canEditFinal = isLockedStatus ? false : isOpsOrAdmin;
 
   const sanitizeVal = (val) => {
     if (!val || val === 'None' || val === 'none' || val === 'null' || val === 'undefined') return '';
@@ -388,8 +399,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           {/* Navigation Tabs (Stage Specific View + Audit Log based on button clicked) */}
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
             
-            {/* 1. QD Tab (Shown only when QD button is clicked) */}
-            {(initialTabKey === 'qd' || showAllTabs) && (
+            {/* 1. QD Tab (Hidden for Digital processes) */}
+            {!isDigitalProcess && (initialTabKey === 'qd' || showAllTabs) && (
               <button
                 onClick={() => setActiveTab('qd')}
                 style={{
@@ -412,32 +423,30 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
               </button>
             )}
 
-            {/* 2. Remark Tab (Shown only when Remark button is clicked) */}
-            {(initialTabKey === 'remark' || showAllTabs) && (
-              <button
-                onClick={() => setActiveTab('remark')}
-                style={{
-                  background: activeTab === 'remark' ? '#fff7ed' : 'none',
-                  border: 'none',
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  fontWeight: activeTab === 'remark' ? 800 : 600,
-                  fontSize: '13px',
-                  color: activeTab === 'remark' ? '#ea580c' : '#64748b',
-                  borderBottom: activeTab === 'remark' ? '3px solid #ea580c' : '3px solid transparent',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <Sliders size={14} /> Operational Remarks
-              </button>
-            )}
+            {/* 2. Remark Tab (Shown for all processes, titled Application Remark & Stage Tracking) */}
+            <button
+              onClick={() => setActiveTab('remark')}
+              style={{
+                background: activeTab === 'remark' ? '#fff7ed' : 'none',
+                border: 'none',
+                padding: '10px 16px',
+                borderRadius: '8px',
+                fontWeight: activeTab === 'remark' ? 800 : 600,
+                fontSize: '13px',
+                color: activeTab === 'remark' ? '#ea580c' : '#64748b',
+                borderBottom: activeTab === 'remark' ? '3px solid #ea580c' : '3px solid transparent',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <Sliders size={14} /> Application Remark & Stage Tracking
+            </button>
 
-            {/* 3. Final Tab (Shown only when Final button is clicked) */}
-            {(initialTabKey === 'final' || showAllTabs) && (
+            {/* 3. Final Tab (Hidden for Digital processes and Physical process) */}
+            {!isDigitalProcess && !isPhysical && (initialTabKey === 'final' || showAllTabs) && (
               <button
                 onClick={() => setActiveTab('final')}
                 style={{
@@ -723,9 +732,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Appcode Status</label>
                     <select
+                      disabled={!canEditRemark}
                       value={appcodeStatus}
                       onChange={(e) => setAppcodeStatus(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
                       <option value="">None</option>
                       <option value="appcode send">1. appcode send</option>
@@ -749,9 +759,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Soft Approval Status</label>
                     <select
+                      disabled={!canEditRemark}
                       value={softApprovalStatus}
                       onChange={(e) => setSoftApprovalStatus(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
                       <option value="">None</option>
                       <option value="approved">1. approved</option>
@@ -771,9 +782,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>IQA Stage</label>
                     <select
+                      disabled={!canEditRemark}
                       value={iqaStage}
                       onChange={(e) => setIqaStage(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
                       <option value="">None</option>
                       <option value="IQA SENT">1. IQA SENT</option>
@@ -792,52 +804,60 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Bank Application Ref No.</label>
                     <input
                       type="text"
+                      disabled={!canEditRemark}
                       value={bankRefNumber}
                       onChange={(e) => setBankRefNumber(e.target.value)}
                       placeholder="Enter Bank Application Ref No."
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: '#fff' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
-                  {/* Order 5: VKYC STATUS */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Status</label>
-                    <select
-                      value={vkycStage}
-                      onChange={(e) => setVkycStage(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
-                    >
-                      <option value="">None</option>
-                      <option value="VKYC Pending">1. VKYC Pending</option>
-                      <option value="vkyc pending">1. vkyc pending</option>
-                      <option value="VKYC Complete">2. VKYC Complete</option>
-                      <option value="vkyc complete">2. vkyc complete</option>
-                      <option value="VKYC Failed">3. VKYC Failed</option>
-                      {vkycStage && !['', 'VKYC Pending', 'vkyc pending', 'VKYC Complete', 'vkyc complete', 'VKYC Failed'].includes(vkycStage) && (
-                        <option value={vkycStage}>{vkycStage}</option>
-                      )}
-                    </select>
-                  </div>
+                  {/* Order 5: VKYC STATUS (Hidden for physical process) */}
+                  {!isPhysical && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Status</label>
+                      <select
+                        disabled={!canEditRemark}
+                        value={vkycStage}
+                        onChange={(e) => setVkycStage(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                      >
+                        <option value="">None</option>
+                        <option value="VKYC Pending">1. VKYC Pending</option>
+                        <option value="vkyc pending">1. vkyc pending</option>
+                        <option value="VKYC Complete">2. VKYC Complete</option>
+                        <option value="vkyc complete">2. vkyc complete</option>
+                        <option value="VKYC Failed">3. VKYC Failed</option>
+                        {vkycStage && !['', 'VKYC Pending', 'vkyc pending', 'VKYC Complete', 'vkyc complete', 'VKYC Failed'].includes(vkycStage) && (
+                          <option value={vkycStage}>{vkycStage}</option>
+                        )}
+                      </select>
+                    </div>
+                  )}
 
-                  {/* Order 6: VKYC LINK */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Link</label>
-                    <input
-                      type="url"
-                      value={vkycUrl}
-                      onChange={(e) => setVkycUrl(e.target.value)}
-                      placeholder="https://vkyc..."
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: '#fff' }}
-                    />
-                  </div>
+                  {/* Order 6: VKYC LINK (Hidden for physical process) */}
+                  {!isPhysical && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Link</label>
+                      <input
+                        type="url"
+                        disabled={!canEditRemark}
+                        value={vkycUrl}
+                        onChange={(e) => setVkycUrl(e.target.value)}
+                        placeholder="https://vkyc..."
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                      />
+                    </div>
+                  )}
 
                   {/* Order 7: DISPATCH STATUS */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Dispatch Status</label>
                     <select
+                      disabled={!canEditRemark}
                       value={dispatchStatus}
                       onChange={(e) => setDispatchStatus(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
                       <option value="">None</option>
                       <option value="dispatch pending">1. dispatch pending</option>
@@ -866,14 +886,20 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   zIndex: 20,
                   boxShadow: '0 -6px 16px rgba(0,0,0,0.06)'
                 }}>
-                  <button
-                    type="button"
-                    onClick={() => handleSaveDetails('remark')}
-                    disabled={actionLoading}
-                    style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                  >
-                    <Save size={16} /> {actionLoading ? 'Saving...' : 'Save Remarks & Stage'}
-                  </button>
+                  {canEditRemark ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSaveDetails('remark')}
+                      disabled={actionLoading}
+                      style={{ background: '#ea580c', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    >
+                      <Save size={16} /> {actionLoading ? 'Saving...' : 'Save Remarks & Stage'}
+                    </button>
+                  ) : (
+                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px', width: '100%', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      <Lock size={13} /> Editing is disabled because application status is {currentStatus?.replace(/_/g, ' ')}.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1010,7 +1036,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     </button>
                   ) : (
                     <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px', width: '100%', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                      <Lock size={13} /> Final Form is read-only for partner roles. Editable by Admin & Operations only.
+                      <Lock size={13} /> Editing is disabled because application status is {currentStatus?.replace(/_/g, ' ')}.
                     </div>
                   )}
                 </div>

@@ -727,18 +727,57 @@ export default function ManageApplications() {
                     </td>
                     <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'nowrap' }}>
-                        <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                          <MdVisibility /> Review
-                        </button>
-                        <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                          📋 QD
-                        </button>
-                        <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                          ⚙️ Remark
-                        </button>
-                        <button onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }} style={{ border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                          🏦 Final
-                        </button>
+                        {(() => {
+                          const proc = String(app.process_type || app.process_by || '').toLowerCase();
+                          const isDigital = proc.includes('linked_share') || proc.includes('direct_bank') || proc.includes('link') || proc.includes('direct');
+                          const isPhys = proc.includes('physical');
+
+                          if (isDigital) {
+                            return (
+                              <>
+                                <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                  <MdVisibility /> Review
+                                </button>
+                                <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                  ⚙️ Remark
+                                </button>
+                              </>
+                            );
+                          }
+
+                          if (isPhys) {
+                            return (
+                              <>
+                                <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                  <MdVisibility /> Review
+                                </button>
+                                <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                  📋 QD
+                                </button>
+                                <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                  ⚙️ Remark
+                                </button>
+                              </>
+                            );
+                          }
+
+                          return (
+                            <>
+                              <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                <MdVisibility /> Review
+                              </button>
+                              <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                📋 QD
+                              </button>
+                              <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                ⚙️ Remark
+                              </button>
+                              <button onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }} style={{ border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                🏦 Final
+                              </button>
+                            </>
+                          );
+                        })()}
                         <button onClick={() => handleDeleteApplication(app.id, app.app_number)} style={{ border: `1px solid ${C.red}40`, background: `${C.red}12`, color: C.red, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
                           <MdDelete /> Delete
                         </button>
@@ -897,18 +936,57 @@ export default function ManageApplications() {
                           </td>
                           <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'nowrap' }}>
-                              <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                <MdVisibility /> Review
-                              </button>
-                              <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                📋 QD
-                              </button>
-                              <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                ⚙️ Remark
-                              </button>
-                              <button onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }} style={{ border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                🏦 Final
-                              </button>
+                              {(() => {
+                                const proc = String(app.process_type || app.process_by || '').toLowerCase();
+                                const isDigital = proc.includes('linked_share') || proc.includes('direct_bank') || proc.includes('link') || proc.includes('direct');
+                                const isPhys = proc.includes('physical');
+
+                                if (isDigital) {
+                                  return (
+                                    <>
+                                      <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                        <MdVisibility /> Review
+                                      </button>
+                                      <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                        ⚙️ Remark
+                                      </button>
+                                    </>
+                                  );
+                                }
+
+                                if (isPhys) {
+                                  return (
+                                    <>
+                                      <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                        <MdVisibility /> Review
+                                      </button>
+                                      <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                        📋 QD
+                                      </button>
+                                      <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                        ⚙️ Remark
+                                      </button>
+                                    </>
+                                  );
+                                }
+
+                                return (
+                                  <>
+                                    <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                      <MdVisibility /> Review
+                                    </button>
+                                    <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                      📋 QD
+                                    </button>
+                                    <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                      ⚙️ Remark
+                                    </button>
+                                    <button onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }} style={{ border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                      🏦 Final
+                                    </button>
+                                  </>
+                                );
+                              })()}
                               <button onClick={() => handleDeleteApplication(app.id, app.app_number)} style={{ border: `1px solid ${C.red}40`, background: `${C.red}12`, color: C.red, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
                                 <MdDelete /> Delete
                               </button>
@@ -990,12 +1068,30 @@ export default function ManageApplications() {
                 >
                   <MdCheckCircle size={18} /> {submittingSuperAdminApprove ? 'Approving...' : 'Approve (Super Admin Approved)'}
                 </button>
-                <button
-                  onClick={() => setVerifyModalApp(selectedApp)}
-                  style={{ ...S.btn('outline'), color: C.primary, borderColor: C.primary, padding: '8px 14px', fontSize: '12.5px', fontWeight: 700 }}
-                >
-                  Edit Details (Form 1 / 2 / 3)
-                </button>
+                {(() => {
+                  const isLocked = ['operational_verified', 'super_admin_approved', 'approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed'].includes(String(selectedApp?.status || '').toLowerCase());
+                  return (
+                    <button
+                      disabled={isLocked}
+                      onClick={() => {
+                        if (isLocked) return;
+                        setVerifyModalApp(selectedApp);
+                      }}
+                      style={{
+                        ...S.btn('outline'),
+                        color: isLocked ? C.textLight : C.primary,
+                        borderColor: isLocked ? C.border : C.primary,
+                        padding: '8px 14px',
+                        fontSize: '12.5px',
+                        fontWeight: 700,
+                        opacity: isLocked ? 0.6 : 1,
+                        cursor: isLocked ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {isLocked ? 'Edit Details (Locked)' : 'Edit Details (Form 1 / 2 / 3)'}
+                    </button>
+                  );
+                })()}
               </div>
             </div>
 

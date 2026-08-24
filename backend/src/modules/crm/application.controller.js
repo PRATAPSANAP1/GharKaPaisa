@@ -2255,11 +2255,32 @@ const submitPartnerApplication = async (req, res, next) => {
 
     await client.query('COMMIT');
 
-    if (process_type === 'linked_share' && trimmedMobile && shareUrl) {
+    if (process_type === 'linked_share' && shareUrl) {
       const { sendLinkedShareSms } = require('../../services/sms/sms.service');
-      sendLinkedShareSms(trimmedMobile, trimmedName, product.name, shareUrl).catch(err => {
-        logger.warn('[SMS] Failed to send linked share SMS:', err.message);
-      });
+      let partnerMobile = req.user?.mobile || req.user?.phone;
+      if (!partnerMobile && partnerId) {
+        try {
+          const { rows: [pUser] } = await client.query(`
+            SELECT u.mobile, u.phone, pp.mobile as partner_mobile 
+            FROM partner_profiles pp 
+            LEFT JOIN users u ON u.id = pp.user_id 
+            WHERE pp.id = $1 OR pp.user_id = $1
+          `, [partnerId]);
+          partnerMobile = pUser?.mobile || pUser?.phone || pUser?.partner_mobile;
+        } catch (e) {}
+      }
+
+      if (partnerMobile) {
+        sendLinkedShareSms(partnerMobile, trimmedName || 'Customer', product.name, shareUrl).catch(err => {
+          logger.warn('[SMS] Failed to send linked share SMS to partner:', err.message);
+        });
+      }
+
+      if (trimmedMobile && trimmedMobile !== partnerMobile) {
+        sendLinkedShareSms(trimmedMobile, trimmedName, product.name, shareUrl).catch(err => {
+          logger.warn('[SMS] Failed to send linked share SMS to customer:', err.message);
+        });
+      }
     }
 
     const { sendEmail } = require('../../services/email/email.service');

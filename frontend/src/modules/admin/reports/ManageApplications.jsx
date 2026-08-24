@@ -391,32 +391,90 @@ export default function ManageApplications() {
                           </td>
                           <td style={{ padding: "14px 16px", textAlign: "right" }}>
                             <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
-                              {isOpsHeadOrSuperAdmin && (
-                                <button
-                                  onClick={() => handleViewDetails(app)}
-                                  style={{ background: "#7c3aed15", border: "1px solid #7c3aed40", color: "#7c3aed", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                                >
-                                  <Eye size={12} /> Review
-                                </button>
-                              )}
-                              <button
-                                onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
-                                style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                              >
-                                <FileText size={12} /> QD
-                              </button>
-                              <button
-                                onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
-                                style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: 'center', gap: "4px" }}
-                              >
-                                <FileEdit size={12} /> Remark
-                              </button>
-                              <button
-                                onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }}
-                                style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                              >
-                                <Building2 size={12} /> Final
-                              </button>
+                              {(() => {
+                                const proc = String(app.process_type || app.process_by || '').toLowerCase();
+                                const isDigital = proc.includes('linked_share') || proc.includes('direct_bank') || proc.includes('link') || proc.includes('direct');
+                                const isPhys = proc.includes('physical');
+
+                                if (isDigital) {
+                                  return (
+                                    <>
+                                      {isOpsHeadOrSuperAdmin && (
+                                        <button
+                                          onClick={() => handleViewDetails(app)}
+                                          style={{ background: "#7c3aed15", border: "1px solid #7c3aed40", color: "#7c3aed", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                        >
+                                          <Eye size={12} /> Review
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
+                                        style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: 'center', gap: "4px" }}
+                                      >
+                                        <FileEdit size={12} /> Remark
+                                      </button>
+                                    </>
+                                  );
+                                }
+
+                                if (isPhys) {
+                                  return (
+                                    <>
+                                      {isOpsHeadOrSuperAdmin && (
+                                        <button
+                                          onClick={() => handleViewDetails(app)}
+                                          style={{ background: "#7c3aed15", border: "1px solid #7c3aed40", color: "#7c3aed", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                        >
+                                          <Eye size={12} /> Review
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
+                                        style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                      >
+                                        <FileText size={12} /> QD
+                                      </button>
+                                      <button
+                                        onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
+                                        style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: 'center', gap: "4px" }}
+                                      >
+                                        <FileEdit size={12} /> Remark
+                                      </button>
+                                    </>
+                                  );
+                                }
+
+                                return (
+                                  <>
+                                    {isOpsHeadOrSuperAdmin && (
+                                      <button
+                                        onClick={() => handleViewDetails(app)}
+                                        style={{ background: "#7c3aed15", border: "1px solid #7c3aed40", color: "#7c3aed", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                      >
+                                        <Eye size={12} /> Review
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
+                                      style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                    >
+                                      <FileText size={12} /> QD
+                                    </button>
+                                    <button
+                                      onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
+                                      style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: 'center', gap: "4px" }}
+                                    >
+                                      <FileEdit size={12} /> Remark
+                                    </button>
+                                    <button
+                                      onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }}
+                                      style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                    >
+                                      <Building2 size={12} /> Final
+                                    </button>
+                                  </>
+                                );
+                              })()}
                             </div>
                           </td>
                         </tr>
@@ -502,17 +560,31 @@ export default function ManageApplications() {
                     >
                       <CheckCircle2 size={16} /> {submittingApprove ? 'Approving...' : 'Approve (Super Admin Approved)'}
                     </button>
-                    <button
-                      onClick={() => {
-                        const targetApp = appDetail;
-                        setSelectedApp(null);
-                        setVerifyModalTab('qd');
-                        setVerifyModalApp(targetApp);
-                      }}
-                      style={{ background: '#2563eb15', border: '1px solid #2563eb40', color: '#2563eb', padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
-                    >
-                      Edit Details (Form 1 / 2 / 3)
-                    </button>
+                    {(() => {
+                      const isLocked = ['operational_verified', 'super_admin_approved', 'approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed'].includes(String(appDetail?.status || '').toLowerCase());
+                      return (
+                        <button
+                          disabled={isLocked}
+                          onClick={() => {
+                            if (isLocked) return;
+                            const targetApp = appDetail;
+                            setSelectedApp(null);
+                            setVerifyModalTab('qd');
+                            setVerifyModalApp(targetApp);
+                          }}
+                          style={{
+                            background: isLocked ? '#f1f5f9' : '#2563eb15',
+                            border: `1px solid ${isLocked ? '#cbd5e1' : '#2563eb40'}`,
+                            color: isLocked ? '#94a3b8' : '#2563eb',
+                            padding: '8px 14px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700,
+                            cursor: isLocked ? 'not-allowed' : 'pointer',
+                            opacity: isLocked ? 0.7 : 1
+                          }}
+                        >
+                          {isLocked ? 'Edit Details (Locked)' : 'Edit Details (Form 1 / 2 / 3)'}
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
 

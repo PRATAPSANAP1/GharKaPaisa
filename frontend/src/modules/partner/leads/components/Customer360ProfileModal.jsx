@@ -294,48 +294,56 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             {/* Edit Profile Button */}
-            <button
-              onClick={() => {
-                setEditForm({
-                  full_name: overview.full_name || '',
-                  mobile: overview.mobile || '',
-                  email: overview.email || '',
-                  dob: overview.dob ? new Date(overview.dob).toISOString().split('T')[0] : '',
-                  pan_number: overview.pan_number || '',
-                  aadhaar_number: overview.aadhaar_number || '',
-                  aadhaar_last4: overview.aadhaar_last4 || '',
-                  city: overview.city || '',
-                  state: overview.state || '',
-                  pincode: overview.pincode || '',
-                  monthly_income: overview.monthly_income || '',
-                  employer: overview.employer || '',
-                  employment_type: overview.employment_type || 'salaried',
-                  occupation: overview.occupation || '',
-                  alternate_mobile: overview.alternate_mobile || '',
-                  nominee_name: overview.nominee_name || '',
-                  nominee_relation: overview.nominee_relation || ''
-                });
-                setEditError('');
-                setIsEditing(true);
-              }}
-              style={{
-                background: 'rgba(255,255,255,0.18)',
-                color: '#FFFFFF',
-                border: '1px solid rgba(255,255,255,0.3)',
-                borderRadius: '10px',
-                padding: '6px 14px',
-                fontWeight: 700,
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <MdEdit style={{ fontSize: '16px' }} />
-              <span>Edit Details</span>
-            </button>
+            {(() => {
+              const isLockedByStatus = ['operational_verified', 'super_admin_approved', 'approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed'].includes(String(overview?.pipeline_status || overview?.status || '').toLowerCase()) || applications.some(a => ['operational_verified', 'super_admin_approved', 'approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed'].includes(String(a.status || '').toLowerCase()));
+              return (
+                <button
+                  disabled={isLockedByStatus}
+                  onClick={() => {
+                    if (isLockedByStatus) return;
+                    setEditForm({
+                      full_name: overview.full_name || '',
+                      mobile: overview.mobile || '',
+                      email: overview.email || '',
+                      dob: overview.dob ? new Date(overview.dob).toISOString().split('T')[0] : '',
+                      pan_number: overview.pan_number || '',
+                      aadhaar_number: overview.aadhaar_number || '',
+                      aadhaar_last4: overview.aadhaar_last4 || '',
+                      city: overview.city || '',
+                      state: overview.state || '',
+                      pincode: overview.pincode || '',
+                      monthly_income: overview.monthly_income || '',
+                      employer: overview.employer || '',
+                      employment_type: overview.employment_type || 'salaried',
+                      occupation: overview.occupation || '',
+                      alternate_mobile: overview.alternate_mobile || '',
+                      nominee_name: overview.nominee_name || '',
+                      nominee_relation: overview.nominee_relation || ''
+                    });
+                    setEditError('');
+                    setIsEditing(true);
+                  }}
+                  style={{
+                    background: isLockedByStatus ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.18)',
+                    color: isLockedByStatus ? '#94A3B8' : '#FFFFFF',
+                    border: `1px solid ${isLockedByStatus ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)'}`,
+                    borderRadius: '10px',
+                    padding: '6px 14px',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    cursor: isLockedByStatus ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: isLockedByStatus ? 0.6 : 1,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <MdEdit style={{ fontSize: '16px' }} />
+                  <span>{isLockedByStatus ? 'Edit Details (Locked)' : 'Edit Details'}</span>
+                </button>
+              );
+            })()}
 
             <button
               onClick={onClose}
