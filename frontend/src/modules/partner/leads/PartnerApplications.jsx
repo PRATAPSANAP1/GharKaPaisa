@@ -827,11 +827,11 @@ export default function PartnerApplications() {
         </div>
       </div>
 
-      {/* ── Status-Wise Stacked Tables ── */}
+      {/* ── Unified Applications Table (Newest First) ── */}
       {isLoading ? (
         <div style={{ borderRadius: 18, background: cardBg, border: `1px solid ${border}`, padding: '60px 20px', textAlign: 'center', color: textMuted }}>
           <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 12px', color: accent }} />
-          <p style={{ fontSize: 13, fontWeight: 700 }}>Loading status-wise application tables...</p>
+          <p style={{ fontSize: 13, fontWeight: 700 }}>Loading applications...</p>
         </div>
       ) : applications.length === 0 ? (
         <div style={{ borderRadius: 18, background: cardBg, border: `1px solid ${border}`, padding: '60px 20px', textAlign: 'center', color: textMuted }}>
@@ -840,376 +840,172 @@ export default function PartnerApplications() {
           <p style={{ fontSize: 12, marginTop: 4 }}>Try adjusting your search query or status filters</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {(() => {
-            const allMatchedStatuses = new Set([
-              'pending', 'initiated', 'link_pending', 'bank_application_pending', 'created', 'lead_created', 'new', 'draft',
-              'details_submitted', 'submitted', 'under_review', 'under review', 'verification', 'in_process', 'in_progress',
-              'operational_verified', 'operational_approved', 'app_file_generated',
-              'approved', 'super_admin_approved', 'disbursed',
-              'commission_released', 'released', 'credited',
-              'commission_received', 'received', 'paid',
-              'rejected', 'cancelled', 'declined', 'decline', 'technical_error'
-            ]);
+        (() => {
+          const sortedApps = [...applications].sort((a, b) => {
+            const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.id || 0);
+            const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.id || 0);
+            return timeB - timeA;
+          });
 
-            const groups = [
-              {
-                id: 'pending',
-                title: 'Pending Applications',
-                icon: Clock,
-                color: '#f59e0b',
-                badgeBg: '#f59e0b15',
-                borderColor: '#f59e0b',
-                statuses: ['pending', 'initiated', 'link_pending', 'bank_application_pending', 'created', 'lead_created', 'new', 'draft']
-              },
-              {
-                id: 'details_submitted',
-                title: 'Details Submitted Applications',
-                icon: FileEdit,
-                color: '#3b82f6',
-                badgeBg: '#3b82f615',
-                borderColor: '#3b82f6',
-                statuses: ['details_submitted', 'submitted', 'under_review', 'under review', 'verification', 'in_process', 'in_progress']
-              },
-              {
-                id: 'operational_verified',
-                title: 'Operational Verified Applications',
-                icon: Search,
-                color: '#8b5cf6',
-                badgeBg: '#8b5cf615',
-                borderColor: '#8b5cf6',
-                statuses: ['operational_verified', 'operational_approved', 'app_file_generated']
-              },
-              {
-                id: 'approved',
-                title: 'Approved Applications',
-                icon: CheckCircle2,
-                color: '#10b981',
-                badgeBg: '#10b98115',
-                borderColor: '#10b981',
-                statuses: ['approved', 'super_admin_approved', 'disbursed']
-              },
-              {
-                id: 'commission_released',
-                title: 'Commission Released Applications',
-                icon: Sparkles,
-                color: '#06b6d4',
-                badgeBg: '#06b6d415',
-                borderColor: '#06b6d4',
-                statuses: ['commission_released', 'released', 'credited']
-              },
-              {
-                id: 'commission_received',
-                title: 'Commission Received Applications',
-                icon: CheckCircle2,
-                color: '#16a34a',
-                badgeBg: '#16a34a15',
-                borderColor: '#16a34a',
-                statuses: ['commission_received', 'received', 'paid']
-              },
-              {
-                id: 'rejected',
-                title: 'Rejected & Cancelled Applications',
-                icon: XCircle,
-                color: '#ef4444',
-                badgeBg: '#ef444415',
-                borderColor: '#ef4444',
-                statuses: ['rejected', 'cancelled', 'declined', 'decline', 'technical_error']
-              },
-              {
-                id: 'other',
-                title: 'Other Applications',
-                icon: Layers,
-                color: '#6b7280',
-                badgeBg: '#6b728015',
-                borderColor: '#6b7280',
-                isOtherFallback: true,
-                statuses: []
-              }
-            ];
-
-            return groups.map((group) => {
-              const groupApps = group.isOtherFallback
-                ? applications.filter(a => !allMatchedStatuses.has(String(a.status || '').toLowerCase()))
-                : applications.filter(a => group.statuses.includes(String(a.status || '').toLowerCase()));
-
-              // Skip empty groups if status filter is active
-              if (statusFilter && statusFilter !== group.id && !group.statuses.includes(statusFilter) && groupApps.length === 0) {
-                return null;
-              }
-
-              // Hide "Other Applications" table if there are 0 applications in it
-              if (group.isOtherFallback && groupApps.length === 0) {
-                return null;
-              }
-
-              const GroupIcon = group.icon;
-
-            return (
-              <div key={group.id} style={{
-                borderRadius: 18, background: cardBg, border: `1px solid ${border}`,
-                borderLeft: `5px solid ${group.borderColor}`, overflow: 'hidden',
-                boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.06)'
+          return (
+            <div style={{
+              borderRadius: 18, background: cardBg, border: `1px solid ${border}`,
+              overflow: 'hidden', boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.06)'
+            }}>
+              <div style={{
+                padding: '14px 20px', background: isDark ? '#141414' : '#f8faff',
+                borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between'
               }}>
-                {/* Status Group Header */}
-                <div style={{
-                  padding: '14px 20px', background: isDark ? '#141414' : '#f8faff',
-                  borderBottom: `1px solid ${border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    {GroupIcon && <GroupIcon size={18} style={{ color: group.color }} />}
-                    <h3 style={{ fontSize: 15, fontWeight: 800, color: textPrimary, margin: 0 }}>{group.title}</h3>
-                    <span style={{
-                      padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 800,
-                      background: group.badgeBg, color: group.color, border: `1px solid ${group.color}40`
-                    }}>
-                      {groupApps.length} Applications
-                    </span>
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <FileText size={18} style={{ color: accent }} />
+                  <h3 style={{ fontSize: 15, fontWeight: 800, color: textPrimary, margin: 0 }}>Applications ({sortedApps.length})</h3>
                 </div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: textMuted }}>
+                  Sorted: Latest Top to Oldest Bottom
+                </span>
+              </div>
 
-                {/* Status Table Content */}
-                {groupApps.length === 0 ? (
-                  <div style={{ padding: '24px 20px', color: textMuted, fontSize: 13, textAlign: 'center' }}>
-                    No applications currently in this status stage.
-                  </div>
-                ) : isMobile ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, padding: 12 }}>
-                    {groupApps.map((app, i) => {
-                      const isExpanded = expandedId === app.id;
-                      const isSelected = selectedAppIds.includes(app.id);
-                      const badge = getStatusBadge(app.status);
-                      const BadgeIcon = badge.icon;
+              {isMobile ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, padding: 12 }}>
+                  {sortedApps.map((app, i) => {
+                    const isSelected = selectedAppIds.includes(app.id);
+                    const badge = getStatusBadge(app.status);
+                    const BadgeIcon = badge.icon;
 
-                      return (
-                        <div key={app.id} style={{
-                          background: isDark ? '#121212' : '#fcfdff',
-                          border: `1.5px solid ${isSelected ? accent : border}`,
-                          borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 10,
-                          animation: `fadeIn 0.3s ease ${i * 40}ms both`
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <input type="checkbox" checked={isSelected} onChange={() => handleSelectOne(app.id)} />
-                              <span style={{ fontWeight: 800, color: textPrimary, fontSize: 13 }}>#{app.app_number}</span>
-                            </div>
-                            <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, fontWeight: 800, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <BadgeIcon size={10} /> {badge.label}
-                            </span>
+                    return (
+                      <div key={app.id} style={{
+                        background: isDark ? '#121212' : '#fcfdff',
+                        border: `1.5px solid ${isSelected ? accent : border}`,
+                        borderRadius: 16, padding: 14, display: 'flex', flexDirection: 'column', gap: 10,
+                        animation: `fadeIn 0.3s ease ${i * 40}ms both`
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <input type="checkbox" checked={isSelected} onChange={() => handleSelectOne(app.id)} />
+                            <span style={{ fontWeight: 800, color: textPrimary, fontSize: 13 }}>#{app.app_number}</span>
                           </div>
+                          <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, fontWeight: 800, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <BadgeIcon size={10} /> {badge.label}
+                          </span>
+                        </div>
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: textMuted }}>Customer:</span>
-                              <span style={{ fontWeight: 700, color: textPrimary }}>{app.customer_name}</span>
-                            </div>
-                            {(app.submitted_by_name || (app.partner_first_name && `${app.partner_first_name} ${app.partner_last_name || ''}`)) && (
-                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <span style={{ color: textMuted }}>Submitted By:</span>
-                                <span style={{ fontWeight: 700, color: '#3b82f6' }}>{app.submitted_by_name || `${app.partner_first_name || ''} ${app.partner_last_name || ''}`}</span>
-                              </div>
-                            )}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ color: textMuted }}>Process By:</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: textMuted }}>Customer:</span>
+                            <span style={{ fontWeight: 700, color: textPrimary }}>{app.customer_name}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: textMuted }}>Mobile:</span>
+                            <span style={{ color: textMuted }}>{app.customer_mobile}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: textMuted }}>Product:</span>
+                            <span style={{ fontWeight: 600, color: textPrimary }}>{app.product_name} ({app.bank_name || app.bank_code})</span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, borderTop: `1px solid ${border}`, paddingTop: 8, flexWrap: 'wrap' }}>
+                          <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
+                            style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Share2 size={12} /> Share
+                          </button>
+                          <button onClick={() => handleOpenViewModal(app)}
+                            style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #3b82f640`, background: '#3b82f615', color: '#3b82f6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Eye size={12} /> View
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: isDark ? '#181818' : '#f1f5f9', borderBottom: `1px solid ${border}`, color: textMuted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <th style={{ padding: '12px 14px', width: 40 }}>
+                          <input type="checkbox" checked={selectedAppIds.length === applications.length && applications.length > 0} onChange={handleSelectAll} />
+                        </th>
+                        <th style={{ padding: '12px 14px' }}>App #</th>
+                        <th style={{ padding: '12px 14px' }}>Process</th>
+                        <th style={{ padding: '12px 14px' }}>Customer</th>
+                        <th style={{ padding: '12px 14px' }}>Product</th>
+                        <th style={{ padding: '12px 14px' }}>Status</th>
+                        <th style={{ padding: '12px 14px' }}>Commission</th>
+                        <th style={{ padding: '12px 14px', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody style={{ color: textPrimary }}>
+                      {sortedApps.map((app) => {
+                        const isSelected = selectedAppIds.includes(app.id);
+                        const badge = getStatusBadge(app.status);
+                        const BadgeIcon = badge.icon;
+
+                        return (
+                          <tr key={app.id} style={{ borderBottom: `1px solid ${border}`, background: isSelected ? `${accent}08` : 'transparent' }}>
+                            <td style={{ padding: '12px 14px' }}>
+                              <input type="checkbox" checked={isSelected} onChange={() => handleSelectOne(app.id)} />
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
+                              <div style={{ fontWeight: 800, color: textPrimary }}>#{app.app_number}</div>
+                              <div style={{ fontSize: 11, color: textMuted }}>{app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</div>
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
                               {(() => {
                                 const proc = getProcessByBadge(app.process_by, app.process_type);
                                 return (
-                                  <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 6, background: proc.bg, color: proc.color, border: `1px solid ${proc.border}` }}>
+                                  <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: proc.bg, color: proc.color, border: `1px solid ${proc.border}`, display: 'inline-block' }}>
                                     {proc.label}
                                   </span>
                                 );
                               })()}
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: textMuted }}>Mobile:</span>
-                              <span style={{ color: textMuted }}>{app.customer_mobile}</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: textMuted }}>Product:</span>
-                              <span style={{ fontWeight: 600, color: textPrimary }}>{app.product_name} ({app.bank_name || app.bank_code})</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ color: textMuted }}>Commission:</span>
-                              <span style={{ fontWeight: 800, color: app.commission_amount > 0 ? '#10b981' : textMuted }}>
-                                ₹{app.commission_amount || 0} ({app.commission_status || 'pending'})
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
+                              <div style={{ fontWeight: 700, color: textPrimary }}>{app.customer_name}</div>
+                              <div style={{ fontSize: 11, color: textMuted }}>{app.customer_mobile}</div>
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
+                              <div style={{ fontWeight: 700, color: textPrimary }}>{app.product_name}</div>
+                              <div style={{ fontSize: 11, color: textMuted }}>{app.bank_name || app.bank_code}</div>
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
+                              <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, fontWeight: 800, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <BadgeIcon size={10} /> {badge.label}
                               </span>
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, borderTop: `1px solid ${border}`, paddingTop: 8, flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                              {!isTeamMember && (
-                                <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }}
-                                  style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                  <UserPlus size={12} /> Assign
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
+                              <div style={{ fontWeight: 800, color: app.commission_amount > 0 ? '#10b981' : textMuted }}>₹{app.commission_amount || 0}</div>
+                            </td>
+                            <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                                <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
+                                  style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  <Share2 size={13} /> Share
                                 </button>
-                              )}
-                              <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
-                                style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <Share2 size={12} /> Share
-                              </button>
-                              <button onClick={() => handleOpenViewModal(app)}
-                                style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #3b82f640`, background: '#3b82f615', color: '#3b82f6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <Eye size={12} /> View
-                              </button>
-                              <button onClick={() => handleOpenTrackModal(app)}
-                                style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #8b5cf640`, background: '#8b5cf615', color: '#8b5cf6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <Activity size={12} /> Track
-                              </button>
-                              {!shouldHideQdButton(app.process_by, app.process_type) && (
-                                <button onClick={() => handleOpenQdModal(app)}
-                                  style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                  <FileText size={12} /> QD
+                                <button onClick={() => handleOpenViewModal(app)}
+                                  style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #3b82f640`, background: '#3b82f615', color: '#3b82f6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  <Eye size={13} /> View
                                 </button>
-                              )}
-                              <button onClick={() => handleOpenRemarkModal(app)}
-                                style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <FileEdit size={12} /> Remark
-                              </button>
-                              {!shouldHideFinalButton(app.process_by, app.process_type) && (
-                                <button onClick={() => handleOpenFinalModal(app)}
-                                  style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                  <Building2 size={12} /> Final
+                                <button onClick={() => handleOpenTrackModal(app)}
+                                  style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #8b5cf640`, background: '#8b5cf615', color: '#8b5cf6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  <Activity size={13} /> Track
                                 </button>
-                              )}
-                              {userRole === 'SUPER_ADMIN' && (
-                                <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
-                                  style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ef444440`, background: '#ef444410', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                  <Trash2 size={12} /> Delete
+                                <button onClick={() => handleOpenRemarkModal(app)}
+                                  style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  <FileEdit size={12} /> Remark
                                 </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                      <thead>
-                        <tr style={{ background: isDark ? '#111111' : '#f8faff', borderBottom: `1px solid ${border}` }}>
-                          <th style={{ padding: '12px 14px', width: 36 }}>
-                            <input type="checkbox" onChange={handleSelectAll} checked={selectedAppIds.length === groupApps.length && groupApps.length > 0} />
-                          </th>
-                          {['Application', 'Process Type', 'Customer Info', 'Product & Bank', 'Lead Stage', 'Commission', 'Actions'].map(h => (
-                            <th key={h} style={{ padding: '12px 14px', textAlign: h === 'Actions' ? 'right' : 'left', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: textMuted, whiteSpace: 'nowrap' }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {groupApps.map((app, i) => {
-                          const isSelected = selectedAppIds.includes(app.id);
-                          const badge = getStatusBadge(app.status);
-                          const BadgeIcon = badge.icon;
-
-                          return (
-                            <tr key={app.id} className="app-row" style={{ borderBottom: `1px solid ${border}`, background: isSelected ? `${accent}08` : 'transparent', animation: `fadeIn 0.3s ease ${i * 30}ms both` }}>
-                              <td style={{ padding: '12px 14px' }}>
-                                <input type="checkbox" checked={isSelected} onChange={() => handleSelectOne(app.id)} />
-                              </td>
-                              <td style={{ padding: '12px 14px' }}>
-                                <div style={{ fontWeight: 800, color: textPrimary }}>#{app.app_number}</div>
-                                <div style={{ fontSize: 11, color: textMuted }}>{new Date(app.created_at).toLocaleDateString()}</div>
-                              </td>
-                              <td style={{ padding: '12px 14px' }}>
-                                {(() => {
-                                  const proc = getProcessByBadge(app.process_by, app.process_type);
-                                  return (
-                                    <span style={{ fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 6, background: proc.bg, color: proc.color, border: `1px solid ${proc.border}`, display: 'inline-block' }}>
-                                      {proc.label}
-                                    </span>
-                                  );
-                                })()}
-                                {(app.submitted_by_name || (app.partner_first_name && `${app.partner_first_name} ${app.partner_last_name || ''}`)) && (
-                                  <div style={{ fontSize: 10, color: '#3b82f6', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', gap: 3, background: '#3b82f612', padding: '2px 6px', borderRadius: 4, width: 'fit-content' }}>
-                                    <User size={12} /> {app.submitted_by_name || `${app.partner_first_name || ''} ${app.partner_last_name || ''}`}
-                                  </div>
-                                )}
-                              </td>
-                              <td style={{ padding: '12px 14px' }}>
-                                <div style={{ fontWeight: 700, color: textPrimary }}>{app.customer_name}</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                                  <a href={`tel:${app.customer_mobile}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, color: accent, textDecoration: 'none', fontWeight: 700, background: `${accent}12`, padding: '2px 8px', borderRadius: 6 }}>
-                                    <Phone size={10} /> {app.customer_mobile}
-                                  </a>
-                                  {app.customer_mobile && (
-                                    <a href={`https://wa.me/91${app.customer_mobile.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${app.customer_name}, regarding application #${app.app_number}...`)}`}
-                                      target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, borderRadius: 6, background: '#25D36620', color: '#25D366' }}>
-                                      <MessageSquare size={11} />
-                                    </a>
-                                  )}
-                                </div>
-                              </td>
-                              <td style={{ padding: '12px 14px' }}>
-                                <div style={{ fontWeight: 700, color: textPrimary }}>{app.product_name}</div>
-                                <div style={{ fontSize: 11, color: textMuted }}>{app.bank_name || app.bank_code}</div>
-                              </td>
-                              <td style={{ padding: '12px 14px' }}>
-                                <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, fontWeight: 800, background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                  <BadgeIcon size={10} /> {badge.label}
-                                </span>
-                              </td>
-                              <td style={{ padding: '12px 14px' }}>
-                                <div style={{ fontWeight: 800, color: app.commission_amount > 0 ? '#10b981' : textMuted }}>₹{app.commission_amount || 0}</div>
-                                <span style={{ fontSize: 10, color: textMuted, textTransform: 'capitalize' }}>{app.commission_status || 'pending'}</span>
-                              </td>
-                              <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                                  {!isTeamMember && (
-                                    <button onClick={() => { setAssignTargetApp(app); setShowAssignModal(true); }} className="action-icon-btn"
-                                      style={{ padding: 6, borderRadius: 8, border: `1px solid ${border}`, background: 'transparent', color: textMuted, cursor: 'pointer' }}>
-                                      <UserPlus size={14} />
-                                    </button>
-                                  )}
-                                  <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
-                                    style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                    <Share2 size={13} /> Share
-                                  </button>
-                                  <button onClick={() => handleOpenViewModal(app)}
-                                    style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #3b82f640`, background: '#3b82f615', color: '#3b82f6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                    <Eye size={13} /> View
-                                  </button>
-                                  <button onClick={() => handleOpenTrackModal(app)}
-                                    style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #8b5cf640`, background: '#8b5cf615', color: '#8b5cf6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                    <Activity size={13} /> Track
-                                  </button>
-                                  {!shouldHideQdButton(app.process_by, app.process_type) && (
-                                    <button onClick={() => handleOpenQdModal(app)}
-                                      style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                      <FileText size={12} /> QD
-                                    </button>
-                                  )}
-                                  <button onClick={() => handleOpenRemarkModal(app)}
-                                    style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                    <FileEdit size={12} /> Remark
-                                  </button>
-                                  {!shouldHideFinalButton(app.process_by, app.process_type) && (
-                                    <button onClick={() => handleOpenFinalModal(app)}
-                                      style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                      <Building2 size={12} /> Final
-                                    </button>
-                                  )}
-                                  {userRole === 'SUPER_ADMIN' && (
-                                    <button onClick={() => handleDeleteApplication(app.id, app.app_number)}
-                                      style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ef444440`, background: '#ef444410', color: '#ef4444', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                      <Trash2 size={13} /> Delete
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            );
-          });
-        })()}
-        </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })()
       )}
 
       {/* ═══ MODAL 1: BULK UPDATE ═══ */}
