@@ -1044,11 +1044,11 @@ const updatePostApplyDetails = async (req, res, next) => {
     const cleanAddress1 = (address1 || '').toString().trim();
     const cleanAddress2 = (address2 || '').toString().trim();
     const cleanLandmark = (landmark || '').toString().trim();
-    const cleanAddress = (address || [cleanAddress1, cleanAddress2, cleanLandmark, cleanCity, cleanState, cleanPincode].filter(Boolean).join(', ') || '').toString().trim();
-    const cleanMother = (mother_name || '').toString().trim();
     const cleanCity = (city || '').toString().trim();
     const cleanState = (state || '').toString().trim();
     const cleanPincode = (pincode || '').toString().trim();
+    const cleanAddress = (address || [cleanAddress1, cleanAddress2, cleanLandmark, cleanCity, cleanState, cleanPincode].filter(Boolean).join(', ') || '').toString().trim();
+    const cleanMother = (mother_name || '').toString().trim();
 
     // Safely parse cleanDob for Postgres DATE column in customers table
     let parsedDobDate = null;
