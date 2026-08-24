@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
+import { FileText, FileEdit, Building2 } from 'lucide-react';
 import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
 
 export default function ManageApplications() {
@@ -458,19 +459,19 @@ export default function ManageApplications() {
                                     onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
                                     style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                                   >
-                                    📋 QD
+                                    <FileText size={12} /> QD
                                   </button>
                                   <button
                                     onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
                                     style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: 'center', gap: "4px" }}
                                   >
-                                    ⚙️ Remark
+                                    <FileEdit size={12} /> Remark
                                   </button>
                                   <button
                                     onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }}
                                     style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                                   >
-                                    🏦 Final
+                                    <Building2 size={12} /> Final
                                   </button>
                                 </div>
                               </td>

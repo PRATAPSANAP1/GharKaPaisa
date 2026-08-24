@@ -9,7 +9,8 @@ import {
   Search, Filter, Download, Upload, CheckCircle2, Clock, 
   XCircle, AlertCircle, Phone, MessageSquare, ArrowUpRight, 
   UserPlus, Layers, FileSpreadsheet, ChevronDown, ChevronUp,
-  FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send, Share2, Copy, Trash2, Eye, Activity
+  FileText, ShieldAlert, Sparkles, Check, RefreshCw, X, Send, Share2, Copy, Trash2, Eye, Activity,
+  FileEdit, Building2
 } from 'lucide-react';
 
 const STAGES = [
@@ -1049,17 +1050,17 @@ export default function PartnerApplications() {
                               {!shouldHideQdButton(app.process_by, app.process_type) && (
                                 <button onClick={() => handleOpenQdModal(app)}
                                   style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                  📋 QD
+                                  <FileText size={12} /> QD
                                 </button>
                               )}
                               <button onClick={() => handleOpenRemarkModal(app)}
                                 style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                ⚙️ Remark
+                                <FileEdit size={12} /> Remark
                               </button>
                               {!shouldHideFinalButton(app.process_by, app.process_type) && (
                                 <button onClick={() => handleOpenFinalModal(app)}
                                   style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                  🏦 Final
+                                  <Building2 size={12} /> Final
                                 </button>
                               )}
                               {userRole === 'SUPER_ADMIN' && (
@@ -1167,17 +1168,17 @@ export default function PartnerApplications() {
                                   {!shouldHideQdButton(app.process_by, app.process_type) && (
                                     <button onClick={() => handleOpenQdModal(app)}
                                       style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                      📋 QD
+                                      <FileText size={12} /> QD
                                     </button>
                                   )}
                                   <button onClick={() => handleOpenRemarkModal(app)}
                                     style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                    ⚙️ Remark
+                                    <FileEdit size={12} /> Remark
                                   </button>
                                   {!shouldHideFinalButton(app.process_by, app.process_type) && (
                                     <button onClick={() => handleOpenFinalModal(app)}
                                       style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                                      🏦 Final
+                                      <Building2 size={12} /> Final
                                     </button>
                                   )}
                                   {userRole === 'SUPER_ADMIN' && (
