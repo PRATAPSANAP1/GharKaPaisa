@@ -1449,6 +1449,10 @@ const getApplication = async (req, res, next) => {
           ADD COLUMN IF NOT EXISTS gender VARCHAR(50),
           ADD COLUMN IF NOT EXISTS designation VARCHAR(255),
           ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20);
+        ALTER TABLE leads
+          ADD COLUMN IF NOT EXISTS employment_type VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS occupation VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);
       `);
     } catch (_) {}
 
