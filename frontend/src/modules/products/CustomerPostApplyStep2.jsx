@@ -501,51 +501,6 @@ export default function CustomerPostApplyStep2() {
             </div>
           </div>
 
-          {/* SECTION 3: Bank Reference & Final Application Stage */}
-          <div>
-            <div style={sectionHeaderStyle}>
-              <FiBriefcase size={18} style={{ color: C.primary }} />
-              <span>Bank Reference & Final Application Stage</span>
-              {!isAdminOrSuperAdmin && (
-                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, marginLeft: 'auto' }}>
-                  🔒 Read-Only (Operations Head / Admin / Admin Operator only)
-                </span>
-              )}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-              <div>
-                <label style={labelStyle}>Current Stage / Final Status</label>
-                <select
-                  disabled={!isAdminOrSuperAdmin}
-                  value={finalStatus}
-                  onChange={(e) => setFinalStatus(e.target.value)}
-                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
-                >
-                  <option value="App File Generated (Approved)">App File Generated (Approved)</option>
-                  <option value="Decline">Decline</option>
-                  <option value="In Process">In Process</option>
-                  <option value="Technical Error">Technical Error</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Decline Reason Remark (shown if Decline selected) */}
-            {finalStatus === 'Decline' && (
-              <div style={{ marginTop: '14px' }}>
-                <label style={labelStyle}>Decline Reason Remark</label>
-                <textarea
-                  rows={2}
-                  disabled={!isAdminOrSuperAdmin}
-                  placeholder="Reason for application decline..."
-                  value={declineReason}
-                  onChange={(e) => setDeclineReason(e.target.value)}
-                  style={{ ...(isAdminOrSuperAdmin ? inputStyle : disabledInputStyle), resize: 'vertical' }}
-                />
-              </div>
-            )}
-          </div>
-
           <button
             type="submit"
             disabled={submitting}
