@@ -280,142 +280,129 @@ export default function ManageLeads() {
 
       {loading ? (
         <div style={{ ...S.card, padding: "40px", textAlign: "center", color: C.textLight }}>
-          Loading status-wise application tables...
+          Loading leads & applications...
         </div>
       ) : leads.length === 0 ? (
         <div style={{ ...S.card, padding: "40px", textAlign: "center", color: C.textLight }}>
           No applications or leads found matching criteria.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {statusGroups.map((group) => {
-            const groupLeads = isStatusFiltered ? leads : getLeadsForGroup(group.statuses);
+        (() => {
+          const sortedLeads = [...leads].sort((a, b) => {
+            const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.id || 0);
+            const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.id || 0);
+            return timeB - timeA;
+          });
 
-            // If a status filter is selected and group has no leads, skip empty groups
-            if (isStatusFiltered && status !== group.id && !group.statuses.includes(status) && groupLeads.length === 0) {
-              return null;
-            }
-
-            return (
-              <div
-                key={group.id}
-                style={{
-                  ...S.card,
-                  padding: 0,
-                  borderRadius: "16px",
-                  overflow: "hidden",
-                  borderLeft: `4px solid ${group.borderColor}`
-                }}
-              >
-                {/* Status Table Header */}
-                <div style={{
-                  padding: "16px 24px",
-                  background: C.bgSecondary,
-                  borderBottom: `1px solid ${C.border}`,
-                  display: "flex",
-                  justify: "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap: "12px"
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>
-                      {group.title}
-                    </h3>
-                    <span style={{
-                      padding: "3px 10px",
-                      borderRadius: "20px",
-                      fontSize: "12px",
-                      fontWeight: 800,
-                      background: group.badgeBg,
-                      color: group.badgeColor
-                    }}>
-                      {groupLeads.length} Records
-                    </span>
-                  </div>
+          return (
+            <div
+              style={{
+                ...S.card,
+                padding: 0,
+                borderRadius: "16px",
+                overflow: "hidden",
+                border: `1px solid ${C.border}`
+              }}
+            >
+              {/* Table Header */}
+              <div style={{
+                padding: "16px 24px",
+                background: C.bgSecondary,
+                borderBottom: `1px solid ${C.border}`,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "12px"
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>
+                    Leads & Applications ({sortedLeads.length})
+                  </h3>
                 </div>
-
-                {groupLeads.length === 0 ? (
-                  <div style={{ padding: "24px 32px", color: C.textLight, fontSize: "13px" }}>
-                    No applications currently in this status stage.
-                  </div>
-                ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-                      <thead>
-                        <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, textAlign: "left", color: C.textLight, fontSize: "11px" }}>
-                          <th style={{ padding: "12px 16px" }}>
-                            <input type="checkbox" onChange={toggleSelectAll} checked={selectedLeadIds.length === leads.length && leads.length > 0} />
-                          </th>
-                          <th style={{ padding: "12px 16px" }}>Customer Details</th>
-                          <th style={{ padding: "12px 16px" }}>Product & Bank</th>
-                          <th style={{ padding: "12px 16px" }}>Source & Priority</th>
-                          <th style={{ padding: "12px 16px" }}>Pipeline Stage</th>
-                          <th style={{ padding: "12px 16px" }}>Origin Partner</th>
-                          <th style={{ padding: "12px 16px" }}>Executive</th>
-                          <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody style={{ color: C.text }}>
-                        {groupLeads.map((l) => (
-                          <tr key={l.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                            <td style={{ padding: "12px 16px" }}>
-                              <input type="checkbox" checked={selectedLeadIds.includes(l.id)} onChange={() => toggleSelectLead(l.id)} />
-                            </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <div style={{ fontWeight: 800, color: C.text }}>{l.customer_name}</div>
-                              <div style={{ fontSize: "11px", color: C.textLight }}>{l.mobile} • {l.city || "N/A"}</div>
-                            </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <div style={{ fontWeight: 700 }}>{l.product_name}</div>
-                              <div style={{ fontSize: "11px", color: C.textLight }}>{l.bank_name}</div>
-                            </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <span style={{ fontSize: "11px", background: C.bgSecondary, padding: "2px 6px", borderRadius: "4px", textTransform: "capitalize", fontWeight: 700 }}>
-                                {l.source || 'partner'}
-                              </span>
-                              <div style={{ fontSize: "11px", color: l.priority === 'high' ? C.red : C.green, fontWeight: 700, marginTop: '2px' }}>
-                                ● {(l.priority || 'medium').toUpperCase()}
-                              </div>
-                            </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <span style={{
-                                padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 800,
-                                background: group.badgeBg,
-                                color: group.badgeColor
-                              }}>
-                                {(l.pipeline_stage || l.status).toUpperCase()}
-                              </span>
-                            </td>
-                            <td style={{ padding: "12px 16px" }}>
-                              <div>{l.partner_first_name} {l.partner_last_name || ''}</div>
-                              <div style={{ fontSize: "10px", color: C.textLight }}>{l.partner_code}</div>
-                            </td>
-                            <td style={{ padding: "12px 16px", fontSize: '12px' }}>
-                              {l.bank_executive_name ? (
-                                <span style={{ color: C.teal, fontWeight: 700 }}>{l.bank_executive_name}</span>
-                              ) : (
-                                <span style={{ color: C.textLight }}>Unassigned</span>
-                              )}
-                            </td>
-                            <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                              <button
-                                onClick={() => setActive360LeadId(l.id)}
-                                style={{ ...S.btn("primary"), padding: "6px 12px", fontSize: "12px", borderRadius: "8px" }}
-                              >
-                                Open 360° Lead
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                <span style={{ fontSize: "12px", fontWeight: 600, color: C.textLight }}>
+                  Sorted: Latest Top to Oldest Bottom
+                </span>
               </div>
-            );
-          })}
-        </div>
+
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, textAlign: "left", color: C.textLight, fontSize: "11px" }}>
+                      <th style={{ padding: "12px 16px" }}>
+                        <input type="checkbox" onChange={toggleSelectAll} checked={selectedLeadIds.length === leads.length && leads.length > 0} />
+                      </th>
+                      <th style={{ padding: "12px 16px" }}>Customer Details</th>
+                      <th style={{ padding: "12px 16px" }}>Product & Bank</th>
+                      <th style={{ padding: "12px 16px" }}>Source & Priority</th>
+                      <th style={{ padding: "12px 16px" }}>Pipeline Stage</th>
+                      <th style={{ padding: "12px 16px" }}>Origin Partner</th>
+                      <th style={{ padding: "12px 16px" }}>Executive</th>
+                      <th style={{ padding: "12px 16px" }}>Created Date</th>
+                      <th style={{ padding: "12px 16px", textAlign: "right" }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody style={{ color: C.text }}>
+                    {sortedLeads.map((l) => (
+                      <tr key={l.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: "12px 16px" }}>
+                          <input type="checkbox" checked={selectedLeadIds.includes(l.id)} onChange={() => toggleSelectLead(l.id)} />
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <div style={{ fontWeight: 800, color: C.text }}>{l.customer_name}</div>
+                          <div style={{ fontSize: "11px", color: C.textLight }}>{l.mobile} • {l.city || "N/A"}</div>
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <div style={{ fontWeight: 700 }}>{l.product_name}</div>
+                          <div style={{ fontSize: "11px", color: C.textLight }}>{l.bank_name}</div>
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <span style={{ fontSize: "11px", background: C.bgSecondary, padding: "2px 6px", borderRadius: "4px", textTransform: "capitalize", fontWeight: 700 }}>
+                            {l.source || 'partner'}
+                          </span>
+                          <div style={{ fontSize: "11px", color: l.priority === 'high' ? C.red : C.green, fontWeight: 700, marginTop: '2px' }}>
+                            ● {(l.priority || 'medium').toUpperCase()}
+                          </div>
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <span style={{
+                            padding: "4px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 800,
+                            background: `${C.blue}15`,
+                            color: C.blue
+                          }}>
+                            {(l.pipeline_stage || l.status).toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: "12px 16px" }}>
+                          <div>{l.partner_first_name} {l.partner_last_name || ''}</div>
+                          <div style={{ fontSize: "10px", color: C.textLight }}>{l.partner_code}</div>
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: '12px' }}>
+                          {l.bank_executive_name ? (
+                            <span style={{ color: C.teal, fontWeight: 700 }}>{l.bank_executive_name}</span>
+                          ) : (
+                            <span style={{ color: C.textLight }}>Unassigned</span>
+                          )}
+                        </td>
+                        <td style={{ padding: "12px 16px", fontSize: "12px", color: C.textLight, whiteSpace: "nowrap" }}>
+                          {l.created_at ? new Date(l.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+                        </td>
+                        <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                          <button
+                            onClick={() => setActive360LeadId(l.id)}
+                            style={{ ...S.btn("primary"), padding: "6px 12px", fontSize: "12px", borderRadius: "8px" }}
+                          >
+                            Open 360° Lead
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()
       )}
 
       {/* 360° LEAD ORCHESTRATION MODAL */}
