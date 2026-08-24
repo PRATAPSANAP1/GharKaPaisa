@@ -522,18 +522,12 @@ export default function ManageApplications() {
                     <div><span style={{ color: C.textLight }}>Email Address:</span> <strong style={{ color: C.text }}>{appDetail.customer_email || appDetail.email || appDetail.personal_email || '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>PAN Card Number:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.pan_number || appDetail.pan || '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Date of Birth (DOB):</span> <strong style={{ color: C.text }}>{appDetail.dob || appDetail.date_of_birth || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Gender:</span> <strong style={{ color: C.text, textTransform: 'capitalize' }}>{appDetail.gender || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Marital Status:</span> <strong style={{ color: C.text, textTransform: 'capitalize' }}>{appDetail.marital_status || '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Aadhaar Number:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.aadhaar_number || appDetail.aadhaar_no || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Father's Name:</span> <strong style={{ color: C.text }}>{appDetail.father_name || '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Mother's Name:</span> <strong style={{ color: C.text }}>{appDetail.mother_name || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Qualification / Education:</span> <strong style={{ color: C.text }}>{appDetail.qualification || appDetail.education || '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Employer / Company Name:</span> <strong style={{ color: C.text }}>{appDetail.company_name || appDetail.employer_name || '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Occupation / Designation:</span> <strong style={{ color: C.text }}>{appDetail.designation || appDetail.occupation || '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Monthly Income / Salary:</span> <strong style={{ color: '#16a34a', fontWeight: 800 }}>{(appDetail.monthly_salary || appDetail.monthly_income) ? `₹${parseFloat(appDetail.monthly_salary || appDetail.monthly_income).toLocaleString('en-IN')}` : '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Residential Address:</span> <strong style={{ color: C.text }}>{[appDetail.address || appDetail.residential_address || appDetail.flat_no, appDetail.city, appDetail.state, appDetail.pincode].filter(Boolean).join(', ') || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Company / Office Address:</span> <strong style={{ color: C.text }}>{[appDetail.company_address || appDetail.office_address, appDetail.office_city, appDetail.office_state, appDetail.office_pincode].filter(Boolean).join(', ') || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Bank Account / IFSC:</span> <strong style={{ color: C.text }}>{appDetail.bank_account_no ? `${appDetail.bank_account_no} (${appDetail.ifsc_code || ''})` : '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Partner Code & Name:</span> <strong style={{ color: C.text }}>{appDetail.partner_code ? `${appDetail.partner_code} (${appDetail.partner_first_name || ''} ${appDetail.partner_last_name || ''})` : 'Direct / Admin'}</strong></div>
                   </div>
                 </div>
