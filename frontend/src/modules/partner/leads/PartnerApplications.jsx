@@ -83,8 +83,8 @@ export default function PartnerApplications() {
   };
 
   const shouldHideQdButton = (procBy, procType) => {
-    const { isLinkedShare, isDirectBank } = getProcessFlags(procType, procBy);
-    return isLinkedShare || isDirectBank;
+    const { isLeadPunching, isLinkedShare, isDirectBank } = getProcessFlags(procType, procBy);
+    return isLeadPunching || isLinkedShare || isDirectBank;
   };
 
   const shouldHideFinalButton = (procBy, procType) => {
@@ -1403,6 +1403,10 @@ export default function PartnerApplications() {
                   <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operational & Stage Tracking Information</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                     <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>APPCODE STATUS</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.appcode_status || 'N/A'}</div>
+                    </div>
+                    <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER</div>
                       <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || 'Pending'}</div>
                     </div>
@@ -1444,7 +1448,7 @@ export default function PartnerApplications() {
                         <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails.bank_remark}</div>
                       </div>
                     )}
-                    {viewAppDetails?.vkyc_url && !isPunchLeadProcess(viewApp?.process_by, viewApp?.process_type) && (
+                    {viewAppDetails?.vkyc_url && (
                       <div style={{ gridColumn: 'span 2' }}>
                         <div style={{ color: textMuted, fontSize: 10, fontWeight: 700, marginBottom: 4 }}>VKYC LINK</div>
                         <a href={viewAppDetails.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700, fontSize: 12, wordBreak: 'break-all' }}>
