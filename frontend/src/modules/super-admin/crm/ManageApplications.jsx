@@ -1102,7 +1102,7 @@ export default function ManageApplications() {
                       }}
                       style={{ ...S.btn('outline'), color: C.primary, borderColor: `${C.primary}40`, padding: '6px 14px', fontSize: '11.5px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                     >
-                      🔗 Share Link
+                      🔗 VKYC Share Link
                     </button>
                     <button
                       type="button"
@@ -1117,7 +1117,7 @@ export default function ManageApplications() {
                       }}
                       style={{ ...S.btn('outline'), color: '#ea580c', borderColor: '#ea580c40', background: '#ea580c12', padding: '6px 14px', fontSize: '11.5px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                     >
-                      🌐 Digital Incomplete Share
+                      🌐 Digital Incomplete Restart
                     </button>
                   </div>
                 </div>

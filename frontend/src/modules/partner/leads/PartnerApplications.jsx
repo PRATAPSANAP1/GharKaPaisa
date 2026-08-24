@@ -1311,7 +1311,7 @@ export default function PartnerApplications() {
                           cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
                         }}
                       >
-                        <Share2 size={13} /> Share Link
+                        <Share2 size={13} /> VKYC Share Link
                       </button>
 
                       <button
@@ -1332,7 +1332,7 @@ export default function PartnerApplications() {
                           cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
                         }}
                       >
-                        <ArrowUpRight size={13} /> Digital Incomplete Share
+                        <ArrowUpRight size={13} /> Digital Incomplete Restart
                       </button>
                     </div>
                   </div>
