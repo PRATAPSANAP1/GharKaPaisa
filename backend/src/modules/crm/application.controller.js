@@ -1417,28 +1417,28 @@ const getApplication = async (req, res, next) => {
     const { id } = req.params;
     const { rows: [app] } = await query(`
       SELECT a.*, 
-        COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
-        COALESCE(NULLIF(l.mobile, ''), c.mobile) as customer_mobile,
-        c.email as customer_email,
-        COALESCE(c.pan_number, l.pan_number) as pan_number,
-        TO_CHAR(c.dob, 'YYYY-MM-DD') as dob,
-        COALESCE(c.monthly_income, a.loan_amount) as monthly_income,
-        c.employment_type,
-        COALESCE(c.employer, c.company_name, l.company_name, a.company_name) as company_name,
-        COALESCE(l.city, c.city, a.city) as city,
-        COALESCE(c.state, a.state) as state,
-        COALESCE(c.pincode, l.pincode, a.pincode) as pincode,
-        c.address, c.mother_name, c.father_name, c.marital_status, c.gender, c.aadhaar_number, c.designation,
+        COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+        COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
+        COALESCE(NULLIF(a.customer_email, ''), NULLIF(a.email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) as customer_email,
+        COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number,
+        COALESCE(NULLIF(TO_CHAR(a.dob, 'YYYY-MM-DD'), ''), NULLIF(TO_CHAR(c.dob, 'YYYY-MM-DD'), ''), NULLIF(TO_CHAR(l.dob, 'YYYY-MM-DD'), ''), a.dob::text, c.dob::text, l.dob::text) as dob,
+        COALESCE(a.monthly_income, a.monthly_salary, c.monthly_income, l.monthly_income, a.loan_amount) as monthly_income,
+        COALESCE(NULLIF(a.employment_type, ''), NULLIF(c.employment_type, ''), NULLIF(l.employment_type, ''), NULLIF(a.occupation, ''), NULLIF(c.occupation, '')) as employment_type,
+        COALESCE(NULLIF(a.company_name, ''), NULLIF(c.employer, ''), NULLIF(c.company_name, ''), NULLIF(l.company_name, '')) as company_name,
+        COALESCE(NULLIF(a.city, ''), NULLIF(l.city, ''), NULLIF(c.city, '')) as city,
+        COALESCE(NULLIF(a.state, ''), NULLIF(c.state, ''), NULLIF(l.state, '')) as state,
+        COALESCE(NULLIF(a.pincode, ''), NULLIF(c.pincode, ''), NULLIF(l.pincode, '')) as pincode,
+        c.address, c.mother_name, c.father_name, c.marital_status, c.gender, COALESCE(c.aadhaar_number, a.aadhaar_number) as aadhaar_number, c.designation,
         p.name as product_name, p.category, p.features, p.commission_type, p.commission_value,
         b.name as bank_name, b.short_code as bank_code,
         ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
       FROM applications a
       LEFT JOIN leads l ON l.id = a.lead_id
       LEFT JOIN customers c ON c.id = a.customer_id
-      JOIN products p ON p.id = a.product_id
-      JOIN banks b ON b.id = p.bank_id
-      JOIN partner_profiles ap ON ap.id = a.partner_id
-      WHERE a.id = $1
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN banks b ON b.id = p.bank_id
+      LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
+      WHERE a.id::text = $1 OR a.app_number = $1 OR a.tracking_token = $1
     `, [id]);
     if (!app) return notFound(res);
 
@@ -1449,11 +1449,32 @@ const getApplication = async (req, res, next) => {
       }
     }
 
-    const notes = await getFilteredNotes(id, req.user.role);
+    const notes = await getFilteredNotes(app.id, req.user.role);
     app.notes_list = notes;
 
-    const { rows: [pd] } = await query(`SELECT * FROM physical_application_details WHERE application_id = $1`, [id]);
+    const { rows: [pd] } = await query(`SELECT * FROM physical_application_details WHERE application_id = $1 OR application_id::text = $2`, [app.id, id]);
     app.physical_details = pd || {};
+    if (pd) {
+      if (!app.appcode_status && pd.appcode_status) app.appcode_status = pd.appcode_status;
+      if (!app.soft_approval_status && pd.soft_approval_status) app.soft_approval_status = pd.soft_approval_status;
+      if (!app.vkyc_stage && pd.vkyc_stage) app.vkyc_stage = pd.vkyc_stage;
+      if (!app.iqa_stage && pd.iqa_stage) app.iqa_stage = pd.iqa_stage;
+      if (!app.dispatch_status && pd.dispatch_status) app.dispatch_status = pd.dispatch_status;
+      if (!app.final_status && pd.final_status) app.final_status = pd.final_status;
+      if (!app.bank_ref_number && pd.bank_application_number) app.bank_ref_number = pd.bank_application_number;
+      if (!app.bank_application_number && pd.bank_application_number) app.bank_application_number = pd.bank_application_number;
+      if (!app.dob && pd.dob) app.dob = pd.dob;
+      if (!app.employment_type && pd.employment_type) app.employment_type = pd.employment_type;
+      if (!app.monthly_income && pd.monthly_income) app.monthly_income = pd.monthly_income;
+      if (!app.company_name && pd.company_name) app.company_name = pd.company_name;
+      if (!app.city && pd.city) app.city = pd.city;
+      if (!app.state && pd.state) app.state = pd.state;
+      if (!app.pincode && pd.pincode) app.pincode = pd.pincode;
+      if (!app.pan_number && pd.pan_number) app.pan_number = pd.pan_number;
+      if (!app.customer_name && pd.full_name) app.customer_name = pd.full_name;
+      if (!app.customer_mobile && pd.mobile) app.customer_mobile = pd.mobile;
+      if (!app.customer_email && pd.email) app.customer_email = pd.email;
+    }
 
     return success(res, app);
   } catch (err) {
@@ -3512,9 +3533,9 @@ const get360ApplicationTrace = async (req, res, next) => {
         a.commission_amount,
         
         c.id AS customer_id,
-        c.full_name AS customer_name,
-        c.mobile AS customer_mobile,
-        c.email AS customer_email,
+        COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') AS customer_name,
+        COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) AS customer_mobile,
+        COALESCE(NULLIF(a.customer_email, ''), NULLIF(a.email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) AS customer_email,
         
         l.id AS lead_id,
         l.status AS lead_status,
@@ -3537,7 +3558,7 @@ const get360ApplicationTrace = async (req, res, next) => {
       LEFT JOIN partner_profiles p ON p.id = a.partner_id
       LEFT JOIN products prod ON prod.id = a.product_id
       LEFT JOIN banks b ON b.id = prod.bank_id
-      WHERE a.id = $1
+      WHERE a.id::text = $1 OR a.app_number = $1 OR a.tracking_token = $1
     `, [id]);
 
     if (!appTrace) {

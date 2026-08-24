@@ -1343,28 +1343,28 @@ export default function PartnerApplications() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FULL NAME</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.customer_name || viewAppDetails?.full_name || viewApp.customer_name || 'N/A'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.customer_name || viewAppDetails?.full_name || viewAppDetails?.physical_details?.full_name || viewApp?.customer_name || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>MOBILE NUMBER</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.customer_mobile || viewAppDetails?.mobile || viewApp.customer_mobile || 'N/A'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.customer_mobile || viewAppDetails?.mobile || viewAppDetails?.physical_details?.mobile || viewApp?.customer_mobile || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PERSONAL EMAIL ID</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.email || viewAppDetails?.customer_email || 'N/A'}</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.customer_email || viewAppDetails?.email || viewAppDetails?.physical_details?.email || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DOB</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.dob || 'N/A'}</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.dob || viewAppDetails?.physical_details?.dob || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PAN CARD NUMBER</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pan_number || viewAppDetails?.pan || 'N/A'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pan_number || viewAppDetails?.pan || viewAppDetails?.physical_details?.pan_number || 'N/A'}</div>
                     </div>
-                    {viewAppDetails?.aadhaar_number && (
+                    {(viewAppDetails?.aadhaar_number || viewAppDetails?.physical_details?.aadhaar_number) && (
                       <div>
                         <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>AADHAAR NUMBER</div>
-                        <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails.aadhaar_number}</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.aadhaar_number || viewAppDetails?.physical_details?.aadhaar_number}</div>
                       </div>
                     )}
                   </div>
@@ -1376,17 +1376,17 @@ export default function PartnerApplications() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>OCCUPATION / EMPLOYMENT</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.employment_type || viewAppDetails?.occupation || 'N/A'}</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.employment_type || viewAppDetails?.occupation || viewAppDetails?.physical_details?.employment_type || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>MONTHLY INCOME</div>
                       <div style={{ fontWeight: 800, color: textPrimary }}>
-                        {viewAppDetails?.monthly_income ? `₹${Number(viewAppDetails.monthly_income).toLocaleString('en-IN')}` : 'N/A'}
+                        {(viewAppDetails?.monthly_income || viewAppDetails?.physical_details?.monthly_income) ? `₹${Number(viewAppDetails?.monthly_income || viewAppDetails?.physical_details?.monthly_income).toLocaleString('en-IN')}` : 'N/A'}
                       </div>
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>EMPLOYER / COMPANY NAME</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.company_name || viewAppDetails?.employer || 'N/A'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.company_name || viewAppDetails?.employer || viewAppDetails?.physical_details?.company_name || 'N/A'}</div>
                     </div>
                   </div>
                 </div>
@@ -1397,15 +1397,15 @@ export default function PartnerApplications() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>CITY</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.city || 'N/A'}</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.city || viewAppDetails?.physical_details?.city || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>STATE</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.state || 'N/A'}</div>
+                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.state || viewAppDetails?.physical_details?.state || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PINCODE</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pincode || 'N/A'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pincode || viewAppDetails?.physical_details?.pincode || 'N/A'}</div>
                     </div>
                   </div>
                 </div>
@@ -1416,48 +1416,48 @@ export default function PartnerApplications() {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>APPCODE STATUS</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.appcode_status || 'N/A'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.appcode_status || viewAppDetails?.physical_details?.appcode_status || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || 'Pending'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number || 'Pending'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>CURRENT STAGE</div>
                       <div style={{ fontWeight: 800, color: textPrimary, textTransform: 'uppercase' }}>
-                        {(viewAppDetails?.status || viewApp.status || 'submitted').replace(/_/g, ' ')}
+                        {(viewAppDetails?.status || viewApp?.status || 'submitted').replace(/_/g, ' ')}
                       </div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>SOFT APPROVAL STAGE</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.soft_approval_status || 'N/A'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.soft_approval_status || viewAppDetails?.physical_details?.soft_approval_status || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>VKYC STAGE</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.vkyc_stage || viewAppDetails?.vkyc_status || 'Pending'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.vkyc_stage || viewAppDetails?.vkyc_status || viewAppDetails?.physical_details?.vkyc_stage || 'Pending'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>IQA STAGE</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.iqa_stage || 'N/A'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.iqa_stage || viewAppDetails?.physical_details?.iqa_stage || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DISPATCH STATUS</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.dispatch_status || 'N/A'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.dispatch_status || viewAppDetails?.physical_details?.dispatch_status || 'N/A'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
-                      <div style={{ fontWeight: 800, color: '#10b981' }}>{viewAppDetails?.final_status || 'In Process'}</div>
+                      <div style={{ fontWeight: 800, color: '#10b981' }}>{viewAppDetails?.final_status || viewAppDetails?.physical_details?.final_status || 'In Process'}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>COMMISSION STATUS</div>
-                      <div style={{ fontWeight: 800, color: viewAppDetails?.commission_amount > 0 ? '#10b981' : textMuted }}>
-                        ₹{viewAppDetails?.commission_amount || viewApp.commission_amount || 0} ({viewAppDetails?.commission_status || 'pending'})
+                      <div style={{ fontWeight: 800, color: (viewAppDetails?.commission_amount || viewApp?.commission_amount) > 0 ? '#10b981' : textMuted }}>
+                        ₹{viewAppDetails?.commission_amount || viewApp?.commission_amount || 0} ({viewAppDetails?.commission_status || viewApp?.commission_status || 'pending'})
                       </div>
                     </div>
-                    {viewAppDetails?.bank_remark && (
+                    {(viewAppDetails?.bank_remark || viewAppDetails?.physical_details?.bank_remark) && (
                       <div style={{ gridColumn: 'span 2' }}>
                         <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>
-                        <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails.bank_remark}</div>
+                        <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.bank_remark || viewAppDetails?.physical_details?.bank_remark}</div>
                       </div>
                     )}
                     {viewAppDetails?.vkyc_url && (
