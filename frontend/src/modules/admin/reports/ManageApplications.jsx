@@ -355,15 +355,6 @@ export default function ManageApplications() {
                           <td style={{ padding: "14px 16px", textAlign: "right" }}>
                             <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
                               <button
-                                onClick={() => {
-                                  setVerifyModalTab('final');
-                                  setVerifyModalApp({ ...app, final_status: 'rejected' });
-                                }}
-                                style={{ background: "#ef444415", border: "1px solid #ef444440", color: "#ef4444", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                              >
-                                ❌ Reject
-                              </button>
-                              <button
                                 onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
                                 style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                               >
