@@ -44,6 +44,9 @@ export default function CustomerPostApplyStep2() {
   const [companyName, setCompanyName] = useState('');
   const [designation, setDesignation] = useState('');
   const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [pincode, setPincode] = useState('');
   const [motherName, setMotherName] = useState('');
 
   // Section 2: Operational Remarks & Stages (Editable by Partner & Admin)
@@ -79,7 +82,10 @@ export default function CustomerPostApplyStep2() {
           setPanNumber(details.pan_number || cust.pan_number || '');
           setCompanyName(details.company_name || '');
           setDesignation(details.designation || '');
-          setAddress(details.address || '');
+          setAddress(details.address || cust.address || '');
+          setCity(details.city || cust.city || '');
+          setState(details.state || cust.state || '');
+          setPincode(details.pincode || cust.pincode || '');
           setMotherName(details.mother_name || '');
 
           setAppcodeStatus(details.appcode_status || 'appcode pending');
@@ -129,6 +135,9 @@ export default function CustomerPostApplyStep2() {
         company_name: companyName.trim(),
         designation: designation.trim(),
         address: address.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        pincode: pincode.trim(),
         mother_name: motherName.trim(),
         appcode_status: appcodeStatus,
         soft_approval_status: softApprovalStatus,
@@ -364,17 +373,39 @@ export default function CustomerPostApplyStep2() {
                   style={inputStyle}
                 />
               </div>
-            </div>
+              <div>
+                <label style={labelStyle}>City</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Mumbai / Pune / Delhi"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
 
-            <div style={{ marginTop: '14px' }}>
-              <label style={labelStyle}>Current Home Address with Landmark & Pincode</label>
-              <textarea
-                rows={2}
-                placeholder="Full residential address including landmark & 6-digit pincode"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                style={{ ...inputStyle, resize: 'vertical' }}
-              />
+              <div>
+                <label style={labelStyle}>State</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Maharashtra"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Pincode</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="e.g. 400001"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
             </div>
           </div>
 

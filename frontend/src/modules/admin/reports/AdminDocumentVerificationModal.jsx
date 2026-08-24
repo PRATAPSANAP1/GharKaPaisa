@@ -56,6 +56,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const [companyName, setCompanyName] = useState(application?.company_name || application?.employer_name || '');
   const [designation, setDesignation] = useState(application?.designation || application?.occupation || '');
   const [address, setAddress] = useState(application?.address || application?.residential_address || '');
+  const [city, setCity] = useState(application?.city || '');
+  const [state, setState] = useState(application?.state || '');
+  const [pincode, setPincode] = useState(application?.pincode || '');
   const [companyAddress, setCompanyAddress] = useState(application?.company_address || application?.office_address || '');
   const [motherName, setMotherName] = useState(application?.mother_name || '');
   const [appNumber, setAppNumber] = useState(application?.app_number || application?.application_no || '');
@@ -170,6 +173,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         if (pd.company_name || app.company_name) setCompanyName(pd.company_name || app.company_name || app.employer_name || '');
         if (pd.designation || app.designation) setDesignation(pd.designation || app.designation || app.occupation || '');
         if (pd.flat_no || app.address) setAddress(pd.flat_no || app.address || app.residential_address || '');
+        if (pd.city || app.city || cust.city) setCity(pd.city || app.city || cust.city || '');
+        if (pd.state || app.state || cust.state) setState(pd.state || app.state || cust.state || '');
+        if (pd.pincode || app.pincode || cust.pincode) setPincode(pd.pincode || app.pincode || cust.pincode || '');
         if (pd.company_address || app.company_address) setCompanyAddress(pd.company_address || app.company_address || app.office_address || '');
         if (pd.mother_name || app.mother_name) setMotherName(pd.mother_name || app.mother_name || '');
         if (app.app_number) setAppNumber(app.app_number || app.application_no || '');
@@ -216,6 +222,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           company_name: companyName,
           designation,
           address,
+          city,
+          state,
+          pincode,
           company_address: companyAddress,
           mother_name: motherName,
           app_number: appNumber,
@@ -517,30 +526,41 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Current Home Address with Landmark & Pincode</label>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>City</label>
                     <input
                       type="text"
                       disabled={!canEditQd}
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Home address with landmark & pincode"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="e.g. Mumbai / Delhi"
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
-                  {!isPunchLead && (
-                    <div>
-                      <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Full Company Address</label>
-                      <input
-                        type="text"
-                        disabled={!canEditQd}
-                        value={companyAddress}
-                        onChange={(e) => setCompanyAddress(e.target.value)}
-                        placeholder="Full official office address"
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>State</label>
+                    <input
+                      type="text"
+                      disabled={!canEditQd}
+                      value={state}
+                      onChange={(e) => setState(e.target.value)}
+                      placeholder="e.g. Maharashtra"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Pincode</label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      disabled={!canEditQd}
+                      value={pincode}
+                      onChange={(e) => setPincode(e.target.value)}
+                      placeholder="e.g. 400001"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
+                    />
+                  </div>
 
                   <div>
                     <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Mother Name</label>

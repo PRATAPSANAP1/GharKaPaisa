@@ -2519,6 +2519,15 @@ const updateApplicationDetails = async (req, res, next) => {
     try {
       await client.query(`
         ALTER TABLE applications 
+        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS state VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150),
+        ADD COLUMN IF NOT EXISTS customer_name VARCHAR(150),
+        ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS customer_email VARCHAR(150),
+        ADD COLUMN IF NOT EXISTS company_name VARCHAR(200),
+        ADD COLUMN IF NOT EXISTS designation VARCHAR(150),
         ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50),
         ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
         ADD COLUMN IF NOT EXISTS salary_slip_url TEXT,
@@ -2535,8 +2544,24 @@ const updateApplicationDetails = async (req, res, next) => {
       `);
       await client.query(`
         ALTER TABLE leads 
+        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS state VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
         ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50),
         ADD COLUMN IF NOT EXISTS vkyc_url TEXT
+      `);
+      await client.query(`
+        ALTER TABLE customers
+        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS state VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20)
+      `);
+      await client.query(`
+        ALTER TABLE physical_application_details
+        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS state VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150)
       `);
     } catch (_) {}
 
@@ -2651,8 +2676,17 @@ const updateApplicationDetails = async (req, res, next) => {
         decline_reason = COALESCE(NULLIF($18, ''), decline_reason),
         eligible_reqd = COALESCE(NULLIF($19, ''), eligible_reqd),
         approved_amount = COALESCE($20, approved_amount),
+        city = COALESCE(NULLIF($21, ''), city),
+        state = COALESCE(NULLIF($22, ''), state),
+        pincode = COALESCE(NULLIF($23, ''), pincode),
+        mother_name = COALESCE(NULLIF($24, ''), mother_name),
+        customer_name = COALESCE(NULLIF($25, ''), customer_name),
+        customer_mobile = COALESCE(NULLIF($26, ''), customer_mobile),
+        customer_email = COALESCE(NULLIF($27, ''), customer_email),
+        company_name = COALESCE(NULLIF($28, ''), company_name),
+        designation = COALESCE(NULLIF($29, ''), designation),
         updated_at = NOW()
-      WHERE id = $21
+      WHERE id = $30
       RETURNING *
     `, [
       appNumToSave || req.body.bank_application_number || null,
@@ -2675,6 +2709,15 @@ const updateApplicationDetails = async (req, res, next) => {
       req.body.decline_reason || null,
       req.body.eligible_reqd || null,
       req.body.approved_amount ? parseFloat(req.body.approved_amount) : null,
+      city || null,
+      state || null,
+      pincode || null,
+      mother_name || req.body.mother_name || null,
+      full_name || customer_name || null,
+      mobile || customer_mobile || null,
+      email || customer_email || null,
+      company_name || null,
+      designation || null,
       id
     ]);
 
@@ -2696,9 +2739,9 @@ const updateApplicationDetails = async (req, res, next) => {
           updated_at = NOW()
         WHERE id = $12
       `, [
-        full_name || null,
-        mobile || null,
-        email || null,
+        full_name || customer_name || null,
+        mobile || customer_mobile || null,
+        email || customer_email || null,
         parsedDob || null,
         pincode || null,
         city || null,
@@ -2710,6 +2753,41 @@ const updateApplicationDetails = async (req, res, next) => {
         app.customer_id
       ]);
     }
+
+    // Update physical_application_details if record exists or parameters are provided
+    try {
+      await client.query(`
+        UPDATE physical_application_details SET
+          aadhaar_linked_mobile = COALESCE(NULLIF($1, ''), aadhaar_linked_mobile),
+          pan_name = COALESCE(NULLIF($2, ''), pan_name),
+          dob = COALESCE(NULLIF($3, '')::date, dob),
+          pan_number = COALESCE(NULLIF($4, ''), pan_number),
+          personal_email = COALESCE(NULLIF($5, ''), personal_email),
+          company_name = COALESCE(NULLIF($6, ''), company_name),
+          designation = COALESCE(NULLIF($7, ''), designation),
+          city = COALESCE(NULLIF($8, ''), city),
+          state = COALESCE(NULLIF($9, ''), state),
+          pincode = COALESCE(NULLIF($10, ''), pincode),
+          mother_name = COALESCE(NULLIF($11, ''), mother_name),
+          bank_ref_number = COALESCE(NULLIF($12, ''), bank_ref_number),
+          updated_at = NOW()
+        WHERE application_id = $13
+      `, [
+        mobile || customer_mobile || null,
+        full_name || customer_name || null,
+        parsedDob || null,
+        pan_number || null,
+        email || customer_email || null,
+        company_name || null,
+        designation || null,
+        city || null,
+        state || null,
+        pincode || null,
+        mother_name || req.body.mother_name || null,
+        appNumToSave || null,
+        id
+      ]);
+    } catch (_) {}
 
     // 3. Log to timeline
     await client.query(`

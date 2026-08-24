@@ -176,6 +176,8 @@ export default function PhysicalApplicationForm() {
     company_name: '',
     designation: '',
     flat_no: '',
+    city: '',
+    state: '',
     sub_area: '',
     landmark: '',
     pincode: '',
@@ -241,9 +243,11 @@ export default function PhysicalApplicationForm() {
           company_name: pd.company_name || app.company_name || '',
           designation: pd.designation || app.designation || '',
           flat_no: pd.flat_no || app.address || '',
+          city: pd.city || app.city || cust.city || '',
+          state: pd.state || app.state || cust.state || '',
           sub_area: pd.sub_area || '',
           landmark: pd.landmark || '',
-          pincode: pd.pincode || '',
+          pincode: pd.pincode || app.pincode || cust.pincode || '',
           company_address: pd.company_address || app.company_address || '',
           bank_ref_number: pd.bank_ref_number || app.bank_ref_number || app.bank_application_number || '',
           vkyc_url: app.vkyc_url || '',
@@ -618,28 +622,38 @@ export default function PhysicalApplicationForm() {
               </div>
 
               <div>
-                <label style={labelStyle}>{txt('homeAddress')}</label>
+                <label style={labelStyle}>CITY</label>
                 <input
                   type="text"
-                  value={form.flat_no}
-                  onChange={e => handleChange('flat_no', e.target.value)}
-                  placeholder={txt('homeAddressPlace')}
+                  value={form.city}
+                  onChange={e => handleChange('city', e.target.value)}
+                  placeholder="e.g. Mumbai / Delhi"
                   style={inputStyle}
                 />
               </div>
 
-              {!isPunchLead && (
-                <div>
-                  <label style={labelStyle}>{txt('companyAddress')}</label>
-                  <input
-                    type="text"
-                    value={form.company_address}
-                    onChange={e => handleChange('company_address', e.target.value)}
-                    placeholder={txt('companyAddressPlace')}
-                    style={inputStyle}
-                  />
-                </div>
-              )}
+              <div>
+                <label style={labelStyle}>STATE</label>
+                <input
+                  type="text"
+                  value={form.state}
+                  onChange={e => handleChange('state', e.target.value)}
+                  placeholder="e.g. Maharashtra"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>PINCODE</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={form.pincode}
+                  onChange={e => handleChange('pincode', e.target.value)}
+                  placeholder="e.g. 400001"
+                  style={inputStyle}
+                />
+              </div>
 
               <div>
                 <label style={labelStyle}>{txt('motherName')}</label>
