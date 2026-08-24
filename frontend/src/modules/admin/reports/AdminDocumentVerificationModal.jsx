@@ -286,7 +286,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           dispatch_status: dispatchStatus
         };
       } else if (formType === 'final') {
-        let targetStatus = 'details_submitted';
+        let targetStatus = 'operational_verified';
         if (finalStatus && (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('reject'))) {
           targetStatus = 'rejected';
         }

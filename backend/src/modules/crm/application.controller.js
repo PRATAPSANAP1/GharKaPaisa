@@ -2626,6 +2626,9 @@ const updateApplicationDetails = async (req, res, next) => {
     }
 
     const userRole = (req.user?.role || '').toUpperCase();
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isOpsOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
+
     const isRestrictedAdminStatus = ['approved', 'rejected', 'disbursed', 'commission_released', 'super_admin_approved'].includes((status || '').toLowerCase());
     if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && status && status !== app.status && isRestrictedAdminStatus) {
       await client.query('ROLLBACK');
@@ -2635,6 +2638,10 @@ const updateApplicationDetails = async (req, res, next) => {
     if (status && status !== app.status && isRestrictedApprovalStatus && !['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole)) {
       await client.query('ROLLBACK');
       return error(res, 'Marking application status as Approved is reserved for Super Admin and Operations Head.', 403);
+    }
+    if (status === 'operational_verified' && status !== app.status && !isOpsOrAdmin) {
+      await client.query('ROLLBACK');
+      return error(res, 'Marking application status as Operational Verified is reserved for Administrative Operators.', 403);
     }
 
     const appNumToSave = (bank_application_number || bank_ref_number || '').trim();
@@ -2698,10 +2705,6 @@ const updateApplicationDetails = async (req, res, next) => {
       targetStatus = 'operational_verified';
     } else if (targetStatus === 'submitted') {
       targetStatus = 'details_submitted';
-    }
-    if (!targetStatus && (req.body.bank_remark || req.body.final_status || req.body.bank_ref_number)) {
-      const fs = String(req.body.final_status || '').toLowerCase();
-      targetStatus = (fs.includes('decline') || fs.includes('reject')) ? 'rejected' : 'operational_verified';
     }
     const cleanStr = (val) => {
       if (val === undefined || val === null) return null;
