@@ -23,7 +23,7 @@ export default function CustomerPostApplyStep2() {
 
   const isAdminOrSuperAdmin = [
     'SUPER_ADMIN', 'ADMIN', 'EMPLOYEE', 'SUPERADMIN',
-    'CRM_ADMIN', 'OPERATIONS', 'MANAGEMENT'
+    'CRM_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'MANAGEMENT'
   ].includes(userRole);
 
   const [loading, setLoading] = useState(true);
@@ -33,6 +33,7 @@ export default function CustomerPostApplyStep2() {
 
   // Bank & Application Header Info
   const [bankInfo, setBankInfo] = useState(null);
+  const isSbi = String(bankInfo?.bank_name || bankInfo?.bank_code || '').toUpperCase().includes('SBI');
 
   // Section 1: Customer Quick Details (QD)
   const [customerMobile, setCustomerMobile] = useState('');
@@ -46,6 +47,7 @@ export default function CustomerPostApplyStep2() {
   const [motherName, setMotherName] = useState('');
 
   // Section 2: Operational Remarks & Stages (Editable by Partner & Admin)
+  const [appcodeStatus, setAppcodeStatus] = useState('Appcode Pending');
   const [softApprovalStatus, setSoftApprovalStatus] = useState('Approval-income 25k');
   const [vkycStage, setVkycStage] = useState('VKYC Pending');
   const [iqaStage, setIqaStage] = useState('IQA Pending');
@@ -80,6 +82,8 @@ export default function CustomerPostApplyStep2() {
           setAddress(details.address || '');
           setMotherName(details.mother_name || '');
 
+          const bankIsSbi = String(json.data.bank_name || json.data.bank_code || '').toUpperCase().includes('SBI');
+          setAppcodeStatus(details.appcode_status || (bankIsSbi ? 'Appcode Send' : 'Appcode Pending'));
           setSoftApprovalStatus(details.soft_approval_status || 'Approval-income 25k');
           setVkycStage(details.vkyc_stage || 'VKYC Pending');
           setIqaStage(details.iqa_stage || 'IQA Pending');
@@ -127,6 +131,7 @@ export default function CustomerPostApplyStep2() {
         designation: designation.trim(),
         address: address.trim(),
         mother_name: motherName.trim(),
+        appcode_status: appcodeStatus,
         soft_approval_status: softApprovalStatus,
         vkyc_stage: vkycStage,
         iqa_stage: iqaStage,
@@ -382,6 +387,34 @@ export default function CustomerPostApplyStep2() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+              {/* Order 1: Appcode Status */}
+              <div>
+                <label style={labelStyle}>Appcode Status</label>
+                <select
+                  value={appcodeStatus}
+                  onChange={(e) => setAppcodeStatus(e.target.value)}
+                  style={inputStyle}
+                >
+                  {isSbi ? (
+                    <>
+                      <option value="Appcode Send">Appcode Send</option>
+                      <option value="Soft Approval">Soft Approval</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Submit">Submit</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Appcode Pending">Appcode Pending</option>
+                      <option value="Appcode Send">Appcode Send</option>
+                      <option value="Soft Approval">Soft Approval</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Submit">Submit</option>
+                    </>
+                  )}
+                </select>
+              </div>
+
+              {/* Order 2: Soft Approval Status */}
               <div>
                 <label style={labelStyle}>Soft Approval Status</label>
                 <select
@@ -392,11 +425,41 @@ export default function CustomerPostApplyStep2() {
                   <option value="Approval-income 25k">Approval-income 25k</option>
                   <option value="Approval-income 30k">Approval-income 30k</option>
                   <option value="Approval-NSDP-Cibil based">Approval-NSDP-Cibil based</option>
+                  <option value="Soft Approval">Soft Approval</option>
                 </select>
               </div>
 
+              {/* Order 3: IQA Stage */}
               <div>
-                <label style={labelStyle}>Vkyc Stage</label>
+                <label style={labelStyle}>IQA Stage</label>
+                <select
+                  value={iqaStage}
+                  onChange={(e) => setIqaStage(e.target.value)}
+                  style={inputStyle}
+                >
+                  <option value="IQA SENT">IQA SENT</option>
+                  <option value="IQA COMPLETE">IQA COMPLETE</option>
+                  <option value="IQA PENDING">IQA PENDING</option>
+                  <option value="BLAZE CONTINUE">BLAZE CONTINUE</option>
+                  <option value="BLAZE DECLINE">BLAZE DECLINE</option>
+                </select>
+              </div>
+
+              {/* Order 4: Bank Application Number */}
+              <div>
+                <label style={labelStyle}>Bank Application / Reference Number</label>
+                <input
+                  type="text"
+                  placeholder="e.g. SBI9842157 / HDFC-APP-1002"
+                  value={appNumber}
+                  onChange={(e) => setAppNumber(e.target.value)}
+                  style={{ ...inputStyle, fontFamily: 'monospace' }}
+                />
+              </div>
+
+              {/* Order 5: VKYC Stage / Status */}
+              <div>
+                <label style={labelStyle}>VKYC Status</label>
                 <select
                   value={vkycStage}
                   onChange={(e) => setVkycStage(e.target.value)}
@@ -408,21 +471,19 @@ export default function CustomerPostApplyStep2() {
                 </select>
               </div>
 
+              {/* Order 6: VKYC Link */}
               <div>
-                <label style={labelStyle}>IQA Stage</label>
-                <select
-                  value={iqaStage}
-                  onChange={(e) => setIqaStage(e.target.value)}
+                <label style={labelStyle}>VKYC Link (Optional)</label>
+                <input
+                  type="url"
+                  placeholder="https://vkyc..."
+                  value={vkycUrl}
+                  onChange={(e) => setVkycUrl(e.target.value)}
                   style={inputStyle}
-                >
-                  <option value="IQA Sent">IQA Sent</option>
-                  <option value="IQA Complete">IQA Complete</option>
-                  <option value="IQA Pending">IQA Pending</option>
-                  <option value="BLAZE Continue">BLAZE Continue</option>
-                  <option value="BLAZE Decline">BLAZE Decline</option>
-                </select>
+                />
               </div>
 
+              {/* Order 7: Dispatch Status */}
               <div>
                 <label style={labelStyle}>Dispatch Status</label>
                 <select
@@ -430,8 +491,8 @@ export default function CustomerPostApplyStep2() {
                   onChange={(e) => setDispatchStatus(e.target.value)}
                   style={inputStyle}
                 >
-                  <option value="Dispatch Done">Dispatch Done</option>
-                  <option value="WCP Stage">WCP Stage</option>
+                  <option value="DISPATCH DONE">DISPATCH DONE</option>
+                  <option value="WCP STAGE">WCP STAGE</option>
                   <option value="E-sign Done">E-sign Done</option>
                   <option value="E-sign Pending">E-sign Pending</option>
                   <option value="RTB(ERROR)">RTB(ERROR)</option>
@@ -445,33 +506,14 @@ export default function CustomerPostApplyStep2() {
             <div style={sectionHeaderStyle}>
               <FiBriefcase size={18} style={{ color: C.primary }} />
               <span>Bank Reference & Final Application Stage</span>
+              {!isAdminOrSuperAdmin && (
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, marginLeft: 'auto' }}>
+                  🔒 Read-Only (Operations Head / Admin / Admin Operator only)
+                </span>
+              )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-              <div>
-                <label style={labelStyle}>Bank Application / Reference Number</label>
-                <input
-                  type="text"
-                  disabled={!isAdminOrSuperAdmin}
-                  placeholder="e.g. SBI9842157 / HDFC-APP-1002"
-                  value={appNumber}
-                  onChange={(e) => setAppNumber(e.target.value)}
-                  style={{ ...(isAdminOrSuperAdmin ? inputStyle : disabledInputStyle), fontFamily: 'monospace' }}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Bank VKYC Link (Optional)</label>
-                <input
-                  type="url"
-                  disabled={!isAdminOrSuperAdmin}
-                  placeholder="https://vkyc.sbi.co.in/..."
-                  value={vkycUrl}
-                  onChange={(e) => setVkycUrl(e.target.value)}
-                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
-                />
-              </div>
-
               <div>
                 <label style={labelStyle}>Current Stage / Final Status</label>
                 <select
@@ -484,19 +526,6 @@ export default function CustomerPostApplyStep2() {
                   <option value="Decline">Decline</option>
                   <option value="In Process">In Process</option>
                   <option value="Technical Error">Technical Error</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Eligible for Re-QD</label>
-                <select
-                  disabled={!isAdminOrSuperAdmin}
-                  value={eligibleReqd}
-                  onChange={(e) => setEligibleReqd(e.target.value)}
-                  style={isAdminOrSuperAdmin ? inputStyle : disabledInputStyle}
-                >
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
                 </select>
               </div>
             </div>
