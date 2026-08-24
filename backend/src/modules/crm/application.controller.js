@@ -1442,7 +1442,7 @@ const getApplication = async (req, res, next) => {
       SELECT a.*, 
         COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
         COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
-        COALESCE(NULLIF(a.customer_email, ''), NULLIF(a.email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) as customer_email,
+        COALESCE(NULLIF(a.customer_email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) as customer_email,
         COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number,
         COALESCE(NULLIF(TO_CHAR(a.dob, 'YYYY-MM-DD'), ''), NULLIF(TO_CHAR(c.dob, 'YYYY-MM-DD'), ''), NULLIF(TO_CHAR(l.dob, 'YYYY-MM-DD'), ''), a.dob::text, c.dob::text, l.dob::text) as dob,
         COALESCE(a.monthly_income, a.monthly_salary, c.monthly_income, l.monthly_income, a.loan_amount) as monthly_income,
@@ -3564,7 +3564,7 @@ const get360ApplicationTrace = async (req, res, next) => {
         c.id AS customer_id,
         COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') AS customer_name,
         COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) AS customer_mobile,
-        COALESCE(NULLIF(a.customer_email, ''), NULLIF(a.email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) AS customer_email,
+        COALESCE(NULLIF(a.customer_email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) AS customer_email,
         
         l.id AS lead_id,
         l.status AS lead_status,
