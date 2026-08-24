@@ -356,8 +356,8 @@ export default function ManageApplications() {
                             <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
                               <button
                                 onClick={() => {
-                                  handleViewDetails(app);
-                                  setNewStatus('rejected');
+                                  setVerifyModalTab('final');
+                                  setVerifyModalApp({ ...app, final_status: 'rejected' });
                                 }}
                                 style={{ background: "#ef444415", border: "1px solid #ef444440", color: "#ef4444", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                               >
