@@ -4,10 +4,15 @@ import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers } from 'lucide-react';
 import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
+import { useAuthStore } from '../../../app/store/authStore';
 
 export default function ManageApplications() {
   const { C } = useTheme();
   const S = makeS(C);
+
+  const user = useAuthStore((state) => state.user);
+  const userRole = (user?.role || '').toUpperCase();
+  const isOpsHeadOrSuperAdmin = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole);
 
   // Verification Modal State
   const [verifyModalApp, setVerifyModalApp] = useState(null);
@@ -92,7 +97,7 @@ export default function ManageApplications() {
       if (res.data?.success) {
         const det = res.data.data;
         setAppDetail(det);
-        setNewStatus(det.status);
+        setNewStatus(isOpsHeadOrSuperAdmin ? (det.status || "operational_verified") : "operational_verified");
         setBankRefNumber(det.bank_ref_number || "");
         setApprovedAmount(det.approved_amount || "");
         setRejectionReason(det.rejection_reason || "");
@@ -581,16 +586,16 @@ export default function ManageApplications() {
                   
                   <div>
                     <label style={{ fontSize: "11.5px", color: C.textLight, fontWeight: 700, display: "block", marginBottom: "8px" }}>Select Action Stage</label>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isOpsHeadOrSuperAdmin ? "1fr 1fr 1fr" : "1fr 1fr", gap: "10px" }}>
                       <button
                         type="button"
                         onClick={() => setNewStatus("operational_verified")}
                         style={{
                           padding: "12px 16px",
                           borderRadius: "10px",
-                          border: `2px solid ${(newStatus === "operational_verified" || newStatus === "approved") ? "#10B981" : C.border}`,
-                          background: (newStatus === "operational_verified" || newStatus === "approved") ? "#10B98115" : C.card,
-                          color: (newStatus === "operational_verified" || newStatus === "approved") ? "#10B981" : C.text,
+                          border: `2px solid ${newStatus === "operational_verified" ? "#8B5CF6" : C.border}`,
+                          background: newStatus === "operational_verified" ? "#8B5CF615" : C.card,
+                          color: newStatus === "operational_verified" ? "#8B5CF6" : C.text,
                           fontWeight: 800,
                           fontSize: "13.5px",
                           cursor: "pointer",
@@ -601,8 +606,32 @@ export default function ManageApplications() {
                           transition: "all 0.2s ease"
                         }}
                       >
-                        <span>✅ Approve Application</span>
+                        <span>🔍 Operational Verify</span>
                       </button>
+
+                      {isOpsHeadOrSuperAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setNewStatus("approved")}
+                          style={{
+                            padding: "12px 16px",
+                            borderRadius: "10px",
+                            border: `2px solid ${newStatus === "approved" ? "#10B981" : C.border}`,
+                            background: newStatus === "approved" ? "#10B98115" : C.card,
+                            color: newStatus === "approved" ? "#10B981" : C.text,
+                            fontWeight: 800,
+                            fontSize: "13.5px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "8px",
+                            transition: "all 0.2s ease"
+                          }}
+                        >
+                          <span>✅ Approve Application</span>
+                        </button>
+                      )}
                       
                       <button
                         type="button"
@@ -628,7 +657,7 @@ export default function ManageApplications() {
                     </div>
                   </div>
 
-                  {(newStatus === "operational_verified" || newStatus === "approved") && (
+                  {newStatus === "approved" && isOpsHeadOrSuperAdmin && (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", animation: "fadeIn 0.2s ease" }}>
                       <div>
                         <label style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Approved Amount (₹)</label>
@@ -665,7 +694,8 @@ export default function ManageApplications() {
                     </div>
                   )}
 
-                  <div>
+                  {newStatus === "approved" && isOpsHeadOrSuperAdmin && (
+                    <div>
                     <label style={{ fontSize: "11px", color: C.textLight, fontWeight: 600 }}>Internal Admin Notes</label>
                     <input
                       style={S.input}
@@ -674,6 +704,7 @@ export default function ManageApplications() {
                       onChange={(e) => setNotes(e.target.value)}
                     />
                   </div>
+                  )}
 
                   <div style={{
                     display: "flex", gap: "8px", marginTop: "16px", justifyContent: "flex-end",
@@ -688,12 +719,12 @@ export default function ManageApplications() {
                       disabled={actionLoading}
                       style={{
                         ...S.btn(newStatus === "rejected" ? "danger" : "primary"),
-                        background: newStatus === "rejected" ? "#EF4444" : "#10B981",
-                        borderColor: newStatus === "rejected" ? "#EF4444" : "#10B981",
+                        background: newStatus === "rejected" ? "#EF4444" : newStatus === "approved" ? "#10B981" : "#8B5CF6",
+                        borderColor: newStatus === "rejected" ? "#EF4444" : newStatus === "approved" ? "#10B981" : "#8B5CF6",
                         fontWeight: 800
                       }}
                     >
-                      {actionLoading ? "Processing..." : newStatus === "rejected" ? "Confirm Rejection" : "Confirm Approval"}
+                      {actionLoading ? "Processing..." : newStatus === "rejected" ? "Confirm Rejection" : newStatus === "approved" ? "Confirm Approval" : "Confirm Operational Verification"}
                     </button>
                   </div>
                 </form>

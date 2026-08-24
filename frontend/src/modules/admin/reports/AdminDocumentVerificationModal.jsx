@@ -40,12 +40,17 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
 
   // Role Access Rules:
-  // QD Form: When process == punch lead, editable ONLY by Super Admin, Operation Head & Administrative Operator. Read-only for Partner.
+  // QD Form: Editable by Super Admin, Operation Head & Administrative Operator. Read-only for Partner.
   // Remark Form: Editable by Partner, Super Admin, Administrative Operator, Operational Head.
-  // Final Form: Editable ONLY by Super Admin & Operational Head.
+  // Final Form: Editable by Super Admin, Operation Head & Administrative Operator.
   const canEditQd = isPunchLead ? isOpsOrAdmin : true;
   const canEditRemark = true;
   const canEditFinal = isOpsOrAdmin;
+
+  const sanitizeVal = (val) => {
+    if (!val || val === 'None' || val === 'none' || val === 'null' || val === 'undefined') return '';
+    return val;
+  };
 
   // 1. QD Customer Details State
   const [customerMobile, setCustomerMobile] = useState(application?.customer_mobile || application?.mobile || application?.phone || '');
@@ -68,29 +73,29 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
   // 2. Remark Form State (Appcode Status, Soft Approval, VKYC Stage, IQA Stage, Dispatch Status)
   const isSbi = String(application?.bank_name || application?.bank_code || '').toUpperCase().includes('SBI');
-  const [appcodeStatus, setAppcodeStatus] = useState(application?.appcode_status || application?.physical_details?.appcode_status || '');
-  const [softApprovalStatus, setSoftApprovalStatus] = useState(application?.soft_approval_status || application?.physical_details?.soft_approval_status || '');
-  const [vkycStage, setVkycStage] = useState(application?.vkyc_stage || application?.vkyc_status || application?.physical_details?.vkyc_stage || '');
-  const [iqaStage, setIqaStage] = useState(application?.iqa_stage || application?.physical_details?.iqa_stage || '');
-  const [dispatchStatus, setDispatchStatus] = useState(application?.dispatch_status || application?.physical_details?.dispatch_status || '');
+  const [appcodeStatus, setAppcodeStatus] = useState(sanitizeVal(application?.appcode_status) || sanitizeVal(application?.physical_details?.appcode_status));
+  const [softApprovalStatus, setSoftApprovalStatus] = useState(sanitizeVal(application?.soft_approval_status) || sanitizeVal(application?.physical_details?.soft_approval_status));
+  const [vkycStage, setVkycStage] = useState(sanitizeVal(application?.vkyc_stage) || sanitizeVal(application?.vkyc_status) || sanitizeVal(application?.physical_details?.vkyc_stage));
+  const [iqaStage, setIqaStage] = useState(sanitizeVal(application?.iqa_stage) || sanitizeVal(application?.physical_details?.iqa_stage));
+  const [dispatchStatus, setDispatchStatus] = useState(sanitizeVal(application?.dispatch_status) || sanitizeVal(application?.physical_details?.dispatch_status));
 
   // 3. Final Status & Bank Remarks State
-  const [bankRemark, setBankRemark] = useState(application?.bank_remark || application?.physical_details?.bank_remark || '');
-  const [finalStatus, setFinalStatus] = useState(application?.final_status || application?.physical_details?.final_status || application?.status || 'In Process');
-  const [declineReason, setDeclineReason] = useState(application?.decline_reason || application?.physical_details?.decline_reason || '');
-  const [eligibleReQd, setEligibleReQd] = useState(application?.eligible_reqd || application?.physical_details?.eligible_reqd || 'No');
-  const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || application?.bank_application_number || application?.physical_details?.bank_ref_number || '');
-  const [approvedAmount, setApprovedAmount] = useState(application?.approved_amount || application?.physical_details?.approved_amount || application?.loan_amount || '');
+  const [bankRemark, setBankRemark] = useState(sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark));
+  const [finalStatus, setFinalStatus] = useState(sanitizeVal(application?.final_status) || sanitizeVal(application?.physical_details?.final_status) || sanitizeVal(application?.status) || 'In Process');
+  const [declineReason, setDeclineReason] = useState(sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.decline_reason));
+  const [eligibleReQd, setEligibleReQd] = useState(sanitizeVal(application?.eligible_reqd) || sanitizeVal(application?.physical_details?.eligible_reqd) || 'No');
+  const [bankRefNumber, setBankRefNumber] = useState(sanitizeVal(application?.bank_ref_number) || sanitizeVal(application?.bank_application_number) || sanitizeVal(application?.physical_details?.bank_ref_number));
+  const [approvedAmount, setApprovedAmount] = useState(sanitizeVal(application?.approved_amount) || sanitizeVal(application?.physical_details?.approved_amount) || sanitizeVal(application?.loan_amount));
 
   // 4. Real Database Status Snapshot (for Real DB Status vs Selected Status UI display)
   const [realData, setRealData] = useState({
-    appcodeStatus: application?.appcode_status || application?.physical_details?.appcode_status || '',
-    softApprovalStatus: application?.soft_approval_status || application?.physical_details?.soft_approval_status || '',
-    vkycStage: application?.vkyc_stage || application?.vkyc_status || application?.physical_details?.vkyc_stage || '',
-    iqaStage: application?.iqa_stage || application?.physical_details?.iqa_stage || '',
-    dispatchStatus: application?.dispatch_status || application?.physical_details?.dispatch_status || '',
-    finalStatus: application?.final_status || application?.physical_details?.final_status || application?.status || 'In Process',
-    bankRemark: application?.bank_remark || application?.physical_details?.bank_remark || ''
+    appcodeStatus: sanitizeVal(application?.appcode_status) || sanitizeVal(application?.physical_details?.appcode_status),
+    softApprovalStatus: sanitizeVal(application?.soft_approval_status) || sanitizeVal(application?.physical_details?.soft_approval_status),
+    vkycStage: sanitizeVal(application?.vkyc_stage) || sanitizeVal(application?.vkyc_status) || sanitizeVal(application?.physical_details?.vkyc_stage),
+    iqaStage: sanitizeVal(application?.iqa_stage) || sanitizeVal(application?.physical_details?.iqa_stage),
+    dispatchStatus: sanitizeVal(application?.dispatch_status) || sanitizeVal(application?.physical_details?.dispatch_status),
+    finalStatus: sanitizeVal(application?.final_status) || sanitizeVal(application?.physical_details?.final_status) || sanitizeVal(application?.status) || 'In Process',
+    bankRemark: sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark)
   });
 
   // Share / Send to Customer State
@@ -197,13 +202,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         if (app.bank_ref_number || app.bank_application_number || pd.bank_ref_number || pd.bank_application_number) setBankRefNumber(app.bank_ref_number || app.bank_application_number || pd.bank_ref_number || pd.bank_application_number || '');
         if (app.vkyc_url || pd.vkyc_url) setVkycUrl(app.vkyc_url || pd.vkyc_url || '');
 
-        const realAppcode = app.appcode_status || pd.appcode_status || '';
-        const realSoftApproval = app.soft_approval_status || pd.soft_approval_status || '';
-        const realVkyc = app.vkyc_stage || app.vkyc_status || pd.vkyc_stage || '';
-        const realIqa = app.iqa_stage || pd.iqa_stage || '';
-        const realDispatch = app.dispatch_status || pd.dispatch_status || '';
-        const realFinal = app.final_status || pd.final_status || app.status || 'In Process';
-        const realRemark = app.bank_remark || pd.bank_remark || '';
+        const realAppcode = sanitizeVal(app.appcode_status) || sanitizeVal(pd.appcode_status);
+        const realSoftApproval = sanitizeVal(app.soft_approval_status) || sanitizeVal(pd.soft_approval_status);
+        const realVkyc = sanitizeVal(app.vkyc_stage) || sanitizeVal(app.vkyc_status) || sanitizeVal(pd.vkyc_stage);
+        const realIqa = sanitizeVal(app.iqa_stage) || sanitizeVal(pd.iqa_stage);
+        const realDispatch = sanitizeVal(app.dispatch_status) || sanitizeVal(pd.dispatch_status);
+        const realFinal = sanitizeVal(app.final_status) || sanitizeVal(pd.final_status) || sanitizeVal(app.status) || 'In Process';
+        const realRemark = sanitizeVal(app.bank_remark) || sanitizeVal(pd.bank_remark);
 
         setRealData({
           appcodeStatus: realAppcode,
@@ -215,13 +220,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           bankRemark: realRemark
         });
 
-        setAppcodeStatus(realAppcode);
-        setSoftApprovalStatus(realSoftApproval);
-        setVkycStage(realVkyc);
-        setIqaStage(realIqa);
-        setDispatchStatus(realDispatch);
-        setBankRemark(realRemark);
-        setFinalStatus(realFinal);
+        if (realAppcode) setAppcodeStatus(realAppcode);
+        if (realSoftApproval) setSoftApprovalStatus(realSoftApproval);
+        if (realVkyc) setVkycStage(realVkyc);
+        if (realIqa) setIqaStage(realIqa);
+        if (realDispatch) setDispatchStatus(realDispatch);
+        if (realRemark) setBankRemark(realRemark);
+        if (realFinal) setFinalStatus(realFinal);
         if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
         if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
         if (app.approved_amount || pd.approved_amount) setApprovedAmount(app.approved_amount || pd.approved_amount);

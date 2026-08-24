@@ -1502,12 +1502,13 @@ const getApplication = async (req, res, next) => {
     const { rows: [pd] } = await query(`SELECT * FROM physical_application_details WHERE application_id = $1 OR application_id::text = $2`, [app.id, id]);
     app.physical_details = pd || {};
     if (pd) {
-      if (!app.appcode_status && pd.appcode_status) app.appcode_status = pd.appcode_status;
-      if (!app.soft_approval_status && pd.soft_approval_status) app.soft_approval_status = pd.soft_approval_status;
-      if (!app.vkyc_stage && pd.vkyc_stage) app.vkyc_stage = pd.vkyc_stage;
-      if (!app.iqa_stage && pd.iqa_stage) app.iqa_stage = pd.iqa_stage;
-      if (!app.dispatch_status && pd.dispatch_status) app.dispatch_status = pd.dispatch_status;
-      if (!app.final_status && pd.final_status) app.final_status = pd.final_status;
+      const isClean = (val) => val && val.toLowerCase() !== 'none' && val.toLowerCase() !== 'null';
+      if (!isClean(app.appcode_status) && pd.appcode_status) app.appcode_status = pd.appcode_status;
+      if (!isClean(app.soft_approval_status) && pd.soft_approval_status) app.soft_approval_status = pd.soft_approval_status;
+      if (!isClean(app.vkyc_stage) && pd.vkyc_stage) app.vkyc_stage = pd.vkyc_stage;
+      if (!isClean(app.iqa_stage) && pd.iqa_stage) app.iqa_stage = pd.iqa_stage;
+      if (!isClean(app.dispatch_status) && pd.dispatch_status) app.dispatch_status = pd.dispatch_status;
+      if (!isClean(app.final_status) && pd.final_status) app.final_status = pd.final_status;
       if (!app.final_status && app.status) app.final_status = app.status;
       if (!app.bank_ref_number && pd.bank_application_number) app.bank_ref_number = pd.bank_application_number;
       if (!app.bank_application_number && pd.bank_application_number) app.bank_application_number = pd.bank_application_number;
@@ -2628,6 +2629,11 @@ const updateApplicationDetails = async (req, res, next) => {
       await client.query('ROLLBACK');
       return error(res, 'Marking application status as Approved or Rejected is reserved for Super Admin and Operations Head.', 403);
     }
+    const isRestrictedApprovalStatus = ['approved', 'disbursed', 'commission_released', 'super_admin_approved'].includes((status || '').toLowerCase());
+    if (status && status !== app.status && isRestrictedApprovalStatus && !['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole)) {
+      await client.query('ROLLBACK');
+      return error(res, 'Marking application status as Approved is reserved for Super Admin and Operations Head.', 403);
+    }
 
     const appNumToSave = (bank_application_number || bank_ref_number || '').trim();
     const employerToSave = employer || company_name || null;
@@ -2695,6 +2701,13 @@ const updateApplicationDetails = async (req, res, next) => {
       const fs = String(req.body.final_status || '').toLowerCase();
       targetStatus = (fs.includes('decline') || fs.includes('reject')) ? 'rejected' : 'operational_verified';
     }
+    const cleanStr = (val) => {
+      if (val === undefined || val === null) return null;
+      const s = String(val).trim();
+      if (!s || s.toLowerCase() === 'none' || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return null;
+      return s;
+    };
+
     const { rows: [updatedApp] } = await client.query(`
       UPDATE applications SET
         bank_application_number = COALESCE(NULLIF($1, ''), bank_application_number),
@@ -2737,40 +2750,40 @@ const updateApplicationDetails = async (req, res, next) => {
       RETURNING *
     `, [
       appNumToSave || req.body.bank_application_number || null,
-      vkyc_status || req.body.vkyc_status || null,
-      vkyc_url || req.body.vkyc_url || null,
+      cleanStr(vkyc_status || req.body.vkyc_status),
+      cleanStr(vkyc_url || req.body.vkyc_url),
       salary_slip_url || null,
       pan_card_url || null,
       targetStatus,
-      remarks || req.body.bank_remark || null,
+      cleanStr(remarks || req.body.bank_remark),
       bank_id || null,
       product_id || null,
       loan_amount ? parseFloat(loan_amount) : null,
       metadata ? JSON.stringify(metadata) : null,
-      soft_approval_status || req.body.soft_approval_status || null,
-      vkyc_stage || req.body.vkyc_stage || null,
-      iqa_stage || req.body.iqa_stage || null,
-      dispatch_status || req.body.dispatch_status || null,
-      bank_remark || req.body.bank_remark || null,
-      final_status || req.body.final_status || null,
-      decline_reason || req.body.decline_reason || null,
-      eligible_reqd || req.body.eligible_reqd || null,
+      cleanStr(soft_approval_status || req.body.soft_approval_status),
+      cleanStr(vkyc_stage || req.body.vkyc_stage),
+      cleanStr(iqa_stage || req.body.iqa_stage),
+      cleanStr(dispatch_status || req.body.dispatch_status),
+      cleanStr(bank_remark || req.body.bank_remark),
+      cleanStr(final_status || req.body.final_status),
+      cleanStr(decline_reason || req.body.decline_reason),
+      cleanStr(eligible_reqd || req.body.eligible_reqd),
       approved_amount || (req.body.approved_amount ? parseFloat(req.body.approved_amount) : null),
-      city || null,
-      state || null,
-      pincode || null,
-      mother_name || req.body.mother_name || null,
-      full_name || customer_name || null,
-      mobile || customer_mobile || null,
-      email || customer_email || null,
-      company_name || null,
-      designation || null,
-      address1 || null,
-      address2 || null,
-      landmark || null,
-      address || null,
+      cleanStr(city),
+      cleanStr(state),
+      cleanStr(pincode),
+      cleanStr(mother_name || req.body.mother_name),
+      cleanStr(full_name || customer_name),
+      cleanStr(mobile || customer_mobile),
+      cleanStr(email || customer_email),
+      cleanStr(company_name),
+      cleanStr(designation),
+      cleanStr(address1),
+      cleanStr(address2),
+      cleanStr(landmark),
+      cleanStr(address),
       id,
-      appcode_status || req.body.appcode_status || null
+      cleanStr(appcode_status || req.body.appcode_status)
     ]);
 
     // 2. Update customer details if customer_id exists
@@ -2864,15 +2877,15 @@ const updateApplicationDetails = async (req, res, next) => {
         address2 || null,
         landmark || null,
         id,
-        appcode_status || req.body.appcode_status || null,
-        soft_approval_status || req.body.soft_approval_status || null,
-        vkyc_stage || req.body.vkyc_stage || null,
-        iqa_stage || req.body.iqa_stage || null,
-        dispatch_status || req.body.dispatch_status || null,
-        bank_remark || req.body.bank_remark || null,
-        final_status || req.body.final_status || null,
-        decline_reason || req.body.decline_reason || null,
-        eligible_reqd || req.body.eligible_reqd || null
+        cleanStr(appcode_status || req.body.appcode_status),
+        cleanStr(soft_approval_status || req.body.soft_approval_status),
+        cleanStr(vkyc_stage || req.body.vkyc_stage),
+        cleanStr(iqa_stage || req.body.iqa_stage),
+        cleanStr(dispatch_status || req.body.dispatch_status),
+        cleanStr(bank_remark || req.body.bank_remark),
+        cleanStr(final_status || req.body.final_status),
+        cleanStr(decline_reason || req.body.decline_reason),
+        cleanStr(eligible_reqd || req.body.eligible_reqd)
       ]);
     } catch (_) {}
 
