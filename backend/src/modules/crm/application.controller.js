@@ -2709,14 +2709,14 @@ const updateApplicationDetails = async (req, res, next) => {
         product_id = COALESCE($9, product_id),
         loan_amount = COALESCE($10, loan_amount),
         metadata = COALESCE($11::jsonb, metadata),
-        soft_approval_status = CASE WHEN $12::text IS NOT NULL THEN $12::text ELSE soft_approval_status END,
-        vkyc_stage = CASE WHEN $13::text IS NOT NULL THEN $13::text ELSE vkyc_stage END,
-        iqa_stage = CASE WHEN $14::text IS NOT NULL THEN $14::text ELSE iqa_stage END,
-        dispatch_status = CASE WHEN $15::text IS NOT NULL THEN $15::text ELSE dispatch_status END,
-        bank_remark = CASE WHEN $16::text IS NOT NULL THEN $16::text ELSE bank_remark END,
-        final_status = CASE WHEN $17::text IS NOT NULL THEN $17::text ELSE final_status END,
-        decline_reason = CASE WHEN $18::text IS NOT NULL THEN $18::text ELSE decline_reason END,
-        eligible_reqd = CASE WHEN $19::text IS NOT NULL THEN $19::text ELSE eligible_reqd END,
+        soft_approval_status = COALESCE(NULLIF($12, ''), soft_approval_status),
+        vkyc_stage = COALESCE(NULLIF($13, ''), vkyc_stage),
+        iqa_stage = COALESCE(NULLIF($14, ''), iqa_stage),
+        dispatch_status = COALESCE(NULLIF($15, ''), dispatch_status),
+        bank_remark = COALESCE(NULLIF($16, ''), bank_remark),
+        final_status = COALESCE(NULLIF($17, ''), final_status),
+        decline_reason = COALESCE(NULLIF($18, ''), decline_reason),
+        eligible_reqd = COALESCE(NULLIF($19, ''), eligible_reqd),
         approved_amount = COALESCE($20, approved_amount),
         city = COALESCE(NULLIF($21, ''), city),
         state = COALESCE(NULLIF($22, ''), state),
@@ -2731,7 +2731,7 @@ const updateApplicationDetails = async (req, res, next) => {
         address2 = COALESCE(NULLIF($31, ''), address2),
         landmark = COALESCE(NULLIF($32, ''), landmark),
         address = COALESCE(NULLIF($33, ''), address),
-        appcode_status = CASE WHEN $35::text IS NOT NULL THEN $35::text ELSE appcode_status END,
+        appcode_status = COALESCE(NULLIF($35, ''), appcode_status),
         updated_at = NOW()
       WHERE id = $34
       RETURNING *
@@ -2747,14 +2747,14 @@ const updateApplicationDetails = async (req, res, next) => {
       product_id || null,
       loan_amount ? parseFloat(loan_amount) : null,
       metadata ? JSON.stringify(metadata) : null,
-      req.body.soft_approval_status !== undefined ? req.body.soft_approval_status : null,
-      req.body.vkyc_stage !== undefined ? req.body.vkyc_stage : null,
-      req.body.iqa_stage !== undefined ? req.body.iqa_stage : null,
-      req.body.dispatch_status !== undefined ? req.body.dispatch_status : null,
-      req.body.bank_remark !== undefined ? req.body.bank_remark : null,
-      req.body.final_status !== undefined ? req.body.final_status : null,
-      req.body.decline_reason !== undefined ? req.body.decline_reason : null,
-      req.body.eligible_reqd !== undefined ? req.body.eligible_reqd : null,
+      soft_approval_status || req.body.soft_approval_status || null,
+      vkyc_stage || req.body.vkyc_stage || null,
+      iqa_stage || req.body.iqa_stage || null,
+      dispatch_status || req.body.dispatch_status || null,
+      bank_remark || req.body.bank_remark || null,
+      final_status || req.body.final_status || null,
+      decline_reason || req.body.decline_reason || null,
+      eligible_reqd || req.body.eligible_reqd || null,
       approved_amount || (req.body.approved_amount ? parseFloat(req.body.approved_amount) : null),
       city || null,
       state || null,
@@ -2770,7 +2770,7 @@ const updateApplicationDetails = async (req, res, next) => {
       landmark || null,
       address || null,
       id,
-      req.body.appcode_status !== undefined ? req.body.appcode_status : null
+      appcode_status || req.body.appcode_status || null
     ]);
 
     // 2. Update customer details if customer_id exists
@@ -2836,15 +2836,15 @@ const updateApplicationDetails = async (req, res, next) => {
           landmark = COALESCE(NULLIF($15, ''), landmark),
           flat_no = COALESCE(NULLIF($13, ''), flat_no),
           sub_area = COALESCE(NULLIF($14, ''), sub_area),
-          appcode_status = CASE WHEN $17::text IS NOT NULL THEN $17::text ELSE appcode_status END,
-          soft_approval_status = CASE WHEN $18::text IS NOT NULL THEN $18::text ELSE soft_approval_status END,
-          vkyc_stage = CASE WHEN $19::text IS NOT NULL THEN $19::text ELSE vkyc_stage END,
-          iqa_stage = CASE WHEN $20::text IS NOT NULL THEN $20::text ELSE iqa_stage END,
-          dispatch_status = CASE WHEN $21::text IS NOT NULL THEN $21::text ELSE dispatch_status END,
-          bank_remark = CASE WHEN $22::text IS NOT NULL THEN $22::text ELSE bank_remark END,
-          final_status = CASE WHEN $23::text IS NOT NULL THEN $23::text ELSE final_status END,
-          decline_reason = CASE WHEN $24::text IS NOT NULL THEN $24::text ELSE decline_reason END,
-          eligible_reqd = CASE WHEN $25::text IS NOT NULL THEN $25::text ELSE eligible_reqd END,
+          appcode_status = COALESCE(NULLIF($17, ''), appcode_status),
+          soft_approval_status = COALESCE(NULLIF($18, ''), soft_approval_status),
+          vkyc_stage = COALESCE(NULLIF($19, ''), vkyc_stage),
+          iqa_stage = COALESCE(NULLIF($20, ''), iqa_stage),
+          dispatch_status = COALESCE(NULLIF($21, ''), dispatch_status),
+          bank_remark = COALESCE(NULLIF($22, ''), bank_remark),
+          final_status = COALESCE(NULLIF($23, ''), final_status),
+          decline_reason = COALESCE(NULLIF($24, ''), decline_reason),
+          eligible_reqd = COALESCE(NULLIF($25, ''), eligible_reqd),
           updated_at = NOW()
         WHERE application_id = $16
       `, [
@@ -2864,15 +2864,15 @@ const updateApplicationDetails = async (req, res, next) => {
         address2 || null,
         landmark || null,
         id,
-        req.body.appcode_status !== undefined ? req.body.appcode_status : null,
-        req.body.soft_approval_status !== undefined ? req.body.soft_approval_status : null,
-        req.body.vkyc_stage !== undefined ? req.body.vkyc_stage : null,
-        req.body.iqa_stage !== undefined ? req.body.iqa_stage : null,
-        req.body.dispatch_status !== undefined ? req.body.dispatch_status : null,
-        req.body.bank_remark !== undefined ? req.body.bank_remark : null,
-        req.body.final_status !== undefined ? req.body.final_status : null,
-        req.body.decline_reason !== undefined ? req.body.decline_reason : null,
-        req.body.eligible_reqd !== undefined ? req.body.eligible_reqd : null
+        appcode_status || req.body.appcode_status || null,
+        soft_approval_status || req.body.soft_approval_status || null,
+        vkyc_stage || req.body.vkyc_stage || null,
+        iqa_stage || req.body.iqa_stage || null,
+        dispatch_status || req.body.dispatch_status || null,
+        bank_remark || req.body.bank_remark || null,
+        final_status || req.body.final_status || null,
+        decline_reason || req.body.decline_reason || null,
+        eligible_reqd || req.body.eligible_reqd || null
       ]);
     } catch (_) {}
 
