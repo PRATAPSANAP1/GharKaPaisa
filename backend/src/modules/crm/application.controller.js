@@ -2596,6 +2596,8 @@ const updateApplicationDetails = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS state VARCHAR(100),
         ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
         ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150),
+        ADD COLUMN IF NOT EXISTS bank_ref_number VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
         ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(50),
         ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50),
         ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50),
