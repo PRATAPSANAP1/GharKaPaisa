@@ -110,7 +110,9 @@ const authorize = (...roles) => {
 const requirePartner = async (req, res, next) => {
   try {
     const role = (req.user?.role || '').toUpperCase();
-    if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') return next();
+    const designation = (req.user?.designation || '').toUpperCase();
+    const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'];
+    if (adminRoles.includes(role) || adminRoles.includes(designation)) return next();
     if (!req.partner && req.user) {
       const { rows: [p] } = await query(`SELECT id, kyc_status FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (p) {
@@ -128,7 +130,9 @@ const requirePartner = async (req, res, next) => {
 const requireApprovedPartner = async (req, res, next) => {
   try {
     const role = (req.user?.role || '').toUpperCase();
-    if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') return next();
+    const designation = (req.user?.designation || '').toUpperCase();
+    const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'];
+    if (adminRoles.includes(role) || adminRoles.includes(designation)) return next();
     if (!req.partner && req.user) {
       const { rows: [p] } = await query(`SELECT id, kyc_status FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (p) {
@@ -147,8 +151,10 @@ const requireApprovedPartner = async (req, res, next) => {
 };
 
 const requireApprovedPartnerOrAdmin = (req, res, next) => {
-  const role = (req.user.role || '').toUpperCase();
-  if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') return next();
+  const role = (req.user?.role || '').toUpperCase();
+  const designation = (req.user?.designation || '').toUpperCase();
+  const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'];
+  if (adminRoles.includes(role) || adminRoles.includes(designation)) return next();
   return requireApprovedPartner(req, res, next);
 };
 

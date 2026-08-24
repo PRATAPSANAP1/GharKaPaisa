@@ -1159,7 +1159,7 @@ const listApplications = async (req, res, next) => {
     const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
     if (!isPartnerOrTeam && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
-      if (isOpHeadUser || abRows.length > 0) {
+      if (abRows.length > 0) {
         opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR combined.operation_head_id = '${req.user.id}')`;
       }
     }

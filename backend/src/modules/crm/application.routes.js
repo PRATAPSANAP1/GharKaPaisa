@@ -31,8 +31,8 @@ router.post('/:id/physical-link', requireApprovedPartnerOrAdmin, appCtrl.generat
 router.get('/dashboard', requireApprovedPartnerOrAdmin, appCtrl.getApplicationsDashboard);
 router.get('/analytics', requireApprovedPartnerOrAdmin, appCtrl.getAnalytics);
 router.get('/search', requireApprovedPartnerOrAdmin, appCtrl.listApplications);
-router.get('/admin/applications', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.listApplications);
-router.get('/super-admin/applications', authorize('SUPER_ADMIN'), appCtrl.listApplications);
+router.get('/admin/applications', authorize('ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'), appCtrl.listApplications);
+router.get('/super-admin/applications', authorize('SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'), appCtrl.listApplications);
 
 // Bulk Operations & Export (must be before /:id routes)
 router.put('/bulk-status', requireApprovedPartnerOrAdmin, appCtrl.bulkUpdateStatus);

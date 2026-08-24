@@ -27,7 +27,7 @@ router.post('/approve-kyc', roleCheck('ADMIN', 'SUPER_ADMIN'), partnerCtrl.appro
 router.post('/update-role', roleCheck('ADMIN', 'SUPER_ADMIN'), authCtrl.setRole);
 
 // ── GET /admin/applications ──────────────────────────────────────────────────
-router.get('/applications', roleCheck('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'), appCtrl.listApplications);
+router.get('/applications', roleCheck('ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'), appCtrl.listApplications);
 
 // ── POST /admin/commission-rule ──────────────────────────────────────────────
 router.post('/commission-rule', roleCheck('SUPER_ADMIN'), commissionRules, validate, productCtrl.setCommission);
