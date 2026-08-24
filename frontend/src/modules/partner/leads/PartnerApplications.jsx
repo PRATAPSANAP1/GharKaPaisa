@@ -1044,12 +1044,10 @@ export default function PartnerApplications() {
                                   <UserPlus size={12} /> Assign
                                 </button>
                               )}
-                              {String(app.process_type || '').toLowerCase() !== 'lead_punching' && (
-                                <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
-                                  style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                  <Share2 size={12} /> Share
-                                </button>
-                              )}
+                              <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
+                                style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <Share2 size={12} /> Share
+                              </button>
                               <button onClick={() => handleOpenViewModal(app)}
                                 style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #3b82f640`, background: '#3b82f615', color: '#3b82f6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                                 <Eye size={12} /> View
