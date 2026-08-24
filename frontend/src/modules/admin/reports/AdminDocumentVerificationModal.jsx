@@ -612,22 +612,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setAppcodeStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
-                      {isSbi ? (
-                        <>
-                          <option value="Appcode Send">1. Appcode Send</option>
-                          <option value="Soft Approval">2. Soft Approval</option>
-                          <option value="Pending">3. Pending</option>
-                          <option value="Submit">4. Submit</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="Appcode Pending">1. Appcode Pending</option>
-                          <option value="Appcode Send">2. Appcode Send</option>
-                          <option value="Soft Approval">3. Soft Approval</option>
-                          <option value="Pending">4. Pending</option>
-                          <option value="Submit">5. Submit</option>
-                        </>
-                      )}
+                      <option value="appcode send">1. appcode send</option>
+                      <option value="appcode pending">2. appcode pending</option>
+                      <option value="appcode complete">3. appcode complete</option>
                     </select>
                   </div>
 
@@ -639,10 +626,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setSoftApprovalStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
-                      <option value="Approval-income 25k">1. Approval-income 25k</option>
-                      <option value="Approval-income 30k">2. Approval-income 30k</option>
-                      <option value="Approval-NSDP-Cibil based">3. Approval-NSDP-Cibil based</option>
-                      <option value="Soft Approval">4. Soft Approval</option>
+                      <option value="approved">1. approved</option>
+                      <option value="decline">2. decline</option>
+                      <option value="ATQ">3. ATQ</option>
+                      <option value="technical error">4. technical error</option>
                     </select>
                   </div>
 
@@ -708,11 +695,11 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setDispatchStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
-                      <option value="DISPATCH DONE">1. DISPATCH DONE</option>
-                      <option value="WCP STAGE">2. WCP STAGE</option>
-                      <option value="E-sign Done">3. E-sign Done</option>
-                      <option value="E-sign Pending">4. E-sign Pending</option>
-                      <option value="RTB(ERROR)">5. RTB(ERROR)</option>
+                      <option value="dispatch pending">1. dispatch pending</option>
+                      <option value="complete">2. complete</option>
+                      <option value="e-sign pending">3. e-sign pending</option>
+                      <option value="e-sign done">4. e-sign done</option>
+                      <option value="RTB(Error)">5. RTB(Error)</option>
                     </select>
                   </div>
 

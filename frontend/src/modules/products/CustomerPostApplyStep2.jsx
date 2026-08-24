@@ -47,11 +47,11 @@ export default function CustomerPostApplyStep2() {
   const [motherName, setMotherName] = useState('');
 
   // Section 2: Operational Remarks & Stages (Editable by Partner & Admin)
-  const [appcodeStatus, setAppcodeStatus] = useState('Appcode Pending');
-  const [softApprovalStatus, setSoftApprovalStatus] = useState('Approval-income 25k');
+  const [appcodeStatus, setAppcodeStatus] = useState('appcode pending');
+  const [softApprovalStatus, setSoftApprovalStatus] = useState('approved');
   const [vkycStage, setVkycStage] = useState('VKYC Pending');
   const [iqaStage, setIqaStage] = useState('IQA Pending');
-  const [dispatchStatus, setDispatchStatus] = useState('E-sign Pending');
+  const [dispatchStatus, setDispatchStatus] = useState('dispatch pending');
 
   // Section 3: Bank Reference & Final Application Stage (Disabled for Partner, Editable by Admin/SuperAdmin)
   const [appNumber, setAppNumber] = useState('');
@@ -82,12 +82,11 @@ export default function CustomerPostApplyStep2() {
           setAddress(details.address || '');
           setMotherName(details.mother_name || '');
 
-          const bankIsSbi = String(json.data.bank_name || json.data.bank_code || '').toUpperCase().includes('SBI');
-          setAppcodeStatus(details.appcode_status || (bankIsSbi ? 'Appcode Send' : 'Appcode Pending'));
-          setSoftApprovalStatus(details.soft_approval_status || 'Approval-income 25k');
+          setAppcodeStatus(details.appcode_status || 'appcode pending');
+          setSoftApprovalStatus(details.soft_approval_status || 'approved');
           setVkycStage(details.vkyc_stage || 'VKYC Pending');
           setIqaStage(details.iqa_stage || 'IQA Pending');
-          setDispatchStatus(details.dispatch_status || 'E-sign Pending');
+          setDispatchStatus(details.dispatch_status || 'dispatch pending');
 
           setAppNumber(details.bank_application_number || '');
           setVkycUrl(details.vkyc_url || '');
@@ -395,22 +394,9 @@ export default function CustomerPostApplyStep2() {
                   onChange={(e) => setAppcodeStatus(e.target.value)}
                   style={inputStyle}
                 >
-                  {isSbi ? (
-                    <>
-                      <option value="Appcode Send">Appcode Send</option>
-                      <option value="Soft Approval">Soft Approval</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Submit">Submit</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="Appcode Pending">Appcode Pending</option>
-                      <option value="Appcode Send">Appcode Send</option>
-                      <option value="Soft Approval">Soft Approval</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Submit">Submit</option>
-                    </>
-                  )}
+                  <option value="appcode send">appcode send</option>
+                  <option value="appcode pending">appcode pending</option>
+                  <option value="appcode complete">appcode complete</option>
                 </select>
               </div>
 
@@ -422,10 +408,10 @@ export default function CustomerPostApplyStep2() {
                   onChange={(e) => setSoftApprovalStatus(e.target.value)}
                   style={inputStyle}
                 >
-                  <option value="Approval-income 25k">Approval-income 25k</option>
-                  <option value="Approval-income 30k">Approval-income 30k</option>
-                  <option value="Approval-NSDP-Cibil based">Approval-NSDP-Cibil based</option>
-                  <option value="Soft Approval">Soft Approval</option>
+                  <option value="approved">approved</option>
+                  <option value="decline">decline</option>
+                  <option value="ATQ">ATQ</option>
+                  <option value="technical error">technical error</option>
                 </select>
               </div>
 
@@ -491,11 +477,11 @@ export default function CustomerPostApplyStep2() {
                   onChange={(e) => setDispatchStatus(e.target.value)}
                   style={inputStyle}
                 >
-                  <option value="DISPATCH DONE">DISPATCH DONE</option>
-                  <option value="WCP STAGE">WCP STAGE</option>
-                  <option value="E-sign Done">E-sign Done</option>
-                  <option value="E-sign Pending">E-sign Pending</option>
-                  <option value="RTB(ERROR)">RTB(ERROR)</option>
+                  <option value="dispatch pending">dispatch pending</option>
+                  <option value="complete">complete</option>
+                  <option value="e-sign pending">e-sign pending</option>
+                  <option value="e-sign done">e-sign done</option>
+                  <option value="RTB(Error)">RTB(Error)</option>
                 </select>
               </div>
             </div>
