@@ -2512,13 +2512,20 @@ const updateApplicationDetails = async (req, res, next) => {
       dob,
       employment_type,
       employer,
-      company_name
+      company_name,
+      address1,
+      address2,
+      landmark,
+      address
     } = req.body;
 
-    // Ensure verification & tracking columns exist on applications and leads tables
+    // Ensure verification & tracking columns exist on applications, leads, customers, physical_application_details tables
     try {
       await client.query(`
         ALTER TABLE applications 
+        ADD COLUMN IF NOT EXISTS address1 TEXT,
+        ADD COLUMN IF NOT EXISTS address2 TEXT,
+        ADD COLUMN IF NOT EXISTS landmark TEXT,
         ADD COLUMN IF NOT EXISTS city VARCHAR(100),
         ADD COLUMN IF NOT EXISTS state VARCHAR(100),
         ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
@@ -2544,6 +2551,9 @@ const updateApplicationDetails = async (req, res, next) => {
       `);
       await client.query(`
         ALTER TABLE leads 
+        ADD COLUMN IF NOT EXISTS address1 TEXT,
+        ADD COLUMN IF NOT EXISTS address2 TEXT,
+        ADD COLUMN IF NOT EXISTS landmark TEXT,
         ADD COLUMN IF NOT EXISTS city VARCHAR(100),
         ADD COLUMN IF NOT EXISTS state VARCHAR(100),
         ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
@@ -2552,12 +2562,18 @@ const updateApplicationDetails = async (req, res, next) => {
       `);
       await client.query(`
         ALTER TABLE customers
+        ADD COLUMN IF NOT EXISTS address1 TEXT,
+        ADD COLUMN IF NOT EXISTS address2 TEXT,
+        ADD COLUMN IF NOT EXISTS landmark TEXT,
         ADD COLUMN IF NOT EXISTS city VARCHAR(100),
         ADD COLUMN IF NOT EXISTS state VARCHAR(100),
         ADD COLUMN IF NOT EXISTS pincode VARCHAR(20)
       `);
       await client.query(`
         ALTER TABLE physical_application_details
+        ADD COLUMN IF NOT EXISTS address1 TEXT,
+        ADD COLUMN IF NOT EXISTS address2 TEXT,
+        ADD COLUMN IF NOT EXISTS landmark TEXT,
         ADD COLUMN IF NOT EXISTS city VARCHAR(100),
         ADD COLUMN IF NOT EXISTS state VARCHAR(100),
         ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
@@ -2685,8 +2701,12 @@ const updateApplicationDetails = async (req, res, next) => {
         customer_email = COALESCE(NULLIF($27, ''), customer_email),
         company_name = COALESCE(NULLIF($28, ''), company_name),
         designation = COALESCE(NULLIF($29, ''), designation),
+        address1 = COALESCE(NULLIF($30, ''), address1),
+        address2 = COALESCE(NULLIF($31, ''), address2),
+        landmark = COALESCE(NULLIF($32, ''), landmark),
+        address = COALESCE(NULLIF($33, ''), address),
         updated_at = NOW()
-      WHERE id = $30
+      WHERE id = $34
       RETURNING *
     `, [
       appNumToSave || req.body.bank_application_number || null,
@@ -2718,6 +2738,10 @@ const updateApplicationDetails = async (req, res, next) => {
       email || customer_email || null,
       company_name || null,
       designation || null,
+      address1 || null,
+      address2 || null,
+      landmark || null,
+      address || null,
       id
     ]);
 
@@ -2736,8 +2760,12 @@ const updateApplicationDetails = async (req, res, next) => {
           monthly_income = COALESCE($9, monthly_income),
           employment_type = COALESCE(NULLIF($10, ''), employment_type),
           employer = COALESCE(NULLIF($11, ''), employer),
+          address1 = COALESCE(NULLIF($12, ''), address1),
+          address2 = COALESCE(NULLIF($13, ''), address2),
+          landmark = COALESCE(NULLIF($14, ''), landmark),
+          address = COALESCE(NULLIF($15, ''), address),
           updated_at = NOW()
-        WHERE id = $12
+        WHERE id = $16
       `, [
         full_name || customer_name || null,
         mobile || customer_mobile || null,
@@ -2750,6 +2778,10 @@ const updateApplicationDetails = async (req, res, next) => {
         monthly_salary ? parseFloat(monthly_salary) : null,
         employment_type || null,
         employerToSave,
+        address1 || null,
+        address2 || null,
+        landmark || null,
+        address || null,
         app.customer_id
       ]);
     }
@@ -2770,8 +2802,13 @@ const updateApplicationDetails = async (req, res, next) => {
           pincode = COALESCE(NULLIF($10, ''), pincode),
           mother_name = COALESCE(NULLIF($11, ''), mother_name),
           bank_ref_number = COALESCE(NULLIF($12, ''), bank_ref_number),
+          address1 = COALESCE(NULLIF($13, ''), address1),
+          address2 = COALESCE(NULLIF($14, ''), address2),
+          landmark = COALESCE(NULLIF($15, ''), landmark),
+          flat_no = COALESCE(NULLIF($13, ''), flat_no),
+          sub_area = COALESCE(NULLIF($14, ''), sub_area),
           updated_at = NOW()
-        WHERE application_id = $13
+        WHERE application_id = $16
       `, [
         mobile || customer_mobile || null,
         full_name || customer_name || null,
@@ -2785,6 +2822,9 @@ const updateApplicationDetails = async (req, res, next) => {
         pincode || null,
         mother_name || req.body.mother_name || null,
         appNumToSave || null,
+        address1 || null,
+        address2 || null,
+        landmark || null,
         id
       ]);
     } catch (_) {}

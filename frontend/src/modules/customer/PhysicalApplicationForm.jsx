@@ -622,6 +622,51 @@ export default function PhysicalApplicationForm() {
               </div>
 
               <div>
+                <label style={labelStyle}>ADDRESS LINE 1</label>
+                <input
+                  type="text"
+                  value={form.flat_no}
+                  onChange={e => handleChange('flat_no', e.target.value)}
+                  placeholder="Flat / House No / Building Name"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>ADDRESS LINE 2</label>
+                <input
+                  type="text"
+                  value={form.sub_area}
+                  onChange={e => handleChange('sub_area', e.target.value)}
+                  placeholder="Street / Area / Locality"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>LANDMARK</label>
+                <input
+                  type="text"
+                  value={form.landmark}
+                  onChange={e => handleChange('landmark', e.target.value)}
+                  placeholder="Nearby Landmark"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>PINCODE</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={form.pincode}
+                  onChange={e => handleChange('pincode', e.target.value)}
+                  placeholder="e.g. 400001"
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
                 <label style={labelStyle}>CITY</label>
                 <input
                   type="text"
@@ -639,18 +684,6 @@ export default function PhysicalApplicationForm() {
                   value={form.state}
                   onChange={e => handleChange('state', e.target.value)}
                   placeholder="e.g. Maharashtra"
-                  style={inputStyle}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>PINCODE</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={form.pincode}
-                  onChange={e => handleChange('pincode', e.target.value)}
-                  placeholder="e.g. 400001"
                   style={inputStyle}
                 />
               </div>

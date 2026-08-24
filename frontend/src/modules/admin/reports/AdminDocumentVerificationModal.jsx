@@ -55,10 +55,12 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const [panNumber, setPanNumber] = useState(application?.pan_number || application?.pan || '');
   const [companyName, setCompanyName] = useState(application?.company_name || application?.employer_name || '');
   const [designation, setDesignation] = useState(application?.designation || application?.occupation || '');
-  const [address, setAddress] = useState(application?.address || application?.residential_address || '');
+  const [address1, setAddress1] = useState(application?.address1 || application?.flat_no || application?.address || '');
+  const [address2, setAddress2] = useState(application?.address2 || application?.sub_area || '');
+  const [landmark, setLandmark] = useState(application?.landmark || '');
+  const [pincode, setPincode] = useState(application?.pincode || '');
   const [city, setCity] = useState(application?.city || '');
   const [state, setState] = useState(application?.state || '');
-  const [pincode, setPincode] = useState(application?.pincode || '');
   const [companyAddress, setCompanyAddress] = useState(application?.company_address || application?.office_address || '');
   const [motherName, setMotherName] = useState(application?.mother_name || '');
   const [appNumber, setAppNumber] = useState(application?.app_number || application?.application_no || '');
@@ -172,10 +174,12 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         if (pd.pan_number || cust.pan_number || app.pan_number) setPanNumber(pd.pan_number || cust.pan_number || app.pan_number || app.pan || '');
         if (pd.company_name || app.company_name) setCompanyName(pd.company_name || app.company_name || app.employer_name || '');
         if (pd.designation || app.designation) setDesignation(pd.designation || app.designation || app.occupation || '');
-        if (pd.flat_no || app.address) setAddress(pd.flat_no || app.address || app.residential_address || '');
+        if (pd.address1 || pd.flat_no || app.address1 || app.address) setAddress1(pd.address1 || pd.flat_no || app.address1 || app.address || '');
+        if (pd.address2 || pd.sub_area || app.address2) setAddress2(pd.address2 || pd.sub_area || app.address2 || '');
+        if (pd.landmark || app.landmark) setLandmark(pd.landmark || app.landmark || '');
+        if (pd.pincode || app.pincode || cust.pincode) setPincode(pd.pincode || app.pincode || cust.pincode || '');
         if (pd.city || app.city || cust.city) setCity(pd.city || app.city || cust.city || '');
         if (pd.state || app.state || cust.state) setState(pd.state || app.state || cust.state || '');
-        if (pd.pincode || app.pincode || cust.pincode) setPincode(pd.pincode || app.pincode || cust.pincode || '');
         if (pd.company_address || app.company_address) setCompanyAddress(pd.company_address || app.company_address || app.office_address || '');
         if (pd.mother_name || app.mother_name) setMotherName(pd.mother_name || app.mother_name || '');
         if (app.app_number) setAppNumber(app.app_number || app.application_no || '');
@@ -221,10 +225,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           pan_number: panNumber,
           company_name: companyName,
           designation,
-          address,
+          address1,
+          address2,
+          landmark,
+          pincode,
           city,
           state,
-          pincode,
+          address: [address1, address2, landmark, city, state, pincode].filter(Boolean).join(', '),
           company_address: companyAddress,
           mother_name: motherName,
           app_number: appNumber,
@@ -526,6 +533,55 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   </div>
 
                   <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Address Line 1</label>
+                    <input
+                      type="text"
+                      disabled={!canEditQd}
+                      value={address1}
+                      onChange={(e) => setAddress1(e.target.value)}
+                      placeholder="Flat / House No / Building Name"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Address Line 2</label>
+                    <input
+                      type="text"
+                      disabled={!canEditQd}
+                      value={address2}
+                      onChange={(e) => setAddress2(e.target.value)}
+                      placeholder="Street / Area / Locality"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Landmark</label>
+                    <input
+                      type="text"
+                      disabled={!canEditQd}
+                      value={landmark}
+                      onChange={(e) => setLandmark(e.target.value)}
+                      placeholder="Nearby Landmark"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Pincode</label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      disabled={!canEditQd}
+                      value={pincode}
+                      onChange={(e) => setPincode(e.target.value)}
+                      placeholder="e.g. 400001"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
+                    />
+                  </div>
+
+                  <div>
                     <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>City</label>
                     <input
                       type="text"
@@ -545,19 +601,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       value={state}
                       onChange={(e) => setState(e.target.value)}
                       placeholder="e.g. Maharashtra"
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Pincode</label>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      disabled={!canEditQd}
-                      value={pincode}
-                      onChange={(e) => setPincode(e.target.value)}
-                      placeholder="e.g. 400001"
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>

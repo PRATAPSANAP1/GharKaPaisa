@@ -43,10 +43,12 @@ export default function CustomerPostApplyStep2() {
   const [panNumber, setPanNumber] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [designation, setDesignation] = useState('');
-  const [address, setAddress] = useState('');
+  const [address1, setAddress1] = useState('');
+  const [address2, setAddress2] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [pincode, setPincode] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
-  const [pincode, setPincode] = useState('');
   const [motherName, setMotherName] = useState('');
 
   // Section 2: Operational Remarks & Stages (Editable by Partner & Admin)
@@ -82,10 +84,12 @@ export default function CustomerPostApplyStep2() {
           setPanNumber(details.pan_number || cust.pan_number || '');
           setCompanyName(details.company_name || '');
           setDesignation(details.designation || '');
-          setAddress(details.address || cust.address || '');
+          setAddress1(details.address1 || details.flat_no || cust.address1 || cust.flat_no || details.address || '');
+          setAddress2(details.address2 || details.sub_area || cust.address2 || cust.sub_area || '');
+          setLandmark(details.landmark || cust.landmark || '');
+          setPincode(details.pincode || cust.pincode || '');
           setCity(details.city || cust.city || '');
           setState(details.state || cust.state || '');
-          setPincode(details.pincode || cust.pincode || '');
           setMotherName(details.mother_name || '');
 
           setAppcodeStatus(details.appcode_status || 'appcode pending');
@@ -134,10 +138,13 @@ export default function CustomerPostApplyStep2() {
         pan_number: cleanPan,
         company_name: companyName.trim(),
         designation: designation.trim(),
-        address: address.trim(),
+        address1: address1.trim(),
+        address2: address2.trim(),
+        landmark: landmark.trim(),
+        pincode: pincode.trim(),
         city: city.trim(),
         state: state.trim(),
-        pincode: pincode.trim(),
+        address: [address1, address2, landmark, city, state, pincode].map(s => s.trim()).filter(Boolean).join(', '),
         mother_name: motherName.trim(),
         appcode_status: appcodeStatus,
         soft_approval_status: softApprovalStatus,
@@ -373,6 +380,52 @@ export default function CustomerPostApplyStep2() {
                   style={inputStyle}
                 />
               </div>
+
+              <div>
+                <label style={labelStyle}>Address Line 1</label>
+                <input
+                  type="text"
+                  placeholder="Flat / House No / Building Name"
+                  value={address1}
+                  onChange={(e) => setAddress1(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Address Line 2</label>
+                <input
+                  type="text"
+                  placeholder="Street / Area / Locality"
+                  value={address2}
+                  onChange={(e) => setAddress2(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Landmark</label>
+                <input
+                  type="text"
+                  placeholder="Nearby Landmark"
+                  value={landmark}
+                  onChange={(e) => setLandmark(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Pincode</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder="e.g. 400001"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+
               <div>
                 <label style={labelStyle}>City</label>
                 <input
@@ -391,18 +444,6 @@ export default function CustomerPostApplyStep2() {
                   placeholder="e.g. Maharashtra"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
-                  style={inputStyle}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Pincode</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  placeholder="e.g. 400001"
-                  value={pincode}
-                  onChange={(e) => setPincode(e.target.value)}
                   style={inputStyle}
                 />
               </div>

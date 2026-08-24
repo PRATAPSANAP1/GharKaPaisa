@@ -4466,6 +4466,43 @@ const migrate = async () => {
   } catch (task27Err) {
     logger.error('Failed to run Task 27 migration:', task27Err.message);
   }
+  // ── TASK 28: Structured Address Columns Safety Check ────────────
+  try {
+    logger.info('Running Task 28 Migration (Structured Address Columns: address1, address2, landmark, pincode, city, state)...');
+    await query(`
+      ALTER TABLE customers 
+        ADD COLUMN IF NOT EXISTS address1 TEXT,
+        ADD COLUMN IF NOT EXISTS address2 TEXT,
+        ADD COLUMN IF NOT EXISTS landmark TEXT,
+        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS state VARCHAR(100);
+      ALTER TABLE applications
+        ADD COLUMN IF NOT EXISTS address1 TEXT,
+        ADD COLUMN IF NOT EXISTS address2 TEXT,
+        ADD COLUMN IF NOT EXISTS landmark TEXT,
+        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS state VARCHAR(100);
+      ALTER TABLE leads
+        ADD COLUMN IF NOT EXISTS address1 TEXT,
+        ADD COLUMN IF NOT EXISTS address2 TEXT,
+        ADD COLUMN IF NOT EXISTS landmark TEXT,
+        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS state VARCHAR(100);
+      ALTER TABLE physical_application_details
+        ADD COLUMN IF NOT EXISTS address1 TEXT,
+        ADD COLUMN IF NOT EXISTS address2 TEXT,
+        ADD COLUMN IF NOT EXISTS landmark TEXT,
+        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS state VARCHAR(100);
+    `);
+    logger.info('Task 28 completed successfully.');
+  } catch (task28Err) {
+    logger.error('Failed to run Task 28 migration:', task28Err.message);
+  }
 
   logger.info('✅ All migrations completed successfully');
   if (require.main === module) {

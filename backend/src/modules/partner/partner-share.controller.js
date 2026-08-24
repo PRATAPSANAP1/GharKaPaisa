@@ -995,6 +995,12 @@ const updatePostApplyDetails = async (req, res, next) => {
       pan_number, pan,
       company_name,
       designation,
+      address1,
+      address2,
+      landmark,
+      city,
+      state,
+      pincode,
       address,
       mother_name,
       soft_approval_status,
@@ -1035,7 +1041,10 @@ const updatePostApplyDetails = async (req, res, next) => {
     const cleanEmail = (customer_email || email || '').toString().trim();
     const cleanCompany = (company_name || '').toString().trim();
     const cleanDesignation = (designation || '').toString().trim();
-    const cleanAddress = (address || '').toString().trim();
+    const cleanAddress1 = (address1 || '').toString().trim();
+    const cleanAddress2 = (address2 || '').toString().trim();
+    const cleanLandmark = (landmark || '').toString().trim();
+    const cleanAddress = (address || [cleanAddress1, cleanAddress2, cleanLandmark, cleanCity, cleanState, cleanPincode].filter(Boolean).join(', ') || '').toString().trim();
     const cleanMother = (mother_name || '').toString().trim();
     const cleanCity = (city || '').toString().trim();
     const cleanState = (state || '').toString().trim();
@@ -1074,6 +1083,16 @@ const updatePostApplyDetails = async (req, res, next) => {
 
     // Dynamic column safety check
     try {
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS address1 TEXT`);
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS address2 TEXT`);
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS landmark TEXT`);
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
+      await query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS pincode VARCHAR(50)`);
+
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address1 TEXT`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address2 TEXT`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS landmark TEXT`);
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(50)`);
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255)`);
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dob VARCHAR(50)`);
@@ -1111,14 +1130,14 @@ const updatePostApplyDetails = async (req, res, next) => {
       try {
         const { rows: [newCust] } = await query(`
           INSERT INTO customers (
-            full_name, mobile, email, pan_number, dob, employer, company_name, designation, address, mother_name, city, state, pincode
+            full_name, mobile, email, pan_number, dob, employer, company_name, designation, address, mother_name, city, state, pincode, address1, address2, landmark
           )
-          VALUES ($1, $2, $3, $4, $5::date, $6, $6, $7, $8, $9, $10, $11, $12)
+          VALUES ($1, $2, $3, $4, $5::date, $6, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
           RETURNING id
         `, [
           cleanName || 'Customer', cleanMobile || null, cleanEmail || null, cleanPan || null,
           parsedDobDate, cleanCompany || null, cleanDesignation || null, cleanAddress || null, cleanMother || null,
-          cleanCity || null, cleanState || null, cleanPincode || null
+          cleanCity || null, cleanState || null, cleanPincode || null, cleanAddress1 || null, cleanAddress2 || null, cleanLandmark || null
         ]);
         if (newCust) targetCustId = newCust.id;
       } catch (custInsertErr) {
@@ -1143,9 +1162,12 @@ const updatePostApplyDetails = async (req, res, next) => {
               city = COALESCE(NULLIF($10, ''), city),
               state = COALESCE(NULLIF($11, ''), state),
               pincode = COALESCE(NULLIF($12, ''), pincode),
+              address1 = COALESCE(NULLIF($14, ''), address1),
+              address2 = COALESCE(NULLIF($15, ''), address2),
+              landmark = COALESCE(NULLIF($16, ''), landmark),
               updated_at = NOW()
           WHERE id = $13
-        `, [cleanName, cleanMobile, cleanEmail, cleanPan, parsedDobDate, cleanCompany, cleanDesignation, cleanAddress, cleanMother, cleanCity, cleanState, cleanPincode, targetCustId]);
+        `, [cleanName, cleanMobile, cleanEmail, cleanPan, parsedDobDate, cleanCompany, cleanDesignation, cleanAddress, cleanMother, cleanCity, cleanState, cleanPincode, targetCustId, cleanAddress1, cleanAddress2, cleanLandmark]);
       } catch (errCust) {
         logger.warn('[POST-APPLY] Update customers table notice:', errCust.message);
       }
@@ -1192,6 +1214,9 @@ const updatePostApplyDetails = async (req, res, next) => {
             city = COALESCE(NULLIF($21, ''), city),
             state = COALESCE(NULLIF($22, ''), state),
             pincode = COALESCE(NULLIF($23, ''), pincode),
+            address1 = COALESCE(NULLIF($26, ''), address1),
+            address2 = COALESCE(NULLIF($27, ''), address2),
+            landmark = COALESCE(NULLIF($28, ''), landmark),
             status = COALESCE($20::application_status, status),
             updated_at = NOW()
         WHERE id = $24 OR (lead_id IS NOT NULL AND lead_id = $25)
@@ -1202,7 +1227,8 @@ const updatePostApplyDetails = async (req, res, next) => {
         cleanSoftApproval, cleanVkycStage, cleanIqaStage, cleanDispatch,
         cleanAppNum, cleanVkyc, cleanFinalStatus, cleanDeclineReason, cleanEligibleReqd,
         mappedAppEnumStatus, cleanCity, cleanState, cleanPincode,
-        shareData.application_id || null, shareData.lead_id || null
+        shareData.application_id || null, shareData.lead_id || null,
+        cleanAddress1, cleanAddress2, cleanLandmark
       ]);
     }
 
@@ -1231,16 +1257,19 @@ const updatePostApplyDetails = async (req, res, next) => {
             ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255),
             ADD COLUMN IF NOT EXISTS city VARCHAR(100),
             ADD COLUMN IF NOT EXISTS state VARCHAR(100),
-            ADD COLUMN IF NOT EXISTS pincode VARCHAR(50);
+            ADD COLUMN IF NOT EXISTS pincode VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS address1 TEXT,
+            ADD COLUMN IF NOT EXISTS address2 TEXT,
+            ADD COLUMN IF NOT EXISTS landmark TEXT;
         `);
 
         await query(`
           INSERT INTO physical_application_details (
             application_id, appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
             bank_application_number, vkyc_url, final_status, decline_reason, eligible_reqd,
-            full_name, mobile, email, pan_number, dob, company_name, designation, address, mother_name, city, state, pincode
+            full_name, mobile, email, pan_number, dob, company_name, designation, address, mother_name, city, state, pincode, address1, address2, landmark
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
           ON CONFLICT (application_id) DO UPDATE SET
             appcode_status = COALESCE(EXCLUDED.appcode_status, physical_application_details.appcode_status),
             soft_approval_status = COALESCE(EXCLUDED.soft_approval_status, physical_application_details.soft_approval_status),
@@ -1264,13 +1293,16 @@ const updatePostApplyDetails = async (req, res, next) => {
             city = COALESCE(EXCLUDED.city, physical_application_details.city),
             state = COALESCE(EXCLUDED.state, physical_application_details.state),
             pincode = COALESCE(EXCLUDED.pincode, physical_application_details.pincode),
+            address1 = COALESCE(EXCLUDED.address1, physical_application_details.address1),
+            address2 = COALESCE(EXCLUDED.address2, physical_application_details.address2),
+            landmark = COALESCE(EXCLUDED.landmark, physical_application_details.landmark),
             updated_at = NOW()
         `, [
           shareData.application_id,
           cleanSoftApproval ? 'Appcode Send' : null, cleanSoftApproval || null, cleanVkycStage || null, cleanIqaStage || null, cleanDispatch || null,
           cleanAppNum || null, cleanVkyc || null, cleanFinalStatus || null, cleanDeclineReason || null, cleanEligibleReqd || null,
           cleanName || null, cleanMobile || null, cleanEmail || null, cleanPan || null, cleanDob || null, cleanCompany || null, cleanDesignation || null, cleanAddress || null, cleanMother || null,
-          cleanCity || null, cleanState || null, cleanPincode || null
+          cleanCity || null, cleanState || null, cleanPincode || null, cleanAddress1 || null, cleanAddress2 || null, cleanLandmark || null
         ]);
       } catch (physErr) {
         logger.warn('[POST-APPLY] Update physical_application_details notice:', physErr.message);
