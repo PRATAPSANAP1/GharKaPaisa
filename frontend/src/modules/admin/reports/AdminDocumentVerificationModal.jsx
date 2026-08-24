@@ -94,6 +94,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const [eligibleReQd, setEligibleReQd] = useState(sanitizeVal(application?.eligible_reqd) || sanitizeVal(application?.physical_details?.eligible_reqd) || 'No');
   const [bankRefNumber, setBankRefNumber] = useState(sanitizeVal(application?.bank_ref_number) || sanitizeVal(application?.bank_application_number) || sanitizeVal(application?.physical_details?.bank_ref_number));
   const [approvedAmount, setApprovedAmount] = useState(sanitizeVal(application?.approved_amount) || sanitizeVal(application?.physical_details?.approved_amount) || sanitizeVal(application?.loan_amount));
+  const [currentStatus, setCurrentStatus] = useState(application?.status || 'details_submitted');
 
   // 4. Real Database Status Snapshot (for Real DB Status vs Selected Status UI display)
   const [realData, setRealData] = useState({
@@ -210,6 +211,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         if (app.bank_ref_number || app.bank_application_number || pd.bank_ref_number || pd.bank_application_number) setBankRefNumber(app.bank_ref_number || app.bank_application_number || pd.bank_ref_number || pd.bank_application_number || '');
         if (app.vkyc_url || pd.vkyc_url) setVkycUrl(app.vkyc_url || pd.vkyc_url || '');
 
+        if (app.status) setCurrentStatus(app.status);
         const realAppcode = sanitizeVal(app.appcode_status) || sanitizeVal(pd.appcode_status);
         const realSoftApproval = sanitizeVal(app.soft_approval_status) || sanitizeVal(pd.soft_approval_status);
         const realVkyc = sanitizeVal(app.vkyc_stage) || sanitizeVal(app.vkyc_status) || sanitizeVal(pd.vkyc_stage);
@@ -293,6 +295,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           vkyc_url: vkycUrl,
           dispatch_status: dispatchStatus
         };
+        if (isOpsOrAdmin && !['approved', 'rejected', 'sanctioned'].includes(String(currentStatus).toLowerCase())) {
+          payload.status = 'operational_verified';
+        }
       } else if (formType === 'final') {
         let targetStatus = 'operational_verified';
         if (finalStatus && (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('reject'))) {
@@ -312,7 +317,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
       const res = await api.put(`/applications/${application.id}/verification`, payload);
       if (res?.data?.success) {
         alert(`Application details saved successfully!`);
-        fetchData();
+        await fetchData();
         if (onRefresh) onRefresh();
       }
     } catch (err) {
@@ -353,8 +358,15 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
               <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
                 Application #{appNumber || application.app_number || 'APP-REF'}
               </h3>
-              <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: '#ffedd5', color: '#c2410c' }}>
-                {finalStatus ? finalStatus.toUpperCase() : 'UNDER REVIEW'}
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 800,
+                padding: '4px 10px',
+                borderRadius: '12px',
+                background: (currentStatus === 'operational_verified' || currentStatus === 'approved') ? '#dcfce7' : (currentStatus === 'rejected') ? '#fee2e2' : '#ffedd5',
+                color: (currentStatus === 'operational_verified' || currentStatus === 'approved') ? '#15803d' : (currentStatus === 'rejected') ? '#b91c1c' : '#c2410c'
+              }}>
+                {(currentStatus || application?.status || 'details_submitted').replace(/_/g, ' ').toUpperCase()}
               </span>
             </div>
             <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
