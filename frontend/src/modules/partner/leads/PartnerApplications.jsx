@@ -1448,12 +1448,6 @@ export default function PartnerApplications() {
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
                       <div style={{ fontWeight: 800, color: '#10b981' }}>{viewAppDetails?.final_status || viewAppDetails?.physical_details?.final_status || 'In Process'}</div>
                     </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>COMMISSION STATUS</div>
-                      <div style={{ fontWeight: 800, color: (viewAppDetails?.commission_amount || viewApp?.commission_amount) > 0 ? '#10b981' : textMuted }}>
-                        ₹{viewAppDetails?.commission_amount || viewApp?.commission_amount || 0} ({viewAppDetails?.commission_status || viewApp?.commission_status || 'pending'})
-                      </div>
-                    </div>
                     {(viewAppDetails?.bank_remark || viewAppDetails?.physical_details?.bank_remark) && (
                       <div style={{ gridColumn: 'span 2' }}>
                         <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>
