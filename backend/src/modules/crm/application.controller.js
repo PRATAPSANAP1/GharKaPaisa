@@ -535,9 +535,28 @@ const getTimeline = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    // Resolve application & linked lead ID
-    const { rows: [app] } = await query(`SELECT id, lead_id FROM applications WHERE id = $1`, [id]);
-    const leadId = app?.lead_id || null;
+    // Resolve application & linked lead ID safely without throwing cast errors
+    let appId = id;
+    let leadId = id;
+    try {
+      const { rows: [app] } = await query(
+        `SELECT id, lead_id FROM applications WHERE id::text = $1 OR app_number = $1 LIMIT 1`,
+        [id]
+      );
+      if (app) {
+        appId = app.id;
+        leadId = app.lead_id || id;
+      } else {
+        const { rows: [leadRec] } = await query(
+          `SELECT id, application_id FROM leads WHERE id::text = $1 OR lead_number = $1 OR application_id::text = $1 LIMIT 1`,
+          [id]
+        );
+        if (leadRec) {
+          leadId = leadRec.id;
+          if (leadRec.application_id) appId = leadRec.application_id;
+        }
+      }
+    } catch (_) {}
 
     const { rows } = await query(`
       SELECT DISTINCT ON (id, performed_at, title)
@@ -546,17 +565,17 @@ const getTimeline = async (req, res, next) => {
         SELECT at.id::text, at.application_id::text, at.event_type, at.title, at.description, at.status, at.performed_by, at.performed_at, at.performed_at as created_at, u.full_name as performed_by_name, at.description as remarks
         FROM application_timeline at
         LEFT JOIN users u ON u.id = at.performed_by
-        WHERE at.application_id = $1
+        WHERE at.application_id::text = $1 OR at.application_id::text = $2
 
         UNION ALL
 
         SELECT lt.id::text, lt.lead_id::text as application_id, COALESCE(lt.title, 'Lead Event') as event_type, COALESCE(lt.title, 'Timeline Event') as title, lt.description, 'completed' as status, lt.created_by as performed_by, lt.created_at as performed_at, lt.created_at, u.full_name as performed_by_name, lt.description as remarks
         FROM lead_timeline lt
         LEFT JOIN users u ON u.id = lt.created_by
-        WHERE lt.lead_id = $1 OR ($2::uuid IS NOT NULL AND lt.lead_id = $2::uuid)
+        WHERE lt.lead_id::text = $1 OR lt.lead_id::text = $2 OR lt.lead_id::text = $3
       ) combined
       ORDER BY performed_at DESC
-    `, [id, leadId]);
+    `, [String(id), String(appId), String(leadId)]);
 
     return success(res, rows);
   } catch (err) {
@@ -1485,9 +1504,38 @@ const getApplication = async (req, res, next) => {
       LEFT JOIN products p ON p.id = a.product_id
       LEFT JOIN banks b ON b.id = p.bank_id
       LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
-      WHERE a.id::text = $1 OR a.app_number = $1 OR a.tracking_token = $1
+      WHERE a.id::text = $1 OR a.app_number = $1 OR a.tracking_token = $1 OR a.lead_id::text = $1
     `, [id]);
-    if (!app) return notFound(res);
+
+    if (!app) {
+      const { rows: [leadRec] } = await query(`
+        SELECT l.*,
+          l.id as id,
+          COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number,
+          COALESCE(NULLIF(l.customer_name, ''), 'Customer') as customer_name,
+          COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, '')) as customer_mobile,
+          l.email as customer_email,
+          l.pan_number,
+          l.dob::text as dob,
+          l.monthly_income,
+          l.employment_type,
+          l.company_name,
+          l.city,
+          l.state,
+          l.pincode,
+          p.name as product_name, p.category,
+          b.name as bank_name, b.short_code as bank_code,
+          ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
+        FROM leads l
+        LEFT JOIN products p ON p.id = l.product_id
+        LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN partner_profiles ap ON ap.id = l.partner_id
+        WHERE l.id::text = $1 OR l.lead_number = $1 OR l.application_id::text = $1
+      `, [id]);
+      if (leadRec) app = leadRec;
+    }
+
+    if (!app) return notFound(res, 'Application or Lead record not found');
 
     if (req.user.role === 'PARTNER') {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
@@ -2610,10 +2658,10 @@ const updateApplicationDetails = async (req, res, next) => {
       `);
     } catch (_) {}
 
-    let { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id = $1`, [id]);
+    let { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1`, [id]);
     let isLeadOnly = false;
     if (!app) {
-      const { rows: [leadRec] } = await client.query(`SELECT * FROM leads WHERE id = $1`, [id]);
+      const { rows: [leadRec] } = await client.query(`SELECT * FROM leads WHERE id::text = $1 OR lead_number = $1 OR application_id::text = $1`, [id]);
       if (leadRec) {
         app = leadRec;
         isLeadOnly = true;
