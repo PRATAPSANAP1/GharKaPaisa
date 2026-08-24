@@ -1089,7 +1089,34 @@ const updatePostApplyDetails = async (req, res, next) => {
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
     } catch (_) {}
 
-    const targetCustId = shareData.customer_id || shareData.lead_cust_id;
+    let targetCustId = shareData.customer_id || shareData.lead_cust_id;
+
+    if (!targetCustId && cleanMobile) {
+      const { rows: [c] } = await query(`SELECT id FROM customers WHERE mobile = $1 LIMIT 1`, [cleanMobile]);
+      if (c) targetCustId = c.id;
+    }
+    if (!targetCustId && cleanPan) {
+      const { rows: [c] } = await query(`SELECT id FROM customers WHERE pan_number = $1 LIMIT 1`, [cleanPan]);
+      if (c) targetCustId = c.id;
+    }
+
+    if (!targetCustId && (cleanName || cleanMobile)) {
+      try {
+        const { rows: [newCust] } = await query(`
+          INSERT INTO customers (
+            full_name, mobile, email, pan_number, dob, employer, company_name, designation, address, mother_name
+          )
+          VALUES ($1, $2, $3, $4, $5::date, $6, $6, $7, $8, $9)
+          RETURNING id
+        `, [
+          cleanName || 'Customer', cleanMobile || null, cleanEmail || null, cleanPan || null,
+          parsedDobDate, cleanCompany || null, cleanDesignation || null, cleanAddress || null, cleanMother || null
+        ]);
+        if (newCust) targetCustId = newCust.id;
+      } catch (custInsertErr) {
+        logger.warn('[POST-APPLY] Create customer notice:', custInsertErr.message);
+      }
+    }
 
     if (targetCustId) {
       try {
@@ -1100,9 +1127,14 @@ const updatePostApplyDetails = async (req, res, next) => {
               email = COALESCE(NULLIF($3, ''), email),
               pan_number = COALESCE(NULLIF($4, ''), pan_number),
               dob = COALESCE($5::date, dob),
+              employer = COALESCE(NULLIF($6, ''), employer),
+              company_name = COALESCE(NULLIF($6, ''), company_name),
+              designation = COALESCE(NULLIF($7, ''), designation),
+              address = COALESCE(NULLIF($8, ''), address),
+              mother_name = COALESCE(NULLIF($9, ''), mother_name),
               updated_at = NOW()
-          WHERE id = $6
-        `, [cleanName, cleanMobile, cleanEmail, cleanPan, parsedDobDate, targetCustId]);
+          WHERE id = $10
+        `, [cleanName, cleanMobile, cleanEmail, cleanPan, parsedDobDate, cleanCompany, cleanDesignation, cleanAddress, cleanMother, targetCustId]);
       } catch (errCust) {
         logger.warn('[POST-APPLY] Update customers table notice:', errCust.message);
       }
@@ -1114,37 +1146,40 @@ const updatePostApplyDetails = async (req, res, next) => {
         SET customer_name = COALESCE(NULLIF($1, ''), customer_name),
             mobile = COALESCE(NULLIF($2, ''), mobile),
             pan_number = COALESCE(NULLIF($3, ''), pan_number),
+            customer_id = COALESCE($4, customer_id),
             status = 'submitted', pipeline_stage = 'submitted',
             updated_at = NOW()
-        WHERE id = $4
-      `, [cleanName, cleanMobile, cleanPan, shareData.lead_id]);
+        WHERE id = $5
+      `, [cleanName, cleanMobile, cleanPan, targetCustId, shareData.lead_id]);
     }
 
     if (shareData.application_id || shareData.lead_id) {
       await query(`
         UPDATE applications
-        SET customer_mobile = COALESCE(NULLIF($1, ''), customer_mobile),
-            customer_name = COALESCE(NULLIF($2, ''), customer_name),
-            dob = COALESCE(NULLIF($3, ''), dob),
-            customer_email = COALESCE(NULLIF($4, ''), customer_email),
-            pan_number = COALESCE(NULLIF($5, ''), pan_number),
-            company_name = COALESCE(NULLIF($6, ''), company_name),
-            designation = COALESCE(NULLIF($7, ''), designation),
-            address = COALESCE(NULLIF($8, ''), address),
-            mother_name = COALESCE(NULLIF($9, ''), mother_name),
-            soft_approval_status = COALESCE(NULLIF($10, ''), soft_approval_status),
-            vkyc_stage = COALESCE(NULLIF($11, ''), vkyc_stage),
-            iqa_stage = COALESCE(NULLIF($12, ''), iqa_stage),
-            dispatch_status = COALESCE(NULLIF($13, ''), dispatch_status),
-            bank_application_number = COALESCE(NULLIF($14, ''), bank_application_number),
-            vkyc_url = COALESCE(NULLIF($15, ''), vkyc_url),
-            final_status = COALESCE(NULLIF($16, ''), final_status),
-            decline_reason = COALESCE(NULLIF($17, ''), decline_reason),
-            eligible_reqd = COALESCE(NULLIF($18, ''), eligible_reqd),
-            status = COALESCE($19::application_status, status),
+        SET customer_id = COALESCE($1, customer_id),
+            customer_mobile = COALESCE(NULLIF($2, ''), customer_mobile),
+            customer_name = COALESCE(NULLIF($3, ''), customer_name),
+            dob = COALESCE(NULLIF($4, ''), dob),
+            customer_email = COALESCE(NULLIF($5, ''), customer_email),
+            pan_number = COALESCE(NULLIF($6, ''), pan_number),
+            company_name = COALESCE(NULLIF($7, ''), company_name),
+            designation = COALESCE(NULLIF($8, ''), designation),
+            address = COALESCE(NULLIF($9, ''), address),
+            mother_name = COALESCE(NULLIF($10, ''), mother_name),
+            soft_approval_status = COALESCE(NULLIF($11, ''), soft_approval_status),
+            vkyc_stage = COALESCE(NULLIF($12, ''), vkyc_stage),
+            iqa_stage = COALESCE(NULLIF($13, ''), iqa_stage),
+            dispatch_status = COALESCE(NULLIF($14, ''), dispatch_status),
+            bank_application_number = COALESCE(NULLIF($15, ''), bank_application_number),
+            vkyc_url = COALESCE(NULLIF($16, ''), vkyc_url),
+            final_status = COALESCE(NULLIF($17, ''), final_status),
+            decline_reason = COALESCE(NULLIF($18, ''), decline_reason),
+            eligible_reqd = COALESCE(NULLIF($19, ''), eligible_reqd),
+            status = COALESCE($20::application_status, status),
             updated_at = NOW()
-        WHERE id = $20 OR (lead_id IS NOT NULL AND lead_id = $21)
+        WHERE id = $21 OR (lead_id IS NOT NULL AND lead_id = $22)
       `, [
+        targetCustId,
         cleanMobile, cleanName, cleanDob, cleanEmail, cleanPan,
         cleanCompany, cleanDesignation, cleanAddress, cleanMother,
         cleanSoftApproval, cleanVkycStage, cleanIqaStage, cleanDispatch,
@@ -1152,6 +1187,47 @@ const updatePostApplyDetails = async (req, res, next) => {
         mappedAppEnumStatus,
         shareData.application_id || null, shareData.lead_id || null
       ]);
+    }
+
+    if (shareData.application_id) {
+      try {
+        await query(`
+          INSERT INTO physical_application_details (
+            application_id, appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
+            bank_application_number, vkyc_url, final_status, decline_reason, eligible_reqd,
+            full_name, mobile, email, pan_number, dob, company_name, designation, address, mother_name
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+          ON CONFLICT (application_id) DO UPDATE SET
+            appcode_status = COALESCE(EXCLUDED.appcode_status, physical_application_details.appcode_status),
+            soft_approval_status = COALESCE(EXCLUDED.soft_approval_status, physical_application_details.soft_approval_status),
+            vkyc_stage = COALESCE(EXCLUDED.vkyc_stage, physical_application_details.vkyc_stage),
+            iqa_stage = COALESCE(EXCLUDED.iqa_stage, physical_application_details.iqa_stage),
+            dispatch_status = COALESCE(EXCLUDED.dispatch_status, physical_application_details.dispatch_status),
+            bank_application_number = COALESCE(EXCLUDED.bank_application_number, physical_application_details.bank_application_number),
+            vkyc_url = COALESCE(EXCLUDED.vkyc_url, physical_application_details.vkyc_url),
+            final_status = COALESCE(EXCLUDED.final_status, physical_application_details.final_status),
+            decline_reason = COALESCE(EXCLUDED.decline_reason, physical_application_details.decline_reason),
+            eligible_reqd = COALESCE(EXCLUDED.eligible_reqd, physical_application_details.eligible_reqd),
+            full_name = COALESCE(EXCLUDED.full_name, physical_application_details.full_name),
+            mobile = COALESCE(EXCLUDED.mobile, physical_application_details.mobile),
+            email = COALESCE(EXCLUDED.email, physical_application_details.email),
+            pan_number = COALESCE(EXCLUDED.pan_number, physical_application_details.pan_number),
+            dob = COALESCE(EXCLUDED.dob, physical_application_details.dob),
+            company_name = COALESCE(EXCLUDED.company_name, physical_application_details.company_name),
+            designation = COALESCE(EXCLUDED.designation, physical_application_details.designation),
+            address = COALESCE(EXCLUDED.address, physical_application_details.address),
+            mother_name = COALESCE(EXCLUDED.mother_name, physical_application_details.mother_name),
+            updated_at = NOW()
+        `, [
+          shareData.application_id,
+          cleanSoftApproval ? 'Appcode Send' : null, cleanSoftApproval || null, cleanVkycStage || null, cleanIqaStage || null, cleanDispatch || null,
+          cleanAppNum || null, cleanVkyc || null, cleanFinalStatus || null, cleanDeclineReason || null, cleanEligibleReqd || null,
+          cleanName || null, cleanMobile || null, cleanEmail || null, cleanPan || null, cleanDob || null, cleanCompany || null, cleanDesignation || null, cleanAddress || null, cleanMother || null
+        ]);
+      } catch (physErr) {
+        logger.warn('[POST-APPLY] Update physical_application_details notice:', physErr.message);
+      }
     }
 
     return success(res, {
