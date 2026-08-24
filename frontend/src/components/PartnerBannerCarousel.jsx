@@ -57,13 +57,14 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
   useEffect(() => {
     const fetchTeamBanners = async () => {
       try {
-        const res = await api.get('/banners', { params: { page: 'team' } });
+        const pageParam = showOnlyRefer ? 'referral' : 'team';
+        const res = await api.get('/banners', { params: { page: pageParam } });
         if (res.data?.success && res.data.data && res.data.data.length > 0) {
           const mapped = res.data.data.map((b) => ({
             id: `dynamic-${b.id}`,
             image: b.image_url,
             alt: b.title || 'Partner Banner',
-            link: b.click_url || '/partner/team'
+            link: b.click_url || (showOnlyRefer ? '/partner/referral' : '/partner/team')
           }));
           setDynamicBanners(mapped);
         }
@@ -73,7 +74,7 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
     };
 
     fetchTeamBanners();
-  }, []);
+  }, [showOnlyRefer]);
 
   // Determine active list of banners (Dynamic from Super Admin or Default Fallback)
   const availableBanners = dynamicBanners.length > 0 ? dynamicBanners : defaultBanners;

@@ -164,6 +164,9 @@ export default function ManageBanners() {
   // Filter Banners by Active Tab
   const filteredBanners = banners.filter(item => {
     if (activeTab === "all") return true;
+    if (activeTab === "offer") return item.target_page === "offer" || item.target_page === "home" || item.target_page === "all" || !item.target_page;
+    if (activeTab === "team") return item.target_page === "team" || item.target_page === "partner" || item.target_page === "all" || !item.target_page;
+    if (activeTab === "referral") return item.target_page === "referral" || item.target_page === "refer" || item.target_page === "all" || !item.target_page;
     return item.target_page === activeTab || item.target_page === "all" || !item.target_page;
   });
 
@@ -196,7 +199,8 @@ export default function ManageBanners() {
         {[
           { key: "all", label: "All Banners" },
           { key: "offer", label: "Offer Banners (Home Page)" },
-          { key: "team", label: "Team Banners (Partner Dashboard)" }
+          { key: "team", label: "Team Banners (Partner Dashboard)" },
+          { key: "referral", label: "Referral Banners (Partner Referral)" }
         ].map(tab => (
           <button
             key={tab.key}
@@ -272,10 +276,10 @@ export default function ManageBanners() {
                       fontWeight: 800,
                       padding: "2px 6px",
                       borderRadius: "4px",
-                      background: (item.target_page === 'offer' || item.target_page === 'home') ? '#3B82F6' : (item.target_page === 'team' || item.target_page === 'partner') ? '#8B5CF6' : '#10B981',
+                      background: (item.target_page === 'offer' || item.target_page === 'home') ? '#3B82F6' : (item.target_page === 'team' || item.target_page === 'partner') ? '#8B5CF6' : (item.target_page === 'referral' || item.target_page === 'refer') ? '#F59E0B' : '#10B981',
                       color: '#FFFFFF'
                     }}>
-                      {(item.target_page === 'offer' || item.target_page === 'home') ? 'Offer Banner' : (item.target_page === 'team' || item.target_page === 'partner') ? 'Team Banner' : 'Both (Offer & Team)'}
+                      {(item.target_page === 'offer' || item.target_page === 'home') ? 'Offer Banner' : (item.target_page === 'team' || item.target_page === 'partner') ? 'Team Banner' : (item.target_page === 'referral' || item.target_page === 'refer') ? 'Referral Banner' : 'All Pages (Offer, Team & Referral)'}
                     </span>
                   </div>
                   <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{item.title}</h3>
@@ -401,7 +405,8 @@ export default function ManageBanners() {
                 >
                   <option value="offer">Offer Banner (Home Page & Public Offers)</option>
                   <option value="team">Team Banner (Partner Dashboard & Team Network)</option>
-                  <option value="all">Both (Offer Banner & Team Banner)</option>
+                  <option value="referral">Referral Banner (Partner Referral & Earn)</option>
+                  <option value="all">All Pages (Offer, Team & Referral)</option>
                 </select>
               </div>
 
