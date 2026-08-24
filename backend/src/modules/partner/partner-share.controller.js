@@ -2,6 +2,7 @@ const { query } = require('../../config/database');
 const { success, created, error, notFound } = require('../../utils/response/response');
 const crypto = require('crypto');
 const { getBankApplyLinkBackend } = require('../crm/lead.controller');
+const logger = require('../../config/logger');
 
 /**
  * Partner Share Link Tracking Controller
@@ -1191,6 +1192,29 @@ const updatePostApplyDetails = async (req, res, next) => {
 
     if (shareData.application_id) {
       try {
+        await query(`
+          ALTER TABLE physical_application_details
+            ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
+            ADD COLUMN IF NOT EXISTS final_status VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS decline_reason TEXT,
+            ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS full_name VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS mobile VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS email VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS pan_number VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS dob VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS company_name VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS designation VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS address TEXT,
+            ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255);
+        `);
+
         await query(`
           INSERT INTO physical_application_details (
             application_id, appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
