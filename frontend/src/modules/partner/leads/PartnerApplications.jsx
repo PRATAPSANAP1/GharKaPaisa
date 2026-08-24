@@ -1429,6 +1429,10 @@ export default function PartnerApplications() {
                       </div>
                     </div>
                     <div>
+                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>APPCODE STATUS</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.appcode_status || viewAppDetails?.physical_details?.appcode_status || 'N/A'}</div>
+                    </div>
+                    <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>SOFT APPROVAL STAGE</div>
                       <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.soft_approval_status || viewAppDetails?.physical_details?.soft_approval_status || 'N/A'}</div>
                     </div>

@@ -68,19 +68,19 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
   // 2. Remark Form State (Appcode Status, Soft Approval, VKYC Stage, IQA Stage, Dispatch Status)
   const isSbi = String(application?.bank_name || application?.bank_code || '').toUpperCase().includes('SBI');
-  const [appcodeStatus, setAppcodeStatus] = useState(application?.appcode_status || (isSbi ? 'Appcode Send' : 'Appcode Pending'));
-  const [softApprovalStatus, setSoftApprovalStatus] = useState(application?.soft_approval_status || 'Approval-income 25k');
-  const [vkycStage, setVkycStage] = useState(application?.vkyc_stage || 'VKYC Pending');
-  const [iqaStage, setIqaStage] = useState(application?.iqa_stage || 'IQA Pending');
-  const [dispatchStatus, setDispatchStatus] = useState(application?.dispatch_status || 'E-sign Pending');
+  const [appcodeStatus, setAppcodeStatus] = useState(application?.appcode_status || application?.physical_details?.appcode_status || '');
+  const [softApprovalStatus, setSoftApprovalStatus] = useState(application?.soft_approval_status || application?.physical_details?.soft_approval_status || '');
+  const [vkycStage, setVkycStage] = useState(application?.vkyc_stage || application?.vkyc_status || application?.physical_details?.vkyc_stage || '');
+  const [iqaStage, setIqaStage] = useState(application?.iqa_stage || application?.physical_details?.iqa_stage || '');
+  const [dispatchStatus, setDispatchStatus] = useState(application?.dispatch_status || application?.physical_details?.dispatch_status || '');
 
   // 3. Final Status & Bank Remarks State
-  const [bankRemark, setBankRemark] = useState(application?.bank_remark || '');
-  const [finalStatus, setFinalStatus] = useState(application?.final_status || application?.status || 'In Process');
-  const [declineReason, setDeclineReason] = useState(application?.decline_reason || application?.rejection_reason || '');
-  const [eligibleReQd, setEligibleReQd] = useState(application?.eligible_reqd || 'No');
-  const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || application?.bank_application_number || application?.bank_app_no || '');
-  const [approvedAmount, setApprovedAmount] = useState(application?.approved_amount || application?.loan_amount || '');
+  const [bankRemark, setBankRemark] = useState(application?.bank_remark || application?.physical_details?.bank_remark || '');
+  const [finalStatus, setFinalStatus] = useState(application?.final_status || application?.physical_details?.final_status || application?.status || 'In Process');
+  const [declineReason, setDeclineReason] = useState(application?.decline_reason || application?.physical_details?.decline_reason || '');
+  const [eligibleReQd, setEligibleReQd] = useState(application?.eligible_reqd || application?.physical_details?.eligible_reqd || 'No');
+  const [bankRefNumber, setBankRefNumber] = useState(application?.bank_ref_number || application?.bank_application_number || application?.physical_details?.bank_ref_number || '');
+  const [approvedAmount, setApprovedAmount] = useState(application?.approved_amount || application?.physical_details?.approved_amount || application?.loan_amount || '');
 
   // Share / Send to Customer State
   const [showShareModal, setShowShareModal] = useState(false);
@@ -183,19 +183,19 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
         if (pd.company_address || app.company_address) setCompanyAddress(pd.company_address || app.company_address || app.office_address || '');
         if (pd.mother_name || app.mother_name) setMotherName(pd.mother_name || app.mother_name || '');
         if (app.app_number) setAppNumber(app.app_number || app.application_no || '');
-        if (app.bank_ref_number || app.bank_application_number) setBankRefNumber(app.bank_ref_number || app.bank_application_number || app.bank_app_no || '');
-        if (app.vkyc_url) setVkycUrl(app.vkyc_url || app.vkyc_link || '');
+        if (app.bank_ref_number || app.bank_application_number || pd.bank_ref_number || pd.bank_application_number) setBankRefNumber(app.bank_ref_number || app.bank_application_number || pd.bank_ref_number || pd.bank_application_number || '');
+        if (app.vkyc_url || pd.vkyc_url) setVkycUrl(app.vkyc_url || pd.vkyc_url || '');
 
-        if (app.appcode_status) setAppcodeStatus(app.appcode_status);
-        if (app.soft_approval_status) setSoftApprovalStatus(app.soft_approval_status);
-        if (app.vkyc_stage) setVkycStage(app.vkyc_stage);
-        if (app.iqa_stage) setIqaStage(app.iqa_stage);
-        if (app.dispatch_status) setDispatchStatus(app.dispatch_status);
-        if (app.bank_remark) setBankRemark(app.bank_remark);
-        if (app.final_status || app.status) setFinalStatus(app.final_status || app.status);
-        if (app.decline_reason) setDeclineReason(app.decline_reason);
-        if (app.eligible_reqd) setEligibleReQd(app.eligible_reqd);
-        if (app.approved_amount) setApprovedAmount(app.approved_amount);
+        if (app.appcode_status || pd.appcode_status) setAppcodeStatus(app.appcode_status || pd.appcode_status);
+        if (app.soft_approval_status || pd.soft_approval_status) setSoftApprovalStatus(app.soft_approval_status || pd.soft_approval_status);
+        if (app.vkyc_stage || app.vkyc_status || pd.vkyc_stage) setVkycStage(app.vkyc_stage || app.vkyc_status || pd.vkyc_stage);
+        if (app.iqa_stage || pd.iqa_stage) setIqaStage(app.iqa_stage || pd.iqa_stage);
+        if (app.dispatch_status || pd.dispatch_status) setDispatchStatus(app.dispatch_status || pd.dispatch_status);
+        if (app.bank_remark || pd.bank_remark) setBankRemark(app.bank_remark || pd.bank_remark);
+        if (app.final_status || pd.final_status || app.status) setFinalStatus(app.final_status || pd.final_status || app.status);
+        if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
+        if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
+        if (app.approved_amount || pd.approved_amount) setApprovedAmount(app.approved_amount || pd.approved_amount);
       }
 
       if (timelineRes?.data?.data) {
@@ -675,6 +675,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setAppcodeStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
+                      <option value="">None</option>
                       <option value="appcode send">1. appcode send</option>
                       <option value="appcode pending">2. appcode pending</option>
                       <option value="appcode complete">3. appcode complete</option>
@@ -689,6 +690,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setSoftApprovalStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
+                      <option value="">None</option>
                       <option value="approved">1. approved</option>
                       <option value="decline">2. decline</option>
                       <option value="ETQ">3. ETQ</option>
@@ -704,6 +706,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setIqaStage(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
+                      <option value="">None</option>
                       <option value="IQA SENT">1. IQA SENT</option>
                       <option value="IQA COMPLETE">2. IQA COMPLETE</option>
                       <option value="IQA PENDING">3. IQA PENDING</option>
@@ -732,6 +735,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setVkycStage(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
+                      <option value="">None</option>
                       <option value="VKYC Pending">1. VKYC Pending</option>
                       <option value="VKYC Complete">2. VKYC Complete</option>
                       <option value="VKYC Failed">3. VKYC Failed</option>
@@ -758,6 +762,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setDispatchStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                     >
+                      <option value="">None</option>
                       <option value="dispatch pending">1. dispatch pending</option>
                       <option value="complete">2. complete</option>
                       <option value="e-sign pending">3. e-sign pending</option>

@@ -2522,7 +2522,17 @@ const updateApplicationDetails = async (req, res, next) => {
       address1,
       address2,
       landmark,
-      address
+      address,
+      appcode_status,
+      soft_approval_status,
+      vkyc_stage,
+      iqa_stage,
+      dispatch_status,
+      bank_remark,
+      final_status,
+      decline_reason,
+      eligible_reqd,
+      approved_amount
     } = req.body;
 
     // Ensure verification & tracking columns exist on applications, leads, customers, physical_application_details tables
@@ -2545,6 +2555,7 @@ const updateApplicationDetails = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
         ADD COLUMN IF NOT EXISTS salary_slip_url TEXT,
         ADD COLUMN IF NOT EXISTS pan_card_url TEXT,
+        ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(50),
         ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50),
         ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50),
         ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50),
@@ -2583,7 +2594,16 @@ const updateApplicationDetails = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS city VARCHAR(100),
         ADD COLUMN IF NOT EXISTS state VARCHAR(100),
         ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
-        ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150)
+        ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150),
+        ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS bank_remark TEXT,
+        ADD COLUMN IF NOT EXISTS final_status VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS decline_reason TEXT,
+        ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)
       `);
     } catch (_) {}
 
@@ -2711,6 +2731,7 @@ const updateApplicationDetails = async (req, res, next) => {
         address2 = COALESCE(NULLIF($31, ''), address2),
         landmark = COALESCE(NULLIF($32, ''), landmark),
         address = COALESCE(NULLIF($33, ''), address),
+        appcode_status = COALESCE(NULLIF($35, ''), appcode_status),
         updated_at = NOW()
       WHERE id = $34
       RETURNING *
@@ -2726,15 +2747,15 @@ const updateApplicationDetails = async (req, res, next) => {
       product_id || null,
       loan_amount ? parseFloat(loan_amount) : null,
       metadata ? JSON.stringify(metadata) : null,
-      req.body.soft_approval_status || null,
-      req.body.vkyc_stage || null,
-      req.body.iqa_stage || null,
-      req.body.dispatch_status || null,
-      req.body.bank_remark || null,
-      req.body.final_status || null,
-      req.body.decline_reason || null,
-      req.body.eligible_reqd || null,
-      req.body.approved_amount ? parseFloat(req.body.approved_amount) : null,
+      soft_approval_status || req.body.soft_approval_status || null,
+      vkyc_stage || req.body.vkyc_stage || null,
+      iqa_stage || req.body.iqa_stage || null,
+      dispatch_status || req.body.dispatch_status || null,
+      bank_remark || req.body.bank_remark || null,
+      final_status || req.body.final_status || null,
+      decline_reason || req.body.decline_reason || null,
+      eligible_reqd || req.body.eligible_reqd || null,
+      approved_amount || (req.body.approved_amount ? parseFloat(req.body.approved_amount) : null),
       city || null,
       state || null,
       pincode || null,
@@ -2748,7 +2769,8 @@ const updateApplicationDetails = async (req, res, next) => {
       address2 || null,
       landmark || null,
       address || null,
-      id
+      id,
+      appcode_status || req.body.appcode_status || null
     ]);
 
     // 2. Update customer details if customer_id exists
@@ -2808,11 +2830,21 @@ const updateApplicationDetails = async (req, res, next) => {
           pincode = COALESCE(NULLIF($10, ''), pincode),
           mother_name = COALESCE(NULLIF($11, ''), mother_name),
           bank_ref_number = COALESCE(NULLIF($12, ''), bank_ref_number),
+          bank_application_number = COALESCE(NULLIF($12, ''), bank_application_number),
           address1 = COALESCE(NULLIF($13, ''), address1),
           address2 = COALESCE(NULLIF($14, ''), address2),
           landmark = COALESCE(NULLIF($15, ''), landmark),
           flat_no = COALESCE(NULLIF($13, ''), flat_no),
           sub_area = COALESCE(NULLIF($14, ''), sub_area),
+          appcode_status = COALESCE(NULLIF($17, ''), appcode_status),
+          soft_approval_status = COALESCE(NULLIF($18, ''), soft_approval_status),
+          vkyc_stage = COALESCE(NULLIF($19, ''), vkyc_stage),
+          iqa_stage = COALESCE(NULLIF($20, ''), iqa_stage),
+          dispatch_status = COALESCE(NULLIF($21, ''), dispatch_status),
+          bank_remark = COALESCE(NULLIF($22, ''), bank_remark),
+          final_status = COALESCE(NULLIF($23, ''), final_status),
+          decline_reason = COALESCE(NULLIF($24, ''), decline_reason),
+          eligible_reqd = COALESCE(NULLIF($25, ''), eligible_reqd),
           updated_at = NOW()
         WHERE application_id = $16
       `, [
@@ -2831,7 +2863,16 @@ const updateApplicationDetails = async (req, res, next) => {
         address1 || null,
         address2 || null,
         landmark || null,
-        id
+        id,
+        appcode_status || req.body.appcode_status || null,
+        soft_approval_status || req.body.soft_approval_status || null,
+        vkyc_stage || req.body.vkyc_stage || null,
+        iqa_stage || req.body.iqa_stage || null,
+        dispatch_status || req.body.dispatch_status || null,
+        bank_remark || req.body.bank_remark || null,
+        final_status || req.body.final_status || null,
+        decline_reason || req.body.decline_reason || null,
+        eligible_reqd || req.body.eligible_reqd || null
       ]);
     } catch (_) {}
 
