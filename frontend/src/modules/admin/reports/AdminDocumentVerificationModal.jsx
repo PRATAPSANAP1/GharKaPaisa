@@ -52,6 +52,14 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
     return val;
   };
 
+  const formatDobInput = (val) => {
+    if (!val) return '';
+    const cleaned = val.replace(/\D/g, '').slice(0, 8);
+    if (cleaned.length <= 2) return cleaned;
+    if (cleaned.length <= 4) return `${cleaned.slice(0, 2)}-${cleaned.slice(2)}`;
+    return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 4)}-${cleaned.slice(4, 8)}`;
+  };
+
   // 1. QD Customer Details State
   const [customerMobile, setCustomerMobile] = useState(application?.customer_mobile || application?.mobile || application?.phone || '');
   const [customerName, setCustomerName] = useState(application?.customer_name || application?.full_name || application?.name || '');
@@ -512,8 +520,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       type="text"
                       disabled={!canEditQd}
                       value={dob}
-                      onChange={(e) => setDob(e.target.value)}
+                      onChange={(e) => setDob(formatDobInput(e.target.value))}
                       placeholder="dd-mm-yyyy"
+                      maxLength={10}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
                   </div>

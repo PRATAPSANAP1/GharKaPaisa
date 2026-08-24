@@ -65,6 +65,14 @@ export default function CustomerPostApplyStep2() {
   const [declineReason, setDeclineReason] = useState('');
   const [eligibleReqd, setEligibleReqd] = useState('No');
 
+  const formatDobInput = (val) => {
+    if (!val) return '';
+    const cleaned = val.replace(/\D/g, '').slice(0, 8);
+    if (cleaned.length <= 2) return cleaned;
+    if (cleaned.length <= 4) return `${cleaned.slice(0, 2)}-${cleaned.slice(2)}`;
+    return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 4)}-${cleaned.slice(4, 8)}`;
+  };
+
   useEffect(() => {
     const fetchPostApplyInfo = async () => {
       setLoading(true);
@@ -318,8 +326,9 @@ export default function CustomerPostApplyStep2() {
                 <input
                   type="text"
                   placeholder="e.g. 15-08-1995"
+                  maxLength={10}
                   value={dob}
-                  onChange={(e) => setDob(e.target.value)}
+                  onChange={(e) => setDob(formatDobInput(e.target.value))}
                   style={inputStyle}
                 />
               </div>

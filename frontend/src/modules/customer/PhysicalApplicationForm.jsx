@@ -295,8 +295,16 @@ export default function PhysicalApplicationForm() {
     }
   };
 
+  const formatDobInput = (val) => {
+    if (!val) return '';
+    const cleaned = val.replace(/\D/g, '').slice(0, 8);
+    if (cleaned.length <= 2) return cleaned;
+    if (cleaned.length <= 4) return `${cleaned.slice(0, 2)}-${cleaned.slice(2)}`;
+    return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 4)}-${cleaned.slice(4, 8)}`;
+  };
+
   const handleChange = (field, val) => {
-    setForm(prev => ({ ...prev, [field]: val }));
+    setForm(prev => ({ ...prev, [field]: field === 'dob' ? formatDobInput(val) : val }));
   };
 
   // Modern input styles using Theme Context C
