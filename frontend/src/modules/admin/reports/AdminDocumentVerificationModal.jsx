@@ -703,9 +703,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#c2410c', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Sliders size={16} /> Operational Remarks & Processing Stage
                   </h4>
-                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#fff7ed', color: '#c2410c' }}>
-                    Editable by Admin, Operations & Partner
-                  </span>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
@@ -720,8 +717,19 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     >
                       <option value="">None</option>
                       <option value="appcode send">1. appcode send</option>
+                      <option value="Appcode Send">1. Appcode Send</option>
                       <option value="appcode pending">2. appcode pending</option>
+                      <option value="Appcode Pending">2. Appcode Pending</option>
                       <option value="appcode complete">3. appcode complete</option>
+                      <option value="Appcode Complete">3. Appcode Complete</option>
+                      <option value="Digital">4. Digital</option>
+                      <option value="digital">4. digital</option>
+                      <option value="Soft Approval">Soft Approval</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Submit">Submit</option>
+                      {appcodeStatus && !['', 'appcode send', 'Appcode Send', 'appcode pending', 'Appcode Pending', 'appcode complete', 'Appcode Complete', 'Digital', 'digital', 'Soft Approval', 'Pending', 'Submit'].includes(appcodeStatus) && (
+                        <option value={appcodeStatus}>{appcodeStatus}</option>
+                      )}
                     </select>
                   </div>
 
@@ -735,9 +743,15 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     >
                       <option value="">None</option>
                       <option value="approved">1. approved</option>
+                      <option value="Approved">1. Approved</option>
                       <option value="decline">2. decline</option>
+                      <option value="Decline">2. Decline</option>
                       <option value="ETQ">3. ETQ</option>
                       <option value="technical error">4. technical error</option>
+                      <option value="Technical Error">4. Technical Error</option>
+                      {softApprovalStatus && !['', 'approved', 'Approved', 'decline', 'Decline', 'ETQ', 'technical error', 'Technical Error'].includes(softApprovalStatus) && (
+                        <option value={softApprovalStatus}>{softApprovalStatus}</option>
+                      )}
                     </select>
                   </div>
 
@@ -755,6 +769,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       <option value="IQA PENDING">3. IQA PENDING</option>
                       <option value="BLAZE CONTINUE">4. BLAZE CONTINUE</option>
                       <option value="BLAZE DECLINE">5. BLAZE DECLINE</option>
+                      {iqaStage && !['', 'IQA SENT', 'IQA COMPLETE', 'IQA PENDING', 'BLAZE CONTINUE', 'BLAZE DECLINE'].includes(iqaStage) && (
+                        <option value={iqaStage}>{iqaStage}</option>
+                      )}
                     </select>
                   </div>
 
@@ -780,8 +797,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     >
                       <option value="">None</option>
                       <option value="VKYC Pending">1. VKYC Pending</option>
+                      <option value="vkyc pending">1. vkyc pending</option>
                       <option value="VKYC Complete">2. VKYC Complete</option>
+                      <option value="vkyc complete">2. vkyc complete</option>
                       <option value="VKYC Failed">3. VKYC Failed</option>
+                      {vkycStage && !['', 'VKYC Pending', 'vkyc pending', 'VKYC Complete', 'vkyc complete', 'VKYC Failed'].includes(vkycStage) && (
+                        <option value={vkycStage}>{vkycStage}</option>
+                      )}
                     </select>
                   </div>
 
@@ -811,6 +833,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       <option value="e-sign pending">3. e-sign pending</option>
                       <option value="e-sign done">4. e-sign done</option>
                       <option value="RTB(Error)">5. RTB(Error)</option>
+                      {dispatchStatus && !['', 'dispatch pending', 'complete', 'e-sign pending', 'e-sign done', 'RTB(Error)'].includes(dispatchStatus) && (
+                        <option value={dispatchStatus}>{dispatchStatus}</option>
+                      )}
                     </select>
                   </div>
 

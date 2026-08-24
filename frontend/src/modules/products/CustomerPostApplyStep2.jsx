@@ -478,6 +478,7 @@ export default function CustomerPostApplyStep2() {
                   <option value="appcode send">appcode send</option>
                   <option value="appcode pending">appcode pending</option>
                   <option value="appcode complete">appcode complete</option>
+                  <option value="digital">digital</option>
                 </select>
               </div>
 

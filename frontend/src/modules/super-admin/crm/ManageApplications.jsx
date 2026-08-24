@@ -1050,7 +1050,28 @@ export default function ManageApplications() {
                   🏦 Part 3: Bank Remark & Final Form
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
-                  <div><span style={{ color: C.textLight }}>App / Bank Reference #:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{selectedApp.bank_ref_number || selectedApp.bank_application_number || selectedApp.app_number || '—'}</strong></div>
+                  <div>
+                    <span style={{ color: C.textLight }}>App / Bank Reference #:</span>{' '}
+                    <strong style={{ color: C.text, fontFamily: 'monospace' }}>
+                      {selectedApp.bank_ref_number || selectedApp.bank_application_number || selectedApp.app_number || '—'}
+                    </strong>
+                    {(selectedApp.bank_ref_number || selectedApp.bank_application_number) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const num = selectedApp.bank_ref_number || selectedApp.bank_application_number;
+                          navigator.clipboard.writeText(num);
+                          alert(`📋 Copied Bank Ref Number: ${num}`);
+                        }}
+                        style={{
+                          marginLeft: '8px', padding: '2px 8px', borderRadius: '4px', border: `1px solid ${C.primary}40`,
+                          background: `${C.primary}12`, color: C.primary, fontSize: '10px', fontWeight: 800, cursor: 'pointer'
+                        }}
+                      >
+                        📋 Copy
+                      </button>
+                    )}
+                  </div>
                   <div><span style={{ color: C.textLight }}>Applied Loan Amount:</span> <strong style={{ color: C.text }}>{selectedApp.loan_amount ? `₹${parseFloat(selectedApp.loan_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Approved Amount:</span> <strong style={{ color: C.green, fontWeight: 800 }}>{selectedApp.approved_amount ? `₹${parseFloat(selectedApp.approved_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Commission Amount / Status:</span> <strong style={{ color: C.green, fontWeight: 800 }}>₹{selectedApp.commission_amount || 0} ({selectedApp.commission_status || 'pending'})</strong></div>
@@ -1067,6 +1088,38 @@ export default function ManageApplications() {
                   <div><span style={{ color: C.textLight }}>Bank Remark:</span> <strong style={{ color: C.text }}>{selectedApp.bank_remark || '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Decline / Rejection Reason:</span> <strong style={{ color: C.red, fontWeight: 700 }}>{selectedApp.decline_reason_remark || selectedApp.decline_reason || selectedApp.rejection_reason || '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Super Admin Remark:</span> <strong style={{ color: C.text }}>{selectedApp.super_admin_remark || selectedApp.admin_remark || '—'}</strong></div>
+                  <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', marginTop: '8px', paddingTop: '10px', borderTop: `1px solid ${C.border}` }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const link = selectedApp.vkyc_url || `https://gharkapaisa.in/track/${selectedApp.app_number}`;
+                        if (navigator.share) {
+                          navigator.share({ title: 'VKYC / Tracking Link', text: `Link for App #${selectedApp.app_number}:`, url: link }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(link);
+                          alert('📋 Link copied to clipboard!');
+                        }
+                      }}
+                      style={{ ...S.btn('outline'), color: C.primary, borderColor: `${C.primary}40`, padding: '6px 14px', fontSize: '11.5px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      🔗 Share Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const bName = String(selectedApp.bank_name || selectedApp.product_name || '').toLowerCase();
+                        let targetUrl = 'https://www.sbicard.com/en/eapply/track-credit-card-application.page';
+                        if (bName.includes('hdfc')) targetUrl = 'https://track.hdfcbank.com/';
+                        else if (bName.includes('icici')) targetUrl = 'https://www.icicibank.com/Personal-Banking/cards/credit-card/track-application.page';
+                        else if (bName.includes('axis')) targetUrl = 'https://www.axisbank.com/retail/cards/credit-card/track-your-application';
+                        
+                        window.open(targetUrl, '_blank');
+                      }}
+                      style={{ ...S.btn('outline'), color: '#ea580c', borderColor: '#ea580c40', background: '#ea580c12', padding: '6px 14px', fontSize: '11.5px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      🌐 Digital Incomplete Share
+                    </button>
+                  </div>
                 </div>
               </div>
 

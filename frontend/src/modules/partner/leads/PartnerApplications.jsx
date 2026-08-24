@@ -1418,7 +1418,31 @@ export default function PartnerApplications() {
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number || 'Pending'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                        <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>
+                          {viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number || 'Pending'}
+                        </div>
+                        {(viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const numToCopy = viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number;
+                              if (numToCopy && numToCopy !== 'Pending') {
+                                navigator.clipboard.writeText(numToCopy);
+                                alert(`📋 Copied Bank Application Number: ${numToCopy}`);
+                              }
+                            }}
+                            title="Copy Bank Application Number"
+                            style={{
+                              padding: '2px 8px', borderRadius: 6, border: '1px solid #3b82f640',
+                              background: '#3b82f615', color: '#3b82f6', fontSize: 10, fontWeight: 800,
+                              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3
+                            }}
+                          >
+                            <Copy size={11} /> Copy
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>CURRENT STAGE</div>
@@ -1473,6 +1497,48 @@ export default function PartnerApplications() {
                         </a>
                       </div>
                     )}
+                    <div style={{ gridColumn: 'span 2', display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap', borderTop: `1px solid ${border}`, paddingTop: 10 }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const vkycUrl = viewAppDetails?.vkyc_url || (viewAppDetails?.app_number ? `https://gharkapaisa.in/track/${viewAppDetails.app_number}` : 'https://gharkapaisa.in');
+                          if (navigator.share) {
+                            navigator.share({ title: 'VKYC Link', text: `VKYC Link for Application #${viewAppDetails?.app_number || viewApp?.app_number}:`, url: vkycUrl }).catch(() => {});
+                          } else {
+                            navigator.clipboard.writeText(vkycUrl);
+                            alert('📋 VKYC Link copied to clipboard!');
+                          }
+                        }}
+                        style={{
+                          padding: '7px 14px', borderRadius: 10, border: '1px solid #2563eb40',
+                          background: '#2563eb15', color: '#2563eb', fontSize: 11, fontWeight: 800,
+                          cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
+                        }}
+                      >
+                        <Share2 size={13} /> Share Link
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const bName = viewAppDetails?.bank_name || viewApp?.bank_name || viewAppDetails?.product_name || viewApp?.product_name || '';
+                          const lower = String(bName).toLowerCase();
+                          let targetUrl = 'https://www.sbicard.com/en/eapply/track-credit-card-application.page';
+                          if (lower.includes('hdfc')) targetUrl = 'https://track.hdfcbank.com/';
+                          else if (lower.includes('icici')) targetUrl = 'https://www.icicibank.com/Personal-Banking/cards/credit-card/track-application.page';
+                          else if (lower.includes('axis')) targetUrl = 'https://www.axisbank.com/retail/cards/credit-card/track-your-application';
+                          
+                          window.open(targetUrl, '_blank');
+                        }}
+                        style={{
+                          padding: '7px 14px', borderRadius: 10, border: '1px solid #ea580c40',
+                          background: '#ea580c15', color: '#ea580c', fontSize: 11, fontWeight: 800,
+                          cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
+                        }}
+                      >
+                        <ArrowUpRight size={13} /> Digital Incomplete Share
+                      </button>
+                    </div>
                   </div>
                 </div>
 

@@ -781,6 +781,7 @@ export default function PhysicalApplicationForm() {
                         <option value="Soft Approval">2. Soft Approval</option>
                         <option value="Pending">3. Pending</option>
                         <option value="Submit">4. Submit</option>
+                        <option value="Digital">5. Digital</option>
                       </>
                     ) : (
                       <>
@@ -789,6 +790,7 @@ export default function PhysicalApplicationForm() {
                         <option value="Soft Approval">3. Soft Approval</option>
                         <option value="Pending">4. Pending</option>
                         <option value="Submit">5. Submit</option>
+                        <option value="Digital">6. Digital</option>
                       </>
                     )}
                   </select>
