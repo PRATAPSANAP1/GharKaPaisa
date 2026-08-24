@@ -132,12 +132,13 @@ export default function ManageApplications() {
     setSubmittingApprove(true);
     try {
       const res = await api.put(`/applications/${targetId}/verification`, {
-        status: 'approved',
-        final_status: 'App File Generated (Approved)',
+        status: 'super_admin_approved',
+        final_status: 'Super Admin Approved',
+        super_admin_remark: superAdminRemark.trim() || 'Approved by Operation Head / Super Admin',
         bank_remark: superAdminRemark.trim() || 'Approved by Operation Head / Super Admin'
       });
       if (res.data?.success) {
-        alert("Application status updated to APPROVED successfully!");
+        alert("Application status updated to SUPER ADMIN APPROVED successfully!");
         setSelectedApp(null);
         setAppDetail(null);
         fetchApplications();

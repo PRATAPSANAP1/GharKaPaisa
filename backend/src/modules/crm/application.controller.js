@@ -2708,7 +2708,7 @@ const updateApplicationDetails = async (req, res, next) => {
           updated_at = NOW()
         WHERE id = $7
         RETURNING *
-      `, [vkyc_status || null, vkyc_url || null, status || null, product_id || null, full_name || null, city || null, id]);
+      `, [vkyc_status || null, vkyc_url || null, status || null, product_id || null, full_name || null, city || null, app.id]);
 
       if (app.mobile || app.customer_id) {
         await client.query(`
@@ -2835,7 +2835,7 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(address2),
       cleanStr(landmark),
       cleanStr(address),
-      id,
+      app.id,
       cleanStr(appcode_status || req.body.appcode_status)
     ]);
 
@@ -2990,7 +2990,7 @@ const updateApplicationDetails = async (req, res, next) => {
         address1 || null,
         address2 || null,
         landmark || null,
-        id,
+        app.id,
         cleanStr(appcode_status || req.body.appcode_status),
         cleanStr(soft_approval_status || req.body.soft_approval_status),
         cleanStr(vkyc_stage || req.body.vkyc_stage),
@@ -3010,7 +3010,7 @@ const updateApplicationDetails = async (req, res, next) => {
       INSERT INTO application_timeline (application_id, status, activity, event_type, title, description, actor_type, actor_id)
       VALUES ($1, $2, 'Application Details Updated', 'application_updated', 'Application Edit & Updated', $3, $4, $5)
     `, [
-      id,
+      app.id,
       status || app.status,
       `Application updated. App No: ${appNumToSave || 'N/A'}, VKYC: ${vkyc_status || 'N/A'}, Status: ${status || app.status}`,
       ['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role) ? 'admin' : 'partner',
