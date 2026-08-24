@@ -220,13 +220,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           bankRemark: realRemark
         });
 
-        if (realAppcode) setAppcodeStatus(realAppcode);
-        if (realSoftApproval) setSoftApprovalStatus(realSoftApproval);
-        if (realVkyc) setVkycStage(realVkyc);
-        if (realIqa) setIqaStage(realIqa);
-        if (realDispatch) setDispatchStatus(realDispatch);
-        if (realRemark) setBankRemark(realRemark);
-        if (realFinal) setFinalStatus(realFinal);
+        setAppcodeStatus(realAppcode);
+        setSoftApprovalStatus(realSoftApproval);
+        setVkycStage(realVkyc);
+        setIqaStage(realIqa);
+        setDispatchStatus(realDispatch);
+        setBankRemark(realRemark);
+        setFinalStatus(realFinal);
         if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
         if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
         if (app.approved_amount || pd.approved_amount) setApprovedAmount(app.approved_amount || pd.approved_amount);
