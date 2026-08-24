@@ -3269,14 +3269,18 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
       ]
     );
 
+    const isOpsOrAdminUser = req.user && ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMIN_OPERATOR', 'OPERATOR'].includes((req.user.role || '').toUpperCase());
+
     let mainStatus = 'operational_verified';
-    if (final_status) {
+    if (isOpsOrAdminUser && final_status) {
       const lowerFs = final_status.toLowerCase();
       if (lowerFs.includes('decline') || lowerFs.includes('rejected')) mainStatus = 'rejected';
       else mainStatus = 'operational_verified';
+    } else {
+      mainStatus = null;
     }
 
-    // Sync to applications table
+    // Sync to applications table (Part 3 fields editable only by Operations Head, Super Admin, or Administrative Operator)
     await client.query(
       `UPDATE applications 
        SET status = COALESCE($1, status),
@@ -3295,17 +3299,17 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
        WHERE id = $13`,
       [
         mainStatus,
-        bank_ref_number || null,
-        vkyc_url || null,
+        isOpsOrAdminUser ? (bank_ref_number || null) : null,
+        isOpsOrAdminUser ? (vkyc_url || null) : null,
         appcode_status || null,
         soft_approval_status || null,
         vkyc_stage || null,
         iqa_stage || null,
         dispatch_status || null,
-        bank_remark || null,
-        final_status || null,
-        decline_reason || null,
-        eligible_reqd || null,
+        isOpsOrAdminUser ? (bank_remark || null) : null,
+        isOpsOrAdminUser ? (final_status || null) : null,
+        isOpsOrAdminUser ? (decline_reason || null) : null,
+        isOpsOrAdminUser ? (eligible_reqd || null) : null,
         appId
       ]
     );

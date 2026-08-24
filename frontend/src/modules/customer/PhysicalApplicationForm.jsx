@@ -147,7 +147,7 @@ export default function PhysicalApplicationForm() {
 
   const user = useAuthStore(state => state.user);
   const userRole = (user?.role || '').toUpperCase();
-  const isOperationsOrAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD'].includes(userRole);
+  const isOperationsOrAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMIN_OPERATOR', 'OPERATOR'].includes(userRole);
 
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -951,19 +951,37 @@ export default function PhysicalApplicationForm() {
           {/* ═══ STEP 4: BANK REMARK & FINAL STATUS ═══ */}
           {activeTab === 'step4' && (
             <>
-              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4 }}>
-                🏦 {txt('bankFinalStatus')}
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>🏦 {txt('bankFinalStatus')}</span>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: isOperationsOrAdmin ? C.teal : C.red }}>
+                  {isOperationsOrAdmin ? '✏️ Editable (Operations Head / Super Admin / Administrative Operator)' : '🔒 Read-Only (Operations Head / Admin only)'}
+                </span>
               </div>
+
+              {!isOperationsOrAdmin && (
+                <div style={{ background: isDark ? '#1e293b' : '#f8fafc', border: `1.5px solid ${C.border}`, padding: '12px 16px', borderRadius: 14, fontSize: 12.5, fontWeight: 700, color: C.textMid, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  🔒 Part 3 (Bank & Final Status) can only be added or edited by Operations Head, Super Admin, or Administrative Operator.
+                </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={labelStyle}>{txt('appNumberBank')}</label>
                   <input
                     type="text"
+                    disabled={!isOperationsOrAdmin}
+                    readOnly={!isOperationsOrAdmin}
                     value={form.bank_ref_number}
                     onChange={e => handleChange('bank_ref_number', e.target.value)}
                     placeholder={txt('appNumberBankPlace')}
-                    style={{ ...inputStyle, fontWeight: 'bold', fontFamily: 'monospace' }}
+                    style={{
+                      ...inputStyle,
+                      fontWeight: 'bold',
+                      fontFamily: 'monospace',
+                      opacity: isOperationsOrAdmin ? 1 : 0.8,
+                      cursor: isOperationsOrAdmin ? 'text' : 'not-allowed',
+                      background: isOperationsOrAdmin ? C.inputBg : (isDark ? '#1a1a1a' : '#f1f5f9')
+                    }}
                   />
                 </div>
 
@@ -971,19 +989,32 @@ export default function PhysicalApplicationForm() {
                   <label style={labelStyle}>{txt('vkycUrl')}</label>
                   <input
                     type="url"
+                    disabled={!isOperationsOrAdmin}
+                    readOnly={!isOperationsOrAdmin}
                     value={form.vkyc_url}
                     onChange={e => handleChange('vkyc_url', e.target.value)}
                     placeholder={txt('vkycUrlPlace')}
-                    style={inputStyle}
+                    style={{
+                      ...inputStyle,
+                      opacity: isOperationsOrAdmin ? 1 : 0.8,
+                      cursor: isOperationsOrAdmin ? 'text' : 'not-allowed',
+                      background: isOperationsOrAdmin ? C.inputBg : (isDark ? '#1a1a1a' : '#f1f5f9')
+                    }}
                   />
                 </div>
 
                 <div>
                   <label style={labelStyle}>{txt('finalStatus')}</label>
                   <select
+                    disabled={!isOperationsOrAdmin}
                     value={form.final_status}
                     onChange={e => handleChange('final_status', e.target.value)}
-                    style={inputStyle}
+                    style={{
+                      ...inputStyle,
+                      opacity: isOperationsOrAdmin ? 1 : 0.8,
+                      cursor: isOperationsOrAdmin ? 'pointer' : 'not-allowed',
+                      background: isOperationsOrAdmin ? C.inputBg : (isDark ? '#1a1a1a' : '#f1f5f9')
+                    }}
                   >
                     <option value="App file generated (approved)">1. App file generated (approved)</option>
                     <option value="Decline">2. Decline</option>
@@ -995,9 +1026,15 @@ export default function PhysicalApplicationForm() {
                 <div>
                   <label style={labelStyle}>{txt('eligibleReqd')}</label>
                   <select
+                    disabled={!isOperationsOrAdmin}
                     value={form.eligible_reqd}
                     onChange={e => handleChange('eligible_reqd', e.target.value)}
-                    style={inputStyle}
+                    style={{
+                      ...inputStyle,
+                      opacity: isOperationsOrAdmin ? 1 : 0.8,
+                      cursor: isOperationsOrAdmin ? 'pointer' : 'not-allowed',
+                      background: isOperationsOrAdmin ? C.inputBg : (isDark ? '#1a1a1a' : '#f1f5f9')
+                    }}
                   >
                     <option value="Yes">{txt('yes')}</option>
                     <option value="No">{txt('no')}</option>
@@ -1009,7 +1046,7 @@ export default function PhysicalApplicationForm() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label style={{ ...labelStyle, marginBottom: 0 }}>{txt('bankRemark')}</label>
                   <span style={{ fontSize: '10.5px', fontWeight: 800, color: isOperationsOrAdmin ? C.teal : C.textMid }}>
-                    {isOperationsOrAdmin ? '✏️ Operations Head / Admin Edit Access' : '🔒 Read-Only (Operations Head / Admin only)'}
+                    {isOperationsOrAdmin ? '✏️ Operations Head / Admin Operator Edit Access' : '🔒 Read-Only (Operations Head / Admin only)'}
                   </span>
                 </div>
                 <textarea
@@ -1018,7 +1055,7 @@ export default function PhysicalApplicationForm() {
                   readOnly={!isOperationsOrAdmin}
                   value={form.bank_remark}
                   onChange={e => handleChange('bank_remark', e.target.value)}
-                  placeholder={isOperationsOrAdmin ? txt('bankRemarkPlace') : "Bank remark can only be added or edited by Operations Head or Admin."}
+                  placeholder={isOperationsOrAdmin ? txt('bankRemarkPlace') : "Bank remark can only be added or edited by Operations Head, Super Admin, or Administrative Operator."}
                   style={{
                     ...inputStyle,
                     resize: 'vertical',
@@ -1034,10 +1071,19 @@ export default function PhysicalApplicationForm() {
                   <label style={{ ...labelStyle, color: C.red }}>{txt('declineReason')}</label>
                   <textarea
                     rows={2}
+                    disabled={!isOperationsOrAdmin}
+                    readOnly={!isOperationsOrAdmin}
                     value={form.decline_reason}
                     onChange={e => handleChange('decline_reason', e.target.value)}
                     placeholder={txt('declineReasonPlace')}
-                    style={{ ...inputStyle, borderColor: `${C.red}60`, resize: 'vertical' }}
+                    style={{
+                      ...inputStyle,
+                      borderColor: `${C.red}60`,
+                      resize: 'vertical',
+                      opacity: isOperationsOrAdmin ? 1 : 0.8,
+                      cursor: isOperationsOrAdmin ? 'text' : 'not-allowed',
+                      background: isOperationsOrAdmin ? C.inputBg : (isDark ? '#1a1a1a' : '#f1f5f9')
+                    }}
                   />
                 </div>
               )}
