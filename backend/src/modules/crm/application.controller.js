@@ -1426,8 +1426,22 @@ const getApplication = async (req, res, next) => {
           ADD COLUMN IF NOT EXISTS marital_status VARCHAR(100),
           ADD COLUMN IF NOT EXISTS gender VARCHAR(50),
           ADD COLUMN IF NOT EXISTS designation VARCHAR(255),
-          ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20);
+          ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20),
+          ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(15,2);
         ALTER TABLE applications
+          ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(50),
+          ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS pan_number VARCHAR(20),
+          ADD COLUMN IF NOT EXISTS dob DATE,
+          ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(15,2),
+          ADD COLUMN IF NOT EXISTS monthly_salary DECIMAL(15,2),
+          ADD COLUMN IF NOT EXISTS employment_type VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS occupation VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS company_name VARCHAR(255),
+          ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS state VARCHAR(100),
+          ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
           ADD COLUMN IF NOT EXISTS address TEXT,
           ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255),
           ADD COLUMN IF NOT EXISTS father_name VARCHAR(255),
