@@ -355,12 +355,6 @@ export default function ManageApplications() {
                           <td style={{ padding: "14px 16px", textAlign: "right" }}>
                             <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
                               <button
-                                onClick={() => handleViewDetails(app)}
-                                style={{ background: "#6366f115", border: "1px solid #6366f140", color: "#6366f1", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                              >
-                                Edit Status
-                              </button>
-                              <button
                                 onClick={() => {
                                   handleViewDetails(app);
                                   setNewStatus('rejected');
