@@ -64,6 +64,7 @@ export default function ManageBanners() {
   
   const openAddModal = () => {
     setEditItem(null);
+    const defaultPlacement = activeTab === "all" ? "offer" : activeTab;
     setForm({
       title: "",
       subtitle: "",
@@ -73,7 +74,7 @@ export default function ManageBanners() {
       is_active: true,
       link_type: "custom",
       click_url: "/credit-cards",
-      target_page: "all"
+      target_page: defaultPlacement
     });
     setImageFile(null);
     setModalOpen(true);
@@ -161,6 +162,15 @@ export default function ManageBanners() {
     }
   };
 
+  // Calculate tab count indicators
+  const getTabCount = (key) => {
+    if (key === "all") return banners.length;
+    if (key === "offer") return banners.filter(b => b.target_page === "offer" || b.target_page === "home").length;
+    if (key === "team") return banners.filter(b => b.target_page === "team" || b.target_page === "partner").length;
+    if (key === "referral") return banners.filter(b => b.target_page === "referral" || b.target_page === "refer").length;
+    return 0;
+  };
+
   // Filter Banners by Active Tab
   const filteredBanners = banners.filter(item => {
     if (activeTab === "all") return true;
@@ -201,25 +211,41 @@ export default function ManageBanners() {
           { key: "offer", label: "Offer Banners (Home Page)" },
           { key: "team", label: "Team Banners (Partner Dashboard)" },
           { key: "referral", label: "Referral Banners (Partner Referral)" }
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "8px",
-              fontSize: "13px",
-              fontWeight: 700,
-              cursor: "pointer",
-              border: `1px solid ${activeTab === tab.key ? C.teal : C.border}`,
-              background: activeTab === tab.key ? `${C.teal}15` : C.card,
-              color: activeTab === tab.key ? C.teal : C.text,
-              transition: "all 0.2s ease"
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+        ].map(tab => {
+          const count = getTabCount(tab.key);
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 700,
+                cursor: "pointer",
+                border: `1px solid ${activeTab === tab.key ? C.teal : C.border}`,
+                background: activeTab === tab.key ? `${C.teal}15` : C.card,
+                color: activeTab === tab.key ? C.teal : C.text,
+                transition: "all 0.2s ease",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px"
+              }}
+            >
+              <span>{tab.label}</span>
+              <span style={{
+                fontSize: "11px",
+                fontWeight: 800,
+                padding: "2px 6px",
+                borderRadius: "10px",
+                background: activeTab === tab.key ? C.teal : `${C.border}`,
+                color: activeTab === tab.key ? "#fff" : C.textLight
+              }}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Error alert wrapper */}

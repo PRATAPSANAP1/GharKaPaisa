@@ -11,8 +11,16 @@ const listBanners = async (req, res, next) => {
     const params = [];
 
     if (pageFilter) {
-      sql += ` AND (target_page = $1 OR target_page = 'all' OR target_page IS NULL)`;
-      params.push(pageFilter);
+      if (pageFilter === 'team' || pageFilter === 'partner') {
+        sql += ` AND (target_page = 'team' OR target_page = 'partner' OR target_page = 'all' OR target_page IS NULL)`;
+      } else if (pageFilter === 'referral' || pageFilter === 'refer') {
+        sql += ` AND (target_page = 'referral' OR target_page = 'refer' OR target_page = 'all' OR target_page IS NULL)`;
+      } else if (pageFilter === 'offer' || pageFilter === 'home') {
+        sql += ` AND (target_page = 'offer' OR target_page = 'home' OR target_page = 'all' OR target_page IS NULL)`;
+      } else {
+        sql += ` AND (target_page = $1 OR target_page = 'all' OR target_page IS NULL)`;
+        params.push(pageFilter);
+      }
     }
 
     sql += ` ORDER BY display_order ASC, created_at DESC`;
@@ -31,8 +39,16 @@ const listAllBanners = async (req, res, next) => {
     const params = [];
 
     if (pageFilter && pageFilter !== 'all') {
-      sql += ` WHERE (target_page = $1 OR target_page = 'all' OR target_page IS NULL)`;
-      params.push(pageFilter);
+      if (pageFilter === 'team' || pageFilter === 'partner') {
+        sql += ` WHERE (target_page = 'team' OR target_page = 'partner' OR target_page = 'all' OR target_page IS NULL)`;
+      } else if (pageFilter === 'referral' || pageFilter === 'refer') {
+        sql += ` WHERE (target_page = 'referral' OR target_page = 'refer' OR target_page = 'all' OR target_page IS NULL)`;
+      } else if (pageFilter === 'offer' || pageFilter === 'home') {
+        sql += ` WHERE (target_page = 'offer' OR target_page = 'home' OR target_page = 'all' OR target_page IS NULL)`;
+      } else {
+        sql += ` WHERE (target_page = $1 OR target_page = 'all' OR target_page IS NULL)`;
+        params.push(pageFilter);
+      }
     }
 
     sql += ` ORDER BY display_order ASC, created_at DESC`;
