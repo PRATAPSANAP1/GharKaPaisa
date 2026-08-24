@@ -25,9 +25,6 @@ export default function PrivacyPolicy() {
           </button>
           <div>
             <h1 style={{ fontSize: '28px', fontWeight: 900, color: C.text, margin: 0 }}>Privacy Policy</h1>
-            <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
-              Effective Date: 21/07/2026 | Last Updated: 21/07/2026
-            </p>
           </div>
         </div>
 
