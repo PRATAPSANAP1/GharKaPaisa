@@ -283,9 +283,6 @@ export default function ManageApplications() {
                 <h3 style={{ fontSize: "15px", fontWeight: 800, color: C.text, margin: 0 }}>
                   Applications ({sortedApps.length})
                 </h3>
-                <span style={{ fontSize: "12px", fontWeight: 600, color: C.textLight }}>
-                  Sorted: Latest Top to Oldest Bottom
-                </span>
               </div>
 
               <div style={{ overflowX: "auto" }}>

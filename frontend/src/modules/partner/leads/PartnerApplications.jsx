@@ -860,9 +860,6 @@ export default function PartnerApplications() {
                   <FileText size={18} style={{ color: accent }} />
                   <h3 style={{ fontSize: 15, fontWeight: 800, color: textPrimary, margin: 0 }}>Applications ({sortedApps.length})</h3>
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: textMuted }}>
-                  Sorted: Latest Top to Oldest Bottom
-                </span>
               </div>
 
               {isMobile ? (

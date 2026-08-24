@@ -320,9 +320,6 @@ export default function ManageLeads() {
                     Leads & Applications ({sortedLeads.length})
                   </h3>
                 </div>
-                <span style={{ fontSize: "12px", fontWeight: 600, color: C.textLight }}>
-                  Sorted: Latest Top to Oldest Bottom
-                </span>
               </div>
 
               <div style={{ overflowX: "auto" }}>
