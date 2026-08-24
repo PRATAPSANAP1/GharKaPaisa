@@ -88,7 +88,7 @@ export default function ManageApplications() {
 
   const handleViewDetails = async (app) => {
     setSelectedApp(app);
-    setAppDetail(null);
+    setAppDetail(app);
     setLoadingDetail(true);
     setSuperAdminRemark("");
     setTimelines([]);
@@ -97,10 +97,11 @@ export default function ManageApplications() {
     setApprovedAmount("");
     setRejectionReason("");
     setNotes("");
+    const targetId = app?.id || app?.application_id || app?.app_number || app?.lead_id;
     try {
       const [res, tRes] = await Promise.all([
-        api.get(`/applications/${app.id}`).catch(() => null),
-        api.get(`/applications/${app.id}/timeline`).catch(() => null)
+        targetId ? api.get(`/applications/${targetId}`).catch(() => null) : Promise.resolve(null),
+        targetId ? api.get(`/applications/${targetId}/timeline`).catch(() => null) : Promise.resolve(null)
       ]);
       if (res?.data?.success) {
         const det = res.data.data;
@@ -111,24 +112,26 @@ export default function ManageApplications() {
         setBankRefNumber(det.bank_ref_number || pd.bank_ref_number || "");
         setApprovedAmount(det.approved_amount || pd.approved_amount || "");
         setRejectionReason(det.rejection_reason || pd.decline_reason || "");
-      } else {
-        setAppDetail(app);
       }
       if (tRes?.data?.success) {
         setTimelines(tRes.data.data || []);
       }
     } catch (e) {
       console.error(e);
-      setAppDetail(app);
     } finally {
       setLoadingDetail(false);
     }
   };
 
   const handleApproveApplication = async (appId) => {
+    const targetId = appId || appDetail?.id || appDetail?.application_id || appDetail?.app_number || selectedApp?.id || selectedApp?.application_id || selectedApp?.app_number;
+    if (!targetId) {
+      alert("Application ID not found. Please refresh and try again.");
+      return;
+    }
     setSubmittingApprove(true);
     try {
-      const res = await api.put(`/applications/${appId}/verification`, {
+      const res = await api.put(`/applications/${targetId}/verification`, {
         status: 'approved',
         final_status: 'App File Generated (Approved)',
         bank_remark: superAdminRemark.trim() || 'Approved by Operation Head / Super Admin'
@@ -136,6 +139,7 @@ export default function ManageApplications() {
       if (res.data?.success) {
         alert("Application status updated to APPROVED successfully!");
         setSelectedApp(null);
+        setAppDetail(null);
         fetchApplications();
       }
     } catch (err) {
