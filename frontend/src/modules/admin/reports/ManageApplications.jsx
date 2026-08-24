@@ -511,10 +511,10 @@ export default function ManageApplications() {
                   </div>
                 </div>
 
-                {/* Form 1: Quick Details (QD Form Information) */}
+                {/* Form 1: Quick Details */}
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
                   <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.primary, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                    📋 Form 1: Quick Details (QD Form Information)
+                    Form 1: Quick Details
                   </h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
                     <div><span style={{ color: C.textLight }}>Customer Name:</span> <strong style={{ color: C.text }}>{appDetail.customer_name || appDetail.full_name || appDetail.pan_name || '—'}</strong></div>
@@ -535,7 +535,7 @@ export default function ManageApplications() {
                 {/* Part 2: Operational Processing & Remark Form */}
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
                   <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0d9488', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                    ⚙️ Part 2: Operational Processing & Remark Form
+                    Part 2: Operational Processing & Remark Form
                   </h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
                     <div><span style={{ color: C.textLight }}>Appcode Status:</span> <strong style={{ color: C.text }}>{appDetail.appcode_status || 'Appcode Pending'}</strong></div>
@@ -550,7 +550,7 @@ export default function ManageApplications() {
                 {/* Part 3: Bank Remark & Final Form */}
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
                   <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#9333ea', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                    🏦 Part 3: Bank Remark & Final Form
+                    Part 3: Bank Remark & Final Form
                   </h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
                     <div><span style={{ color: C.textLight }}>App / Bank Reference #:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.bank_ref_number || appDetail.bank_application_number || appDetail.app_number || '—'}</strong></div>
@@ -569,7 +569,7 @@ export default function ManageApplications() {
                 {/* Verification Lifecycle Log Stream */}
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
                   <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                    📜 Verification Lifecycle Log
+                    Verification Lifecycle Log
                   </h4>
                   {timelines && timelines.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

@@ -1002,10 +1002,10 @@ export default function ManageApplications() {
             {/* Read-Only Form 1 (QD), Part 2 (Remark) & Part 3 (Final) Overview */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
-              {/* Form 1: Customer Quick Details (QD Form) */}
+              {/* Form 1: Customer Quick Details */}
               <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
                 <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.primary, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  📋 Form 1: Quick Details (QD Form Information)
+                  Form 1: Quick Details
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
                   <div><span style={{ color: C.textLight }}>Customer Name:</span> <strong style={{ color: C.text }}>{selectedApp.customer_name || selectedApp.full_name || selectedApp.pan_name || '—'}</strong></div>
@@ -1026,7 +1026,7 @@ export default function ManageApplications() {
               {/* Part 2: Operations & Dispatch Stage (Remark Form) */}
               <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
                 <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.teal, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  ⚙️ Part 2: Operational Processing & Remark Form
+                  Part 2: Operational Processing & Remark Form
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
                   <div><span style={{ color: C.textLight }}>Appcode Status:</span> <strong style={{ color: C.text }}>{selectedApp.appcode_status || 'Appcode Pending'}</strong></div>
@@ -1041,7 +1041,7 @@ export default function ManageApplications() {
               {/* Part 3: Bank Remark & Final Status (Final Form) */}
               <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
                 <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.purple, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  🏦 Part 3: Bank Remark & Final Form
+                  Part 3: Bank Remark & Final Form
                 </h4>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
                   <div>
