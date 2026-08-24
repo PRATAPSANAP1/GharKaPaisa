@@ -3,6 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { Icons } from '../../../components/Icon/PartnerIcons';
+import { 
+  ShieldCheck, 
+  Zap, 
+  Clock, 
+  FileText, 
+  CheckCircle, 
+  XCircle, 
+  Coins, 
+  CreditCard, 
+  Landmark, 
+  Package, 
+  RotateCw, 
+  AlertTriangle,
+  Eye
+} from 'lucide-react';
 
 export default function SuperAdminOverview() {
   const { C, isDark } = useTheme();
@@ -442,17 +457,17 @@ export default function SuperAdminOverview() {
             gap: '14px'
           }}>
             {[
-              { label: 'Total Admins', value: stats.admins, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)', icon: '🛡️', action: () => setActiveTab('admins') },
-              { label: 'Active Admins', value: stats.activeAdmins, color: '#10B981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)', icon: '⚡', action: () => setActiveTab('admins') },
-              { label: 'Pending KYC', value: stats.pendingKycPartners, color: '#F97316', bg: 'rgba(249, 115, 22, 0.12)', border: 'rgba(249, 115, 22, 0.3)', icon: '⏳', action: () => navigate('/super-admin/partners?kyc_status=pending') },
-              { label: 'Total Leads', value: stats.totalApps, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.3)', icon: '📄', action: () => navigate('/super-admin/leads') },
-              { label: 'Pending Leads', value: stats.pendingApps, color: '#EAB308', bg: 'rgba(234, 179, 8, 0.12)', border: 'rgba(234, 179, 8, 0.3)', icon: '🕒', action: () => navigate('/super-admin/leads?status=pending') },
-              { label: 'Approved Leads', value: stats.approvedApps, color: '#059669', bg: 'rgba(5, 150, 105, 0.12)', border: 'rgba(5, 150, 105, 0.3)', icon: '✅', action: () => navigate('/super-admin/leads?status=approved') },
-              { label: 'Rejected Leads', value: stats.rejectedApps, color: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.3)', icon: '❌', action: () => navigate('/super-admin/leads?status=rejected') },
-              { label: 'Commission Paid', value: `₹${parseFloat(stats.totalCommissionPaid).toLocaleString('en-IN')}`, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.3)', icon: '💰', action: () => setActiveTab('financials') },
-              { label: 'Pending Withdrawals', value: stats.pendingWithdrawals, color: '#EC4899', bg: 'rgba(236, 72, 153, 0.12)', border: 'rgba(236, 72, 153, 0.3)', icon: '💳', action: () => navigate('/super-admin/wallet?tab=withdrawals') },
-              { label: 'Total Banks', value: stats.banks, color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.3)', icon: '🏦', action: () => navigate('/super-admin/banks') },
-              { label: 'Total Products', value: stats.products, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.3)', icon: '📦', action: () => navigate('/super-admin/products') },
+              { label: 'Total Admins', value: stats.admins, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)', icon: <ShieldCheck size={22} color="#F59E0B" />, action: () => setActiveTab('admins') },
+              { label: 'Active Admins', value: stats.activeAdmins, color: '#10B981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)', icon: <Zap size={22} color="#10B981" />, action: () => setActiveTab('admins') },
+              { label: 'Pending KYC', value: stats.pendingKycPartners, color: '#F97316', bg: 'rgba(249, 115, 22, 0.12)', border: 'rgba(249, 115, 22, 0.3)', icon: <Clock size={22} color="#F97316" />, action: () => navigate('/super-admin/partners?kyc_status=pending') },
+              { label: 'Total Leads', value: stats.totalApps, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.3)', icon: <FileText size={22} color="#3B82F6" />, action: () => navigate('/super-admin/leads') },
+              { label: 'Pending Leads', value: stats.pendingApps, color: '#EAB308', bg: 'rgba(234, 179, 8, 0.12)', border: 'rgba(234, 179, 8, 0.3)', icon: <Clock size={22} color="#EAB308" />, action: () => navigate('/super-admin/leads?status=pending') },
+              { label: 'Approved Leads', value: stats.approvedApps, color: '#059669', bg: 'rgba(5, 150, 105, 0.12)', border: 'rgba(5, 150, 105, 0.3)', icon: <CheckCircle size={22} color="#059669" />, action: () => navigate('/super-admin/leads?status=approved') },
+              { label: 'Rejected Leads', value: stats.rejectedApps, color: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.3)', icon: <XCircle size={22} color="#EF4444" />, action: () => navigate('/super-admin/leads?status=rejected') },
+              { label: 'Commission Paid', value: `₹${parseFloat(stats.totalCommissionPaid).toLocaleString('en-IN')}`, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.3)', icon: <Coins size={22} color="#8B5CF6" />, action: () => setActiveTab('financials') },
+              { label: 'Pending Withdrawals', value: stats.pendingWithdrawals, color: '#EC4899', bg: 'rgba(236, 72, 153, 0.12)', border: 'rgba(236, 72, 153, 0.3)', icon: <CreditCard size={22} color="#EC4899" />, action: () => navigate('/super-admin/wallet?tab=withdrawals') },
+              { label: 'Total Banks', value: stats.banks, color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.3)', icon: <Landmark size={22} color="#06B6D4" />, action: () => navigate('/super-admin/banks') },
+              { label: 'Total Products', value: stats.products, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.3)', icon: <Package size={22} color="#6366F1" />, action: () => navigate('/super-admin/products') },
             ].map((kpi, idx) => (
               <div
                 key={idx}
