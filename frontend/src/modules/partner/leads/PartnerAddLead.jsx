@@ -242,7 +242,7 @@ export default function PartnerAddLead() {
         } else if (processType === 'physical_process') {
           const token = leadData?.tracking_token || leadData?.token || leadData?.app_id || leadData?.id;
           const uploadUrl = token ? `${window.location.origin}/physical-application/${token}` : (leadData?.share_url || directBankUrl);
-          const shareMsg = `Hello ${customerName.trim()},\n\nPlease fill your required customer details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n${uploadUrl}\n\nShared via GharKaPaisa.`;
+          const shareMsg = `Hello ${customerName.trim()},\n\nPlease fill your required customer details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n${uploadUrl}`;
           const finalWaUrl = leadData?.whatsapp_url || `https://wa.me/91${mobile.trim()}?text=${encodeURIComponent(shareMsg)}`;
           
           setShareResult({

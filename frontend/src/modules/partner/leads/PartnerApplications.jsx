@@ -273,7 +273,7 @@ export default function PartnerApplications() {
           shareUrl = `${window.location.origin}/apply/${tokenVal}`;
         }
         const custName = app.customer_name || 'Customer';
-        shareText = `Hello ${custName},\n\nPlease complete your application tracking and details form for ${app.product_name || 'Credit Card'} using this link:\n${shareUrl}\n\nShared via GharKaPaisa.`;
+        shareText = `Hello ${custName},\n\nPlease complete your application tracking and details form for ${app.product_name || 'Credit Card'} using this link:\n${shareUrl}`;
       }
 
       const cleanMobile = (app.customer_mobile || app.mobile || '').replace(/\D/g, '');

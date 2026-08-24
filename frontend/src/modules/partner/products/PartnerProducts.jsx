@@ -359,7 +359,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         const cleanMobile = mobile.trim().replace(/\D/g, '');
         const token = appData?.tracking_token || appData?.token || appData?.application_id || appData?.app_id || appData?.id;
         const uploadUrl = (token ? `${window.location.origin}/physical-application/${token}` : null) || appData?.share_url || `${window.location.origin}/partner/applications`;
-        const waMsg = `Hello ${customerName.trim()},\n\nPlease fill your required customer details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n${uploadUrl}\n\nShared via GharKaPaisa.`;
+        const waMsg = `Hello ${customerName.trim()},\n\nPlease fill your required customer details (Full Name, Address, PAN, DOB, Mother Name, Email, Company Name, Designation) using this link:\n${uploadUrl}`;
         const waUrl = appData?.whatsapp_url || `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(waMsg)}`;
 
         setPhysicalSheetData({
