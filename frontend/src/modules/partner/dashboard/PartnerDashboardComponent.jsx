@@ -246,7 +246,7 @@ export default function PartnerDashboardComponent({ partner }) {
           api.get(`/Partners/${partnerId}/dashboard`).catch(() => null),
           api.get('/wallet').catch(() => null),
           api.get('team/dashboard').catch(() => null),
-          api.get('/banners', { params: { page: 'partner' } }).catch(() => null),
+          api.get('/banners', { params: { page: 'offer' } }).catch(() => null),
           api.get('/notifications', { params: { limit: 10 } }).catch(() => null),
           api.get('/leads', { params: { limit: 100 } }).catch(() => null)
         ]);
@@ -448,7 +448,14 @@ export default function PartnerDashboardComponent({ partner }) {
           </div>
         )}
 
-        {/* ──── HERO BANNER SLIDER ──── */}
+        {/* ──── HERO BANNER SLIDER (OFFER BANNERS) ──── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px', marginBottom: '8px', paddingLeft: '4px', paddingRight: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontWeight: 800, fontSize: '13px', letterSpacing: '0.05em', color: isDark ? C.text : '#111827', textTransform: 'uppercase' }}>
+              Offer Banners
+            </span>
+          </div>
+        </div>
         <div
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
@@ -456,7 +463,6 @@ export default function PartnerDashboardComponent({ partner }) {
             width: '100%',
             height: isMobile ? '180px' : '320px',
             borderRadius: '24px',
-            marginTop: '20px',
             position: 'relative',
             overflow: 'hidden',
             boxShadow: isDark ? 'none' : '0 8px 32px rgba(0,0,0,0.12)',
@@ -668,9 +674,14 @@ export default function PartnerDashboardComponent({ partner }) {
 
 
 
-        {/* ──── PARTNER BANNER CAROUSEL ──── */}
-        <div style={{ marginTop: '16px' }}>
-          <PartnerBannerCarousel />
+        {/* ──── PARTNER BANNER CAROUSEL (TEAM & REFERRAL BANNERS) ──── */}
+        <div style={{ marginTop: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', paddingLeft: '4px', paddingRight: '4px' }}>
+            <span style={{ fontWeight: 800, fontSize: '13px', letterSpacing: '0.05em', color: isDark ? C.text : '#111827', textTransform: 'uppercase' }}>
+              Team &amp; Referral Banners
+            </span>
+          </div>
+          <PartnerBannerCarousel showOnlyRefer={false} />
         </div>
 
         {/* ──── QUICK ACCESS SECTION ──── */}

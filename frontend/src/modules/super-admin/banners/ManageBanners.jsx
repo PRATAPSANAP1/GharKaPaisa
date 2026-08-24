@@ -208,9 +208,8 @@ export default function ManageBanners() {
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
         {[
           { key: "all", label: "All Banners" },
-          { key: "offer", label: "Offer Banners (Home Page)" },
-          { key: "team", label: "Team Banners (Partner Dashboard)" },
-          { key: "referral", label: "Referral Banners (Partner Referral)" }
+          { key: "offer", label: "Offer Banners (Home Page & Partner Top)" },
+          { key: "team", label: "Team & Referral Banners (Partner Dashboard)" }
         ].map(tab => {
           const count = getTabCount(tab.key);
           return (
@@ -429,9 +428,8 @@ export default function ManageBanners() {
                   value={form.target_page}
                   onChange={(e) => setForm({ ...form, target_page: e.target.value })}
                 >
-                  <option value="offer">Offer Banner (Home Page & Public Offers)</option>
-                  <option value="team">Team Banner (Partner Dashboard & Team Network)</option>
-                  <option value="referral">Referral Banner (Partner Referral & Earn)</option>
+                  <option value="offer">Offer Banners (Home Page & Partner Top)</option>
+                  <option value="team">Team & Referral Banners (Partner Dashboard)</option>
                   <option value="all">All Pages (Offer, Team & Referral)</option>
                 </select>
               </div>
