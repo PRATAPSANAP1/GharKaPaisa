@@ -150,6 +150,34 @@ export default function ManageApplications() {
     }
   };
 
+  const handleOperationalVerify = async (appId) => {
+    const targetId = appId || appDetail?.id || appDetail?.application_id || appDetail?.app_number || selectedApp?.id || selectedApp?.application_id || selectedApp?.app_number;
+    if (!targetId) {
+      alert("Application ID not found. Please refresh and try again.");
+      return;
+    }
+    setSubmittingApprove(true);
+    try {
+      const res = await api.put(`/applications/${targetId}/verification`, {
+        status: 'operational_verified',
+        final_status: 'Operational Verified',
+        ops_remark: superAdminRemark.trim() || 'Operational Verified by Administrative Operator',
+        super_admin_remark: superAdminRemark.trim() || 'Operational Verified by Administrative Operator',
+        bank_remark: superAdminRemark.trim() || 'Operational Verified by Administrative Operator'
+      });
+      if (res.data?.success) {
+        alert("Application status updated to OPERATIONAL VERIFIED successfully!");
+        setSelectedApp(null);
+        setAppDetail(null);
+        fetchApplications();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to verify application.");
+    } finally {
+      setSubmittingApprove(false);
+    }
+  };
+
   const handleUpdateStatus = async (e) => {
     e.preventDefault();
     if (!newStatus) return alert("Please select a status.");
@@ -553,6 +581,13 @@ export default function ManageApplications() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <button
+                      disabled={submittingApprove}
+                      onClick={() => handleOperationalVerify(appDetail.id)}
+                      style={{ background: '#7c3aed', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <CheckCircle2 size={16} /> {submittingApprove ? 'Processing...' : 'Mark Operational Verified'}
+                    </button>
                     <button
                       disabled={submittingApprove}
                       onClick={() => handleApproveApplication(appDetail.id)}

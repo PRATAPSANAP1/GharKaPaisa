@@ -387,6 +387,49 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {isOpsOrAdmin && currentStatus !== 'operational_verified' && currentStatus !== 'approved' && currentStatus !== 'super_admin_approved' && (
+              <button
+                disabled={actionLoading}
+                onClick={async () => {
+                  setActionLoading(true);
+                  try {
+                    const targetId = application.id || application.application_id || application.app_number || application.lead_id;
+                    const res = await api.put(`/applications/${targetId}/verification`, {
+                      status: 'operational_verified',
+                      final_status: 'Operational Verified',
+                      ops_remark: 'Operational Verified by Administrative Operator',
+                      super_admin_remark: 'Operational Verified by Administrative Operator'
+                    });
+                    if (res.data?.success) {
+                      alert('Application status updated to OPERATIONAL VERIFIED successfully!');
+                      setCurrentStatus('operational_verified');
+                      await fetchData();
+                      if (onRefresh) onRefresh();
+                    }
+                  } catch (err) {
+                    alert(err.response?.data?.message || 'Failed to update application to Operational Verified');
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+                style={{
+                  background: '#8b5cf6',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 4px rgba(139,92,246,0.2)'
+                }}
+              >
+                <CheckCircle size={15} /> Mark Operational Verified
+              </button>
+            )}
             <button onClick={onClose} style={{ background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', padding: '6px', borderRadius: '50%' }}>
               <X size={20} />
             </button>
