@@ -128,6 +128,8 @@ const updateProfile = async (req, res, next) => {
         updated_at = NOW()
       WHERE id = $9
     `, [first_name, last_name, current_address, business_location, company_name, company_type, gst_number, pincode, PartnerId]);
+
+    await logAction(req, 'UPDATE_PARTNER_PROFILE', PartnerId, { first_name, last_name, company_name });
     return success(res, {}, 'Profile updated');
   } catch (err) {
     next(err);

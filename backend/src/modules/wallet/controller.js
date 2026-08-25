@@ -430,18 +430,6 @@ const requestWithdrawal = async (req, res, next) => {
     const tdsAmount = Math.round((parsedAmount * 0.02) * 100) / 100;
     const netAmount = Math.round((parsedAmount - tdsAmount) * 100) / 100;
 
-    // Ensure all required columns exist on wallet_withdrawals table
-    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS wallet_id UUID REFERENCES partner_wallets(id)`);
-    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS tds_rate NUMERIC(5,2) DEFAULT 2.00`);
-    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS tds_amount NUMERIC(15,2) DEFAULT 0.00`);
-    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS net_amount NUMERIC(15,2)`);
-    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS bank_name VARCHAR(255)`);
-    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS account_number VARCHAR(100)`);
-    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS ifsc_code VARCHAR(50)`);
-    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS bank_account_id UUID`);
-    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS remarks TEXT`);
-    await client.query(`ALTER TABLE wallet_withdrawals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`);
-
     // Insert pending withdrawal request
     const idempotencyKey = `gkp-withdrawal-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const { rows: [wr] } = await client.query(`
