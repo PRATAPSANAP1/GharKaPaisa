@@ -4515,6 +4515,18 @@ const migrate = async () => {
     logger.error('Failed to run Task 28 migration:', task28Err.message);
   }
 
+  // ── TASK 29: Physical Application Details Token & Tracking Column Safety ────
+  try {
+    logger.info('Running Task 29 Migration (Physical Application Details Token Column)...');
+    await query(`
+      ALTER TABLE physical_application_details 
+        ADD COLUMN IF NOT EXISTS token VARCHAR(255);
+    `);
+    logger.info('Task 29 completed successfully.');
+  } catch (task29Err) {
+    logger.error('Failed to run Task 29 migration:', task29Err.message);
+  }
+
   logger.info('✅ All migrations completed successfully');
   if (require.main === module) {
     process.exit(0);

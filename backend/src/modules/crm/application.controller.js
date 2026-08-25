@@ -660,9 +660,9 @@ const updateStatus = async (req, res, next) => {
     );
     if (!app) {
       const { rows: [pdRec] } = await client.query(
-        `SELECT application_id FROM physical_application_details WHERE token = $1 OR id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
+        `SELECT application_id FROM physical_application_details WHERE id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
         [id]
-      );
+      ).catch(() => ({ rows: [] }));
       if (pdRec?.application_id) {
         const { rows: [appFromPd] } = await client.query(
           `SELECT * FROM applications WHERE id = $1 FOR UPDATE`,
@@ -1587,9 +1587,9 @@ const getApplication = async (req, res, next) => {
 
     if (!app) {
       const { rows: [pdRec] } = await query(
-        `SELECT application_id FROM physical_application_details WHERE token = $1 OR id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
+        `SELECT application_id FROM physical_application_details WHERE id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
         [id]
-      );
+      ).catch(() => ({ rows: [] }));
       if (pdRec?.application_id) {
         const { rows: [appFromPd] } = await query(`
           SELECT a.*,
@@ -1730,9 +1730,9 @@ const uploadApplicationDoc = async (req, res, next) => {
     `, [id]);
     if (!app) {
       const { rows: [pdRec] } = await query(
-        `SELECT application_id FROM physical_application_details WHERE token = $1 OR id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
+        `SELECT application_id FROM physical_application_details WHERE id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
         [id]
-      );
+      ).catch(() => ({ rows: [] }));
       if (pdRec?.application_id) {
         const { rows: [appFromPd] } = await query(`SELECT id, partner_id FROM applications WHERE id = $1`, [pdRec.application_id]);
         if (appFromPd) app = appFromPd;
@@ -2803,6 +2803,7 @@ const updateApplicationDetails = async (req, res, next) => {
       `);
       await client.query(`
         ALTER TABLE physical_application_details
+        ADD COLUMN IF NOT EXISTS token VARCHAR(255),
         ADD COLUMN IF NOT EXISTS address1 TEXT,
         ADD COLUMN IF NOT EXISTS address2 TEXT,
         ADD COLUMN IF NOT EXISTS landmark TEXT,
@@ -2845,9 +2846,9 @@ const updateApplicationDetails = async (req, res, next) => {
     if (!app) {
       const { rows: [pdRec] } = await client.query(
         `SELECT application_id FROM physical_application_details 
-         WHERE token = $1 OR id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
+         WHERE id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
         [id]
-      );
+      ).catch(() => ({ rows: [] }));
       if (pdRec?.application_id) {
         const { rows: [appFromPd] } = await client.query(`SELECT * FROM applications WHERE id::text = $1 OR app_number = $1`, [pdRec.application_id]);
         if (appFromPd) app = appFromPd;
@@ -3278,9 +3279,9 @@ const updateProcessType = async (req, res, next) => {
     );
     if (!app) {
       const { rows: [pdRec] } = await client.query(
-        `SELECT application_id FROM physical_application_details WHERE token = $1 OR id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
+        `SELECT application_id FROM physical_application_details WHERE id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
         [id]
-      );
+      ).catch(() => ({ rows: [] }));
       if (pdRec?.application_id) {
         const { rows: [appFromPd] } = await client.query(
           `SELECT * FROM applications WHERE id = $1 FOR UPDATE`,

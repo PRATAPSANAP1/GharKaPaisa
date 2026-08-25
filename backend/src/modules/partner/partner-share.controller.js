@@ -1254,6 +1254,7 @@ const updatePostApplyDetails = async (req, res, next) => {
       try {
         await query(`
           ALTER TABLE physical_application_details
+            ADD COLUMN IF NOT EXISTS token VARCHAR(255),
             ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(100),
             ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100),
             ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100),
