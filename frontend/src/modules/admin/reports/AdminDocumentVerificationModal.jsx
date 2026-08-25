@@ -50,6 +50,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
 
+  const [currentStatus, setCurrentStatus] = useState(application?.status || 'details_submitted');
+
   const isLockedStatus = ['operational_verified', 'super_admin_approved', 'approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed'].includes(String(currentStatus || application?.status || '').toLowerCase());
 
   // Role & Status Access Rules:
@@ -105,7 +107,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const [eligibleReQd, setEligibleReQd] = useState(sanitizeVal(application?.eligible_reqd) || sanitizeVal(application?.physical_details?.eligible_reqd) || 'No');
   const [bankRefNumber, setBankRefNumber] = useState(sanitizeVal(application?.bank_ref_number) || sanitizeVal(application?.bank_application_number) || sanitizeVal(application?.physical_details?.bank_ref_number));
   const [approvedAmount, setApprovedAmount] = useState(sanitizeVal(application?.approved_amount) || sanitizeVal(application?.physical_details?.approved_amount) || sanitizeVal(application?.loan_amount));
-  const [currentStatus, setCurrentStatus] = useState(application?.status || 'details_submitted');
 
   // 4. Real Database Status Snapshot (for Real DB Status vs Selected Status UI display)
   const [realData, setRealData] = useState({
