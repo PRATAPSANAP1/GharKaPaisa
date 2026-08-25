@@ -631,7 +631,7 @@ export default function ManageApplications() {
                   </h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
                     <div><span style={{ color: C.textLight }}>App / Bank Reference #:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.bank_ref_number || appDetail.bank_application_number || appDetail.app_number || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Applied Loan Amount:</span> <strong style={{ color: C.text }}>{appDetail.loan_amount ? `₹${parseFloat(appDetail.loan_amount).toLocaleString('en-IN')}` : '₹0'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>Applied Loan Amount:</span> <strong style={{ color: C.text }}>{(appDetail.loan_amount && Number(appDetail.loan_amount) > 0) ? `₹${parseFloat(appDetail.loan_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Commission Amount / Status:</span> <strong style={{ color: C.text }}>{appDetail.commission_amount ? `₹${parseFloat(appDetail.commission_amount).toLocaleString('en-IN')}` : '₹500.00'} ({appDetail.commission_status || 'pending'})</strong></div>
                     <div><span style={{ color: C.textLight }}>VKYC / Direct Web Link:</span> <strong style={{ color: C.text }}>{appDetail.vkyc_url ? <a href={appDetail.vkyc_url} target="_blank" rel="noreferrer" style={{ color: C.primary }}>Open Link ↗</a> : '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Final Status from Bank:</span> <strong style={{ color: C.text }}>{appDetail.final_status || 'pending'}</strong></div>

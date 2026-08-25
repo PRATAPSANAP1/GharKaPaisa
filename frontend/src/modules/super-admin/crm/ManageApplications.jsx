@@ -1162,7 +1162,7 @@ export default function ManageApplications() {
                       </button>
                     )}
                   </div>
-                  <div><span style={{ color: C.textLight }}>Applied Loan Amount:</span> <strong style={{ color: C.text }}>{selectedApp.loan_amount ? `₹${parseFloat(selectedApp.loan_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
+                  <div><span style={{ color: C.textLight }}>Applied Loan Amount:</span> <strong style={{ color: C.text }}>{(selectedApp.loan_amount && Number(selectedApp.loan_amount) > 0) ? `₹${parseFloat(selectedApp.loan_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
                   <div><span style={{ color: C.textLight }}>Commission Amount / Status:</span> <strong style={{ color: C.green, fontWeight: 800 }}>₹{selectedApp.commission_amount || 0} ({selectedApp.commission_status || 'pending'})</strong></div>
                   <div>
                     <span style={{ color: C.textLight }}>VKYC / Direct Web Link:</span>{' '}
