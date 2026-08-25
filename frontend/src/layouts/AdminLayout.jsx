@@ -145,23 +145,23 @@ const AdminLayout = () => {
             {/* Dashboard */}
             <NavLink to="/admin/dashboard" style={navLinkStyle}>
               <Icons.dashboard size={18} />
-              <span>📊 Dashboard</span>
+              <span>Dashboard</span>
             </NavLink>
 
             {/* User Management */}
             <NavLink to="/admin/partners" style={navLinkStyle}>
               <Icons.profile size={18} />
-              <span>👥 User Management</span>
+              <span>User Management</span>
             </NavLink>
           </>
         )}
 
-        {/* 💳 CREDIT CARDS — Only Assigned Banks */}
+        {/* CREDIT CARDS — Only Assigned Banks */}
         <div>
           <button onClick={() => setOpenCcMenu(!openCcMenu)} style={menuBtnStyle(openCcMenu)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Icons.creditCard size={18} />
-              <span>💳 Credit Cards</span>
+              <span>Credit Cards</span>
             </div>
             {openCcMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
           </button>
@@ -180,12 +180,12 @@ const AdminLayout = () => {
           )}
         </div>
 
-        {/* 🏦 LOANS — Only Assigned Banks */}
+        {/* LOANS — Only Assigned Banks */}
         <div>
           <button onClick={() => setOpenLoansMenu(!openLoansMenu)} style={menuBtnStyle(openLoansMenu)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Icons.wallet size={18} />
-              <span>🏦 Loans</span>
+              <span>Loans</span>
             </div>
             {openLoansMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
           </button>
@@ -204,12 +204,12 @@ const AdminLayout = () => {
           )}
         </div>
 
-        {/* 🛡 INSURANCE — Only Assigned Banks */}
+        {/* INSURANCE — Only Assigned Banks */}
         <div>
           <button onClick={() => setOpenInsuranceMenu(!openInsuranceMenu)} style={menuBtnStyle(openInsuranceMenu)}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Icons.trending size={18} />
-              <span>🛡 Insurance</span>
+              <span>Insurance</span>
             </div>
             {openInsuranceMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
           </button>
@@ -228,35 +228,35 @@ const AdminLayout = () => {
           )}
         </div>
 
-        {/* 📋 Applications */}
+        {/* Applications */}
         <NavLink to="/admin/applications" style={navLinkStyle}>
           <Icons.creditCard size={18} />
-          <span>📋 Applications</span>
+          <span>Applications</span>
         </NavLink>
 
         {/* Full Admin Nav Items (Hidden for Backend admins) */}
         {!isBackend && (
           <>
-            {/* 👥 Customers */}
+            {/* Customers */}
             <NavLink to="/admin/leads" style={navLinkStyle}>
               <Icons.trending size={18} />
-              <span>👥 Customers</span>
+              <span>Customers</span>
             </NavLink>
 
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
 
-            {/* 🏦 BANKS MANAGEMENT */}
+            {/* BANKS MANAGEMENT */}
             <NavLink to="/admin/banks" style={navLinkStyle}>
               <MdAccountBalance size={18} />
-              <span>🏦 Banks</span>
+              <span>Banks</span>
             </NavLink>
 
-            {/* 📦 PRODUCTS MANAGEMENT */}
+            {/* PRODUCTS MANAGEMENT */}
             <div>
               <button onClick={() => setOpenProductsMenu(!openProductsMenu)} style={menuBtnStyle(openProductsMenu)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <MdShoppingBag size={18} />
-                  <span>📦 Products</span>
+                  <span>Products</span>
                 </div>
                 {openProductsMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
               </button>
@@ -280,28 +280,28 @@ const AdminLayout = () => {
 
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
 
-            {/* 💰 Wallet & Withdrawals */}
+            {/* Wallet & Withdrawals */}
             <NavLink to="/admin/withdrawals" style={navLinkStyle}>
               <Icons.wallet size={18} />
-              <span>💰 Wallet & Payouts</span>
+              <span>Wallet & Payouts</span>
             </NavLink>
 
-            {/* 💵 Commissions */}
+            {/* Commissions */}
             <NavLink to="/admin/commissions" style={navLinkStyle}>
               <Icons.trending size={18} />
-              <span>💵 Commissions</span>
+              <span>Commissions</span>
             </NavLink>
 
-            {/* 📈 Reports & Analytics */}
+            {/* Reports & Analytics */}
             <NavLink to="/admin/reports" style={navLinkStyle}>
               <Icons.dashboard size={18} />
-              <span>📈 Reports</span>
+              <span>Reports</span>
             </NavLink>
 
-            {/* ⚙ Settings */}
+            {/* Settings */}
             <NavLink to="/admin/sections" style={navLinkStyle}>
               <MdSettings size={18} />
-              <span>⚙ Settings</span>
+              <span>Settings</span>
             </NavLink>
           </>
         )}
