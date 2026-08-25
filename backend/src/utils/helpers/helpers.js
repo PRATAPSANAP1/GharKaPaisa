@@ -1,11 +1,14 @@
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 
-// Generate unique application number: APP + YYYYMMDD + random 4 digits
-const generateAppNumber = () => {
+// Generate unique application number: APP + YYYYMMDD + sequence or random
+const generateAppNumber = (seq) => {
   const date = new Date();
   const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-  const rand = Math.floor(1000 + Math.random() * 9000);
+  if (seq) {
+    return `APP${datePart}${String(seq).padStart(5, '0')}`;
+  }
+  const rand = Math.floor(10000 + Math.random() * 90000);
   return `APP${datePart}${rand}`;
 };
 

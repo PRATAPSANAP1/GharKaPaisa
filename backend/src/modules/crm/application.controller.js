@@ -1620,9 +1620,50 @@ const getApplication = async (req, res, next) => {
           LEFT JOIN products p ON p.id = a.product_id
           LEFT JOIN banks b ON b.id = p.bank_id
           LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
-          WHERE a.id = $1
+          WHERE a.id::text = $1 OR a.app_number = $1
         `, [pdRec.application_id]);
         if (appFromPd) app = appFromPd;
+      }
+    }
+
+    if (!app) {
+      const { rows: [pslRec] } = await query(
+        `SELECT application_id FROM partner_share_links WHERE tracking_token = $1 LIMIT 1`,
+        [id]
+      );
+      if (pslRec?.application_id) {
+        const { rows: [appFromPsl] } = await query(`
+          SELECT a.*,
+            COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
+            COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
+            COALESCE(NULLIF(a.customer_email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) as customer_email,
+            COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number,
+            COALESCE(NULLIF(a.dob::text, ''), NULLIF(c.dob::text, '')) as dob,
+            COALESCE(a.monthly_income, a.monthly_salary, c.monthly_income, l.monthly_income, a.loan_amount) as monthly_income,
+            COALESCE(NULLIF(a.employment_type, ''), NULLIF(c.employment_type, ''), NULLIF(l.employment_type, ''), NULLIF(a.occupation, ''), NULLIF(c.occupation, '')) as employment_type,
+            COALESCE(NULLIF(a.company_name, ''), NULLIF(c.employer, ''), NULLIF(c.company_name, ''), NULLIF(l.company_name, '')) as company_name,
+            COALESCE(NULLIF(a.city, ''), NULLIF(l.city, ''), NULLIF(c.city, '')) as city,
+            COALESCE(NULLIF(a.state, ''), NULLIF(c.state, ''), NULLIF(l.state, '')) as state,
+            COALESCE(NULLIF(a.pincode, ''), NULLIF(c.pincode, ''), NULLIF(l.pincode, '')) as pincode,
+            COALESCE(a.address, c.address) as address,
+            COALESCE(a.mother_name, c.mother_name) as mother_name,
+            COALESCE(a.father_name, c.father_name) as father_name,
+            COALESCE(c.marital_status, a.marital_status) as marital_status,
+            COALESCE(c.gender, a.gender) as gender,
+            COALESCE(c.aadhaar_number, a.aadhaar_number) as aadhaar_number,
+            COALESCE(a.designation, c.designation) as designation,
+            p.name as product_name, p.category, p.features, p.commission_type, p.commission_value,
+            b.name as bank_name, b.short_code as bank_code,
+            ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name
+          FROM applications a
+          LEFT JOIN leads l ON l.id = a.lead_id
+          LEFT JOIN customers c ON c.id = a.customer_id
+          LEFT JOIN products p ON p.id = a.product_id
+          LEFT JOIN banks b ON b.id = p.bank_id
+          LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
+          WHERE a.id::text = $1 OR a.app_number = $1
+        `, [pslRec.application_id]);
+        if (appFromPsl) app = appFromPsl;
       }
     }
 
@@ -2808,8 +2849,18 @@ const updateApplicationDetails = async (req, res, next) => {
         [id]
       );
       if (pdRec?.application_id) {
-        const { rows: [appFromPd] } = await client.query(`SELECT * FROM applications WHERE id = $1`, [pdRec.application_id]);
+        const { rows: [appFromPd] } = await client.query(`SELECT * FROM applications WHERE id::text = $1 OR app_number = $1`, [pdRec.application_id]);
         if (appFromPd) app = appFromPd;
+      }
+    }
+    if (!app) {
+      const { rows: [pslRec] } = await client.query(
+        `SELECT application_id FROM partner_share_links WHERE tracking_token = $1 LIMIT 1`,
+        [id]
+      );
+      if (pslRec?.application_id) {
+        const { rows: [appFromPsl] } = await client.query(`SELECT * FROM applications WHERE id::text = $1 OR app_number = $1`, [pslRec.application_id]);
+        if (appFromPsl) app = appFromPsl;
       }
     }
 

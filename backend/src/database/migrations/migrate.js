@@ -812,6 +812,12 @@ const migrate = async () => {
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS customer_id UUID REFERENCES customers(id)`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id)`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS parent_partner_id UUID REFERENCES partner_profiles(id)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(15)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS source VARCHAR(100)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS pipeline_stage VARCHAR(50)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS priority VARCHAR(50)`);
+  await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS tracking_token VARCHAR(100)`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS process_type VARCHAR(50) DEFAULT 'lead_punching'`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS otp_code VARCHAR(10)`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS otp_expires_at TIMESTAMPTZ`);
@@ -828,12 +834,17 @@ const migrate = async () => {
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
   await query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS application_id UUID REFERENCES applications(id) ON DELETE SET NULL`);
   await query(`CREATE INDEX IF NOT EXISTS idx_leads_partner ON leads(partner_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_leads_tracking_token ON leads(tracking_token)`);
 
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS lead_id UUID REFERENCES leads(id) ON DELETE SET NULL`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS parent_partner_id UUID REFERENCES partner_profiles(id)`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS process_type VARCHAR(50) DEFAULT 'lead_punching'`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS tracking_token VARCHAR(100)`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_url VARCHAR(500)`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS commission_released BOOLEAN DEFAULT FALSE`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_applications_process_type ON applications(process_type)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_applications_source ON applications(source)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_applications_final_status ON applications(final_status)`);
 
   // ── Lead Followups ─────────────────────────────────────────────
   await query(`
