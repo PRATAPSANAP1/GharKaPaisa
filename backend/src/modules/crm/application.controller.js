@@ -3482,6 +3482,8 @@ const getPhysicalApplicationByToken = async (req, res, next) => {
 
     let { rows: [tokenRec] } = await query(
       `SELECT cat.*, a.id as application_id, a.app_number, a.process_type, a.status, a.bank_id, a.product_id,
+              a.bank_ref_number, a.bank_application_number, a.vkyc_url, a.appcode_status, a.soft_approval_status,
+              a.vkyc_stage, a.iqa_stage, a.dispatch_status, a.bank_remark, a.final_status, a.decline_reason, a.eligible_reqd,
               b.name as bank_name, b.short_code as bank_code,
               p.name as product_name,
               c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email, c.pan_number as customer_pan, c.dob as customer_dob
@@ -3497,6 +3499,8 @@ const getPhysicalApplicationByToken = async (req, res, next) => {
     if (!tokenRec) {
       const { rows: [appRec] } = await query(
         `SELECT a.id as application_id, a.app_number, a.process_type, a.status, a.bank_id, a.product_id,
+                a.bank_ref_number, a.bank_application_number, a.vkyc_url, a.appcode_status, a.soft_approval_status,
+                a.vkyc_stage, a.iqa_stage, a.dispatch_status, a.bank_remark, a.final_status, a.decline_reason, a.eligible_reqd,
                 b.name as bank_name, b.short_code as bank_code,
                 p.name as product_name,
                 c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email, c.pan_number as customer_pan, c.dob as customer_dob
@@ -3513,6 +3517,8 @@ const getPhysicalApplicationByToken = async (req, res, next) => {
     if (!tokenRec) {
       const { rows: [pslRec] } = await query(
         `SELECT psl.application_id, a.app_number, a.process_type, a.status, a.bank_id, a.product_id,
+                a.bank_ref_number, a.bank_application_number, a.vkyc_url, a.appcode_status, a.soft_approval_status,
+                a.vkyc_stage, a.iqa_stage, a.dispatch_status, a.bank_remark, a.final_status, a.decline_reason, a.eligible_reqd,
                 b.name as bank_name, b.short_code as bank_code,
                 p.name as product_name,
                 c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email, c.pan_number as customer_pan, c.dob as customer_dob
@@ -3549,6 +3555,16 @@ const getPhysicalApplicationByToken = async (req, res, next) => {
       bank_code: tokenRec.bank_code,
       is_sbi: isSbi,
       product_name: tokenRec.product_name,
+      bank_ref_number: tokenRec.bank_ref_number || tokenRec.bank_application_number || pad?.bank_ref_number || pad?.bank_application_number || '',
+      vkyc_url: tokenRec.vkyc_url || pad?.vkyc_url || '',
+      appcode_status: tokenRec.appcode_status || pad?.appcode_status || '',
+      soft_approval_status: tokenRec.soft_approval_status || pad?.soft_approval_status || '',
+      vkyc_stage: tokenRec.vkyc_stage || pad?.vkyc_stage || '',
+      iqa_stage: tokenRec.iqa_stage || pad?.iqa_stage || '',
+      dispatch_status: tokenRec.dispatch_status || pad?.dispatch_status || '',
+      bank_remark: tokenRec.bank_remark || pad?.bank_remark || '',
+      final_status: tokenRec.final_status || pad?.final_status || '',
+      decline_reason: tokenRec.decline_reason || pad?.decline_reason || '',
       customer: {
         full_name: tokenRec.customer_name,
         mobile: tokenRec.customer_mobile,
@@ -3629,8 +3645,8 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
       `INSERT INTO physical_application_details (
         application_id, aadhaar_linked_mobile, pan_name, dob, pan_number,
         mother_name, personal_email, company_name, designation, flat_no,
-        sub_area, landmark, pincode, company_address, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+        sub_area, landmark, pincode, company_address, bank_ref_number, bank_application_number, vkyc_url, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15, $16, NOW())
       ON CONFLICT (application_id) DO UPDATE SET
         aadhaar_linked_mobile = EXCLUDED.aadhaar_linked_mobile,
         pan_name = EXCLUDED.pan_name,
@@ -3645,11 +3661,14 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
         landmark = EXCLUDED.landmark,
         pincode = EXCLUDED.pincode,
         company_address = EXCLUDED.company_address,
+        bank_ref_number = COALESCE(EXCLUDED.bank_ref_number, physical_application_details.bank_ref_number),
+        bank_application_number = COALESCE(EXCLUDED.bank_application_number, physical_application_details.bank_application_number),
+        vkyc_url = COALESCE(EXCLUDED.vkyc_url, physical_application_details.vkyc_url),
         updated_at = NOW()`,
       [
         appId, aadhaar_linked_mobile || null, pan_name || null, parsedDob || null, pan_number || null,
         mother_name || null, personal_email || null, company_name || null, designation || null, flat_no || null,
-        sub_area || null, landmark || null, pincode || null, company_address || null
+        sub_area || null, landmark || null, pincode || null, company_address || null, bank_ref_number || null, vkyc_url || null
       ]
     );
 
@@ -3664,11 +3683,12 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
       mainStatus = null;
     }
 
-    // Sync to applications table (Part 3 fields editable only by Operations Head, Super Admin, or Administrative Operator)
+    // Sync to applications table
     await client.query(
       `UPDATE applications 
        SET status = COALESCE($1, status),
            bank_ref_number = COALESCE(NULLIF($2, ''), bank_ref_number),
+           bank_application_number = COALESCE(NULLIF($2, ''), bank_application_number),
            vkyc_url = COALESCE(NULLIF($3, ''), vkyc_url),
            appcode_status = COALESCE(NULLIF($4, ''), appcode_status),
            soft_approval_status = COALESCE(NULLIF($5, ''), soft_approval_status),
@@ -3683,17 +3703,17 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
        WHERE id = $13`,
       [
         mainStatus,
-        isOpsOrAdminUser ? (bank_ref_number || null) : null,
-        isOpsOrAdminUser ? (vkyc_url || null) : null,
+        bank_ref_number || null,
+        vkyc_url || null,
         appcode_status || null,
         soft_approval_status || null,
         vkyc_stage || null,
         iqa_stage || null,
         dispatch_status || null,
-        isOpsOrAdminUser ? (bank_remark || null) : null,
-        isOpsOrAdminUser ? (final_status || null) : null,
-        isOpsOrAdminUser ? (decline_reason || null) : null,
-        isOpsOrAdminUser ? (eligible_reqd || null) : null,
+        bank_remark || null,
+        final_status || null,
+        decline_reason || null,
+        eligible_reqd || null,
         appId
       ]
     );

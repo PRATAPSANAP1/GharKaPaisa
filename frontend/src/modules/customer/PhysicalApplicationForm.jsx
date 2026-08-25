@@ -250,17 +250,17 @@ export default function PhysicalApplicationForm() {
           landmark: pd.landmark || '',
           pincode: pd.pincode || app.pincode || cust.pincode || '',
           company_address: pd.company_address || app.company_address || '',
-          bank_ref_number: pd.bank_ref_number || app.bank_ref_number || app.bank_application_number || '',
-          vkyc_url: app.vkyc_url || '',
-          appcode_status: app.appcode_status || 'Appcode Pending',
-          soft_approval_status: app.soft_approval_status || 'Approval-income 25k',
-          vkyc_stage: app.vkyc_stage || 'VKYC Pending',
-          iqa_stage: app.iqa_stage || 'IQA Pending',
-          dispatch_status: app.dispatch_status || 'E-sign Pending',
-          eligible_reqd: app.eligible_reqd || 'No',
-          final_status: app.final_status || 'In Process',
-          bank_remark: app.bank_remark || '',
-          decline_reason: app.decline_reason || ''
+          bank_ref_number: data.bank_ref_number || pd.bank_ref_number || app.bank_ref_number || app.bank_application_number || pd.bank_application_number || '',
+          vkyc_url: data.vkyc_url || app.vkyc_url || pd.vkyc_url || '',
+          appcode_status: data.appcode_status || app.appcode_status || pd.appcode_status || 'None',
+          soft_approval_status: data.soft_approval_status || app.soft_approval_status || pd.soft_approval_status || 'None',
+          vkyc_stage: data.vkyc_stage || app.vkyc_stage || pd.vkyc_stage || 'None',
+          iqa_stage: data.iqa_stage || app.iqa_stage || pd.iqa_stage || 'None',
+          dispatch_status: data.dispatch_status || app.dispatch_status || pd.dispatch_status || 'None',
+          eligible_reqd: data.eligible_reqd || app.eligible_reqd || pd.eligible_reqd || 'No',
+          final_status: data.final_status || app.final_status || pd.final_status || 'In Process',
+          bank_remark: data.bank_remark || app.bank_remark || pd.bank_remark || '',
+          decline_reason: data.decline_reason || app.decline_reason || pd.decline_reason || ''
         });
 
         const procType = String(app.process_type || app.process_by || data.process_type || '').toLowerCase();
