@@ -8,3 +8,9 @@ logs/
 skills-lock.json
 # Firebase service account private key — NEVER commit
 backend/firebase-service-account.json
+
+# Internal Documentation & Reports
+documentation/
+*.docx
+*.pdf
+*.xlsx
