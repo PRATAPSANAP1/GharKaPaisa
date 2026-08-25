@@ -195,10 +195,11 @@ export default function PhysicalApplicationForm() {
     decline_reason: ''
   });
 
-  const bankNameStr = String(appData?.bank_name || appData?.bank?.name || appData?.product_name || appData?.product?.name || '').toLowerCase();
+  const bankNameStr = String(appData?.bank_name || appData?.bank?.name || appData?.product_name || appData?.product?.name || appData?.application?.bank_name || '').toLowerCase();
   const isSbi = bankNameStr.includes('sbi');
-  const processTypeStr = String(appData?.process_type || appData?.process_by || '').toLowerCase();
+  const processTypeStr = String(appData?.process_type || appData?.process_by || appData?.application?.process_type || appData?.application?.process_by || '').toLowerCase();
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
+  const isDigitalProcess = processTypeStr.includes('linked') || processTypeStr.includes('share') || processTypeStr.includes('direct') || processTypeStr.includes('link');
 
   useEffect(() => {
     fetchApplicationDetails();
@@ -428,9 +429,6 @@ export default function PhysicalApplicationForm() {
   }
 
   // Main Responsive Layout
-  const procTypeStr = String(appData?.process_type || appData?.process_by || appData?.application?.process_type || appData?.application?.process_by || '').toLowerCase();
-  const isDigitalProcess = procTypeStr.includes('linked') || procTypeStr.includes('share') || procTypeStr.includes('direct') || procTypeStr.includes('link');
-
   const steps = isDigitalProcess
     ? [{ id: 'step2', num: '1', title: 'Application Remark & Stage Tracking', desc: 'Remark Form' }]
     : [
