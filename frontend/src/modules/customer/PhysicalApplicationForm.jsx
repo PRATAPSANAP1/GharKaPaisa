@@ -778,38 +778,31 @@ export default function PhysicalApplicationForm() {
                     onChange={e => handleChange('appcode_status', e.target.value)}
                     style={inputStyle}
                   >
-                    {isSbi ? (
-                      <>
-                        <option value="Appcode Send">1. Appcode Send</option>
-                        <option value="Soft Approval">2. Soft Approval</option>
-                        <option value="Pending">3. Pending</option>
-                        <option value="Submit">4. Submit</option>
-                        <option value="Digital">5. Digital</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="Appcode Pending">1. Appcode Pending</option>
-                        <option value="Appcode Send">2. Appcode Send</option>
-                        <option value="Soft Approval">3. Soft Approval</option>
-                        <option value="Pending">4. Pending</option>
-                        <option value="Submit">5. Submit</option>
-                        <option value="Digital">6. Digital</option>
-                      </>
+                    <option value="None">None</option>
+                    <option value="Appcode Send">Appcode Send</option>
+                    <option value="Appcode Pending">Appcode Pending</option>
+                    <option value="Appcode submit">Appcode submit</option>
+                    {form.appcode_status && !['None', 'Appcode Send', 'Appcode Pending', 'Appcode submit'].includes(form.appcode_status) && (
+                      <option value={form.appcode_status}>{form.appcode_status}</option>
                     )}
                   </select>
                 </div>
 
                 <div>
-                  <label style={labelStyle}>{txt('softApprovalStatus')}</label>
+                  <label style={labelStyle}>{txt('softApprovalStatus') || 'SOFT APPROVAL STATUS'}</label>
                   <select
                     value={form.soft_approval_status}
                     onChange={e => handleChange('soft_approval_status', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="Approval-income 25k">1. Approval-income 25k</option>
-                    <option value="Approval-income 30k">2. Approval-income 30k</option>
-                    <option value="Approval-NSDP-Cibil based">3. Approval-NSDP-Cibil based</option>
-                    <option value="Soft Approval">4. Soft Approval</option>
+                    <option value="None">None</option>
+                    <option value="Approve">Approve</option>
+                    <option value="Decline">Decline</option>
+                    <option value="EQT">EQT</option>
+                    <option value="Technical Error">Technical Error</option>
+                    {form.soft_approval_status && !['None', 'Approve', 'Decline', 'EQT', 'Technical Error'].includes(form.soft_approval_status) && (
+                      <option value={form.soft_approval_status}>{form.soft_approval_status}</option>
+                    )}
                   </select>
                 </div>
               </div>
@@ -817,27 +810,32 @@ export default function PhysicalApplicationForm() {
               {/* Order: 3. IQA Stage, 4. Bank Application Number */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>{txt('iqaStage')}</label>
+                  <label style={labelStyle}>{txt('iqaStage') || 'IQA STAGE'}</label>
                   <select
                     value={form.iqa_stage}
                     onChange={e => handleChange('iqa_stage', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="IQA SENT">1. IQA SENT</option>
-                    <option value="IQA COMPLETE">2. IQA COMPLETE</option>
-                    <option value="IQA PENDING">3. IQA PENDING</option>
-                    <option value="BLAZE CONTINUE">4. BLAZE CONTINUE</option>
-                    <option value="BLAZE DECLINE">5. BLAZE DECLINE</option>
+                    <option value="None">None</option>
+                    <option value="IQT Send">IQT Send</option>
+                    <option value="IQT Pending">IQT Pending</option>
+                    <option value="IQT Complete">IQT Complete</option>
+                    <option value="Blaze Continue">Blaze Continue</option>
+                    <option value="Blaze Decline">Blaze Decline</option>
+                    {form.iqa_stage && !['None', 'IQT Send', 'IQT Pending', 'IQT Complete', 'Blaze Continue', 'Blaze Decline'].includes(form.iqa_stage) && (
+                      <option value={form.iqa_stage}>{form.iqa_stage}</option>
+                    )}
                   </select>
                 </div>
 
                 <div>
-                  <label style={labelStyle}>{txt('appNumberBank')}</label>
+                  <label style={labelStyle}>BANK APPLICATION NUMBER (13-digit number)</label>
                   <input
                     type="text"
+                    maxLength={13}
                     value={form.bank_ref_number}
-                    onChange={e => handleChange('bank_ref_number', e.target.value)}
-                    placeholder={txt('appNumberBankPlace')}
+                    onChange={e => handleChange('bank_ref_number', e.target.value.replace(/\D/g, '').slice(0, 13))}
+                    placeholder="Enter 13-digit Bank App Reference Number"
                     style={inputStyle}
                   />
                 </div>
@@ -846,25 +844,29 @@ export default function PhysicalApplicationForm() {
               {/* Order: 5. VKYC Status, 6. VKYC Link */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>{txt('vkycStage')}</label>
+                  <label style={labelStyle}>{txt('vkycStage') || 'VKYC STAGE'}</label>
                   <select
                     value={form.vkyc_stage}
                     onChange={e => handleChange('vkyc_stage', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="VKYC Pending">1. VKYC Pending</option>
-                    <option value="VKYC Complete">2. VKYC Complete</option>
-                    <option value="VKYC Failed">3. VKYC Failed</option>
+                    <option value="None">None</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Complete">Complete</option>
+                    <option value="Failed">Failed</option>
+                    {form.vkyc_stage && !['None', 'Pending', 'Complete', 'Failed'].includes(form.vkyc_stage) && (
+                      <option value={form.vkyc_stage}>{form.vkyc_stage}</option>
+                    )}
                   </select>
                 </div>
 
                 <div>
-                  <label style={labelStyle}>{txt('vkycUrl')}</label>
+                  <label style={labelStyle}>{txt('vkycUrl') || 'VKYC LINK'}</label>
                   <input
                     type="url"
                     value={form.vkyc_url}
                     onChange={e => handleChange('vkyc_url', e.target.value)}
-                    placeholder={txt('vkycUrlPlace')}
+                    placeholder="https://vkyc..."
                     style={inputStyle}
                   />
                 </div>
@@ -873,17 +875,21 @@ export default function PhysicalApplicationForm() {
               {/* Order: 7. Dispatch Status */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
                 <div>
-                  <label style={labelStyle}>{txt('dispatchStatus')}</label>
+                  <label style={labelStyle}>{txt('dispatchStatus') || 'DISPATCH STATUS'}</label>
                   <select
                     value={form.dispatch_status}
                     onChange={e => handleChange('dispatch_status', e.target.value)}
                     style={inputStyle}
                   >
-                    <option value="DISPATCH DONE">1. DISPATCH DONE</option>
-                    <option value="WCP STAGE">2. WCP STAGE</option>
-                    <option value="E-sign Done">3. E-sign Done</option>
-                    <option value="E-sign Pending">4. E-sign Pending</option>
-                    <option value="RTB(ERROR)">5. RTB(ERROR)</option>
+                    <option value="None">None</option>
+                    <option value="Dispatch Pending">Dispatch Pending</option>
+                    <option value="Dispatch Complete">Dispatch Complete</option>
+                    <option value="E-Sign Pending">E-Sign Pending</option>
+                    <option value="E-sign Complete">E-sign Complete</option>
+                    <option value="RTB(Error)">RTB(Error)</option>
+                    {form.dispatch_status && !['None', 'Dispatch Pending', 'Dispatch Complete', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)'].includes(form.dispatch_status) && (
+                      <option value={form.dispatch_status}>{form.dispatch_status}</option>
+                    )}
                   </select>
                 </div>
               </div>

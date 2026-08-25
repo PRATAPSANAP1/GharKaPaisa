@@ -738,19 +738,11 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setAppcodeStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
-                      <option value="">None</option>
-                      <option value="appcode send">1. appcode send</option>
-                      <option value="Appcode Send">1. Appcode Send</option>
-                      <option value="appcode pending">2. appcode pending</option>
-                      <option value="Appcode Pending">2. Appcode Pending</option>
-                      <option value="appcode complete">3. appcode complete</option>
-                      <option value="Appcode Complete">3. Appcode Complete</option>
-                      <option value="Digital">4. Digital</option>
-                      <option value="digital">4. digital</option>
-                      <option value="Soft Approval">Soft Approval</option>
-                      <option value="Pending">Pending</option>
-                      <option value="Submit">Submit</option>
-                      {appcodeStatus && !['', 'appcode send', 'Appcode Send', 'appcode pending', 'Appcode Pending', 'appcode complete', 'Appcode Complete', 'Digital', 'digital', 'Soft Approval', 'Pending', 'Submit'].includes(appcodeStatus) && (
+                      <option value="None">None</option>
+                      <option value="Appcode Send">Appcode Send</option>
+                      <option value="Appcode Pending">Appcode Pending</option>
+                      <option value="Appcode submit">Appcode submit</option>
+                      {appcodeStatus && !['None', 'Appcode Send', 'Appcode Pending', 'Appcode submit', ''].includes(appcodeStatus) && (
                         <option value={appcodeStatus}>{appcodeStatus}</option>
                       )}
                     </select>
@@ -765,15 +757,12 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setSoftApprovalStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
-                      <option value="">None</option>
-                      <option value="approved">1. approved</option>
-                      <option value="Approved">1. Approved</option>
-                      <option value="decline">2. decline</option>
-                      <option value="Decline">2. Decline</option>
-                      <option value="ETQ">3. ETQ</option>
-                      <option value="technical error">4. technical error</option>
-                      <option value="Technical Error">4. Technical Error</option>
-                      {softApprovalStatus && !['', 'approved', 'Approved', 'decline', 'Decline', 'ETQ', 'technical error', 'Technical Error'].includes(softApprovalStatus) && (
+                      <option value="None">None</option>
+                      <option value="Approve">Approve</option>
+                      <option value="Decline">Decline</option>
+                      <option value="EQT">EQT</option>
+                      <option value="Technical Error">Technical Error</option>
+                      {softApprovalStatus && !['None', 'Approve', 'Decline', 'EQT', 'Technical Error', ''].includes(softApprovalStatus) && (
                         <option value={softApprovalStatus}>{softApprovalStatus}</option>
                       )}
                     </select>
@@ -788,13 +777,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setIqaStage(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
-                      <option value="">None</option>
-                      <option value="IQA SENT">1. IQA SENT</option>
-                      <option value="IQA COMPLETE">2. IQA COMPLETE</option>
-                      <option value="IQA PENDING">3. IQA PENDING</option>
-                      <option value="BLAZE CONTINUE">4. BLAZE CONTINUE</option>
-                      <option value="BLAZE DECLINE">5. BLAZE DECLINE</option>
-                      {iqaStage && !['', 'IQA SENT', 'IQA COMPLETE', 'IQA PENDING', 'BLAZE CONTINUE', 'BLAZE DECLINE'].includes(iqaStage) && (
+                      <option value="None">None</option>
+                      <option value="IQT Send">IQT Send</option>
+                      <option value="IQT Pending">IQT Pending</option>
+                      <option value="IQT Complete">IQT Complete</option>
+                      <option value="Blaze Continue">Blaze Continue</option>
+                      <option value="Blaze Decline">Blaze Decline</option>
+                      {iqaStage && !['None', 'IQT Send', 'IQT Pending', 'IQT Complete', 'Blaze Continue', 'Blaze Decline', ''].includes(iqaStage) && (
                         <option value={iqaStage}>{iqaStage}</option>
                       )}
                     </select>
@@ -802,13 +791,14 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
                   {/* Order 4: BANK APPLICATION NUMBER */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Bank Application Ref No.</label>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Bank Application Ref No. (13 digits)</label>
                     <input
                       type="text"
+                      maxLength={13}
                       disabled={!canEditRemark}
                       value={bankRefNumber}
-                      onChange={(e) => setBankRefNumber(e.target.value)}
-                      placeholder="Enter Bank Application Ref No."
+                      onChange={(e) => setBankRefNumber(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                      placeholder="Enter 13-digit Bank App Ref No."
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                     />
                   </div>
@@ -816,20 +806,18 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   {/* Order 5: VKYC STATUS (Hidden for physical process) */}
                   {!isPhysical && (
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Status</label>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Stage</label>
                       <select
                         disabled={!canEditRemark}
                         value={vkycStage}
                         onChange={(e) => setVkycStage(e.target.value)}
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                       >
-                        <option value="">None</option>
-                        <option value="VKYC Pending">1. VKYC Pending</option>
-                        <option value="vkyc pending">1. vkyc pending</option>
-                        <option value="VKYC Complete">2. VKYC Complete</option>
-                        <option value="vkyc complete">2. vkyc complete</option>
-                        <option value="VKYC Failed">3. VKYC Failed</option>
-                        {vkycStage && !['', 'VKYC Pending', 'vkyc pending', 'VKYC Complete', 'vkyc complete', 'VKYC Failed'].includes(vkycStage) && (
+                        <option value="None">None</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Complete">Complete</option>
+                        <option value="Failed">Failed</option>
+                        {vkycStage && !['None', 'Pending', 'Complete', 'Failed', ''].includes(vkycStage) && (
                           <option value={vkycStage}>{vkycStage}</option>
                         )}
                       </select>
@@ -860,13 +848,13 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                       onChange={(e) => setDispatchStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
-                      <option value="">None</option>
-                      <option value="dispatch pending">1. dispatch pending</option>
-                      <option value="complete">2. complete</option>
-                      <option value="e-sign pending">3. e-sign pending</option>
-                      <option value="e-sign done">4. e-sign done</option>
-                      <option value="RTB(Error)">5. RTB(Error)</option>
-                      {dispatchStatus && !['', 'dispatch pending', 'complete', 'e-sign pending', 'e-sign done', 'RTB(Error)'].includes(dispatchStatus) && (
+                      <option value="None">None</option>
+                      <option value="Dispatch Pending">Dispatch Pending</option>
+                      <option value="Dispatch Complete">Dispatch Complete</option>
+                      <option value="E-Sign Pending">E-Sign Pending</option>
+                      <option value="E-sign Complete">E-sign Complete</option>
+                      <option value="RTB(Error)">RTB(Error)</option>
+                      {dispatchStatus && !['None', 'Dispatch Pending', 'Dispatch Complete', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)', ''].includes(dispatchStatus) && (
                         <option value={dispatchStatus}>{dispatchStatus}</option>
                       )}
                     </select>
