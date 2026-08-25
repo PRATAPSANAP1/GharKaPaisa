@@ -45,7 +45,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   // User Role & Permissions
   const user = useAuthStore((state) => state.user);
   const role = (user?.role || '').toUpperCase();
-  const isOpsOrAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'OPERATOR'].includes(role);
+  const userDesignation = (user?.designation || '').toUpperCase();
+  const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role);
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
+  const isOpsOrAdmin = isOpsHead || isOpsOperator;
   const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
 
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
@@ -387,13 +390,57 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {isOpsOrAdmin && currentStatus !== 'operational_verified' && currentStatus !== 'approved' && currentStatus !== 'super_admin_approved' && (
+            {isOpsHead && currentStatus !== 'approved' && currentStatus !== 'super_admin_approved' && (
               <button
                 disabled={actionLoading}
                 onClick={async () => {
                   setActionLoading(true);
                   try {
-                    const targetId = application.id || application.application_id || application.app_number || application.lead_id;
+                    const targetId = application.app_number || application.id || application.application_id || application.lead_id;
+                    const res = await api.put(`/applications/${targetId}/verification`, {
+                      status: 'super_admin_approved',
+                      final_status: 'Super Admin Approved',
+                      super_admin_remark: 'Approved by Operations Head / Super Admin',
+                      bank_remark: 'Approved by Operations Head / Super Admin'
+                    });
+                    if (res.data?.success) {
+                      alert('Application status updated to SUPER ADMIN APPROVED successfully!');
+                      setCurrentStatus('super_admin_approved');
+                      await fetchData();
+                      if (onRefresh) onRefresh();
+                    }
+                  } catch (err) {
+                    alert(err.response?.data?.message || 'Failed to approve application');
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+                style={{
+                  background: '#16a34a',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 4px rgba(22,163,74,0.2)'
+                }}
+              >
+                <CheckCircle size={15} /> Approve (Super Admin Approved)
+              </button>
+            )}
+
+            {isOpsOperator && currentStatus !== 'operational_verified' && currentStatus !== 'approved' && currentStatus !== 'super_admin_approved' && (
+              <button
+                disabled={actionLoading}
+                onClick={async () => {
+                  setActionLoading(true);
+                  try {
+                    const targetId = application.app_number || application.id || application.application_id || application.lead_id;
                     const res = await api.put(`/applications/${targetId}/verification`, {
                       status: 'operational_verified',
                       final_status: 'Operational Verified',
