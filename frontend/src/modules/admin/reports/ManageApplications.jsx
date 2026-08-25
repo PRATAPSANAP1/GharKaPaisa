@@ -12,7 +12,8 @@ export default function ManageApplications() {
 
   const user = useAuthStore((state) => state.user);
   const userRole = (user?.role || '').toUpperCase();
-  const isOpsHeadOrSuperAdmin = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole);
+  const userDesignation = (user?.designation || '').toUpperCase();
+  const isOpsHeadOrSuperAdmin = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
 
   // Verification Modal State
   const [verifyModalApp, setVerifyModalApp] = useState(null);
