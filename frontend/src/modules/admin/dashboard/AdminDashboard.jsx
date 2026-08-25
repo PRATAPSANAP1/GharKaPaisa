@@ -93,11 +93,7 @@ export default function AdminDashboard() {
       {/* Top Banner Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16, background: isDark ? 'linear-gradient(135deg, #111c35 0%, #0d1428 100%)' : '#ffffff', border: `1px solid ${border}`, borderRadius: 20, padding: "18px 20px", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, fontWeight: 800, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-            <span>⚡ Operational Intelligence Desk</span>
-          </div>
           <h2 style={{ fontSize: "22px", fontWeight: 900, color: textPrimary, margin: 0 }}>Admin Dashboard Analytics</h2>
-          <p style={{ fontSize: "13px", color: textMuted, margin: "4px 0 0 0" }}>Real-time metrics, partner performance, and application tracking</p>
         </div>
 
         <button 
