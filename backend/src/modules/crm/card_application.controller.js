@@ -24,6 +24,37 @@ const submitApplication = async (req, res, next) => {
       [customerName.trim(), mobile.trim(), bankName.trim(), cardName.trim(), leadCategory]
     );
 
+    // Dual-sync to main applications table to preserve single source of truth
+    try {
+      // Find matching bank and product if available
+      const { rows: [bank] } = await query(`SELECT id FROM banks WHERE LOWER(name) ILIKE $1 OR LOWER(short_code) ILIKE $1 LIMIT 1`, [`%${bankName.trim()}%`]);
+      let productId = null;
+      let bankId = bank ? bank.id : null;
+
+      if (bankId) {
+        const { rows: [prod] } = await query(`SELECT id FROM products WHERE bank_id = $1 AND LOWER(name) ILIKE $2 LIMIT 1`, [bankId, `%${cardName.trim()}%`]);
+        productId = prod ? prod.id : null;
+      }
+
+      // Upsert lead
+      const { rows: [lead] } = await query(
+        `INSERT INTO leads (customer_name, mobile, status, source) VALUES ($1, $2, 'details_submitted', 'direct_card') RETURNING id`,
+        [customerName.trim(), mobile.trim()]
+      );
+
+      const appNum = `DIR${Date.now().toString().slice(-6)}${Math.floor(100 + Math.random() * 900)}`;
+
+      await query(
+        `INSERT INTO applications (app_number, lead_id, bank_id, product_id, status, process_type, source, customer_name, customer_mobile)
+         VALUES ($1, $2, $3, $4, 'details_submitted', 'direct_lead', 'direct_card_applications', $5, $6)
+         ON CONFLICT (app_number) DO NOTHING`,
+        [appNum, lead.id, bankId, productId, customerName.trim(), mobile.trim()]
+      );
+    } catch (syncErr) {
+      // Non-blocking sync error logging
+      console.error('Direct application single-source sync warning:', syncErr.message);
+    }
+
     return created(res, application, 'Direct lead recorded successfully');
   } catch (err) {
     next(err);
@@ -33,12 +64,25 @@ const submitApplication = async (req, res, next) => {
 // Admin & Super Admin route to list direct applications with category filter
 const listApplications = async (req, res, next) => {
   try {
-    const { page, limit, offset } = getPaginationParams(req.query);
+    let { page, limit, offset } = getPaginationParams(req.query);
+    limit = Math.min(Math.max(parseInt(limit) || 10, 1), 100);
+    offset = (Math.max(parseInt(page) || 1, 1) - 1) * limit;
+
     const { search, category } = req.query;
 
     let whereClause = 'WHERE 1=1';
     const values = [];
     let idx = 1;
+
+    const userRole = (req.user?.role || '').toUpperCase();
+    if (userRole !== 'SUPER_ADMIN' && req.user?.id) {
+      const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
+      if (abRows.length > 0) {
+        whereClause += ` AND (bank_name IN (SELECT name FROM banks WHERE id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid)))`;
+        values.push(req.user.id);
+        idx++;
+      }
+    }
 
     if (category && category !== 'all') {
       whereClause += ` AND (LOWER(category) = $${idx} OR ($${idx} = 'credit_card' AND (category IS NULL OR category = '')))`;

@@ -1168,7 +1168,10 @@ const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{
 
 const listApplications = async (req, res, next) => {
   try {
-    const { page, limit, offset } = getPaginationParams(req.query);
+    let { page, limit, offset } = getPaginationParams(req.query);
+    limit = Math.min(Math.max(parseInt(limit) || 10, 1), 100);
+    offset = (Math.max(parseInt(page) || 1, 1) - 1) * limit;
+
     const { status, partner_id, partner_id: q_partner_id, product_id, search, bank_id, process_by, operation_head_id, operation_head, member_id, category } = req.query;
     const targetPartnerId = q_partner_id || partner_id;
     const targetOpHeadId = isUuid(operation_head_id) ? operation_head_id : (isUuid(operation_head) ? operation_head : null);
@@ -1204,12 +1207,19 @@ const listApplications = async (req, res, next) => {
     const validCommissionStatus = req.query.commission_status && req.query.commission_status.trim() ? req.query.commission_status.trim() : null;
 
     let opHeadBankFilterSQL = '';
+    let countOpHeadBankFilterSQL = '';
+    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus];
+    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus];
+
     const userDesignation = (req.user?.designation || '').toUpperCase();
     const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
     if (!isPartnerOrTeam && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
       if (abRows.length > 0) {
-        opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR combined.operation_head_id = '${req.user.id}')`;
+        opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $16::uuid) OR combined.operation_head_id = $16::uuid)`;
+        countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $14::uuid) OR combined.operation_head_id = $14::uuid)`;
+        queryParams.push(req.user.id);
+        countQueryParams.push(req.user.id);
       }
     }
 
@@ -1236,8 +1246,6 @@ const listApplications = async (req, res, next) => {
         ))
       )
     `;
-
-    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus];
 
     const { rows } = await query(`
       SELECT * FROM (
@@ -1332,9 +1340,7 @@ const listApplications = async (req, res, next) => {
       LIMIT $6 OFFSET $7
     `, queryParams);
 
-    // Count query with same filter
-    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus];
-
+    // Count query with synchronized status filter
     const countScopeSQL = `
       WHERE (
         ($9::boolean = false AND ($1::uuid IS NULL OR combined.partner_id IN (
@@ -1368,22 +1374,16 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
       ) combined
-      ${countScopeSQL}
-        AND (
+         AND (
           $2::text IS NULL
           OR combined.status = $2
           OR ($2 = 'pending' AND combined.status IN ('pending', 'lead_created', 'new', 'draft', 'initiated', 'link_sent', 'confirmed', 'link_pending'))
-          OR ($2 = 'details_submitted' AND combined.status IN ('details_submitted', 'submitted', 'bank_form_submitted', 'under_review', 'under review', 'verification', 'in_process', 'in_progress'))
-          OR ($2 = 'under_review' AND combined.status IN ('under_review', 'under review', 'verification', 'in_progress', 'bank_verification'))
-          OR ($2 = 'submitted' AND combined.status IN ('submitted', 'applied', 'bank_form_submitted'))
-          OR ($2 = 'super_admin_approved' AND combined.status IN ('super_admin_approved', 'approved', 'disbursed'))
-          OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned'))
-          OR ($2 = 'operational_verified' AND (
-            LOWER(combined.status) IN ('approved', 'operational_verified', 'app file generated (approved)', 'approved_by_ops', 'disbursed', 'sanctioned')
-            OR LOWER(combined.status) LIKE '%approve%' OR LOWER(combined.status) LIKE '%generated%'
-          ))
-          OR ($2 = 'disbursed' AND combined.status IN ('disbursed', 'completed', 'paid'))
-          OR ($2 = 'rejected' AND combined.status IN ('rejected', 'declined', 'cancelled', 'decline', 'technical_error'))
+          OR ($2 = 'details_submitted' AND combined.status IN ('details_submitted', 'submitted', 'bank_form_submitted'))
+          OR ($2 = 'operational_verified' AND combined.status IN ('operational_verified', 'under_review', 'under review', 'verification', 'in_process', 'in_progress', 'vkyc_pending', 'vkyc_completed'))
+          OR ($2 = 'approved' AND combined.status IN ('approved', 'sanctioned', 'super_admin_approved', 'disbursed'))
+          OR ($2 = 'commission_received' AND combined.status IN ('commission_received', 'commission_released', 'released', 'credited', 'paid'))
+          OR ($2 = 'rejected' AND combined.status IN ('rejected', 'declined', 'decline', 'technical_error'))
+          OR ($2 = 'cancelled' AND combined.status IN ('cancelled', 'cancel', 'canceled'))
         )
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
@@ -1403,7 +1403,7 @@ const listApplications = async (req, res, next) => {
           OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
           OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
           OR ($12::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
-          OR (LOWER(combined.category::text) = LOWER($12::text))
+          OR (LOWER(combined.category::text) = LOWER($14::text))
         )
         AND (
           $13::text IS NULL OR $13::text = '' OR $13::text = 'all'
@@ -1411,7 +1411,7 @@ const listApplications = async (req, res, next) => {
           OR ($13::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
           OR ($13::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
         )
-        ${opHeadBankFilterSQL}
+        ${countOpHeadBankFilterSQL}
     `, countQueryParams);
 
     // Compute real-time canonical status counts directly from applications table
@@ -1483,46 +1483,6 @@ const listApplications = async (req, res, next) => {
 const getApplication = async (req, res, next) => {
   try {
     const { id } = req.params;
-
-    // Safety check for dynamic columns on customers & applications
-    try {
-      await query(`
-        ALTER TABLE customers 
-          ADD COLUMN IF NOT EXISTS address TEXT,
-          ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255),
-          ADD COLUMN IF NOT EXISTS father_name VARCHAR(255),
-          ADD COLUMN IF NOT EXISTS marital_status VARCHAR(100),
-          ADD COLUMN IF NOT EXISTS gender VARCHAR(50),
-          ADD COLUMN IF NOT EXISTS designation VARCHAR(255),
-          ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20),
-          ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(15,2);
-        ALTER TABLE applications
-          ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255),
-          ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(50),
-          ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255),
-          ADD COLUMN IF NOT EXISTS pan_number VARCHAR(20),
-          ADD COLUMN IF NOT EXISTS dob DATE,
-          ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(15,2),
-          ADD COLUMN IF NOT EXISTS monthly_salary DECIMAL(15,2),
-          ADD COLUMN IF NOT EXISTS employment_type VARCHAR(100),
-          ADD COLUMN IF NOT EXISTS occupation VARCHAR(100),
-          ADD COLUMN IF NOT EXISTS company_name VARCHAR(255),
-          ADD COLUMN IF NOT EXISTS city VARCHAR(100),
-          ADD COLUMN IF NOT EXISTS state VARCHAR(100),
-          ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
-          ADD COLUMN IF NOT EXISTS address TEXT,
-          ADD COLUMN IF NOT EXISTS mother_name VARCHAR(255),
-          ADD COLUMN IF NOT EXISTS father_name VARCHAR(255),
-          ADD COLUMN IF NOT EXISTS marital_status VARCHAR(100),
-          ADD COLUMN IF NOT EXISTS gender VARCHAR(50),
-          ADD COLUMN IF NOT EXISTS designation VARCHAR(255),
-          ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20);
-        ALTER TABLE leads
-          ADD COLUMN IF NOT EXISTS employment_type VARCHAR(100),
-          ADD COLUMN IF NOT EXISTS occupation VARCHAR(100),
-          ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);
-      `);
-    } catch (_) {}
 
     const { rows: [app] } = await query(`
       SELECT a.*, 

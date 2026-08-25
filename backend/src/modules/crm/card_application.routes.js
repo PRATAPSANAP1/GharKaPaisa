@@ -8,9 +8,9 @@ const roleCheck = require('../../middleware/authorization/role.middleware.js');
 router.post('/', ctrl.submitApplication);
 
 // Admin & Super Admin route to list direct applications
-router.get('/', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.listApplications);
+router.get('/', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD'), ctrl.listApplications);
 
 // Admin & Super Admin route to update direct lead status
-router.put('/:id/status', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN'), ctrl.updateApplicationStatus);
+router.put('/:id/status', jwtAuth, roleCheck('ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD'), ctrl.updateApplicationStatus);
 
 module.exports = router;

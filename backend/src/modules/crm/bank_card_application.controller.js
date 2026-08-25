@@ -263,12 +263,25 @@ const updateDeclineFields = async (req, res, next) => {
 // GET /api/v1/admin/bank-cards — List Applications with Filters (Unified from bank_card_applications and applications)
 const listBankCardApplications = async (req, res, next) => {
   try {
-    const { page, limit, offset } = getPaginationParams(req.query);
+    let { page, limit, offset } = getPaginationParams(req.query);
+    limit = Math.min(Math.max(parseInt(limit) || 10, 1), 100);
+    offset = (Math.max(parseInt(page) || 1, 1) - 1) * limit;
+
     const { bank_id, bank_slug, final_stage, qd_status, income_status, dispatch_stage, category, executive, search } = req.query;
 
     let whereClause = 'WHERE 1=1';
     const values = [];
     let idx = 1;
+
+    const userRole = (req.user?.role || '').toUpperCase();
+    if (userRole !== 'SUPER_ADMIN' && req.user?.id) {
+      const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
+      if (abRows.length > 0) {
+        whereClause += ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid) OR combined.bank_id IN (SELECT b.id FROM banks b WHERE b.operation_head_id = $${idx}::uuid))`;
+        values.push(req.user.id);
+        idx++;
+      }
+    }
 
     if (bank_id && bank_id !== 'all') {
       whereClause += ` AND combined.bank_id = $${idx}`;
