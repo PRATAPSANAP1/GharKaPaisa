@@ -406,23 +406,40 @@ export default function PhysicalApplicationForm() {
             </div>
           </div>
 
-          <button 
-            onClick={() => setSubmitted(false)} 
-            style={{ 
-              marginTop: 24, 
-              padding: '14px 28px', 
-              borderRadius: 16, 
-              border: 'none', 
-              background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, 
-              color: '#fff', 
-              fontWeight: 800, 
-              fontSize: 14, 
-              cursor: 'pointer',
-              boxShadow: `0 8px 24px ${C.primary}35`
-            }}
-          >
-            ✏️ {txt('retry')} / View Form Again
-          </button>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginTop: 24 }}>
+            <button 
+              onClick={() => window.location.href = '/'} 
+              style={{ 
+                padding: '14px 28px', 
+                borderRadius: 16, 
+                border: 'none', 
+                background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, 
+                color: '#fff', 
+                fontWeight: 800, 
+                fontSize: 14, 
+                cursor: 'pointer',
+                boxShadow: `0 8px 24px ${C.primary}35`
+              }}
+            >
+              🏠 Open Home Page
+            </button>
+
+            <button 
+              onClick={() => setSubmitted(false)} 
+              style={{ 
+                padding: '14px 22px', 
+                borderRadius: 16, 
+                border: `1px solid ${C.border}`, 
+                background: C.bgSecondary, 
+                color: C.text, 
+                fontWeight: 800, 
+                fontSize: 13.5, 
+                cursor: 'pointer'
+              }}
+            >
+              ✏️ Edit / View Form Again
+            </button>
+          </div>
         </div>
       </div>
     );
