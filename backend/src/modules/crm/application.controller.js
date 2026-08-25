@@ -1683,8 +1683,21 @@ const uploadApplicationDoc = async (req, res, next) => {
       return error(res, 'S3 bucket is not configured.', 503);
     }
 
-    const { rows: [app] } = await query(`SELECT partner_id FROM applications WHERE id = $1`, [id]);
-    if (!app) return notFound(res);
+    let { rows: [app] } = await query(`
+      SELECT id, partner_id FROM applications 
+      WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1
+    `, [id]);
+    if (!app) {
+      const { rows: [pdRec] } = await query(
+        `SELECT application_id FROM physical_application_details WHERE token = $1 OR id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
+        [id]
+      );
+      if (pdRec?.application_id) {
+        const { rows: [appFromPd] } = await query(`SELECT id, partner_id FROM applications WHERE id = $1`, [pdRec.application_id]);
+        if (appFromPd) app = appFromPd;
+      }
+    }
+    if (!app) return notFound(res, 'Application or Lead record not found');
 
     if (req.user.role === 'PARTNER') {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
@@ -2770,13 +2783,33 @@ const updateApplicationDetails = async (req, res, next) => {
       `);
     } catch (_) {}
 
-    let { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1`, [id]);
+    let { rows: [app] } = await client.query(
+      `SELECT * FROM applications 
+       WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 
+          OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1`,
+      [id]
+    );
     let isLeadOnly = false;
     if (!app) {
-      const { rows: [leadRec] } = await client.query(`SELECT * FROM leads WHERE id::text = $1 OR lead_number = $1 OR application_id::text = $1`, [id]);
+      const { rows: [leadRec] } = await client.query(
+        `SELECT * FROM leads 
+         WHERE id::text = $1 OR lead_number = $1 OR application_id::text = $1 OR mobile = $1`,
+        [id]
+      );
       if (leadRec) {
         app = leadRec;
         isLeadOnly = true;
+      }
+    }
+    if (!app) {
+      const { rows: [pdRec] } = await client.query(
+        `SELECT application_id FROM physical_application_details 
+         WHERE token = $1 OR id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
+        [id]
+      );
+      if (pdRec?.application_id) {
+        const { rows: [appFromPd] } = await client.query(`SELECT * FROM applications WHERE id = $1`, [pdRec.application_id]);
+        if (appFromPd) app = appFromPd;
       }
     }
 
