@@ -901,7 +901,7 @@ export default function PartnerApplications() {
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, borderTop: `1px solid ${border}`, paddingTop: 8, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 6, borderTop: `1px solid ${border}`, paddingTop: 8, flexWrap: 'wrap' }}>
                           <button onClick={() => handleGenerateShareLink(app)} disabled={generatingShare}
                             style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #10b98140`, background: '#10b98115', color: '#10b981', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Share2 size={12} /> Share
@@ -909,6 +909,14 @@ export default function PartnerApplications() {
                           <button onClick={() => handleOpenViewModal(app)}
                             style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #3b82f640`, background: '#3b82f615', color: '#3b82f6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Eye size={12} /> View
+                          </button>
+                          <button onClick={() => handleOpenTrackModal(app)}
+                            style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #8b5cf640`, background: '#8b5cf615', color: '#8b5cf6', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Activity size={12} /> Track
+                          </button>
+                          <button onClick={() => handleOpenRemarkModal(app)}
+                            style={{ padding: '6px 10px', borderRadius: 8, border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', fontWeight: 700, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <FileEdit size={12} /> Remark
                           </button>
                         </div>
                       </div>

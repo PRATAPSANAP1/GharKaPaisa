@@ -428,12 +428,17 @@ export default function PhysicalApplicationForm() {
   }
 
   // Main Responsive Layout
-  const steps = [
-    { id: 'step1', num: '1', title: txt('step1Short'), desc: 'Customer Details' },
-    { id: 'step2', num: '2', title: txt('step2Short'), desc: 'Appcode & VKYC' },
-    { id: 'step3', num: '3', title: txt('step3Short'), desc: 'IQA & Dispatch' },
-    { id: 'step4', num: '4', title: txt('step4Short'), desc: 'Bank & Ops Status' }
-  ];
+  const procTypeStr = String(appData?.process_type || appData?.process_by || appData?.application?.process_type || appData?.application?.process_by || '').toLowerCase();
+  const isDigitalProcess = procTypeStr.includes('linked') || procTypeStr.includes('share') || procTypeStr.includes('direct') || procTypeStr.includes('link');
+
+  const steps = isDigitalProcess
+    ? [{ id: 'step2', num: '1', title: 'Application Remark & Stage Tracking', desc: 'Remark Form' }]
+    : [
+        { id: 'step1', num: '1', title: txt('step1Short'), desc: 'Customer Details' },
+        { id: 'step2', num: '2', title: txt('step2Short'), desc: 'Appcode & VKYC' },
+        { id: 'step3', num: '3', title: txt('step3Short'), desc: 'IQA & Dispatch' },
+        { id: 'step4', num: '4', title: txt('step4Short'), desc: 'Bank & Ops Status' }
+      ];
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, padding: isMobile ? '14px 12px 36px' : '24px 20px 48px', fontFamily: "'Inter', sans-serif", transition: 'background 0.3s ease, color 0.3s ease' }}>
@@ -490,7 +495,7 @@ export default function PhysicalApplicationForm() {
             
             {/* Step Completion Indicator Pill */}
             <div style={{ padding: '6px 14px', borderRadius: 20, background: C.bgSecondary, border: `1px solid ${C.border}`, fontSize: 12, fontWeight: 800, color: C.primary }}>
-              Step {steps.findIndex(s => s.id === activeTab) + 1} of 4
+              Step {isDigitalProcess ? 1 : steps.findIndex(s => s.id === activeTab) + 1} of {isDigitalProcess ? 1 : 4}
             </div>
           </div>
         </div>
@@ -885,34 +890,14 @@ export default function PhysicalApplicationForm() {
                 </div>
               </div>
 
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('step1')}
-                  style={{
-                    padding: '14px 22px',
-                    borderRadius: '16px',
-                    border: `1px solid ${C.border}`,
-                    background: C.bgSecondary,
-                    color: C.text,
-                    fontWeight: 800,
-                    fontSize: '13.5px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6
-                  }}
-                >
-                  <MdNavigateBefore size={20} /> {txt('backStep')} Step 1
-                </button>
-
-                <div style={{ display: 'flex', gap: 12 }}>
+              {isDigitalProcess ? (
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
                   <button
                     type="button"
                     onClick={handleSubmit}
                     disabled={submitting}
                     style={{
-                      padding: '14px 24px',
+                      padding: '14px 28px',
                       borderRadius: '16px',
                       border: 'none',
                       background: '#10b981',
@@ -926,31 +911,77 @@ export default function PhysicalApplicationForm() {
                       boxShadow: '0 6px 20px rgba(16, 185, 129, 0.35)'
                     }}
                   >
-                    {submitting ? 'Submitting...' : 'Submit Details'}
+                    {submitting ? 'Submitting...' : 'SUBMIT DETAILS 💾'}
                   </button>
-
+                </div>
+              ) : (
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={() => setActiveTab('step3')}
+                    onClick={() => setActiveTab('step1')}
                     style={{
-                      padding: '14px 28px',
+                      padding: '14px 22px',
                       borderRadius: '16px',
-                      border: 'none',
-                      background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
-                      color: '#ffffff',
-                      fontWeight: 900,
-                      fontSize: '14px',
+                      border: `1px solid ${C.border}`,
+                      background: C.bgSecondary,
+                      color: C.text,
+                      fontWeight: 800,
+                      fontSize: '13.5px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 8,
-                      boxShadow: `0 6px 20px ${C.primary}35`
+                      gap: 6
                     }}
                   >
-                    {txt('nextStep')} 3: IQA & Dispatch <MdNavigateNext size={20} />
+                    <MdNavigateBefore size={20} /> {txt('backStep')} Step 1
                   </button>
+
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={submitting}
+                      style={{
+                        padding: '14px 24px',
+                        borderRadius: '16px',
+                        border: 'none',
+                        background: '#10b981',
+                        color: '#ffffff',
+                        fontWeight: 900,
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        boxShadow: '0 6px 20px rgba(16, 185, 129, 0.35)'
+                      }}
+                    >
+                      {submitting ? 'Submitting...' : 'Submit Details'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('step3')}
+                      style={{
+                        padding: '14px 28px',
+                        borderRadius: '16px',
+                        border: 'none',
+                        background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
+                        color: '#ffffff',
+                        fontWeight: 900,
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        boxShadow: `0 6px 20px ${C.primary}35`
+                      }}
+                    >
+                      {txt('nextStep')} 3: IQA & Dispatch <MdNavigateNext size={20} />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
 
