@@ -651,8 +651,30 @@ const updateStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status, remarks = 'Status updated by administrative panel' } = req.body;
 
-    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id = $1 FOR UPDATE`, [id]);
-    if (!app) return notFound(res, 'Application not found');
+    let { rows: [app] } = await client.query(
+      `SELECT * FROM applications 
+       WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 
+          OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1 
+       FOR UPDATE`, 
+      [id]
+    );
+    if (!app) {
+      const { rows: [pdRec] } = await client.query(
+        `SELECT application_id FROM physical_application_details WHERE token = $1 OR id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
+        [id]
+      );
+      if (pdRec?.application_id) {
+        const { rows: [appFromPd] } = await client.query(
+          `SELECT * FROM applications WHERE id = $1 FOR UPDATE`,
+          [pdRec.application_id]
+        );
+        if (appFromPd) app = appFromPd;
+      }
+    }
+    if (!app) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Application or Lead record not found');
+    }
 
     const userRole = (req.user?.role || '').toUpperCase();
     const restrictedForPartner = ['operational_verified', 'super_admin_approved', 'commission_processing', 'commission_released'];
@@ -938,8 +960,17 @@ const approveApplication = async (req, res, next) => {
     const { id, approved_amount } = req.body;
     if (!id) return error(res, 'ID is required', 400);
 
-    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id=$1 FOR UPDATE`, [id]);
-    if (!app) return notFound(res);
+    let { rows: [app] } = await client.query(
+      `SELECT * FROM applications 
+       WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 
+          OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1 
+       FOR UPDATE`, 
+      [id]
+    );
+    if (!app) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Application or Lead record not found');
+    }
 
     await client.query(`
       UPDATE applications SET 
@@ -951,7 +982,7 @@ const approveApplication = async (req, res, next) => {
         commission_paid_at=NOW(),
         updated_at=NOW()
       WHERE id=$2
-    `, [approved_amount, id]);
+    `, [approved_amount, app.id]);
 
     // Split payout trigger
     const commValue = app.commission_amount || 0;
@@ -989,12 +1020,21 @@ const rejectApplication = async (req, res, next) => {
     const { id, reason } = req.body;
     if (!id) return error(res, 'ID is required', 400);
 
-    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id=$1 FOR UPDATE`, [id]);
-    if (!app) return notFound(res);
+    let { rows: [app] } = await client.query(
+      `SELECT * FROM applications 
+       WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 
+          OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1 
+       FOR UPDATE`, 
+      [id]
+    );
+    if (!app) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Application or Lead record not found');
+    }
 
     await client.query(`
       UPDATE applications SET status='rejected', commission_status='cancelled', rejection_reason=$1, updated_at=NOW() WHERE id=$2
-    `, [reason || 'Rejected by super admin', id]);
+    `, [reason || 'Rejected by super admin', app.id]);
 
     await logTimeline(client, id, 'rejected', 'Application Rejected', reason || 'Rejected by super admin', req.user.id);
     await logAction(req, 'SUPER_ADMIN_REJECT_APPLICATION', id, { reason });
@@ -1086,12 +1126,21 @@ const manualCommission = async (req, res, next) => {
     const { id, amount, remarks } = req.body;
     if (!id || !amount) return error(res, 'ID and amount are required', 400);
 
-    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id=$1 FOR UPDATE`, [id]);
-    if (!app) return notFound(res);
+    let { rows: [app] } = await client.query(
+      `SELECT * FROM applications 
+       WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 
+          OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1 
+       FOR UPDATE`, 
+      [id]
+    );
+    if (!app) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Application or Lead record not found');
+    }
 
     await client.query(`
       UPDATE applications SET commission_amount=$1, commission_status='approved', updated_at=NOW() WHERE id=$2
-    `, [amount, id]);
+    `, [amount, app.id]);
 
     await creditCommission(app.partner_id, id, amount, remarks || 'Manual commission assignment', req.user.id);
 
@@ -3095,10 +3144,29 @@ const updateProcessType = async (req, res, next) => {
 
     await client.query('BEGIN');
 
-    const { rows: [app] } = await client.query(`SELECT * FROM applications WHERE id = $1 FOR UPDATE`, [id]);
+    let { rows: [app] } = await client.query(
+      `SELECT * FROM applications 
+       WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 
+          OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1 
+       FOR UPDATE`, 
+      [id]
+    );
+    if (!app) {
+      const { rows: [pdRec] } = await client.query(
+        `SELECT application_id FROM physical_application_details WHERE token = $1 OR id::text = $1 OR bank_application_number = $1 OR bank_ref_number = $1 LIMIT 1`,
+        [id]
+      );
+      if (pdRec?.application_id) {
+        const { rows: [appFromPd] } = await client.query(
+          `SELECT * FROM applications WHERE id = $1 FOR UPDATE`,
+          [pdRec.application_id]
+        );
+        if (appFromPd) app = appFromPd;
+      }
+    }
     if (!app) {
       await client.query('ROLLBACK');
-      return notFound(res, 'Application not found');
+      return notFound(res, 'Application or Lead record not found');
     }
 
     const oldProcessType = app.process_type;
@@ -3156,11 +3224,11 @@ const updateVkyc = async (req, res, next) => {
       SET vkyc_status = COALESCE(NULLIF($1, ''), vkyc_status),
           vkyc_url = COALESCE(NULLIF($2, ''), vkyc_url),
           updated_at = NOW()
-      WHERE id = $3
+      WHERE id::text = $3 OR app_number = $3 OR tracking_token = $3 OR bank_application_number = $3 OR bank_ref_number = $3
       RETURNING *
     `, [vkyc_status ? vkyc_status.trim() : null, targetUrl ? targetUrl.trim() : null, id]);
 
-    if (!app) return notFound(res, 'Application not found');
+    if (!app) return notFound(res, 'Application or Lead record not found');
 
     await logApplicationAudit(req, id, app.lead_id, 'VKYC_UPDATED', { vkyc_status: app.vkyc_status }, { vkyc_status, vkyc_url: targetUrl }, remarks);
 
