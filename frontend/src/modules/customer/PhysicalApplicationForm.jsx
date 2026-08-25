@@ -467,7 +467,7 @@ export default function PhysicalApplicationForm() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           {!isMobile && (
             <div style={{ fontSize: 11, fontWeight: 800, color: C.teal, background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '5px 12px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <MdLock size={14} color={C.teal} /> {txt('portalTitle')}
+              <MdLock size={14} color={C.teal} /> {isDigitalProcess ? 'Application Verification Portal' : txt('portalTitle')}
             </div>
           )}
           <LanguageSwitcher />
@@ -483,10 +483,10 @@ export default function PhysicalApplicationForm() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-                ⚡ {appData?.bank_name || 'Bank'} {txt('headerSub')}
+                ⚡ {appData?.bank_name || 'Bank'} {isDigitalProcess ? 'Application Verification' : 'Application Verification'}
               </div>
               <h1 style={{ margin: '0 0 6px', fontSize: isMobile ? 18 : 22, fontWeight: 900, color: C.text }}>
-                {txt('headerSub')}
+                {isDigitalProcess ? 'Application Remark & Stage Tracking' : 'Application Verification'}
               </h1>
               <p style={{ margin: 0, fontSize: 13, color: C.textMid, lineHeight: 1.5 }}>
                 {txt('appNo')} <strong style={{ color: C.text }}>#{appData?.app_number}</strong> • {txt('bank')}: <strong style={{ color: C.text }}>{appData?.bank_name || 'SBI Bank'}</strong> • {txt('product')}: <strong style={{ color: C.text }}>{appData?.product_name || 'Credit Card'}</strong>
