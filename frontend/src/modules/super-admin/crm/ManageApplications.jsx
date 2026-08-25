@@ -658,13 +658,12 @@ export default function ManageApplications() {
         </form>
       </div>
 
-      {/* Main Grid Queue Table */}
+      {/* Main Grid Queue Table - Unified Single Master Table sorted newest first */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '40px' }}>Loading queue list...</div>
       ) : applications.length === 0 ? (
         <div style={{ ...S.card, padding: '48px', textAlign: 'center', color: C.textLight }}>No applications matching search criteria.</div>
-      ) : statusFilter ? (
-        /* Single Filtered Status Table */
+      ) : (
         <div style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -680,72 +679,93 @@ export default function ManageApplications() {
                 </tr>
               </thead>
               <tbody style={{ fontSize: '13.5px' }}>
-                {applications.map((app) => (
-                  <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
-                    <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontWeight: 700 }}>
-                      {app.app_number}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: 800, color: C.text }}>{app.customer_name}</div>
-                      <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{app.customer_mobile}</div>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: 600 }}>{app.partner_first_name || app.Partner_first_name || 'Direct'} {app.partner_last_name || app.Partner_last_name || ''}</div>
-                      <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{app.partner_code || app.Partner_code || 'N/A'}</div>
-                      <div style={{
-                        marginTop: '4px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', display: 'inline-block',
-                        padding: '2px 8px', borderRadius: '6px',
-                        background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
-                        color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
-                      }}>
-                        {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? 'Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? 'Customer Apply' : 'Partner Punch'}
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ color: C.text }}>{app.product_name}</div>
-                      <div style={{ fontSize: '11.5px', color: C.textLight, marginTop: '2px' }}>{app.bank_name} • {app.category}</div>
-                      {app.operation_head_name && (
-                        <div style={{ fontSize: '10.5px', fontWeight: 700, color: C.purple, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span>Op Head:</span> {app.operation_head_name}
+                {[...applications]
+                  .sort((a, b) => {
+                    const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                    const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                    return dateB - dateA; // Latest/newest application on top, oldest at bottom
+                  })
+                  .map((app) => (
+                    <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
+                      <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontWeight: 700 }}>
+                        {app.app_number}
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ fontWeight: 800, color: C.text }}>{app.customer_name}</div>
+                        <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{app.customer_mobile}</div>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ fontWeight: 600 }}>{app.partner_first_name || app.Partner_first_name || 'Direct'} {app.partner_last_name || app.Partner_last_name || ''}</div>
+                        <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{app.partner_code || app.Partner_code || 'N/A'}</div>
+                        <div style={{
+                          marginTop: '4px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', display: 'inline-block',
+                          padding: '2px 8px', borderRadius: '6px',
+                          background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
+                          color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
+                        }}>
+                          {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? 'Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? 'Customer Apply' : 'Partner Punch'}
                         </div>
-                      )}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{
-                        display: 'inline-block', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px',
-                        background: (app.status === 'approved' || app.status === 'disbursed') ? `${C.green}15` : app.status === 'rejected' ? `${C.red}15` : `${C.gold}15`,
-                        color: (app.status === 'approved' || app.status === 'disbursed') ? C.green : app.status === 'rejected' ? C.red : C.gold
-                      }}>
-                        {app.status?.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: 700, color: C.green }}>₹{app.commission_amount || 0}</div>
-                      <div style={{ fontSize: '10.5px', color: C.textLight, marginTop: '2px', textTransform: 'uppercase' }}>
-                        {app.commission_status}
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'nowrap' }}>
-                        {(() => {
-                          const proc = String(app.process_type || app.process_by || '').toLowerCase();
-                          const isDigital = proc.includes('linked_share') || proc.includes('direct_bank') || proc.includes('link') || proc.includes('direct');
-                          const isPhys = proc.includes('physical');
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ color: C.text }}>{app.product_name}</div>
+                        <div style={{ fontSize: '11.5px', color: C.textLight, marginTop: '2px' }}>{app.bank_name} • {app.category}</div>
+                        {app.operation_head_name && (
+                          <div style={{ fontSize: '10.5px', fontWeight: 700, color: C.purple, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>Op Head:</span> {app.operation_head_name}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{
+                          display: 'inline-block', fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px',
+                          background: (app.status === 'approved' || app.status === 'disbursed') ? `${C.green}15` : app.status === 'rejected' ? `${C.red}15` : `${C.gold}15`,
+                          color: (app.status === 'approved' || app.status === 'disbursed') ? C.green : app.status === 'rejected' ? C.red : C.gold
+                        }}>
+                          {app.status?.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ fontWeight: 700, color: C.green }}>₹{app.commission_amount || 0}</div>
+                        <div style={{ fontSize: '10.5px', color: C.textLight, marginTop: '2px', textTransform: 'uppercase' }}>
+                          {app.commission_status}
+                        </div>
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'nowrap' }}>
+                          {(() => {
+                            const proc = String(app.process_type || app.process_by || '').toLowerCase();
+                            const isDigital = proc.includes('linked_share') || proc.includes('direct_bank') || proc.includes('link') || proc.includes('direct');
+                            const isPhys = proc.includes('physical');
 
-                          if (isDigital) {
-                            return (
-                              <>
-                                <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                  <MdVisibility /> Review
-                                </button>
-                                <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                  ⚙️ Remark
-                                </button>
-                              </>
-                            );
-                          }
+                            if (isDigital) {
+                              return (
+                                <>
+                                  <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                    <MdVisibility /> Review
+                                  </button>
+                                  <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                    ⚙️ Remark
+                                  </button>
+                                </>
+                              );
+                            }
 
-                          if (isPhys) {
+                            if (isPhys) {
+                              return (
+                                <>
+                                  <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                    <MdVisibility /> Review
+                                  </button>
+                                  <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                    📋 QD
+                                  </button>
+                                  <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                    ⚙️ Remark
+                                  </button>
+                                </>
+                              );
+                            }
+
                             return (
                               <>
                                 <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
@@ -757,250 +777,22 @@ export default function ManageApplications() {
                                 <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
                                   ⚙️ Remark
                                 </button>
+                                <button onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }} style={{ border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                                  🏦 Final
+                                </button>
                               </>
                             );
-                          }
-
-                          return (
-                            <>
-                              <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                <MdVisibility /> Review
-                              </button>
-                              <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                📋 QD
-                              </button>
-                              <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                ⚙️ Remark
-                              </button>
-                              <button onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }} style={{ border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                🏦 Final
-                              </button>
-                            </>
-                          );
-                        })()}
-                        <button onClick={() => handleDeleteApplication(app.id, app.app_number)} style={{ border: `1px solid ${C.red}40`, background: `${C.red}12`, color: C.red, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                          <MdDelete /> Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          })()}
+                          <button onClick={() => handleDeleteApplication(app.id, app.app_number)} style={{ border: `1px solid ${C.red}40`, background: `${C.red}12`, color: C.red, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
+                            <MdDelete /> Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {(() => {
-            const allMatchedStatuses = new Set([
-              'pending', 'initiated', 'link_pending', 'bank_application_pending', 'created', 'lead_created', 'new', 'draft', 'confirmed', 'link_sent',
-              'details_submitted', 'submitted', 'bank_form_submitted', 'under_review', 'under review', 'verification', 'in_process', 'in_progress',
-              'operational_verified', 'operational_approved', 'app_file_generated',
-              'approved', 'super_admin_approved', 'disbursed', 'sanctioned',
-              'commission_released', 'released', 'credited',
-              'commission_received', 'received', 'paid',
-              'rejected', 'cancelled', 'declined', 'decline', 'technical_error'
-            ]);
-
-            const groups = [
-              {
-                id: 'pending',
-                title: 'Pending Applications',
-                IconComponent: MdHourglassEmpty,
-                badgeColor: '#F59E0B',
-                statuses: ['pending', 'initiated', 'link_pending', 'bank_application_pending', 'created', 'lead_created', 'new', 'draft', 'confirmed', 'link_sent']
-              },
-              {
-                id: 'details_submitted',
-                title: 'Details Submitted Applications',
-                IconComponent: MdAssignment,
-                badgeColor: '#3B82F6',
-                statuses: ['details_submitted', 'submitted', 'bank_form_submitted', 'under_review', 'under review', 'verification', 'in_process', 'in_progress']
-              },
-              {
-                id: 'operational_verified',
-                title: 'Operational Verified Applications',
-                IconComponent: MdSearch,
-                badgeColor: '#8B5CF6',
-                statuses: ['operational_verified', 'operational_approved', 'app_file_generated']
-              },
-              {
-                id: 'approved',
-                title: 'Approved Applications',
-                IconComponent: MdCheckCircle,
-                badgeColor: '#10B981',
-                statuses: ['approved', 'super_admin_approved', 'disbursed', 'sanctioned']
-              },
-              {
-                id: 'commission_released',
-                title: 'Commission Released Applications',
-                IconComponent: MdAttachMoney,
-                badgeColor: '#06B6D4',
-                statuses: ['commission_released', 'released', 'credited']
-              },
-              {
-                id: 'commission_received',
-                title: 'Commission Received Applications',
-                IconComponent: MdMonetizationOn,
-                badgeColor: '#16A34A',
-                statuses: ['commission_received', 'received', 'paid']
-              },
-              {
-                id: 'rejected',
-                title: 'Rejected & Cancelled Applications',
-                IconComponent: MdCancel,
-                badgeColor: '#EF4444',
-                statuses: ['rejected', 'cancelled', 'declined', 'decline', 'technical_error']
-              },
-              {
-                id: 'other',
-                title: 'Other Applications',
-                IconComponent: MdAssignment,
-                badgeColor: '#6B7280',
-                isOtherFallback: true,
-                statuses: []
-              }
-            ];
-
-            return groups.map((sec, sIdx) => {
-              const list = sec.isOtherFallback
-                ? applications.filter(a => !allMatchedStatuses.has(String(a.status || '').toLowerCase()))
-                : applications.filter(a => sec.statuses.includes(String(a.status || '').toLowerCase()));
-
-              if (!list || list.length === 0) return null;
-              const HeaderIcon = sec.IconComponent;
-              return (
-              <div key={sIdx} style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
-                <div style={{ padding: '14px 20px', background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {HeaderIcon && <HeaderIcon size={20} style={{ color: sec.badgeColor }} />}
-                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0 }}>{sec.title}</h3>
-                    <span style={{ fontSize: '11px', fontWeight: 900, background: `${sec.badgeColor}20`, color: sec.badgeColor, padding: '2px 10px', borderRadius: '12px' }}>
-                      {list.length} Applications
-                    </span>
-                  </div>
-                </div>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead>
-                      <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}`, fontSize: '11px', textTransform: 'uppercase', color: C.textLight }}>
-                        <th style={{ padding: '12px 16px' }}>App ID</th>
-                        <th style={{ padding: '12px 16px' }}>Customer Details</th>
-                        <th style={{ padding: '12px 16px' }}>Partner & Process By</th>
-                        <th style={{ padding: '12px 16px' }}>Product & Bank</th>
-                        <th style={{ padding: '12px 16px' }}>Status</th>
-                        <th style={{ padding: '12px 16px' }}>Commission Status</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'center' }}>Details</th>
-                      </tr>
-                    </thead>
-                    <tbody style={{ fontSize: '13px' }}>
-                      {list.map((app) => (
-                        <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
-                          <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 700 }}>
-                            {app.app_number}
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ fontWeight: 800, color: C.text }}>{app.customer_name}</div>
-                            <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{app.customer_mobile}</div>
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ fontWeight: 600 }}>{app.partner_first_name || app.Partner_first_name || 'Direct'} {app.partner_last_name || app.Partner_last_name || ''}</div>
-                            <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>{app.partner_code || app.Partner_code || 'N/A'}</div>
-                            <div style={{
-                              marginTop: '4px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', display: 'inline-block',
-                              padding: '2px 8px', borderRadius: '6px',
-                              background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
-                              color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
-                            }}>
-                              {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? 'Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? 'Customer Apply' : 'Partner Punch'}
-                            </div>
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ color: C.text }}>{app.product_name}</div>
-                            <div style={{ fontSize: '11.5px', color: C.textLight, marginTop: '2px' }}>{app.bank_name} • {app.category}</div>
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <span style={{
-                              display: 'inline-block', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '20px',
-                              background: (app.status === 'approved' || app.status === 'disbursed') ? `${C.green}15` : app.status === 'rejected' ? `${C.red}15` : `${C.gold}15`,
-                              color: (app.status === 'approved' || app.status === 'disbursed') ? C.green : app.status === 'rejected' ? C.red : C.gold
-                            }}>
-                              {app.status?.replace('_', ' ')}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px 16px' }}>
-                            <div style={{ fontWeight: 700, color: C.green }}>₹{app.commission_amount || 0}</div>
-                            <div style={{ fontSize: '10.5px', color: C.textLight, marginTop: '2px', textTransform: 'uppercase' }}>
-                              {app.commission_status}
-                            </div>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'nowrap' }}>
-                              {(() => {
-                                const proc = String(app.process_type || app.process_by || '').toLowerCase();
-                                const isDigital = proc.includes('linked_share') || proc.includes('direct_bank') || proc.includes('link') || proc.includes('direct');
-                                const isPhys = proc.includes('physical');
-
-                                if (isDigital) {
-                                  return (
-                                    <>
-                                      <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                        <MdVisibility /> Review
-                                      </button>
-                                      <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                        ⚙️ Remark
-                                      </button>
-                                    </>
-                                  );
-                                }
-
-                                if (isPhys) {
-                                  return (
-                                    <>
-                                      <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                        <MdVisibility /> Review
-                                      </button>
-                                      <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                        📋 QD
-                                      </button>
-                                      <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                        ⚙️ Remark
-                                      </button>
-                                    </>
-                                  );
-                                }
-
-                                return (
-                                  <>
-                                    <button onClick={() => handleOpenDetail(app)} style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                      <MdVisibility /> Review
-                                    </button>
-                                    <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                      📋 QD
-                                    </button>
-                                    <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                      ⚙️ Remark
-                                    </button>
-                                    <button onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }} style={{ border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                      🏦 Final
-                                    </button>
-                                  </>
-                                );
-                              })()}
-                              <button onClick={() => handleDeleteApplication(app.id, app.app_number)} style={{ border: `1px solid ${C.red}40`, background: `${C.red}12`, color: C.red, padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                <MdDelete /> Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            );
-          });
-        })()}
         </div>
       )}
 
