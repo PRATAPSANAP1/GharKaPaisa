@@ -553,16 +553,16 @@ export default function ManageApplications() {
                   </p>
                 </div>
 
-                {/* Super Admin / Ops Head Final Approval & Status Upgrade Card */}
+                {/* Operational Verification & Status Upgrade Card */}
                 <div style={{ background: `${C.primary}08`, border: `1.5px solid ${C.primary}30`, padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ fontWeight: 800, fontSize: '14px', color: C.primary, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <CheckCircle2 size={18} /> Super Admin Final Approval & Status Upgrade
+                      <CheckCircle2 size={18} /> Operational Verification & Status Upgrade
                     </div>
                     <span style={{
                       fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '12px',
-                      background: appDetail.status === 'approved' ? '#dcfce7' : '#ffedd5',
-                      color: appDetail.status === 'approved' ? '#15803d' : '#c2410c',
+                      background: (appDetail.status === 'approved' || appDetail.status === 'operational_verified') ? '#dcfce7' : '#ffedd5',
+                      color: (appDetail.status === 'approved' || appDetail.status === 'operational_verified') ? '#15803d' : '#c2410c',
                       textTransform: 'uppercase'
                     }}>
                       Current Status: {(appDetail.status || 'pending').replace(/_/g, ' ')}
@@ -570,7 +570,7 @@ export default function ManageApplications() {
                   </div>
                   
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Super Admin Remark / Approval Note</label>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Operational Remark / Approval Note</label>
                     <textarea
                       rows={2}
                       placeholder="Enter remarks or approval notes..."
@@ -588,13 +588,15 @@ export default function ManageApplications() {
                     >
                       <CheckCircle2 size={16} /> {submittingApprove ? 'Processing...' : 'Mark Operational Verified'}
                     </button>
-                    <button
-                      disabled={submittingApprove}
-                      onClick={() => handleApproveApplication(appDetail.id)}
-                      style={{ background: '#16a34a', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      <CheckCircle2 size={16} /> {submittingApprove ? 'Approving...' : 'Approve (Super Admin Approved)'}
-                    </button>
+                    {userRole === 'SUPER_ADMIN' && (
+                      <button
+                        disabled={submittingApprove}
+                        onClick={() => handleApproveApplication(appDetail.id)}
+                        style={{ background: '#16a34a', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <CheckCircle2 size={16} /> {submittingApprove ? 'Approving...' : 'Approve (Super Admin Approved)'}
+                      </button>
+                    )}
                     {(() => {
                       const isLocked = ['operational_verified', 'super_admin_approved', 'approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed'].includes(String(appDetail?.status || '').toLowerCase());
                       return (
