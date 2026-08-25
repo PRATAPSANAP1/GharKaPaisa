@@ -107,7 +107,8 @@ export default function ManageApplications() {
       if (res?.data?.success) {
         const det = res.data.data;
         const pd = det.physical_details || {};
-        const merged = { ...app, ...det, ...pd };
+        const realAppId = det.app_number || det.id || app?.app_number || app?.id || det.application_id || app?.application_id;
+        const merged = { ...app, ...det, ...pd, real_id: realAppId, app_number: det.app_number || app?.app_number };
         setAppDetail(merged);
         setNewStatus(isOpsHeadOrSuperAdmin ? (det.status || "operational_verified") : "operational_verified");
         setBankRefNumber(det.bank_ref_number || pd.bank_ref_number || "");
@@ -125,7 +126,7 @@ export default function ManageApplications() {
   };
 
   const handleApproveApplication = async (appId) => {
-    const targetId = appId || appDetail?.id || appDetail?.application_id || appDetail?.app_number || selectedApp?.id || selectedApp?.application_id || selectedApp?.app_number;
+    const targetId = appId || appDetail?.app_number || appDetail?.real_id || appDetail?.id || appDetail?.application_id || selectedApp?.app_number || selectedApp?.id || selectedApp?.application_id;
     if (!targetId) {
       alert("Application ID not found. Please refresh and try again.");
       return;
@@ -152,7 +153,7 @@ export default function ManageApplications() {
   };
 
   const handleOperationalVerify = async (appId) => {
-    const targetId = appId || appDetail?.id || appDetail?.application_id || appDetail?.app_number || selectedApp?.id || selectedApp?.application_id || selectedApp?.app_number;
+    const targetId = appId || appDetail?.app_number || appDetail?.real_id || appDetail?.id || appDetail?.application_id || selectedApp?.app_number || selectedApp?.id || selectedApp?.application_id;
     if (!targetId) {
       alert("Application ID not found. Please refresh and try again.");
       return;
@@ -584,7 +585,7 @@ export default function ManageApplications() {
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <button
                       disabled={submittingApprove}
-                      onClick={() => handleOperationalVerify(appDetail.id)}
+                      onClick={() => handleOperationalVerify(appDetail?.app_number || appDetail?.real_id || appDetail?.id)}
                       style={{ background: '#7c3aed', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
                       <CheckCircle2 size={16} /> {submittingApprove ? 'Processing...' : 'Mark Operational Verified'}
