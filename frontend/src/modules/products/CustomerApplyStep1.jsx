@@ -137,8 +137,11 @@ export default function CustomerApplyStep1() {
       const json = await res.json();
       if (json && json.success) {
         setSubmitted(true);
-        const targetUrl = json.data?.redirect_url || redirectUrl || 'https://gharkapaisa.in';
+        const targetUrl = json.data?.redirect_url || redirectUrl || product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || 'https://gharkapaisa.in';
         setRedirectUrl(targetUrl);
+        if (targetUrl) {
+          window.location.href = targetUrl;
+        }
       } else {
         alert(json?.message || 'Failed to submit application details. Please check your inputs.');
       }
@@ -332,59 +335,30 @@ export default function CustomerApplyStep1() {
         <div style={{ width: '100%', maxWidth: '640px', background: cardBg, borderRadius: isMobile ? '20px' : '24px', border: `1px solid ${borderCol}`, padding: isMobile ? '18px 16px' : '28px', boxShadow: '0 16px 40px rgba(0,0,0,0.08)' }}>
           
           {submitted ? (
-            /* SUBMITTED SUCCESS SCREEN */
-            <div style={{ textAlign: 'center', padding: '16px 0' }}>
-              <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: '#10b98120', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '34px', marginBottom: '16px' }}>✅</div>
+            /* SUBMITTED REDIRECTING SCREEN */
+            <div style={{ textAlign: 'center', padding: '28px 16px' }}>
+              <div style={{ width: '56px', height: '56px', border: `4px solid ${borderCol}`, borderTopColor: C.primary || '#2563eb', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 20px' }} />
               <h2 style={{ fontSize: isMobile ? '19px' : '22px', fontWeight: 900, margin: '0 0 8px', color: '#10b981' }}>Details Saved Successfully!</h2>
-              <p style={{ fontSize: '13.5px', color: mutedCol, maxWidth: '480px', margin: '0 auto 20px', lineHeight: '1.5' }}>
-                Your customer details for <strong>{product.name}</strong> have been recorded. Proceed to the bank portal to finish your application.
+              <p style={{ fontSize: '14px', color: mutedCol, maxWidth: '480px', margin: '0 auto 20px', lineHeight: '1.5' }}>
+                Redirecting you to the official bank application portal for <strong>{product.name}</strong>...
               </p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
-                <a
-                  href={redirectUrl || product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || 'https://gharkapaisa.in'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '14px 16px',
-                    borderRadius: '14px',
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                    color: '#ffffff',
-                    fontSize: isMobile ? '14px' : '15px',
-                    fontWeight: 900,
-                    textDecoration: 'none',
-                    boxShadow: '0 6px 20px rgba(16,185,129,0.35)'
-                  }}
-                >
-                  1. OPEN OFFICIAL BANK APPLICATION PORTAL ➔
-                </a>
-
-                <a
-                  href={`/apply/${token}/post-apply`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'block',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '14px 16px',
-                    borderRadius: '14px',
-                    background: `linear-gradient(135deg, ${C.primary || '#2563eb'}, #1d4ed8)`,
-                    color: '#ffffff',
-                    fontSize: isMobile ? '14px' : '15px',
-                    fontWeight: 900,
-                    textDecoration: 'none',
-                    boxShadow: '0 6px 20px rgba(37,99,235,0.35)'
-                  }}
-                >
-                  2. OPEN QD (QUICK DETAILS) FORM IN NEW TAB ↗
-                </a>
-              </div>
-
-
+              <a
+                href={redirectUrl || product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || 'https://gharkapaisa.in'}
+                style={{
+                  display: 'inline-block',
+                  padding: '12px 24px',
+                  borderRadius: '12px',
+                  background: `linear-gradient(135deg, ${C.primary || '#2563eb'}, #1d4ed8)`,
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  fontWeight: 800,
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 14px rgba(37,99,235,0.3)'
+                }}
+              >
+                Click Here if Not Redirected Automatically ➔
+              </a>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
           ) : (
             /* APPLICATION FORM */
