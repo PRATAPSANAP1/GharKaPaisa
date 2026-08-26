@@ -55,10 +55,6 @@ export default function CustomerApplyStep1() {
             || (data.product?.redirect_url && data.product.redirect_url.trim());
           if (bankLink) {
             setRedirectUrl(bankLink);
-            if (data.process_type === 'linked_share' || data.application?.process_type === 'linked_share' || data.lead?.process_type === 'linked_share') {
-              window.location.replace(bankLink);
-              return;
-            }
           }
 
           if (data.customer) {
