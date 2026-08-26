@@ -247,6 +247,7 @@ export default function PartnerApplications() {
       const isPunching = procType.includes('punch') || procType === 'lead_punching';
       const isPhysical = procType.includes('physical');
       const isLinked = procType.includes('linked');
+      const isDirect = procType.includes('direct') || procType.includes('bank');
 
       let shareUrl = '';
       let shareTitle = `${app.product_name || 'Credit Card Application'} - GharKaPaisa`;
@@ -259,7 +260,8 @@ export default function PartnerApplications() {
         const custName = app.customer_name || 'Customer';
         shareText = `Hello ${custName},\n\nPlease complete your Quick Details (QD) form for ${app.product_name || 'Application'} using this link:\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`;
       } else {
-        const endpoint = (isPhysical || isLinked) ? '/applications/generate-physical-link' : '/applications/generate-share-link';
+        const isPhysicalOrDigitalRemark = isPhysical || isLinked || isDirect;
+        const endpoint = isPhysicalOrDigitalRemark ? '/applications/generate-physical-link' : '/applications/generate-share-link';
 
         const res = await api.post(endpoint, {
           application_id: app.id,
@@ -270,7 +272,9 @@ export default function PartnerApplications() {
           shareUrl = res.data.data.share_url || res.data.data.url;
           tokenVal = res.data.data.token || app.tracking_token || tokenVal;
         } else {
-          shareUrl = `${window.location.origin}/apply/${tokenVal}`;
+          shareUrl = isPhysicalOrDigitalRemark 
+            ? `${window.location.origin}/physical-application/${tokenVal}` 
+            : `${window.location.origin}/apply/${tokenVal}`;
         }
         const custName = app.customer_name || 'Customer';
         shareText = `Hello ${custName},\n\nPlease complete your application tracking and details form for ${app.product_name || 'Credit Card'} using this link:\n${shareUrl}`;
