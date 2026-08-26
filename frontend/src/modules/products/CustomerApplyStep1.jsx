@@ -86,41 +86,35 @@ export default function CustomerApplyStep1() {
     if (activeToken) fetchTokenDetails();
   }, [activeToken]);
 
+  const bankNameStr = String(product?.bank_name || product?.bank_code || product?.name || '').toLowerCase();
+  const isSbiProduct = product?.bank_id === 'e7c2c604-139d-4fcf-a87c-695633535a02' || bankNameStr.includes('sbi') || bankNameStr.includes('state bank');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!fullName.trim() && !customer?.full_name) {
+    const nameVal = fullName.trim() || customer?.full_name || '';
+    const mobileVal = mobileNum.trim() || customer?.mobile || '';
+
+    if (!nameVal) {
       return alert('Please enter your Customer Name.');
     }
-    if (!email.trim() || !/\S+@\S+\.\S+/.test(email.trim())) {
-      return alert('Please enter a valid email address.');
-    }
-    if (!dob) {
-      return alert('Please select your Date of Birth.');
-    }
-    if (!income || parseFloat(income) <= 0) {
-      return alert('Please enter a valid monthly income.');
-    }
-    if (!employer.trim()) {
-      return alert('Please enter your employer or company name.');
+
+    const cleanMobile = mobileVal.replace(/\D/g, '');
+    if (!cleanMobile || cleanMobile.length !== 10) {
+      return alert('Please enter a valid 10-digit Mobile Number.');
     }
 
     const cleanPan = pan.trim().toUpperCase();
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    if (!cleanPan || !panRegex.test(cleanPan)) {
-      return alert('Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).');
+    if (isSbiProduct) {
+      if (!cleanPan || !panRegex.test(cleanPan)) {
+        return alert('Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F) for SBI Bank product.');
+      }
+    } else if (cleanPan) {
+      if (!panRegex.test(cleanPan)) {
+        return alert('Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).');
+      }
     }
-
-    const cleanAadhaar = aadhaar.trim();
-    if (!cleanAadhaar || cleanAadhaar.length !== 12 || !/^\d{12}$/.test(cleanAadhaar)) {
-      return alert('Please enter a valid 12-digit Aadhaar Card number.');
-    }
-
-    if (!city.trim()) return alert('Please enter your City.');
-    if (!state.trim()) return alert('Please enter your State.');
-    if (!pincode.trim() || pincode.trim().length !== 6) return alert('Please enter a valid 6-digit Pincode.');
-
-    const cleanIncomeVal = parseFloat(income.toString().replace(/[^0-9.]/g, '')) || 0;
 
     setSubmitting(true);
     try {
@@ -128,33 +122,22 @@ export default function CustomerApplyStep1() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          full_name: fullName.trim() || customer?.full_name || '',
-          customer_name: fullName.trim() || customer?.full_name || '',
-          mobile: mobileNum.trim() || customer?.mobile || '',
-          customer_mobile: mobileNum.trim() || customer?.mobile || '',
-          email: email.trim().toLowerCase(),
-          dob,
-          occupation,
-          employment: occupation,
-          employment_type: occupation,
-          income: cleanIncomeVal,
-          monthly_income: cleanIncomeVal,
-          employer: employer.trim(),
-          company_name: employer.trim(),
-          pan: cleanPan,
-          pan_number: cleanPan,
-          aadhaar: cleanAadhaar,
-          aadhaar_number: cleanAadhaar,
-          city: city.trim(),
-          state: state.trim(),
-          pincode: pincode.trim()
+          full_name: nameVal,
+          customer_name: nameVal,
+          mobile: cleanMobile,
+          customer_mobile: cleanMobile,
+          pan: cleanPan || null,
+          pan_number: cleanPan || null,
+          process_type: 'linked_share',
+          process_by: 'partner',
+          source: 'linked_share'
         })
       });
 
       const json = await res.json();
       if (json && json.success) {
         setSubmitted(true);
-        const targetUrl = json.data?.redirect_url || 'https://gharkapaisa.in';
+        const targetUrl = json.data?.redirect_url || redirectUrl || 'https://gharkapaisa.in';
         setRedirectUrl(targetUrl);
       } else {
         alert(json?.message || 'Failed to submit application details. Please check your inputs.');
@@ -406,207 +389,57 @@ export default function CustomerApplyStep1() {
           ) : (
             /* APPLICATION FORM */
             <div>
-              {/* Direct Bank Application Button */}
-              <div style={{ marginBottom: '18px' }}>
-                <a
-                  href={redirectUrl || product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || 'https://gharkapaisa.in'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '14px 16px',
-                    borderRadius: '14px',
-                    background: 'linear-gradient(135deg, #10b981, #059669)',
-                    color: '#ffffff',
-                    fontSize: isMobile ? '13.5px' : '15px',
-                    fontWeight: 900,
-                    textDecoration: 'none',
-                    boxShadow: '0 6px 20px rgba(16,185,129,0.35)'
-                  }}
-                >
-                  ⚡ OPEN OFFICIAL BANK APPLICATION PORTAL DIRECTLY ➔
-                </a>
-              </div>
-
-              {/* Prefilled Customer Banner */}
-              <div style={{ background: isDark ? '#1f1f23' : '#f1f5f9', border: `1px solid ${borderCol}`, borderRadius: '14px', padding: '14px', marginBottom: '20px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: C.primary || '#2563eb', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
-                  📌 Pre-Saved Applicant Information
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '8px' : '12px', fontSize: '12.5px' }}>
-                  <div>
-                    <span style={{ color: mutedCol, fontSize: '11px', display: 'block' }}>Customer Name</span>
-                    <strong style={{ fontSize: '13.5px' }}>{customer?.full_name || 'Customer'}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: mutedCol, fontSize: '11px', display: 'block' }}>Mobile Number</span>
-                    <strong style={{ fontSize: '13.5px', fontFamily: 'monospace' }}>{customer?.mobile || 'Confidential'}</strong>
-                  </div>
-                </div>
-              </div>
-
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 
-                {/* Name & Mobile (Read Only) */}
+                {/* Customer Name & Mobile Number */}
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: mutedCol, display: 'block', marginBottom: '5px' }}>Customer Name</label>
-                    <input
-                      type="text"
-                      disabled
-                      value={customer?.full_name || ''}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: mutedCol, fontSize: '13.5px', fontWeight: 700 }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: mutedCol, display: 'block', marginBottom: '5px' }}>Mobile Number</label>
-                    <input
-                      type="text"
-                      disabled
-                      value={customer?.mobile || ''}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: mutedCol, fontSize: '13.5px', fontWeight: 700, fontFamily: 'monospace' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Email & DOB */}
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Email Address *</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="name@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', outline: 'none' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Date of Birth (DOB) *</label>
-                    <input
-                      type="date"
-                      required
-                      value={dob}
-                      onChange={(e) => setDob(e.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', outline: 'none' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Occupation & Monthly Income */}
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Occupation / Employment *</label>
-                    <select
-                      value={occupation}
-                      onChange={(e) => setOccupation(e.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', outline: 'none' }}
-                    >
-                      <option value="Salaried">Salaried Employee</option>
-                      <option value="Self Employed Professional">Self-Employed Professional</option>
-                      <option value="Business Owner">Business Owner</option>
-                      <option value="Student">Student</option>
-                      <option value="Homemaker">Homemaker</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Monthly Income (₹) *</label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="e.g. 50000"
-                      value={income}
-                      onChange={(e) => setIncome(e.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', outline: 'none' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Employer / Company Name */}
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Employer / Company Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter current employer or business name"
-                    value={employer}
-                    onChange={(e) => setEmployer(e.target.value)}
-                    style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', outline: 'none' }}
-                  />
-                </div>
-
-                {/* PAN Card & Aadhaar Number */}
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>PAN Card Number *</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Customer Name *</label>
                     <input
                       type="text"
                       required
+                      placeholder="Enter Customer Full Name"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, outline: 'none' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Mobile Number *</label>
+                    <input
+                      type="tel"
+                      required
+                      maxLength={10}
+                      placeholder="10-Digit Mobile Number"
+                      value={mobileNum}
+                      onChange={(e) => setMobileNum(e.target.value.replace(/\D/g, ''))}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, fontFamily: 'monospace', outline: 'none' }}
+                    />
+                  </div>
+                </div>
+
+                {/* PAN Card Field (Mandatory for SBI products, optional for others) */}
+                {(isSbiProduct || pan) && (
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>
+                      PAN Card Number {isSbiProduct ? '*' : '(Optional)'}
+                    </label>
+                    <input
+                      type="text"
+                      required={isSbiProduct}
                       maxLength={10}
                       placeholder="ABCDE1234F"
                       value={pan}
                       onChange={(e) => setPan(e.target.value.toUpperCase())}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontFamily: 'monospace', fontWeight: 800, textTransform: 'uppercase', outline: 'none' }}
+                      style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontFamily: 'monospace', fontWeight: 800, textTransform: 'uppercase', outline: 'none' }}
                     />
+                    {isSbiProduct && (
+                      <span style={{ fontSize: '11px', color: '#2563eb', marginTop: '4px', display: 'block', fontWeight: 600 }}>
+                        ℹ️ PAN Card details are required for SBI Bank applications.
+                      </span>
+                    )}
                   </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Aadhaar Number *</label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={12}
-                      placeholder="12-Digit Aadhaar"
-                      value={aadhaar}
-                      onChange={(e) => setAadhaar(e.target.value.replace(/\D/g, ''))}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontFamily: 'monospace', fontWeight: 800, outline: 'none' }}
-                    />
-                  </div>
-                </div>
-
-                {/* City, State & Pincode */}
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>City *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="City"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', outline: 'none' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>State *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="State"
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', outline: 'none' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Pincode *</label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={6}
-                      placeholder="6 Digits"
-                      value={pincode}
-                      onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '11px 12px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontFamily: 'monospace', outline: 'none' }}
-                    />
-                  </div>
-                </div>
+                )}
 
                 {/* Submit Button */}
                 <button
