@@ -451,8 +451,7 @@ export default function PhysicalApplicationForm() {
     : [
         { id: 'step1', num: '1', title: txt('step1Short'), desc: 'Customer Details' },
         { id: 'step2', num: '2', title: txt('step2Short'), desc: 'Appcode & VKYC' },
-        { id: 'step3', num: '3', title: txt('step3Short'), desc: 'IQA & Dispatch' },
-        { id: 'step4', num: '4', title: txt('step4Short'), desc: 'Bank & Ops Status' }
+        { id: 'step4', num: '3', title: txt('step4Short'), desc: 'Bank & Ops Status' }
       ];
 
   return (
@@ -510,7 +509,7 @@ export default function PhysicalApplicationForm() {
             
             {/* Step Completion Indicator Pill */}
             <div style={{ padding: '6px 14px', borderRadius: 20, background: C.bgSecondary, border: `1px solid ${C.border}`, fontSize: 12, fontWeight: 800, color: C.primary }}>
-              Step {isDigitalProcess ? 1 : steps.findIndex(s => s.id === activeTab) + 1} of {isDigitalProcess ? 1 : 4}
+              Step {isDigitalProcess ? 1 : steps.findIndex(s => s.id === activeTab) + 1} of {isDigitalProcess ? 1 : 3}
             </div>
           </div>
         </div>
@@ -522,7 +521,7 @@ export default function PhysicalApplicationForm() {
         )}
 
         {/* ═══ STEP TAB WIZARD (RESPONSIVE GRID / SCROLL) ═══ */}
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : (isDigitalProcess ? '1fr' : 'repeat(3, 1fr)'), gap: 10, marginBottom: 20 }}>
           {steps.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -982,7 +981,7 @@ export default function PhysicalApplicationForm() {
 
                     <button
                       type="button"
-                      onClick={() => setActiveTab('step3')}
+                      onClick={() => setActiveTab('step4')}
                       style={{
                         padding: '14px 28px',
                         borderRadius: '16px',
@@ -998,95 +997,11 @@ export default function PhysicalApplicationForm() {
                         boxShadow: `0 6px 20px ${C.primary}35`
                       }}
                     >
-                      {txt('nextStep')} 3: IQA & Dispatch <MdNavigateNext size={20} />
+                      {txt('nextStep')} 3: Bank & Final Status <MdNavigateNext size={20} />
                     </button>
                   </div>
                 </div>
               )}
-            </>
-          )}
-
-          {/* ═══ STEP 3: IQA & DISPATCH STAGE ═══ */}
-          {activeTab === 'step3' && (
-            <>
-              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4 }}>
-                📦 {txt('iqaDispatch')}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={labelStyle}>{txt('iqaStage')}</label>
-                  <select
-                    value={form.iqa_stage}
-                    onChange={e => handleChange('iqa_stage', e.target.value)}
-                    style={inputStyle}
-                  >
-                    <option value="IQA SENT">1. IQA SENT</option>
-                    <option value="IQA COMPLETE">2. IQA COMPLETE</option>
-                    <option value="IQA PENDING">3. IQA PENDING</option>
-                    <option value="BLAZE CONTINUE">4. BLAZE CONTINUE</option>
-                    <option value="BLAZE DECLINE">5. BLAZE DECLINE</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={labelStyle}>{txt('dispatchStatus')}</label>
-                  <select
-                    value={form.dispatch_status}
-                    onChange={e => handleChange('dispatch_status', e.target.value)}
-                    style={inputStyle}
-                  >
-                    <option value="DISPATCH DONE">1. DISPATCH DONE</option>
-                    <option value="WCP STAGE">2. WCP STAGE</option>
-                    <option value="E-sign Done">3. E-sign Done</option>
-                    <option value="E-sign Pending">4. E-sign Pending</option>
-                    <option value="RTB(ERROR)">5. RTB(ERROR)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('step2')}
-                  style={{
-                    padding: '14px 22px',
-                    borderRadius: '16px',
-                    border: `1px solid ${C.border}`,
-                    background: C.bgSecondary,
-                    color: C.text,
-                    fontWeight: 800,
-                    fontSize: '13.5px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6
-                  }}
-                >
-                  <MdNavigateBefore size={20} /> {txt('backStep')} Step 2
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('step4')}
-                  style={{
-                    padding: '14px 28px',
-                    borderRadius: '16px',
-                    border: 'none',
-                    background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`,
-                    color: '#ffffff',
-                    fontWeight: 900,
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    boxShadow: `0 6px 20px ${C.primary}35`
-                  }}
-                >
-                  {txt('nextStep')} 4: Bank & Final Status <MdNavigateNext size={20} />
-                </button>
-              </div>
             </>
           )}
 
@@ -1236,7 +1151,7 @@ export default function PhysicalApplicationForm() {
               <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 20, marginTop: 10, display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                 <button
                   type="button"
-                  onClick={() => setActiveTab('step3')}
+                  onClick={() => setActiveTab('step2')}
                   style={{
                     padding: '14px 22px',
                     borderRadius: '16px',
@@ -1251,7 +1166,7 @@ export default function PhysicalApplicationForm() {
                     gap: 6
                   }}
                 >
-                  <MdNavigateBefore size={20} /> {txt('backStep')} Step 3
+                  <MdNavigateBefore size={20} /> {txt('backStep')} Step 2
                 </button>
 
                 <button
