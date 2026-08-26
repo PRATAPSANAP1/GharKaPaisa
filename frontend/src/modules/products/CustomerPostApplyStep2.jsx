@@ -52,11 +52,11 @@ export default function CustomerPostApplyStep2() {
   const [motherName, setMotherName] = useState('');
 
   // Section 2: Operational Remarks & Stages (Editable by Partner & Admin)
-  const [appcodeStatus, setAppcodeStatus] = useState('appcode pending');
-  const [softApprovalStatus, setSoftApprovalStatus] = useState('approved');
-  const [vkycStage, setVkycStage] = useState('VKYC Pending');
-  const [iqaStage, setIqaStage] = useState('IQA Pending');
-  const [dispatchStatus, setDispatchStatus] = useState('dispatch pending');
+  const [appcodeStatus, setAppcodeStatus] = useState('None');
+  const [softApprovalStatus, setSoftApprovalStatus] = useState('None');
+  const [vkycStage, setVkycStage] = useState('None');
+  const [iqaStage, setIqaStage] = useState('None');
+  const [dispatchStatus, setDispatchStatus] = useState('None');
 
   // Section 3: Bank Reference & Final Application Stage (Disabled for Partner, Editable by Admin/SuperAdmin)
   const [appNumber, setAppNumber] = useState('');
@@ -100,11 +100,11 @@ export default function CustomerPostApplyStep2() {
           setState(details.state || cust.state || '');
           setMotherName(details.mother_name || '');
 
-          setAppcodeStatus(details.appcode_status || 'appcode pending');
-          setSoftApprovalStatus(details.soft_approval_status || 'approved');
-          setVkycStage(details.vkyc_stage || 'VKYC Pending');
-          setIqaStage(details.iqa_stage || 'IQA Pending');
-          setDispatchStatus(details.dispatch_status || 'dispatch pending');
+          setAppcodeStatus(details.appcode_status || 'None');
+          setSoftApprovalStatus(details.soft_approval_status || 'None');
+          setVkycStage(details.vkyc_stage || 'None');
+          setIqaStage(details.iqa_stage || 'None');
+          setDispatchStatus(details.dispatch_status || 'None');
 
           setAppNumber(details.bank_application_number || '');
           setVkycUrl(details.vkyc_url || '');
@@ -475,6 +475,7 @@ export default function CustomerPostApplyStep2() {
                   onChange={(e) => setAppcodeStatus(e.target.value)}
                   style={inputStyle}
                 >
+                  <option value="None">None</option>
                   <option value="appcode send">appcode send</option>
                   <option value="appcode pending">appcode pending</option>
                   <option value="appcode complete">appcode complete</option>
@@ -490,6 +491,7 @@ export default function CustomerPostApplyStep2() {
                   onChange={(e) => setSoftApprovalStatus(e.target.value)}
                   style={inputStyle}
                 >
+                  <option value="None">None</option>
                   <option value="approved">approved</option>
                   <option value="decline">decline</option>
                   <option value="ETQ">ETQ</option>
@@ -505,6 +507,7 @@ export default function CustomerPostApplyStep2() {
                   onChange={(e) => setIqaStage(e.target.value)}
                   style={inputStyle}
                 >
+                  <option value="None">None</option>
                   <option value="IQA SENT">IQA SENT</option>
                   <option value="IQA COMPLETE">IQA COMPLETE</option>
                   <option value="IQA PENDING">IQA PENDING</option>
@@ -533,6 +536,7 @@ export default function CustomerPostApplyStep2() {
                   onChange={(e) => setVkycStage(e.target.value)}
                   style={inputStyle}
                 >
+                  <option value="None">None</option>
                   <option value="VKYC Pending">VKYC Pending</option>
                   <option value="VKYC Complete">VKYC Complete</option>
                   <option value="VKYC Failed">VKYC Failed</option>
@@ -559,6 +563,7 @@ export default function CustomerPostApplyStep2() {
                   onChange={(e) => setDispatchStatus(e.target.value)}
                   style={inputStyle}
                 >
+                  <option value="None">None</option>
                   <option value="dispatch pending">dispatch pending</option>
                   <option value="complete">complete</option>
                   <option value="e-sign pending">e-sign pending</option>
