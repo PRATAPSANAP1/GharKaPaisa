@@ -46,8 +46,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const user = useAuthStore((state) => state.user);
   const role = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
-  const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role);
   const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
+  const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
   const isOpsOrAdmin = isOpsHead || isOpsOperator;
   const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
 

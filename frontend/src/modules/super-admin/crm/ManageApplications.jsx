@@ -11,6 +11,7 @@ import {
 } from 'react-icons/md';
 
 import { useSearchParams } from 'react-router-dom';
+import { useAuthStore } from '../../../app/store/authStore';
 
 const VISIBILITY_OPTIONS = [
   { id: 'public', label: 'Public (Visible to Partner)' },
@@ -21,6 +22,12 @@ const VISIBILITY_OPTIONS = [
 export default function ManageApplications() {
   const { C } = useTheme();
   const S = makeS(C);
+  const user = useAuthStore((state) => state.user);
+  const userRole = (user?.role || '').toUpperCase();
+  const userDesignation = (user?.designation || '').toUpperCase();
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
+  const isOpsHead = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole) && !isOpsOperator;
+
   const [searchParams] = useSearchParams();
   const urlStatus = searchParams.get('status');
 
@@ -885,13 +892,15 @@ export default function ManageApplications() {
                 >
                   <MdCheckCircle size={18} /> {submittingSuperAdminApprove ? 'Processing...' : 'Mark Operational Verified'}
                 </button>
-                <button
-                  disabled={submittingSuperAdminApprove}
-                  onClick={() => handleSuperAdminApprove(selectedApp.id)}
-                  style={{ ...S.btn('primary'), background: C.green, borderColor: C.green, padding: '8px 18px', fontSize: '13px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <MdCheckCircle size={18} /> {submittingSuperAdminApprove ? 'Approving...' : 'Approve (Super Admin Approved)'}
-                </button>
+                {isOpsHead && (
+                  <button
+                    disabled={submittingSuperAdminApprove}
+                    onClick={() => handleSuperAdminApprove(selectedApp.id)}
+                    style={{ ...S.btn('primary'), background: C.green, borderColor: C.green, padding: '8px 18px', fontSize: '13px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <MdCheckCircle size={18} /> {submittingSuperAdminApprove ? 'Approving...' : 'Approve (Super Admin Approved)'}
+                  </button>
+                )}
                 {(() => {
                   const isLocked = ['operational_verified', 'super_admin_approved', 'approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed'].includes(String(selectedApp?.status || '').toLowerCase());
                   return (
