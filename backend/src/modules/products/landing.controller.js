@@ -171,8 +171,8 @@ const applyProductLanding = async (req, res, next) => {
       await query(`
         INSERT INTO leads (
           partner_id, product_id, customer_name, customer_mobile, mobile,
-          pan_number, customer_id, source, status, created_at
-        ) VALUES ($1, $2, $3, $4, $4, $5, $6, 'partner_share', 'new', NOW())
+          pan_number, customer_id, source, process_type, process_by, status, created_at
+        ) VALUES ($1, $2, $3, $4, $4, $5, $6, 'linked_share', 'linked_share', 'partner', 'details_submitted', NOW())
       `, [
         partner ? partner.id : null,
         product.id,

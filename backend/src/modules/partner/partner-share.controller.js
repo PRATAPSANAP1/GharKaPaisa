@@ -437,9 +437,9 @@ const submitShareLead = async (req, res, next) => {
       const { rows } = await query(`
         INSERT INTO leads (
           partner_id, product_id, customer_name, customer_mobile, mobile,
-          tracking_token, source, status, pipeline_stage, customer_id
+          tracking_token, source, process_type, process_by, status, pipeline_stage, customer_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, 'partner_share', 'under_review', 'created', $7)
+        VALUES ($1, $2, $3, $4, $5, $6, 'linked_share', 'linked_share', 'partner', 'details_submitted', 'created', $7)
         RETURNING *
       `, [
         shareLinkData.partner_id,
@@ -455,7 +455,7 @@ const submitShareLead = async (req, res, next) => {
       if (insertErr.code === '23505') {
         const { rows: [fallbackLead] } = await query(`
           UPDATE leads
-          SET customer_name = $1, tracking_token = $2, customer_id = COALESCE($5, customer_id),
+          SET customer_name = $1, tracking_token = $2, source = 'linked_share', process_type = 'linked_share', process_by = 'partner', customer_id = COALESCE($5, customer_id),
               updated_at = NOW()
           WHERE product_id = $3 AND (mobile = $4 OR customer_mobile = $4) AND status NOT IN ('rejected', 'cancelled')
           RETURNING *
