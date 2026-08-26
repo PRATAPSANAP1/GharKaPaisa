@@ -52,8 +52,6 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
 
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
-  const isLinkedShare = processTypeStr.includes('linked_share') || processTypeStr.includes('share_link') || (processTypeStr.includes('share') && !processTypeStr.includes('direct'));
-  const isDirectBank = processTypeStr.includes('direct_bank') || processTypeStr.includes('direct_apply') || processTypeStr.includes('direct');
   const isDigital = isLinkedShare || isDirectBank;
 
   const [currentStatus, setCurrentStatus] = useState(application?.status || 'details_submitted');
@@ -61,10 +59,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const isLockedStatus = ['operational_verified', 'super_admin_approved', 'approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed'].includes(String(currentStatus || application?.status || '').toLowerCase());
 
   // Role & Status Access Rules:
-  // QD, Remark, and Final forms are locked for editing when status is operational_verified or higher.
+  // QD and Remark forms follow status rules, but Final form is always editable by all admin roles.
   const canEditQd = isLockedStatus ? false : (isPunchLead ? isOpsOrAdmin : true);
   const canEditRemark = isLockedStatus ? false : true;
-  const canEditFinal = isLockedStatus ? false : isOpsOrAdmin;
+  const canEditFinal = !isPartner;
 
   const sanitizeVal = (val) => {
     if (!val || val === 'None' || val === 'none' || val === 'null' || val === 'undefined') return '';
