@@ -550,7 +550,7 @@ export default function ManageApplications() {
                       </button>
                     )}
                     {(() => {
-                      const isLocked = ['operational_verified', 'super_admin_approved', 'approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed'].includes(String(appDetail?.status || '').toLowerCase());
+                      const isLocked = ['approved', 'super_admin_approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed', 'rejected', 'cancelled'].includes(String(appDetail?.status || '').toLowerCase());
                       return (
                         <button
                           disabled={isLocked}
