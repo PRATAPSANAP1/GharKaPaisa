@@ -640,11 +640,15 @@ export default function PartnerApplications() {
     return { label: 'Partner Punch', color: '#8b5cf6', bg: '#8b5cf618', border: '#8b5cf640' };
   };
 
-  const getStepProgress = (status) => {
-    if (status === 'rejected') return 0;
-    if (status === 'disbursed') return 4;
-    if (status === 'approved') return 3;
-    if (status === 'under_review') return 2;
+  const getStepProgress = (status, commStatus) => {
+    const s = String(status || '').toLowerCase();
+    const c = String(commStatus || '').toLowerCase();
+    if (s === 'rejected' || s === 'cancelled') return 0;
+    if (s === 'commission_received' || c === 'released' || c === 'credited') return 6;
+    if (s === 'commission_released' || c === 'on_hold' || c === 'held') return 5;
+    if (s === 'approved' || s === 'disbursed' || s === 'super_admin_approved') return 4;
+    if (s === 'operational_verified') return 3;
+    if (s === 'details_submitted' || s === 'submitted') return 2;
     return 1;
   };
 
@@ -1364,21 +1368,31 @@ export default function PartnerApplications() {
         const currentStatus = (trackApp.status || 'submitted').toLowerCase();
         const pipelineStage = (trackApp.pipeline_stage || '').toLowerCase();
         
+        const commStatus = String(trackApp.commission_status || '').toLowerCase();
+        const isCommReleased = trackApp.commission_released || commStatus === 'released' || commStatus === 'credited' || currentStatus === 'commission_received';
+        const isCommOnHold = commStatus === 'on_hold' || commStatus === 'held' || currentStatus === 'commission_released';
+
         const STATUS_RANK = {
           'pending': 1, 'initiated': 1, 'link_pending': 1, 'created': 1, 'lead_created': 1,
           'details_submitted': 2, 'submitted': 2, 'under_review': 2, 'link_generated': 2, 'app_number_added': 2, 'pan_check': 2,
           'operational_verified': 3, 'operational_approved': 3, 'link_sent': 3, 'kyc_pending': 3, 'qd': 3,
           'approved': 4, 'super_admin_approved': 4, 'disbursed': 4, 'bank_application': 4, 'bank_processing': 4,
-          'commission_released': 5, 'commission_processing': 5, 'released': 5, 'hold': 5,
+          'commission_released': 5, 'commission_processing': 5, 'released': 5, 'hold': 5, 'on_hold': 5,
           'commission_received': 6, 'received': 6
         };
 
         const getStageStatus = (stageId, index) => {
           const stageIndex = index + 1;
-          const statusRank = Math.max(
+          let statusRank = Math.max(
             STATUS_RANK[currentStatus] || 0,
             STATUS_RANK[pipelineStage] || 0
           );
+
+          if (isCommReleased) {
+            statusRank = Math.max(statusRank, 6);
+          } else if (isCommOnHold) {
+            statusRank = Math.max(statusRank, 5);
+          }
           
           if (statusRank >= stageIndex) return 'completed';
 
