@@ -189,6 +189,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   const [customerName, setCustomerName] = useState("");
   const [countryCode, setCountryCode] = useState("+91");
   const [mobile, setMobile] = useState("");
+  const [panNumber, setPanNumber] = useState("");
   const [processType, setProcessType] = useState("lead_punching"); // 'lead_punching', 'linked_share', 'direct_bank'
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
@@ -251,20 +252,29 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
     setCustomerName("");
     setCountryCode("+91");
     setMobile("");
+    setPanNumber("");
     setProcessType("lead_punching");
     setFormErrors({});
   };
+
+  const isSbiProduct = selectedProduct?.bank_id === 'e7c2c604-139d-4fcf-a87c-695633535a02' ||
+                       String(selectedProduct?.bank_code || '').toLowerCase() === 'sbi' ||
+                       String(selectedProduct?.bank_name || '').toLowerCase().includes('sbi') ||
+                       String(selectedProduct?.bank_slug || '').toLowerCase() === 'sbi';
 
   const handleSubmitLead = async (e) => {
     if (e) e.preventDefault();
 
     const errors = {};
-    if (processType === 'lead_punching' || processType === 'physical_process') {
-      if (!customerName.trim() || customerName.trim().length < 2) {
-        errors.customerName = "Customer Name must be at least 2 characters.";
-      }
-      if (!mobile.trim() || !/^[6-9]\d{9}$/.test(mobile.trim())) {
-        errors.mobile = "Please enter a valid 10-digit mobile number.";
+    if (!customerName.trim() || customerName.trim().length < 2) {
+      errors.customerName = "Customer Name must be at least 2 characters.";
+    }
+    if (!mobile.trim() || !/^[6-9]\d{9}$/.test(mobile.trim())) {
+      errors.mobile = "Please enter a valid 10-digit mobile number.";
+    }
+    if (isSbiProduct) {
+      if (!panNumber.trim() || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber.trim().toUpperCase())) {
+        errors.panNumber = "Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).";
       }
     }
 
@@ -281,9 +291,11 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
 
       const payload = {
         product_id: selectedProduct.id,
-        full_name: customerName.trim() || 'Customer',
+        full_name: customerName.trim(),
         country_code: countryCode || '+91',
-        mobile: mobile.trim() || '0000000000',
+        mobile: mobile.trim(),
+        pan_number: panNumber.trim().toUpperCase() || undefined,
+        pan: panNumber.trim().toUpperCase() || undefined,
         process_type: processType,
         agree_terms: true
       };
@@ -1674,6 +1686,22 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                   </div>
                   {formErrors.mobile && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.mobile}</span>}
                 </div>
+
+                {/* PAN Card Field - Mandatory for SBI Product */}
+                {isSbiProduct && (
+                  <div>
+                    <label style={S.label}>PAN Card Number * (Mandatory for SBI Product)</label>
+                    <input
+                      type="text"
+                      placeholder="Enter 10-digit PAN (e.g. ABCDE1234F)"
+                      maxLength={10}
+                      value={panNumber}
+                      onChange={(e) => { setPanNumber(e.target.value.toUpperCase()); setFormErrors(prev => ({ ...prev, panNumber: null })); }}
+                      style={{ ...S.input, height: '44px', fontSize: '14px', textTransform: 'uppercase', fontFamily: 'monospace', borderColor: formErrors.panNumber ? C.red : C.border }}
+                    />
+                    {formErrors.panNumber && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.panNumber}</span>}
+                  </div>
+                )}
 
                 {/* 3. Process By (3 Modes) */}
                 <div>

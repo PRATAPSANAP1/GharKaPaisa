@@ -17,6 +17,7 @@ export default function ProductApplyLanding() {
   // Form
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
+  const [panNumber, setPanNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState('');
@@ -64,11 +65,21 @@ export default function ProductApplyLanding() {
     if (productId) fetchProduct();
   }, [productId, partnerCode]);
 
+  const isSbiProduct = bank?.id === 'e7c2c604-139d-4fcf-a87c-695633535a02' ||
+                       product?.bank_id === 'e7c2c604-139d-4fcf-a87c-695633535a02' ||
+                       String(bank?.short_code || bank?.name || product?.bank_name || product?.bank_code || '').toLowerCase().includes('sbi');
+
   // Form submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!customerName.trim()) return alert('Please enter your name');
     if (!customerMobile.trim() || customerMobile.trim().length < 10) return alert('Please enter a valid 10-digit mobile number');
+
+    if (isSbiProduct) {
+      if (!panNumber.trim() || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber.trim().toUpperCase())) {
+        return alert('Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).');
+      }
+    }
 
     setSubmitting(true);
     try {
@@ -78,6 +89,8 @@ export default function ProductApplyLanding() {
         body: JSON.stringify({
           customer_name: customerName.trim(),
           customer_mobile: customerMobile.trim().replace(/\D/g, '').slice(-10),
+          pan_number: panNumber.trim().toUpperCase() || undefined,
+          pan: panNumber.trim().toUpperCase() || undefined,
           partner_code: partnerCode || searchParams.get('partner') || null
         })
       });
@@ -478,6 +491,29 @@ export default function ProductApplyLanding() {
                   />
                 </div>
               </div>
+
+              {/* Mandatory PAN Card Field for SBI products */}
+              {isSbiProduct && (
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>PAN Card Number * (Mandatory for SBI)</label>
+                  <input
+                    type="text"
+                    value={panNumber}
+                    onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
+                    placeholder="ABCDE1234F"
+                    required
+                    maxLength={10}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                      background: '#0F172A', border: `1.5px solid ${borderColor}`, borderRadius: '12px',
+                      color: textPrimary, fontSize: '14px', fontWeight: 700, outline: 'none',
+                      textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'monospace'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = themeColor}
+                    onBlur={(e) => e.target.style.borderColor = borderColor}
+                  />
+                </div>
+              )}
 
               <button
                 type="submit"

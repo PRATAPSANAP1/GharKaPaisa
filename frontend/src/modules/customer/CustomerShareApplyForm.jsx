@@ -9,6 +9,8 @@ export default function CustomerShareApplyForm() {
   const [data, setData] = useState(null);
 
   // Form State
+  const [customerName, setCustomerName] = useState('');
+  const [customerMobile, setCustomerMobile] = useState('');
   const [dob, setDob] = useState('');
   const [pan, setPan] = useState('');
   const [income, setIncome] = useState('');
@@ -26,6 +28,11 @@ export default function CustomerShareApplyForm() {
         const res = await api.get(`/applications/apply/${token}`);
         if (res.data?.success) {
           setData(res.data.data);
+          const cust = res.data.data?.customer || {};
+          if (cust.full_name) setCustomerName(cust.full_name);
+          else if (cust.first_name) setCustomerName(cust.first_name);
+          if (cust.mobile) setCustomerMobile(cust.mobile);
+          if (cust.pan_number) setPan(cust.pan_number);
           const targetUrl = res.data.data?.product?.partner_url || res.data.data?.product?.public_url || 'https://gharkapaisa.in';
           setRedirectUrl(targetUrl);
         } else {
@@ -41,18 +48,23 @@ export default function CustomerShareApplyForm() {
     if (token) fetchTokenData();
   }, [token]);
 
+  const isSbiProduct = data?.product?.bank_id === 'e7c2c604-139d-4fcf-a87c-695633535a02' ||
+                       String(data?.product?.bank_code || data?.product?.bank_name || '').toLowerCase().includes('sbi');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!pan || pan.trim().length !== 10) return alert('Please enter a valid 10-character PAN Card number.');
-    if (!dob) return alert('Please enter your Date of Birth.');
-    if (!income) return alert('Please enter your Income.');
+    if (!customerName.trim() || customerName.trim().length < 2) return alert('Please enter your Full Name.');
+    if (!customerMobile.trim() || customerMobile.trim().length < 10) return alert('Please enter a valid 10-digit mobile number.');
+    if (isSbiProduct && (!pan || pan.trim().length !== 10)) return alert('Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).');
 
     setSubmitting(true);
     try {
       const res = await api.patch(`/applications/apply/${token}`, {
+        full_name: customerName.trim(),
+        mobile: customerMobile.trim().replace(/\D/g, '').slice(-10),
         dob,
         pan: pan.trim().toUpperCase(),
-        income: parseFloat(income),
+        income: income ? parseFloat(income) : undefined,
         address,
         employment
       });
@@ -191,11 +203,38 @@ export default function CustomerShareApplyForm() {
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>PAN Card Number *</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>Full Name *</label>
+            <input
+              type="text"
+              required
+              placeholder="Enter customer full name"
+              value={customerName}
+              onChange={e => setCustomerName(e.target.value)}
+              style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 12, padding: '12px 14px', color: '#fff', fontSize: 14, fontWeight: 600 }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>Mobile Number *</label>
+            <input
+              type="tel"
+              required
+              maxLength={10}
+              placeholder="Enter 10-digit mobile number"
+              value={customerMobile}
+              onChange={e => setCustomerMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 12, padding: '12px 14px', color: '#fff', fontSize: 14, fontWeight: 600 }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>
+              PAN Card Number {isSbiProduct ? '*' : '(Optional)'}
+            </label>
             <input
               type="text"
               maxLength={10}
-              required
+              required={isSbiProduct}
               placeholder="ABCDE1234F"
               value={pan}
               onChange={e => setPan(e.target.value.toUpperCase())}

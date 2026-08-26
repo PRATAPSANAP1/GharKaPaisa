@@ -106,7 +106,7 @@ const getProductLanding = async (req, res, next) => {
 const applyProductLanding = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { customer_name, customer_mobile, partner_code } = req.body;
+    const { customer_name, customer_mobile, pan_number, pan, partner_code } = req.body;
 
     if (!customer_name || !customer_mobile) {
       return error(res, 'Customer name and mobile number are required', 400);
@@ -116,6 +116,8 @@ const applyProductLanding = async (req, res, next) => {
     if (cleanMobile.length !== 10) {
       return error(res, 'Invalid mobile number. Please enter a valid 10-digit number.', 400);
     }
+
+    const cleanPan = (pan_number || pan || '').toString().trim().toUpperCase() || null;
 
     // Find product
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -143,18 +145,41 @@ const applyProductLanding = async (req, res, next) => {
       partner = p || null;
     }
 
-    // Save lead to leads table
+    // Upsert customer and save lead to leads table
     try {
+      let customerId = null;
+      try {
+        const { rows: [existingCust] } = await query(
+          `SELECT id FROM customers WHERE mobile = $1 LIMIT 1`,
+          [cleanMobile]
+        );
+        if (existingCust) {
+          customerId = existingCust.id;
+          await query(
+            `UPDATE customers SET full_name = COALESCE(NULLIF(full_name, ''), $1), pan_number = COALESCE(NULLIF($2, ''), pan_number), updated_at = NOW() WHERE id = $3`,
+            [customer_name.trim(), cleanPan, customerId]
+          );
+        } else {
+          const { rows: [newCust] } = await query(
+            `INSERT INTO customers (full_name, mobile, pan_number) VALUES ($1, $2, $3) RETURNING id`,
+            [customer_name.trim(), cleanMobile, cleanPan]
+          );
+          customerId = newCust?.id || null;
+        }
+      } catch (custErr) {}
+
       await query(`
         INSERT INTO leads (
-          partner_id, product_id, customer_name, customer_mobile,
-          source, status, created_at
-        ) VALUES ($1, $2, $3, $4, 'partner_share', 'new', NOW())
+          partner_id, product_id, customer_name, customer_mobile, mobile,
+          pan_number, customer_id, source, status, created_at
+        ) VALUES ($1, $2, $3, $4, $4, $5, $6, 'partner_share', 'new', NOW())
       `, [
         partner ? partner.id : null,
         product.id,
         customer_name.trim(),
-        cleanMobile
+        cleanMobile,
+        cleanPan,
+        customerId
       ]);
     } catch (leadErr) {
       // If leads table doesn't have these columns or table doesn't exist, log and continue

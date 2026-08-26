@@ -52,6 +52,9 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
 
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
+  const isLinkedShare = processTypeStr.includes('linked_share') || processTypeStr.includes('share_link') || (processTypeStr.includes('share') && !processTypeStr.includes('direct'));
+  const isDirectBank = processTypeStr.includes('direct_bank') || processTypeStr.includes('direct_apply') || processTypeStr.includes('direct');
+  const isDigital = isLinkedShare || isDirectBank;
 
   const [currentStatus, setCurrentStatus] = useState(application?.status || 'details_submitted');
 
@@ -105,7 +108,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
   // 3. Final Status & Bank Remarks State
   const [bankRemark, setBankRemark] = useState(sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark));
-  const [finalStatus, setFinalStatus] = useState(sanitizeVal(application?.final_status) || sanitizeVal(application?.physical_details?.final_status) || sanitizeVal(application?.status) || 'In Process');
+  const [finalStatus, setFinalStatus] = useState(sanitizeVal(application?.final_status) || sanitizeVal(application?.physical_details?.final_status) || sanitizeVal(application?.status) || 'None');
+  const [appFileGenerated, setAppFileGenerated] = useState(sanitizeVal(application?.app_file_generated) || sanitizeVal(application?.appfile_generated) || sanitizeVal(application?.physical_details?.app_file_generated) || 'None');
   const [declineReason, setDeclineReason] = useState(sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.decline_reason));
   const [eligibleReQd, setEligibleReQd] = useState(sanitizeVal(application?.eligible_reqd) || sanitizeVal(application?.physical_details?.eligible_reqd) || 'No');
   const [bankRefNumber, setBankRefNumber] = useState(sanitizeVal(application?.bank_ref_number) || sanitizeVal(application?.bank_application_number) || sanitizeVal(application?.physical_details?.bank_ref_number));
@@ -314,18 +318,17 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
           payload.status = 'operational_verified';
         }
       } else if (formType === 'final') {
-        let targetStatus = 'operational_verified';
+        let targetStatus = currentStatus;
         if (finalStatus && (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('reject'))) {
           targetStatus = 'rejected';
+        } else if (finalStatus && finalStatus.toLowerCase().includes('approve')) {
+          targetStatus = 'approved';
         }
         payload = {
           bank_remark: bankRemark,
           final_status: finalStatus,
-          status: targetStatus,
-          decline_reason: declineReason,
-          eligible_reqd: eligibleReQd,
-          bank_ref_number: bankRefNumber,
-          approved_amount: approvedAmount ? parseFloat(approvedAmount) : undefined
+          app_file_generated: appFileGenerated,
+          status: targetStatus
         };
       }
 
@@ -819,24 +822,26 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
                   
-                  {/* Order 1: APPCODE STATUS */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>APPCODE STATUS</label>
-                    <select
-                      disabled={!canEditRemark}
-                      value={appcodeStatus || 'None'}
-                      onChange={(e) => setAppcodeStatus(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                    >
-                      <option value="None">None</option>
-                      <option value="Appcode Send">Appcode Send</option>
-                      <option value="Appcode Pending">Appcode Pending</option>
-                      <option value="Appcode submit">Appcode submit</option>
-                      {appcodeStatus && !['None', 'Appcode Send', 'Appcode Pending', 'Appcode submit', ''].includes(appcodeStatus) && (
-                        <option value={appcodeStatus}>{appcodeStatus}</option>
-                      )}
-                    </select>
-                  </div>
+                  {/* Order 1: APPCODE STATUS (Hidden for linked_share and direct_bank / direct_apply) */}
+                  {!isLinkedShare && !isDirectBank && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>APPCODE STATUS</label>
+                      <select
+                        disabled={!canEditRemark}
+                        value={appcodeStatus || 'None'}
+                        onChange={(e) => setAppcodeStatus(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                      >
+                        <option value="None">None</option>
+                        <option value="Appcode Send">Appcode Send</option>
+                        <option value="Appcode Pending">Appcode Pending</option>
+                        <option value="Appcode submit">Appcode submit</option>
+                        {appcodeStatus && !['None', 'Appcode Send', 'Appcode Pending', 'Appcode submit', ''].includes(appcodeStatus) && (
+                          <option value={appcodeStatus}>{appcodeStatus}</option>
+                        )}
+                      </select>
+                    </div>
+                  )}
 
                   {/* Order 2: SOFT APPROVAL STATUS */}
                   <div>
@@ -1001,93 +1006,50 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
                   
-                  {/* 1. Bank Application Reference Number */}
+                  {/* 1. FINAL STATUS FROM BANK */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Bank Application Ref No.</label>
-                    <input
-                      type="text"
-                      disabled={!canEditFinal}
-                      value={bankRefNumber}
-                      onChange={(e) => setBankRefNumber(e.target.value)}
-                      placeholder="Enter Bank Application Ref No."
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditFinal ? '#f8fafc' : '#fff' }}
-                    />
-                  </div>
-
-                  {/* 2. VKYC Link with Open V-KYC Button */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Link</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input
-                        type="text"
-                        disabled={!canEditFinal}
-                        value={vkycUrl}
-                        onChange={(e) => setVkycUrl(e.target.value)}
-                        placeholder="https://vkyc..."
-                        style={{ flex: 1, padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* 3. Final Status from Bank / Current Stage */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Final Status from Bank / Current Stage</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. FINAL STATUS FROM BANK</label>
                     <select
                       disabled={!canEditFinal}
-                      value={finalStatus}
+                      value={finalStatus || 'None'}
                       onChange={(e) => setFinalStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
                     >
-                      <option value="App File Generated (Approved)">1. App file generated (approved)</option>
-                      <option value="Decline">2. Decline</option>
-                      <option value="In Process">3. In Process</option>
-                      <option value="Technical Error">4. Technical Error</option>
+                      <option value="None">None</option>
+                      <option value="In-Process">In-Process</option>
+                      <option value="Approve">Approve</option>
+                      <option value="Decline">Decline</option>
+                      <option value="Technical Error">Technical Error</option>
                     </select>
                   </div>
 
-                  {/* 4. Eligible for Re-QD - Hide if punching process */}
-                  {!isPunchLead && (
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Eligible for Re-QD</label>
-                      <select
-                        disabled={!canEditFinal}
-                        value={eligibleReQd}
-                        onChange={(e) => setEligibleReQd(e.target.value)}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                      >
-                        <option value="Yes">1. Yes</option>
-                        <option value="No">2. No</option>
-                      </select>
-                    </div>
-                  )}
+                  {/* 2. App file generated */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>2. App file generated</label>
+                    <select
+                      disabled={!canEditFinal}
+                      value={appFileGenerated || 'None'}
+                      onChange={(e) => setAppFileGenerated(e.target.value)}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                    >
+                      <option value="None">None</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </div>
 
-                  {/* 5. Bank Remark (Operations Head) */}
+                  {/* 3. BANK REMARK */}
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Bank Remark (Operations Head)</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. BANK REMARK</label>
                     <textarea
                       disabled={!canEditFinal}
                       value={bankRemark}
                       onChange={(e) => setBankRemark(e.target.value)}
-                      placeholder="Enter detailed bank remark (Operations Head edit only)..."
+                      placeholder="Enter Bank Remark..."
                       rows={3}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
                     />
                   </div>
-
-                  {/* Decline Reason Remark */}
-                  {(finalStatus === 'Decline' || finalStatus.toLowerCase().includes('decline')) && (
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626', display: 'block', marginBottom: '6px' }}>Decline Reason Remark</label>
-                      <textarea
-                        disabled={!canEditFinal}
-                        value={declineReason}
-                        onChange={(e) => setDeclineReason(e.target.value)}
-                        placeholder="Specify reason for decline..."
-                        rows={2}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #fecaca', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff5f5' }}
-                      />
-                    </div>
-                  )}
 
                 </div>
 
