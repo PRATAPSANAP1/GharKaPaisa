@@ -56,7 +56,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
   const [currentStatus, setCurrentStatus] = useState(application?.status || 'details_submitted');
 
-  const isLockedStatus = ['operational_verified', 'super_admin_approved', 'approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed'].includes(String(currentStatus || application?.status || '').toLowerCase());
+  const isLockedStatus = ['approved', 'super_admin_approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed', 'rejected', 'cancelled'].includes(String(currentStatus || application?.status || '').toLowerCase());
 
   // Role & Status Access Rules:
   // QD and Remark forms follow status rules, but Final form is always editable by all admin roles.
