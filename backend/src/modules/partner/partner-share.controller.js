@@ -90,9 +90,9 @@ const generateShareLink = async (req, res, next) => {
       VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days')
     `, [partnerId, productId, trackingToken, applicationId, leadId]);
 
-    // Generate share link URL - prioritize products.partner_url as Single Source of Truth
+    // Generate share link URL pointing to GharKaPaisa customer detail collection page
     const directBankUrl = product.partner_url?.trim() || getBankApplyLinkBackend(product.name, product.bank_name || product.bank_code, product);
-    const shareLink = directBankUrl || `${appUrl}/apply/${trackingToken}`;
+    const shareLink = `${appUrl}/apply/${trackingToken}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Apply for ${product.name} directly using your official application link:\n${shareLink}`)}`;
 
     const targetMobile = req.body.customer_mobile || req.body.mobile;
