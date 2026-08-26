@@ -59,10 +59,11 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const isLockedStatus = ['approved', 'super_admin_approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed', 'rejected', 'cancelled'].includes(String(currentStatus || application?.status || '').toLowerCase());
 
   // Role & Status Access Rules:
-  // QD and Remark forms follow status rules, but Final form is always editable by all admin roles.
-  const canEditQd = isLockedStatus ? false : (isPunchLead ? isOpsOrAdmin : true);
-  const canEditRemark = isLockedStatus ? false : true;
-  const canEditFinal = !isPartner;
+  // After approved status, all form sections are locked for everyone.
+  // Before approved status, QD, Remark, and Final forms are editable by admin/ops roles.
+  const canEditQd = !isLockedStatus;
+  const canEditRemark = !isLockedStatus;
+  const canEditFinal = !isPartner && !isLockedStatus;
 
   const sanitizeVal = (val) => {
     if (!val || val === 'None' || val === 'none' || val === 'null' || val === 'undefined') return '';
@@ -595,7 +596,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                     </h4>
                     {!canEditQd && (
                       <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Lock size={12} /> Read-Only Mode (Partner Edit Only)
+                        <Lock size={12} /> Locked (Approved Status)
                       </span>
                     )}
                   </div>
