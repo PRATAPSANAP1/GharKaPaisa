@@ -1374,6 +1374,7 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
       ) combined
+      ${countScopeSQL}
          AND (
           $2::text IS NULL
           OR combined.status = $2
