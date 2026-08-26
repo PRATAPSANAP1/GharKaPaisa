@@ -1404,7 +1404,7 @@ const listApplications = async (req, res, next) => {
           OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
           OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
           OR ($12::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
-          OR (LOWER(combined.category::text) = LOWER($14::text))
+          OR (LOWER(combined.category::text) = LOWER($12::text))
         )
         AND (
           $13::text IS NULL OR $13::text = '' OR $13::text = 'all'
