@@ -762,7 +762,7 @@ const verifyLeadOtp = async (req, res, next) => {
 
       const partnerName = `${partnerProfile?.first_name || ''} ${partnerProfile?.last_name || ''}`.trim() || 'Your Financial Partner';
       const cleanMobile = lead.mobile.replace(/\D/g, '');
-      const waText = encodeURIComponent(`Hello ${lead.customer_name},\n\nApply for ${product?.name || 'Financial Product'} using your official bank link:\n${shareUrl}\n\nShared by ${partnerName} via GharKaPaisa.`);
+      const waText = encodeURIComponent(`Hello ${lead.customer_name},\n\nApply for ${product?.name || 'Financial Product'} using your official bank link:\n${shareUrl}`);
       whatsappUrl = `https://wa.me/91${cleanMobile}?text=${waText}`;
 
       await client.query(`

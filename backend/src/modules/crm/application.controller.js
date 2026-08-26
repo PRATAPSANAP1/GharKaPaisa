@@ -2323,7 +2323,7 @@ const submitPartnerApplication = async (req, res, next) => {
         return error(res, `Partner URL (Bank Apply Link) is missing for ${product.name}`, 400);
       }
       shareUrl = partnerUrl;
-      const msg = encodeURIComponent(`Hello ${trimmedName},\n\nYou can apply for ${product.name} with ${product.bank_name || 'Bank'} using official partner application link below:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
+      const msg = encodeURIComponent(`Hello ${trimmedName},\n\nYou can apply for ${product.name} with ${product.bank_name || 'Bank'} using official partner application link below:\n\n${shareUrl}`);
       whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
 
       const trackingToken = 'SH_' + Math.random().toString(36).substring(2, 12).toUpperCase();
@@ -2341,7 +2341,7 @@ const submitPartnerApplication = async (req, res, next) => {
     } else if (process_type === 'physical_process') {
       const trackingToken = Math.random().toString(36).substring(2, 12);
       shareUrl = `${baseUrl}/physical-application/${trackingToken}`;
-      const msg = encodeURIComponent(`Hello ${trimmedName},\n\nPlease fill your required customer details using this link:\n\n${shareUrl}\n\nThank you,\nGharKaPaisa Team`);
+      const msg = encodeURIComponent(`Hello ${trimmedName},\n\nPlease fill your required customer details using this link:\n\n${shareUrl}`);
       whatsappUrl = `https://wa.me/91${trimmedMobile}?text=${msg}`;
 
       try {
