@@ -585,21 +585,20 @@ export default function ManageApplications() {
                   </div>
 
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    {isOpsHead ? (
+                    <button
+                      disabled={submittingApprove}
+                      onClick={() => handleOperationalVerify(appDetail?.app_number || appDetail?.real_id || appDetail?.id)}
+                      style={{ background: '#7c3aed', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <CheckCircle2 size={16} /> {submittingApprove ? 'Processing...' : 'Mark Operational Verified'}
+                    </button>
+                    {isOpsHead && (
                       <button
                         disabled={submittingApprove}
                         onClick={() => handleApproveApplication(appDetail?.app_number || appDetail?.real_id || appDetail?.id)}
                         style={{ background: '#16a34a', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                       >
                         <CheckCircle2 size={16} /> {submittingApprove ? 'Approving...' : 'Approve (Super Admin Approved)'}
-                      </button>
-                    ) : (
-                      <button
-                        disabled={submittingApprove}
-                        onClick={() => handleOperationalVerify(appDetail?.app_number || appDetail?.real_id || appDetail?.id)}
-                        style={{ background: '#7c3aed', color: '#ffffff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                      >
-                        <CheckCircle2 size={16} /> {submittingApprove ? 'Processing...' : 'Mark Operational Verified'}
                       </button>
                     )}
                     {(() => {

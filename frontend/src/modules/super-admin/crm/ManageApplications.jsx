@@ -90,6 +90,31 @@ export default function ManageApplications() {
     }
   };
 
+  const handleOperationalVerify = async (appId) => {
+    const targetId = appId || selectedApp?.app_number || selectedApp?.id || selectedApp?.application_id;
+    if (!targetId) return alert('Application ID not found.');
+    setSubmittingSuperAdminApprove(true);
+    try {
+      const res = await api.put(`/applications/${targetId}/verification`, {
+        status: 'operational_verified',
+        final_status: 'Operational Verified',
+        ops_remark: superAdminRemark.trim() || 'Operational Verified by Administrative Operator',
+        super_admin_remark: superAdminRemark.trim() || 'Operational Verified by Administrative Operator',
+        bank_remark: superAdminRemark.trim() || 'Operational Verified by Administrative Operator'
+      });
+      if (res.data?.success || res.status === 200) {
+        alert('Application status updated to OPERATIONAL VERIFIED successfully!');
+        setDetailModalOpen(false);
+        setSuperAdminRemark('');
+        fetchApplications();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update application to Operational Verified');
+    } finally {
+      setSubmittingSuperAdminApprove(false);
+    }
+  };
+
   // Action Dialog States
   const [actionType, setActionType] = useState(null); // 'approve', 'reject', 'reassign', 'manual', 'reverse'
   const [actionForm, setActionForm] = useState({
@@ -853,6 +878,13 @@ export default function ManageApplications() {
               </div>
 
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  disabled={submittingSuperAdminApprove}
+                  onClick={() => handleOperationalVerify(selectedApp.id)}
+                  style={{ ...S.btn('primary'), background: '#7c3aed', borderColor: '#7c3aed', padding: '8px 18px', fontSize: '13px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <MdCheckCircle size={18} /> {submittingSuperAdminApprove ? 'Processing...' : 'Mark Operational Verified'}
+                </button>
                 <button
                   disabled={submittingSuperAdminApprove}
                   onClick={() => handleSuperAdminApprove(selectedApp.id)}
