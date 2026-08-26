@@ -603,9 +603,10 @@ const getApplyTokenDetails = async (req, res, next) => {
       }
     }
 
-    const fullName = custRecord?.full_name || leadRec?.customer_name || shareData.customer_name || 'Valued Customer';
+    const rawFullName = custRecord?.full_name || leadRec?.customer_name || shareData.customer_name || '';
+    const fullName = (rawFullName && rawFullName !== 'Valued Customer') ? rawFullName : '';
     const mobile = custRecord?.mobile || leadRec?.mobile || leadRec?.customer_mobile || shareData.mobile || '';
-    const firstName = fullName.trim().split(' ')[0];
+    const firstName = fullName ? fullName.trim().split(' ')[0] : '';
 
     return success(res, {
       token,

@@ -59,7 +59,8 @@ export default function CustomerApplyStep1() {
 
           if (data.customer) {
             setCustomer(data.customer);
-            setFullName(data.customer.full_name || '');
+            const initialName = data.customer.full_name && data.customer.full_name !== 'Valued Customer' ? data.customer.full_name : '';
+            setFullName(initialName);
             setMobileNum(data.customer.mobile || '');
             setEmail(data.customer.email || '');
             setDob(data.customer.dob || '');
