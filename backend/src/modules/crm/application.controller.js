@@ -3939,9 +3939,9 @@ const releaseCommission = async (req, res, next) => {
 
     await client.query('BEGIN');
 
-    // 1. Update application commission status & set status to approved
+    // 1. Update application status to commission_received & commission_status to released
     await client.query(
-      `UPDATE applications SET status = 'approved', final_status = 'approved', approved_at = COALESCE(approved_at, NOW()), commission_status = 'released', commission_released = TRUE, updated_at = NOW() WHERE id = $1`,
+      `UPDATE applications SET status = 'commission_received', final_status = 'Commission Received', approved_at = COALESCE(approved_at, NOW()), commission_status = 'released', commission_released = TRUE, updated_at = NOW() WHERE id = $1`,
       [id]
     );
 
@@ -4022,7 +4022,7 @@ const holdCommission = async (req, res, next) => {
     const { remarks } = req.body;
 
     const { rows: [app] } = await query(
-      `SELECT id, app_number, commission_status FROM applications WHERE id = $1`,
+      `SELECT id, app_number, commission_status FROM applications WHERE id::text = $1 OR app_number = $1 OR tracking_token = $1`,
       [id]
     );
 
@@ -4033,15 +4033,23 @@ const holdCommission = async (req, res, next) => {
     }
 
     await query(
-      `UPDATE applications SET commission_status = 'on_hold', updated_at = NOW() WHERE id = $1`,
-      [id]
+      `UPDATE applications SET status = 'commission_released', final_status = 'Commission Released', commission_status = 'on_hold', updated_at = NOW() WHERE id = $1`,
+      [app.id]
     );
 
+    try {
+      await logTimeline(query, app.id, 'commission_released', 'Commission Released (On Hold)',
+        remarks || 'Commission placed on hold by Super Admin. Status updated to Commission Released.',
+        req.user ? req.user.id : null
+      );
+    } catch (_) {}
+
     return success(res, {
-      application_id: id,
+      application_id: app.id,
       app_number: app.app_number,
+      status: 'commission_released',
       commission_status: 'on_hold'
-    }, 'Commission has been put on hold.');
+    }, 'Commission has been put on hold and application status set to Commission Released.');
   } catch (err) {
     next(err);
   }

@@ -35,7 +35,7 @@ export default function SuperAdminCommission() {
         const approvedOnly = list.filter(app => {
           const st = (app.status || '').toLowerCase();
           const cst = (app.commission_status || '').toLowerCase();
-          return ['super_admin_approved', 'approved', 'disbursed', 'commission_released'].includes(st) || ['released', 'approved', 'on_hold', 'held'].includes(cst);
+          return ['super_admin_approved', 'approved', 'disbursed', 'commission_released', 'commission_received'].includes(st) || ['released', 'approved', 'on_hold', 'held'].includes(cst);
         });
         setApplications(approvedOnly);
       }
