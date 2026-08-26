@@ -819,31 +819,103 @@ const updateApplyTokenDetails = async (req, res, next) => {
       targetCustomerId = newCust?.id || null;
     }
 
-    // Update lead record stage
+    // 1. Ensure Lead record exists or is updated with process_type = 'linked_share'
     if (targetLeadId) {
       await query(`
         UPDATE leads
-        SET pipeline_stage = 'details_submitted', status = 'in_progress',
+        SET pipeline_stage = 'details_submitted', status = 'pending',
             customer_id = COALESCE($2, customer_id),
             customer_name = COALESCE(NULLIF($3, ''), customer_name),
             city = COALESCE(NULLIF($4, ''), city),
             pan_number = COALESCE(NULLIF($5, ''), pan_number),
+            process_type = 'linked_share',
+            process_by = 'partner',
+            source = 'linked_share',
             updated_at = NOW()
         WHERE id = $1
       `, [targetLeadId, targetCustomerId, cleanName, cleanCity, cleanPan]);
+    } else {
+      const { rows: [existingLead] } = await query(`
+        SELECT id FROM leads
+        WHERE (tracking_token = $1 OR (product_id = $2 AND partner_id = $3 AND (mobile = $4 OR customer_mobile = $4)))
+          AND status NOT IN ('rejected', 'cancelled')
+        ORDER BY created_at DESC LIMIT 1
+      `, [token, shareData.product_id, shareData.partner_id, cleanMobile]);
+
+      if (existingLead) {
+        targetLeadId = existingLead.id;
+        await query(`
+          UPDATE leads
+          SET pipeline_stage = 'details_submitted', status = 'pending',
+              customer_id = COALESCE($2, customer_id),
+              customer_name = COALESCE(NULLIF($3, ''), customer_name),
+              city = COALESCE(NULLIF($4, ''), city),
+              pan_number = COALESCE(NULLIF($5, ''), pan_number),
+              process_type = 'linked_share',
+              process_by = 'partner',
+              source = 'linked_share',
+              updated_at = NOW()
+          WHERE id = $1
+        `, [targetLeadId, targetCustomerId, cleanName, cleanCity, cleanPan]);
+      } else {
+        const leadNum = 'LEAD-' + Date.now().toString(36).toUpperCase();
+        const { rows: [parentP] } = shareData.partner_id ? await query(`SELECT parent_partner_id FROM partner_profiles WHERE id = $1`, [shareData.partner_id]).catch(() => ({ rows: [] })) : { rows: [] };
+        
+        const { rows: [newLead] } = await query(`
+          INSERT INTO leads (
+            lead_number, partner_id, parent_partner_id, created_by, customer_id,
+            product_id, customer_name, mobile, customer_mobile, city, pan_number, status, process_type, process_by,
+            otp_verified, source, priority, pipeline_stage, tracking_token
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, 'pending', 'linked_share', 'partner', TRUE, 'linked_share', 'medium', 'details_submitted', $11)
+          RETURNING *
+        `, [
+          leadNum, shareData.partner_id || null, parentP?.parent_partner_id || null, partnerUserId, targetCustomerId,
+          shareData.product_id, cleanName || 'Customer', cleanMobile, cleanCity || null, cleanPan || null, token
+        ]);
+        targetLeadId = newLead.id;
+      }
     }
 
-    // Update application record if exists
-    if (shareData.application_id) {
+    // 2. Ensure Application record exists in applications table with process_type = 'linked_share'
+    let targetAppId = shareData.application_id;
+    if (!targetAppId && targetLeadId) {
+      const { rows: [existingApp] } = await query(`SELECT id FROM applications WHERE lead_id = $1 LIMIT 1`, [targetLeadId]);
+      if (existingApp) {
+        targetAppId = existingApp.id;
+      }
+    }
+
+    if (targetAppId) {
       await query(`
         UPDATE applications
-        SET status = 'details_submitted',
+        SET status = 'pending',
             customer_id = COALESCE($1, customer_id),
             pan_number = COALESCE(NULLIF($2, ''), pan_number),
             monthly_salary = COALESCE($3, monthly_salary),
+            process_type = 'linked_share',
+            process_by = 'partner',
+            source = 'linked_share',
             updated_at = NOW()
         WHERE id = $4
-      `, [targetCustomerId, cleanPan, numIncome, shareData.application_id]);
+      `, [targetCustomerId, cleanPan, numIncome, targetAppId]);
+    } else if (targetLeadId) {
+      const date = new Date();
+      const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+      const appNum = 'APP' + datePart + Math.floor(1000 + Math.random() * 9000);
+
+      const { rows: [newApp] } = await query(`
+        INSERT INTO applications (
+          app_number, lead_id, customer_id, product_id, partner_id, bank_id,
+          submitted_by, loan_amount, status, process_type, process_by, source, tracking_token, agree_terms, pan_number, submitted_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'linked_share', 'partner', 'linked_share', $9, TRUE, $10, NOW())
+        RETURNING *
+      `, [
+        appNum, targetLeadId, targetCustomerId, shareData.product_id, shareData.partner_id || null, product?.bank_id || null,
+        partnerUserId, numIncome || 0, token, cleanPan || null
+      ]);
+      targetAppId = newApp.id;
     }
 
     const host = req.get('host') || 'gharkapaisa.in';
