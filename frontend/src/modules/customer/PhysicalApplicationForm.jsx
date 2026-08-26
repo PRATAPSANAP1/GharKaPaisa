@@ -787,24 +787,26 @@ export default function PhysicalApplicationForm() {
                 ⚙️ Application Remark & Stage Tracking Form
               </div>
 
-              {/* Order: 1. Appcode Status, 2. Soft Approval Status */}
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
-                <div>
-                  <label style={labelStyle}>{txt('appcodeStatus') || 'APPCODE STATUS'}</label>
-                  <select
-                    value={form.appcode_status}
-                    onChange={e => handleChange('appcode_status', e.target.value)}
-                    style={inputStyle}
-                  >
-                    <option value="None">None</option>
-                    <option value="Appcode Send">Appcode Send</option>
-                    <option value="Appcode Pending">Appcode Pending</option>
-                    <option value="Appcode submit">Appcode submit</option>
-                    {form.appcode_status && !['None', 'Appcode Send', 'Appcode Pending', 'Appcode submit'].includes(form.appcode_status) && (
-                      <option value={form.appcode_status}>{form.appcode_status}</option>
-                    )}
-                  </select>
-                </div>
+              {/* Order: 1. Appcode Status (Hidden for linked_share & direct_apply), 2. Soft Approval Status */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : (isDigitalProcess ? '1fr' : '1fr 1fr'), gap: 16 }}>
+                {!isDigitalProcess && (
+                  <div>
+                    <label style={labelStyle}>{txt('appcodeStatus') || 'APPCODE STATUS'}</label>
+                    <select
+                      value={form.appcode_status}
+                      onChange={e => handleChange('appcode_status', e.target.value)}
+                      style={inputStyle}
+                    >
+                      <option value="None">None</option>
+                      <option value="Appcode Send">Appcode Send</option>
+                      <option value="Appcode Pending">Appcode Pending</option>
+                      <option value="Appcode submit">Appcode submit</option>
+                      {form.appcode_status && !['None', 'Appcode Send', 'Appcode Pending', 'Appcode submit'].includes(form.appcode_status) && (
+                        <option value={form.appcode_status}>{form.appcode_status}</option>
+                      )}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label style={labelStyle}>{txt('softApprovalStatus') || 'SOFT APPROVAL STATUS'}</label>
