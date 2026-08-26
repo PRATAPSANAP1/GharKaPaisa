@@ -81,11 +81,12 @@ export default function ManageApplications() {
     setSubmittingSuperAdminApprove(true);
     try {
       const res = await api.put(`/applications/${appId}/status`, {
-        status: 'super_admin_approved',
-        remarks: superAdminRemark || 'Super Admin Approved'
+        status: 'approved',
+        final_status: 'Approved',
+        remarks: superAdminRemark || 'Approved by Operations Head / Super Admin'
       });
       if (res.data?.success || res.status === 200) {
-        alert('Application approved successfully! Status updated to Super Admin Approved (super_admin_approved).');
+        alert('Application approved successfully! Status updated to Approved.');
         setDetailModalOpen(false);
         setSuperAdminRemark('');
         fetchApplications();

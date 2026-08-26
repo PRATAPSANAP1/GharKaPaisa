@@ -398,14 +398,14 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   try {
                     const targetId = application.app_number || application.id || application.application_id || application.lead_id;
                     const res = await api.put(`/applications/${targetId}/verification`, {
-                      status: 'super_admin_approved',
-                      final_status: 'Super Admin Approved',
+                      status: 'approved',
+                      final_status: 'Approved',
                       super_admin_remark: 'Approved by Operations Head / Super Admin',
                       bank_remark: 'Approved by Operations Head / Super Admin'
                     });
                     if (res.data?.success) {
-                      alert('Application status updated to SUPER ADMIN APPROVED successfully!');
-                      setCurrentStatus('super_admin_approved');
+                      alert('Application status updated to APPROVED successfully!');
+                      setCurrentStatus('approved');
                       await fetchData();
                       if (onRefresh) onRefresh();
                     }
