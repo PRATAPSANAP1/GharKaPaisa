@@ -821,10 +821,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   
                   {/* Order 1: APPCODE STATUS */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Appcode Status</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>APPCODE STATUS</label>
                     <select
                       disabled={!canEditRemark}
-                      value={appcodeStatus}
+                      value={appcodeStatus || 'None'}
                       onChange={(e) => setAppcodeStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
@@ -840,10 +840,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
                   {/* Order 2: SOFT APPROVAL STATUS */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Soft Approval Status</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>SOFT APPROVAL STATUS</label>
                     <select
                       disabled={!canEditRemark}
-                      value={softApprovalStatus}
+                      value={softApprovalStatus || 'None'}
                       onChange={(e) => setSoftApprovalStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
@@ -860,10 +860,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
                   {/* Order 3: IQA STAGE */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>IQA Stage</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>IQA STAGE</label>
                     <select
                       disabled={!canEditRemark}
-                      value={iqaStage}
+                      value={iqaStage || 'None'}
                       onChange={(e) => setIqaStage(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
@@ -881,25 +881,25 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
                   {/* Order 4: BANK APPLICATION NUMBER */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Bank Application Ref No. (13 digits)</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>BANK APPLICATION NUMBER (13-digit number)</label>
                     <input
                       type="text"
                       maxLength={13}
                       disabled={!canEditRemark}
                       value={bankRefNumber}
                       onChange={(e) => setBankRefNumber(e.target.value.replace(/\D/g, '').slice(0, 13))}
-                      placeholder="Enter 13-digit Bank App Ref No."
+                      placeholder="Enter 13-digit Bank App Reference Number"
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
-                  {/* Order 5: VKYC STATUS (Hidden for physical process) */}
+                  {/* Order 5: VKYC STAGE (Hidden for physical process) */}
                   {!isPhysical && (
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Stage</label>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>VKYC STAGE</label>
                       <select
                         disabled={!canEditRemark}
-                        value={vkycStage}
+                        value={vkycStage || 'None'}
                         onChange={(e) => setVkycStage(e.target.value)}
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                       >
@@ -917,7 +917,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
                   {/* Order 6: VKYC LINK (Hidden for physical process) */}
                   {!isPhysical && (
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>VKYC Link</label>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>VKYC LINK</label>
                       <input
                         type="url"
                         disabled={!canEditRemark}
@@ -931,10 +931,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
 
                   {/* Order 7: DISPATCH STATUS */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Dispatch Status</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DISPATCH STATUS</label>
                     <select
                       disabled={!canEditRemark}
-                      value={dispatchStatus}
+                      value={dispatchStatus || 'None'}
                       onChange={(e) => setDispatchStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
