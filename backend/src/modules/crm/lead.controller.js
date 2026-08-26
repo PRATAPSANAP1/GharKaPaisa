@@ -245,9 +245,9 @@ function getBankApplyLinkBackend(productName, bankName, productObj = null) {
   const bankLower = String(bankName || productObj?.bank_name || '').toLowerCase();
 
   const isSbiUrl = cleanUrl.toLowerCase().includes('sbicard.com') || cleanUrl.toLowerCase().includes('sbi.co.in');
-  const isNonSbiBank = (bankLower && !bankLower.includes('sbi')) || (nameLower && !nameLower.includes('sbi') && !nameLower.includes('state bank'));
+  const isSbiBankOrProduct = bankLower.includes('sbi') || bankLower.includes('state bank') || nameLower.includes('sbi') || nameLower.includes('state bank');
   
-  if (isSbiUrl && isNonSbiBank) {
+  if (isSbiUrl && !isSbiBankOrProduct) {
     console.warn(`[URL_RESOLVER_GUARD] Rejected cross-bank SBI link on non-SBI product '${productName || productObj?.name}'`);
     return "";
   }
