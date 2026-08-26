@@ -23,7 +23,7 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   const isDigitalProcess = isLinkedShare || isDirectBank;
   const isPhysical = processTypeStr.includes('physical');
 
-  const initialTabKey = isDigitalProcess ? 'remark' : getTabKey(initialTab);
+  const initialTabKey = initialTab ? getTabKey(initialTab) : (isDigitalProcess ? 'remark' : 'qd');
   const [activeTab, setActiveTab] = useState(initialTabKey);
   const [timeline, setTimeline] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,10 +37,10 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
   }, []);
 
   useEffect(() => {
-    if (isDigitalProcess) {
-      setActiveTab('remark');
+    if (initialTab) {
+      setActiveTab(getTabKey(initialTab));
     }
-  }, [application?.id, processTypeStr]);
+  }, [application?.id, initialTab]);
 
   // User Role & Permissions
   const user = useAuthStore((state) => state.user);
@@ -537,8 +537,8 @@ const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initi
               <Sliders size={14} /> Application Remark & Stage Tracking
             </button>
 
-            {/* 3. Final Tab (Hidden for Digital processes and Physical process) */}
-            {!isDigitalProcess && !isPhysical && (initialTabKey === 'final' || showAllTabs) && (
+            {/* 3. Final Tab (Shown for all processes including Customer Apply & Direct Bank) */}
+            {(initialTabKey === 'final' || showAllTabs) && (
               <button
                 onClick={() => setActiveTab('final')}
                 style={{
