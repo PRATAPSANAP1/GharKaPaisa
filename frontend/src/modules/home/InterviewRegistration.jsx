@@ -1,0 +1,286 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../../contexts/ThemeContext';
+import { 
+  FaArrowLeft, FaBriefcase, FaGraduationCap, FaUser, FaEnvelope, 
+  FaPhone, FaCheckCircle, FaFileAlt, FaLock, FaBuilding, FaMoneyBillWave 
+} from 'react-icons/fa';
+import axios from 'axios';
+
+export default function InterviewRegistration() {
+  const { C } = useTheme();
+  const navigate = useNavigate();
+
+  const [step, setStep] = useState(1); // 1: Registration Form, 2: OTP Verification, 3: Success Code
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [referenceCode, setReferenceCode] = useState('');
+
+  const [otpMobile, setOtpMobile] = useState('');
+  const [otpEmail, setOtpEmail] = useState('');
+  const [mobileOtpSent, setMobileOtpSent] = useState(false);
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+
+  const [formData, setFormData] = useState({
+    full_name: '',
+    mobile_number: '',
+    email_id: '',
+    date_of_birth: '',
+    current_address: '',
+    highest_qualification: 'Graduate',
+    passing_year: '2022',
+    experience_type: 'Fresher',
+    total_experience_years: '0',
+    current_company: '',
+    current_designation: '',
+    last_salary_ctc: '',
+    expected_salary: '',
+    immediate_joining: true,
+    notice_period_days: '0',
+    comfortable_with_location: true,
+    relevant_experience: true,
+    how_did_you_hear: 'Career Portal'
+  });
+
+  const [resumeFile, setResumeFile] = useState(null);
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setResumeFile(e.target.files[0]);
+    }
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!formData.full_name || !formData.mobile_number || !formData.email_id) {
+      setError('Please fill in all required fields (Name, Mobile, Email).');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Send Mobile & Email OTP
+      await axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: formData.mobile_number });
+      await axios.post('/api/v1/public/careers/verify-email', { email_id: formData.email_id });
+      setMobileOtpSent(true);
+      setEmailOtpSent(true);
+      setStep(2);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to send OTP verification. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const verifyRes = await axios.post('/api/v1/public/careers/verify-otp', {
+        mobile_number: formData.mobile_number,
+        email_id: formData.email_id,
+        otp: otpMobile || otpEmail || '123456'
+      });
+
+      if (verifyRes.data.success) {
+        // Register Candidate
+        const registerPayload = new FormData();
+        Object.keys(formData).forEach(key => {
+          registerPayload.append(key, formData[key]);
+        });
+        if (resumeFile) {
+          registerPayload.append('resume', resumeFile);
+        }
+
+        const regRes = await axios.post('/api/v1/public/careers/register', registerPayload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        if (regRes.data.success) {
+          setReferenceCode(regRes.data.data?.reference_code || regRes.data.reference_code);
+          setStep(3);
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'OTP verification failed. Please enter valid OTP.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '40px 16px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
+          <button 
+            onClick={() => navigate('/careers')}
+            style={{ 
+              background: C.card, border: `1px solid ${C.border}`, borderRadius: '50%', 
+              width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: C.textMid, boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+            }}
+          >
+            <FaArrowLeft />
+          </button>
+          <div>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Career Portal
+            </span>
+            <h1 style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: 0 }}>Candidate Interview Registration</h1>
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px 16px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px' }}>
+            {error}
+          </div>
+        )}
+
+        {/* STEP 1: Registration Form */}
+        {step === 1 && (
+          <form onSubmit={handleFormSubmit} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 20px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <FaUser style={{ color: C.teal }} /> Personal & Contact Details
+            </h2>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Full Name *</label>
+                <input type="text" name="full_name" required value={formData.full_name} onChange={handleInputChange} placeholder="Full Name" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Mobile Number *</label>
+                <input type="tel" name="mobile_number" required value={formData.mobile_number} onChange={handleInputChange} placeholder="10 Digit Mobile" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Email Address *</label>
+                <input type="email" name="email_id" required value={formData.email_id} onChange={handleInputChange} placeholder="email@domain.com" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Date of Birth</label>
+                <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+              </div>
+            </div>
+
+            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '24px 0 20px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <FaGraduationCap style={{ color: C.teal }} /> Education & Experience
+            </h2>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Highest Qualification *</label>
+                <select name="highest_qualification" value={formData.highest_qualification} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
+                  <option value="10th / 12th">10th / 12th</option>
+                  <option value="Diploma">Diploma</option>
+                  <option value="Graduate">Graduate (BA, BCom, BSc, BTech, BCA)</option>
+                  <option value="Post Graduate">Post Graduate (MBA, MTech, MCA, MCom)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Passing Year</label>
+                <input type="number" name="passing_year" value={formData.passing_year} onChange={handleInputChange} placeholder="e.g. 2022" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Experience Type *</label>
+                <select name="experience_type" value={formData.experience_type} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
+                  <option value="Fresher">Fresher</option>
+                  <option value="Experienced">Experienced</option>
+                </select>
+              </div>
+
+              {formData.experience_type === 'Experienced' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Total Experience (Years)</label>
+                    <input type="number" step="0.5" name="total_experience_years" value={formData.total_experience_years} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Current / Last Company</label>
+                    <input type="text" name="current_company" value={formData.current_company} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '24px 0 20px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <FaFileAlt style={{ color: C.teal }} /> Resume Upload
+            </h2>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Upload Resume (PDF / DOCX)</label>
+              <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} style={{ width: '100%', padding: '10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+            </div>
+
+            <button type="submit" disabled={loading} style={{ background: C.teal, color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, cursor: 'pointer', width: '100%' }}>
+              {loading ? 'Processing...' : 'Proceed to Verification & Submit'}
+            </button>
+          </form>
+        )}
+
+        {/* STEP 2: OTP Verification */}
+        {step === 2 && (
+          <form onSubmit={handleVerifyOtp} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 12px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <FaLock style={{ color: C.teal }} /> Mobile & Email Verification
+            </h2>
+            <p style={{ fontSize: '14px', color: C.textMid, marginBottom: '24px' }}>
+              Enter the 6-digit OTP sent to your Mobile ({formData.mobile_number}) and Email ({formData.email_id}).
+            </p>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Enter 6-Digit OTP</label>
+              <input type="text" maxLength={6} required value={otpMobile} onChange={(e) => setOtpMobile(e.target.value)} placeholder="Enter 6-digit OTP (Default test: 123456)" style={{ width: '100%', padding: '12px 16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '16px', letterSpacing: '2px', color: C.text }} />
+            </div>
+
+            <button type="submit" disabled={loading} style={{ background: C.teal, color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, cursor: 'pointer', width: '100%' }}>
+              {loading ? 'Verifying...' : 'Verify OTP & Complete Registration'}
+            </button>
+          </form>
+        )}
+
+        {/* STEP 3: Registration Success & Reference Code Display */}
+        {step === 3 && (
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '40px 32px', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+            <FaCheckCircle size={56} style={{ color: C.teal, marginBottom: '16px' }} />
+            <h2 style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: '0 0 8px 0' }}>Interview Registration Successful!</h2>
+            <p style={{ fontSize: '14px', color: C.textMid, margin: '0 0 24px 0' }}>
+              Your application has been registered with our HR Acquisition team.
+            </p>
+
+            <div style={{ background: `${C.teal}15`, border: `1px solid ${C.teal}40`, borderRadius: '16px', padding: '20px', maxWidth: '400px', margin: '0 auto 28px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Your Candidate Reference Code</span>
+              <strong style={{ fontSize: '28px', fontWeight: 900, color: C.teal, letterSpacing: '1px' }}>{referenceCode}</strong>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button onClick={() => navigate(`/careers/status/${referenceCode}`)} style={{ background: C.teal, color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer' }}>
+                Check Application Status
+              </button>
+              <button onClick={() => navigate('/careers')} style={{ background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`, padding: '12px 24px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer' }}>
+                Return to Careers
+              </button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}

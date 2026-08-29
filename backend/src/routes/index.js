@@ -28,6 +28,10 @@ const partnerShareCtrl = require('../modules/partner/partner-share.controller.js
 
 const customerRoute = require('../modules/customer/customer.routes.js');
 const customerPortalRoute = require('../modules/customer/customer_portal.routes.js');
+const publicCareersRoute = require('../modules/public/public.routes.js');
+const hrRoute = require('../modules/hr/hr.routes.js');
+const employeeManagementRoute = require('../modules/employee-management/employee-management.routes.js');
+const employeeRoute = require('../modules/employee/employee.routes.js');
 
 // ── Webhooks & Public Actions ──────────────────────────────────
 router.post('/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
@@ -42,6 +46,10 @@ router.use('/services',         serviceRouter);
 router.use('/service-catalog',  serviceCatalogRouter);
 router.use('/settings',         settingsRouter);
 router.use('/customer-portal',  customerPortalRoute);
+router.use('/public/careers',   publicCareersRoute);
+router.use('/hr',               hrRoute);
+router.use('/employees',        employeeManagementRoute);
+router.use('/employee',         employeeRoute);
 
 // ── Public Share Link & Self-Fulfillment Routes (No auth required) ──
 router.get('/app/:trackingToken', partnerShareCtrl.handleDirectAppRedirect);

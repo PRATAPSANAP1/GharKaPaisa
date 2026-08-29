@@ -15,6 +15,20 @@ import PublicLayout from '../layouts/PublicLayout';
 // Public Pages
 import Home from '../modules/home/Home';
 import Contact from '../modules/home/Contact';
+import Careers from '../modules/home/Careers';
+import InterviewRegistration from '../modules/home/InterviewRegistration';
+import ApplicationStatus from '../modules/home/ApplicationStatus';
+import HRDashboard from '../modules/hr/HRDashboard';
+import EmployeeManagement from '../modules/super-admin/employees/EmployeeManagement';
+import EmployeeLogin from '../modules/employee/EmployeeLogin';
+import EmployeeDashboard from '../modules/employee/EmployeeDashboard';
+import JoiningForm from '../modules/employee/profile/JoiningForm';
+import TermsAcceptance from '../modules/employee/profile/TermsAcceptance';
+import KYCSubmission from '../modules/employee/profile/KYCSubmission';
+import EmployeeCreditCards from '../modules/employee/credit-cards/EmployeeCreditCards';
+import EmployeeApplications from '../modules/employee/applications/EmployeeApplications';
+import MyTeam from '../modules/employee/team/MyTeam';
+import MyIncentives from '../modules/employee/incentives/MyIncentives';
 import PartnerLogin from '../modules/authentication/login/PartnerLogin';
 import PartnerRegister from '../modules/authentication/register/PartnerRegister';
 import VerifyEmail from '../modules/authentication/register/VerifyEmail';
@@ -146,6 +160,22 @@ const AppRoutes = () => {
         <Route path="/shipping-policy" element={<ShippingPolicy />} />
         <Route path="/cancellation-and-refund-policy" element={<RefundPolicy />} />
         <Route path="/refund-policy" element={<RefundPolicy />} />
+        <Route path="/careers" element={<Careers />} />
+        <Route path="/career" element={<Careers />} />
+        <Route path="/careers/register" element={<InterviewRegistration />} />
+        <Route path="/careers/status" element={<ApplicationStatus />} />
+        <Route path="/careers/status/:code" element={<ApplicationStatus />} />
+
+        {/* Employee Management System Panel Routes */}
+        <Route path="/employee/login" element={<EmployeeLogin />} />
+        <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
+        <Route path="/employee/joining-form" element={<JoiningForm />} />
+        <Route path="/employee/terms" element={<TermsAcceptance />} />
+        <Route path="/employee/kyc" element={<KYCSubmission />} />
+        <Route path="/employee/credit-cards" element={<EmployeeCreditCards />} />
+        <Route path="/employee/applications" element={<EmployeeApplications />} />
+        <Route path="/employee/team" element={<MyTeam />} />
+        <Route path="/employee/incentives" element={<MyIncentives />} />
 
         {/* Dynamic CMS Service Pages */}
         <Route path="/recharge" element={<ComingSoon />} />
@@ -247,6 +277,11 @@ const AppRoutes = () => {
             <Route path="/admin/withdrawals" element={<ManageWithdrawals />} />
             <Route path="/admin/leads" element={<ManageLeads />} />
             <Route path="/admin/direct-leads" element={<ManageDirectLeads />} />
+
+            {/* HR Management System Routes */}
+            <Route path="/hr" element={<HRDashboard />} />
+            <Route path="/hr/dashboard" element={<HRDashboard />} />
+            <Route path="/hr/candidates" element={<HRDashboard />} />
             
             {/* Dynamic Bank & Product Management for Admin */}
             <Route path="/admin/banks" element={<ManageBanks />} />
@@ -287,6 +322,7 @@ const AppRoutes = () => {
             <Route path="/super-admin" element={<Navigate to="/super-admin/overview" replace />} />
             <Route path="/super-admin/overview" element={<SuperAdminOverview />} />
             <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+            <Route path="/super-admin/employees" element={<EmployeeManagement />} />
             <Route path="/super-admin/partners" element={<ManagePartners />} />
             <Route path="/super-admin/leads" element={<ManageLeads />} />
             <Route path="/super-admin/applications" element={<SuperAdminManageApplications />} />

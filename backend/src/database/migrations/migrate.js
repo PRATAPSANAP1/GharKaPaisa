@@ -4522,9 +4522,16 @@ const migrate = async () => {
       ALTER TABLE physical_application_details 
         ADD COLUMN IF NOT EXISTS token VARCHAR(255);
     `);
-    logger.info('Task 29 completed successfully.');
   } catch (task29Err) {
     logger.error('Failed to run Task 29 migration:', task29Err.message);
+  }
+
+  try {
+    logger.info('Running Employee Management System migrations...');
+    const migrateEmployeeSystem = require('./migrate_employee_system');
+    await migrateEmployeeSystem();
+  } catch (empMigErr) {
+    logger.error('Failed to run Employee Management System migration:', empMigErr.message);
   }
 
   logger.info('✅ All migrations completed successfully');
