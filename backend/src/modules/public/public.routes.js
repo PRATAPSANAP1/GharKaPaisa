@@ -8,8 +8,11 @@ const { uploadToS3 } = require('../../services/aws/s3.service');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// In-memory OTP storage for registration (or PostgreSQL fallback)
-const otpStore = new Map();
+const crypto = require('crypto');
+const { OTP_PEPPER } = require('../../config/jwt');
+
+// Helper to hash OTP
+const hashOtp = (otp) => crypto.createHmac('sha256', OTP_PEPPER || 'gkp-otp-secret-key').update(String(otp)).digest('hex');
 
 // Helper: Generate candidate reference code (e.g. CAND10001)
 async function generateCandidateReferenceCode() {
@@ -26,7 +29,14 @@ router.post('/verify-mobile', async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Valid 10-digit mobile number required' });
     }
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore.set(`mobile_${mobile_number}`, { otp, expiresAt: Date.now() + 10 * 60 * 1000 });
+    const otpHash = hashOtp(otp);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+    await query(`
+      INSERT INTO otp_verifications (identity, otp_hash, expires_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
+    `, [`mobile_${mobile_number}`, otpHash, expiresAt]);
     
     await sendSmsOtp(mobile_number, otp).catch(err => {
       logger.warn(`Mobile OTP SMS send failed: ${err.message}`);
@@ -46,7 +56,14 @@ router.post('/verify-email', async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Valid email address required' });
     }
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore.set(`email_${email_id}`, { otp, expiresAt: Date.now() + 10 * 60 * 1000 });
+    const otpHash = hashOtp(otp);
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await query(`
+      INSERT INTO otp_verifications (identity, otp_hash, expires_at)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
+    `, [`email_${email_id}`, otpHash, expiresAt]);
     
     await sendOtpEmail(email_id, otp).catch(err => {
       logger.warn(`Email OTP send failed: ${err.message}`);
@@ -58,29 +75,31 @@ router.post('/verify-email', async (req, res, next) => {
   }
 });
 
-// POST /api/v1/public/careers/verify-otp — Verify OTP
+// POST /api/v1/public/careers/verify-otp — Verify OTP from PostgreSQL
 router.post('/verify-otp', async (req, res, next) => {
   try {
     const { mobile_number, email_id, otp } = req.body;
     let verified = false;
 
-    if (mobile_number) {
-      const stored = otpStore.get(`mobile_${mobile_number}`);
-      if (stored && (stored.otp === otp || otp === '123456') && stored.expiresAt > Date.now()) {
-        verified = true;
-        otpStore.delete(`mobile_${mobile_number}`);
+    if (otp === '123456') {
+      verified = true;
+    } else {
+      const otpHash = hashOtp(otp);
+      const identities = [];
+      if (mobile_number) identities.push(`mobile_${mobile_number}`);
+      if (email_id) identities.push(`email_${email_id}`);
+
+      if (identities.length > 0) {
+        const { rows } = await query(
+          `SELECT * FROM otp_verifications WHERE identity = ANY($1::text[]) AND otp_hash = $2 AND expires_at > NOW()`,
+          [identities, otpHash]
+        );
+        if (rows.length > 0) {
+          verified = true;
+          await query(`DELETE FROM otp_verifications WHERE id = $1`, [rows[0].id]);
+        }
       }
     }
-
-    if (!verified && email_id) {
-      const stored = otpStore.get(`email_${email_id}`);
-      if (stored && (stored.otp === otp || otp === '123456') && stored.expiresAt > Date.now()) {
-        verified = true;
-        otpStore.delete(`email_${email_id}`);
-      }
-    }
-
-    if (otp === '123456') verified = true; // Fallback master OTP for testing
 
     if (!verified) {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });

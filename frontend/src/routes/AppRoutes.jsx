@@ -11,6 +11,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import PartnerLayout from '../layouts/PartnerLayout';
 import SuperAdminLayout from '../layouts/SuperAdminLayout';
 import PublicLayout from '../layouts/PublicLayout';
+import EmployeeLayout from '../layouts/EmployeeLayout';
 
 // Public Pages
 import Home from '../modules/home/Home';
@@ -29,6 +30,7 @@ import EmployeeCreditCards from '../modules/employee/credit-cards/EmployeeCredit
 import EmployeeApplications from '../modules/employee/applications/EmployeeApplications';
 import MyTeam from '../modules/employee/team/MyTeam';
 import MyIncentives from '../modules/employee/incentives/MyIncentives';
+import EmployeeProfile from '../modules/employee/profile/EmployeeProfile';
 import PartnerLogin from '../modules/authentication/login/PartnerLogin';
 import PartnerRegister from '../modules/authentication/register/PartnerRegister';
 import VerifyEmail from '../modules/authentication/register/VerifyEmail';

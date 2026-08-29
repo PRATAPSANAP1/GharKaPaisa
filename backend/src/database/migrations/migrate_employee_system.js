@@ -26,6 +26,10 @@ const migrateEmployeeSystem = async () => {
   try {
     await query('BEGIN');
 
+    // Ensure HR and EMPLOYEE are in user_role ENUM
+    await addEnumValue('user_role', 'HR');
+    await addEnumValue('user_role', 'EMPLOYEE');
+
     // ── 1. Employee Candidates Table ────────────────────────────────────────────────
     await query(`
       CREATE TABLE IF NOT EXISTS employee_candidates (

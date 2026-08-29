@@ -695,7 +695,6 @@ const updateStatus = async (req, res, next) => {
     }
 
     const historyEntry = JSON.stringify({ status, at: new Date(), by: req.user.id, remarks });
-    const isRejected = status === 'rejected' || status === 'cancelled';
     await client.query(`
       UPDATE applications SET
         status = $1,
@@ -705,6 +704,24 @@ const updateStatus = async (req, res, next) => {
         updated_at = NOW()
       WHERE id = $4
     `, [status, approvedAt, historyEntry, id, isRejected]);
+
+    // ── Employee Incentive Engine Lifecycle Sync ────────────────────────────
+    let incStatus = null;
+    if (status === 'operational_verified') {
+      incStatus = 'HELD';
+    } else if (['approved', 'super_admin_approved', 'commission_released', 'released'].includes(status)) {
+      incStatus = 'COMPLETED';
+    } else if (['rejected', 'cancelled', 'declined'].includes(status)) {
+      incStatus = 'CANCELLED';
+    }
+
+    if (incStatus) {
+      await client.query(`
+        UPDATE employee_incentive_transactions 
+        SET status = $1, updated_at = NOW() 
+        WHERE application_id = $2
+      `, [incStatus, app.id]);
+    }
 
     await logTimeline(client, id, status, `Transitioned to ${status.replace(/_/g, ' ').toUpperCase()}`, remarks, req.user.id);
     // Click status updates omitted
