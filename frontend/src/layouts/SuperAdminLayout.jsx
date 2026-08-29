@@ -171,6 +171,8 @@ const SuperAdminLayout = () => {
       items: [
         { path: '/super-admin/dashboard', label: 'Admins', icon: <Icons.profile size={16} /> },
         { path: '/super-admin/partners', label: 'Partners', icon: <Icons.profile size={16} /> },
+        { path: '/super-admin/employees', label: 'Employees', icon: <Icons.profile size={16} /> },
+        { path: '/super-admin/hr', label: 'HR / Candidates', icon: <Icons.profile size={16} /> },
       ]
     },
     {

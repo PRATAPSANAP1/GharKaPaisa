@@ -148,10 +148,22 @@ const AdminLayout = () => {
               <span>Dashboard</span>
             </NavLink>
 
-            {/* User Management */}
+            {/* Partners */}
             <NavLink to="/admin/partners" style={navLinkStyle}>
               <Icons.profile size={18} />
-              <span>User Management</span>
+              <span>Partners</span>
+            </NavLink>
+
+            {/* Employees */}
+            <NavLink to="/super-admin/employees" style={navLinkStyle}>
+              <Icons.profile size={18} />
+              <span>Employees</span>
+            </NavLink>
+
+            {/* HR / Candidates */}
+            <NavLink to="/hr" style={navLinkStyle}>
+              <Icons.profile size={18} />
+              <span>HR / Candidates</span>
             </NavLink>
           </>
         )}
