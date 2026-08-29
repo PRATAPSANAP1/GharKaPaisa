@@ -944,7 +944,27 @@ export function FooterSection({ C, navigate }) {
             Policies & Company
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <span onClick={() => navigate?.("/careers")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Career</span>
+            <button 
+              onClick={() => navigate?.("/careers")} 
+              style={{ 
+                background: "#2DD4BF", 
+                color: "#081424", 
+                border: "none", 
+                padding: "8px 16px", 
+                borderRadius: "10px", 
+                fontSize: "13px", 
+                fontWeight: 900, 
+                cursor: "pointer", 
+                width: "fit-content",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                boxShadow: "0 4px 12px rgba(45, 212, 191, 0.3)"
+              }}
+            >
+              Careers / Jobs
+            </button>
+            <span onClick={() => navigate?.("/careers")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Career Opportunities</span>
             <span onClick={() => navigate?.("/terms-and-conditions")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Terms & Conditions</span>
             <span onClick={() => navigate?.("/privacy-policy")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Privacy Policy</span>
             <span onClick={() => navigate?.("/shipping-and-delivery-policy")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Shipping & Delivery Policy</span>
@@ -959,7 +979,7 @@ export function FooterSection({ C, navigate }) {
         <span style={{ fontWeight: 700, color: "#ffffff" }}>Quick Links:</span>
         <span onClick={() => navigate?.("/")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Home</span> |
         <span onClick={() => navigate?.("/credit-cards")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Products</span> |
-        <span onClick={() => navigate?.("/careers")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Career</span> |
+        <span onClick={() => navigate?.("/careers")} style={{ cursor: "pointer", color: "#2DD4BF", fontWeight: 800, textDecoration: "underline" }}>Career</span> |
         <span onClick={() => navigate?.("/contact")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Contact Us</span> |
         <span onClick={() => navigate?.("/terms-and-conditions")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Terms & Conditions</span> |
         <span onClick={() => navigate?.("/privacy-policy")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Privacy Policy</span> |
