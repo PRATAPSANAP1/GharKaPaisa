@@ -34,6 +34,11 @@ export const LIGHT = {
   navyMid:     "#1E293B",   // Sidebar Hover
   tealGlow:    "rgba(79, 70, 229, 0.15)",
   amber:       "#F59E0B",
+  // ── Employee Panel Tokens ──
+  employeePrimary:     "#0F766E",   // Deep Teal
+  employeePrimaryDark: "#115E59",
+  employeeGlow:        "rgba(15, 118, 110, 0.14)",
+  employeeIncentive:   "#0F766E",
 };
 
 // ── Dark Theme ─────────────────────────────────────────────────────────────────
@@ -60,6 +65,11 @@ export const DARK = {
   navyMid:     "#000000",
   tealGlow:    "rgba(249, 115, 22, 0.15)",
   amber:       "#F59E0B",
+  // ── Employee Panel Tokens ──
+  employeePrimary:     "#2DD4BF",   // Crisp Deep Teal in Dark Mode
+  employeePrimaryDark: "#14B8A6",
+  employeeGlow:        "rgba(45, 212, 191, 0.16)",
+  employeeIncentive:   "#2DD4BF",
 };
 
 // ── Context ────────────────────────────────────────────────────────────────────

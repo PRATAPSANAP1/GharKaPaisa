@@ -55,7 +55,7 @@ export default function EmployeeLayout() {
         <div style={{ padding: '24px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img src={logo} alt="GharKaPaisa" style={{ height: '36px' }} />
           <div>
-            <div style={{ fontSize: '15px', fontWeight: 900, color: C.teal, letterSpacing: '-0.3px' }}>EMPLOYEE PORTAL</div>
+            <div style={{ fontSize: '15px', fontWeight: 900, color: C.employeePrimary || '#0F766E', letterSpacing: '-0.3px' }}>EMPLOYEE PORTAL</div>
             <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>GharKaPaisa Platform</div>
           </div>
         </div>
@@ -63,7 +63,7 @@ export default function EmployeeLayout() {
         {/* User Card in Sidebar */}
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, background: C.bgSecondary }}>
           <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>{user?.full_name || user?.name || 'Employee User'}</div>
-          <div style={{ fontSize: '11.5px', color: C.teal, fontWeight: 800 }}>ID: {user?.emp_code || user?.employee_id || 'EMP-ACTIVE'}</div>
+          <div style={{ fontSize: '11.5px', color: C.employeePrimary || '#0F766E', fontWeight: 800 }}>ID: {user?.emp_code || user?.employee_id || 'EMP-ACTIVE'}</div>
           <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>{user?.designation || 'Sales Associate'} • {user?.role || 'EMPLOYEE'}</div>
         </div>
 
@@ -85,7 +85,7 @@ export default function EmployeeLayout() {
                   fontSize: '13.5px',
                   fontWeight: active ? 800 : 600,
                   color: active ? '#fff' : C.textMid,
-                  background: active ? C.teal : 'transparent',
+                  background: active ? (C.employeePrimary || '#0F766E') : 'transparent',
                   textDecoration: 'none',
                   transition: 'all 0.2s ease'
                 }}
@@ -133,7 +133,7 @@ export default function EmployeeLayout() {
           position: 'sticky', top: 0, zIndex: 90
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 800, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: C.employeePrimary || '#0F766E', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Employee Portal Workspace
             </span>
           </div>
