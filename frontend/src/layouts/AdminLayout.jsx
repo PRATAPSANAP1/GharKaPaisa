@@ -160,10 +160,10 @@ const AdminLayout = () => {
               <span>Employees</span>
             </NavLink>
 
-            {/* HR / Candidates */}
+            {/* HR */}
             <NavLink to="/hr" style={navLinkStyle}>
               <Icons.profile size={18} />
-              <span>HR / Candidates</span>
+              <span>HR</span>
             </NavLink>
           </>
         )}
