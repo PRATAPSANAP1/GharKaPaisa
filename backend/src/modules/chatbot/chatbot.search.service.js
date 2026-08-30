@@ -3,7 +3,7 @@ const logger = require('../../config/logger');
 
 class ChatbotSearchService {
   /**
-   * Search bank in PostgreSQL `banks` table dynamically
+   * Search bank in PostgreSQL `banks` table dynamically (with LIKE and pg_trgm fuzzy matching)
    */
   async searchBank(bankTerm) {
     try {
@@ -16,7 +16,24 @@ class ChatbotSearchService {
          LIMIT 1`,
         [`%${cleanTerm}%`]
       );
-      return rows[0] || null;
+      if (rows.length > 0) return rows[0];
+
+      // Similarity fuzzy match fallback for bank name or short code
+      try {
+        const { rows: fuzzyRows } = await query(
+          `SELECT id, name, short_code, logo_url, status, is_active,
+                  GREATEST(similarity(LOWER(name), LOWER($1)), similarity(LOWER(short_code), LOWER($1))) AS similarity_score
+           FROM banks
+           WHERE (is_active = true OR status = 'Active')
+             AND GREATEST(similarity(LOWER(name), LOWER($1)), similarity(LOWER(short_code), LOWER($1))) > 0.40
+           ORDER BY similarity_score DESC
+           LIMIT 1`,
+          [cleanTerm]
+        );
+        return fuzzyRows[0] || null;
+      } catch {
+        return null;
+      }
     } catch (error) {
       logger.error('Error searching bank in DB:', error);
       return null;

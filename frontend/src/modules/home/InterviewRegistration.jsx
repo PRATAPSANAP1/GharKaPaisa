@@ -373,7 +373,7 @@ export default function InterviewRegistration() {
         setError(regRes.data.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit registration. Please try again.');
+      setError(err.response?.data?.message || err.message || 'Failed to submit registration. Please try again.');
     } finally {
       setLoading(false);
     }

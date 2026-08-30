@@ -263,13 +263,63 @@ router.post('/register', upload.single('resume'), async (req, res, next) => {
     const validReferredByUuid = isUuid(referred_by_employee_id) ? referred_by_employee_id.trim() : null;
     const finalHrName = hr_name || (!isUuid(referred_by_employee_id) && referred_by_employee_id ? String(referred_by_employee_id).trim() : null);
 
+    const cleanStr = (val) => (val && typeof val === 'string' && val.trim() ? val.trim() : null);
+    
+    const parseDate = (val) => {
+      if (!val || typeof val !== 'string' || !val.trim()) return null;
+      const clean = val.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+      const d = new Date(clean);
+      return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+    };
+
+    const parseNum = (val) => {
+      if (val === null || val === undefined || val === '') return null;
+      const numStr = String(val).replace(/[^0-9.]/g, '');
+      if (!numStr) return null;
+      const n = parseFloat(numStr);
+      return isNaN(n) ? null : n;
+    };
+
+    const parseIntNum = (val) => {
+      if (val === null || val === undefined || val === '') return null;
+      const numStr = String(val).replace(/[^0-9]/g, '');
+      if (!numStr) return null;
+      const n = parseInt(numStr, 10);
+      return isNaN(n) ? null : n;
+    };
+
+    const parseBool = (val, defaultVal = false) => {
+      if (val === true || val === 'true' || val === 1 || val === '1') return true;
+      if (val === false || val === 'false' || val === 0 || val === '0') return false;
+      return defaultVal;
+    };
+
     const values = [
-      reference_code, full_name, mobile_number, email_id, date_of_birth || null, current_address || null,
-      highest_qualification, passing_year ? parseInt(passing_year) : null, experience_type || 'Fresher', total_experience_years ? parseFloat(total_experience_years) : 0,
-      current_company || null, current_designation || null, last_salary_ctc ? parseFloat(last_salary_ctc) : null, expected_salary ? parseFloat(expected_salary) : null,
-      immediate_joining === 'true' || immediate_joining === true, notice_period_days ? parseInt(notice_period_days) : 0, comfortable_with_location !== 'false',
-      relevant_experience === 'true' || relevant_experience === true, how_did_you_hear || null, validReferredByUuid,
-      resume_url, resume_file_name, target_role || null, finalHrName
+      reference_code,
+      full_name.trim(),
+      mobile_number.trim(),
+      email_id.trim().toLowerCase(),
+      parseDate(date_of_birth),
+      cleanStr(current_address),
+      highest_qualification.trim(),
+      parseIntNum(passing_year),
+      experience_type || 'Fresher',
+      parseNum(total_experience_years) || 0,
+      cleanStr(current_company),
+      cleanStr(current_designation),
+      parseNum(last_salary_ctc),
+      parseNum(expected_salary),
+      parseBool(immediate_joining, true),
+      parseIntNum(notice_period_days) || 0,
+      parseBool(comfortable_with_location, true),
+      parseBool(relevant_experience, true),
+      cleanStr(how_did_you_hear),
+      validReferredByUuid,
+      resume_url,
+      resume_file_name,
+      cleanStr(target_role),
+      cleanStr(finalHrName)
     ];
 
     const { rows } = await query(insertQuery, values);
@@ -288,7 +338,7 @@ router.post('/register', upload.single('resume'), async (req, res, next) => {
   } catch (err) {
     console.error('[CAREER CANDIDATE REGISTER ERROR]:', err);
     logger.error('[CAREER CANDIDATE REGISTER ERROR]:', err);
-    next(err);
+    res.status(500).json({ success: false, message: err.message || 'Registration error occurred. Please try again.' });
   }
 });
 

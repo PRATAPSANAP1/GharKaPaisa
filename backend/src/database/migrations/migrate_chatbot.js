@@ -7,6 +7,13 @@ const logger = require('../../config/logger');
  */
 async function migrateChatbotSystem() {
   try {
+    // 0. Ensure pg_trgm extension for fuzzy search
+    try {
+      await query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);
+    } catch (e) {
+      logger.warn('pg_trgm extension create warning:', e.message);
+    }
+
     // 1. Create chatbot_conversations table
     await query(`
       CREATE TABLE IF NOT EXISTS chatbot_conversations (

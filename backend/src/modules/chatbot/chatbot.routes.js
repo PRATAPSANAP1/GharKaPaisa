@@ -5,13 +5,24 @@ const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 const roleCheck = require('../../middleware/authorization/role.middleware');
 const logger = require('../../config/logger');
 
-// Public routes (no authentication required)
-router.post('/message', chatbotController.sendMessage.bind(chatbotController));
-router.post('/action', chatbotController.handleAction.bind(chatbotController));
-router.post('/conversation', chatbotController.createConversation.bind(chatbotController));
-router.post('/reset', chatbotController.resetConversation.bind(chatbotController));
-router.get('/search', chatbotController.searchKnowledgeBase.bind(chatbotController));
-router.get('/faq/:category', chatbotController.getFAQ.bind(chatbotController));
+// Optional JWT middleware helper to hydrate req.user if Bearer token is provided
+const optionalJwt = (req, res, next) => {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+    return jwtAuth(req, res, (err) => {
+      // If token verification fails, continue as unauthenticated PUBLIC visitor
+      next();
+    });
+  }
+  next();
+};
+
+// Public routes (with optional JWT context hydration)
+router.post('/message', optionalJwt, chatbotController.sendMessage.bind(chatbotController));
+router.post('/action', optionalJwt, chatbotController.handleAction.bind(chatbotController));
+router.post('/conversation', optionalJwt, chatbotController.createConversation.bind(chatbotController));
+router.post('/reset', optionalJwt, chatbotController.resetConversation.bind(chatbotController));
+router.get('/search', optionalJwt, chatbotController.searchKnowledgeBase.bind(chatbotController));
+router.get('/faq/:category', optionalJwt, chatbotController.getFAQ.bind(chatbotController));
 
 // Protected routes (authentication required)
 router.use(jwtAuth);

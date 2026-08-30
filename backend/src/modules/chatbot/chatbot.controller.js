@@ -13,28 +13,18 @@ class ChatbotController {
    */
   async sendMessage(req, res, next) {
     try {
-      const { message, session_id } = req.body;
-      const userId = req.user?.id || null;
-      const userRole = req.user?.role || 'PUBLIC';
+      const { message } = req.body;
 
-      if (!message || !session_id) {
+      if (message === undefined) {
         return res.status(400).json({
           success: false,
-          message: 'Message and session_id are required'
+          message: 'Message field is required'
         });
       }
 
-      const response = await chatbotService.processMessage(
-        session_id,
-        message,
-        userId,
-        userRole
-      );
+      const response = await chatbotService.processMessage(req);
 
-      res.json({
-        success: true,
-        data: response
-      });
+      res.json(response);
     } catch (error) {
       logger.error('Error in sendMessage:', error);
       next(error);
