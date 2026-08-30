@@ -262,6 +262,9 @@ export default function InterviewRegistration() {
       setEmailOtpTimer(60);
       setInfoMsg('Verification OTP dispatched to your Email address!');
     } catch (err) {
+      try {
+        await axios.post('/api/v1/auth/send-registration-otp', { email: em });
+      } catch (authErr) {}
       setEmailOtpSent(true);
       setEmailOtpTimer(60);
       setInfoMsg('Verification OTP dispatched to your Email address!');
@@ -281,6 +284,7 @@ export default function InterviewRegistration() {
     setError('');
     setInfoMsg('');
     setEmailVerifyLoading(true);
+
     try {
       const res = await axios.post('/api/v1/public/careers/verify-otp', {
         email_id: formData.email_id.trim(),
@@ -291,9 +295,25 @@ export default function InterviewRegistration() {
         setEmailPreVerified(true);
         setEmailOtpSent(false);
         setInfoMsg('✓ Email address successfully verified!');
+        setEmailVerifyLoading(false);
+        return;
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid Email OTP. Please try again.');
+      try {
+        const authRes = await axios.post('/api/v1/auth/verify-registration-otp', {
+          email: formData.email_id.trim(),
+          otp: String(code).trim()
+        });
+        if (authRes.data?.success) {
+          setEmailPreVerified(true);
+          setEmailOtpSent(false);
+          setInfoMsg('✓ Email address successfully verified!');
+          setEmailVerifyLoading(false);
+          return;
+        }
+      } catch (authErr) {
+        setError(err.response?.data?.message || authErr.response?.data?.message || 'Invalid Email OTP. Please try again.');
+      }
     } finally {
       setEmailVerifyLoading(false);
     }

@@ -88,21 +88,26 @@ router.post('/verify-email', async (req, res, next) => {
     if (!email_id || !email_id.includes('@')) {
       return res.status(400).json({ success: false, message: 'Valid email address required' });
     }
+    const cleanEmail = email_id.trim().toLowerCase();
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = hashOtp(otp);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     try {
-      await query(`DELETE FROM otp_verifications WHERE identity = $1`, [`email_${email_id}`]);
+      await query(`DELETE FROM otp_verifications WHERE identity = $1 OR identity = $2`, [`email_${cleanEmail}`, cleanEmail]);
       await query(`
         INSERT INTO otp_verifications (identity, otp_hash, expires_at)
         VALUES ($1, $2, $3)
-      `, [`email_${email_id}`, otpHash, expiresAt]);
+      `, [`email_${cleanEmail}`, otpHash, expiresAt]);
+      await query(`
+        INSERT INTO otp_verifications (identity, otp_hash, expires_at)
+        VALUES ($1, $2, $3)
+      `, [cleanEmail, otpHash, expiresAt]);
     } catch (dbErr) {
       logger.warn(`OTP DB insert email warning: ${dbErr.message}`);
     }
     
-    await sendOtpEmail(email_id, otp).catch(err => {
+    await sendOtpEmail(cleanEmail, otp).catch(err => {
       logger.warn(`Email OTP send failed: ${err.message}`);
     });
 
@@ -122,26 +127,27 @@ router.post('/verify-otp', async (req, res, next) => {
 
     const mOtp = mobile_otp || otp;
     const eOtp = email_otp || otp;
+    const cleanEmail = email_id ? String(email_id).trim().toLowerCase() : '';
 
     if (mOtp === '123456' || eOtp === '123456' || mOtp === '1234' || eOtp === '1234' || otp === '123456') {
       verified = true;
     } else {
       try {
-        if (type === 'mobile' || (mobile_number && mOtp && !email_id)) {
+        if (type === 'mobile' || (mobile_number && mOtp && !cleanEmail)) {
           const mHash = hashOtp(mOtp);
           const { rows } = await query(
-            `SELECT * FROM otp_verifications WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()`,
-            [`mobile_${mobile_number}`, mHash]
+            `SELECT * FROM otp_verifications WHERE (identity = $1 OR identity = $2) AND otp_hash = $3 AND expires_at > NOW()`,
+            [`mobile_${mobile_number}`, mobile_number, mHash]
           );
           if (rows.length > 0) {
             verified = true;
             await query(`DELETE FROM otp_verifications WHERE id = $1`, [rows[0].id]);
           }
-        } else if (type === 'email' || (email_id && eOtp && !mobile_number)) {
+        } else if (type === 'email' || (cleanEmail && eOtp && !mobile_number)) {
           const eHash = hashOtp(eOtp);
           const { rows } = await query(
-            `SELECT * FROM otp_verifications WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()`,
-            [`email_${email_id}`, eHash]
+            `SELECT * FROM otp_verifications WHERE (identity = $1 OR identity = $2) AND otp_hash = $3 AND expires_at > NOW()`,
+            [`email_${cleanEmail}`, cleanEmail, eHash]
           );
           if (rows.length > 0) {
             verified = true;
@@ -151,8 +157,8 @@ router.post('/verify-otp', async (req, res, next) => {
           const mHash = mOtp ? hashOtp(mOtp) : '';
           const eHash = eOtp ? hashOtp(eOtp) : '';
           const { rows } = await query(
-            `SELECT * FROM otp_verifications WHERE ((identity = $1 AND otp_hash = $2) OR (identity = $3 AND otp_hash = $4)) AND expires_at > NOW()`,
-            [`mobile_${mobile_number}`, mHash, `email_${email_id}`, eHash]
+            `SELECT * FROM otp_verifications WHERE ((identity = $1 OR identity = $2 AND otp_hash = $3) OR (identity = $4 OR identity = $5 AND otp_hash = $6)) AND expires_at > NOW()`,
+            [`mobile_${mobile_number}`, mobile_number, mHash, `email_${cleanEmail}`, cleanEmail, eHash]
           );
           if (rows.length > 0) {
             verified = true;

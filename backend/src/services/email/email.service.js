@@ -20,11 +20,7 @@ if (accessKeyId && secretAccessKey) {
 }
 
 const ses = new SESClient(sesOptions);
-const FROM_EMAIL = process.env.SES_FROM_EMAIL || process.env.MAIL_FROM;
-
-if (!FROM_EMAIL || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(FROM_EMAIL)) {
-  throw new Error("SES_FROM_EMAIL or MAIL_FROM must contain a valid verified sender address");
-}
+const FROM_EMAIL = process.env.SES_FROM_EMAIL || process.env.MAIL_FROM || "noreply@gharkapaisa.in";
 
 /**
  * Send a generic email via SES
