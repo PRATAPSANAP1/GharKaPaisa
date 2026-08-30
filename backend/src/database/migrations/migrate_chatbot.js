@@ -7,8 +7,6 @@ const logger = require('../../config/logger');
  */
 async function migrateChatbotSystem() {
   try {
-    logger.info('Starting Chatbot System migration...');
-
     // 1. Create chatbot_conversations table
     await query(`
       CREATE TABLE IF NOT EXISTS chatbot_conversations (
@@ -24,7 +22,6 @@ async function migrateChatbotSystem() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    logger.info('✅ Created chatbot_conversations table');
 
     // 2. Create chatbot_messages table
     await query(`
@@ -40,7 +37,6 @@ async function migrateChatbotSystem() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    logger.info('✅ Created chatbot_messages table');
 
     // 3. Create chatbot_intents table
     await query(`
@@ -58,7 +54,6 @@ async function migrateChatbotSystem() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    logger.info('✅ Created chatbot_intents table');
 
     // 4. Create chatbot_analytics table
     await query(`
@@ -75,7 +70,6 @@ async function migrateChatbotSystem() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    logger.info('✅ Created chatbot_analytics table');
 
     // 5. Create chatbot_handoffs table
     await query(`
@@ -90,7 +84,6 @@ async function migrateChatbotSystem() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    logger.info('✅ Created chatbot_handoffs table');
 
     // 6. Create indexes for better performance
     await query(`
@@ -99,21 +92,18 @@ async function migrateChatbotSystem() {
       CREATE INDEX IF NOT EXISTS idx_chatbot_conversations_status ON chatbot_conversations(status);
       CREATE INDEX IF NOT EXISTS idx_chatbot_conversations_user_role ON chatbot_conversations(user_role);
     `);
-    logger.info('✅ Created indexes for chatbot_conversations');
 
     await query(`
       CREATE INDEX IF NOT EXISTS idx_chatbot_messages_conversation_id ON chatbot_messages(conversation_id);
       CREATE INDEX IF NOT EXISTS idx_chatbot_messages_created_at ON chatbot_messages(created_at);
       CREATE INDEX IF NOT EXISTS idx_chatbot_messages_intent ON chatbot_messages(intent);
     `);
-    logger.info('✅ Created indexes for chatbot_messages');
 
     await query(`
       CREATE INDEX IF NOT EXISTS idx_chatbot_intents_intent_name ON chatbot_intents(intent_name);
       CREATE INDEX IF NOT EXISTS idx_chatbot_intents_is_active ON chatbot_intents(is_active);
       CREATE INDEX IF NOT EXISTS idx_chatbot_intents_priority ON chatbot_intents(priority);
     `);
-    logger.info('✅ Created indexes for chatbot_intents');
 
     await query(`
       CREATE INDEX IF NOT EXISTS idx_chatbot_analytics_session_id ON chatbot_analytics(session_id);
@@ -121,20 +111,15 @@ async function migrateChatbotSystem() {
       CREATE INDEX IF NOT EXISTS idx_chatbot_analytics_intent_detected ON chatbot_analytics(intent_detected);
       CREATE INDEX IF NOT EXISTS idx_chatbot_analytics_created_at ON chatbot_analytics(created_at);
     `);
-    logger.info('✅ Created indexes for chatbot_analytics');
 
     await query(`
       CREATE INDEX IF NOT EXISTS idx_chatbot_handoffs_conversation_id ON chatbot_handoffs(conversation_id);
       CREATE INDEX IF NOT EXISTS idx_chatbot_handoffs_assigned_to ON chatbot_handoffs(assigned_to);
       CREATE INDEX IF NOT EXISTS idx_chatbot_handoffs_status ON chatbot_handoffs(status);
     `);
-    logger.info('✅ Created indexes for chatbot_handoffs');
 
     // 7. Seed default intents
     await seedDefaultIntents();
-    logger.info('✅ Seeded default chatbot intents');
-
-    logger.info('✅ Chatbot System migration completed successfully');
   } catch (error) {
     logger.error('❌ Chatbot System migration failed:', error);
     throw error;
