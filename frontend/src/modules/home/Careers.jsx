@@ -36,49 +36,6 @@ export default function Careers() {
         'Ability to build and manage partner/DSA relationships.',
         'Self-motivated with a track record of achieving sales targets.'
       ]
-    },
-    {
-      id: 2,
-      title: 'Full Stack React / Node Developer',
-      department: 'Technology & Engineering',
-      location: 'Pune / Hybrid',
-      type: 'Full-time',
-      experience: '2-4 Years',
-      description: 'Build fast, responsive web applications and scalable backend APIs for fintech product distribution and partner management.',
-      requirements: [
-        'Proficiency in React.js, Node.js, Express, and PostgreSQL/MySQL.',
-        'Experience building RESTful APIs and secure authentication flows.',
-        'Knowledge of state management, UI/UX optimization, and responsive design.',
-        'Good understanding of fintech security and web performance.'
-      ]
-    },
-    {
-      id: 3,
-      title: 'Partner Relationship Manager',
-      department: 'Operations & Business Development',
-      location: 'Pune',
-      type: 'Full-time',
-      experience: '2-5 Years',
-      description: 'Onboard, train, and support financial advisors, agents, and DSAs on the GharKaPaisa partner portal.',
-      requirements: [
-        'Proven relationship management skills in banking, insurance, or fintech.',
-        'Excellent problem-solving skills to assist partners with application queries.',
-        'High energy and passion for driving field agent engagement.'
-      ]
-    },
-    {
-      id: 4,
-      title: 'Customer Support & Verification Associate',
-      department: 'Operations',
-      location: 'Pune',
-      type: 'Full-time',
-      experience: '0-2 Years',
-      description: 'Assist customer applicants with documentation, eligibility checks, status tracking, and query resolution.',
-      requirements: [
-        'Good verbal and written communication skills.',
-        'Attention to detail in reviewing customer document uploads.',
-        'Customer-first mindset and ability to multitask effectively.'
-      ]
     }
   ];
 
