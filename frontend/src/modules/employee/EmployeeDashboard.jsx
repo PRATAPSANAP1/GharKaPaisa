@@ -15,6 +15,13 @@ export default function EmployeeDashboard() {
   const [checklist, setChecklist] = useState({});
   const [stats, setStats] = useState({ total_earned: 0, pending_incentive: 0, total_leads_converted: 0 });
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -62,41 +69,41 @@ export default function EmployeeDashboard() {
   };
 
   if (loading) {
-    return <div style={{ padding: '60px', textAlign: 'center', background: C.bg, minHeight: '100vh', color: C.text }}>Loading Employee Dashboard...</div>;
+    return <div style={{ padding: '60px 16px', textAlign: 'center', background: C.bg, minHeight: '100vh', color: C.text }}>Loading Employee Dashboard...</div>;
   }
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '32px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: isMobile ? '16px 8px 60px' : '24px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
         {/* Top Header / Profile Bar */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '24px 32px', marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: C.teal, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 900 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: isMobile ? '16px' : '24px 32px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%' }}>
+            <div style={{ width: isMobile ? '44px' : '56px', height: isMobile ? '44px' : '56px', borderRadius: '50%', background: C.teal, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '18px' : '24px', fontWeight: 900, flexShrink: 0 }}>
               {employee?.full_name ? employee.full_name.charAt(0) : 'E'}
             </div>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h1 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: C.text }}>{employee?.full_name}</h1>
-                <span style={{ background: `${C.teal}15`, color: C.teal, fontSize: '12px', fontWeight: 800, padding: '2px 8px', borderRadius: '8px' }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h1 style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, margin: 0, color: C.text }}>{employee?.full_name}</h1>
+                <span style={{ background: `${C.teal}15`, color: C.teal, fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '8px' }}>
                   {employee?.employee_id}
                 </span>
               </div>
-              <p style={{ fontSize: '13px', color: C.textMid, margin: '2px 0 0 0' }}>
+              <p style={{ fontSize: isMobile ? '12px' : '13px', color: C.textMid, margin: '2px 0 0 0', wordBreak: 'break-word' }}>
                 {employee?.designation} • {employee?.department || 'Sales'} • {employee?.mobile_number}
               </p>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
             <span style={{ 
-              padding: '6px 14px', borderRadius: '14px', fontSize: '12px', fontWeight: 800,
+              padding: '6px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800,
               background: employee?.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
               color: employee?.activation_status === 'APPROVED' ? '#065F46' : '#92400E'
             }}>
               {employee?.activation_status === 'APPROVED' ? 'Active / Approved' : 'Onboarding Phase'}
             </span>
-            <button onClick={handleLogout} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button onClick={handleLogout} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 14px', borderRadius: '10px', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <FaSignOutAlt /> Sign Out
             </button>
           </div>
@@ -104,13 +111,13 @@ export default function EmployeeDashboard() {
 
         {/* Onboarding Checklist Widget if not fully activated */}
         {employee?.activation_status !== 'APPROVED' && (
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '28px', marginBottom: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: isMobile ? '16px' : '28px', marginBottom: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginBottom: '16px' }}>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 4px 0', color: C.text }}>Employee Onboarding Checklist</h2>
-                <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>Complete all required onboarding steps to unlock full sales links & incentives activation</p>
+                <h2 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, margin: '0 0 4px 0', color: C.text }}>Employee Onboarding Checklist</h2>
+                <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Complete all required onboarding steps to unlock full sales links & incentives activation</p>
               </div>
-              <div style={{ fontSize: '20px', fontWeight: 900, color: C.teal }}>
+              <div style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: C.teal }}>
                 {checklist?.overall_progress || 20}% Completed
               </div>
             </div>

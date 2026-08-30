@@ -12,6 +12,14 @@ export default function MyTeam() {
   const [designation, setDesignation] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const fetchTeam = async () => {
     setLoading(true);
     try {
@@ -20,11 +28,11 @@ export default function MyTeam() {
 
       const res = await axios.get('/api/v1/employee/team');
       if (res.data.success) {
-        setTeam(res.data.team || []);
-        setDesignation(res.data.designation || '');
+        setTeam(res.data.data || []);
+        setDesignation(res.data.employee_designation || '');
       }
     } catch (err) {
-      console.error('Fetch team error:', err);
+      console.error('Fetch employee team error:', err);
     } finally {
       setLoading(false);
     }
@@ -35,17 +43,17 @@ export default function MyTeam() {
   }, []);
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '32px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: isMobile ? '16px 8px 60px' : '32px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
-          <button onClick={() => navigate('/employee/dashboard')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '50%', width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: C.textMid }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+          <button onClick={() => navigate('/employee/dashboard')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '50%', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: C.textMid, flexShrink: 0 }}>
             <FaArrowLeft />
           </button>
           <div>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hierarchy Control</span>
-            <h1 style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: 0 }}>My Team & Reporting Hierarchy</h1>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hierarchy Control</span>
+            <h1 style={{ fontSize: isMobile ? '18px' : '26px', fontWeight: 900, color: C.text, margin: 0 }}>My Team & Reporting Hierarchy</h1>
           </div>
         </div>
 

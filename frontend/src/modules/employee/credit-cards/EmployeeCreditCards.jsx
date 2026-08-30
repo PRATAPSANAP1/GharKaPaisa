@@ -15,6 +15,13 @@ export default function EmployeeCreditCards() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedId, setCopiedId] = useState(null);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Add Lead Modal State
   const [addLeadModalProduct, setAddLeadModalProduct] = useState(null);
@@ -79,38 +86,38 @@ export default function EmployeeCreditCards() {
   );
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '32px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: isMobile ? '16px 8px 60px' : '32px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
           <button 
             onClick={() => navigate('/employee/dashboard')}
             style={{ 
               background: C.card, border: `1px solid ${C.border}`, borderRadius: '50%', 
-              width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', color: C.textMid
+              width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: C.textMid, flexShrink: 0
             }}
           >
             <FaArrowLeft />
           </button>
           <div>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Employee Catalog
             </span>
-            <h1 style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: 0 }}>Credit Cards & Financial Products</h1>
+            <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, color: C.text, margin: 0 }}>Credit Cards & Financial Products</h1>
           </div>
         </div>
 
         {/* Search Bar */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '16px 20px', marginBottom: '28px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '12px 16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           <FaSearch style={{ color: C.textMid }} />
           <input 
             type="text" 
             placeholder="Search by card name or bank..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '15px', color: C.text }}
+            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '14px', color: C.text }}
           />
         </div>
 
@@ -120,20 +127,20 @@ export default function EmployeeCreditCards() {
         ) : filteredCards.length === 0 ? (
           <div style={{ padding: '60px', textAlign: 'center', color: C.textMid }}>No products available.</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
             {filteredCards.map((card) => (
-              <div key={card.product_id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+              <div key={card.product_id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: isMobile ? '16px' : '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', gap: '10px' }}>
                     <div>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid, textTransform: 'uppercase' }}>
                         {card.bank_name || 'Partner Bank'}
                       </span>
-                      <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '2px 0 0', color: C.text }}>{card.product_name}</h3>
+                      <h3 style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: 900, margin: '2px 0 0', color: C.text }}>{card.product_name}</h3>
                     </div>
-                    <div style={{ background: `${C.teal}15`, border: `1px solid ${C.teal}30`, padding: '6px 12px', borderRadius: '12px', textAlign: 'right' }}>
-                      <span style={{ fontSize: '10px', color: C.textMid, textTransform: 'uppercase', display: 'block', fontWeight: 800 }}>Employee Incentive</span>
-                      <strong style={{ fontSize: '16px', fontWeight: 900, color: C.teal }}>₹{card.employee_incentive}</strong>
+                    <div style={{ background: `${C.teal}15`, border: `1px solid ${C.teal}30`, padding: '4px 10px', borderRadius: '10px', textAlign: 'right', flexShrink: 0 }}>
+                      <span style={{ fontSize: '9px', color: C.textMid, textTransform: 'uppercase', display: 'block', fontWeight: 800 }}>Employee Incentive</span>
+                      <strong style={{ fontSize: '15px', fontWeight: 900, color: C.teal }}>₹{card.employee_incentive}</strong>
                     </div>
                   </div>
 

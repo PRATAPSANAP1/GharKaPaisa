@@ -39,7 +39,9 @@ export default function InterviewRegistration() {
     notice_period_days: '0',
     comfortable_with_location: true,
     relevant_experience: true,
-    how_did_you_hear: 'Career Portal'
+    how_did_you_hear: 'WorkIndia / Job Portal',
+    hr_name: '',
+    target_role: 'Financial Sales Executive'
   });
 
   const [resumeFile, setResumeFile] = useState(null);
@@ -66,11 +68,27 @@ export default function InterviewRegistration() {
       return;
     }
 
+    if (formData.how_did_you_hear === 'Employee Reference' && !formData.hr_name) {
+      setError('Please enter the Referring Employee Name / ID.');
+      return;
+    }
+
+    if (formData.how_did_you_hear === 'Other' && !formData.hr_name) {
+      setError('Please enter the HR Name / Reference Details.');
+      return;
+    }
+
+    if (!resumeFile) {
+      setError('Resume / CV file is required. Please upload your Resume before proceeding.');
+      return;
+    }
+
     setLoading(true);
     try {
       // Send Mobile & Email OTP
       await axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: formData.mobile_number });
-      await axios.post('/api/v1/public/careers/verify-email', { email_id: formData.email_id });
+      await axios.post('/api/v1/public/careers/verify-email', { email_id: formData.email_id }).catch(() => {});
+      
       setMobileOtpSent(true);
       setEmailOtpSent(true);
       setStep(2);
@@ -84,12 +102,18 @@ export default function InterviewRegistration() {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError('');
+    const enteredOtp = otpMobile || otpEmail;
+    if (!enteredOtp) {
+      setError('Please enter the 6-digit OTP.');
+      return;
+    }
+
     setLoading(true);
     try {
       const verifyRes = await axios.post('/api/v1/public/careers/verify-otp', {
         mobile_number: formData.mobile_number,
         email_id: formData.email_id,
-        otp: otpMobile || otpEmail || '123456'
+        otp: enteredOtp
       });
 
       if (verifyRes.data.success) {
@@ -214,7 +238,7 @@ export default function InterviewRegistration() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Target Job Role *</label>
-                <select name="target_role" value={formData.target_role || 'Financial Sales Executive'} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
+                <select name="target_role" value={formData.target_role} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
                   <option value="Financial Sales Executive">Financial Sales Executive</option>
                   <option value="Credit Card Specialist">Credit Card Specialist</option>
                   <option value="Team Leader">Team Leader (TL)</option>
@@ -323,11 +347,37 @@ export default function InterviewRegistration() {
                   </label>
                 ))}
               </div>
+
+              {/* Conditional Referring Employee / HR Name field */}
+              {(formData.how_did_you_hear === 'Other' || formData.how_did_you_hear === 'Employee Reference') && (
+                <div style={{ marginTop: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
+                    {formData.how_did_you_hear === 'Employee Reference' ? 'Referring Employee Name / Employee ID *' : 'HR Name / Reference Details *'}
+                  </label>
+                  <input 
+                    type="text" 
+                    name="hr_name" 
+                    required
+                    value={formData.hr_name} 
+                    onChange={handleInputChange} 
+                    placeholder={formData.how_did_you_hear === 'Employee Reference' ? 'Enter Referring Employee Name or Employee ID (e.g. Rahul Sharma / GKP1002)' : 'Enter HR Name or how you heard about this job'} 
+                    style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} 
+                  />
+                </div>
+              )}
             </div>
 
             <div style={{ marginBottom: '28px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Resume / CV Upload (PDF / DOCX)</label>
-              <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} style={{ width: '100%', padding: '10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
+                Resume / CV Upload (PDF / DOCX) *
+              </label>
+              <input 
+                type="file" 
+                required 
+                accept=".pdf,.doc,.docx" 
+                onChange={handleFileChange} 
+                style={{ width: '100%', padding: '10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} 
+              />
             </div>
 
             <button type="submit" disabled={loading} style={{ background: C.employeePrimary || C.teal || '#0F766E', color: '#fff', border: 'none', padding: '14px 28px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, cursor: 'pointer', width: '100%', boxShadow: '0 4px 14px rgba(15,118,110,0.3)' }}>

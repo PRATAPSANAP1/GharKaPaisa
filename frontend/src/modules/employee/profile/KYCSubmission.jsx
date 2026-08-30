@@ -19,6 +19,13 @@ export default function KYCSubmission() {
 
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,11 +65,11 @@ export default function KYCSubmission() {
 
   if (submitted) {
     return (
-      <div style={{ background: C.bg, minHeight: '100vh', padding: '60px 24px', fontFamily: "'Inter', sans-serif", color: C.text }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto', background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '40px', textAlign: 'center' }}>
-          <FaCheckCircle size={56} style={{ color: C.teal, marginBottom: '16px' }} />
-          <h2 style={{ fontSize: '24px', fontWeight: 900, margin: '0 0 8px 0' }}>KYC Documents Submitted!</h2>
-          <p style={{ fontSize: '14px', color: C.textMid, margin: '0 0 24px 0' }}>
+      <div style={{ background: C.bg, minHeight: '100vh', padding: isMobile ? '32px 16px' : '60px 24px', fontFamily: "'Inter', sans-serif", color: C.text }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: isMobile ? '24px 16px' : '40px', textAlign: 'center' }}>
+          <FaCheckCircle size={48} style={{ color: C.teal, marginBottom: '16px' }} />
+          <h2 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, margin: '0 0 8px 0' }}>KYC Documents Submitted!</h2>
+          <p style={{ fontSize: '13px', color: C.textMid, margin: '0 0 24px 0' }}>
             Your PAN, Aadhaar, and Bank proof documents have been submitted to HR & Super Admin for verification.
           </p>
           <button onClick={() => navigate('/employee/dashboard')} style={{ background: C.teal, color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer' }}>
@@ -74,21 +81,21 @@ export default function KYCSubmission() {
   }
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '32px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: isMobile ? '16px 8px 60px' : '32px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
       <div style={{ maxWidth: '800px', margin: '0 auto' }}>
         
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
-          <button onClick={() => navigate('/employee/dashboard')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '50%', width: '42px', height: '42px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: C.textMid }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+          <button onClick={() => navigate('/employee/dashboard')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '50%', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: C.textMid, flexShrink: 0 }}>
             <FaArrowLeft />
           </button>
           <div>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Onboarding Step 3</span>
-            <h1 style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: 0 }}>Document Upload & KYC Verification</h1>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Onboarding Step 3</span>
+            <h1 style={{ fontSize: isMobile ? '18px' : '26px', fontWeight: 900, color: C.text, margin: 0 }}>Document Upload & KYC Verification</h1>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+        <form onSubmit={handleSubmit} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: isMobile ? '20px 16px' : '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
           
           <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.teal, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FaIdCard /> PAN Card Verification
