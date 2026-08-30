@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../contexts/ThemeContext';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 import PartnerMobileBottomNav from '../components/PartnerMobileBottomNav';
+import Chatbot from '../components/Chatbot/Chatbot';
 import {
   MdDashboard, MdStorefront, MdCreditCard, MdLeaderboard,
   MdPeople, MdVerifiedUser, MdAccountCircle, MdFolder,
@@ -782,6 +783,7 @@ export default function PartnerLayout() {
         }}>
           <AnnouncementBanner />
           <Outlet />
+          <Chatbot />
         </div>
       </main>
 

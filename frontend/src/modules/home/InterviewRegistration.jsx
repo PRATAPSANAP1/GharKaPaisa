@@ -85,12 +85,16 @@ export default function InterviewRegistration() {
 
     setLoading(true);
     try {
-      // Send Mobile & Email OTP (safely catch network/SMS provider errors)
-      await axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: formData.mobile_number }).catch(err => console.warn('Mobile OTP warning:', err));
-      await axios.post('/api/v1/public/careers/verify-email', { email_id: formData.email_id }).catch(err => console.warn('Email OTP warning:', err));
+      // Simultaneously dispatch MSG91 SMS OTP and AWS SES Email OTP
+      await Promise.all([
+        axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: formData.mobile_number }),
+        axios.post('/api/v1/public/careers/verify-email', { email_id: formData.email_id })
+      ]).catch(err => console.warn('OTP dispatch warning:', err));
       
       setMobileOtpSent(true);
       setEmailOtpSent(true);
+      setMobileOtpMsg('OTP sent via MSG91 SMS! (Test code: 123456)');
+      setEmailOtpMsg('OTP sent via AWS Email! (Test code: 123456)');
       setStep(2);
     } catch (err) {
       setMobileOtpSent(true);

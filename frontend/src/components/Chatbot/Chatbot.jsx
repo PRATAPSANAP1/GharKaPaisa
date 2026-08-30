@@ -3,16 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { 
   FaComments, FaPaperPlane, FaTimes, FaRedo, 
-  FaRobot, FaUser, FaChevronRight, FaRegSmile 
+  FaRobot, FaUser, FaChevronRight, FaRegSmile,
+  FaCreditCard, FaHandHoldingUsd, FaChartLine, FaHeadset,
+  FaShoppingBag, FaPlane, FaStar, FaHome, FaBriefcase,
+  FaInfoCircle, FaRupeeSign, FaWallet, FaUsers, FaUserPlus,
+  FaSignInAlt
 } from 'react-icons/fa';
 import './Chatbot.css';
 import chatbotIcon from '../../assets/logos/chatbot-icon.png';
 
 const DEFAULT_CHIPS = [
-  { label: '💳 Find Credit Card', action: 'cards_start' },
-  { label: '💰 Apply for Loan', action: 'loans_start' },
-  { label: '📈 Partner Earnings', action: 'partner_start' },
-  { label: '💬 Contact Support', action: 'support_start' }
+  { label: 'Find Credit Card', action: 'cards_start', icon: <FaCreditCard /> },
+  { label: 'Apply for Loan', action: 'loans_start', icon: <FaHandHoldingUsd /> },
+  { label: 'Partner Earnings', action: 'partner_start', icon: <FaChartLine /> },
+  { label: 'Contact Support', action: 'support_start', icon: <FaHeadset /> }
 ];
 
 export default function Chatbot() {
@@ -70,11 +74,11 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "Awesome! Let's find your perfect credit card. Which category interests you the most?",
           chips: [
-            { label: '💸 Lifetime Free Cards', action: 'cards_ltf' },
-            { label: '🛍️ Cashback & Shopping', action: 'cards_cashback' },
-            { label: '✈️ Travel & Transit', action: 'cards_travel' },
-            { label: '👑 Rewards & Lifestyle', action: 'cards_rewards' },
-            { label: '🔙 Main Menu', action: 'main_menu' }
+            { label: 'Lifetime Free Cards', action: 'cards_ltf', icon: <FaCreditCard /> },
+            { label: 'Cashback & Shopping', action: 'cards_cashback', icon: <FaShoppingBag /> },
+            { label: 'Travel & Transit', action: 'cards_travel', icon: <FaPlane /> },
+            { label: 'Rewards & Lifestyle', action: 'cards_rewards', icon: <FaStar /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         }));
         break;
@@ -83,9 +87,9 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "We offer multiple Lifetime Free (LTF) credit cards with ₹0 annual fee and ₹0 joining fee. You can view bank options like Axis Bank, HDFC Pixel, or Kotak. You can read the benefits details and apply online.",
           chips: [
-            { label: 'Explore LTF Cards Now', action: 'go_ltf' },
-            { label: '🔙 Card Categories', action: 'cards_start' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'Explore LTF Cards Now', action: 'go_ltf', icon: <FaCreditCard /> },
+            { label: 'Card Categories', action: 'cards_start', icon: <FaCreditCard /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         }));
         break;
@@ -94,9 +98,9 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "For shopping enthusiasts, our cashback cards offer up to 5% cashback on top e-commerce websites like Flipkart and Amazon (Axis Flipkart, ICICI Amazon Pay). They are great for saving money on everyday purchases.",
           chips: [
-            { label: 'View Credit Cards list', action: 'go_cards' },
-            { label: '🔙 Card Categories', action: 'cards_start' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'View Credit Cards list', action: 'go_cards', icon: <FaCreditCard /> },
+            { label: 'Card Categories', action: 'cards_start', icon: <FaCreditCard /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         }));
         break;
@@ -105,9 +109,9 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "If you travel frequently, co-branded travel cards give you complimentary lounge access, air miles, and hotel points to save on flights and transit.",
           chips: [
-            { label: 'View Travel Benefits', action: 'go_travel' },
-            { label: '🔙 Card Categories', action: 'cards_start' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'View Travel Benefits', action: 'go_travel', icon: <FaPlane /> },
+            { label: 'Card Categories', action: 'cards_start', icon: <FaCreditCard /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         }));
         break;
@@ -116,8 +120,8 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "Our premium reward and lifestyle cards reward your dining, movies, and utility spends with high multipliers, which you can redeem for vouchers or items.",
           chips: [
-            { label: 'Compare All Cards', action: 'go_cards' },
-            { label: '🔙 Card Categories', action: 'cards_start' }
+            { label: 'Compare All Cards', action: 'go_cards', icon: <FaCreditCard /> },
+            { label: 'Card Categories', action: 'cards_start', icon: <FaCreditCard /> }
           ]
         }));
         break;
@@ -126,10 +130,10 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "We offer quick loans via our top banking partners. What kind of loan are you looking for?",
           chips: [
-            { label: '🙋 Personal Loan', action: 'loans_personal' },
-            { label: '💼 Business Loan', action: 'loans_business' },
-            { label: '🏠 Home Loan / LAP', action: 'loans_home' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'Personal Loan', action: 'loans_personal', icon: <FaUser /> },
+            { label: 'Business Loan', action: 'loans_business', icon: <FaBriefcase /> },
+            { label: 'Home Loan / LAP', action: 'loans_home', icon: <FaHome /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         }));
         break;
@@ -138,8 +142,8 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "Personal loans have minimum documentation and quick approval, starting from 10.5% interest. You can check your eligibility and submit details on our Loans page.",
           chips: [
-            { label: 'Check Loan Options', action: 'go_loans' },
-            { label: '🔙 Loan Options', action: 'loans_start' }
+            { label: 'Check Loan Options', action: 'go_loans', icon: <FaHandHoldingUsd /> },
+            { label: 'Loan Options', action: 'loans_start', icon: <FaHandHoldingUsd /> }
           ]
         }));
         break;
@@ -148,8 +152,8 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "Expand your business with unsecured lines of credit up to ₹50 Lakhs. Rates start from 13.5%.",
           chips: [
-            { label: 'Go to Loans Page', action: 'go_loans' },
-            { label: '🔙 Loan Options', action: 'loans_start' }
+            { label: 'Go to Loans Page', action: 'go_loans', icon: <FaHandHoldingUsd /> },
+            { label: 'Loan Options', action: 'loans_start', icon: <FaHandHoldingUsd /> }
           ]
         }));
         break;
@@ -158,8 +162,8 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "Get home loans or Loans Against Property (LAP) starting from 8.4% interest rate with flexible tenure options.",
           chips: [
-            { label: 'Go to Loans Page', action: 'go_loans' },
-            { label: '🔙 Loan Options', action: 'loans_start' }
+            { label: 'Go to Loans Page', action: 'go_loans', icon: <FaHandHoldingUsd /> },
+            { label: 'Loan Options', action: 'loans_start', icon: <FaHandHoldingUsd /> }
           ]
         }));
         break;
@@ -168,11 +172,11 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "As a GharKaPaisa Partner, you can submit leads for financial products and earn huge commission payouts on every approval. How can I help you?",
           chips: [
-            { label: '💡 How to Join?', action: 'partner_join' },
-            { label: '💰 Commission Rates', action: 'partner_rates' },
-            { label: '💳 Wallet & Payouts', action: 'partner_payouts' },
-            { label: '👥 Referral Network', action: 'partner_referral' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'How to Join?', action: 'partner_join', icon: <FaInfoCircle /> },
+            { label: 'Commission Rates', action: 'partner_rates', icon: <FaRupeeSign /> },
+            { label: 'Wallet & Payouts', action: 'partner_payouts', icon: <FaWallet /> },
+            { label: 'Referral Network', action: 'partner_referral', icon: <FaUsers /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         }));
         break;
@@ -181,8 +185,8 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "It is free and fast! 1. Go to register. 2. Sign up with your mobile number. 3. Upload KYC files (PAN, Aadhaar) inside your panel. 4. Share links and start earning!",
           chips: [
-            { label: 'Register Now', action: 'go_register' },
-            { label: 'Login to Account', action: 'go_login' }
+            { label: 'Register Now', action: 'go_register', icon: <FaUserPlus /> },
+            { label: 'Login to Account', action: 'go_login', icon: <FaSignInAlt /> }
           ]
         }));
         break;
@@ -191,8 +195,8 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "Partners earn up to ₹3,500 per credit card approval and up to 3.5% payout on loan disbursements. Commission slabs are tier-based so you earn more as your monthly volume grows.",
           chips: [
-            { label: 'Become a Partner', action: 'go_register' },
-            { label: '🔙 Partner Info', action: 'partner_start' }
+            { label: 'Become a Partner', action: 'go_register', icon: <FaUserPlus /> },
+            { label: 'Partner Info', action: 'partner_start', icon: <FaInfoCircle /> }
           ]
         }));
         break;
@@ -201,8 +205,8 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "Your approved lead payouts are credited directly to your GKP Wallet. You can withdraw withdrawable funds instantly to your registered bank account or UPI ID with one click.",
           chips: [
-            { label: 'Login & Check Wallet', action: 'go_login' },
-            { label: '🔙 Partner Info', action: 'partner_start' }
+            { label: 'Login & Check Wallet', action: 'go_login', icon: <FaSignInAlt /> },
+            { label: 'Partner Info', action: 'partner_start', icon: <FaInfoCircle /> }
           ]
         }));
         break;
@@ -211,8 +215,8 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "Build your network and earn passive income! You get commissions on Level 1 (direct), Level 2, and Level 3 sub-agents' earnings. Check the Team Referral tab in your Dashboard.",
           chips: [
-            { label: 'Register as Agent', action: 'go_register' },
-            { label: '🔙 Partner Info', action: 'partner_start' }
+            { label: 'Register as Agent', action: 'go_register', icon: <FaUserPlus /> },
+            { label: 'Partner Info', action: 'partner_start', icon: <FaInfoCircle /> }
           ]
         }));
         break;
@@ -221,8 +225,8 @@ export default function Chatbot() {
         simulateBotResponse(label, () => ({
           text: "Our dedicated support team is available Mon-Sat, 10 AM to 7 PM. You can call us, send a message on WhatsApp, or email us at support@gharkapaisa.com.",
           chips: [
-            { label: 'Go to Contact Page', action: 'go_contact' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'Go to Contact Page', action: 'go_contact', icon: <FaHeadset /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         }));
         break;
@@ -299,9 +303,9 @@ export default function Chatbot() {
         return {
           text: "GharKaPaisa lists multiple premium credit cards from SBI, ICICI, HDFC, Axis, and Kotak. Which category is your interest?",
           chips: [
-            { label: '💳 Find Credit Card', action: 'cards_start' },
-            { label: '💸 Lifetime Free Cards', action: 'cards_ltf' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'Find Credit Card', action: 'cards_start', icon: <FaCreditCard /> },
+            { label: 'Lifetime Free Cards', action: 'cards_ltf', icon: <FaCreditCard /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         };
       }
@@ -310,9 +314,9 @@ export default function Chatbot() {
         return {
           text: "We assist with Personal Loans, Business Loans, and Home Loans from major lending partners. Which one do you want to explore?",
           chips: [
-            { label: '💰 Apply for Loan', action: 'loans_start' },
-            { label: '🙋 Personal Loan', action: 'loans_personal' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'Apply for Loan', action: 'loans_start', icon: <FaHandHoldingUsd /> },
+            { label: 'Personal Loan', action: 'loans_personal', icon: <FaUser /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         };
       }
@@ -321,9 +325,9 @@ export default function Chatbot() {
         return {
           text: "Earn high payouts by submitting customer applications as a Partner! Grow your Level 1, 2, and 3 referral network.",
           chips: [
-            { label: '📈 Partner Earnings', action: 'partner_start' },
-            { label: '💡 How to Join?', action: 'partner_join' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'Partner Earnings', action: 'partner_start', icon: <FaChartLine /> },
+            { label: 'How to Join?', action: 'partner_join', icon: <FaInfoCircle /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         };
       }
@@ -332,8 +336,8 @@ export default function Chatbot() {
         return {
           text: "To clear your KYC verification and withdraw earnings, upload your Aadhaar Card (front & back), PAN Card, and a cancelled check photo inside the KYC panel.",
           chips: [
-            { label: 'Login to KYC', action: 'go_login' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'Login to KYC', action: 'go_login', icon: <FaSignInAlt /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         };
       }
@@ -342,8 +346,8 @@ export default function Chatbot() {
         return {
           text: "A CIBIL score of 750 or higher increases your chances of credit card and loan approval with better interest rates.",
           chips: [
-            { label: '💰 Apply for Loan', action: 'loans_start' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'Apply for Loan', action: 'loans_start', icon: <FaHandHoldingUsd /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         };
       }
@@ -352,7 +356,7 @@ export default function Chatbot() {
         return {
           text: "We support quick mobile recharge, DTH payments, electricity bill payments, loan repayments, and Fastag recharges via the Services tab.",
           chips: [
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         };
       }
@@ -361,8 +365,8 @@ export default function Chatbot() {
         return {
           text: "You can write to us at support@gharkapaisa.com or call 1800-GKP-HELP. We will be happy to help you!",
           chips: [
-            { label: '💬 Contact Support', action: 'support_start' },
-            { label: '🏡 Main Menu', action: 'main_menu' }
+            { label: 'Contact Support', action: 'support_start', icon: <FaHeadset /> },
+            { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
           ]
         };
       }
@@ -476,6 +480,7 @@ export default function Chatbot() {
                             hoverBackground: C.primary
                           }}
                         >
+                          {chip.icon && <span style={{ marginRight: '6px' }}>{chip.icon}</span>}
                           {chip.label}
                         </button>
                       ))}
