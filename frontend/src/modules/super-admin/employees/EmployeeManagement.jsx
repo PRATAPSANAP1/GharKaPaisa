@@ -172,33 +172,6 @@ export default function EmployeeManagement() {
           ))}
         </div>
 
-        {/* Onboarding Funnel Progress Bar */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px', marginBottom: '24px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: C.textMid, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            🔄 Employee Onboarding Pipeline Stage Tracker
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-            {[
-              { title: 'Candidate', status: '✅ Registered' },
-              { title: 'Interview', status: '✅ Selected' },
-              { title: 'Employee ID', status: '✅ Generated' },
-              { title: 'Joining Form', status: '📋 Submitted' },
-              { title: 'Terms & Video', status: '🎥 Verified' },
-              { title: 'KYC Docs', status: '🪪 Reviewed' },
-              { title: 'Product Links', status: '🔗 Assigned' },
-              { title: 'Active Employee', status: '🚀 Active' }
-            ].map((step, idx) => (
-              <React.Fragment key={idx}>
-                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 12px', textAlign: 'center', flex: 1, minWidth: '110px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>{step.title}</div>
-                  <div style={{ fontSize: '12px', fontWeight: 900, color: C.teal }}>{step.status}</div>
-                </div>
-                {idx < 7 && <span style={{ color: C.textMid, fontWeight: 900 }}>➔</span>}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px' }}>
           {[
@@ -333,7 +306,7 @@ export default function EmployeeManagement() {
         {/* Hierarchy Tab View */}
         {activeTab === 'hierarchy' && (
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px' }}>🌳 Employee Reporting Hierarchy Architecture</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><FaSitemap style={{ color: C.teal }} /> Employee Reporting Hierarchy Architecture</h2>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
               {managersList.length === 0 ? (
@@ -388,7 +361,7 @@ export default function EmployeeManagement() {
         {/* Product Links Tab View */}
         {activeTab === 'links' && (
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '8px' }}>🏦 Employee-Specific Product Referral Links & Fixed Incentives</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}><FaUniversity style={{ color: C.teal }} /> Employee-Specific Product Referral Links & Fixed Incentives</h2>
             <p style={{ fontSize: '13px', color: C.textMid, marginBottom: '20px' }}>
               Unlike Partner Commission URLs, employee referral links are isolated per employee record using <code>employee_product_links</code>.
             </p>
@@ -474,7 +447,7 @@ export default function EmployeeManagement() {
 
                   {/* Onboarding Checklist Matrix */}
                   <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: 900, marginBottom: '12px', color: C.text }}>📋 Onboarding & Verification Status Checklist</h3>
+                    <h3 style={{ fontSize: '14px', fontWeight: 900, marginBottom: '12px', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}><FaCheckCircle style={{ color: C.teal }} /> Onboarding & Verification Status Checklist</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
                       {[
                         { label: 'Interview Completed', status: emp360Data.checklist?.interview_completed },
@@ -495,7 +468,7 @@ export default function EmployeeManagement() {
 
                   {/* Uploaded Documents List */}
                   <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: 900, marginBottom: '12px', color: C.text }}>📄 Uploaded Employee Verification Documents</h3>
+                    <h3 style={{ fontSize: '14px', fontWeight: 900, marginBottom: '12px', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}><FaFileAlt style={{ color: C.teal }} /> Uploaded Employee Verification Documents</h3>
                     {emp360Data.documents?.length === 0 ? (
                       <div style={{ fontSize: '12px', color: C.textMid }}>No verification documents uploaded yet.</div>
                     ) : (
@@ -511,7 +484,7 @@ export default function EmployeeManagement() {
 
                   {/* Assigned Product Referral Links */}
                   <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: 900, marginBottom: '12px', color: C.text }}>🔗 Assigned Referral Links & Incentive Rules</h3>
+                    <h3 style={{ fontSize: '14px', fontWeight: 900, marginBottom: '12px', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}><FaLink style={{ color: C.teal }} /> Assigned Referral Links & Incentive Rules</h3>
                     {emp360Data.product_links?.length === 0 ? (
                       <div style={{ fontSize: '12px', color: C.textMid }}>No product referral links assigned to this employee.</div>
                     ) : (

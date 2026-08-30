@@ -40,6 +40,51 @@ export default function HRDashboard() {
     interview_feedback: ''
   });
 
+  // Create HR Account modal state
+  const [createHRModalOpen, setCreateHRModalOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [hrForm, setHrForm] = useState({
+    fullName: '',
+    email: '',
+    mobile: '',
+    password: '',
+    confirmPassword: '',
+    designation: 'HR Manager',
+    department: 'Human Resources'
+  });
+
+  const handleCreateHRSubmit = async (e) => {
+    e.preventDefault();
+    if (hrForm.password !== hrForm.confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+    setCreateLoading(true);
+    try {
+      const res = await axios.post('/api/v1/superadmin/create-admin', {
+        ...hrForm,
+        role: 'HR'
+      });
+      if (res.data.success) {
+        alert(`HR Account Created Successfully! User Email: ${hrForm.email}`);
+        setCreateHRModalOpen(false);
+        setHrForm({
+          fullName: '',
+          email: '',
+          mobile: '',
+          password: '',
+          confirmPassword: '',
+          designation: 'HR Manager',
+          department: 'Human Resources'
+        });
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to create HR account');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   const fetchHRData = async () => {
     setLoading(true);
     try {
@@ -107,6 +152,18 @@ export default function HRDashboard() {
             </span>
             <h1 style={{ fontSize: '28px', fontWeight: 900, color: C.text, margin: 0 }}>Candidate Acquisition & HR Overview</h1>
           </div>
+
+          <button 
+            onClick={() => setCreateHRModalOpen(true)}
+            style={{ 
+              background: C.employeePrimary || C.teal || '#0F766E', color: '#ffffff', border: 'none', 
+              padding: '12px 24px', borderRadius: '12px', fontSize: '14px', 
+              fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+              boxShadow: '0 4px 14px rgba(15,118,110,0.25)' 
+            }}
+          >
+            <FaUserPlus /> + Create HR Account
+          </button>
         </div>
 
         {/* Stats Cards Grid */}
@@ -263,6 +320,63 @@ export default function HRDashboard() {
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                   <button type="button" onClick={() => setSelectedCandModal(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '10px 20px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
                   <button type="submit" style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>Confirm Selection & Generate ID</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ── MODAL: Create HR Account ── */}
+        {createHRModalOpen && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+            <div style={{ background: C.card, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '540px', border: `1px solid ${C.border}`, boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
+                <div>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal, textTransform: 'uppercase' }}>Super Admin Operations</span>
+                  <h2 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: C.text }}>Create HR Manager Account</h2>
+                </div>
+                <button onClick={() => setCreateHRModalOpen(false)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
+              </div>
+
+              <form onSubmit={handleCreateHRSubmit}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Full Name *</label>
+                    <input type="text" required value={hrForm.fullName} onChange={(e) => setHrForm({ ...hrForm, fullName: e.target.value })} placeholder="e.g. Priya Sharma" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Email Address *</label>
+                    <input type="email" required value={hrForm.email} onChange={(e) => setHrForm({ ...hrForm, email: e.target.value })} placeholder="hr@example.com" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Mobile Number *</label>
+                    <input type="tel" required value={hrForm.mobile} onChange={(e) => setHrForm({ ...hrForm, mobile: e.target.value })} placeholder="10 Digit Mobile" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Designation *</label>
+                    <input type="text" required value={hrForm.designation} onChange={(e) => setHrForm({ ...hrForm, designation: e.target.value })} placeholder="e.g. HR Manager / Executive" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Password *</label>
+                    <input type="password" required value={hrForm.password} onChange={(e) => setHrForm({ ...hrForm, password: e.target.value })} placeholder="••••••••" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Confirm Password *</label>
+                    <input type="password" required value={hrForm.confirmPassword} onChange={(e) => setHrForm({ ...hrForm, confirmPassword: e.target.value })} placeholder="••••••••" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                  <button type="button" onClick={() => setCreateHRModalOpen(false)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '10px 20px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                  <button type="submit" disabled={createLoading} style={{ background: C.employeePrimary || C.teal || '#0F766E', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>
+                    {createLoading ? 'Provisioning...' : 'Provision HR Account'}
+                  </button>
                 </div>
               </form>
             </div>

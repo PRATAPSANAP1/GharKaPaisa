@@ -287,7 +287,7 @@ export default function Careers() {
           <div style={{ borderTop: `1px solid ${C.border}`, marginTop: '28px', paddingTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '24px', fontSize: '13px', color: C.textMid }}>
             <div>
               <strong style={{ color: C.text }}>Direct Email:</strong>{' '}
-              <a href="mailto:careers@gharkapaisa.in" style={{ color: C.teal, textDecoration: 'none' }}>careers@gharkapaisa.in</a>
+              <a href="mailto:support@gharkapaisa.in" style={{ color: C.teal, textDecoration: 'none' }}>support@gharkapaisa.in</a>
             </div>
             <div>
               <strong style={{ color: C.text }}>HR Contact:</strong>{' '}

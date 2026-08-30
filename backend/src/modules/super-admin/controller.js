@@ -30,8 +30,8 @@ const createAdmin = async (req, res, next) => {
 
     const employeeId = 'GKP-' + crypto.randomBytes(3).toString('hex').toUpperCase();
 
-    if (!['ADMIN', 'EMPLOYEE'].includes(role)) {
-      return error(res, 'Role must be either ADMIN or EMPLOYEE', 400);
+    if (!['ADMIN', 'EMPLOYEE', 'HR'].includes(role)) {
+      return error(res, 'Role must be either ADMIN, EMPLOYEE, or HR', 400);
     }
 
     if (password !== confirmPassword) {
