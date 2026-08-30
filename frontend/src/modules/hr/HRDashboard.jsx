@@ -166,8 +166,8 @@ export default function HRDashboard() {
           </button>
         </div>
 
-        {/* Stats Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+        {/* Stats Cards Grid (Single Row Layout) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', marginBottom: '32px' }}>
           {[
             { label: 'Total Applications', count: stats.total_candidates, icon: <FaUsers />, color: C.teal },
             { label: 'Registered (New)', count: stats.registered, icon: <FaClock />, color: '#3B82F6' },
@@ -176,13 +176,13 @@ export default function HRDashboard() {
             { label: 'Rejected', count: stats.rejected, icon: <FaTimesCircle />, color: '#EF4444' },
             { label: 'Employees Created', count: stats.converted, icon: <FaUserPlus />, color: '#8B5CF6' }
           ].map((st, i) => (
-            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '46px', height: '46px', borderRadius: '12px', background: `${st.color}15`, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '14px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${st.color}15`, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
                 {st.icon}
               </div>
-              <div>
-                <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>{st.label}</span>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: C.text }}>{st.count}</div>
+              <div style={{ minWidth: 0 }}>
+                <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{st.label}</span>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: C.text }}>{st.count}</div>
               </div>
             </div>
           ))}
