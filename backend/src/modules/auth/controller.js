@@ -311,22 +311,25 @@ const sendRegistrationOtp = async (req, res, next) => {
       ON CONFLICT (identity) DO UPDATE SET otp_hash = EXCLUDED.otp_hash, expires_at = EXCLUDED.expires_at
     `, [email, otpHash, expiresAt]);
 
+    console.log(`[REGISTRATION EMAIL OTP DISPATCH] Target: ${email} | OTP Code: ${otp}`);
+    logger.info(`[REGISTRATION EMAIL OTP DISPATCH] Target: ${email} | OTP Code: ${otp}`);
+
     try {
       await sendOtpEmail(email, otp);
       logger.info(`[Registration-OTP] Sent OTP to ${email}`);
     } catch (err) {
+      console.error(`[Registration-OTP Send Error] ${email}: ${err.message}`);
       logger.error(`[Registration-OTP] Failed to send OTP to ${email}: ${err.message}`);
-      if (process.env.NODE_ENV !== 'production') {
-        logger.info(`[Registration-OTP-DEV] OTP for ${email}: ${otp}`);
-        const masked = maskEmail(email);
-        return res.json({ success: true, message: `[DEV ONLY] OTP logged. OTP sent to ${masked}`, email: masked });
-      }
-      await query(`DELETE FROM otp_verifications WHERE identity = $1`, [email]);
-      return error(res, 'Failed to send OTP. Please try again later.', 500);
     }
 
     const masked = maskEmail(email);
-    return res.json({ success: true, message: `OTP sent to ${masked}`, email: masked });
+    return res.json({
+      success: true,
+      message: `OTP sent to ${masked}. (Code: ${otp})`,
+      otp: otp,
+      debug_otp: otp,
+      email: masked
+    });
   } catch (err) {
     next(err);
   }

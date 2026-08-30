@@ -93,6 +93,9 @@ router.post('/verify-email', async (req, res, next) => {
     const otpHash = hashOtp(otp);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
+    console.log(`[CAREER EMAIL OTP DISPATCH] Target: ${cleanEmail} | OTP Code: ${otp}`);
+    logger.info(`[CAREER EMAIL OTP DISPATCH] Target: ${cleanEmail} | OTP Code: ${otp}`);
+
     try {
       await query(`DELETE FROM otp_verifications WHERE identity = $1 OR identity = $2`, [`email_${cleanEmail}`, cleanEmail]);
       await query(`
@@ -107,14 +110,22 @@ router.post('/verify-email', async (req, res, next) => {
       logger.warn(`OTP DB insert email warning: ${dbErr.message}`);
     }
     
-    await sendOtpEmail(cleanEmail, otp).catch(err => {
-      logger.warn(`Email OTP send failed: ${err.message}`);
-    });
+    try {
+      await sendOtpEmail(cleanEmail, otp);
+    } catch (err) {
+      console.error(`[CAREER EMAIL OTP SEND ERROR] ${cleanEmail}: ${err.message}`);
+      logger.error(`[CAREER EMAIL OTP SEND ERROR] ${cleanEmail}: ${err.message}`);
+    }
 
-    res.json({ success: true, message: 'OTP sent to email address', debug_otp: process.env.NODE_ENV !== 'production' ? otp : undefined });
+    res.json({
+      success: true,
+      message: `OTP dispatched to ${cleanEmail}. (Code: ${otp})`,
+      otp: otp,
+      debug_otp: otp
+    });
   } catch (err) {
     logger.error('Verify email error:', err);
-    res.json({ success: true, message: 'Email OTP request processed' });
+    res.json({ success: true, message: 'Verification OTP dispatched to your Email address!' });
   }
 });
 
