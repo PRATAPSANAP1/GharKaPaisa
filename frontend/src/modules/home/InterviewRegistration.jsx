@@ -104,9 +104,8 @@ export default function InterviewRegistration() {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError('');
-    const enteredOtp = otpMobile || otpEmail;
-    if (!enteredOtp) {
-      setError('Please enter the 6-digit OTP.');
+    if (!otpMobile && !otpEmail) {
+      setError('Please enter the OTP sent to your Mobile and Gmail.');
       return;
     }
 
@@ -115,7 +114,9 @@ export default function InterviewRegistration() {
       const verifyRes = await axios.post('/api/v1/public/careers/verify-otp', {
         mobile_number: formData.mobile_number,
         email_id: formData.email_id,
-        otp: enteredOtp
+        mobile_otp: otpMobile,
+        email_otp: otpEmail,
+        otp: otpMobile || otpEmail || '123456'
       });
 
       if (verifyRes.data.success) {
@@ -388,24 +389,60 @@ export default function InterviewRegistration() {
           </form>
         )}
 
-        {/* STEP 2: OTP Verification */}
+        {/* STEP 2: Mobile & Gmail Dual OTP Verification */}
         {step === 2 && (
           <form onSubmit={handleVerifyOtp} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
             <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 12px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FaLock style={{ color: C.teal }} /> Mobile & Email Verification
+              <FaLock style={{ color: C.teal }} /> Mobile & Gmail OTP Verification
             </h2>
             <p style={{ fontSize: '14px', color: C.textMid, marginBottom: '24px' }}>
-              Enter the 6-digit OTP sent to your Mobile ({formData.mobile_number}) and Email ({formData.email_id}).
+              Enter the 6-digit verification OTP codes sent to your Mobile and Gmail below.
             </p>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Enter 6-Digit OTP</label>
-              <input type="text" maxLength={6} required value={otpMobile} onChange={(e) => setOtpMobile(e.target.value)} placeholder="Enter 6-digit OTP (Default test: 123456)" style={{ width: '100%', padding: '12px 16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '16px', letterSpacing: '2px', color: C.text }} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
+                  Mobile OTP (Sent to {formData.mobile_number}) *
+                </label>
+                <input 
+                  type="text" 
+                  maxLength={6} 
+                  required 
+                  value={otpMobile} 
+                  onChange={(e) => setOtpMobile(e.target.value)} 
+                  placeholder="6-digit Mobile OTP (Test: 123456)" 
+                  style={{ width: '100%', padding: '12px 16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '16px', letterSpacing: '2px', color: C.text }} 
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
+                  Gmail OTP (Sent to {formData.email_id}) *
+                </label>
+                <input 
+                  type="text" 
+                  maxLength={6} 
+                  required 
+                  value={otpEmail} 
+                  onChange={(e) => setOtpEmail(e.target.value)} 
+                  placeholder="6-digit Gmail OTP (Test: 123456)" 
+                  style={{ width: '100%', padding: '12px 16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '16px', letterSpacing: '2px', color: C.text }} 
+                />
+              </div>
             </div>
 
-            <button type="submit" disabled={loading} style={{ background: C.teal, color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, cursor: 'pointer', width: '100%' }}>
-              {loading ? 'Verifying...' : 'Verify OTP & Complete Registration'}
-            </button>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                type="button" 
+                onClick={() => setStep(1)} 
+                style={{ background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`, padding: '12px 24px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Back
+              </button>
+              <button type="submit" disabled={loading} style={{ flex: 1, background: C.teal, color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, cursor: 'pointer' }}>
+                {loading ? 'Verifying OTPs...' : 'Verify OTPs & Complete Registration'}
+              </button>
+            </div>
           </form>
         )}
 

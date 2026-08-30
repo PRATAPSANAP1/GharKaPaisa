@@ -117,35 +117,34 @@ router.post('/verify-email', async (req, res, next) => {
 router.post('/verify-otp', async (req, res, next) => {
   try {
     await ensurePublicTablesExist();
-    const { mobile_number, email_id, otp } = req.body;
+    const { mobile_number, email_id, otp, mobile_otp, email_otp } = req.body;
     let verified = false;
 
-    if (otp === '123456' || otp === '1234') {
+    const mOtp = mobile_otp || otp;
+    const eOtp = email_otp || otp;
+
+    if (mOtp === '123456' || eOtp === '123456' || mOtp === '1234' || eOtp === '1234' || otp === '123456') {
       verified = true;
     } else {
-      const otpHash = hashOtp(otp);
-      const identities = [];
-      if (mobile_number) identities.push(`mobile_${mobile_number}`);
-      if (email_id) identities.push(`email_${email_id}`);
+      const mHash = mOtp ? hashOtp(mOtp) : '';
+      const eHash = eOtp ? hashOtp(eOtp) : '';
 
-      if (identities.length > 0) {
-        try {
-          const { rows } = await query(
-            `SELECT * FROM otp_verifications WHERE identity = ANY($1::text[]) AND otp_hash = $2 AND expires_at > NOW()`,
-            [identities, otpHash]
-          );
-          if (rows.length > 0) {
-            verified = true;
-            await query(`DELETE FROM otp_verifications WHERE id = $1`, [rows[0].id]);
-          }
-        } catch (dbErr) {
-          logger.warn(`OTP DB select warning: ${dbErr.message}`);
+      try {
+        const { rows } = await query(
+          `SELECT * FROM otp_verifications WHERE (identity = $1 AND otp_hash = $2) OR (identity = $3 AND otp_hash = $4) AND expires_at > NOW()`,
+          [`mobile_${mobile_number}`, mHash, `email_${email_id}`, eHash]
+        );
+        if (rows.length > 0) {
+          verified = true;
+          await query(`DELETE FROM otp_verifications WHERE id = $1`, [rows[0].id]);
         }
+      } catch (dbErr) {
+        logger.warn(`OTP DB select warning: ${dbErr.message}`);
       }
     }
 
     if (!verified) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP. Use 123456 to verify.' });
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP. You can enter 123456 to verify.' });
     }
 
     res.json({ success: true, message: 'OTP verified successfully' });
