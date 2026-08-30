@@ -271,6 +271,19 @@ async function seedDefaultIntents() {
       priority: 6
     },
     {
+      intent_name: 'lead_process',
+      description: 'User asking about lead creation process or steps',
+      training_phrases: ['lead process', 'create lead', 'add lead', 'punch lead', 'how to create lead', 'lead steps', 'how to add lead', 'process of lead', 'lead creation'],
+      response_template: 'Here is the step-by-step lead process tailored for your panel context.',
+      chips: JSON.stringify([
+        { label: 'Lead Process', action: 'lead_process' },
+        { label: 'Main Menu', action: 'main_menu' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
       intent_name: 'application_status',
       description: 'User checking application status',
       training_phrases: ['application status', 'track application', 'my application', 'application status check'],

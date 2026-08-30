@@ -112,11 +112,11 @@ export default function InterviewRegistration() {
       await axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: mob });
       setMobileOtpSent(true);
       setMobileOtpTimer(60);
-      setInfoMsg('Verification OTP dispatched to Mobile number! (Test code: 123456)');
+      setInfoMsg('Verification OTP dispatched to your Mobile number!');
     } catch (err) {
       setMobileOtpSent(true);
       setMobileOtpTimer(60);
-      setInfoMsg('OTP sent to Mobile! (Test code: 123456)');
+      setInfoMsg('Verification OTP dispatched to your Mobile number!');
     } finally {
       setMobileOtpLoading(false);
     }
@@ -145,7 +145,7 @@ export default function InterviewRegistration() {
         setInfoMsg('✓ Mobile number successfully verified!');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid Mobile OTP. Please try again or use 123456.');
+      setError(err.response?.data?.message || 'Invalid Mobile OTP. Please try again.');
     } finally {
       setMobileVerifyLoading(false);
     }
@@ -166,11 +166,11 @@ export default function InterviewRegistration() {
       await axios.post('/api/v1/public/careers/verify-email', { email_id: em });
       setEmailOtpSent(true);
       setEmailOtpTimer(60);
-      setInfoMsg('Verification OTP dispatched to Email address! (Test code: 123456)');
+      setInfoMsg('Verification OTP dispatched to your Email address!');
     } catch (err) {
       setEmailOtpSent(true);
       setEmailOtpTimer(60);
-      setInfoMsg('OTP sent to Email! (Test code: 123456)');
+      setInfoMsg('Verification OTP dispatched to your Email address!');
     } finally {
       setEmailOtpLoading(false);
     }
@@ -199,7 +199,7 @@ export default function InterviewRegistration() {
         setInfoMsg('✓ Email address successfully verified!');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid Email OTP. Please try again or use 123456.');
+      setError(err.response?.data?.message || 'Invalid Email OTP. Please try again.');
     } finally {
       setEmailVerifyLoading(false);
     }
@@ -374,7 +374,7 @@ export default function InterviewRegistration() {
                         setMobileOtp(val);
                         if (val.length === 6) handleVerifyMobileOtp(val);
                       }} 
-                      placeholder="6-digit SMS OTP (Test: 123456)" 
+                      placeholder="Enter 6-digit Mobile OTP" 
                       style={{ flex: 1, padding: '8px 12px', background: C.bgSecondary, border: `1px solid ${C.teal}`, borderRadius: '8px', fontSize: '13px', color: C.text }} 
                     />
                     <button
@@ -434,7 +434,7 @@ export default function InterviewRegistration() {
                         setEmailOtp(val);
                         if (val.length === 6) handleVerifyEmailOtp(val);
                       }} 
-                      placeholder="6-digit Gmail OTP (Test: 123456)" 
+                      placeholder="Enter 6-digit Email OTP" 
                       style={{ flex: 1, padding: '8px 12px', background: C.bgSecondary, border: `1px solid ${C.teal}`, borderRadius: '8px', fontSize: '13px', color: C.text }} 
                     />
                     <button

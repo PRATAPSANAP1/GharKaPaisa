@@ -139,18 +139,13 @@ class KnowledgeBaseService {
           ]
         },
 
-        // Main Menu
-        main_menu: {
-          text: "Here is the main menu. What would you like to explore today?",
-          chips: [
-            { label: 'Find Credit Card', action: 'cards_start' },
-            { label: 'Apply for Loan', action: 'loans_start' },
-            { label: 'Partner Earnings', action: 'partner_start' },
-            { label: 'Contact Support', action: 'support_start' }
-          ]
-        },
+        // Role-Specific Lead Creation Process Flow
+        lead_process: this.getLeadProcessResponse(userRole),
 
-        // Navigation Actions (these should trigger redirects)
+        // Main Menu
+        main_menu: this.getMainMenuResponse(userRole),
+
+        // Navigation Actions (these trigger redirects)
         go_ltf: { text: 'Redirecting to Lifetime Free Cards...', chips: [], redirect: '/credit-cards/lifetime-free-credit-cards-ltf' },
         go_cards: { text: 'Redirecting to Credit Cards...', chips: [], redirect: '/credit-cards' },
         go_travel: { text: 'Redirecting to Travel & Transit...', chips: [], redirect: '/travel-transit' },
@@ -161,7 +156,18 @@ class KnowledgeBaseService {
         go_careers: { text: 'Redirecting to Careers...', chips: [], redirect: '/careers' },
         go_interview: { text: 'Redirecting to Interview Registration...', chips: [], redirect: '/careers/register' },
         go_whatsapp: { text: 'Opening WhatsApp...', chips: [], redirect: 'https://wa.me/919876543210' },
-        go_cibil: { text: 'Redirecting to CIBIL check...', chips: [], redirect: 'https://cibil.com' }
+        go_cibil: { text: 'Redirecting to CIBIL check...', chips: [], redirect: 'https://cibil.com' },
+
+        // Panel-Specific Lead Redirects
+        go_partner_products: { text: 'Opening Partner Products Page...', chips: [], redirect: '/partner/products' },
+        go_partner_add_lead: { text: 'Opening Add Lead Form...', chips: [], redirect: '/partner/leads/add' },
+        go_partner_applications: { text: 'Opening Partner Applications...', chips: [], redirect: '/partner/applications' },
+        go_employee_cards: { text: 'Opening Employee Credit Cards...', chips: [], redirect: '/employee/credit-cards' },
+        go_employee_applications: { text: 'Opening Employee Applications...', chips: [], redirect: '/employee/applications' },
+        go_employee_incentives: { text: 'Opening Employee Incentives...', chips: [], redirect: '/employee/incentives' },
+        go_admin_leads: { text: 'Opening Lead Management...', chips: [], redirect: userRole === 'SUPER_ADMIN' ? '/super-admin/leads' : '/admin/leads' },
+        go_admin_direct_leads: { text: 'Opening Direct Leads...', chips: [], redirect: userRole === 'SUPER_ADMIN' ? '/super-admin/direct-leads' : '/admin/direct-leads' },
+        go_admin_applications: { text: 'Opening Applications CRM...', chips: [], redirect: userRole === 'SUPER_ADMIN' ? '/super-admin/applications' : '/admin/applications' }
       };
 
       return actionResponses[action] || this.getDefaultResponse();
@@ -169,6 +175,113 @@ class KnowledgeBaseService {
       logger.error('Error getting action response:', error);
       return this.getDefaultResponse();
     }
+  }
+
+  /**
+   * Get role-specific lead process response
+   */
+  getLeadProcessResponse(userRole) {
+    const role = (userRole || 'PUBLIC').toUpperCase();
+
+    if (role === 'PARTNER' || role === 'TEAM_MEMBER') {
+      return {
+        text: "📋 Partner Lead Creation Process:\n\nStep 1: Select Financial Product (Credit Card, Personal/Business Loan, Insurance).\nStep 2: Generate referral share link or open the Add Lead form.\nStep 3: Enter Customer details (Name, Mobile, PAN, Income).\nStep 4: Customer completes OTP verification & document upload.\nStep 5: Track lead status & payout credit in 'My Applications'.",
+        chips: [
+          { label: 'Step 1: Select Product', action: 'go_partner_products' },
+          { label: 'Step 2: Add Lead Form', action: 'go_partner_add_lead' },
+          { label: 'Step 5: Track Applications', action: 'go_partner_applications' },
+          { label: 'Main Menu', action: 'main_menu' }
+        ]
+      };
+    }
+
+    if (role === 'EMPLOYEE') {
+      return {
+        text: "📋 Employee Lead Punching Process:\n\nStep 1: Select Bank Credit Card or Loan product.\nStep 2: Punch customer details (Name, Mobile Number, PAN, Salary/Income).\nStep 3: Trigger customer OTP & KYC verification link.\nStep 4: Track application stage progress & earned incentives in Applications.",
+        chips: [
+          { label: 'Step 1: Select Product', action: 'go_employee_cards' },
+          { label: 'Step 4: Track Applications', action: 'go_employee_applications' },
+          { label: 'My Incentives', action: 'go_employee_incentives' },
+          { label: 'Main Menu', action: 'main_menu' }
+        ]
+      };
+    }
+
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+      return {
+        text: "📋 Admin Lead Management Workflow:\n\nStep 1: Open Manage Leads to review incoming lead queue.\nStep 2: Assign leads to Partners/Executives or process direct punching.\nStep 3: Audit customer documents, CIBIL, and verification state.\nStep 4: Update application stage and monitor conversions in CRM.",
+        chips: [
+          { label: 'Step 1: Manage Leads', action: 'go_admin_leads' },
+          { label: 'Step 1: Direct Leads', action: 'go_admin_direct_leads' },
+          { label: 'Step 4: Applications CRM', action: 'go_admin_applications' },
+          { label: 'Main Menu', action: 'main_menu' }
+        ]
+      };
+    }
+
+    // Public / Visitor default
+    return {
+      text: "📋 Lead Submission & Referral Process:\n\nStep 1: Register as a Partner on GharKaPaisa.\nStep 2: Complete quick KYC verification with PAN & Aadhaar.\nStep 3: Select Product (Credit Card, Loan) & share direct referral link.\nStep 4: Earn up to ₹3,500 per credit card approval credited directly to your GKP Wallet!",
+      chips: [
+        { label: 'Step 1: Register as Partner', action: 'go_register' },
+        { label: 'Step 1: Login Account', action: 'go_login' },
+        { label: 'Explore Credit Cards', action: 'go_cards' },
+        { label: 'Main Menu', action: 'main_menu' }
+      ]
+    };
+  }
+
+  /**
+   * Get role-specific main menu response
+   */
+  getMainMenuResponse(userRole) {
+    const role = (userRole || 'PUBLIC').toUpperCase();
+
+    if (role === 'PARTNER' || role === 'TEAM_MEMBER') {
+      return {
+        text: "Here is your Partner Main Menu. What would you like to explore today?",
+        chips: [
+          { label: 'Select Product', action: 'go_partner_products' },
+          { label: 'Add Lead', action: 'go_partner_add_lead' },
+          { label: 'Lead Process', action: 'lead_process' },
+          { label: 'My Applications', action: 'go_partner_applications' }
+        ]
+      };
+    }
+
+    if (role === 'EMPLOYEE') {
+      return {
+        text: "Here is your Employee Main Menu. How can I assist you today?",
+        chips: [
+          { label: 'Punch Credit Card', action: 'go_employee_cards' },
+          { label: 'Lead Process', action: 'lead_process' },
+          { label: 'My Applications', action: 'go_employee_applications' },
+          { label: 'My Incentives', action: 'go_employee_incentives' }
+        ]
+      };
+    }
+
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+      return {
+        text: "Here is your Admin Main Menu. What would you like to manage?",
+        chips: [
+          { label: 'Manage Leads', action: 'go_admin_leads' },
+          { label: 'Lead Process', action: 'lead_process' },
+          { label: 'Applications CRM', action: 'go_admin_applications' },
+          { label: 'Direct Cards', action: 'go_admin_direct_leads' }
+        ]
+      };
+    }
+
+    return {
+      text: "Here is the main menu. What would you like to explore today?",
+      chips: [
+        { label: 'Find Credit Card', action: 'cards_start' },
+        { label: 'Apply for Loan', action: 'loans_start' },
+        { label: 'Lead Process', action: 'lead_process' },
+        { label: 'Partner Earnings', action: 'partner_start' }
+      ]
+    };
   }
 
   /**

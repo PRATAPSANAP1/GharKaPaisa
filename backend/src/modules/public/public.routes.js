@@ -165,7 +165,7 @@ router.post('/verify-otp', async (req, res, next) => {
     }
 
     if (!verified) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP. (Test code: 123456)' });
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP. Please enter the valid OTP code.' });
     }
 
     res.json({ success: true, message: 'OTP verified successfully' });
