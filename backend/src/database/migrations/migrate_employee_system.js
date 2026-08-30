@@ -1,6 +1,6 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
-const { query } = require('../../config/database');
+const { query, pool } = require('../../config/database');
 const logger = require('../../config/logger');
 
 // Helper to add an enum value idempotently
@@ -24,11 +24,11 @@ const migrateEmployeeSystem = async () => {
   logger.info('Running Employee Management System migrations...');
 
   try {
-    await query('BEGIN');
-
-    // Ensure HR and EMPLOYEE are in user_role ENUM
+    // Ensure HR and EMPLOYEE are in user_role ENUM (must be executed outside transaction block)
     await addEnumValue('user_role', 'HR');
     await addEnumValue('user_role', 'EMPLOYEE');
+
+    await query('BEGIN');
 
     // ── 1. Employee Candidates Table ────────────────────────────────────────────────
     await query(`
@@ -447,12 +447,14 @@ const migrateEmployeeSystem = async () => {
 // Run migration if called directly
 if (require.main === module) {
   migrateEmployeeSystem()
-    .then(result => {
+    .then(async (result) => {
       console.log('Migration result:', result);
+      await pool.end();
       process.exit(0);
     })
-    .catch(error => {
+    .catch(async (error) => {
       console.error('Migration failed:', error);
+      await pool.end();
       process.exit(1);
     });
 }

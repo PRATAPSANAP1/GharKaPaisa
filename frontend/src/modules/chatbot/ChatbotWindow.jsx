@@ -23,7 +23,7 @@ export default function ChatbotWindow({
   const primaryGlow = `${C.primary}30`;
 
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isTyping]);

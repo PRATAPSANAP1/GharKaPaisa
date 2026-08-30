@@ -3,6 +3,7 @@ const router = express.Router();
 const chatbotController = require('./chatbot.controller');
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 const roleCheck = require('../../middleware/authorization/role.middleware');
+const { chatbotLimiter } = require('../../middleware/rate-limit/rateLimit.middleware');
 const logger = require('../../config/logger');
 
 // Optional JWT middleware helper to hydrate req.user if Bearer token is provided
@@ -16,8 +17,8 @@ const optionalJwt = (req, res, next) => {
   next();
 };
 
-// Public routes (with optional JWT context hydration)
-router.post('/message', optionalJwt, chatbotController.sendMessage.bind(chatbotController));
+// Public routes (with optional JWT context hydration and rate limiting)
+router.post('/message', optionalJwt, chatbotLimiter, chatbotController.sendMessage.bind(chatbotController));
 router.post('/action', optionalJwt, chatbotController.handleAction.bind(chatbotController));
 router.post('/conversation', optionalJwt, chatbotController.createConversation.bind(chatbotController));
 router.post('/reset', optionalJwt, chatbotController.resetConversation.bind(chatbotController));

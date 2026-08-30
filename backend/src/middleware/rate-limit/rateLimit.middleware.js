@@ -84,6 +84,17 @@ const refreshLimiter = rateLimit({
   message: { success: false, message: 'Too many refresh attempts. Please try again later.' }
 });
 
+// Chatbot message limiter — 60 messages per 1 minute per user/IP
+const chatbotLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
+  message: { success: false, message: 'Rate limit exceeded for chatbot messages. Please wait a moment.' }
+});
+
 // Legacy alias — kept so any existing imports don't break
 const authLimiter = loginLimiter;
 const emailActionLimiter = sendOtpLimiter;
@@ -96,6 +107,7 @@ module.exports = {
   verifyOtpLimiter,
   registerLimiter,
   forgotPasswordLimiter,
+  chatbotLimiter,
   // legacy aliases
   authLimiter,
   emailActionLimiter

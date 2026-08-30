@@ -18,6 +18,15 @@ export function resetSessionId() {
 }
 
 /**
+ * Create or retrieve an active conversation for the current session.
+ */
+export async function createConversation(sessionId) {
+  const sid = sessionId || getSessionId();
+  const res = await api.post('/chatbot/conversation', { session_id: sid });
+  return res.data;
+}
+
+/**
  * Send message to chatbot backend endpoint
  */
 export async function sendMessage(message, userRole = 'PUBLIC', panel = 'public') {
@@ -49,9 +58,37 @@ export async function sendAction(action, label, userRole = 'PUBLIC', panel = 'pu
 /**
  * Reset active conversation session
  */
-export async function resetConversation() {
-  const sessionId = getSessionId();
-  const res = await api.post('/chatbot/reset', { session_id: sessionId });
+export async function resetConversation(sessionId) {
+  const sid = sessionId || getSessionId();
+  const res = await api.post('/chatbot/reset', { session_id: sid });
   resetSessionId();
+  return res.data;
+}
+
+/**
+ * Submit feedback rating (1-5)
+ */
+export async function submitFeedback(rating) {
+  const sessionId = getSessionId();
+  const res = await api.post('/chatbot/feedback', {
+    session_id: sessionId,
+    rating
+  });
+  return res.data;
+}
+
+/**
+ * Search knowledge base
+ */
+export async function searchKnowledgeBase(keyword) {
+  const res = await api.get('/chatbot/search', { params: { keyword } });
+  return res.data;
+}
+
+/**
+ * Get FAQ entries by category
+ */
+export async function getFAQ(category) {
+  const res = await api.get(`/chatbot/faq/${category}`);
   return res.data;
 }
