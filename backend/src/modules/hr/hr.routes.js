@@ -125,20 +125,19 @@ router.post('/candidates/:id/select', async (req, res, next) => {
     let userRes = await query(`SELECT id FROM users WHERE mobile = $1 OR email = $2`, [candidate.mobile_number, candidate.email_id]);
     let userId = null;
 
+    const employee_id = await generateEmployeeId();
+
     if (userRes.rows.length > 0) {
       userId = userRes.rows[0].id;
-      await query(`UPDATE users SET role = 'EMPLOYEE', designation = $1, department = $2 WHERE id = $3`, [offered_designation, offered_department, userId]);
+      await query(`UPDATE users SET role = 'EMPLOYEE', designation = $1, department = $2, employee_id = $3 WHERE id = $4`, [offered_designation, offered_department, employee_id, userId]);
     } else {
-      const empIdCode = await generateEmployeeId();
       const newUser = await query(
         `INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department)
          VALUES ($1, $2, $3, 'EMPLOYEE', 'active', $4, $5, $6) RETURNING id`,
-        [candidate.full_name, candidate.mobile_number, candidate.email_id, empIdCode, offered_designation, offered_department]
+        [candidate.full_name, candidate.mobile_number, candidate.email_id, employee_id, offered_designation, offered_department]
       );
       userId = newUser.rows[0].id;
     }
-
-    const employee_id = await generateEmployeeId();
 
     // Create Employee record
     const empInsert = await query(

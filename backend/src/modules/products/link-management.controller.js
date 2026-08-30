@@ -360,14 +360,26 @@ const handleRedirect = async (req, res, next) => {
       return res.status(404).send('Product not found');
     }
 
-    // 2. Find the partner (if any)
+    // 2. Find the partner or employee (if any)
     let partner = null;
-    if (actualPartnerCode) {
+    let employee = null;
+    const empQueryParam = req.query.emp || req.query.employee || req.query.emp_code;
+    const lookupCode = actualPartnerCode || empQueryParam;
+
+    if (lookupCode) {
       const { rows: [p] } = await query(
         `SELECT id, partner_code FROM partner_profiles WHERE partner_code = $1 OR id::text = $1`,
-        [actualPartnerCode]
+        [lookupCode]
       );
       partner = p;
+
+      if (!partner) {
+        const { rows: [e] } = await query(
+          `SELECT id, employee_id FROM employees WHERE employee_id = $1 OR id::text = $1`,
+          [lookupCode]
+        );
+        employee = e;
+      }
     }
 
     // 3. Determine redirect URL
@@ -388,7 +400,7 @@ const handleRedirect = async (req, res, next) => {
       const { device, browser, os } = parseUA(uaString);
 
       const trackingUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`;
-      const campaign = req.query.utm_campaign || product.utm_campaign || null;
+      const campaign = req.query.utm_campaign || product.utm_campaign || (employee ? `employee_${employee.employee_id}` : null);
       const referralSource = req.headers.referer || req.query.referral_source || null;
       const customerMobile = req.query.mobile || null;
       const customerId = req.query.customerId || null; // customer context if provided
@@ -418,7 +430,7 @@ const handleRedirect = async (req, res, next) => {
     }
 
     // 5. Append UTM parameters
-    const utmSource = req.query.utm_source || product.utm_source || (partner ? `partner_${partner.partner_code || partner.partner_code}` : null);
+    const utmSource = req.query.utm_source || product.utm_source || (partner ? `partner_${partner.partner_code}` : (employee ? `employee_${employee.employee_id}` : null));
     const utmMedium = req.query.utm_medium || product.utm_medium || 'affiliate';
     const utmCampaign = req.query.utm_campaign || product.utm_campaign || null;
 
@@ -427,7 +439,8 @@ const handleRedirect = async (req, res, next) => {
       if (utmSource) parsedUrl.searchParams.set('utm_source', utmSource);
       if (utmMedium) parsedUrl.searchParams.set('utm_medium', utmMedium);
       if (utmCampaign) parsedUrl.searchParams.set('utm_campaign', utmCampaign);
-      if (partner) parsedUrl.searchParams.set('partner_code', partner.partner_code || partner.partner_code);
+      if (partner) parsedUrl.searchParams.set('partner_code', partner.partner_code);
+      if (employee) parsedUrl.searchParams.set('emp_code', employee.employee_id);
       targetUrl = parsedUrl.toString();
     } catch (e) {
       // url formatting failed
