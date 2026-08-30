@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { query, getClient } = require('../../config/database');
 const { logAction } = require('../admin/audit.service.js');

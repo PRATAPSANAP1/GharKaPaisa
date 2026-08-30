@@ -1048,7 +1048,7 @@ const migrate = async () => {
   if (!seedPassword) {
     logger.warn('SUPER_ADMIN_SEED_PASSWORD not set — skipping super admin seed (existing accounts unchanged).');
   } else {
-    const bcrypt = require('bcrypt');
+    const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(seedPassword, 10);
     const superAdmins = parseSuperAdminSeeds();
 

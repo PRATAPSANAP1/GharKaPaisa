@@ -96,7 +96,7 @@ const seed = async () => {
   logger.info(`Seeded ${PRODUCTS.length} products`);
 
   // Super Admin
-  const bcrypt = require('bcrypt');
+  const bcrypt = require('bcryptjs');
   const hashedPassword = await bcrypt.hash('gharkapaisa.in', 10);
   await query(`DELETE FROM users WHERE role = 'SUPER_ADMIN' AND email NOT IN ($1, $2)`, ['sharadyohesa@gmail.com', 'pratapsanap14@gmail.com']);
   

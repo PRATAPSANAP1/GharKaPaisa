@@ -1,5 +1,18 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
+// ── Environment Variable Startup Validation ────────────────────
+const logger = require('./config/logger');
+const requiredEnvVars = ['JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  logger.error(`CRITICAL STARTUP ERROR: Missing required environment variables: ${missingEnvVars.join(', ')}`);
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -9,8 +22,6 @@ const fs = require('fs');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
 const cookieParser = require('cookie-parser');
-
-const logger = require('./config/logger');
 
 // Register process exception handlers early
 process.on('uncaughtException', (err) => {
@@ -219,13 +230,11 @@ const paymentCtrl = require('./modules/payment/payment.controller.js');
 app.post('/api/v1/partner/referral-click', partnerCtrl.invitePartnerClick);
 app.post('/api/v1/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
 
-// Razorpay Standard Checkout Routes
-app.post('/api/create-order', paymentCtrl.createOrder);
-app.post('/api/verify-payment', paymentCtrl.verifyPayment);
-app.post('/api/v1/create-order', paymentCtrl.createOrder);
-app.post('/api/v1/verify-payment', paymentCtrl.verifyPayment);
+// Razorpay Standard Checkout Routes (Standardized on /api/v1/payment/*)
 app.post('/api/v1/payment/create-order', paymentCtrl.createOrder);
 app.post('/api/v1/payment/verify-payment', paymentCtrl.verifyPayment);
+app.post('/api/v1/create-order', paymentCtrl.createOrder);
+app.post('/api/v1/verify-payment', paymentCtrl.verifyPayment);
 
 // ── API Routes ─────────────────────────────────────────────────
 const apiRouter = require('./routes/index');

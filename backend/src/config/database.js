@@ -47,14 +47,13 @@ const query = async (text, params) => {
     });
     return res;
   } catch (err) {
-    console.error("\n================ SQL ERROR ================");
-    console.error("SQL:");
-    console.error(text);
-    console.error("\nParameters:");
-    console.dir(params, { depth: null });
-    console.error("\nPostgres Error:");
-    console.error(err);
-    console.error("===========================================\n");
+    if (process.env.NODE_ENV !== 'production') {
+      console.error("\n================ SQL ERROR ================");
+      console.error("SQL:", text);
+      console.error("Parameters:", params);
+      console.error("Postgres Error:", err.message);
+      console.error("===========================================\n");
+    }
 
     logger.error('Database query error', {
       query: text,
