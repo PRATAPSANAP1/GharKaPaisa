@@ -1,13 +1,15 @@
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
+const knowledgeBaseService = require('./knowledge-base.service');
+
 /**
  * Intent Service - Handles NLP intent detection and matching
- * Currently uses keyword matching, can be upgraded to OpenAI API
+ * Uses keyword matching + dynamic PostgreSQL product & bank search
  */
 class IntentService {
   /**
-   * Detect intent from user message using keyword matching
+   * Detect intent from user message using keyword matching + dynamic DB lookup
    * @param {string} message - User message text
    * @param {string} userRole - User role (PUBLIC, PARTNER, ADMIN, SUPER_ADMIN, EMPLOYEE)
    * @returns {Object} - Detected intent with confidence score
@@ -16,7 +18,7 @@ class IntentService {
     try {
       const messageLower = message.toLowerCase();
 
-      // Get all active intents that match the user role
+      // 1. Get all active intents that match the user role
       const { rows } = await query(
         `SELECT * FROM chatbot_intents
          WHERE is_active = true
@@ -43,7 +45,22 @@ class IntentService {
         }
       }
 
-      return bestMatch || this.getDefaultIntent(userRole);
+      if (bestMatch) {
+        return bestMatch;
+      }
+
+      // 2. Dynamic Database Product & Bank Search
+      const dbSearchResult = await knowledgeBaseService.searchProducts(messageLower, userRole);
+      if (dbSearchResult) {
+        return {
+          intent_name: 'product_db_search',
+          response_template: dbSearchResult.response_template,
+          chips: JSON.stringify(dbSearchResult.chips || []),
+          confidence_score: 0.85
+        };
+      }
+
+      return this.getDefaultIntent(userRole);
     } catch (error) {
       logger.error('Error detecting intent:', error);
       return this.getDefaultIntent(userRole);

@@ -118,6 +118,51 @@ function getClientFallbackResponse(text, userRole = 'PUBLIC') {
     return getClientFallbackAction('lead_process', userRole);
   }
 
+  // Bank & Card Product Searches
+  if (t.includes('hdfc')) {
+    return {
+      text: "💳 *HDFC Bank Products Available on GharKaPaisa:*\n\n1. *HDFC Pixel Play Credit Card* [CREDIT CARD]\n   • Instant cashback on dining & online shopping\n   • ₹0 Joining / LTF Offers\n\n2. *HDFC Swiggy Credit Card* [CO-BRANDED]\n   • 10% cashback on Swiggy food & Instamart\n\n3. *HDFC Personal Loan* [LOAN]\n   • Interest rates starting from 10.5%",
+      chips: [
+        { label: 'View HDFC Pixel Card', action: 'go_prod_hdfc-pixel', icon: <FaCreditCard /> },
+        { label: 'Explore HDFC Cards', action: 'go_bank_hdfc', icon: <FaCreditCard /> },
+        { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
+      ]
+    };
+  }
+
+  if (t.includes('axis') || t.includes('flipkart')) {
+    return {
+      text: "💳 *Axis Bank Products Available on GharKaPaisa:*\n\n1. *Axis Bank Flipkart Credit Card* [CASHBACK]\n   • 5% unlimited cashback on Flipkart & Myntra\n\n2. *Axis Bank Neo Credit Card* [LIFESTYLE]\n   • Discounts on Zomato, BookMyShow & Amazon\n\n3. *Axis Bank MY ZONE Credit Card* [MOVIES & DINING]\n   • Buy 1 Get 1 Free Movie Tickets",
+      chips: [
+        { label: 'View Axis Flipkart Card', action: 'go_prod_axis-flipkart', icon: <FaCreditCard /> },
+        { label: 'Explore Axis Cards', action: 'go_bank_axis', icon: <FaCreditCard /> },
+        { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
+      ]
+    };
+  }
+
+  if (t.includes('sbi') || t.includes('simplysave')) {
+    return {
+      text: "💳 *SBI Card Products Available on GharKaPaisa:*\n\n1. *SBI SimplySave Credit Card* [REWARDS]\n   • 10x reward points on grocery & dining\n\n2. *SBI Cashback Credit Card* [CASHBACK]\n   • 5% cashback on all online merchant spends",
+      chips: [
+        { label: 'View SBI SimplySave', action: 'go_prod_sbi-simplysave', icon: <FaCreditCard /> },
+        { label: 'Explore SBI Cards', action: 'go_bank_sbi', icon: <FaCreditCard /> },
+        { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
+      ]
+    };
+  }
+
+  if (t.includes('icici') || t.includes('amazon')) {
+    return {
+      text: "💳 *ICICI Bank Products Available on GharKaPaisa:*\n\n1. *ICICI Amazon Pay Credit Card* [LTF]\n   • 5% cashback for Amazon Prime members\n\n2. *ICICI Rubyx / Coral Credit Card* [PREMIUM]\n   • Complimentary airport lounge access",
+      chips: [
+        { label: 'View ICICI Amazon Pay', action: 'go_prod_icici-amazon-pay', icon: <FaCreditCard /> },
+        { label: 'Explore ICICI Cards', action: 'go_bank_icici', icon: <FaCreditCard /> },
+        { label: 'Main Menu', action: 'main_menu', icon: <FaHome /> }
+      ]
+    };
+  }
+
   if (t.includes('hello') || t.includes('hi') || t.includes('hey')) {
     return {
       text: "Hello! I am your GharKaPaisa Finance Buddy. How can I help you today?",
@@ -188,7 +233,7 @@ function getClientFallbackResponse(text, userRole = 'PUBLIC') {
     };
   }
   return {
-    text: "I couldn't find an exact match for your question. You can use our quick links below or type details like 'lead process', 'loan', 'credit card', or 'partner' to search.",
+    text: "I couldn't find an exact match for your question. You can use our quick links below or type details like 'hdfc cards', 'axis flipkart', 'loan', or 'partner' to search.",
     chips: defaultChips
   };
 }
@@ -499,6 +544,39 @@ export default function Chatbot() {
     if (REDIRECT_ACTIONS[action]) {
       addMessage({ sender: 'user', text: label, timestamp: new Date() });
       navigate(REDIRECT_ACTIONS[action]);
+      setIsOpen(false);
+      return;
+    }
+
+    // Dynamic Product & Bank Redirects (per userRole rules & permissions)
+    if (action.startsWith('go_prod_')) {
+      const slug = action.replace('go_prod_', '');
+      addMessage({ sender: 'user', text: label, timestamp: new Date() });
+      if (userRole === 'PARTNER' || userRole === 'TEAM_MEMBER') {
+        navigate('/partner/products');
+      } else if (userRole === 'EMPLOYEE') {
+        navigate('/employee/credit-cards');
+      } else if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
+        navigate(userRole === 'SUPER_ADMIN' ? '/super-admin/products' : '/admin/products');
+      } else {
+        navigate(`/products/credit_card/${slug}`);
+      }
+      setIsOpen(false);
+      return;
+    }
+
+    if (action.startsWith('go_bank_')) {
+      const bankSlug = action.replace('go_bank_', '');
+      addMessage({ sender: 'user', text: label, timestamp: new Date() });
+      if (userRole === 'PARTNER' || userRole === 'TEAM_MEMBER') {
+        navigate(`/partner/credit-cards/${bankSlug}`);
+      } else if (userRole === 'EMPLOYEE') {
+        navigate('/employee/credit-cards');
+      } else if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
+        navigate(userRole === 'SUPER_ADMIN' ? `/super-admin/leads` : `/admin/credit-cards/${bankSlug}`);
+      } else {
+        navigate(`/cards/${bankSlug}`);
+      }
       setIsOpen(false);
       return;
     }

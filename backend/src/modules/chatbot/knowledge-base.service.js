@@ -301,6 +301,196 @@ class KnowledgeBaseService {
   }
 
   /**
+   * Search products & banks dynamically in PostgreSQL
+   * @param {string} keyword - Search term (e.g. "axis flipkart", "hdfc", "personal loan")
+   * @param {string} userRole - User role (PUBLIC, PARTNER, EMPLOYEE, ADMIN, SUPER_ADMIN)
+   * @returns {Object|null} - Formatted response object with template and chips
+   */
+  async searchProducts(keyword, userRole = 'PUBLIC') {
+    try {
+      const cleanKeyword = keyword.trim().toLowerCase();
+      const role = (userRole || 'PUBLIC').toUpperCase();
+
+      // 1. Check if search term matches a bank name or bank short code
+      const { rows: bankRows } = await query(
+        `SELECT id, name, short_code, logo_url FROM banks 
+         WHERE (LOWER(name) LIKE $1 OR LOWER(short_code) LIKE $1)
+         AND (is_active = true OR status = 'Active') LIMIT 1`,
+        [`%${cleanKeyword}%`]
+      );
+
+      if (bankRows.length > 0) {
+        return await this.getProductsByBank(bankRows[0], userRole);
+      }
+
+      // 2. Search products by name, category, or sub_category
+      const { rows: productRows } = await query(
+        `SELECT p.*, b.name as bank_name, b.short_code as bank_short_code, b.logo_url as bank_logo
+         FROM products p
+         JOIN banks b ON b.id = p.bank_id
+         WHERE (p.name ILIKE $1 OR p.category::text ILIKE $1 OR p.sub_category ILIKE $1 OR p.best_for ILIKE $1)
+         AND (p.is_active = true OR p.status = 'Active')
+         ORDER BY p.priority DESC, p.created_at DESC
+         LIMIT 6`,
+        [`%${cleanKeyword}%`]
+      );
+
+      if (productRows.length === 0) {
+        return null;
+      }
+
+      return this.formatProductSearchResult(productRows, cleanKeyword, role);
+    } catch (error) {
+      logger.error('Error searching products in chatbot KB:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get products by bank
+   */
+  async getProductsByBank(bankObj, userRole = 'PUBLIC') {
+    try {
+      const bankId = bankObj.id;
+      const bankName = bankObj.name;
+      const role = (userRole || 'PUBLIC').toUpperCase();
+
+      const { rows: products } = await query(
+        `SELECT p.*, b.name as bank_name, b.short_code as bank_short_code
+         FROM products p
+         JOIN banks b ON b.id = p.bank_id
+         WHERE p.bank_id = $1 AND (p.is_active = true OR p.status = 'Active')
+         ORDER BY p.priority DESC, p.created_at DESC
+         LIMIT 8`,
+        [bankId]
+      );
+
+      if (products.length === 0) {
+        return {
+          response_template: `Currently there are no active credit cards or loan products listed for ${bankName} in our database. Please check back soon or explore other top banking partners!`,
+          chips: [
+            { label: 'Explore Credit Cards', action: 'cards_start' },
+            { label: 'Explore Loans', action: 'loans_start' },
+            { label: 'Main Menu', action: 'main_menu' }
+          ]
+        };
+      }
+
+      let text = `💳 Here are the active ${bankName} financial products available on GharKaPaisa:\n\n`;
+      const chips = [];
+
+      products.forEach((p, idx) => {
+        const categoryLabel = p.category ? p.category.replace('_', ' ').toUpperCase() : 'PRODUCT';
+        const feeInfo = p.is_lifetime_free ? '₹0 Lifetime Free' : (p.annual_fee ? `Fee: ${p.annual_fee}` : '');
+        text += `${idx + 1}. *${p.name}* [${categoryLabel}]\n`;
+        if (p.short_description || p.welcome_benefits || p.rewards) {
+          text += `   • ${p.short_description || p.welcome_benefits || p.rewards}\n`;
+        }
+        if (feeInfo) text += `   • ${feeInfo}\n`;
+        text += `\n`;
+
+        let chipAction = 'go_cards';
+        if (role === 'PARTNER' || role === 'TEAM_MEMBER') {
+          chipAction = 'go_partner_products';
+        } else if (role === 'EMPLOYEE') {
+          chipAction = 'go_employee_cards';
+        } else if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+          chipAction = 'go_admin_leads';
+        } else {
+          chipAction = p.slug ? `go_prod_${p.slug}` : 'go_cards';
+        }
+
+        chips.push({
+          label: `View ${p.name}`,
+          action: chipAction
+        });
+      });
+
+      chips.push({ label: 'Main Menu', action: 'main_menu' });
+
+      return {
+        response_template: text,
+        chips: chips
+      };
+    } catch (error) {
+      logger.error('Error fetching bank products in KB:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Format product search results
+   */
+  formatProductSearchResult(products, keyword, role) {
+    if (products.length === 1) {
+      const p = products[0];
+      const categoryLabel = p.category ? p.category.replace('_', ' ').toUpperCase() : 'FINANCIAL PRODUCT';
+      
+      let text = `⭐ *${p.name}* (${p.bank_name})\n`;
+      text += `Category: ${categoryLabel}\n\n`;
+      
+      if (p.short_description) text += `📌 *Overview:* ${p.short_description}\n`;
+      if (p.welcome_benefits) text += `🎁 *Welcome Benefits:* ${p.welcome_benefits}\n`;
+      if (p.rewards || p.cashback) text += `💰 *Rewards & Cashback:* ${p.rewards || p.cashback}\n`;
+      if (p.annual_fee) text += `💳 *Fee Structure:* ${p.is_lifetime_free ? '₹0 Lifetime Free (LTF)' : p.annual_fee}\n`;
+
+      const chips = [];
+
+      if (role === 'PARTNER' || role === 'TEAM_MEMBER') {
+        chips.push({ label: `View ${p.name} in Partner Catalog`, action: 'go_partner_products' });
+        chips.push({ label: `Add Lead for ${p.name}`, action: 'go_partner_add_lead' });
+      } else if (role === 'EMPLOYEE') {
+        chips.push({ label: `Punch Lead for ${p.name}`, action: 'go_employee_cards' });
+      } else if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+        chips.push({ label: `Manage Applications`, action: 'go_admin_applications' });
+      } else {
+        chips.push({ label: `View ${p.name} Full Benefits Page`, action: p.slug ? `go_prod_${p.slug}` : 'go_cards' });
+        chips.push({ label: 'Explore All Cards', action: 'go_cards' });
+      }
+      chips.push({ label: 'Main Menu', action: 'main_menu' });
+
+      return {
+        response_template: text,
+        chips: chips
+      };
+    }
+
+    let text = `🔍 Found ${products.length} matching products for "${keyword}":\n\n`;
+    const chips = [];
+
+    products.forEach((p, idx) => {
+      text += `${idx + 1}. *${p.name}* (${p.bank_name})\n`;
+      if (p.short_description || p.rewards) {
+        text += `   • ${p.short_description || p.rewards}\n`;
+      }
+      text += `\n`;
+
+      let chipAction = 'go_cards';
+      if (role === 'PARTNER' || role === 'TEAM_MEMBER') {
+        chipAction = 'go_partner_products';
+      } else if (role === 'EMPLOYEE') {
+        chipAction = 'go_employee_cards';
+      } else if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+        chipAction = 'go_admin_leads';
+      } else {
+        chipAction = p.slug ? `go_prod_${p.slug}` : 'go_cards';
+      }
+
+      chips.push({
+        label: p.name,
+        action: chipAction
+      });
+    });
+
+    chips.push({ label: 'Main Menu', action: 'main_menu' });
+
+    return {
+      response_template: text,
+      chips: chips
+    };
+  }
+
+  /**
    * Search knowledge base by keyword
    * @param {string} keyword - Search keyword
    * @returns {Array} - Matching knowledge base entries

@@ -259,13 +259,17 @@ router.post('/register', upload.single('resume'), async (req, res, next) => {
       ) RETURNING id, reference_code, interview_status, created_at
     `;
 
+    const isUuid = (val) => typeof val === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val.trim());
+    const validReferredByUuid = isUuid(referred_by_employee_id) ? referred_by_employee_id.trim() : null;
+    const finalHrName = hr_name || (!isUuid(referred_by_employee_id) && referred_by_employee_id ? String(referred_by_employee_id).trim() : null);
+
     const values = [
       reference_code, full_name, mobile_number, email_id, date_of_birth || null, current_address || null,
       highest_qualification, passing_year ? parseInt(passing_year) : null, experience_type || 'Fresher', total_experience_years ? parseFloat(total_experience_years) : 0,
       current_company || null, current_designation || null, last_salary_ctc ? parseFloat(last_salary_ctc) : null, expected_salary ? parseFloat(expected_salary) : null,
       immediate_joining === 'true' || immediate_joining === true, notice_period_days ? parseInt(notice_period_days) : 0, comfortable_with_location !== 'false',
-      relevant_experience === 'true' || relevant_experience === true, how_did_you_hear || null, referred_by_employee_id || null,
-      resume_url, resume_file_name, target_role || null, hr_name || null
+      relevant_experience === 'true' || relevant_experience === true, how_did_you_hear || null, validReferredByUuid,
+      resume_url, resume_file_name, target_role || null, finalHrName
     ];
 
     const { rows } = await query(insertQuery, values);
@@ -282,6 +286,8 @@ router.post('/register', upload.single('resume'), async (req, res, next) => {
     });
 
   } catch (err) {
+    console.error('[CAREER CANDIDATE REGISTER ERROR]:', err);
+    logger.error('[CAREER CANDIDATE REGISTER ERROR]:', err);
     next(err);
   }
 });
