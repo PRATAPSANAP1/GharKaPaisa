@@ -6,10 +6,33 @@ import {
   FaPhone, FaCheckCircle, FaFileAlt, FaLock, FaBuilding, FaMoneyBillWave 
 } from 'react-icons/fa';
 import axios from 'axios';
+import { useMsg91OTP } from '../../hooks/useMsg91OTP';
 
 export default function InterviewRegistration() {
   const { C } = useTheme();
   const navigate = useNavigate();
+
+  // MSG91 SDK hook (matching PartnerRegister)
+  const { sdkReady } = useMsg91OTP();
+  const [mobileOtpRequestId, setMobileOtpRequestId] = useState("");
+
+  const getMsg91RequestId = (data) => {
+    const candidates = [
+      data?.requestId,
+      data?.request_id,
+      data?.reqId,
+      data?.otpRequestId,
+      data?.message,
+      data?.data?.requestId,
+      data?.data?.request_id,
+      data?.data?.reqId,
+      data?.data?.otpRequestId,
+      data?.data?.message,
+    ];
+    return candidates
+      .map(value => String(value || '').trim())
+      .find(value => /^[A-Za-z0-9_-]{8,}$/.test(value)) || "";
+  };
 
   const [step, setStep] = useState(1); // 1: Registration Form & Real-time Verification, 3: Success Code
   const [loading, setLoading] = useState(false);
@@ -83,6 +106,7 @@ export default function InterviewRegistration() {
       setMobilePreVerified(false);
       setMobileOtpSent(false);
       setMobileOtp('');
+      setMobileOtpRequestId('');
     }
     if (name === 'email_id') {
       setEmailPreVerified(false);
@@ -97,7 +121,7 @@ export default function InterviewRegistration() {
     }
   };
 
-  // ── Send Mobile OTP ──
+  // ── Send Mobile OTP (MSG91 Widget + Backend Fallback, matching PartnerRegister) ──
   const handleSendMobileOtp = async () => {
     setError('');
     setInfoMsg('');
@@ -108,6 +132,38 @@ export default function InterviewRegistration() {
     }
 
     setMobileOtpLoading(true);
+    const formattedMobile = '91' + mob;
+
+    if (sdkReady && typeof window.sendOtp === 'function') {
+      try {
+        window.sendOtp(
+          formattedMobile,
+          (data) => {
+            const reqId = getMsg91RequestId(data);
+            if (reqId) setMobileOtpRequestId(reqId);
+            setMobileOtpSent(true);
+            setMobileOtpTimer(60);
+            setMobileOtpLoading(false);
+            setInfoMsg('Verification OTP dispatched to your Mobile number!');
+          },
+          async (sdkErr) => {
+            console.warn('[MSG91 SDK Notice] sendOtp failed, calling backend fallback:', sdkErr);
+            try {
+              await axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: mob });
+            } catch (e) {}
+            setMobileOtpSent(true);
+            setMobileOtpTimer(60);
+            setMobileOtpLoading(false);
+            setInfoMsg('Verification OTP dispatched to your Mobile number!');
+          }
+        );
+        return;
+      } catch (err) {
+        console.warn('MSG91 SDK sendOtp exception, falling back to backend API:', err);
+      }
+    }
+
+    // Direct backend API fallback
     try {
       await axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: mob });
       setMobileOtpSent(true);
@@ -122,7 +178,7 @@ export default function InterviewRegistration() {
     }
   };
 
-  // ── Verify Mobile OTP ──
+  // ── Verify Mobile OTP (MSG91 Widget + Backend Fallback, matching PartnerRegister) ──
   const handleVerifyMobileOtp = async (valToVerify) => {
     const code = valToVerify || mobileOtp;
     if (!code || String(code).trim().length < 6) {
@@ -133,6 +189,47 @@ export default function InterviewRegistration() {
     setError('');
     setInfoMsg('');
     setMobileVerifyLoading(true);
+
+    const finishMobileVerification = () => {
+      setMobilePreVerified(true);
+      setMobileOtpSent(false);
+      setMobileVerifyLoading(false);
+      setInfoMsg('✓ Mobile number successfully verified!');
+    };
+
+    if (typeof window.verifyOtp === 'function') {
+      const verifyArgs = [
+        Number(String(code).trim()),
+        (data) => {
+          finishMobileVerification();
+        },
+        async (sdkErr) => {
+          console.warn('[MSG91 SDK Notice] verifyOtp failed, trying backend verification:', sdkErr);
+          try {
+            const res = await axios.post('/api/v1/public/careers/verify-otp', {
+              mobile_number: formData.mobile_number.trim(),
+              mobile_otp: String(code).trim(),
+              type: 'mobile'
+            });
+            if (res.data.success) {
+              finishMobileVerification();
+              return;
+            }
+          } catch (backendErr) {
+            setError(backendErr.response?.data?.message || 'Invalid Mobile OTP. Please try again.');
+            setMobileVerifyLoading(false);
+          }
+        }
+      ];
+      if (mobileOtpRequestId) verifyArgs.push(mobileOtpRequestId);
+      try {
+        window.verifyOtp(...verifyArgs);
+        return;
+      } catch (err) {
+        console.warn('MSG91 SDK verifyOtp exception, trying backend verification:', err);
+      }
+    }
+
     try {
       const res = await axios.post('/api/v1/public/careers/verify-otp', {
         mobile_number: formData.mobile_number.trim(),
@@ -140,13 +237,10 @@ export default function InterviewRegistration() {
         type: 'mobile'
       });
       if (res.data.success) {
-        setMobilePreVerified(true);
-        setMobileOtpSent(false);
-        setInfoMsg('✓ Mobile number successfully verified!');
+        finishMobileVerification();
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid Mobile OTP. Please try again.');
-    } finally {
       setMobileVerifyLoading(false);
     }
   };

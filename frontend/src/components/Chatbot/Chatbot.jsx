@@ -617,18 +617,53 @@ export default function Chatbot() {
     }
   };
 
+  // Derive panel badge title
+  const getRoleBadgeLabel = () => {
+    switch (userRole) {
+      case 'PARTNER':
+      case 'TEAM_MEMBER':
+        return 'Partner AI';
+      case 'EMPLOYEE':
+        return 'Employee Assistant';
+      case 'ADMIN':
+      case 'SUPER_ADMIN':
+        return 'Admin Helpdesk';
+      default:
+        return 'Finance Buddy';
+    }
+  };
+
+  const primaryDark = C.primaryDark || C.primary;
+  const primaryGlow = isDark ? `${C.primary}50` : `${C.primary}30`;
+
   return (
-    <div className="gkp-chatbot-container" style={{ '--theme-primary': C.primary, '--theme-bg': C.card, '--theme-text': C.text, '--theme-border': C.border, '--theme-secondary': C.bgSecondary, '--theme-text-mid': C.textMid }}>
-      {/* Floating launcher bubble */}
+    <div 
+      className="gkp-chatbot-container" 
+      style={{ 
+        '--theme-primary': C.primary, 
+        '--theme-primary-dark': primaryDark,
+        '--theme-glow': primaryGlow,
+        '--theme-bg': C.bg, 
+        '--theme-card': C.card, 
+        '--theme-text': C.text, 
+        '--theme-border': C.border, 
+        '--theme-secondary': C.bgSecondary, 
+        '--theme-text-mid': C.textMid 
+      }}
+    >
+      {/* Floating Launcher & Tooltip Speech Bubble */}
       {!isOpen && (
         <div className="gkp-chatbot-launcher-wrapper">
+          <div className="robot-speech-bubble" style={{ background: C.card, color: C.text, borderColor: C.border }}>
+            <span>Need help with leads or cards?</span>
+            <span className="speech-arrow" style={{ borderTopColor: C.border }} />
+          </div>
           <button 
             className="gkp-chatbot-launcher robot-launcher" 
             onClick={toggleChat}
-            style={{ boxShadow: `0 8px 24px ${C.primary}30` }}
             aria-label="Open Chatbot"
           >
-            <img src={chatbotIcon} className="dancing-robot-img" alt="Dancing Robot Assistant" style={{ borderColor: C.primary }} />
+            <img src={chatbotIcon} className="dancing-robot-img" alt="Dancing Robot Assistant" />
             {hasNewMessage && <span className="notification-badge" />}
           </button>
         </div>
@@ -636,19 +671,31 @@ export default function Chatbot() {
 
       {/* Chat Window */}
       {isOpen && (
-        <div className={`gkp-chatbot-window ${isOpen ? 'open' : ''}`} style={{ background: C.card, border: `1px solid ${C.border}`, boxShadow: `0 12px 32px rgba(0, 0, 0, ${isDark ? '0.4' : '0.15'})` }}>
-          {/* Header */}
-          <div className="gkp-chatbot-header" style={{ background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark || C.primary})` }}>
+        <div 
+          className={`gkp-chatbot-window ${isOpen ? 'open' : ''}`} 
+          style={{ 
+            background: C.card, 
+            border: `1.5px solid ${C.border}`, 
+            boxShadow: `0 20px 50px rgba(0, 0, 0, ${isDark ? '0.5' : '0.18'}), 0 0 30px ${primaryGlow}` 
+          }}
+        >
+          {/* Vibrant Gradient Header */}
+          <div 
+            className="gkp-chatbot-header" 
+            style={{ 
+              background: `linear-gradient(135deg, ${C.primary} 0%, ${primaryDark} 100%)` 
+            }}
+          >
             <div className="header-info">
               <div className="avatar-container robot-avatar">
                 <img src={chatbotIcon} className="header-robot-img" alt="Robot avatar" />
                 <span className="online-indicator" />
               </div>
               <div>
-                <h3 className="bot-title">GKP Finance Buddy</h3>
-                <p className="bot-subtitle">
+                <h3 className="bot-title">GKP {getRoleBadgeLabel()}</h3>
+                <span className="bot-subtitle-badge">
                   {backendAvailable ? 'Online • AI Agent' : 'Online • Agent'}
-                </p>
+                </span>
               </div>
             </div>
             <div className="header-actions">
@@ -656,7 +703,6 @@ export default function Chatbot() {
                 className="header-btn" 
                 onClick={handleClearChat} 
                 title="Reset Conversation"
-                style={{ color: '#ffffff' }}
               >
                 <FaRedo size={12} />
               </button>
@@ -664,30 +710,37 @@ export default function Chatbot() {
                 className="header-btn close-btn" 
                 onClick={toggleChat} 
                 title="Close Chat"
-                style={{ color: '#ffffff' }}
               >
-                <FaTimes size={16} />
+                <FaTimes size={15} />
               </button>
             </div>
           </div>
 
-          {/* Messages body */}
+          {/* Messages Body */}
           <div className="gkp-chatbot-body" style={{ background: C.bg }}>
             <div className="messages-list">
               {messages.map((msg, index) => (
                 <div key={index} className={`message-wrapper ${msg.sender}`}>
-                  <div className="message-bubble" style={{
-                    background: msg.sender === 'bot' ? C.card : C.primary,
-                    color: msg.sender === 'bot' ? C.text : '#ffffff',
-                    border: msg.sender === 'bot' ? `1px solid ${C.border}` : 'none'
-                  }}>
+                  <div 
+                    className="message-bubble" 
+                    style={{
+                      background: msg.sender === 'bot' 
+                        ? C.card 
+                        : `linear-gradient(135deg, ${C.primary}, ${primaryDark})`,
+                      color: msg.sender === 'bot' ? C.text : '#ffffff',
+                      border: msg.sender === 'bot' ? `1px solid ${C.border}` : 'none'
+                    }}
+                  >
                     <p className="message-text">{msg.text}</p>
-                    <span className="message-time" style={{ color: msg.sender === 'bot' ? C.textLight : 'rgba(255,255,255,0.7)' }}>
+                    <span 
+                      className="message-time" 
+                      style={{ color: msg.sender === 'bot' ? C.textLight : 'rgba(255,255,255,0.75)' }}
+                    >
                       {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
 
-                  {/* Chips display (bot only, on latest message of bot) */}
+                  {/* Interactive Action Chips */}
                   {msg.sender === 'bot' && msg.chips && msg.chips.length > 0 && index === messages.length - 1 && !isTyping && (
                     <div className="chips-container">
                       {msg.chips.map((chip, idx) => (
@@ -698,12 +751,11 @@ export default function Chatbot() {
                           style={{
                             background: C.bgSecondary,
                             color: C.primary,
-                            border: `1px solid ${C.border}`,
-                            hoverBackground: C.primary
+                            border: `1.5px solid ${C.border}`
                           }}
                         >
-                          {chip.icon && <span style={{ marginRight: '6px' }}>{chip.icon}</span>}
-                          {chip.label}
+                          {chip.icon && <span className="chip-icon">{chip.icon}</span>}
+                          <span>{chip.label}</span>
                         </button>
                       ))}
                     </div>
@@ -711,14 +763,14 @@ export default function Chatbot() {
                 </div>
               ))}
 
-              {/* Typing indicator */}
+              {/* Typing Indicator */}
               {isTyping && (
                 <div className="message-wrapper bot typing">
                   <div className="message-bubble typing-indicator-bubble" style={{ background: C.card, border: `1px solid ${C.border}` }}>
                     <div className="typing-dots">
-                      <span className="dot" style={{ background: C.textLight }} />
-                      <span className="dot" style={{ background: C.textLight }} />
-                      <span className="dot" style={{ background: C.textLight }} />
+                      <span className="dot" style={{ background: C.primary }} />
+                      <span className="dot" style={{ background: C.primary }} />
+                      <span className="dot" style={{ background: C.primary }} />
                     </div>
                   </div>
                 </div>
@@ -727,13 +779,13 @@ export default function Chatbot() {
             </div>
           </div>
 
-          {/* Message Input form */}
-          <form className="gkp-chatbot-footer" onSubmit={handleSendMessage} style={{ borderTop: `1px solid ${C.border}` }}>
+          {/* Footer Input Bar */}
+          <form className="gkp-chatbot-footer" onSubmit={handleSendMessage} style={{ borderTop: `1px solid ${C.border}`, background: C.card }}>
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask me something about cards or loans..."
+              placeholder="Ask me about leads, cards, or loans..."
               className="chatbot-input"
               style={{ background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}` }}
             />
@@ -741,7 +793,10 @@ export default function Chatbot() {
               type="submit" 
               className="chatbot-send-btn"
               disabled={!inputValue.trim()}
-              style={{ background: C.primary, color: '#ffffff' }}
+              style={{ 
+                background: `linear-gradient(135deg, ${C.primary}, ${primaryDark})`, 
+                color: '#ffffff' 
+              }}
             >
               <FaPaperPlane size={14} />
             </button>
