@@ -1,39 +1,44 @@
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const logger = require("../../config/logger");
+const nodemailer = require("nodemailer");
 
-const region = process.env.AWS_REGION || "ap-south-1";
-const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-const sessionToken = process.env.AWS_SESSION_TOKEN;
+const getAwsSesConfig = () => {
+  const region = process.env.AWS_REGION || process.env.AWS_SES_REGION || "ap-south-1";
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID || process.env.AWS_KEY_ID || process.env.AWS_SES_ACCESS_KEY_ID || process.env.SES_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || process.env.AWS_SECRET_KEY || process.env.AWS_SES_SECRET_ACCESS_KEY || process.env.SES_SECRET_ACCESS_KEY;
+  const sessionToken = process.env.AWS_SESSION_TOKEN;
 
-if ((accessKeyId && !secretAccessKey) || (!accessKeyId && secretAccessKey)) {
-  throw new Error("AWS email credentials are incomplete");
-}
+  if (accessKeyId && secretAccessKey) {
+    const sesClient = new SESClient({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+        ...(sessionToken ? { sessionToken } : {})
+      }
+    });
+    return { sesClient, hasCreds: true };
+  }
+  
+  // Try default SDK credential chain if region/sender configured
+  try {
+    const sesClient = new SESClient({ region });
+    return { sesClient, hasCreds: true };
+  } catch (e) {
+    return { sesClient: null, hasCreds: false };
+  }
+};
 
-const sesOptions = { region };
-if (accessKeyId && secretAccessKey) {
-  sesOptions.credentials = {
-    accessKeyId,
-    secretAccessKey,
-    ...(sessionToken ? { sessionToken } : {}),
-  };
-}
-
-const rawFromEmail = process.env.SES_FROM_EMAIL || process.env.MAIL_FROM || "noreply@gharkapaisa.in";
-const senderDisplayName = process.env.SES_SENDER_NAME || "GHARKP";
-
-const formatSenderAddress = (email, name = senderDisplayName) => {
-  const clean = String(email || '').trim();
+const getFromEmail = () => {
+  const rawFromEmail = process.env.SES_FROM_EMAIL || process.env.MAIL_FROM || "noreply@gharkapaisa.in";
+  const senderDisplayName = process.env.SES_SENDER_NAME || "GHARKP";
+  const clean = String(rawFromEmail || '').trim();
   if (clean.includes('<') && clean.includes('>')) {
     return clean;
   }
   const extracted = clean.replace(/.*<([^>]+)>.*/, '$1');
-  return `"${name}" <${extracted}>`;
+  return `"${senderDisplayName}" <${extracted}>`;
 };
-
-const FROM_EMAIL = formatSenderAddress(rawFromEmail);
-
-const nodemailer = require("nodemailer");
 
 /**
  * Send a generic email via SES (with Nodemailer SMTP & safe fallback)
@@ -43,15 +48,18 @@ const sendEmail = async ({ to, subject, html, text }) => {
     throw new Error("A valid recipient email address is required");
   }
 
+  const fromEmail = getFromEmail();
+  const { sesClient } = getAwsSesConfig();
+
   // 1. Primary: AWS SES
-  if (accessKeyId && secretAccessKey) {
+  if (sesClient) {
     try {
       const body = {};
       if (html) body.Html = { Data: html, Charset: "UTF-8" };
       if (text || !html) body.Text = { Data: text || "GharKaPaisa Notification", Charset: "UTF-8" };
 
       const command = new SendEmailCommand({
-        Source: FROM_EMAIL,
+        Source: fromEmail,
         Destination: { ToAddresses: [to] },
         Message: {
           Subject: { Data: subject || "GharKaPaisa Notification", Charset: "UTF-8" },
@@ -59,11 +67,13 @@ const sendEmail = async ({ to, subject, html, text }) => {
         },
       });
 
-      const result = await ses.send(command);
-      logger.info(`[SES] Email sent to ${to} | MessageId: ${result.MessageId}`);
+      const result = await sesClient.send(command);
+      console.log(`[SES SUCCESS] Email sent to ${to} | MessageId: ${result.MessageId}`);
+      logger.info(`[SES SUCCESS] Email sent to ${to} | MessageId: ${result.MessageId}`);
       return result;
     } catch (err) {
-      logger.error(`[SES] Primary AWS SES email notice for ${to}: ${err.message}`);
+      console.error(`[SES ERROR] AWS SES dispatch failed for ${to}: ${err.message}`);
+      logger.error(`[SES ERROR] AWS SES dispatch failed for ${to}: ${err.message}`);
     }
   }
 
@@ -80,7 +90,7 @@ const sendEmail = async ({ to, subject, html, text }) => {
         }
       });
       const info = await transporter.sendMail({
-        from: FROM_EMAIL,
+        from: fromEmail,
         to,
         subject,
         text,
