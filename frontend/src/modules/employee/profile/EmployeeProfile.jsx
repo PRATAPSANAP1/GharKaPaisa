@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '../../../store/authStore';
+import { useAuthStore } from '../../../app/store/authStore';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { FaUserCircle, FaIdCard, FaBuilding, FaEnvelope, FaPhone, FaCheckCircle, FaLock, FaShieldAlt } from 'react-icons/fa';
 import api from '../../../services/api';

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../app/store/authStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { 
   FaChartPie, FaCreditCard, FaUserPlus, FaFileAlt, FaUsers, 
   FaGift, FaUserCircle, FaCheckCircle, FaFileContract, FaVideo, 
   FaSignOutAlt, FaMoon, FaSun, FaBars, FaTimes, FaShieldAlt
 } from 'react-icons/fa';
-import logo from '../assets/images/logo.png';
+import logo from '../assets/logos/logo.png';
 
 export default function EmployeeLayout() {
   const { user, logout } = useAuthStore();
