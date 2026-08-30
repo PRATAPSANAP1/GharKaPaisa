@@ -10,6 +10,7 @@ import {
   MdCheckCircle, MdError, MdLock, MdCloudUpload, 
   MdNavigateNext, MdNavigateBefore, MdSave, MdRefresh 
 } from 'react-icons/md';
+import { FaEdit, FaLock, FaUniversity, FaExclamationTriangle, FaClipboardList, FaCog, FaHome } from 'react-icons/fa';
 
 // Multi-language Translation Dictionary for Physical Application Form
 const DICTIONARY = {
@@ -64,7 +65,7 @@ const DICTIONARY = {
     declineReasonPlace: 'Specify detailed decline reason...',
     nextStep: 'Next Step',
     backStep: 'Back',
-    saveDetails: 'SAVE DETAILS 💾',
+    saveDetails: 'SAVE DETAILS',
     savingDetails: 'Saving Details...',
     formSavedSuccess: 'Application details & Form status saved successfully!',
     successSub: 'Application details updated in database.',
@@ -125,7 +126,7 @@ const DICTIONARY = {
     declineReasonPlace: 'अस्वीकृति का विस्तृत कारण लिखें...',
     nextStep: 'अगला चरण',
     backStep: 'पीछे',
-    saveDetails: 'विवरण सहेजें 💾',
+    saveDetails: 'विवरण सहेजें',
     savingDetails: 'सहेजा जा रहा है...',
     formSavedSuccess: 'आवेदन विवरण सफलतापूर्वक सहेजा गया!',
     successSub: 'आवेदन विवरण डेटाबेस में अद्यतन हो गया है।',
@@ -420,10 +421,13 @@ export default function PhysicalApplicationForm() {
                 fontWeight: 800, 
                 fontSize: 14, 
                 cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
                 boxShadow: `0 8px 24px ${C.primary}35`
               }}
             >
-              🏠 Open Home Page
+              <FaHome size={16} /> Open Home Page
             </button>
 
             <button 
@@ -436,10 +440,13 @@ export default function PhysicalApplicationForm() {
                 color: C.text, 
                 fontWeight: 800, 
                 fontSize: 13.5, 
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8
               }}
             >
-              ✏️ Edit / View Form Again
+              <FaEdit size={14} /> Edit / View Form Again
             </button>
           </div>
         </div>
@@ -499,7 +506,7 @@ export default function PhysicalApplicationForm() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-                ⚡ {appData?.bank_name || 'Bank'} {isDigitalProcess ? 'Application Verification' : 'Application Verification'}
+                {appData?.bank_name || 'Bank'} {isDigitalProcess ? 'Application Verification' : 'Application Verification'}
               </div>
               <h1 style={{ margin: '0 0 6px', fontSize: isMobile ? 18 : 22, fontWeight: 900, color: C.text }}>
                 {isDigitalProcess ? 'Application Remark & Stage Tracking' : 'Application Verification'}
@@ -517,8 +524,8 @@ export default function PhysicalApplicationForm() {
         </div>
 
         {errorMsg && (
-          <div style={{ background: `${C.red}15`, border: `1px solid ${C.red}40`, color: C.red, padding: '14px 18px', borderRadius: 16, fontSize: 13, fontWeight: 700, marginBottom: 20 }}>
-            ⚠️ {errorMsg}
+          <div style={{ background: `${C.red}15`, border: `1px solid ${C.red}40`, color: C.red, padding: '14px 18px', borderRadius: 16, fontSize: 13, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <FaExclamationTriangle /> {errorMsg}
           </div>
         )}
 
@@ -562,8 +569,8 @@ export default function PhysicalApplicationForm() {
           {/* ═══ STEP 1: CUSTOMER & PHYSICAL DETAILS ═══ */}
           {activeTab === 'step1' && (
             <>
-              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4 }}>
-                📋 {txt('customerDetails')}
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <FaClipboardList /> {txt('customerDetails')}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
@@ -783,8 +790,8 @@ export default function PhysicalApplicationForm() {
           {/* ═══ STEP 2: APPLICATION REMARK & STAGE TRACKING FORM ═══ */}
           {activeTab === 'step2' && (
             <>
-              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4 }}>
-                ⚙️ Application Remark & Stage Tracking Form
+              <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <FaCog /> Application Remark & Stage Tracking Form
               </div>
 
               {/* Order: 1. Appcode Status (Hidden for linked_share & direct_apply), 2. Soft Approval Status */}
@@ -1013,15 +1020,15 @@ export default function PhysicalApplicationForm() {
           {activeTab === 'step4' && (
             <>
               <div style={{ fontSize: 13.5, fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${C.border}`, paddingBottom: 10, marginBottom: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>🏦 {txt('bankFinalStatus')}</span>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: isOperationsOrAdmin ? C.teal : C.red }}>
-                  {isOperationsOrAdmin ? '✏️ Editable' : '🔒 Read-Only'}
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><FaUniversity /> {txt('bankFinalStatus')}</span>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: isOperationsOrAdmin ? C.teal : C.red, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {isOperationsOrAdmin ? <><FaEdit /> Editable</> : <><FaLock /> Read-Only</>}
                 </span>
               </div>
 
               {!isOperationsOrAdmin && (
                 <div style={{ background: isDark ? '#1e293b' : '#f8fafc', border: `1.5px solid ${C.border}`, padding: '10px 14px', borderRadius: 12, fontSize: 12, fontWeight: 700, color: C.red, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  🔒 Part 3 (Bank & Final Status) can only be added or edited by Operations Head, Super Admin, or Administrative Operator.
+                  <FaLock /> Part 3 (Bank & Final Status) can only be added or edited by Operations Head, Super Admin, or Administrative Operator.
                 </div>
               )}
 
@@ -1070,8 +1077,8 @@ export default function PhysicalApplicationForm() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <label style={{ ...labelStyle, marginBottom: 0 }}>3. BANK REMARK</label>
-                  <span style={{ fontSize: '10.5px', fontWeight: 800, color: isOperationsOrAdmin ? C.teal : C.textMid }}>
-                    {isOperationsOrAdmin ? '✏️ Editable' : '🔒 Read-Only'}
+                  <span style={{ fontSize: '10.5px', fontWeight: 800, color: isOperationsOrAdmin ? C.teal : C.textMid, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {isOperationsOrAdmin ? <><FaEdit /> Editable</> : <><FaLock /> Read-Only</>}
                   </span>
                 </div>
                 <textarea

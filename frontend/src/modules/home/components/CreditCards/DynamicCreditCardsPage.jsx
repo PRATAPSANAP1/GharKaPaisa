@@ -231,7 +231,7 @@ export default function DynamicCreditCardsPage() {
             style={{ maxWidth: '40%', maxHeight: '50%', objectFit: 'contain' }} 
           />
         ) : (
-          <span style={{ fontSize: '64px' }}>💳</span>
+          <FaRegCreditCard size={64} style={{ color: bankThemeColor }} />
         )}
       </div>
 

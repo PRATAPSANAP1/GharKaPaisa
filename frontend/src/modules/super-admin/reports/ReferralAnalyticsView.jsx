@@ -187,7 +187,7 @@ export default function ReferralAnalyticsView() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ padding: '10px 14px', background: C.card, borderRadius: '10px', fontWeight: 800, fontSize: '13px', color: C.blue, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>👔 Parent Partner</span>
+              <span>Parent Partner</span>
               <span>↓</span>
               <span>Downline Team Member Split Breakdown</span>
             </div>

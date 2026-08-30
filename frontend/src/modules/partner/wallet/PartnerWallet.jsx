@@ -19,6 +19,7 @@ import {
   MdContentCopy,
   MdCheck
 } from 'react-icons/md';
+import { FaEdit, FaShieldAlt, FaClock } from 'react-icons/fa';
 import {
   AreaChart,
   Area,
@@ -573,7 +574,7 @@ const PartnerWallet = () => {
                     gap: '4px'
                   }}
                 >
-                  <span>✏️ Edit Bank Details</span>
+                  <FaEdit /> Edit Bank Details
                 </button>
               </div>
 
@@ -677,8 +678,8 @@ const PartnerWallet = () => {
                 </button>
               </form>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: C.bgSecondary, padding: '12px', borderRadius: '8px', fontSize: '11px', color: C.textLight }}>
-                <div>⏱️ SLA: 1-2 business days (NEFT/IMPS)</div>
-                <div>🛡️ KYC Status: {kycStatus === 'approved' ? '🟢 Verified & Approved' : '🔴 KYC Required'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><FaClock /> SLA: 1-2 business days (NEFT/IMPS)</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><FaShieldAlt /> KYC Status: {kycStatus === 'approved' ? 'Verified & Approved' : 'KYC Required'}</div>
               </div>
             </div>
 

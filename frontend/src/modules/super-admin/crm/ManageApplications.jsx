@@ -9,6 +9,11 @@ import {
   MdShare, MdTrackChanges, MdDelete,
   MdHourglassEmpty, MdVerified, MdMonetizationOn, MdAttachMoney, MdCancel
 } from 'react-icons/md';
+import { 
+  FaCog, FaUniversity, FaClipboardList, FaCreditCard, 
+  FaShieldAlt, FaEdit, FaUser, FaPaperclip, FaFileAlt, 
+  FaScroll, FaLink, FaShareAlt, FaExternalLinkAlt 
+} from 'react-icons/fa';
 
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../../app/store/authStore';
@@ -777,7 +782,7 @@ export default function ManageApplications() {
                                     <MdVisibility /> Review
                                   </button>
                                   <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                    ⚙️ Remark
+                                    <FaCog /> Remark
                                   </button>
                                 </>
                               );
@@ -790,10 +795,10 @@ export default function ManageApplications() {
                                     <MdVisibility /> Review
                                   </button>
                                   <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                    📋 QD
+                                    <FaClipboardList /> QD
                                   </button>
                                   <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                    ⚙️ Remark
+                                    <FaCog /> Remark
                                   </button>
                                 </>
                               );
@@ -805,13 +810,13 @@ export default function ManageApplications() {
                                   <MdVisibility /> Review
                                 </button>
                                 <button onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }} style={{ border: `1px solid #2563eb40`, background: '#2563eb12', color: '#2563eb', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                  📋 QD
+                                  <FaClipboardList /> QD
                                 </button>
                                 <button onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }} style={{ border: `1px solid #ea580c40`, background: '#ea580c12', color: '#ea580c', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                  ⚙️ Remark
+                                  <FaCog /> Remark
                                 </button>
                                 <button onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }} style={{ border: `1px solid #16a34a40`, background: '#16a34a12', color: '#16a34a', padding: '6px 10px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700 }}>
-                                  🏦 Final
+                                  <FaUniversity /> Final
                                 </button>
                               </>
                             );
@@ -1001,8 +1006,8 @@ export default function ManageApplications() {
                   <div>
                     <span style={{ color: C.textLight }}>VKYC / Direct Web Link:</span>{' '}
                     {selectedApp.vkyc_url ? (
-                      <a href={selectedApp.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: C.primary, textDecoration: 'underline', fontWeight: 700 }}>
-                        Open Link 🔗
+                      <a href={selectedApp.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: C.primary, textDecoration: 'underline', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        Open Link <FaLink size={12} />
                       </a>
                     ) : <strong style={{ color: C.text }}>—</strong>}
                   </div>
@@ -1018,12 +1023,12 @@ export default function ManageApplications() {
                           navigator.share({ title: 'VKYC / Tracking Link', text: `Link for App #${selectedApp.app_number}:`, url: link }).catch(() => {});
                         } else {
                           navigator.clipboard.writeText(link);
-                          alert('📋 Link copied to clipboard!');
+                          alert('Link copied to clipboard!');
                         }
                       }}
-                      style={{ ...S.btn('outline'), color: C.primary, borderColor: `${C.primary}40`, padding: '6px 14px', fontSize: '11.5px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      style={{ ...S.btn('outline'), color: C.primary, borderColor: `${C.primary}40`, padding: '6px 14px', fontSize: '11.5px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                      🔗 VKYC Share Link
+                      <FaShareAlt size={12} /> VKYC Share Link
                     </button>
                     <button
                       type="button"
@@ -1036,9 +1041,9 @@ export default function ManageApplications() {
                         
                         window.open(targetUrl, '_blank');
                       }}
-                      style={{ ...S.btn('outline'), color: '#ea580c', borderColor: '#ea580c40', background: '#ea580c12', padding: '6px 14px', fontSize: '11.5px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      style={{ ...S.btn('outline'), color: '#ea580c', borderColor: '#ea580c40', background: '#ea580c12', padding: '6px 14px', fontSize: '11.5px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                      🌐 Digital Incomplete Restart
+                      <FaExternalLinkAlt size={12} /> Digital Incomplete Restart
                     </button>
                   </div>
                 </div>
@@ -1047,8 +1052,8 @@ export default function ManageApplications() {
               {/* Uploaded Documents Attachments Preview */}
               {documents && documents.length > 0 && (
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
-                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                    📎 Uploaded Application Documents ({documents.length})
+                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <FaPaperclip /> Uploaded Application Documents ({documents.length})
                   </h4>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                     {documents.map((doc, dIdx) => (
@@ -1063,9 +1068,9 @@ export default function ManageApplications() {
                           fontSize: '12px', fontWeight: 700, color: C.primary, textDecoration: 'none'
                         }}
                       >
-                        <span>📄</span>
+                        <FaFileAlt size={12} />
                         <span>{doc.doc_type?.replace(/_/g, ' ').toUpperCase() || `DOCUMENT ${dIdx+1}`}</span>
-                        <span style={{ fontSize: '10px', color: C.textLight }}>🔗</span>
+                        <FaLink size={10} style={{ color: C.textLight }} />
                       </a>
                     ))}
                   </div>
@@ -1076,8 +1081,8 @@ export default function ManageApplications() {
 
             {/* Verification Lifecycle Log Stream */}
             <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
-              <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                📜 Verification Lifecycle Log
+              <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaScroll /> Verification Lifecycle Log
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderLeft: `2px solid ${C.primary}`, paddingLeft: '14px' }}>
                 {timelines.length === 0 ? (
@@ -1238,10 +1243,11 @@ export default function ManageApplications() {
                   border: leadCategory === 'credit_card' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
                   background: leadCategory === 'credit_card' ? `${C.primary}15` : C.bgSecondary,
                   color: leadCategory === 'credit_card' ? C.primary : C.text,
-                  fontWeight: 800, fontSize: '13px', cursor: 'pointer'
+                  fontWeight: 800, fontSize: '13px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
-                💳 Credit Card
+                <FaCreditCard /> Credit Card
               </button>
               <button
                 type="button"
@@ -1251,10 +1257,11 @@ export default function ManageApplications() {
                   border: leadCategory === 'loan' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
                   background: leadCategory === 'loan' ? `${C.primary}15` : C.bgSecondary,
                   color: leadCategory === 'loan' ? C.primary : C.text,
-                  fontWeight: 800, fontSize: '13px', cursor: 'pointer'
+                  fontWeight: 800, fontSize: '13px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
-                🏦 Loan
+                <FaUniversity /> Loan
               </button>
               <button
                 type="button"
@@ -1264,10 +1271,11 @@ export default function ManageApplications() {
                   border: leadCategory === 'insurance' ? `2px solid ${C.primary}` : `1px solid ${C.border}`,
                   background: leadCategory === 'insurance' ? `${C.primary}15` : C.bgSecondary,
                   color: leadCategory === 'insurance' ? C.primary : C.text,
-                  fontWeight: 800, fontSize: '13px', cursor: 'pointer'
+                  fontWeight: 800, fontSize: '13px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                 }}
               >
-                🛡️ Insurance
+                <FaShieldAlt /> Insurance
               </button>
             </div>
 
@@ -1514,7 +1522,9 @@ export default function ManageApplications() {
                 <span style={{ fontSize: '11px', fontWeight: 800, background: `${C.primary}15`, color: C.primary, padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>
                   {editingApp.app_number}
                 </span>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: '4px 0 0' }}>✏️ Edit Lead / Application Details</h3>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FaEdit /> Edit Lead / Application Details
+                </h3>
                 <p style={{ fontSize: '12px', color: C.textLight, margin: '2px 0 0' }}>
                   Update customer details, bank-specific requirements, and tracking information
                 </p>
@@ -1531,7 +1541,9 @@ export default function ManageApplications() {
               
               {/* Customer Profile Section */}
               <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', marginBottom: '10px' }}>👤 Customer Information</div>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FaUser /> Customer Information
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
                     <label style={S.label}>Customer Full Name *</label>
@@ -1568,8 +1580,8 @@ export default function ManageApplications() {
 
               {/* Dynamic Bank Specific Configuration Section */}
               <div style={{ background: `${C.primary}08`, padding: '14px', borderRadius: '14px', border: `1px solid ${C.primary}25` }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', marginBottom: '10px' }}>
-                  🏦 Bank-Specific Requirements ({editForm.bank_name || editingApp.bank_name || 'Standard Bank'})
+                <div style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FaUniversity /> Bank-Specific Requirements ({editForm.bank_name || editingApp.bank_name || 'Standard Bank'})
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

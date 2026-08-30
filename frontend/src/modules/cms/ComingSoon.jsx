@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme, makeS } from '../../contexts/ThemeContext';
+import { FaRocket } from 'react-icons/fa';
 import { Icons } from '../../components/Icon/PartnerIcons';
 
 export default function ComingSoon() {
@@ -21,9 +22,9 @@ export default function ComingSoon() {
           width: "100px", height: "100px", borderRadius: "50%",
           background: `linear-gradient(135deg, ${C.teal}20, ${C.primary}30)`,
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: C.primary, fontSize: "48px"
+          color: C.primary, fontSize: "44px"
         }}>
-          {Icons.Settings || "✈️"}
+          {Icons.Settings || <FaRocket />}
         </div>
 
         <div>

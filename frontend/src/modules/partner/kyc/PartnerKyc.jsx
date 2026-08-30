@@ -502,8 +502,8 @@ export default function PartnerKyc() {
         alignItems: isMobile ? 'flex-start' : 'center',
         gap: isMobile ? '12px' : '16px'
       }}>
-        <div style={{ fontSize: isMobile ? '24px' : '28px', flexShrink: 0 }}>
-          {isApproved ? '✅' : isUnderReview ? '⏳' : isRejected ? '❌' : '📋'}
+        <div style={{ fontSize: isMobile ? '24px' : '28px', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+          {isApproved ? <MdCheckCircle color="#10B981" /> : isUnderReview ? <MdPendingActions color="#F59E0B" /> : isRejected ? <MdError color="#EF4444" /> : <MdAssignment color="#2563EB" />}
         </div>
         <div style={{ minWidth: 0, width: '100%' }}>
           <h3 style={{ margin: 0, fontSize: isMobile ? '14px' : '16px', fontWeight: 800, textTransform: 'uppercase', wordBreak: 'break-word' }}>
@@ -1161,8 +1161,8 @@ export default function PartnerKyc() {
             <h3 style={{ margin: 0, fontSize: isMobile ? '15px' : '16px', fontWeight: 800 }}>Submit KYC Application for Review</h3>
             <p style={{ margin: '4px 0 0 0', fontSize: isMobile ? '12px' : '13px', color: isAllUploaded ? '#10B981' : textSecondary, fontWeight: isAllUploaded ? 700 : 400, wordBreak: 'break-word' }}>
               {isAllUploaded 
-                ? '✅ All 3 mandatory items (PAN, Bank Proof, Video) uploaded! Click submit for Super Admin & Admin review.'
-                : '⚠️ Upload PAN Card, Bank Account Proof, and Video Verification to enable submission.'}
+                ? 'All 3 mandatory items (PAN, Bank Proof, Video) uploaded! Click submit for Super Admin & Admin review.'
+                : 'Upload PAN Card, Bank Account Proof, and Video Verification to enable submission.'}
             </p>
           </div>
           <button 

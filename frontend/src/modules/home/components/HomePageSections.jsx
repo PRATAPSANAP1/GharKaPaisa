@@ -484,7 +484,7 @@ export function BankLogosSection({ C }) {
         fontWeight: 700,
         display: "inline-block"
       }}>
-        🏦 Trusted Partner Banks
+        <FaUniversity style={{ marginRight: '6px' }} /> Trusted Partner Banks
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { FaExclamationTriangle, FaCheckCircle } from 'react-icons/fa';
 import api from '../../services/api';
 
 export default function CustomerShareApplyForm() {
@@ -99,7 +100,7 @@ export default function CustomerShareApplyForm() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: '#fff', padding: 20, fontFamily: 'sans-serif' }}>
         <div style={{ background: '#1e293b', border: '1px solid #ef4444', borderRadius: 20, padding: 32, maxWidth: 440, textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>⚠️</div>
+          <div style={{ fontSize: 36, marginBottom: 12, color: '#f87171', display: 'flex', justifyContent: 'center' }}><FaExclamationTriangle /></div>
           <h2 style={{ fontSize: 20, color: '#f87171', margin: '0 0 10px' }}>Application Link Unavailable</h2>
           <p style={{ fontSize: 14, color: '#94a3b8', margin: '0 0 20px' }}>{error || 'This link may have expired or is invalid.'}</p>
           <a href="/" style={{ display: 'inline-block', background: '#3b82f6', color: '#fff', textDecoration: 'none', padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 14 }}>Return to Homepage</a>
@@ -114,7 +115,9 @@ export default function CustomerShareApplyForm() {
     return (
       <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f8fafc', fontFamily: "'Inter', sans-serif", padding: '24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: '100%', maxWidth: 540, background: '#1e293b', border: '1px solid #334155', borderRadius: 24, padding: 32, boxShadow: '0 24px 60px rgba(0,0,0,0.4)', textAlign: 'center' }}>
-          <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: '#10b98120', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '34px', marginBottom: '16px' }}>✅</div>
+          <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: '#10b98120', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '34px', marginBottom: '16px', color: '#10b981' }}>
+            <FaCheckCircle />
+          </div>
           <h2 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 8px', color: '#10b981' }}>Details Saved Successfully!</h2>
           <p style={{ fontSize: '13.5px', color: '#94a3b8', margin: '0 auto 24px', lineHeight: '1.5' }}>
             Your customer details for <strong>{product.name || 'this product'}</strong> have been recorded. Proceed to the bank portal to finish your application.

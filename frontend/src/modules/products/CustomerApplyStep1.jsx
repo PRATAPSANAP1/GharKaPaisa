@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { FaExclamationTriangle, FaShieldAlt, FaInfoCircle, FaPaperPlane, FaClipboardList } from 'react-icons/fa';
 import { getApiV1Url } from '../../config/api';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -183,7 +184,9 @@ export default function CustomerApplyStep1() {
   if (error || !product) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: themeBg, color: textCol, fontFamily: 'Inter, sans-serif', padding: '24px', textAlign: 'center' }}>
-        <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: '#ef444420', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '16px' }}>⚠️</div>
+        <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: '#ef444420', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '16px', color: '#f87171' }}>
+          <FaExclamationTriangle />
+        </div>
         <h2 style={{ fontSize: '22px', fontWeight: 900, margin: '0 0 8px', color: '#f87171' }}>{error || 'Invalid Application Link'}</h2>
         <p style={{ fontSize: '14px', color: mutedCol, maxWidth: '400px', marginBottom: '24px' }}>This application link is expired, inactive, or already processed.</p>
         <a href="https://gharkapaisa.in" style={{ padding: '12px 24px', background: C.primary || '#2563eb', color: '#fff', borderRadius: '12px', fontWeight: 800, textDecoration: 'none', fontSize: '14px', boxShadow: '0 4px 14px rgba(37,99,235,0.3)' }}>Return to Homepage</a>
@@ -197,7 +200,7 @@ export default function CustomerApplyStep1() {
       {/* Top Branding Banner */}
       <div style={{ width: '100%', maxWidth: '640px', textAlign: 'center', marginBottom: isMobile ? '16px' : '24px' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: `${C.primary || '#2563eb'}18`, border: `1px solid ${C.primary || '#2563eb'}30`, padding: '6px 14px', borderRadius: '30px', color: C.primary || '#2563eb', fontWeight: 800, fontSize: isMobile ? '11px' : '12px', letterSpacing: '0.5px', marginBottom: '10px' }}>
-          🛡️ OFFICIALLY VERIFIED APPLICATION PORTAL
+          <FaShieldAlt /> OFFICIALLY VERIFIED APPLICATION PORTAL
         </div>
         <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>{product.name}</h1>
         <p style={{ fontSize: isMobile ? '13px' : '14px', color: mutedCol, margin: 0 }}>
@@ -222,10 +225,14 @@ export default function CustomerApplyStep1() {
               transition: 'all 0.2s ease',
               background: activeTab === 'product_details' ? (isDark ? '#27272a' : '#ffffff') : 'transparent',
               color: activeTab === 'product_details' ? (C.primary || '#2563eb') : mutedCol,
-              boxShadow: activeTab === 'product_details' ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
+              boxShadow: activeTab === 'product_details' ? '0 4px 12px rgba(0,0,0,0.1)' : 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
             }}
           >
-            📋 Product Details
+            <FaClipboardList /> Product Details
           </button>
           <button
             type="button"
@@ -241,10 +248,14 @@ export default function CustomerApplyStep1() {
               transition: 'all 0.2s ease',
               background: activeTab === 'apply_now' ? `linear-gradient(135deg, ${C.primary || '#2563eb'}, #1d4ed8)` : 'transparent',
               color: activeTab === 'apply_now' ? '#ffffff' : mutedCol,
-              boxShadow: activeTab === 'apply_now' ? '0 4px 14px rgba(37,99,235,0.4)' : 'none'
+              boxShadow: activeTab === 'apply_now' ? '0 4px 14px rgba(37,99,235,0.4)' : 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
             }}
           >
-            ✍️ Apply Now
+            <FaPaperPlane /> Apply Now
           </button>
         </div>
       </div>
@@ -409,8 +420,8 @@ export default function CustomerApplyStep1() {
                       style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontFamily: 'monospace', fontWeight: 800, textTransform: 'uppercase', outline: 'none' }}
                     />
                     {isSbiProduct && (
-                      <span style={{ fontSize: '11px', color: '#2563eb', marginTop: '4px', display: 'block', fontWeight: 600 }}>
-                        ℹ️ PAN Card details are required for SBI Bank applications.
+                      <span style={{ fontSize: '11px', color: '#2563eb', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                        <FaInfoCircle /> PAN Card details are required for SBI Bank applications.
                       </span>
                     )}
                   </div>

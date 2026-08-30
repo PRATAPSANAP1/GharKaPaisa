@@ -81,7 +81,7 @@ export default function Careers() {
               borderRadius: '20px', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', 
               letterSpacing: '0.5px', display: 'inline-block', marginBottom: '16px', border: '1px solid rgba(45, 212, 191, 0.3)'
             }}>
-              🚀 We are Hiring
+              <FaRocket style={{ marginRight: '6px' }} /> We are Hiring
             </span>
             <h2 style={{ fontSize: '32px', fontWeight: 900, lineHeight: 1.2, margin: '0 0 16px 0', letterSpacing: '-0.5px' }}>
               Build the Future of Financial Product Distribution

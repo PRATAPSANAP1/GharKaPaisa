@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
-import { MdAdd, MdSearch, MdEdit, MdDelete, MdCheckCircle, MdCancel } from "react-icons/md";
+import { MdAdd, MdSearch, MdEdit, MdDelete, MdCheckCircle, MdCancel, MdAccountBalance } from "react-icons/md";
 
 export default function ManageBanks() {
   const { C, isDark } = useTheme();
@@ -344,7 +344,7 @@ export default function ManageBanks() {
                      {bank.logo_url ? (
                        <img src={bank.logo_url} alt={bank.name} style={{ height: '28px', maxWidth: '80px', objectFit: 'contain' }} />
                      ) : (
-                       <span style={{ fontSize: '20px' }}>🏦</span>
+                       <MdAccountBalance size={22} style={{ color: C.teal }} />
                      )}
                    </td>
                    <td style={{ padding: '14px 16px', fontWeight: 800, color: C.text }}>{bank.name}</td>
@@ -686,7 +686,7 @@ export default function ManageBanks() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: C.card, borderRadius: '24px', padding: '28px', maxWidth: '420px', width: '100%', border: `1px solid ${C.border}`, textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#EF444415', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '24px' }}>
-              ⚠️
+              <MdCancel size={28} />
             </div>
             <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: '0 0 8px 0' }}>
               Delete {bankToDelete.name}?

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { FaSun, FaMoon } from 'react-icons/fa';
 
 // ── Brand Palette ──────────────────────────────────────────────────────────────
 const BRAND = {
@@ -234,7 +235,7 @@ export function ThemeToggle({ style = {}, onChange }) {
         color: isLight ? "#888" : "#aab0d8",
         transition: "all 0.3s",
       }}>
-        {isLight ? "☀️" : "🌙"}
+        {isLight ? <FaSun size={12} /> : <FaMoon size={12} />}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { FaShieldAlt, FaPaperPlane, FaCheckCircle, FaUniversity, FaEdit, FaLock, FaBolt, FaClipboardList } from 'react-icons/fa';
 import { getApiV1Url } from '../../config/api';
 import { getCleanImageUrl } from '../../utils/urlHelper';
 import { useFormPersistence } from '../../hooks/useFormPersistence';
@@ -151,7 +152,7 @@ export default function ProductApplyLanding() {
         {/* Top Branding Banner */}
         <div style={{ width: '100%', maxWidth: '640px', textAlign: 'center', marginBottom: isMobile ? '16px' : '24px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: `${themeColor}18`, border: `1px solid ${themeColor}30`, padding: '6px 14px', borderRadius: '30px', color: themeColor, fontWeight: 800, fontSize: isMobile ? '11px' : '12px', letterSpacing: '0.5px', marginBottom: '10px' }}>
-            🛡️ OFFICIALLY VERIFIED APPLICATION PORTAL
+            <FaShieldAlt /> OFFICIALLY VERIFIED APPLICATION PORTAL
           </div>
           <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, margin: '0 0 4px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>{product.name}</h1>
           <p style={{ fontSize: isMobile ? '13px' : '14px', color: textSecondary, margin: 0 }}>
@@ -175,10 +176,14 @@ export default function ProductApplyLanding() {
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 background: 'transparent',
-                color: textSecondary
+                color: textSecondary,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
               }}
             >
-              📋 Product Details
+              <FaClipboardList /> Product Details
             </button>
             <button
               type="button"
@@ -192,17 +197,23 @@ export default function ProductApplyLanding() {
                 cursor: 'default',
                 background: `linear-gradient(135deg, ${themeColor}, #1d4ed8)`,
                 color: '#ffffff',
-                boxShadow: `0 4px 14px ${themeColor}40`
+                boxShadow: `0 4px 14px ${themeColor}40`,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
               }}
             >
-              ✍️ Apply Now
+              <FaPaperPlane /> Apply Now
             </button>
           </div>
         </div>
 
         {/* SUCCESS CARD */}
         <div style={{ width: '100%', maxWidth: '640px', background: bgCard, borderRadius: isMobile ? '20px' : '24px', border: `1px solid ${borderColor}`, padding: isMobile ? '24px 18px' : '36px 28px', boxShadow: '0 16px 40px rgba(0,0,0,0.3)', textAlign: 'center' }}>
-          <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: '#10b98120', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '34px', marginBottom: '16px' }}>✅</div>
+          <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: '#10b98120', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '34px', marginBottom: '16px', color: '#10b981' }}>
+            <FaCheckCircle />
+          </div>
           <h2 style={{ fontSize: isMobile ? '19px' : '22px', fontWeight: 900, margin: '0 0 8px', color: '#10b981' }}>Details Saved Successfully!</h2>
           <p style={{ fontSize: '13.5px', color: textSecondary, maxWidth: '480px', margin: '0 auto 24px', lineHeight: '1.5' }}>
             Your customer details for <strong>{product.name}</strong> have been recorded. Proceed to the bank portal to finish your application.
@@ -270,7 +281,7 @@ export default function ProductApplyLanding() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '22px' }}>🏦</span>
+          <FaUniversity size={20} style={{ color: '#fff' }} />
           <span style={{ fontSize: '15px', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>GharKaPaisa</span>
         </div>
         <span style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.15)', padding: '4px 10px', borderRadius: '20px' }}>
@@ -446,8 +457,8 @@ export default function ProductApplyLanding() {
             order: isMobile ? 1 : 2
           }}>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: `${themeColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                <span style={{ fontSize: '22px' }}>📝</span>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: `${themeColor}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', color: themeColor }}>
+                <FaEdit size={22} />
               </div>
               <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 4px' }}>Apply for {product.name}</h3>
               <p style={{ fontSize: '12.5px', color: textSecondary, margin: 0 }}>Fill the details below to proceed to the official application</p>
@@ -537,13 +548,13 @@ export default function ProductApplyLanding() {
             {/* Trust Badges */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '20px', paddingTop: '16px', borderTop: `1px solid ${borderColor}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: textSecondary }}>
-                <span>🔒</span> Secure
+                <FaLock /> Secure
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: textSecondary }}>
-                <span>⚡</span> Instant
+                <FaBolt /> Instant
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: textSecondary }}>
-                <span>✅</span> Verified
+                <FaCheckCircle color="#10B981" /> Verified
               </div>
             </div>
           </div>

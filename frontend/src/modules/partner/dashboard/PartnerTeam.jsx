@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Users, Layers, List, TrendingUp, Activity, Target, Settings,
-  RefreshCw, AlertCircle, UserPlus, Send, Copy, Check, CheckCircle, MessageSquare, Mail, Share2
+  RefreshCw, AlertCircle, UserPlus, Send, Copy, Check, CheckCircle, MessageSquare, Mail, Share2, Rocket
 } from 'lucide-react';
 import TeamDashboardTab from './team/TeamDashboardTab';
 import TeamTreeTab from './team/TeamTreeTab';
@@ -195,7 +195,7 @@ export default function PartnerTeam() {
                     opacity: upgradeLoading ? 0.6 : 1,
                     transition: 'all 0.2s'
                   }}>
-                  {upgradeLoading ? 'Submitting...' : '🚀 Request Partner Upgrade'}
+                  {upgradeLoading ? 'Submitting...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Rocket size={16} /> Request Partner Upgrade</span>}
                 </button>
                 {upgradeMsg && <p style={{ fontSize: 12, color: textMuted, marginTop: 8 }}>{upgradeMsg}</p>}
               </>

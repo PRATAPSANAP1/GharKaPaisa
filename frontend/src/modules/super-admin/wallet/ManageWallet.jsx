@@ -314,7 +314,7 @@ export default function ManageWallet() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: C.teal, letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>⚡ RAZORPAYX PAYOUT ACCOUNT</span>
+                <span>RAZORPAYX PAYOUT ACCOUNT</span>
                 <span style={{ fontSize: '10px', background: '#DCFCE7', color: '#15803D', padding: '2px 8px', borderRadius: '12px', fontWeight: 700 }}>
                   {razorpayData?.account_status || 'CONNECTED'}
                 </span>
@@ -341,7 +341,7 @@ export default function ManageWallet() {
           <div style={{ position: 'absolute', top: 0, right: 0, width: '6px', height: '100%', background: C.gold }}></div>
           <div>
             <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: C.gold, letterSpacing: '0.5px', marginBottom: '8px' }}>
-              🏛️ GHARKAPAISA PARTNER LIABILITY
+              GHARKAPAISA PARTNER LIABILITY
             </div>
             <div style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: '6px 0 2px 0' }}>
               ₹{parseFloat(razorpayData?.partner_liability || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -474,7 +474,7 @@ export default function ManageWallet() {
                                     onClick={() => handleOpenPayModal(w)}
                                     style={{ ...S.btn('primary'), padding: '6px 10px', fontSize: '11px', background: C.teal, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                                   >
-                                    ⚡ Pay via Razorpay
+                                    Pay via Razorpay
                                   </button>
                                   <button
                                     disabled={actionLoading}
@@ -897,9 +897,9 @@ export default function ManageWallet() {
                 <label style={{ fontSize: '12px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Corporate Transfer Mode</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
                   {[
-                    { id: 'IMPS', label: '⚡ IMPS (Instant 24x7)' },
-                    { id: 'NEFT', label: '🏦 NEFT (Batch)' },
-                    { id: 'RTGS', label: '💼 RTGS (High Value)' }
+                    { id: 'IMPS', label: 'IMPS (Instant 24x7)' },
+                    { id: 'NEFT', label: 'NEFT (Batch)' },
+                    { id: 'RTGS', label: 'RTGS (High Value)' }
                   ].map(m => (
                     <button
                       key={m.id}
@@ -942,7 +942,7 @@ export default function ManageWallet() {
 
               {/* Security Safeguard Warning */}
               <div style={{ fontSize: '11.5px', color: '#92400E', background: '#FEF3C7', padding: '10px 14px', borderRadius: '10px', border: '1px solid #FCD34D', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '14px' }}>🔒</span>
+                <MdLock size={16} />
                 <div>
                   <strong>Audit Secured:</strong> This instant API transaction will disburse funds directly to the partner's verified bank account and record a dual-authorization audit entry.
                 </div>
@@ -957,7 +957,7 @@ export default function ManageWallet() {
                 onClick={handleConfirmRazorpayPayment}
                 style={{ ...S.btn('primary'), background: C.teal, padding: '10px 24px', fontSize: '13.5px', fontWeight: 800, borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
               >
-                {actionLoading ? 'Initiating Payout...' : '🔒 Confirm & Transfer Payout'}
+                <MdLock size={16} /> {actionLoading ? 'Initiating Payout...' : 'Confirm & Transfer Payout'}
               </button>
             </div>
           </div>
