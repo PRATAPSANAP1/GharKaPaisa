@@ -4534,6 +4534,14 @@ const migrate = async () => {
     logger.error('Failed to run Employee Management System migration:', empMigErr.message);
   }
 
+  try {
+    logger.info('Running Chatbot System migrations...');
+    const migrateChatbotSystem = require('./migrate_chatbot');
+    await migrateChatbotSystem();
+  } catch (chatbotMigErr) {
+    logger.error('Failed to run Chatbot System migration:', chatbotMigErr.message);
+  }
+
   logger.info('✅ All migrations completed successfully');
   if (require.main === module) {
     process.exit(0);

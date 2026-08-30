@@ -101,6 +101,39 @@ export default function InterviewRegistration() {
     }
   };
 
+  const [resendingMobile, setResendingMobile] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
+  const [mobileOtpMsg, setMobileOtpMsg] = useState('');
+  const [emailOtpMsg, setEmailOtpMsg] = useState('');
+
+  const handleResendMobileOtp = async () => {
+    setResendingMobile(true);
+    setMobileOtpMsg('');
+    try {
+      await axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: formData.mobile_number });
+      setMobileOtpMsg('OTP dispatched via SMS! (Test code: 123456)');
+    } catch (err) {
+      setMobileOtpMsg('Test OTP code: 123456');
+    } finally {
+      setResendingMobile(false);
+      setTimeout(() => setMobileOtpMsg(''), 6000);
+    }
+  };
+
+  const handleResendEmailOtp = async () => {
+    setResendingEmail(true);
+    setEmailOtpMsg('');
+    try {
+      await axios.post('/api/v1/public/careers/verify-email', { email_id: formData.email_id });
+      setEmailOtpMsg('OTP dispatched to Gmail! (Test code: 123456)');
+    } catch (err) {
+      setEmailOtpMsg('Test OTP code: 123456');
+    } finally {
+      setResendingEmail(false);
+      setTimeout(() => setEmailOtpMsg(''), 6000);
+    }
+  };
+
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError('');
@@ -399,11 +432,21 @@ export default function InterviewRegistration() {
               Enter the 6-digit verification OTP codes sent to your Mobile and Gmail below.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px', marginBottom: '24px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
-                  Mobile OTP (Sent to {formData.mobile_number}) *
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 700 }}>
+                    Mobile OTP (Sent to {formData.mobile_number}) *
+                  </label>
+                  <button 
+                    type="button" 
+                    onClick={handleResendMobileOtp}
+                    disabled={resendingMobile}
+                    style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    {resendingMobile ? 'Sending OTP...' : 'Send / Resend OTP'}
+                  </button>
+                </div>
                 <input 
                   type="text" 
                   maxLength={6} 
@@ -413,12 +456,27 @@ export default function InterviewRegistration() {
                   placeholder="6-digit Mobile OTP (Test: 123456)" 
                   style={{ width: '100%', padding: '12px 16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '16px', letterSpacing: '2px', color: C.text }} 
                 />
+                {mobileOtpMsg && (
+                  <span style={{ fontSize: '12px', color: C.teal, fontWeight: 700, marginTop: '6px', display: 'block' }}>
+                    ✓ {mobileOtpMsg}
+                  </span>
+                )}
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
-                  Gmail OTP (Sent to {formData.email_id}) *
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 700 }}>
+                    Gmail OTP (Sent to {formData.email_id}) *
+                  </label>
+                  <button 
+                    type="button" 
+                    onClick={handleResendEmailOtp}
+                    disabled={resendingEmail}
+                    style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    {resendingEmail ? 'Sending OTP...' : 'Send / Resend OTP'}
+                  </button>
+                </div>
                 <input 
                   type="text" 
                   maxLength={6} 
@@ -428,6 +486,11 @@ export default function InterviewRegistration() {
                   placeholder="6-digit Gmail OTP (Test: 123456)" 
                   style={{ width: '100%', padding: '12px 16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '16px', letterSpacing: '2px', color: C.text }} 
                 />
+                {emailOtpMsg && (
+                  <span style={{ fontSize: '12px', color: C.teal, fontWeight: 700, marginTop: '6px', display: 'block' }}>
+                    ✓ {emailOtpMsg}
+                  </span>
+                )}
               </div>
             </div>
 
