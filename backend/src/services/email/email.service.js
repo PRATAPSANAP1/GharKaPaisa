@@ -19,8 +19,19 @@ if (accessKeyId && secretAccessKey) {
   };
 }
 
-const ses = new SESClient(sesOptions);
-const FROM_EMAIL = process.env.SES_FROM_EMAIL || process.env.MAIL_FROM || "noreply@gharkapaisa.in";
+const rawFromEmail = process.env.SES_FROM_EMAIL || process.env.MAIL_FROM || "noreply@gharkapaisa.in";
+const senderDisplayName = process.env.SES_SENDER_NAME || "GHARKP";
+
+const formatSenderAddress = (email, name = senderDisplayName) => {
+  const clean = String(email || '').trim();
+  if (clean.includes('<') && clean.includes('>')) {
+    return clean;
+  }
+  const extracted = clean.replace(/.*<([^>]+)>.*/, '$1');
+  return `"${name}" <${extracted}>`;
+};
+
+const FROM_EMAIL = formatSenderAddress(rawFromEmail);
 
 /**
  * Send a generic email via SES
