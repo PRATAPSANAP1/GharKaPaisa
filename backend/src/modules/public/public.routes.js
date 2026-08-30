@@ -117,7 +117,7 @@ router.post('/verify-email', async (req, res, next) => {
 router.post('/verify-otp', async (req, res, next) => {
   try {
     await ensurePublicTablesExist();
-    const { mobile_number, email_id, otp, mobile_otp, email_otp } = req.body;
+    const { mobile_number, email_id, otp, mobile_otp, email_otp, type } = req.body;
     let verified = false;
 
     const mOtp = mobile_otp || otp;
@@ -126,17 +126,38 @@ router.post('/verify-otp', async (req, res, next) => {
     if (mOtp === '123456' || eOtp === '123456' || mOtp === '1234' || eOtp === '1234' || otp === '123456') {
       verified = true;
     } else {
-      const mHash = mOtp ? hashOtp(mOtp) : '';
-      const eHash = eOtp ? hashOtp(eOtp) : '';
-
       try {
-        const { rows } = await query(
-          `SELECT * FROM otp_verifications WHERE (identity = $1 AND otp_hash = $2) OR (identity = $3 AND otp_hash = $4) AND expires_at > NOW()`,
-          [`mobile_${mobile_number}`, mHash, `email_${email_id}`, eHash]
-        );
-        if (rows.length > 0) {
-          verified = true;
-          await query(`DELETE FROM otp_verifications WHERE id = $1`, [rows[0].id]);
+        if (type === 'mobile' || (mobile_number && mOtp && !email_id)) {
+          const mHash = hashOtp(mOtp);
+          const { rows } = await query(
+            `SELECT * FROM otp_verifications WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()`,
+            [`mobile_${mobile_number}`, mHash]
+          );
+          if (rows.length > 0) {
+            verified = true;
+            await query(`DELETE FROM otp_verifications WHERE id = $1`, [rows[0].id]);
+          }
+        } else if (type === 'email' || (email_id && eOtp && !mobile_number)) {
+          const eHash = hashOtp(eOtp);
+          const { rows } = await query(
+            `SELECT * FROM otp_verifications WHERE identity = $1 AND otp_hash = $2 AND expires_at > NOW()`,
+            [`email_${email_id}`, eHash]
+          );
+          if (rows.length > 0) {
+            verified = true;
+            await query(`DELETE FROM otp_verifications WHERE id = $1`, [rows[0].id]);
+          }
+        } else {
+          const mHash = mOtp ? hashOtp(mOtp) : '';
+          const eHash = eOtp ? hashOtp(eOtp) : '';
+          const { rows } = await query(
+            `SELECT * FROM otp_verifications WHERE ((identity = $1 AND otp_hash = $2) OR (identity = $3 AND otp_hash = $4)) AND expires_at > NOW()`,
+            [`mobile_${mobile_number}`, mHash, `email_${email_id}`, eHash]
+          );
+          if (rows.length > 0) {
+            verified = true;
+            await query(`DELETE FROM otp_verifications WHERE id = $1`, [rows[0].id]);
+          }
         }
       } catch (dbErr) {
         logger.warn(`OTP DB select warning: ${dbErr.message}`);
@@ -144,7 +165,7 @@ router.post('/verify-otp', async (req, res, next) => {
     }
 
     if (!verified) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired OTP. You can enter 123456 to verify.' });
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP. (Test code: 123456)' });
     }
 
     res.json({ success: true, message: 'OTP verified successfully' });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { 
@@ -11,15 +11,27 @@ export default function InterviewRegistration() {
   const { C } = useTheme();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState(1); // 1: Registration Form, 2: OTP Verification, 3: Success Code
+  const [step, setStep] = useState(1); // 1: Registration Form & Real-time Verification, 3: Success Code
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
   const [referenceCode, setReferenceCode] = useState('');
 
-  const [otpMobile, setOtpMobile] = useState('');
-  const [otpEmail, setOtpEmail] = useState('');
+  // Mobile OTP States
+  const [mobileOtp, setMobileOtp] = useState('');
   const [mobileOtpSent, setMobileOtpSent] = useState(false);
+  const [mobileOtpTimer, setMobileOtpTimer] = useState(0);
+  const [mobileOtpLoading, setMobileOtpLoading] = useState(false);
+  const [mobileVerifyLoading, setMobileVerifyLoading] = useState(false);
+  const [mobilePreVerified, setMobilePreVerified] = useState(false);
+
+  // Email OTP States
+  const [emailOtp, setEmailOtp] = useState('');
   const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailOtpTimer, setEmailOtpTimer] = useState(0);
+  const [emailOtpLoading, setEmailOtpLoading] = useState(false);
+  const [emailVerifyLoading, setEmailVerifyLoading] = useState(false);
+  const [emailPreVerified, setEmailPreVerified] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -46,12 +58,37 @@ export default function InterviewRegistration() {
 
   const [resumeFile, setResumeFile] = useState(null);
 
+  // Timers countdown
+  useEffect(() => {
+    let t;
+    if (mobileOtpTimer > 0) t = setTimeout(() => setMobileOtpTimer(mobileOtpTimer - 1), 1000);
+    return () => clearTimeout(t);
+  }, [mobileOtpTimer]);
+
+  useEffect(() => {
+    let t;
+    if (emailOtpTimer > 0) t = setTimeout(() => setEmailOtpTimer(emailOtpTimer - 1), 1000);
+    return () => clearTimeout(t);
+  }, [emailOtpTimer]);
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+
+    // Reset verification if mobile or email is altered
+    if (name === 'mobile_number') {
+      setMobilePreVerified(false);
+      setMobileOtpSent(false);
+      setMobileOtp('');
+    }
+    if (name === 'email_id') {
+      setEmailPreVerified(false);
+      setEmailOtpSent(false);
+      setEmailOtp('');
+    }
   };
 
   const handleFileChange = (e) => {
@@ -60,11 +97,132 @@ export default function InterviewRegistration() {
     }
   };
 
+  // ── Send Mobile OTP ──
+  const handleSendMobileOtp = async () => {
+    setError('');
+    setInfoMsg('');
+    const mob = formData.mobile_number.trim();
+    if (!mob || !/^[6-9]\d{9}$/.test(mob)) {
+      setError('Please enter a valid 10-digit mobile number before sending OTP.');
+      return;
+    }
+
+    setMobileOtpLoading(true);
+    try {
+      await axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: mob });
+      setMobileOtpSent(true);
+      setMobileOtpTimer(60);
+      setInfoMsg('Verification OTP dispatched to Mobile number! (Test code: 123456)');
+    } catch (err) {
+      setMobileOtpSent(true);
+      setMobileOtpTimer(60);
+      setInfoMsg('OTP sent to Mobile! (Test code: 123456)');
+    } finally {
+      setMobileOtpLoading(false);
+    }
+  };
+
+  // ── Verify Mobile OTP ──
+  const handleVerifyMobileOtp = async (valToVerify) => {
+    const code = valToVerify || mobileOtp;
+    if (!code || String(code).trim().length < 6) {
+      setError('Please enter the 6-digit Mobile OTP code.');
+      return;
+    }
+
+    setError('');
+    setInfoMsg('');
+    setMobileVerifyLoading(true);
+    try {
+      const res = await axios.post('/api/v1/public/careers/verify-otp', {
+        mobile_number: formData.mobile_number.trim(),
+        mobile_otp: String(code).trim(),
+        type: 'mobile'
+      });
+      if (res.data.success) {
+        setMobilePreVerified(true);
+        setMobileOtpSent(false);
+        setInfoMsg('✓ Mobile number successfully verified!');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid Mobile OTP. Please try again or use 123456.');
+    } finally {
+      setMobileVerifyLoading(false);
+    }
+  };
+
+  // ── Send Email OTP ──
+  const handleSendEmailOtp = async () => {
+    setError('');
+    setInfoMsg('');
+    const em = formData.email_id.trim();
+    if (!em || !/\S+@\S+\.\S+/.test(em)) {
+      setError('Please enter a valid Email address before sending OTP.');
+      return;
+    }
+
+    setEmailOtpLoading(true);
+    try {
+      await axios.post('/api/v1/public/careers/verify-email', { email_id: em });
+      setEmailOtpSent(true);
+      setEmailOtpTimer(60);
+      setInfoMsg('Verification OTP dispatched to Email address! (Test code: 123456)');
+    } catch (err) {
+      setEmailOtpSent(true);
+      setEmailOtpTimer(60);
+      setInfoMsg('OTP sent to Email! (Test code: 123456)');
+    } finally {
+      setEmailOtpLoading(false);
+    }
+  };
+
+  // ── Verify Email OTP ──
+  const handleVerifyEmailOtp = async (valToVerify) => {
+    const code = valToVerify || emailOtp;
+    if (!code || String(code).trim().length < 6) {
+      setError('Please enter the 6-digit Email OTP code.');
+      return;
+    }
+
+    setError('');
+    setInfoMsg('');
+    setEmailVerifyLoading(true);
+    try {
+      const res = await axios.post('/api/v1/public/careers/verify-otp', {
+        email_id: formData.email_id.trim(),
+        email_otp: String(code).trim(),
+        type: 'email'
+      });
+      if (res.data.success) {
+        setEmailPreVerified(true);
+        setEmailOtpSent(false);
+        setInfoMsg('✓ Email address successfully verified!');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid Email OTP. Please try again or use 123456.');
+    } finally {
+      setEmailVerifyLoading(false);
+    }
+  };
+
+  // ── Final Registration Submission ──
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setInfoMsg('');
+
     if (!formData.full_name || !formData.mobile_number || !formData.email_id) {
-      setError('Please fill in all required fields (Name, Mobile, Email).');
+      setError('Please fill in all required personal details (Full Name, Mobile, Email).');
+      return;
+    }
+
+    if (!mobilePreVerified) {
+      setError('Please verify your Mobile Number with OTP before submitting.');
+      return;
+    }
+
+    if (!emailPreVerified) {
+      setError('Please verify your Email Address with OTP before submitting.');
       return;
     }
 
@@ -79,104 +237,32 @@ export default function InterviewRegistration() {
     }
 
     if (!resumeFile) {
-      setError('Resume / CV file is required. Please upload your Resume before proceeding.');
+      setError('Resume / CV file is required. Please upload your Resume before completing registration.');
       return;
     }
 
     setLoading(true);
     try {
-      // Simultaneously dispatch MSG91 SMS OTP and AWS SES Email OTP
-      await Promise.all([
-        axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: formData.mobile_number }),
-        axios.post('/api/v1/public/careers/verify-email', { email_id: formData.email_id })
-      ]).catch(err => console.warn('OTP dispatch warning:', err));
-      
-      setMobileOtpSent(true);
-      setEmailOtpSent(true);
-      setMobileOtpMsg('OTP sent via MSG91 SMS! (Test code: 123456)');
-      setEmailOtpMsg('OTP sent via AWS Email! (Test code: 123456)');
-      setStep(2);
-    } catch (err) {
-      setMobileOtpSent(true);
-      setEmailOtpSent(true);
-      setStep(2);
-    } finally {
-      setLoading(false);
-    }
-  };
+      const registerPayload = new FormData();
+      Object.keys(formData).forEach(key => {
+        registerPayload.append(key, formData[key]);
+      });
+      if (resumeFile) {
+        registerPayload.append('resume', resumeFile);
+      }
 
-  const [resendingMobile, setResendingMobile] = useState(false);
-  const [resendingEmail, setResendingEmail] = useState(false);
-  const [mobileOtpMsg, setMobileOtpMsg] = useState('');
-  const [emailOtpMsg, setEmailOtpMsg] = useState('');
-
-  const handleResendMobileOtp = async () => {
-    setResendingMobile(true);
-    setMobileOtpMsg('');
-    try {
-      await axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: formData.mobile_number });
-      setMobileOtpMsg('OTP dispatched via SMS! (Test code: 123456)');
-    } catch (err) {
-      setMobileOtpMsg('Test OTP code: 123456');
-    } finally {
-      setResendingMobile(false);
-      setTimeout(() => setMobileOtpMsg(''), 6000);
-    }
-  };
-
-  const handleResendEmailOtp = async () => {
-    setResendingEmail(true);
-    setEmailOtpMsg('');
-    try {
-      await axios.post('/api/v1/public/careers/verify-email', { email_id: formData.email_id });
-      setEmailOtpMsg('OTP dispatched to Gmail! (Test code: 123456)');
-    } catch (err) {
-      setEmailOtpMsg('Test OTP code: 123456');
-    } finally {
-      setResendingEmail(false);
-      setTimeout(() => setEmailOtpMsg(''), 6000);
-    }
-  };
-
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!otpMobile && !otpEmail) {
-      setError('Please enter the OTP sent to your Mobile and Gmail.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const verifyRes = await axios.post('/api/v1/public/careers/verify-otp', {
-        mobile_number: formData.mobile_number,
-        email_id: formData.email_id,
-        mobile_otp: otpMobile,
-        email_otp: otpEmail,
-        otp: otpMobile || otpEmail || '123456'
+      const regRes = await axios.post('/api/v1/public/careers/register', registerPayload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      if (verifyRes.data.success) {
-        // Register Candidate
-        const registerPayload = new FormData();
-        Object.keys(formData).forEach(key => {
-          registerPayload.append(key, formData[key]);
-        });
-        if (resumeFile) {
-          registerPayload.append('resume', resumeFile);
-        }
-
-        const regRes = await axios.post('/api/v1/public/careers/register', registerPayload, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-
-        if (regRes.data.success) {
-          setReferenceCode(regRes.data.data?.reference_code || regRes.data.reference_code);
-          setStep(3);
-        }
+      if (regRes.data.success) {
+        setReferenceCode(regRes.data.data?.reference_code || regRes.data.reference_code);
+        setStep(3);
+      } else {
+        setError(regRes.data.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'OTP verification failed. Please enter valid OTP.');
+      setError(err.response?.data?.message || 'Failed to submit registration. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -207,34 +293,160 @@ export default function InterviewRegistration() {
         </div>
 
         {error && (
-          <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px 16px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px' }}>
+          <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px 16px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', fontWeight: 600 }}>
             {error}
           </div>
         )}
 
-        {/* STEP 1: Registration Form */}
+        {infoMsg && (
+          <div style={{ background: '#ECFDF5', border: '1px solid #6EE7B7', color: '#065F46', padding: '12px 16px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', fontWeight: 600 }}>
+            {infoMsg}
+          </div>
+        )}
+
+        {/* STEP 1: Registration Form with Inline Real-time OTP Verification */}
         {step === 1 && (
           <form onSubmit={handleFormSubmit} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
             
             {/* Section 1: Personal Details */}
             <h2 style={{ fontSize: '19px', fontWeight: 800, margin: '0 0 20px 0', color: C.teal || '#0F766E', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
-              <FaUser style={{ color: C.teal || '#0F766E' }} /> 1. Personal Details
+              <FaUser style={{ color: C.teal || '#0F766E' }} /> 1. Personal Details & Contact Verification
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-              <div>
+              
+              {/* Full Name */}
+              <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Full Name *</label>
-                <input type="text" name="full_name" required value={formData.full_name} onChange={handleInputChange} placeholder="Enter full name" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                <input 
+                  type="text" 
+                  name="full_name" 
+                  required 
+                  value={formData.full_name} 
+                  onChange={handleInputChange} 
+                  placeholder="Enter full name" 
+                  style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} 
+                />
               </div>
 
+              {/* Mobile Number & Inline OTP */}
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Mobile Number *</label>
-                <input type="tel" name="mobile_number" required value={formData.mobile_number} onChange={handleInputChange} placeholder="10 digit mobile number" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="tel" 
+                    name="mobile_number" 
+                    required 
+                    disabled={mobilePreVerified}
+                    value={formData.mobile_number} 
+                    onChange={handleInputChange} 
+                    placeholder="10 digit mobile number" 
+                    style={{ flex: 1, padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} 
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendMobileOtp}
+                    disabled={mobilePreVerified || mobileOtpLoading || (mobileOtpSent && mobileOtpTimer > 0)}
+                    style={{
+                      background: mobilePreVerified ? '#ECFDF5' : 'rgba(15, 118, 110, 0.1)',
+                      color: mobilePreVerified ? '#059669' : C.teal || '#0F766E',
+                      border: mobilePreVerified ? '1px solid #6EE7B7' : `1px solid ${C.teal || '#0F766E'}`,
+                      borderRadius: '10px',
+                      padding: '0 14px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: (mobilePreVerified || mobileOtpLoading || (mobileOtpSent && mobileOtpTimer > 0)) ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {mobilePreVerified ? '✓ Verified' : mobileOtpSent ? (mobileOtpTimer > 0 ? `Resend in ${mobileOtpTimer}s` : 'Resend OTP') : (mobileOtpLoading ? 'Sending...' : 'Send OTP')}
+                  </button>
+                </div>
+
+                {/* Inline Mobile OTP Box */}
+                {mobileOtpSent && !mobilePreVerified && (
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <input 
+                      type="text" 
+                      maxLength={6} 
+                      value={mobileOtp} 
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setMobileOtp(val);
+                        if (val.length === 6) handleVerifyMobileOtp(val);
+                      }} 
+                      placeholder="6-digit SMS OTP (Test: 123456)" 
+                      style={{ flex: 1, padding: '8px 12px', background: C.bgSecondary, border: `1px solid ${C.teal}`, borderRadius: '8px', fontSize: '13px', color: C.text }} 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleVerifyMobileOtp()}
+                      disabled={mobileVerifyLoading || mobileOtp.length < 6}
+                      style={{ background: C.teal || '#0F766E', color: '#fff', border: 'none', borderRadius: '8px', padding: '0 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      {mobileVerifyLoading ? 'Verifying...' : 'Verify OTP'}
+                    </button>
+                  </div>
+                )}
               </div>
 
+              {/* Email ID & Inline OTP */}
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Email ID *</label>
-                <input type="email" name="email_id" required value={formData.email_id} onChange={handleInputChange} placeholder="name@example.com" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="email" 
+                    name="email_id" 
+                    required 
+                    disabled={emailPreVerified}
+                    value={formData.email_id} 
+                    onChange={handleInputChange} 
+                    placeholder="name@example.com" 
+                    style={{ flex: 1, padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} 
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSendEmailOtp}
+                    disabled={emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)}
+                    style={{
+                      background: emailPreVerified ? '#ECFDF5' : 'rgba(15, 118, 110, 0.1)',
+                      color: emailPreVerified ? '#059669' : C.teal || '#0F766E',
+                      border: emailPreVerified ? '1px solid #6EE7B7' : `1px solid ${C.teal || '#0F766E'}`,
+                      borderRadius: '10px',
+                      padding: '0 14px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: (emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)) ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {emailPreVerified ? '✓ Verified' : emailOtpSent ? (emailOtpTimer > 0 ? `Resend in ${emailOtpTimer}s` : 'Resend OTP') : (emailOtpLoading ? 'Sending...' : 'Send OTP')}
+                  </button>
+                </div>
+
+                {/* Inline Email OTP Box */}
+                {emailOtpSent && !emailPreVerified && (
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <input 
+                      type="text" 
+                      maxLength={6} 
+                      value={emailOtp} 
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setEmailOtp(val);
+                        if (val.length === 6) handleVerifyEmailOtp(val);
+                      }} 
+                      placeholder="6-digit Gmail OTP (Test: 123456)" 
+                      style={{ flex: 1, padding: '8px 12px', background: C.bgSecondary, border: `1px solid ${C.teal}`, borderRadius: '8px', fontSize: '13px', color: C.text }} 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleVerifyEmailOtp()}
+                      disabled={emailVerifyLoading || emailOtp.length < 6}
+                      style={{ background: C.teal || '#0F766E', color: '#fff', border: 'none', borderRadius: '8px', padding: '0 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      {emailVerifyLoading ? 'Verifying...' : 'Verify OTP'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -421,95 +633,8 @@ export default function InterviewRegistration() {
             </div>
 
             <button type="submit" disabled={loading} style={{ background: C.employeePrimary || C.teal || '#0F766E', color: '#fff', border: 'none', padding: '14px 28px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, cursor: 'pointer', width: '100%', boxShadow: '0 4px 14px rgba(15,118,110,0.3)' }}>
-              {loading ? 'Processing Registration...' : 'Proceed to Mobile/Email Verification & Submit'}
+              {loading ? 'Submitting Registration...' : 'Complete Candidate Registration'}
             </button>
-          </form>
-        )}
-
-        {/* STEP 2: Mobile & Gmail Dual OTP Verification */}
-        {step === 2 && (
-          <form onSubmit={handleVerifyOtp} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 12px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FaLock style={{ color: C.teal }} /> Mobile & Gmail OTP Verification
-            </h2>
-            <p style={{ fontSize: '14px', color: C.textMid, marginBottom: '24px' }}>
-              Enter the 6-digit verification OTP codes sent to your Mobile and Gmail below.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: 700 }}>
-                    Mobile OTP (Sent to {formData.mobile_number}) *
-                  </label>
-                  <button 
-                    type="button" 
-                    onClick={handleResendMobileOtp}
-                    disabled={resendingMobile}
-                    style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
-                  >
-                    {resendingMobile ? 'Sending OTP...' : 'Send / Resend OTP'}
-                  </button>
-                </div>
-                <input 
-                  type="text" 
-                  maxLength={6} 
-                  required 
-                  value={otpMobile} 
-                  onChange={(e) => setOtpMobile(e.target.value)} 
-                  placeholder="6-digit Mobile OTP (Test: 123456)" 
-                  style={{ width: '100%', padding: '12px 16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '16px', letterSpacing: '2px', color: C.text }} 
-                />
-                {mobileOtpMsg && (
-                  <span style={{ fontSize: '12px', color: C.teal, fontWeight: 700, marginTop: '6px', display: 'block' }}>
-                    ✓ {mobileOtpMsg}
-                  </span>
-                )}
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: 700 }}>
-                    Gmail OTP (Sent to {formData.email_id}) *
-                  </label>
-                  <button 
-                    type="button" 
-                    onClick={handleResendEmailOtp}
-                    disabled={resendingEmail}
-                    style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
-                  >
-                    {resendingEmail ? 'Sending OTP...' : 'Send / Resend OTP'}
-                  </button>
-                </div>
-                <input 
-                  type="text" 
-                  maxLength={6} 
-                  required 
-                  value={otpEmail} 
-                  onChange={(e) => setOtpEmail(e.target.value)} 
-                  placeholder="6-digit Gmail OTP (Test: 123456)" 
-                  style={{ width: '100%', padding: '12px 16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '16px', letterSpacing: '2px', color: C.text }} 
-                />
-                {emailOtpMsg && (
-                  <span style={{ fontSize: '12px', color: C.teal, fontWeight: 700, marginTop: '6px', display: 'block' }}>
-                    ✓ {emailOtpMsg}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button 
-                type="button" 
-                onClick={() => setStep(1)} 
-                style={{ background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`, padding: '12px 24px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Back
-              </button>
-              <button type="submit" disabled={loading} style={{ flex: 1, background: C.teal, color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, cursor: 'pointer' }}>
-                {loading ? 'Verifying OTPs...' : 'Verify OTPs & Complete Registration'}
-              </button>
-            </div>
           </form>
         )}
 
