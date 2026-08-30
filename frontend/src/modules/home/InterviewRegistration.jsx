@@ -271,10 +271,12 @@ export default function InterviewRegistration() {
                 </select>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Notice Period (Days)</label>
-                <input type="number" name="notice_period_days" value={formData.notice_period_days} onChange={handleInputChange} placeholder="e.g. 15" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
-              </div>
+              {!formData.immediate_joining && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Notice Period (Days)</label>
+                  <input type="number" name="notice_period_days" value={formData.notice_period_days} onChange={handleInputChange} placeholder="e.g. 15" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                </div>
+              )}
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Comfortable with job location? *</label>
