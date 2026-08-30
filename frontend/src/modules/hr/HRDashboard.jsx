@@ -343,7 +343,7 @@ export default function HRDashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '16px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Full Name *</label>
-                    <input type="text" required value={hrForm.fullName} onChange={(e) => setHrForm({ ...hrForm, fullName: e.target.value })} placeholder="e.g. Priya Sharma" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                    <input type="text" required value={hrForm.fullName} onChange={(e) => setHrForm({ ...hrForm, fullName: e.target.value })} placeholder="Enter full name" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
                   </div>
 
                   <div>

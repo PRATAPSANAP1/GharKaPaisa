@@ -160,7 +160,7 @@ export default function InterviewRegistration() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Full Name *</label>
-                <input type="text" name="full_name" required value={formData.full_name} onChange={handleInputChange} placeholder="e.g. Rahul Verma" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                <input type="text" name="full_name" required value={formData.full_name} onChange={handleInputChange} placeholder="Enter full name" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
               </div>
 
               <div>
