@@ -151,41 +151,49 @@ export default function InterviewRegistration() {
         {/* STEP 1: Registration Form */}
         {step === 1 && (
           <form onSubmit={handleFormSubmit} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 20px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FaUser style={{ color: C.teal }} /> Personal & Contact Details
+            
+            {/* Section 1: Personal Details */}
+            <h2 style={{ fontSize: '19px', fontWeight: 800, margin: '0 0 20px 0', color: C.teal || '#0F766E', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+              <FaUser style={{ color: C.teal || '#0F766E' }} /> 1. Personal Details
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Full Name *</label>
-                <input type="text" name="full_name" required value={formData.full_name} onChange={handleInputChange} placeholder="Full Name" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                <input type="text" name="full_name" required value={formData.full_name} onChange={handleInputChange} placeholder="e.g. Rahul Verma" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Mobile Number *</label>
-                <input type="tel" name="mobile_number" required value={formData.mobile_number} onChange={handleInputChange} placeholder="10 Digit Mobile" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                <input type="tel" name="mobile_number" required value={formData.mobile_number} onChange={handleInputChange} placeholder="10 digit mobile number" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Email Address *</label>
-                <input type="email" name="email_id" required value={formData.email_id} onChange={handleInputChange} placeholder="email@domain.com" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Email ID *</label>
+                <input type="email" name="email_id" required value={formData.email_id} onChange={handleInputChange} placeholder="name@example.com" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Date of Birth</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Date of Birth / Age</label>
                 <input type="date" name="date_of_birth" value={formData.date_of_birth} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+              </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Current Address</label>
+                <input type="text" name="current_address" value={formData.current_address} onChange={handleInputChange} placeholder="Current City / Area Address" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
               </div>
             </div>
 
-            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '24px 0 20px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FaGraduationCap style={{ color: C.teal }} /> Education & Experience
+            {/* Section 2: Education */}
+            <h2 style={{ fontSize: '19px', fontWeight: 800, margin: '24px 0 20px 0', color: C.teal || '#0F766E', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+              <FaGraduationCap style={{ color: C.teal || '#0F766E' }} /> 2. Education
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Highest Qualification *</label>
                 <select name="highest_qualification" value={formData.highest_qualification} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
-                  <option value="10th / 12th">10th / 12th</option>
+                  <option value="10th / 12th">10th / 12th Pass</option>
                   <option value="Diploma">Diploma</option>
                   <option value="Graduate">Graduate (BA, BCom, BSc, BTech, BCA)</option>
                   <option value="Post Graduate">Post Graduate (MBA, MTech, MCA, MCom)</option>
@@ -193,12 +201,33 @@ export default function InterviewRegistration() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Passing Year</label>
-                <input type="number" name="passing_year" value={formData.passing_year} onChange={handleInputChange} placeholder="e.g. 2022" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Passing Year *</label>
+                <input type="number" name="passing_year" required value={formData.passing_year} onChange={handleInputChange} placeholder="e.g. 2022" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+              </div>
+            </div>
+
+            {/* Section 3: Experience & Job Role Details */}
+            <h2 style={{ fontSize: '19px', fontWeight: 800, margin: '24px 0 20px 0', color: C.teal || '#0F766E', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+              <FaBriefcase style={{ color: C.teal || '#0F766E' }} /> 3. Experience & Job Role Details
+            </h2>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Target Job Role *</label>
+                <select name="target_role" value={formData.target_role || 'Financial Sales Executive'} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
+                  <option value="Financial Sales Executive">Financial Sales Executive</option>
+                  <option value="Credit Card Specialist">Credit Card Specialist</option>
+                  <option value="Team Leader">Team Leader (TL)</option>
+                  <option value="Telecaller">Telecaller (TC)</option>
+                  <option value="Customer Support & Verification">Customer Support & Verification</option>
+                  <option value="Full Stack React / Node Developer">Full Stack React / Node Developer</option>
+                  <option value="Partner Relationship Manager">Partner Relationship Manager</option>
+                  <option value="Operations Associate">Operations Associate</option>
+                </select>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Experience Type *</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Fresher / Experienced *</label>
                 <select name="experience_type" value={formData.experience_type} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
                   <option value="Fresher">Fresher</option>
                   <option value="Experienced">Experienced</option>
@@ -209,27 +238,98 @@ export default function InterviewRegistration() {
                 <>
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Total Experience (Years)</label>
-                    <input type="number" step="0.5" name="total_experience_years" value={formData.total_experience_years} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                    <input type="number" step="0.5" name="total_experience_years" value={formData.total_experience_years} onChange={handleInputChange} placeholder="e.g. 2.5" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
                   </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Current / Last Company</label>
-                    <input type="text" name="current_company" value={formData.current_company} onChange={handleInputChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                    <input type="text" name="current_company" value={formData.current_company} onChange={handleInputChange} placeholder="e.g. HDFC / Axis DSA" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Current / Last Designation</label>
+                    <input type="text" name="current_designation" value={formData.current_designation} onChange={handleInputChange} placeholder="e.g. Senior Executive" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Last Salary / CTC (Annual ₹)</label>
+                    <input type="text" name="last_salary_ctc" value={formData.last_salary_ctc} onChange={handleInputChange} placeholder="e.g. 3,50,000" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
                   </div>
                 </>
               )}
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Expected Salary (Monthly ₹)</label>
+                <input type="text" name="expected_salary" value={formData.expected_salary} onChange={handleInputChange} placeholder="e.g. 25,000" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Available for Immediate Joining? *</label>
+                <select name="immediate_joining" value={formData.immediate_joining ? 'Yes' : 'No'} onChange={(e) => setFormData(p => ({ ...p, immediate_joining: e.target.value === 'Yes' }))} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
+                  <option value="Yes">Yes - Immediate Joining</option>
+                  <option value="No">No - Needs Notice Period</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Notice Period (Days)</label>
+                <input type="number" name="notice_period_days" value={formData.notice_period_days} onChange={handleInputChange} placeholder="e.g. 15" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Comfortable with job location? *</label>
+                <select name="comfortable_with_location" value={formData.comfortable_with_location ? 'Yes' : 'No'} onChange={(e) => setFormData(p => ({ ...p, comfortable_with_location: e.target.value === 'Yes' }))} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
+                  <option value="Yes">Yes - Comfortable with location</option>
+                  <option value="No">No - Prefers Remote / Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Do you have relevant experience? *</label>
+                <select name="relevant_experience" value={formData.relevant_experience ? 'Yes' : 'No'} onChange={(e) => setFormData(p => ({ ...p, relevant_experience: e.target.value === 'Yes' }))} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
+                  <option value="Yes">Yes - Direct Financial Sales Experience</option>
+                  <option value="No">No - Related / Fresh Experience</option>
+                </select>
+              </div>
             </div>
 
-            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '24px 0 20px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FaFileAlt style={{ color: C.teal }} /> Resume Upload
+            {/* Section 4: Source & Resume Upload */}
+            <h2 style={{ fontSize: '19px', fontWeight: 800, margin: '24px 0 20px 0', color: C.teal || '#0F766E', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+              <FaFileAlt style={{ color: C.teal || '#0F766E' }} /> 4. Source & Resume Upload
             </h2>
 
             <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Upload Resume (PDF / DOCX)</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '10px' }}>How did you hear about this job? *</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                {[
+                  'Employee Reference',
+                  'WhatsApp',
+                  'Instagram',
+                  'WorkIndia / Job Portal',
+                  'College Reference',
+                  'Other'
+                ].map((src) => (
+                  <label key={src} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: C.bgSecondary, padding: '10px 14px', borderRadius: '10px', border: `1px solid ${C.border}`, cursor: 'pointer', fontSize: '13px', color: C.text }}>
+                    <input 
+                      type="radio" 
+                      name="how_did_you_hear" 
+                      value={src} 
+                      checked={formData.how_did_you_hear === src} 
+                      onChange={handleInputChange} 
+                    />
+                    {src}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '28px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Resume / CV Upload (PDF / DOCX)</label>
               <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileChange} style={{ width: '100%', padding: '10px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} />
             </div>
 
-            <button type="submit" disabled={loading} style={{ background: C.teal, color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, cursor: 'pointer', width: '100%' }}>
-              {loading ? 'Processing...' : 'Proceed to Verification & Submit'}
+            <button type="submit" disabled={loading} style={{ background: C.employeePrimary || C.teal || '#0F766E', color: '#fff', border: 'none', padding: '14px 28px', borderRadius: '12px', fontSize: '15px', fontWeight: 800, cursor: 'pointer', width: '100%', boxShadow: '0 4px 14px rgba(15,118,110,0.3)' }}>
+              {loading ? 'Processing Registration...' : 'Proceed to Mobile/Email Verification & Submit'}
             </button>
           </form>
         )}

@@ -275,107 +275,56 @@ export default function Careers() {
           </div>
         </div>
 
-        {/* Quick Application / Direct Contact Card */}
+        {/* Interview Registration Form Banner / Direct CTA */}
         <div style={{ 
           background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', 
-          padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' 
+          padding: '36px', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' 
         }}>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: C.text, margin: '0 0 8px 0' }}>
-            Don't see a matching position?
-          </h2>
-          <p style={{ fontSize: '14px', color: C.textMid, margin: '0 0 24px 0', lineHeight: 1.5 }}>
-            We are always looking for talented individuals. Send us your resume directly, and our team will get in touch when a relevant role opens up.
-          </p>
-
-          {submitted ? (
-            <div style={{ 
-              background: `${C.teal}15`, border: `1px solid ${C.teal}40`, 
-              borderRadius: '16px', padding: '24px', textAlign: 'center', color: C.text 
-            }}>
-              <FaCheckCircle size={36} style={{ color: C.teal, marginBottom: '12px' }} />
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 800 }}>Application Received!</h3>
-              <p style={{ margin: 0, fontSize: '14px', color: C.textMid }}>
-                Thank you for your interest in GharKaPaisa. Our hiring team will review your profile and reach out to you soon.
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '24px' }}>
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: C.employeePrimary || C.teal || '#0F766E', textTransform: 'uppercase', letterSpacing: '0.5px', background: `${C.employeePrimary || C.teal || '#0F766E'}15`, padding: '4px 12px', borderRadius: '12px' }}>
+                Official Candidate Onboarding
+              </span>
+              <h2 style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: '8px 0 4px 0' }}>
+                Interview Registration Form – Required Details
+              </h2>
+              <p style={{ fontSize: '14px', color: C.textMid, margin: 0, lineHeight: 1.5 }}>
+                Fill in your complete profile details, verify your mobile/email via OTP, and receive your Candidate Reference Code immediately.
               </p>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: C.text }}>Full Name *</label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="e.g. Rahul Verma" 
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '14px', color: C.text, outline: 'none' }}
-                />
-              </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: C.text }}>Email Address *</label>
-                <input 
-                  type="email" 
-                  required
-                  placeholder="name@example.com" 
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '14px', color: C.text, outline: 'none' }}
-                />
-              </div>
+            <button 
+              onClick={() => navigate('/careers/register')}
+              style={{ 
+                background: C.employeePrimary || C.teal || '#0F766E', color: '#ffffff', border: 'none', 
+                padding: '14px 28px', borderRadius: '14px', fontSize: '15px', 
+                fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 16px rgba(15,118,110,0.3)',
+                display: 'inline-flex', alignItems: 'center', gap: '10px'
+              }}
+            >
+              <FaPaperPlane /> Register for Interview Now
+            </button>
+          </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: C.text }}>Phone Number *</label>
-                <input 
-                  type="tel" 
-                  required
-                  placeholder="10 digit mobile number" 
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '14px', color: C.text, outline: 'none' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: C.text }}>Area of Interest</label>
-                <select 
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '14px', color: C.text, outline: 'none' }}
-                >
-                  <option value="Financial Sales Executive">Sales & Distribution</option>
-                  <option value="Full Stack React / Node Developer">Technology & Engineering</option>
-                  <option value="Partner Relationship Manager">Partner Management</option>
-                  <option value="Customer Support">Operations & Support</option>
-                  <option value="Marketing">Marketing & Growth</option>
-                </select>
-              </div>
-
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px', color: C.text }}>Brief Summary / Cover Note</label>
-                <textarea 
-                  rows={3}
-                  placeholder="Tell us briefly about your experience and skillsets..." 
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', fontSize: '14px', color: C.text, outline: 'none', resize: 'vertical' }}
-                />
-              </div>
-
-              <div style={{ gridColumn: '1 / -1' }}>
-                <button 
-                  type="submit"
-                  style={{ 
-                    background: C.teal, color: '#ffffff', border: 'none', 
-                    padding: '12px 28px', borderRadius: '12px', fontSize: '14px', 
-                    fontWeight: 800, cursor: 'pointer', boxShadow: `0 4px 14px ${C.teal}30` 
-                  }}
-                >
-                  Submit Profile
-                </button>
-              </div>
-            </form>
-          )}
+          {/* Structured 4-Section Checklist Preview */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', background: C.bgSecondary, padding: '20px', borderRadius: '18px', border: `1px solid ${C.border}` }}>
+            <div>
+              <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginBottom: '6px' }}>1. Personal Details</strong>
+              <span style={{ fontSize: '12.5px', color: C.textMid, lineHeight: 1.4, display: 'block' }}>Name, Mobile, Email ID, DOB / Age, Current Address</span>
+            </div>
+            <div>
+              <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginBottom: '6px' }}>2. Education</strong>
+              <span style={{ fontSize: '12.5px', color: C.textMid, lineHeight: 1.4, display: 'block' }}>Highest Qualification & Passing Year</span>
+            </div>
+            <div>
+              <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginBottom: '6px' }}>3. Experience & Job Role</strong>
+              <span style={{ fontSize: '12.5px', color: C.textMid, lineHeight: 1.4, display: 'block' }}>Target Role, Fresher/Exp, Last CTC, Expected Salary, Immediate Joining, Location Comfort</span>
+            </div>
+            <div>
+              <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginBottom: '6px' }}>4. Source & Resume Upload</strong>
+              <span style={{ fontSize: '12.5px', color: C.textMid, lineHeight: 1.4, display: 'block' }}>How did you hear (Ref / WA / Insta / Job Portal), Resume PDF/DOCX</span>
+            </div>
+          </div>
 
           {/* Contact Details Footer inside Card */}
           <div style={{ borderTop: `1px solid ${C.border}`, marginTop: '28px', paddingTop: '20px', display: 'flex', flexWrap: 'wrap', gap: '24px', fontSize: '13px', color: C.textMid }}>
