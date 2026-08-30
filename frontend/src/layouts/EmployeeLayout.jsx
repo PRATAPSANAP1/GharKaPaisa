@@ -8,6 +8,7 @@ import {
   FaSignOutAlt, FaMoon, FaSun, FaBars, FaTimes, FaShieldAlt
 } from 'react-icons/fa';
 import logo from '../assets/logos/logo.png';
+import Chatbot from '../components/Chatbot/Chatbot';
 
 export default function EmployeeLayout() {
   const { user, logout } = useAuthStore();
@@ -214,6 +215,7 @@ export default function EmployeeLayout() {
         </main>
       </div>
 
+      <Chatbot />
     </div>
   );
 }

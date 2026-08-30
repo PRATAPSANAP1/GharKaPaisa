@@ -7,6 +7,7 @@ import { Icons } from '../components/Icon/PartnerIcons';
 import api, { getAccessToken } from '../services/api';
 import { getApiV1Url } from '../config/api';
 import logo from '../assets/logos/logo.png';
+import Chatbot from '../components/Chatbot/Chatbot';
 import '../components/Navbar/Navbar.css';
 import { MdNotifications } from 'react-icons/md';
 
@@ -735,6 +736,7 @@ const SuperAdminLayout = () => {
         </main>
       </div>
 
+      <Chatbot />
     </div>
   );
 };
