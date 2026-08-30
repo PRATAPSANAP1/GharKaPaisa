@@ -100,49 +100,50 @@ const verifyAccessToken = async ({ accessToken, expectedMobile }) => {
 };
 
 const sendSmsOtp = async (mobile, otp) => {
-  const authKey = getAuthKey();
+  const authKey = process.env.MSG91_AUTH_KEY || process.env.MSG91_AUTHKEY;
   const templateId = process.env.MSG91_OTP_TEMPLATE_ID;
 
-  if (!templateId) {
-    throw new Error("MSG91_OTP_TEMPLATE_ID is not configured");
-  }
-
   const normalized = normalizeIndianMobile(mobile);
-
   if (!normalized) {
     throw new Error("Invalid Indian mobile number");
   }
 
-  const url = `https://control.msg91.com/api/v5/otp?template_id=${templateId}&mobile=91${normalized}&authkey=${authKey}&otp=${otp}`;
+  if (authKey && templateId) {
+    const url = `https://control.msg91.com/api/v5/otp?template_id=${templateId}&mobile=91${normalized}&authkey=${authKey}&otp=${otp}`;
 
+    try {
+      console.log("========== MSG91 OTP API ==========");
+      console.log("URL:", url);
+      console.log("Template:", templateId);
+      console.log("Mobile:", normalized);
+
+      const response = await axios.post(
+        url,
+        {},
+        {
+          headers: {
+            Accept: "application/json"
+          },
+          timeout: 10000
+        }
+      );
+
+      console.log("MSG91 Response:", response.data);
+      return response.data;
+    } catch (err) {
+      console.log("MSG91 OTP API notice:", err.response?.data ? JSON.stringify(err.response.data) : err.message);
+    }
+  }
+
+  // Fallback to standard SMS API via sendSms
   try {
-    console.log("========== MSG91 ==========");
-    console.log("URL:", url);
-    console.log("Template:", templateId);
-    console.log("Mobile:", normalized);
-
-    const response = await axios.post(
-      url,
-      {},
-      {
-        headers: {
-          Accept: "application/json"
-        },
-        timeout: 10000
-      }
-    );
-
-    console.log("MSG91 Response:", response.data);
-
-    return response.data;
-
-  } catch (err) {
-    console.log("=========== VERIFY ERROR ===========");
-    console.log("Status:", err.response?.status);
-    console.log("Data:", JSON.stringify(err.response?.data, null, 2));
-    console.log("====================================");
-    throw err;
-}
+    const { sendSms } = require('../sms/sms.service');
+    const body = `Your GharKaPaisa verification OTP is ${otp}. Valid for 10 minutes. Do not share.`;
+    return await sendSms(mobile, body);
+  } catch (fallbackErr) {
+    console.log("MSG91 fallback SMS failed:", fallbackErr.message);
+    throw fallbackErr;
+  }
 };
 
 module.exports = {
