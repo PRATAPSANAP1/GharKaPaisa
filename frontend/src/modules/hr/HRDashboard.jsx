@@ -253,25 +253,25 @@ export default function HRDashboard() {
   });
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '32px 24px', fontFamily: "'Inter', sans-serif", color: C.text }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '12px 16px 24px', fontFamily: "'Inter', sans-serif", color: C.text }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
         
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
           <div>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <span style={{ fontSize: '11.5px', fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               HR Management Portal
             </span>
-            <h1 style={{ fontSize: '28px', fontWeight: 900, color: C.text, margin: 0 }}>HR Operations & Candidate Acquisition</h1>
+            <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>HR Operations & Candidate Acquisition</h1>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button 
               onClick={() => { fetchHRData(); fetchHRAccounts(); }}
               style={{ 
                 background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`, 
-                padding: '12px 18px', borderRadius: '12px', fontSize: '14px', 
-                fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
+                padding: '8px 14px', borderRadius: '10px', fontSize: '13px', 
+                fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
               }}
             >
               <FaSync /> Refresh
@@ -281,8 +281,8 @@ export default function HRDashboard() {
                 onClick={() => setCreateHRModalOpen(true)}
                 style={{ 
                   background: C.employeePrimary || C.teal || '#0F766E', color: '#ffffff', border: 'none', 
-                  padding: '12px 24px', borderRadius: '12px', fontSize: '14px', 
-                  fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '8px 16px', borderRadius: '10px', fontSize: '13px', 
+                  fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
                   boxShadow: '0 4px 14px rgba(15,118,110,0.25)' 
                 }}
               >
@@ -292,8 +292,8 @@ export default function HRDashboard() {
           </div>
         </div>
 
-        {/* Stats Cards Grid (Single Row Layout) */}
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isSuperAdmin ? 7 : 6}, 1fr)`, gap: '12px', marginBottom: '32px' }}>
+        {/* Stats Cards Grid (Responsive Row Layout) */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '12px' }}>
           {[
             { label: 'Total Applications', count: stats.total_candidates, icon: <FaUsers />, color: C.teal },
             { label: 'Registered (New)', count: stats.registered, icon: <FaClock />, color: '#3B82F6' },
@@ -303,13 +303,13 @@ export default function HRDashboard() {
             { label: 'Employees Created', count: stats.converted, icon: <FaUserPlus />, color: '#8B5CF6' },
             ...(isSuperAdmin ? [{ label: 'HR Team Accounts', count: hrAccounts.length, icon: <FaUserShield />, color: '#EC4899' }] : [])
           ].map((st, i) => (
-            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '14px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${st.color}15`, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: `${st.color}15`, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
                 {st.icon}
               </div>
               <div style={{ minWidth: 0 }}>
-                <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{st.label}</span>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: C.text }}>{st.count}</div>
+                <span style={{ fontSize: '10.5px', color: C.textMid, fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{st.label}</span>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: C.text }}>{st.count}</div>
               </div>
             </div>
           ))}
@@ -317,7 +317,7 @@ export default function HRDashboard() {
 
         {/* Navigation Tabs (Only for Super Admin; HR Panel defaults to Candidates view) */}
         {isSuperAdmin ? (
-          <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: `2px solid ${C.border}`, paddingBottom: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', borderBottom: `2px solid ${C.border}`, paddingBottom: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <button 
               onClick={() => setActiveTab('candidates')}
               style={{

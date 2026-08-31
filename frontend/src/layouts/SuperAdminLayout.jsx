@@ -731,7 +731,7 @@ const SuperAdminLayout = () => {
         )}
 
         {/* Page Body */}
-        <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px' : '24px' }}>
+        <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '12px 14px' : '16px 20px' }}>
           <Outlet />
         </main>
       </div>
