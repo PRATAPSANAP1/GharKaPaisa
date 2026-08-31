@@ -239,8 +239,8 @@ router.get('/:id', async (req, res, next) => {
 
     // 4. Documents (check employee_documents, plus add candidate resume if present)
     const docsRes = await query(
-      `SELECT * FROM employee_documents WHERE employee_id = $1 OR mobile_number = $2 ORDER BY uploaded_at DESC`,
-      [id, employee.mobile_number]
+      `SELECT * FROM employee_documents WHERE employee_id = $1 ORDER BY created_at DESC`,
+      [id]
     );
     let docs = docsRes.rows;
     if (employee.resume_url && !docs.some(d => d.document_type === 'resume')) {
