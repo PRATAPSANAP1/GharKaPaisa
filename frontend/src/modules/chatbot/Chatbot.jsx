@@ -127,6 +127,38 @@ export default function Chatbot() {
     });
   }, [userRole]);
 
+  // Resume pending application intent after login/registration (Requirement #1 & #11)
+  useEffect(() => {
+    try {
+      const savedIntent = localStorage.getItem('gkp_pending_chatbot_intent');
+      if (savedIntent && userRole !== 'PUBLIC') {
+        const parsed = JSON.parse(savedIntent);
+        localStorage.removeItem('gkp_pending_chatbot_intent');
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            sender: 'bot',
+            text: `🎉 *Welcome back!* You are now logged in as **${userRole}**.\n\nWould you like to resume your credit card application for **${parsed.productName || 'Selected Product'}**?`,
+            timestamp: new Date(),
+            chips: [
+              {
+                label: 'Continue Application',
+                action: userRole === 'EMPLOYEE' ? 'go_employee_cards' : 'go_partner_add_lead'
+              },
+              { label: 'View Card Details', action: `go_prod_${parsed.productSlug || ''}` },
+              { label: 'Main Menu', action: 'main_menu' }
+            ]
+          }
+        ]);
+        setIsOpen(true);
+        setHasNewMessage(true);
+      }
+    } catch (e) {
+      // Ignore parse error
+    }
+  }, [userRole]);
+
   const addMessage = useCallback((message) => {
     setMessages((prev) => [...prev, message]);
   }, []);

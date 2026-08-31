@@ -405,6 +405,51 @@ class ChatbotService {
         );
       }
 
+      // Auto-detect logged in user role for smooth UX (Requirement #9)
+      if (context.isAuthenticated) {
+        if (context.role === 'PARTNER' || context.role === 'TEAM_MEMBER') {
+          return responseService.buildTextResponse(
+            `📌 *Selected Card: ${product.name}*\n\nYou are logged in as a **Partner**. Would you like to process this application as a Partner to earn commission?`,
+            context,
+            [
+              { label: 'Continue as Partner', action: `select_role_partner_${product.id}` },
+              { label: 'As Customer (Direct)', action: `select_role_customer_${product.id}` },
+              { label: 'Main Menu', action: 'main_menu' }
+            ]
+          );
+        }
+
+        if (context.role === 'EMPLOYEE') {
+          // Employee Security Check (Requirement #2): Check product assignment
+          const isAssigned = context.employeeId 
+            ? await searchService.getEmployeeProductLink(context.employeeId, product.id)
+            : null;
+
+          if (isAssigned) {
+            return responseService.buildTextResponse(
+              `📌 *Selected Card: ${product.name}*\n\nYou are logged in as an **Employee**.\n\n✅ **Assignment Check Passed**: Product assigned to your employee account.`,
+              context,
+              [
+                { label: 'Punch Employee Lead', action: 'go_employee_cards' },
+                { label: 'View Card Details', action: `go_prod_${product.slug}` },
+                { label: 'Main Menu', action: 'main_menu' }
+              ]
+            );
+          } else {
+            return responseService.buildTextResponse(
+              `📌 *Selected Card: ${product.name}*\n\nYou are logged in as an **Employee**.\n\n⚠️ **Assignment Notice**: This product (${product.name}) is not currently assigned to your employee profile in ` + '`employee_product_links`' + `.`,
+              context,
+              [
+                { label: 'View Assigned Products', action: 'go_employee_cards' },
+                { label: 'Process as Customer (No Login)', action: `select_role_customer_${product.id}` },
+                { label: 'Main Menu', action: 'main_menu' }
+              ]
+            );
+          }
+        }
+      }
+
+      // Default role selection prompt for public visitors
       const chips = [
         { label: 'As Partner', action: `select_role_partner_${product.id}` },
         { label: 'As Employee', action: `select_role_employee_${product.id}` },
@@ -436,24 +481,37 @@ class ChatbotService {
       const productName = product ? product.name : 'Credit Card';
       const productSlug = product ? product.slug : '';
 
-      if (context.role === 'PARTNER' || context.role === 'TEAM_MEMBER') {
-        return responseService.buildTextResponse(
-          `💼 *Partner Processing - ${productName}*\n\nWelcome Partner! You are logged in. Click **'Create Partner Lead'** below to submit a lead for **${productName}** and earn commission.`,
-          context,
-          [
-            { label: 'Create Partner Lead', action: 'go_partner_add_lead' },
-            { label: 'View Card Details', action: `go_prod_${productSlug}` },
-            { label: 'Main Menu', action: 'main_menu' }
-          ]
-        );
+      // Security Verification (Requirement #12): Verify authenticated role from JWT
+      if (context.isAuthenticated) {
+        if (context.role === 'PARTNER' || context.role === 'TEAM_MEMBER') {
+          return responseService.buildTextResponse(
+            `💼 *Partner Processing - ${productName}*\n\nWelcome Partner! You are authenticated. Click **'Create Partner Lead'** below to submit a lead for **${productName}** and earn commission.`,
+            context,
+            [
+              { label: 'Create Partner Lead', action: 'go_partner_add_lead' },
+              { label: 'View Card Details', action: `go_prod_${productSlug}` },
+              { label: 'Main Menu', action: 'main_menu' }
+            ]
+          );
+        } else {
+          return responseService.buildTextResponse(
+            `💼 *Account Role Mismatch*\n\n⚠️ Your currently logged-in account (${context.role}) is not a Partner account. Partner commission processing is restricted to registered Partners.`,
+            context,
+            [
+              { label: 'Login with Partner Account', action: 'go_login' },
+              { label: 'Register New Partner', action: 'go_register' },
+              { label: 'Process as Customer (No Login)', action: `select_role_customer_${productId}` }
+            ]
+          );
+        }
       }
 
       return responseService.buildTextResponse(
-        `💼 *Partner Processing - ${productName}*\n\nTo process as a Partner and earn commission on **${productName}**, please log in to your Partner account or register as a new Partner.`,
+        `💼 *Partner Processing - ${productName}*\n\nDo you already have a Partner account?`,
         context,
         [
-          { label: 'Login to Partner Portal', action: 'go_login' },
-          { label: 'Register as Partner', action: 'go_register' },
+          { label: 'Yes, Login', action: 'go_login' },
+          { label: 'No, Register', action: 'go_register' },
           { label: 'Process as Customer (No Login)', action: `select_role_customer_${productId}` }
         ]
       );
@@ -476,20 +534,48 @@ class ChatbotService {
       const productName = product ? product.name : 'Credit Card';
       const productSlug = product ? product.slug : '';
 
-      if (context.role === 'EMPLOYEE') {
-        return responseService.buildTextResponse(
-          `👔 *Employee Processing - ${productName}*\n\nHello! You are logged in as an Employee. Click **'Punch Employee Lead'** below to process **${productName}** and log your incentive.`,
-          context,
-          [
-            { label: 'Punch Employee Lead', action: 'go_employee_cards' },
-            { label: 'View Card Details', action: `go_prod_${productSlug}` },
-            { label: 'Main Menu', action: 'main_menu' }
-          ]
-        );
+      // Security Check (Requirement #2 & #12): Verify JWT role + employee_product_links assignment
+      if (context.isAuthenticated) {
+        if (context.role === 'EMPLOYEE') {
+          const linkData = context.employeeId 
+            ? await searchService.getEmployeeProductLink(context.employeeId, product.id)
+            : null;
+
+          if (linkData) {
+            return responseService.buildTextResponse(
+              `👔 *Employee Processing - ${productName}*\n\n✅ **Security Check Passed**: Product assigned to your employee profile.\n\nClick **'Punch Employee Lead'** below to process **${productName}** and log your incentive:`,
+              context,
+              [
+                { label: 'Punch Employee Lead', action: 'go_employee_cards' },
+                { label: 'View Card Details', action: `go_prod_${productSlug}` },
+                { label: 'Main Menu', action: 'main_menu' }
+              ]
+            );
+          } else {
+            return responseService.buildTextResponse(
+              `👔 *Employee Access Restricted*\n\n⚠️ **Security Check Failed**: This product (${productName}) is NOT assigned to your employee profile in ` + '`employee_product_links`' + `.\n\nEmployees can only obtain referral links for assigned products:`,
+              context,
+              [
+                { label: 'View Assigned Products', action: 'go_employee_cards' },
+                { label: 'Process as Customer (No Login)', action: `select_role_customer_${productId}` },
+                { label: 'Main Menu', action: 'main_menu' }
+              ]
+            );
+          }
+        } else {
+          return responseService.buildTextResponse(
+            `👔 *Access Denied*\n\n⚠️ Your currently logged-in account (${context.role}) is not an Employee account.`,
+            context,
+            [
+              { label: 'Login to Employee Portal', action: 'go_login' },
+              { label: 'Process as Customer (No Login)', action: `select_role_customer_${productId}` }
+            ]
+          );
+        }
       }
 
       return responseService.buildTextResponse(
-        `👔 *Employee Processing - ${productName}*\n\nTo process as an Employee and log incentives for **${productName}**, please log in to your Employee Portal.`,
+        `👔 *Employee Processing - ${productName}*\n\nEmployee Login Required. Please log in to your Employee Portal to continue:`,
         context,
         [
           { label: 'Login to Employee Portal', action: 'go_login' },
@@ -516,10 +602,10 @@ class ChatbotService {
       const productSlug = product ? product.slug : '';
 
       return responseService.buildTextResponse(
-        `👤 *Customer Application - ${productName}*\n\nGreat! You are applying directly as a Customer for **${productName}**. **No login required!**\n\nClick **'Open Application Form'** below to fill out your details directly:`,
+        `👤 *Customer Application - ${productName}*\n\nNo login is required to start your application!\n\nClick **'Apply Now'** below to open the application form directly:`,
         context,
         [
-          { label: 'Open Application Form', action: `apply_direct_${productSlug}` },
+          { label: 'Apply Now', action: `apply_direct_${productSlug}` },
           { label: 'View Card Features', action: `go_prod_${productSlug}` },
           { label: 'Main Menu', action: 'main_menu' }
         ]
