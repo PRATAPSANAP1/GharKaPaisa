@@ -1,3 +1,4 @@
+const { query } = require('../../config/database');
 const contextService = require('./chatbot.context.service');
 const intentService = require('./chatbot.intent.service');
 const searchService = require('./chatbot.search.service');
