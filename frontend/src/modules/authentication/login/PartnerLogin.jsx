@@ -283,7 +283,8 @@ export default function PartnerLogin() {
               setStatus("success");
 
               setTimeout(() => {
-                const from = location.state?.from?.pathname;
+                const rawFrom = location.state?.from?.pathname;
+                const from = (rawFrom && rawFrom !== '/' && rawFrom !== '/login' && rawFrom !== '/admin-login') ? rawFrom : null;
                 const role = profile.role?.toUpperCase();
                 const dest = from || loginRes.redirect ||
                   (role === 'SUPER_ADMIN' ? '/super-admin/overview' :
@@ -317,19 +318,21 @@ export default function PartnerLogin() {
       setStatus("success");
 
       setTimeout(() => {
+        const rawFrom = location.state?.from?.pathname;
+        const from = (rawFrom && rawFrom !== '/' && rawFrom !== '/login' && rawFrom !== '/admin-login') ? rawFrom : null;
         if (loginRes.redirect) {
           if (loginRes.redirect.startsWith('http')) {
             window.location.href = loginRes.redirect;
           } else {
             const targetRedirect = (loginRes.redirect === '/superadmin/dashboard' || loginRes.redirect === '/super-admin/dashboard') ? '/super-admin/overview' : loginRes.redirect;
-            navigate(location.state?.from?.pathname || targetRedirect);
+            navigate(from || targetRedirect);
           }
         } else {
           const role = profile.role?.toUpperCase();
-          if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/super-admin/overview');
-          else if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
-          else if (role === 'HR') navigate(location.state?.from?.pathname || '/hr/dashboard');
-          else navigate(location.state?.from?.pathname || '/partner/dashboard');
+          if (role === 'SUPER_ADMIN') navigate(from || '/super-admin/overview');
+          else if (role === 'ADMIN') navigate(from || '/admin/dashboard');
+          else if (role === 'HR') navigate(from || '/hr/dashboard');
+          else navigate(from || '/partner/dashboard');
         }
       }, 1500);
     } catch (e) {
@@ -545,7 +548,8 @@ export default function PartnerLogin() {
                 const profile = await getMe();
                 loginStore(profile, loginRes.idToken);
 
-                const from = location.state?.from?.pathname;
+                const rawFrom = location.state?.from?.pathname;
+                const from = (rawFrom && rawFrom !== '/' && rawFrom !== '/login' && rawFrom !== '/admin-login') ? rawFrom : null;
                 const role = profile.role?.toUpperCase();
                 const dest = from || loginRes.redirect ||
                   (role === 'SUPER_ADMIN' ? '/super-admin/overview' :
@@ -586,23 +590,26 @@ export default function PartnerLogin() {
       const needsProfileCompletion = inviteToken && profile.role?.toUpperCase() === 'TEAM_MEMBER' && 
         (!profile.first_name || !profile.last_name || !profile.mobile || !profile.email);
 
+      const rawFrom = location.state?.from?.pathname;
+      const from = (rawFrom && rawFrom !== '/' && rawFrom !== '/login' && rawFrom !== '/admin-login') ? rawFrom : null;
+
       if (loginRes.redirect) {
         if (loginRes.redirect.startsWith('http')) {
           window.location.href = loginRes.redirect;
         } else {
           // Normalize superadmin redirect if it comes from the backend without a hyphen
           const targetRedirect = (loginRes.redirect === '/superadmin/dashboard' || loginRes.redirect === '/super-admin/dashboard' || loginRes.redirect === '/superadmin') ? '/super-admin/overview' : loginRes.redirect;
-          navigate(location.state?.from?.pathname || targetRedirect);
+          navigate(from || targetRedirect);
         }
       } else if (needsProfileCompletion) {
         // Redirect to profile page for team members to complete registration
         navigate('/partner/profile');
       } else {
         const role = profile.role?.toUpperCase();
-        if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/super-admin/overview');
-        else if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
-        else if (role === 'HR') navigate(location.state?.from?.pathname || '/hr/dashboard');
-        else navigate(location.state?.from?.pathname || '/partner/dashboard');
+        if (role === 'SUPER_ADMIN') navigate(from || '/super-admin/overview');
+        else if (role === 'ADMIN') navigate(from || '/admin/dashboard');
+        else if (role === 'HR') navigate(from || '/hr/dashboard');
+        else navigate(from || '/partner/dashboard');
       }
     } catch (e) {
       // On failure: clear OTP boxes and refocus first input
