@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuthStore } from '../../app/store/authStore';
 import { 
   FaUsers, FaUserCheck, FaClock, FaTimesCircle, FaSearch, 
   FaFilter, FaStar, FaUserPlus, FaFileAlt, FaCheckCircle, FaPhone, FaEnvelope,
-  FaUserShield, FaTrash, FaBan, FaCheck, FaSync
+  FaUserShield, FaTrash, FaBan, FaCheck, FaSync, FaEye, FaIdCard
 } from 'react-icons/fa';
 import api from '../../services/api';
 
 export default function HRDashboard() {
   const { C } = useTheme();
+  const user = useAuthStore((state) => state.user);
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   
   // Tab state: 'candidates' or 'hr_team'
   const [activeTab, setActiveTab] = useState('candidates');
@@ -33,6 +36,7 @@ export default function HRDashboard() {
   const [hrSearchTerm, setHrSearchTerm] = useState('');
 
   // Selected candidate modal state
+  const [viewCandModal, setViewCandModal] = useState(null);
   const [selectedCandModal, setSelectedCandModal] = useState(null);
   const [interviewModal, setInterviewModal] = useState(null);
   
@@ -244,22 +248,24 @@ export default function HRDashboard() {
             >
               <FaSync /> Refresh
             </button>
-            <button 
-              onClick={() => setCreateHRModalOpen(true)}
-              style={{ 
-                background: C.employeePrimary || C.teal || '#0F766E', color: '#ffffff', border: 'none', 
-                padding: '12px 24px', borderRadius: '12px', fontSize: '14px', 
-                fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-                boxShadow: '0 4px 14px rgba(15,118,110,0.25)' 
-              }}
-            >
-              <FaUserPlus /> + Create HR Account
-            </button>
+            {isSuperAdmin && (
+              <button 
+                onClick={() => setCreateHRModalOpen(true)}
+                style={{ 
+                  background: C.employeePrimary || C.teal || '#0F766E', color: '#ffffff', border: 'none', 
+                  padding: '12px 24px', borderRadius: '12px', fontSize: '14px', 
+                  fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                  boxShadow: '0 4px 14px rgba(15,118,110,0.25)' 
+                }}
+              >
+                <FaUserPlus /> + Create HR Account
+              </button>
+            )}
           </div>
         </div>
 
         {/* Stats Cards Grid (Single Row Layout) */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px', marginBottom: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${isSuperAdmin ? 7 : 6}, 1fr)`, gap: '12px', marginBottom: '32px' }}>
           {[
             { label: 'Total Applications', count: stats.total_candidates, icon: <FaUsers />, color: C.teal },
             { label: 'Registered (New)', count: stats.registered, icon: <FaClock />, color: '#3B82F6' },
@@ -267,7 +273,7 @@ export default function HRDashboard() {
             { label: 'Selected', count: stats.selected, icon: <FaUserCheck />, color: '#10B981' },
             { label: 'Rejected', count: stats.rejected, icon: <FaTimesCircle />, color: '#EF4444' },
             { label: 'Employees Created', count: stats.converted, icon: <FaUserPlus />, color: '#8B5CF6' },
-            { label: 'HR Team Accounts', count: hrAccounts.length, icon: <FaUserShield />, color: '#EC4899' }
+            ...(isSuperAdmin ? [{ label: 'HR Team Accounts', count: hrAccounts.length, icon: <FaUserShield />, color: '#EC4899' }] : [])
           ].map((st, i) => (
             <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '14px 12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${st.color}15`, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
@@ -281,46 +287,54 @@ export default function HRDashboard() {
           ))}
         </div>
 
-        {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: `2px solid ${C.border}`, paddingBottom: '8px' }}>
-          <button 
-            onClick={() => setActiveTab('candidates')}
-            style={{
-              padding: '10px 20px',
-              fontSize: '15px',
-              fontWeight: 800,
-              color: activeTab === 'candidates' ? (C.teal || '#0F766E') : C.textMid,
-              borderBottom: activeTab === 'candidates' ? `3px solid ${C.teal || '#0F766E'}` : '3px solid transparent',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <FaUsers /> Candidate Applications ({stats.total_candidates})
-          </button>
-          
-          <button 
-            onClick={() => setActiveTab('hr_team')}
-            style={{
-              padding: '10px 20px',
-              fontSize: '15px',
-              fontWeight: 800,
-              color: activeTab === 'hr_team' ? (C.teal || '#0F766E') : C.textMid,
-              borderBottom: activeTab === 'hr_team' ? `3px solid ${C.teal || '#0F766E'}` : '3px solid transparent',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <FaUserShield /> HR Managers & Team ({hrAccounts.length})
-          </button>
-        </div>
+        {/* Navigation Tabs (Only for Super Admin; HR Panel defaults to Candidates view) */}
+        {isSuperAdmin ? (
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: `2px solid ${C.border}`, paddingBottom: '8px' }}>
+            <button 
+              onClick={() => setActiveTab('candidates')}
+              style={{
+                padding: '10px 20px',
+                fontSize: '15px',
+                fontWeight: 800,
+                color: activeTab === 'candidates' ? (C.teal || '#0F766E') : C.textMid,
+                borderBottom: activeTab === 'candidates' ? `3px solid ${C.teal || '#0F766E'}` : '3px solid transparent',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <FaUsers /> Candidate Applications ({stats.total_candidates})
+            </button>
+            
+            <button 
+              onClick={() => setActiveTab('hr_team')}
+              style={{
+                padding: '10px 20px',
+                fontSize: '15px',
+                fontWeight: 800,
+                color: activeTab === 'hr_team' ? (C.teal || '#0F766E') : C.textMid,
+                borderBottom: activeTab === 'hr_team' ? `3px solid ${C.teal || '#0F766E'}` : '3px solid transparent',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <FaUserShield /> HR Managers & Team ({hrAccounts.length})
+            </button>
+          </div>
+        ) : (
+          <div style={{ marginBottom: '20px', borderBottom: `2px solid ${C.border}`, paddingBottom: '12px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FaUsers style={{ color: C.teal }} /> Candidates List & Employee ID Allocation
+            </h3>
+          </div>
+        )}
 
         {/* ── TAB 1: Candidate Applications ── */}
         {activeTab === 'candidates' && (
@@ -398,18 +412,24 @@ export default function HRDashboard() {
                             </span>
                           </td>
                           <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                              <button 
+                                onClick={() => setViewCandModal(cand)}
+                                style={{ background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`, padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <FaEye /> View Candidate
+                              </button>
                               <button 
                                 onClick={() => setInterviewModal(cand)}
-                                style={{ background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`, padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                                style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                               >
-                                Feedback
+                                <FaStar /> Feedback
                               </button>
                               <button 
                                 onClick={() => setSelectedCandModal(cand)}
-                                style={{ background: C.teal, color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                                style={{ background: C.teal, color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                               >
-                                Select & Create EMP ID
+                                <FaUserCheck /> Select & Give EMP ID
                               </button>
                             </div>
                           </td>
@@ -534,6 +554,100 @@ export default function HRDashboard() {
               )}
             </div>
           </>
+        )}
+
+        {/* Modal: View Candidate Details */}
+        {viewCandModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+            <div style={{ background: C.card, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}`, boxShadow: '0 12px 40px rgba(0,0,0,0.2)' }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '16px' }}>
+                <div>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Candidate Profile • {viewCandModal.reference_code}
+                  </span>
+                  <h2 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: '4px 0 0 0' }}>{viewCandModal.full_name}</h2>
+                </div>
+                <button onClick={() => setViewCandModal(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
+              </div>
+
+              {/* Status & EMP ID Badge */}
+              <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                <span style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 800, background: viewCandModal.interview_status === 'SELECTED' || viewCandModal.interview_status === 'EMPLOYEE_CREATED' ? '#D1FAE5' : viewCandModal.interview_status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7', color: viewCandModal.interview_status === 'SELECTED' || viewCandModal.interview_status === 'EMPLOYEE_CREATED' ? '#065F46' : viewCandModal.interview_status === 'REJECTED' ? '#991B1B' : '#92400E' }}>
+                  Status: {viewCandModal.interview_status}
+                </span>
+                {viewCandModal.employee_id && (
+                  <span style={{ padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 800, background: '#EDE9FE', color: '#5B21B6' }}>
+                    Employee ID: {viewCandModal.employee_id}
+                  </span>
+                )}
+              </div>
+
+              {/* Grid Info */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Contact Info</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: C.text, marginTop: '4px' }}>📞 {viewCandModal.mobile_number}</div>
+                  <div style={{ fontSize: '13px', color: C.textMid }}>✉️ {viewCandModal.email_id}</div>
+                </div>
+
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Education & Qualification</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: C.text, marginTop: '4px' }}>{viewCandModal.highest_qualification}</div>
+                  <div style={{ fontSize: '13px', color: C.textMid }}>Passing Year: {viewCandModal.passing_year || 'N/A'}</div>
+                </div>
+
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Experience</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: C.text, marginTop: '4px' }}>{viewCandModal.experience_type} ({viewCandModal.total_experience_years || 0} yrs)</div>
+                  <div style={{ fontSize: '13px', color: C.textMid }}>Company: {viewCandModal.current_company || 'N/A'}</div>
+                  <div style={{ fontSize: '13px', color: C.textMid }}>Designation: {viewCandModal.current_designation || 'N/A'}</div>
+                </div>
+
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Salary Expectations</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: C.text, marginTop: '4px' }}>Last CTC: {viewCandModal.last_salary_ctc ? `₹${viewCandModal.last_salary_ctc}` : 'N/A'}</div>
+                  <div style={{ fontSize: '13px', color: C.textMid }}>Expected CTC: {viewCandModal.expected_salary ? `₹${viewCandModal.expected_salary}` : 'N/A'}</div>
+                </div>
+
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Joining & Location</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: C.text, marginTop: '4px' }}>Notice: {viewCandModal.notice_period_days ? `${viewCandModal.notice_period_days} days` : 'Immediate'}</div>
+                  <div style={{ fontSize: '13px', color: C.textMid }}>Immediate: {viewCandModal.immediate_joining ? 'Yes' : 'No'}</div>
+                </div>
+
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Address</div>
+                  <div style={{ fontSize: '13px', color: C.text, marginTop: '4px' }}>{viewCandModal.current_address || 'N/A'}</div>
+                </div>
+              </div>
+
+              {/* Feedback History */}
+              {viewCandModal.interview_feedback && (
+                <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', marginBottom: '24px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: C.teal, marginBottom: '6px' }}>Interview Feedback & Rating</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700 }}>Rating: ⭐ {viewCandModal.interview_rating || 0} / 5</div>
+                  <div style={{ fontSize: '13px', color: C.textMid, marginTop: '4px' }}>Remarks: "{viewCandModal.interview_feedback}"</div>
+                </div>
+              )}
+
+              {/* Resume Document Link */}
+              {viewCandModal.resume_url && (
+                <div style={{ marginBottom: '24px' }}>
+                  <a href={viewCandModal.resume_url} target="_blank" rel="noreferrer" style={{ background: C.teal, color: '#fff', padding: '10px 20px', borderRadius: '10px', textDecoration: 'none', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <FaFileAlt /> View Resume Document
+                  </a>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: `1px solid ${C.border}`, paddingTop: '16px' }}>
+                <button onClick={() => setViewCandModal(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '10px 20px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Close</button>
+                {viewCandModal.interview_status !== 'EMPLOYEE_CREATED' && (
+                  <button onClick={() => { const cand = viewCandModal; setViewCandModal(null); setSelectedCandModal(cand); }} style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>Select Candidate & Give EMP ID</button>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Modal: Select Candidate & Generate Employee ID */}
