@@ -165,6 +165,33 @@ export default function EmployeeManagement() {
     }
   };
 
+  const handleKycVerify = async (empId, status) => {
+    const actionLabel = status === 'VERIFIED' ? 'Approve KYC & Activate' : 'Reject KYC';
+    if (!window.confirm(`Are you sure you want to ${actionLabel} for this employee?`)) return;
+
+    let notes = '';
+    if (status === 'REJECTED') {
+      notes = prompt('Enter rejection / re-upload reason for Employee KYC:');
+      if (!notes || !notes.trim()) return;
+    }
+
+    try {
+      const res = await axios.post(`/api/v1/employees/${empId}/kyc-verify`, {
+        kyc_status: status,
+        review_notes: notes ? notes.trim() : null
+      });
+      if (res.data.success) {
+        alert(`Employee KYC successfully updated to ${status}`);
+        fetchData();
+        if (selectedEmp && selectedEmp.id === empId) {
+          handleOpen360View(selectedEmp);
+        }
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'KYC status update failed');
+    }
+  };
+
   const handleOpen360View = async (emp) => {
     setSelectedEmp(emp);
     setLoading360(true);
@@ -651,6 +678,89 @@ export default function EmployeeManagement() {
                     )}
                   </div>
 
+                  {/* Submitted KYC & Verification Documents Panel */}
+                  <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                      <h3 style={{ fontSize: '15px', fontWeight: 900, margin: 0, color: C.teal, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <FaIdCard /> Submitted KYC Documents & Verification Details
+                      </h3>
+                      <span style={{
+                        padding: '4px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 800,
+                        background: emp360Data.kyc?.kyc_status === 'VERIFIED' ? '#D1FAE5' : (emp360Data.kyc?.kyc_status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7'),
+                        color: emp360Data.kyc?.kyc_status === 'VERIFIED' ? '#065F46' : (emp360Data.kyc?.kyc_status === 'REJECTED' ? '#991B1B' : '#92400E')
+                      }}>
+                        KYC STATUS: {emp360Data.kyc?.kyc_status || 'PENDING'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', fontSize: '13px' }}>
+                      
+                      {/* PAN Card Box */}
+                      <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                        <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block', marginBottom: '4px' }}>1. PAN Card Number</span>
+                        <strong style={{ fontSize: '14px', letterSpacing: '0.5px' }}>{emp360Data.kyc?.pan_number || emp360Data.joining_details?.pan_number || 'Not Submitted'}</strong>
+                        {emp360Data.kyc?.pan_document_url ? (
+                          <a href={emp360Data.kyc.pan_document_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px', background: C.card, border: `1px solid ${C.border}`, padding: '6px 10px', borderRadius: '8px', color: C.teal, fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
+                            <FaFileAlt /> View PAN Card Doc ↗
+                          </a>
+                        ) : (
+                          <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No PAN file attached</div>
+                        )}
+                      </div>
+
+                      {/* Aadhaar Card Box */}
+                      <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                        <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block', marginBottom: '4px' }}>2. Aadhaar Card Number</span>
+                        <strong style={{ fontSize: '14px', letterSpacing: '0.5px' }}>{emp360Data.kyc?.aadhaar_number || emp360Data.joining_details?.aadhaar_number || 'Not Submitted'}</strong>
+                        {emp360Data.kyc?.aadhaar_document_url ? (
+                          <a href={emp360Data.kyc.aadhaar_document_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px', background: C.card, border: `1px solid ${C.border}`, padding: '6px 10px', borderRadius: '8px', color: C.teal, fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
+                            <FaFileAlt /> View Aadhaar Card Doc ↗
+                          </a>
+                        ) : (
+                          <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No Aadhaar file attached</div>
+                        )}
+                      </div>
+
+                      {/* Bank Proof Box */}
+                      <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                        <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block', marginBottom: '4px' }}>3. Bank Account Proof</span>
+                        <strong style={{ fontSize: '13px' }}>A/C: {emp360Data.kyc?.bank_account_number || emp360Data.joining_details?.bank_account_number || 'N/A'}</strong>
+                        <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>IFSC: {emp360Data.kyc?.ifsc_code || emp360Data.joining_details?.ifsc_code || 'N/A'}</div>
+                        {emp360Data.kyc?.bank_document_url ? (
+                          <a href={emp360Data.kyc.bank_document_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px', background: C.card, border: `1px solid ${C.border}`, padding: '6px 10px', borderRadius: '8px', color: C.teal, fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
+                            <FaFileAlt /> View Bank Proof Doc ↗
+                          </a>
+                        ) : (
+                          <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No Bank file attached</div>
+                        )}
+                      </div>
+
+                      {/* Verification Video Box */}
+                      <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                        <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block', marginBottom: '4px' }}>4. Verification Video</span>
+                        <strong style={{ fontSize: '13px' }}>{emp360Data.terms?.video_url ? '🎥 Recording Submitted' : 'Not Uploaded'}</strong>
+                        {emp360Data.terms?.video_url ? (
+                          <a href={emp360Data.terms.video_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px', background: C.teal, color: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
+                            <FaVideo /> Play Verification Video ↗
+                          </a>
+                        ) : (
+                          <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No video recording</div>
+                        )}
+                      </div>
+
+                    </div>
+
+                    {/* KYC Quick Action Buttons */}
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '16px', borderTop: `1px dashed ${C.border}`, paddingTop: '14px' }}>
+                      <button onClick={() => handleKycVerify(selectedEmp.id, 'VERIFIED')} style={{ background: '#10B981', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+                        <FaCheck /> Approve Employee KYC
+                      </button>
+                      <button onClick={() => handleKycVerify(selectedEmp.id, 'REJECTED')} style={{ background: '#EF4444', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+                        <FaTimesCircle /> Reject / Request Re-upload
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Onboarding Checklist Matrix */}
                   <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: 900, marginBottom: '12px', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}><FaCheckCircle style={{ color: C.teal }} /> Onboarding & Verification Status Checklist</h3>
@@ -713,7 +823,7 @@ export default function EmployeeManagement() {
                   {/* Action Bar */}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
                     <button onClick={() => handleActivateEmployee(selectedEmp.id, selectedEmp.activation_status)} style={{ background: selectedEmp.activation_status === 'APPROVED' ? '#EF4444' : '#10B981', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>
-                      {selectedEmp.activation_status === 'APPROVED' ? 'Deactivate Employee' : 'Verify KYC & Approve Employee'}
+                      {selectedEmp.activation_status === 'APPROVED' ? 'Deactivate Employee' : 'Verify & Activate Account'}
                     </button>
                   </div>
 

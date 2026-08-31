@@ -192,6 +192,55 @@ router.post('/:id/activate', async (req, res, next) => {
   }
 });
 
+// POST /api/v1/employees/:id/kyc-verify — Super Admin & HR Approve or Reject Employee KYC
+router.post('/:id/kyc-verify', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { kyc_status, review_notes } = req.body; // 'VERIFIED' or 'REJECTED'
+
+    if (!kyc_status || !['VERIFIED', 'REJECTED'].includes(kyc_status)) {
+      return res.status(400).json({ success: false, message: 'Status must be VERIFIED or REJECTED' });
+    }
+
+    const isVerified = kyc_status === 'VERIFIED';
+
+    // Update employee_kyc table
+    await query(
+      `INSERT INTO employee_kyc (employee_id, kyc_status, reviewed_by, reviewed_at, review_notes, updated_at)
+       VALUES ($1, $2, $3, NOW(), $4, NOW())
+       ON CONFLICT (employee_id) DO UPDATE SET
+         kyc_status = EXCLUDED.kyc_status,
+         reviewed_by = EXCLUDED.reviewed_by,
+         reviewed_at = NOW(),
+         review_notes = EXCLUDED.review_notes,
+         updated_at = NOW()`,
+      [id, kyc_status, req.user.id, review_notes || null]
+    );
+
+    // Update onboarding checklist
+    await query(
+      `UPDATE employee_onboarding_checklist 
+       SET kyc_verified = $1, kyc_verified_at = $2, 
+           overall_progress = $3, 
+           current_stage = $4 
+       WHERE employee_id = $5`,
+      [isVerified, isVerified ? new Date() : null, isVerified ? 90 : 75, isVerified ? 'VERIFIED_PENDING_ACTIVATION' : 'KYC_REJECTED', id]
+    );
+
+    // Update employee activation status if verified
+    if (isVerified) {
+      await query(
+        `UPDATE employees SET activation_status = 'APPROVED', employee_status = 'ACTIVE', activated_at = NOW() WHERE id = $1`,
+        [id]
+      );
+    }
+
+    res.json({ success: true, message: `Employee KYC marked as ${kyc_status}`, status: kyc_status });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/v1/employees/:id/hierarchy — Assign Manager & Team Leader
 router.post('/:id/hierarchy', async (req, res, next) => {
   try {
