@@ -141,14 +141,6 @@ export default function EmployeeLayout() {
           )}
         </div>
 
-        {/* User Card in Sidebar */}
-        <div style={{ padding: '16px 20px', background: C.bgSecondary, margin: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '2px' }}>{user?.full_name || user?.name || 'Employee'}</div>
-          <div style={{ fontSize: '11px', color: C.employeePrimary || '#0F766E', fontWeight: 700, textTransform: 'uppercase' }}>
-            {user?.designation || 'Sales Executive'} • {empCode ? `ID: ${empCode}` : 'EMPLOYEE'}
-          </div>
-        </div>
-
         {/* Navigation Menu */}
         <nav style={{ flex: 1, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }}>
           {navItems.map((item) => {
@@ -178,33 +170,6 @@ export default function EmployeeLayout() {
             );
           })}
         </nav>
-
-        {/* Quick Invite Buttons in Sidebar Bottom */}
-        <div style={{ padding: '12px 16px', borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <button
-            onClick={() => { setInviteType('EMPLOYEE'); setInviteModalOpen(true); }}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              padding: '10px', borderRadius: '10px', background: `${C.employeePrimary || '#0F766E'}15`,
-              color: C.employeePrimary || '#0F766E', border: `1px solid ${C.employeePrimary || '#0F766E'}30`,
-              fontSize: '12.5px', fontWeight: 800, cursor: 'pointer'
-            }}
-          >
-            <FaUserPlus /> Invite Candidate / Employee
-          </button>
-
-          <button
-            onClick={() => { setInviteType('PARTNER'); setInviteModalOpen(true); }}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              padding: '10px', borderRadius: '10px', background: `${C.teal || '#0D6EFD'}15`,
-              color: C.teal || '#0D6EFD', border: `1px solid ${C.teal || '#0D6EFD'}30`,
-              fontSize: '12.5px', fontWeight: 800, cursor: 'pointer'
-            }}
-          >
-            <FaHandshake /> Invite Partner / DSA
-          </button>
-        </div>
 
         {/* Sidebar Footer */}
         <div style={{ padding: '16px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
