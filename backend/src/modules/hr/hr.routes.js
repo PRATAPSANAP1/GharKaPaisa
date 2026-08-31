@@ -4,7 +4,7 @@ const { query } = require('../../config/database');
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 const roleCheck = require('../../middleware/authorization/role.middleware');
 const bcrypt = require('bcryptjs');
-const { sendEmployeeInvitationEmail } = require('../../services/email/email.service');
+const { sendEmployeeInvitationEmail, sendCandidateAssignedToHrEmail } = require('../../services/email/email.service');
 const { sendSms, sendEmployeeInviteSms } = require('../../services/sms/sms.service');
 const logger = require('../../config/logger');
 const { getSignedDownloadUrl } = require('../../services/aws/s3.service');
@@ -148,7 +148,7 @@ router.get('/candidates', async (req, res, next) => {
   }
 });
 
-// POST /api/v1/hr/candidates/:id/assign-hr — Assign candidate to specific HR Manager
+// POST /api/v1/hr/candidates/:id/assign-hr — Assign candidate to specific HR Manager & Send Email
 router.post('/candidates/:id/assign-hr', async (req, res, next) => {
   try {
     await ensureHRColumnsExist();
@@ -156,10 +156,21 @@ router.post('/candidates/:id/assign-hr', async (req, res, next) => {
     const { hr_id, hr_name } = req.body;
 
     let hrName = hr_name;
-    if (hr_id && !hrName) {
-      const hrRes = await query(`SELECT full_name FROM users WHERE id = $1`, [hr_id]);
+    let hrEmail = null;
+
+    if (hr_id) {
+      const hrRes = await query(`SELECT full_name, email FROM users WHERE id = $1`, [hr_id]);
       if (hrRes.rows.length > 0) {
-        hrName = hrRes.rows[0].full_name;
+        if (!hrName) hrName = hrRes.rows[0].full_name;
+        hrEmail = hrRes.rows[0].email;
+      }
+    }
+
+    if (!hrEmail && hrName) {
+      const hrRes = await query(`SELECT email, full_name FROM users WHERE full_name ILIKE $1 OR email ILIKE $1 LIMIT 1`, [hrName]);
+      if (hrRes.rows.length > 0) {
+        hrEmail = hrRes.rows[0].email;
+        if (!hrName) hrName = hrRes.rows[0].full_name;
       }
     }
 
@@ -172,10 +183,27 @@ router.post('/candidates/:id/assign-hr', async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Candidate record not found' });
     }
 
+    const candidate = rows[0];
+
+    // Trigger email notification to assigned HR manager asynchronously
+    if (hrEmail) {
+      sendCandidateAssignedToHrEmail({
+        hrEmail,
+        hrName: hrName || 'HR Manager',
+        candidateName: candidate.full_name,
+        referenceCode: candidate.reference_code,
+        targetRole: candidate.target_role || candidate.current_designation,
+        candidateMobile: candidate.mobile_number,
+        candidateEmail: candidate.email_id
+      }).catch(emailErr => {
+        logger.warn(`Failed to dispatch candidate assignment email to ${hrEmail}: ${emailErr.message}`);
+      });
+    }
+
     res.json({
       success: true,
-      message: 'Candidate assigned to HR successfully',
-      data: rows[0]
+      message: 'Candidate assigned to HR successfully and email notification sent',
+      data: candidate
     });
   } catch (err) {
     next(err);

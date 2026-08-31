@@ -3,7 +3,7 @@ const router = express.Router();
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 const { sendSmsOtp } = require('../../services/otp/msg91.service');
-const { sendOtpEmail } = require('../../services/email/email.service');
+const { sendOtpEmail, sendCandidateAssignedToHrEmail } = require('../../services/email/email.service');
 const { uploadToS3 } = require('../../services/aws/s3.service');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -388,15 +388,46 @@ router.post('/register', upload.single('resume'), async (req, res, next) => {
     ];
 
     const { rows } = await query(insertQuery, values);
+    const registeredCand = rows[0];
+
+    // Check if candidate is assigned to a specific HR user and notify them via email
+    if (finalHrName || validReferredByUuid) {
+      (async () => {
+        try {
+          let hrRes;
+          if (validReferredByUuid) {
+            hrRes = await query(`SELECT email, full_name FROM users WHERE id = $1 OR employee_id = $1 LIMIT 1`, [validReferredByUuid]);
+          }
+          if ((!hrRes || hrRes.rows.length === 0) && finalHrName) {
+            hrRes = await query(`SELECT email, full_name FROM users WHERE (full_name ILIKE $1 OR email ILIKE $1) AND role IN ('HR', 'ADMIN', 'SUPER_ADMIN') LIMIT 1`, [finalHrName]);
+          }
+
+          if (hrRes && hrRes.rows.length > 0 && hrRes.rows[0].email) {
+            const hrUser = hrRes.rows[0];
+            await sendCandidateAssignedToHrEmail({
+              hrEmail: hrUser.email,
+              hrName: hrUser.full_name || finalHrName || 'HR Manager',
+              candidateName: full_name.trim(),
+              referenceCode: reference_code,
+              targetRole: target_role || current_designation || 'Candidate',
+              candidateMobile: mobile_number.trim(),
+              candidateEmail: email_id.trim()
+            });
+          }
+        } catch (hrNotifyErr) {
+          logger.warn(`Failed to dispatch candidate registration notification to HR: ${hrNotifyErr.message}`);
+        }
+      })();
+    }
 
     res.status(201).json({
       success: true,
       message: 'Interview registration submitted successfully',
       data: {
-        id: rows[0].id,
-        reference_code: rows[0].reference_code,
-        interview_status: rows[0].interview_status,
-        created_at: rows[0].created_at
+        id: registeredCand.id,
+        reference_code: registeredCand.reference_code,
+        interview_status: registeredCand.interview_status,
+        created_at: registeredCand.created_at
       }
     });
 

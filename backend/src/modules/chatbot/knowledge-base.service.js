@@ -167,7 +167,34 @@ class KnowledgeBaseService {
         go_employee_incentives: { text: 'Opening Employee Incentives...', chips: [], redirect: '/employee/incentives' },
         go_admin_leads: { text: 'Opening Lead Management...', chips: [], redirect: userRole === 'SUPER_ADMIN' ? '/super-admin/leads' : '/admin/leads' },
         go_admin_direct_leads: { text: 'Opening Direct Leads...', chips: [], redirect: userRole === 'SUPER_ADMIN' ? '/super-admin/direct-leads' : '/admin/direct-leads' },
-        go_admin_applications: { text: 'Opening Applications CRM...', chips: [], redirect: userRole === 'SUPER_ADMIN' ? '/super-admin/applications' : '/admin/applications' }
+        go_admin_applications: { text: 'Opening Applications CRM...', chips: [], redirect: userRole === 'SUPER_ADMIN' ? '/super-admin/applications' : '/admin/applications' },
+
+        // Additional Partner-specific redirects
+        go_applications: { text: 'Redirecting to your applications...', chips: [], redirect: '/partner/applications' },
+        go_dashboard: { text: 'Redirecting to your dashboard...', chips: [], redirect: '/partner/dashboard' },
+        go_wallet: { text: 'Redirecting to your wallet...', chips: [], redirect: '/partner/wallet' },
+        go_withdraw: { text: 'Redirecting to withdrawal page...', chips: [], redirect: '/partner/wallet' },
+        go_team: { text: 'Redirecting to your team page...', chips: [], redirect: '/partner/team' },
+        go_referral: { text: 'Redirecting to referral page...', chips: [], redirect: '/partner/referral' },
+
+        // Admin-specific redirects
+        go_partners: { text: 'Redirecting to partners management...', chips: [], redirect: '/admin/partners' },
+        go_partner_kyc: { text: 'Redirecting to partner KYC verification...', chips: [], redirect: '/admin/partners' },
+
+        // Super Admin-specific redirects
+        go_employees: { text: 'Redirecting to employee management...', chips: [], redirect: '/super-admin/employees' },
+        go_activate: { text: 'Redirecting to employee activation...', chips: [], redirect: '/super-admin/employees' },
+        go_commissions: { text: 'Redirecting to commissions page...', chips: [], redirect: '/super-admin/commissions' },
+        go_release: { text: 'Redirecting to payout release page...', chips: [], redirect: '/super-admin/commissions' },
+
+        // Employee-specific redirects
+        go_incentives: { text: 'Redirecting to your incentives...', chips: [], redirect: '/employee/incentives' },
+        go_manager: { text: 'Redirecting to manager information...', chips: [], redirect: '/employee/team' },
+
+        // Lead creation redirects with product pre-selection
+        go_add_lead_card: { text: 'Redirecting to credit card lead creation...', chips: [], redirect: '/partner/add-lead' },
+        go_add_lead_loan: { text: 'Redirecting to loan lead creation...', chips: [], redirect: '/partner/add-lead' },
+        go_add_lead_insurance: { text: 'Redirecting to insurance lead creation...', chips: [], redirect: '/partner/add-lead' }
       };
 
       return actionResponses[action] || this.getDefaultResponse();

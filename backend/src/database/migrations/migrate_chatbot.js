@@ -154,6 +154,163 @@ async function seedDefaultIntents() {
       priority: 10
     },
     {
+      intent_name: 'partner_create_lead',
+      description: 'Partner wants to create a new lead',
+      training_phrases: ['create lead', 'add lead', 'new lead', 'submit lead', 'customer application', 'i want to create lead'],
+      response_template: 'I can help you create a new lead. Which product category would you like to create a lead for?',
+      chips: JSON.stringify([
+        { label: 'Credit Card', action: 'lead_credit_card' },
+        { label: 'Loan', action: 'lead_loan' },
+        { label: 'Insurance', action: 'lead_insurance' }
+      ]),
+      required_role: ['PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'partner_check_application',
+      description: 'Partner wants to check application status',
+      training_phrases: ['check application', 'my applications', 'application status', 'track application', 'view applications'],
+      response_template: 'I can help you check your applications. Fetching your recent applications...',
+      chips: JSON.stringify([
+        { label: 'View All Applications', action: 'go_applications' },
+        { label: 'Dashboard', action: 'go_dashboard' }
+      ]),
+      required_role: ['PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'partner_wallet',
+      description: 'Partner wants to check wallet/payouts',
+      training_phrases: ['wallet', 'payout', 'withdraw', 'balance', 'earnings', 'commission', 'my money'],
+      response_template: 'I can help you check your wallet balance and payouts. Fetching your wallet details...',
+      chips: JSON.stringify([
+        { label: 'View Wallet', action: 'go_wallet' },
+        { label: 'Withdraw Funds', action: 'go_withdraw' }
+      ]),
+      required_role: ['PARTNER'],
+      is_active: true,
+      priority: 8
+    },
+    {
+      intent_name: 'partner_team',
+      description: 'Partner wants to check team/referral network',
+      training_phrases: ['team', 'referral', 'my network', 'level 1', 'level 2', 'downline', 'sub-agents'],
+      response_template: 'I can help you check your referral team and network earnings.',
+      chips: JSON.stringify([
+        { label: 'View My Team', action: 'go_team' },
+        { label: 'Referral Link', action: 'go_referral' }
+      ]),
+      required_role: ['PARTNER'],
+      is_active: true,
+      priority: 7
+    },
+    {
+      intent_name: 'public_create_lead',
+      description: 'Public user wants to create lead',
+      training_phrases: ['create lead', 'add lead', 'new lead', 'customer application', 'i want to create lead'],
+      response_template: 'To create leads and earn commissions, you need to be a registered Partner. Do you already have a Partner account?',
+      chips: JSON.stringify([
+        { label: 'Login (Existing Partner)', action: 'go_login' },
+        { label: 'Register (New Partner)', action: 'go_register' }
+      ]),
+      required_role: ['PUBLIC'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'public_check_status',
+      description: 'Public user wants to check application status',
+      training_phrases: ['check status', 'application status', 'my application', 'track application', 'reference code'],
+      response_template: 'To check your application status, please provide your Reference Code or Mobile Number.',
+      chips: JSON.stringify([
+        { label: 'I have Reference Code', action: 'status_ref_code' },
+        { label: 'I have Mobile Number', action: 'status_mobile' }
+      ]),
+      required_role: ['PUBLIC'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'admin_verify_application',
+      description: 'Admin wants to verify applications',
+      training_phrases: ['verify application', 'pending applications', 'approve application', 'review application'],
+      response_template: 'I can help you with application verification. Fetching pending applications...',
+      chips: JSON.stringify([
+        { label: 'View Pending Applications', action: 'go_applications' },
+        { label: 'All Applications', action: 'go_all_applications' }
+      ]),
+      required_role: ['ADMIN', 'SUPER_ADMIN'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'admin_manage_partners',
+      description: 'Admin wants to manage partners',
+      training_phrases: ['manage partners', 'view partners', 'partner list', 'partner management'],
+      response_template: 'I can help you manage Partners. What would you like to do?',
+      chips: JSON.stringify([
+        { label: 'View All Partners', action: 'go_partners' },
+        { label: 'Partner KYC', action: 'go_partner_kyc' }
+      ]),
+      required_role: ['ADMIN', 'SUPER_ADMIN'],
+      is_active: true,
+      priority: 8
+    },
+    {
+      intent_name: 'superadmin_manage_employees',
+      description: 'Super Admin wants to manage employees',
+      training_phrases: ['manage employees', 'employee list', 'employee management', 'hr', 'staff'],
+      response_template: 'I can help you manage Employees. What would you like to do?',
+      chips: JSON.stringify([
+        { label: 'View All Employees', action: 'go_employees' },
+        { label: 'Activate Employee', action: 'go_activate' }
+      ]),
+      required_role: ['SUPER_ADMIN'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'superadmin_commission',
+      description: 'Super Admin wants to manage commissions',
+      training_phrases: ['commission', 'payout approval', 'approve commission', 'release commission'],
+      response_template: 'I can help you with commission management and payouts.',
+      chips: JSON.stringify([
+        { label: 'View Pending Commissions', action: 'go_commissions' },
+        { label: 'Release Payouts', action: 'go_release' }
+      ]),
+      required_role: ['SUPER_ADMIN'],
+      is_active: true,
+      priority: 8
+    },
+    {
+      intent_name: 'employee_incentive',
+      description: 'Employee wants to check incentives',
+      training_phrases: ['incentive', 'earnings', 'my earnings', 'commission', 'how much i earned'],
+      response_template: 'I can help you check your incentive earnings. Fetching your incentive details...',
+      chips: JSON.stringify([
+        { label: 'View My Incentives', action: 'go_incentives' },
+        { label: 'Payout History', action: 'go_payout_history' }
+      ]),
+      required_role: ['EMPLOYEE'],
+      is_active: true,
+      priority: 8
+    },
+    {
+      intent_name: 'employee_team',
+      description: 'Employee wants to check team',
+      training_phrases: ['my team', 'team members', 'team leader', 'manager', 'hierarchy'],
+      response_template: 'I can help you check your team based on your hierarchy.',
+      chips: JSON.stringify([
+        { label: 'View My Team', action: 'go_team' },
+        { label: 'My Manager', action: 'go_manager' }
+      ]),
+      required_role: ['EMPLOYEE'],
+      is_active: true,
+      priority: 7
+    },
+    {
       intent_name: 'credit_card_inquiry',
       description: 'User asking about credit cards',
       training_phrases: ['credit card', 'card', 'cc', 'credit cards', 'apply for card', 'best card'],
@@ -287,6 +444,256 @@ async function seedDefaultIntents() {
       required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
       is_active: true,
       priority: 7
+    },
+    {
+      intent_name: 'lead_credit_card',
+      description: 'User wants to create credit card lead',
+      training_phrases: ['credit card lead', 'card lead', 'credit card application'],
+      response_template: 'I will redirect you to the credit card lead creation form.',
+      chips: JSON.stringify([
+        { label: 'Go to Add Lead', action: 'go_add_lead_card' }
+      ]),
+      required_role: ['PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 8
+    },
+    {
+      intent_name: 'lead_loan',
+      description: 'User wants to create loan lead',
+      training_phrases: ['loan lead', 'personal loan lead', 'business loan lead'],
+      response_template: 'I will redirect you to the loan lead creation form.',
+      chips: JSON.stringify([
+        { label: 'Go to Add Lead', action: 'go_add_lead_loan' }
+      ]),
+      required_role: ['PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 8
+    },
+    {
+      intent_name: 'lead_insurance',
+      description: 'User wants to create insurance lead',
+      training_phrases: ['insurance lead', 'insurance application'],
+      response_template: 'I will redirect you to the insurance lead creation form.',
+      chips: JSON.stringify([
+        { label: 'Go to Add Lead', action: 'go_add_lead_insurance' }
+      ]),
+      required_role: ['PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 8
+    },
+    {
+      intent_name: 'go_applications',
+      description: 'Redirect to applications page',
+      training_phrases: ['view applications', 'my applications', 'go to applications'],
+      response_template: 'Redirecting to your applications page...',
+      chips: JSON.stringify([]),
+      required_role: ['PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_dashboard',
+      description: 'Redirect to dashboard',
+      training_phrases: ['dashboard', 'home', 'main page'],
+      response_template: 'Redirecting to your dashboard...',
+      chips: JSON.stringify([]),
+      required_role: ['PARTNER', 'EMPLOYEE', 'ADMIN', 'SUPER_ADMIN'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_wallet',
+      description: 'Redirect to wallet page',
+      training_phrases: ['wallet', 'my wallet', 'check wallet'],
+      response_template: 'Redirecting to your wallet page...',
+      chips: JSON.stringify([]),
+      required_role: ['PARTNER'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_withdraw',
+      description: 'Redirect to withdrawal page',
+      training_phrases: ['withdraw', 'payout', 'withdraw money'],
+      response_template: 'Redirecting to withdrawal page...',
+      chips: JSON.stringify([]),
+      required_role: ['PARTNER'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_team',
+      description: 'Redirect to team page',
+      training_phrases: ['team', 'my team', 'referral network'],
+      response_template: 'Redirecting to your team page...',
+      chips: JSON.stringify([]),
+      required_role: ['PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_referral',
+      description: 'Redirect to referral page',
+      training_phrases: ['referral', 'referral link', 'share link'],
+      response_template: 'Redirecting to referral page...',
+      chips: JSON.stringify([]),
+      required_role: ['PARTNER'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_login',
+      description: 'Redirect to login page',
+      training_phrases: ['login', 'sign in', 'log in'],
+      response_template: 'Redirecting to login page...',
+      chips: JSON.stringify([]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE', 'ADMIN', 'SUPER_ADMIN'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_register',
+      description: 'Redirect to registration page',
+      training_phrases: ['register', 'sign up', 'join', 'create account'],
+      response_template: 'Redirecting to registration page...',
+      chips: JSON.stringify([]),
+      required_role: ['PUBLIC'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_partners',
+      description: 'Redirect to partners management page',
+      training_phrases: ['partners', 'manage partners', 'partner list'],
+      response_template: 'Redirecting to partners management page...',
+      chips: JSON.stringify([]),
+      required_role: ['ADMIN', 'SUPER_ADMIN'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_partner_kyc',
+      description: 'Redirect to partner KYC page',
+      training_phrases: ['partner kyc', 'verify partner kyc'],
+      response_template: 'Redirecting to partner KYC verification page...',
+      chips: JSON.stringify([]),
+      required_role: ['ADMIN', 'SUPER_ADMIN'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_employees',
+      description: 'Redirect to employees page',
+      training_phrases: ['employees', 'manage employees', 'employee list'],
+      response_template: 'Redirecting to employee management page...',
+      chips: JSON.stringify([]),
+      required_role: ['SUPER_ADMIN'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_activate',
+      description: 'Redirect to employee activation page',
+      training_phrases: ['activate employee', 'employee activation'],
+      response_template: 'Redirecting to employee activation page...',
+      chips: JSON.stringify([]),
+      required_role: ['SUPER_ADMIN'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_commissions',
+      description: 'Redirect to commissions page',
+      training_phrases: ['commissions', 'approve commission', 'pending commissions'],
+      response_template: 'Redirecting to commissions page...',
+      chips: JSON.stringify([]),
+      required_role: ['SUPER_ADMIN'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_release',
+      description: 'Redirect to payout release page',
+      training_phrases: ['release payout', 'approve payout'],
+      response_template: 'Redirecting to payout release page...',
+      chips: JSON.stringify([]),
+      required_role: ['SUPER_ADMIN'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_incentives',
+      description: 'Redirect to incentives page',
+      training_phrases: ['incentives', 'my incentives', 'view incentives'],
+      response_template: 'Redirecting to your incentives page...',
+      chips: JSON.stringify([]),
+      required_role: ['EMPLOYEE'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_manager',
+      description: 'Redirect to manager info',
+      training_phrases: ['my manager', 'team leader', 'manager info'],
+      response_template: 'Redirecting to your manager information...',
+      chips: JSON.stringify([]),
+      required_role: ['EMPLOYEE'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_add_lead_card',
+      description: 'Redirect to add credit card lead',
+      training_phrases: [],
+      response_template: 'Redirecting to credit card lead creation...',
+      chips: JSON.stringify([]),
+      required_role: ['PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_add_lead_loan',
+      description: 'Redirect to add loan lead',
+      training_phrases: [],
+      response_template: 'Redirecting to loan lead creation...',
+      chips: JSON.stringify([]),
+      required_role: ['PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'go_add_lead_insurance',
+      description: 'Redirect to add insurance lead',
+      training_phrases: [],
+      response_template: 'Redirecting to insurance lead creation...',
+      chips: JSON.stringify([]),
+      required_role: ['PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 5
+    },
+    {
+      intent_name: 'status_ref_code',
+      description: 'User has reference code for status check',
+      training_phrases: ['reference code', 'i have reference code', 'check with reference code'],
+      response_template: 'Please enter your Reference Code (e.g., CAND12345) to check your application status.',
+      chips: JSON.stringify([
+        { label: 'Check Status', action: 'status_check' }
+      ]),
+      required_role: ['PUBLIC'],
+      is_active: true,
+      priority: 6
+    },
+    {
+      intent_name: 'status_mobile',
+      description: 'User has mobile number for status check',
+      training_phrases: ['mobile number', 'i have mobile number', 'check with mobile'],
+      response_template: 'Please enter your mobile number to check your application status.',
+      chips: JSON.stringify([
+        { label: 'Check Status', action: 'status_check' }
+      ]),
+      required_role: ['PUBLIC'],
+      is_active: true,
+      priority: 6
     }
   ];
 
