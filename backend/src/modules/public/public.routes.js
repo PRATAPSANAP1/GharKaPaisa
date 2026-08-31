@@ -51,7 +51,11 @@ async function generateCandidateReferenceCode() {
 router.post('/verify-mobile', async (req, res, next) => {
   try {
     await ensurePublicTablesExist();
-    const cleanMob = mobile_number.trim();
+    const { mobile_number } = req.body;
+    if (!mobile_number) {
+      return res.status(400).json({ success: false, message: 'Valid 10-digit mobile number required' });
+    }
+    const cleanMob = String(mobile_number).trim();
     if (!cleanMob || cleanMob.length < 10) {
       return res.status(400).json({ success: false, message: 'Valid 10-digit mobile number required' });
     }
@@ -79,16 +83,16 @@ router.post('/verify-mobile', async (req, res, next) => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
 
     try {
-      await query(`DELETE FROM otp_verifications WHERE identity = $1`, [`mobile_${mobile_number}`]);
+      await query(`DELETE FROM otp_verifications WHERE identity = $1`, [`mobile_${cleanMob}`]);
       await query(`
         INSERT INTO otp_verifications (identity, otp_hash, expires_at)
         VALUES ($1, $2, $3)
-      `, [`mobile_${mobile_number}`, otpHash, expiresAt]);
+      `, [`mobile_${cleanMob}`, otpHash, expiresAt]);
     } catch (dbErr) {
       logger.warn(`OTP DB insert warning: ${dbErr.message}`);
     }
     
-    await sendSmsOtp(mobile_number, otp).catch(err => {
+    await sendSmsOtp(cleanMob, otp).catch(err => {
       logger.warn(`Mobile OTP SMS send failed: ${err.message}`);
     });
     
@@ -103,7 +107,12 @@ router.post('/verify-mobile', async (req, res, next) => {
 router.post('/verify-email', async (req, res, next) => {
   try {
     await ensurePublicTablesExist();
-    const cleanEmail = email_id.trim().toLowerCase();
+    const { email_id, email } = req.body;
+    const targetEmail = email_id || email;
+    if (!targetEmail) {
+      return res.status(400).json({ success: false, message: 'Valid email address is required' });
+    }
+    const cleanEmail = String(targetEmail).trim().toLowerCase();
 
     // 1. Check if email exists in users table (any existing role)
     const userCheck = await query(`SELECT id, role FROM users WHERE LOWER(email) = LOWER($1)`, [cleanEmail]);
