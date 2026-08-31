@@ -73,6 +73,12 @@ const createAdmin = async (req, res, next) => {
       }
     }
 
+    // Ensure HR and EMPLOYEE enum values exist safely
+    try {
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'HR'`);
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'EMPLOYEE'`);
+    } catch (e) {}
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -84,7 +90,7 @@ const createAdmin = async (req, res, next) => {
       )
       VALUES ($1, $2, $3, $9::user_role, 'active'::user_status, $4, $5, $6, $7, $8, true, true)
       RETURNING id, email, role, status`,
-      [email, formattedMobile, hashedPassword, fullName, uniqueEmployeeId, department, designation, req.user.id, role]
+      [email, formattedMobile, hashedPassword, fullName, uniqueEmployeeId, department, designation, req.user?.id || null, role]
     );
 
     logger.info(`Super admin ${req.user.email} created new user: ${email} with role: ${role}`);

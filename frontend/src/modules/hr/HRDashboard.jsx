@@ -4,7 +4,7 @@ import {
   FaUsers, FaUserCheck, FaClock, FaTimesCircle, FaSearch, 
   FaFilter, FaStar, FaUserPlus, FaFileAlt, FaCheckCircle, FaPhone, FaEnvelope 
 } from 'react-icons/fa';
-import axios from 'axios';
+import api from '../../services/api';
 
 export default function HRDashboard() {
   const { C } = useTheme();
@@ -61,7 +61,7 @@ export default function HRDashboard() {
     }
     setCreateLoading(true);
     try {
-      const res = await axios.post('/api/v1/superadmin/create-admin', {
+      const res = await api.post('/superadmin/create-admin', {
         ...hrForm,
         role: 'HR'
       });
@@ -88,12 +88,12 @@ export default function HRDashboard() {
   const fetchHRData = async () => {
     setLoading(true);
     try {
-      const statsRes = await axios.get('/api/v1/hr/candidates/stats');
+      const statsRes = await api.get('/hr/candidates/stats');
       if (statsRes.data.success) {
         setStats(statsRes.data.data);
       }
 
-      const candRes = await axios.get('/api/v1/hr/candidates', {
+      const candRes = await api.get('/hr/candidates', {
         params: { status: statusFilter, search: searchTerm }
       });
       if (candRes.data.success) {
@@ -114,7 +114,7 @@ export default function HRDashboard() {
     e.preventDefault();
     if (!selectedCandModal) return;
     try {
-      const res = await axios.post(`/api/v1/hr/candidates/${selectedCandModal.id}/select`, selectionForm);
+      const res = await api.post(`/hr/candidates/${selectedCandModal.id}/select`, selectionForm);
       if (res.data.success) {
         alert(`Candidate Selected! Employee ID Created: ${res.data.data.employee_id}`);
         setSelectedCandModal(null);
@@ -129,7 +129,7 @@ export default function HRDashboard() {
     e.preventDefault();
     if (!interviewModal) return;
     try {
-      const res = await axios.post(`/api/v1/hr/candidates/${interviewModal.id}/interview`, feedbackForm);
+      const res = await api.post(`/hr/candidates/${interviewModal.id}/interview`, feedbackForm);
       if (res.data.success) {
         alert('Interview Feedback Saved');
         setInterviewModal(null);
