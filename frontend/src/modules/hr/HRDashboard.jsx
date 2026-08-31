@@ -464,7 +464,7 @@ export default function HRDashboard() {
                     <thead>
                       <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textMid, fontWeight: 700 }}>
                         <th style={{ padding: '14px 20px' }}>HR Manager</th>
-                        <th style={{ padding: '14px 20px' }}>Employee ID</th>
+                        <th style={{ padding: '14px 20px' }}>HR ID</th>
                         <th style={{ padding: '14px 20px' }}>Contact Info</th>
                         <th style={{ padding: '14px 20px' }}>Designation / Dept</th>
                         <th style={{ padding: '14px 20px' }}>Status</th>
@@ -481,7 +481,7 @@ export default function HRDashboard() {
                             </span>
                           </td>
                           <td style={{ padding: '14px 20px', fontFamily: 'monospace', fontWeight: 700, color: C.teal }}>
-                            {hr.employeeId || 'N/A'}
+                            {hr.employeeId ? hr.employeeId.replace(/^GKP-/, 'HR-') : 'N/A'}
                           </td>
                           <td style={{ padding: '14px 20px', color: C.textMid }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FaEnvelope style={{ fontSize: '12px' }} /> {hr.email}</div>

@@ -28,7 +28,8 @@ const createAdmin = async (req, res, next) => {
       return error(res, 'All required fields must be provided', 400);
     }
 
-    const employeeId = 'GKP-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+    const idPrefix = (role === 'HR') ? 'HR-' : 'GKP-';
+    const employeeId = idPrefix + crypto.randomBytes(3).toString('hex').toUpperCase();
 
     if (!['ADMIN', 'EMPLOYEE', 'HR'].includes(role)) {
       return error(res, 'Role must be either ADMIN, EMPLOYEE, or HR', 400);
@@ -67,7 +68,7 @@ const createAdmin = async (req, res, next) => {
     while (!isUnique) {
       const { rows: [existingEmployee] } = await query(`SELECT id FROM users WHERE employee_id = $1`, [uniqueEmployeeId]);
       if (existingEmployee) {
-        uniqueEmployeeId = 'GKP-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+        uniqueEmployeeId = idPrefix + crypto.randomBytes(3).toString('hex').toUpperCase();
       } else {
         isUnique = true;
       }
