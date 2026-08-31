@@ -4,6 +4,32 @@ const { query } = require('../../config/database');
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 const roleCheck = require('../../middleware/authorization/role.middleware');
 const logger = require('../../config/logger');
+const { getSignedDownloadUrl } = require('../../services/aws/s3.service');
+
+// Helper to convert raw S3 URLs/Keys into presigned S3 download URLs
+const resolveS3Url = async (urlOrKey) => {
+  if (!urlOrKey || typeof urlOrKey !== 'string') return urlOrKey;
+  if (urlOrKey.includes('X-Amz-Signature') || urlOrKey.includes('X-Amz-Algorithm')) {
+    return urlOrKey;
+  }
+  let key = urlOrKey;
+  if (key.includes('.amazonaws.com/')) {
+    key = key.split('.amazonaws.com/')[1];
+  } else if (key.startsWith('http://') || key.startsWith('https://')) {
+    const parts = key.split('/');
+    key = parts.slice(3).join('/');
+  }
+  key = key.replace(/^\//, '');
+  if (!key) return urlOrKey;
+
+  try {
+    const signedUrl = await getSignedDownloadUrl(key, 86400); // 24 hours validity
+    return signedUrl;
+  } catch (err) {
+    logger.warn(`Failed to generate signed S3 URL for key "${key}": ${err.message}`);
+    return urlOrKey;
+  }
+};
 
 // Protect routes: Super Admin and Admin only
 router.use(jwtAuth);
@@ -289,6 +315,30 @@ router.get('/:id', async (req, res, next) => {
       WHERE employee_id = $1
     `, [id]);
 
+    // Resolve S3 document URLs to signed URLs to allow public viewing in dashboard
+    if (employee.resume_url) {
+      employee.resume_url = await resolveS3Url(employee.resume_url);
+    }
+
+    if (kycData) {
+      if (kycData.pan_document_url) kycData.pan_document_url = await resolveS3Url(kycData.pan_document_url);
+      if (kycData.aadhaar_document_url) kycData.aadhaar_document_url = await resolveS3Url(kycData.aadhaar_document_url);
+      if (kycData.bank_document_url) kycData.bank_document_url = await resolveS3Url(kycData.bank_document_url);
+    }
+
+    if (Array.isArray(docs)) {
+      for (let d of docs) {
+        if (d.document_url) {
+          d.document_url = await resolveS3Url(d.document_url);
+        }
+      }
+    }
+
+    let termsData = termsRes.rows[0] || null;
+    if (termsData && termsData.video_url) {
+      termsData.video_url = await resolveS3Url(termsData.video_url);
+    }
+
     res.json({
       success: true,
       data: {
@@ -296,7 +346,7 @@ router.get('/:id', async (req, res, next) => {
         joining_details: joiningRes.rows[0] || null,
         kyc: kycData,
         documents: docs,
-        terms: termsRes.rows[0] || null,
+        terms: termsData,
         checklist: checklistRes.rows[0] || null,
         hierarchy: hierarchyRes.rows[0] || null,
         product_links: linksRes.rows,
