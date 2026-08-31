@@ -2691,7 +2691,9 @@ export default function Home({ onNavigate }) {
                   justifyContent: "space-between",
                   gap: isMobile ? "8px" : "12px",
                   transition: "all 0.2s ease", 
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  height: isMobile ? "175px" : "205px",
+                  boxSizing: "border-box"
                 }}
                 onClick={() => {
                   const cardSlug = card.slug || card.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -2702,7 +2704,7 @@ export default function Home({ onNavigate }) {
                 >
                   {/* Visual Card Image */}
                   <div style={{
-                    height: isMobile ? "80px" : "100px",
+                    height: isMobile ? "75px" : "95px",
                     borderRadius: isMobile ? "10px" : "12px",
                     overflow: "hidden",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
@@ -2710,7 +2712,8 @@ export default function Home({ onNavigate }) {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    padding: "4px"
+                    padding: "4px",
+                    flexShrink: 0
                   }}>
                     <img 
                       src={card.image} 
@@ -2730,7 +2733,7 @@ export default function Home({ onNavigate }) {
                   <div style={{ display: "flex", flexDirection: "column", flex: 1, justifyContent: "space-between" }}>
                     <div>
                       <h3 style={{ 
-                        margin: isMobile ? "0 0 4px 0" : "0 0 8px 0", 
+                        margin: "0", 
                         fontSize: isMobile ? "11.5px" : "13px", 
                         fontWeight: 800, 
                         color: C.text, 
@@ -2740,28 +2743,11 @@ export default function Home({ onNavigate }) {
                         display: "-webkit-box",
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: "vertical",
-                        wordBreak: "break-word"
+                        wordBreak: "break-word",
+                        textAlign: "center"
                       }}>
                         {card.name}
                       </h3>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? "3px" : "4px", marginBottom: isMobile ? "6px" : "10px" }}>
-                        {(card.features || []).slice(0, 3).map((feat, fi) => (
-                          <span key={fi} style={{
-                            fontSize: isMobile ? "8.5px" : "9px", 
-                            fontWeight: 600, 
-                            color: C.teal,
-                            background: `${C.teal}12`, 
-                            border: `1px solid ${C.teal}30`,
-                            borderRadius: isMobile ? "4px" : "6px", 
-                            padding: isMobile ? "2px 5px" : "2px 6px", 
-                            lineHeight: 1.3,
-                            whiteSpace: "nowrap",
-                            maxWidth: "100%",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis"
-                          }}>{feat}</span>
-                        ))}
-                      </div>
                     </div>
                     <button 
                       onClick={(e) => {
@@ -2782,7 +2768,8 @@ export default function Home({ onNavigate }) {
                         fontSize: isMobile ? "10.5px" : "11px", 
                         fontWeight: 800, 
                         cursor: "pointer",
-                        transition: "all 0.2s"
+                        transition: "all 0.2s",
+                        marginTop: "auto"
                       }}
                       onMouseEnter={(e) => { e.target.style.background = C.teal; e.target.style.color = "#fff"; }}
                       onMouseLeave={(e) => { e.target.style.background = `${C.teal}15`; e.target.style.color = C.teal; }}
