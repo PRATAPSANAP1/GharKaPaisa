@@ -1,20 +1,9 @@
 import React from 'react';
 import chatbotIcon from '../../assets/logos/chatbot-icon.png';
 
-export default function ChatbotButton({ onClick, hasNewMessage, C }) {
+export default function ChatbotButton({ onClick, hasNewMessage }) {
   return (
     <div className="gkp-chatbot-launcher-wrapper">
-      <div 
-        className="robot-speech-bubble" 
-        style={{ 
-          background: C.card, 
-          color: C.text, 
-          borderColor: C.border 
-        }}
-      >
-        <span>Need help with cards or leads?</span>
-        <span className="speech-arrow" style={{ borderTopColor: C.border }} />
-      </div>
       <button 
         className="gkp-chatbot-launcher robot-launcher" 
         onClick={onClick}

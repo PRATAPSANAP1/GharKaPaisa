@@ -58,9 +58,9 @@
   border-top: 6px solid var(--theme-border);
 }
 
-/* Dancing Robot Launcher Button — Rounded Rectangle with 2rem to 2.5rem radius */
+/* Dancing Robot Launcher Button — Transparent & Compact Size */
 .gkp-chatbot-launcher {
-  border: 1.5px solid var(--theme-border);
+  border: none !important;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -68,45 +68,44 @@
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   position: relative;
   outline: none;
-  border-radius: 2.2rem; /* Rounded rectangle with 2.2rem radius */
-  background: var(--theme-card) !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 0 16px var(--theme-glow);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  padding: 6px;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 0 !important;
 }
 
 .robot-launcher {
-  width: 90px;
-  height: 90px;
-  overflow: hidden;
-  filter: drop-shadow(0 8px 16px var(--theme-glow));
+  width: 60px !important;
+  height: 60px !important;
+  overflow: visible;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.2));
 }
 
 .dancing-robot-img {
-  width: 100%;
-  height: 100%;
+  width: 60px !important;
+  height: 60px !important;
   object-fit: contain;
-  border-radius: 1.8rem;
   animation: robotDance 3.5s ease-in-out infinite;
-  background-color: transparent;
+  background: transparent !important;
+  background-color: transparent !important;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .gkp-chatbot-launcher:hover .dancing-robot-img {
   animation: robotDanceHover 1s ease-in-out infinite;
-  transform: scale(1.08);
+  transform: scale(1.1);
 }
 
 /* Notification Badge */
 .notification-badge {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 12px;
-  height: 12px;
+  top: 2px;
+  right: 2px;
+  width: 11px;
+  height: 11px;
   background: linear-gradient(135deg, #ef4444, #f87171);
-  border-radius: 4px;
+  border-radius: 50%;
   border: 2px solid #ffffff;
   animation: pulseBadge 2s infinite;
 }
@@ -524,13 +523,13 @@
   }
 
   .robot-launcher {
-    width: 85px;
-    height: 85px;
+    width: 50px !important;
+    height: 50px !important;
   }
 
   .dancing-robot-img {
-    width: 85px;
-    height: 85px;
+    width: 50px !important;
+    height: 50px !important;
   }
 
   .robot-speech-bubble {
