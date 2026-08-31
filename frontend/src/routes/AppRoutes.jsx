@@ -270,7 +270,9 @@ const AppRoutes = () => {
             <Route path="/employee/joining-form" element={<JoiningForm />} />
             <Route path="/employee/terms" element={<TermsAcceptance />} />
             <Route path="/employee/kyc" element={<KYCSubmission />} />
-            <Route path="/employee/credit-cards" element={<EmployeeCreditCards />} />
+            <Route path="/employee/credit-cards" element={<EmployeeCreditCards defaultCategory="credit_card" />} />
+            <Route path="/employee/loans" element={<EmployeeCreditCards defaultCategory="loans" />} />
+            <Route path="/employee/insurance" element={<EmployeeCreditCards defaultCategory="insurance" />} />
             <Route path="/employee/applications" element={<EmployeeApplications />} />
             <Route path="/employee/team" element={<MyTeam />} />
             <Route path="/employee/incentives" element={<MyIncentives />} />

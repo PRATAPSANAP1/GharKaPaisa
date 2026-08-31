@@ -3,9 +3,9 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../app/store/authStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { 
-  FaChartPie, FaCreditCard, FaUserPlus, FaFileAlt, FaUsers, 
-  FaGift, FaUserCircle, FaCheckCircle, FaFileContract, FaVideo, 
-  FaSignOutAlt, FaMoon, FaSun, FaBars, FaTimes, FaShieldAlt
+  FaChartPie, FaCreditCard, FaCoins, FaShieldAlt, FaFileAlt, FaUsers, 
+  FaGift, FaUserCircle, FaCheckCircle, FaFileContract, 
+  FaSignOutAlt, FaMoon, FaSun, FaBars, FaTimes
 } from 'react-icons/fa';
 import logo from '../assets/logos/logo.png';
 import Chatbot from '../components/Chatbot/Chatbot';
@@ -32,21 +32,31 @@ export default function EmployeeLayout() {
   }, []);
 
   const isManagerOrTL = user?.designation === 'Manager' || user?.designation === 'Team Leader' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+  const status = (user?.employee_status || user?.status || user?.activation_status || '').toUpperCase();
+  const isApproved = status === 'APPROVED' || status === 'ACTIVE';
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const navItems = [
+  const navItems = isApproved ? [
     { path: '/employee/dashboard', label: 'Employee Dashboard', icon: <FaChartPie /> },
-    { path: '/employee/credit-cards', label: 'Credit Cards & Links', icon: <FaCreditCard /> },
+    { path: '/employee/credit-cards', label: 'Credit Cards', icon: <FaCreditCard /> },
+    { path: '/employee/loans', label: 'Loans', icon: <FaCoins /> },
+    { path: '/employee/insurance', label: 'Insurance', icon: <FaShieldAlt /> },
     { path: '/employee/applications', label: 'My Applications', icon: <FaFileAlt /> },
     { path: '/employee/incentives', label: 'My Incentives', icon: <FaGift /> },
     ...(isManagerOrTL ? [{ path: '/employee/team', label: 'My Team Architecture', icon: <FaUsers /> }] : []),
     { path: '/employee/profile', label: 'Employee Profile', icon: <FaUserCircle /> },
     { path: '/employee/kyc', label: 'KYC & Verification', icon: <FaCheckCircle /> },
     { path: '/employee/terms', label: 'Terms & Conditions Video', icon: <FaFileContract /> }
+  ] : [
+    { path: '/employee/dashboard', label: 'Employee Dashboard', icon: <FaChartPie /> },
+    { path: '/employee/joining-form', label: 'Joining Registration', icon: <FaFileAlt /> },
+    { path: '/employee/terms', label: 'Terms & Conditions Video', icon: <FaFileContract /> },
+    { path: '/employee/kyc', label: 'KYC & Verification', icon: <FaCheckCircle /> },
+    { path: '/employee/profile', label: 'Employee Profile', icon: <FaUserCircle /> }
   ];
 
   return (
@@ -107,6 +117,15 @@ export default function EmployeeLayout() {
           <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>{user?.full_name || user?.name || 'Employee User'}</div>
           <div style={{ fontSize: '11px', color: C.employeePrimary || '#0F766E', fontWeight: 800 }}>ID: {user?.emp_code || user?.employee_id || 'EMP-ACTIVE'}</div>
           <div style={{ fontSize: '10.5px', color: C.textMid, marginTop: '2px' }}>{user?.designation || 'Sales Associate'} • {user?.role || 'EMPLOYEE'}</div>
+          <div style={{ marginTop: '6px' }}>
+            <span style={{ 
+              padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800,
+              background: isApproved ? '#D1FAE5' : '#FEF3C7',
+              color: isApproved ? '#065F46' : '#92400E'
+            }}>
+              {isApproved ? '● ACCOUNT APPROVED' : '● ONBOARDING PHASE'}
+            </span>
+          </div>
         </div>
 
         {/* Navigation Menu */}

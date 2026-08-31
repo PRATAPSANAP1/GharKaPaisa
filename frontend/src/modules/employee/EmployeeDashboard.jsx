@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { 
   FaUser, FaCreditCard, FaUserPlus, FaFileAlt, FaVideo, 
-  FaIdCard, FaCheckCircle, FaClock, FaUsers, FaCoins, FaSignOutAlt, FaChartLine 
+  FaIdCard, FaCheckCircle, FaClock, FaUsers, FaCoins, FaSignOutAlt, FaChartLine, FaShieldAlt, FaGift
 } from 'react-icons/fa';
 import axios from 'axios';
 import { getApiV1Url } from '../../config/api';
@@ -73,6 +73,8 @@ export default function EmployeeDashboard() {
     return <div style={{ padding: '60px 16px', textAlign: 'center', background: C.bg, minHeight: '100vh', color: C.text }}>Loading Employee Dashboard...</div>;
   }
 
+  const isApproved = employee?.activation_status === 'APPROVED' || employee?.employee_status === 'ACTIVE';
+
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: isMobile ? '16px 8px 60px' : '24px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -99,10 +101,10 @@ export default function EmployeeDashboard() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
             <span style={{ 
               padding: '6px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800,
-              background: employee?.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
-              color: employee?.activation_status === 'APPROVED' ? '#065F46' : '#92400E'
+              background: isApproved ? '#D1FAE5' : '#FEF3C7',
+              color: isApproved ? '#065F46' : '#92400E'
             }}>
-              {employee?.activation_status === 'APPROVED' ? 'Active / Approved' : 'Onboarding Phase'}
+              {isApproved ? '● Active / Approved Partner Panel' : '● Onboarding Phase'}
             </span>
             <button onClick={handleLogout} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 14px', borderRadius: '10px', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <FaSignOutAlt /> Sign Out
@@ -111,7 +113,7 @@ export default function EmployeeDashboard() {
         </div>
 
         {/* Onboarding Checklist Widget if not fully activated */}
-        {employee?.activation_status !== 'APPROVED' && (
+        {!isApproved && (
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: isMobile ? '16px' : '28px', marginBottom: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: '8px', marginBottom: '16px' }}>
               <div>
@@ -206,29 +208,53 @@ export default function EmployeeDashboard() {
           </div>
         </div>
 
-        {/* Action Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-          <div onClick={() => navigate('/employee/credit-cards')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '28px', cursor: 'pointer', transition: 'transform 0.2s' }}>
-            <FaCreditCard style={{ fontSize: '32px', color: C.teal, marginBottom: '16px' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 6px 0', color: C.text }}>Credit Cards & Product Links</h3>
-            <p style={{ fontSize: '13px', color: C.textMid, margin: 0, lineHeight: 1.5 }}>
-              Access employee-specific referral links with guaranteed employee incentive payout.
+        {/* Action Cards Grid - Full Partner Panel Style */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
+          <div onClick={() => navigate('/employee/credit-cards')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '24px', cursor: 'pointer', transition: 'transform 0.2s' }}>
+            <FaCreditCard style={{ fontSize: '30px', color: C.teal, marginBottom: '14px' }} />
+            <h3 style={{ fontSize: '17px', fontWeight: 900, margin: '0 0 6px 0', color: C.text }}>Credit Cards</h3>
+            <p style={{ fontSize: '12.5px', color: C.textMid, margin: 0, lineHeight: 1.5 }}>
+              Browse banking credit card products, copy employee referral links, and earn commission.
             </p>
           </div>
 
-          <div onClick={() => navigate('/employee/applications')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '28px', cursor: 'pointer', transition: 'transform 0.2s' }}>
-            <FaUserPlus style={{ fontSize: '32px', color: '#3B82F6', marginBottom: '16px' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 6px 0', color: C.text }}>My Customer Applications</h3>
-            <p style={{ fontSize: '13px', color: C.textMid, margin: 0, lineHeight: 1.5 }}>
+          <div onClick={() => navigate('/employee/loans')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '24px', cursor: 'pointer', transition: 'transform 0.2s' }}>
+            <FaCoins style={{ fontSize: '30px', color: '#F59E0B', marginBottom: '14px' }} />
+            <h3 style={{ fontSize: '17px', fontWeight: 900, margin: '0 0 6px 0', color: C.text }}>Loans</h3>
+            <p style={{ fontSize: '12.5px', color: C.textMid, margin: 0, lineHeight: 1.5 }}>
+              Personal, Business & Home loan offers with fast customer lead generation.
+            </p>
+          </div>
+
+          <div onClick={() => navigate('/employee/insurance')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '24px', cursor: 'pointer', transition: 'transform 0.2s' }}>
+            <FaShieldAlt style={{ fontSize: '30px', color: '#10B981', marginBottom: '14px' }} />
+            <h3 style={{ fontSize: '17px', fontWeight: 900, margin: '0 0 6px 0', color: C.text }}>Insurance</h3>
+            <p style={{ fontSize: '12.5px', color: C.textMid, margin: 0, lineHeight: 1.5 }}>
+              Health, Motor & Term insurance products for employee client outreach.
+            </p>
+          </div>
+
+          <div onClick={() => navigate('/employee/applications')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '24px', cursor: 'pointer', transition: 'transform 0.2s' }}>
+            <FaUserPlus style={{ fontSize: '30px', color: '#3B82F6', marginBottom: '14px' }} />
+            <h3 style={{ fontSize: '17px', fontWeight: 900, margin: '0 0 6px 0', color: C.text }}>My Applications</h3>
+            <p style={{ fontSize: '12.5px', color: C.textMid, margin: 0, lineHeight: 1.5 }}>
               Track customer lead statuses, document uploads, and bank approvals in real-time.
             </p>
           </div>
 
+          <div onClick={() => navigate('/employee/incentives')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '24px', cursor: 'pointer', transition: 'transform 0.2s' }}>
+            <FaGift style={{ fontSize: '30px', color: '#EC4899', marginBottom: '14px' }} />
+            <h3 style={{ fontSize: '17px', fontWeight: 900, margin: '0 0 6px 0', color: C.text }}>My Incentives</h3>
+            <p style={{ fontSize: '12.5px', color: C.textMid, margin: 0, lineHeight: 1.5 }}>
+              View earned bonuses, pending incentives, hold periods, and payout ledger.
+            </p>
+          </div>
+
           {(employee?.designation === 'Manager' || employee?.designation === 'Team Leader') && (
-            <div onClick={() => navigate('/employee/team')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '28px', cursor: 'pointer', transition: 'transform 0.2s' }}>
-              <FaUsers style={{ fontSize: '32px', color: '#8B5CF6', marginBottom: '16px' }} />
-              <h3 style={{ fontSize: '18px', fontWeight: 900, margin: '0 0 6px 0', color: C.text }}>My Team Management</h3>
-              <p style={{ fontSize: '13px', color: C.textMid, margin: 0, lineHeight: 1.5 }}>
+            <div onClick={() => navigate('/employee/team')} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '24px', cursor: 'pointer', transition: 'transform 0.2s' }}>
+              <FaUsers style={{ fontSize: '30px', color: '#8B5CF6', marginBottom: '14px' }} />
+              <h3 style={{ fontSize: '17px', fontWeight: 900, margin: '0 0 6px 0', color: C.text }}>My Team Management</h3>
+              <p style={{ fontSize: '12.5px', color: C.textMid, margin: 0, lineHeight: 1.5 }}>
                 View assigned Team Leaders and Telecallers (TC), hierarchy status, and sales metrics.
               </p>
             </div>
