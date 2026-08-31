@@ -23,6 +23,18 @@ class ChatbotService {
       const userMessage = (req.body?.message || '').trim();
       const context = await contextService.buildContext(req);
 
+      const lowerMsg = userMessage.toLowerCase().trim();
+      if (
+        lowerMsg === 'find credit card' ||
+        lowerMsg === 'credit card' ||
+        lowerMsg === 'credit cards' ||
+        lowerMsg === 'apply credit card' ||
+        lowerMsg === 'find card' ||
+        lowerMsg === 'cards'
+      ) {
+        return await this.handleFindCreditCardFlow(context);
+      }
+
       if (!userMessage) {
         return responseService.buildTextResponse(
           "Hello! How can I assist you with credit cards, loans, or applications today?",
@@ -246,6 +258,35 @@ class ChatbotService {
         return res;
       }
 
+      if (action === 'cards_start' || action === 'cards_find') {
+        return await this.handleFindCreditCardFlow(context);
+      }
+
+      if (action.startsWith('select_bank_')) {
+        const bankId = action.replace('select_bank_', '');
+        return await this.handleSelectBankFlow(bankId, context);
+      }
+
+      if (action.startsWith('select_product_')) {
+        const productId = action.replace('select_product_', '');
+        return await this.handleSelectProductFlow(productId, context);
+      }
+
+      if (action.startsWith('select_role_partner_')) {
+        const productId = action.replace('select_role_partner_', '');
+        return await this.handleRolePartnerFlow(productId, context);
+      }
+
+      if (action.startsWith('select_role_employee_')) {
+        const productId = action.replace('select_role_employee_', '');
+        return await this.handleRoleEmployeeFlow(productId, context);
+      }
+
+      if (action.startsWith('select_role_customer_')) {
+        const productId = action.replace('select_role_customer_', '');
+        return await this.handleRoleCustomerFlow(productId, context);
+      }
+
       if (action === 'lead_process') {
         return this.handleLeadProcess(context);
       }
@@ -269,6 +310,227 @@ class ChatbotService {
     } catch (error) {
       logger.error('Error handling chatbot action:', error);
       return responseService.buildTextResponse(`Processing action: ${label}`, { role: userRole });
+    }
+  }
+
+  /**
+   * Interactive Credit Card Flow - Step 1: Bank Selection
+   */
+  async handleFindCreditCardFlow(context) {
+    try {
+      const banks = await searchService.getAllActiveBanks();
+      if (!banks || banks.length === 0) {
+        return responseService.buildTextResponse(
+          "We could not find any active banks in the database at the moment.",
+          context,
+          responseService.getQuickLinks(context)
+        );
+      }
+
+      const chips = banks.slice(0, 10).map(b => ({
+        label: b.name,
+        action: `select_bank_${b.id}`
+      }));
+      chips.push({ label: 'Main Menu', action: 'main_menu' });
+
+      return responseService.buildTextResponse(
+        "💳 *Find Credit Card*\n\nWhich bank credit card are you looking for? Please select a bank below or type the bank name:",
+        context,
+        chips
+      );
+    } catch (error) {
+      logger.error('Error in handleFindCreditCardFlow:', error);
+      return responseService.buildTextResponse(
+        "Which bank credit card are you looking for? Please select a bank below:",
+        context,
+        responseService.getQuickLinks(context)
+      );
+    }
+  }
+
+  /**
+   * Interactive Credit Card Flow - Step 2: Product Selection for Bank
+   */
+  async handleSelectBankFlow(bankId, context) {
+    try {
+      const bank = await searchService.getBankById(bankId);
+      const products = await searchService.searchProductsByBank(bankId, 'credit_card');
+
+      const bankName = bank ? bank.name : 'Selected Bank';
+
+      if (!products || products.length === 0) {
+        return responseService.buildTextResponse(
+          `I found **${bankName}**, but there are currently no active credit card products listed for it in our database.`,
+          context,
+          [
+            { label: 'Select Another Bank', action: 'cards_start' },
+            { label: 'Main Menu', action: 'main_menu' }
+          ]
+        );
+      }
+
+      const chips = products.map(p => ({
+        label: p.name,
+        action: `select_product_${p.id}`
+      }));
+      chips.push({ label: 'Back to Banks', action: 'cards_start' });
+      chips.push({ label: 'Main Menu', action: 'main_menu' });
+
+      return responseService.buildTextResponse(
+        `🏦 *${bankName} Credit Cards*\n\nGreat choice! Here are the active credit cards available for **${bankName}**. Please select a card to proceed:`,
+        context,
+        chips
+      );
+    } catch (error) {
+      logger.error('Error in handleSelectBankFlow:', error);
+      return responseService.buildTextResponse(
+        "Please select a product from the options below:",
+        context,
+        [{ label: 'Find Credit Card', action: 'cards_start' }]
+      );
+    }
+  }
+
+  /**
+   * Interactive Credit Card Flow - Step 3: Role Selection for Selected Product
+   */
+  async handleSelectProductFlow(productId, context) {
+    try {
+      const product = await searchService.getProductById(productId);
+      if (!product) {
+        return responseService.buildTextResponse(
+          "The selected card product details could not be found. Please try selecting a bank again.",
+          context,
+          [{ label: 'Find Credit Card', action: 'cards_start' }, { label: 'Main Menu', action: 'main_menu' }]
+        );
+      }
+
+      const chips = [
+        { label: 'As Partner', action: `select_role_partner_${product.id}` },
+        { label: 'As Employee', action: `select_role_employee_${product.id}` },
+        { label: 'As Customer (Direct)', action: `select_role_customer_${product.id}` },
+        { label: 'Main Menu', action: 'main_menu' }
+      ];
+
+      return responseService.buildTextResponse(
+        `📌 *Selected Card: ${product.name}*\n\nHow would you like to process the credit card application for **${product.name}**?\n\nPlease select your role below:`,
+        context,
+        chips
+      );
+    } catch (error) {
+      logger.error('Error in handleSelectProductFlow:', error);
+      return responseService.buildTextResponse(
+        "Please select how you would like to process your application:",
+        context,
+        [{ label: 'Find Credit Card', action: 'cards_start' }]
+      );
+    }
+  }
+
+  /**
+   * Interactive Credit Card Flow - Role: Partner
+   */
+  async handleRolePartnerFlow(productId, context) {
+    try {
+      const product = await searchService.getProductById(productId);
+      const productName = product ? product.name : 'Credit Card';
+      const productSlug = product ? product.slug : '';
+
+      if (context.role === 'PARTNER' || context.role === 'TEAM_MEMBER') {
+        return responseService.buildTextResponse(
+          `💼 *Partner Processing - ${productName}*\n\nWelcome Partner! You are logged in. Click **'Create Partner Lead'** below to submit a lead for **${productName}** and earn commission.`,
+          context,
+          [
+            { label: 'Create Partner Lead', action: 'go_partner_add_lead' },
+            { label: 'View Card Details', action: `go_prod_${productSlug}` },
+            { label: 'Main Menu', action: 'main_menu' }
+          ]
+        );
+      }
+
+      return responseService.buildTextResponse(
+        `💼 *Partner Processing - ${productName}*\n\nTo process as a Partner and earn commission on **${productName}**, please log in to your Partner account or register as a new Partner.`,
+        context,
+        [
+          { label: 'Login to Partner Portal', action: 'go_login' },
+          { label: 'Register as Partner', action: 'go_register' },
+          { label: 'Process as Customer (No Login)', action: `select_role_customer_${productId}` }
+        ]
+      );
+    } catch (error) {
+      logger.error('Error in handleRolePartnerFlow:', error);
+      return responseService.buildTextResponse(
+        "Please log in or register to continue as a Partner.",
+        context,
+        [{ label: 'Login', action: 'go_login' }, { label: 'Register', action: 'go_register' }]
+      );
+    }
+  }
+
+  /**
+   * Interactive Credit Card Flow - Role: Employee
+   */
+  async handleRoleEmployeeFlow(productId, context) {
+    try {
+      const product = await searchService.getProductById(productId);
+      const productName = product ? product.name : 'Credit Card';
+      const productSlug = product ? product.slug : '';
+
+      if (context.role === 'EMPLOYEE') {
+        return responseService.buildTextResponse(
+          `👔 *Employee Processing - ${productName}*\n\nHello! You are logged in as an Employee. Click **'Punch Employee Lead'** below to process **${productName}** and log your incentive.`,
+          context,
+          [
+            { label: 'Punch Employee Lead', action: 'go_employee_cards' },
+            { label: 'View Card Details', action: `go_prod_${productSlug}` },
+            { label: 'Main Menu', action: 'main_menu' }
+          ]
+        );
+      }
+
+      return responseService.buildTextResponse(
+        `👔 *Employee Processing - ${productName}*\n\nTo process as an Employee and log incentives for **${productName}**, please log in to your Employee Portal.`,
+        context,
+        [
+          { label: 'Login to Employee Portal', action: 'go_login' },
+          { label: 'Process as Customer (No Login)', action: `select_role_customer_${productId}` }
+        ]
+      );
+    } catch (error) {
+      logger.error('Error in handleRoleEmployeeFlow:', error);
+      return responseService.buildTextResponse(
+        "Please log in to continue as an Employee.",
+        context,
+        [{ label: 'Login', action: 'go_login' }]
+      );
+    }
+  }
+
+  /**
+   * Interactive Credit Card Flow - Role: Customer (Direct Application Without Login)
+   */
+  async handleRoleCustomerFlow(productId, context) {
+    try {
+      const product = await searchService.getProductById(productId);
+      const productName = product ? product.name : 'Credit Card';
+      const productSlug = product ? product.slug : '';
+
+      return responseService.buildTextResponse(
+        `👤 *Customer Application - ${productName}*\n\nGreat! You are applying directly as a Customer for **${productName}**. **No login required!**\n\nClick **'Open Application Form'** below to fill out your details directly:`,
+        context,
+        [
+          { label: 'Open Application Form', action: `apply_direct_${productSlug}` },
+          { label: 'View Card Features', action: `go_prod_${productSlug}` },
+          { label: 'Main Menu', action: 'main_menu' }
+        ]
+      );
+    } catch (error) {
+      logger.error('Error in handleRoleCustomerFlow:', error);
+      return responseService.buildTextResponse(
+        "Click below to fill out your application form directly:",
+        context,
+        [{ label: 'Main Menu', action: 'main_menu' }]
+      );
     }
   }
 

@@ -229,6 +229,14 @@ export default function Chatbot() {
       return;
     }
 
+    if (action.startsWith('apply_direct_')) {
+      const slug = action.replace('apply_direct_', '');
+      addMessage({ sender: 'user', text: label, timestamp: new Date() });
+      navigate(`/products/credit_card/${slug}/apply`);
+      setIsOpen(false);
+      return;
+    }
+
     if (action.startsWith('go_prod_')) {
       const slug = action.replace('go_prod_', '');
       addMessage({ sender: 'user', text: label, timestamp: new Date() });

@@ -3,6 +3,65 @@ const logger = require('../../config/logger');
 
 class ChatbotSearchService {
   /**
+   * Get all active banks
+   */
+  async getAllActiveBanks() {
+    try {
+      const { rows } = await query(
+        `SELECT id, name, short_code, logo_url, slug, status, is_active
+         FROM banks
+         WHERE (is_active = true OR status = 'Active')
+         ORDER BY priority DESC, name ASC`
+      );
+      return rows;
+    } catch (error) {
+      logger.error('Error fetching all active banks:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get bank by ID or slug
+   */
+  async getBankById(bankId) {
+    try {
+      const { rows } = await query(
+        `SELECT id, name, short_code, logo_url, slug, status, is_active
+         FROM banks
+         WHERE id::text = $1 OR LOWER(short_code) = LOWER($1) OR LOWER(slug) = LOWER($1)
+         LIMIT 1`,
+        [bankId]
+      );
+      return rows[0] || null;
+    } catch (error) {
+      logger.error('Error fetching bank by ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get product by ID or slug
+   */
+  async getProductById(productId) {
+    try {
+      const { rows } = await query(
+        `SELECT p.id, p.name, p.category, p.description, p.image_url, p.annual_fee,
+                p.is_lifetime_free, p.slug, p.rewards, p.welcome_benefits, p.partner_url, p.public_url,
+                b.id AS bank_id, b.name AS bank_name, b.short_code AS bank_short_code
+         FROM products p
+         LEFT JOIN banks b ON b.id = p.bank_id
+         WHERE p.id::text = $1 OR LOWER(p.slug) = LOWER($1)
+         LIMIT 1`,
+        [productId]
+      );
+      return rows[0] || null;
+    } catch (error) {
+      logger.error('Error fetching product by ID:', error);
+      return null;
+    }
+  }
+
+  /**
    * Search bank in PostgreSQL `banks` table dynamically (with LIKE and pg_trgm fuzzy matching)
    */
   async searchBank(bankTerm) {
