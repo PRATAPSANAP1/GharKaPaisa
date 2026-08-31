@@ -8,7 +8,7 @@ const logger = require('../../config/logger');
 
 // Optional JWT middleware helper to hydrate req.user if Bearer token is provided
 const optionalJwt = (req, res, next) => {
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+  if (req?.headers?.authorization && req.headers.authorization.startsWith('Bearer ')) {
     return jwtAuth(req, res, (err) => {
       // If token verification fails, continue as unauthenticated PUBLIC visitor
       next();
