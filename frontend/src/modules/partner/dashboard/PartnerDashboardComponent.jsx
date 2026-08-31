@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
@@ -208,7 +208,10 @@ const NavItem = ({ icon, label, active, onClick }) => (
 export default function PartnerDashboardComponent({ partner }) {
   const { C, isDark } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
+
+  const isEmployee = location.pathname.includes('/employee') || !!partner?.employee_id || !!partner?.employee_status || partner?.role === 'EMPLOYEE';
 
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
@@ -346,7 +349,7 @@ export default function PartnerDashboardComponent({ partner }) {
       icon: MdStorefront,
       color: '#7C3AED',
       bgLight: '#F5F3FF',
-      action: () => navigate('/partner/products')
+      action: () => navigate(isEmployee ? '/employee/credit-cards' : '/partner/products')
     },
     {
       id: 'customer',
@@ -355,9 +358,9 @@ export default function PartnerDashboardComponent({ partner }) {
       icon: MdPeople,
       color: '#2563EB',
       bgLight: '#EFF6FF',
-      action: () => navigate('/partner/customers', { state: { openAddModal: true } })
+      action: () => navigate(isEmployee ? '/employee/applications' : '/partner/customers', { state: { openAddModal: true } })
     },
-    {
+    ...(!isEmployee ? [{
       id: 'invite',
       label: t('quickActions.invitePartner', 'Invite Partner'),
       desc: t('quickActions.inviteDesc', 'Grow your network and overrides'),
@@ -365,7 +368,7 @@ export default function PartnerDashboardComponent({ partner }) {
       color: '#EA580C',
       bgLight: '#FFF7ED',
       action: () => navigate('/partner/team-network')
-    }
+    }] : [])
   ];
 
   return (
@@ -675,14 +678,16 @@ export default function PartnerDashboardComponent({ partner }) {
 
 
         {/* ──── PARTNER BANNER CAROUSEL (TEAM & REFERRAL BANNERS) ──── */}
-        <div style={{ marginTop: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', paddingLeft: '4px', paddingRight: '4px' }}>
-            <span style={{ fontWeight: 800, fontSize: '13px', letterSpacing: '0.05em', color: isDark ? C.text : '#111827', textTransform: 'uppercase' }}>
-              Team &amp; Referral Banners
-            </span>
+        {!isEmployee && (
+          <div style={{ marginTop: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', paddingLeft: '4px', paddingRight: '4px' }}>
+              <span style={{ fontWeight: 800, fontSize: '13px', letterSpacing: '0.05em', color: isDark ? C.text : '#111827', textTransform: 'uppercase' }}>
+                Team &amp; Referral Banners
+              </span>
+            </div>
+            <PartnerBannerCarousel showOnlyRefer={false} />
           </div>
-          <PartnerBannerCarousel showOnlyRefer={false} />
-        </div>
+        )}
 
         {/* ──── QUICK ACCESS SECTION ──── */}
         <div style={{ marginTop: '20px', marginLeft: '8px', marginRight: '8px' }}>

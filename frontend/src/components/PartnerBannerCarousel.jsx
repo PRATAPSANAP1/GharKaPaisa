@@ -105,7 +105,8 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
     }
   };
 
-  if (!activeBanners.length) return null;
+  const isEmployee = location.pathname.includes('/employee');
+  if (isEmployee || !activeBanners.length) return null;
 
   // On desktop, render team & offer banners in a clean responsive grid
   if (!isMobile && activeBanners.length > 1) {
