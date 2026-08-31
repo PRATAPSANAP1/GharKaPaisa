@@ -479,12 +479,14 @@ export default function HRDashboard() {
                               >
                                 <FaStar /> Feedback
                               </button>
-                              <button 
-                                onClick={() => handleOpenSelectModal(cand)}
-                                style={{ background: C.teal, color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                              >
-                                <FaUserCheck /> Select & Give EMP ID
-                              </button>
+                              {!isSuperAdmin && (
+                                <button 
+                                  onClick={() => handleOpenSelectModal(cand)}
+                                  style={{ background: C.teal, color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  <FaUserCheck /> Select & Give EMP ID
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -730,7 +732,7 @@ export default function HRDashboard() {
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: `1px solid ${C.border}`, paddingTop: '16px' }}>
                 <button onClick={() => setViewCandModal(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '10px 20px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Close</button>
-                {viewCandModal.interview_status !== 'EMPLOYEE_CREATED' && (
+                {viewCandModal.interview_status !== 'EMPLOYEE_CREATED' && !isSuperAdmin && (
                   <button onClick={() => { const cand = viewCandModal; setViewCandModal(null); handleOpenSelectModal(cand); }} style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>Select Candidate & Give EMP ID</button>
                 )}
               </div>
