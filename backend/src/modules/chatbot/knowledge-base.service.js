@@ -194,7 +194,22 @@ class KnowledgeBaseService {
         // Lead creation redirects with product pre-selection
         go_add_lead_card: { text: 'Redirecting to credit card lead creation...', chips: [], redirect: '/partner/add-lead' },
         go_add_lead_loan: { text: 'Redirecting to loan lead creation...', chips: [], redirect: '/partner/add-lead' },
-        go_add_lead_insurance: { text: 'Redirecting to insurance lead creation...', chips: [], redirect: '/partner/add-lead' }
+        go_add_lead_insurance: { text: 'Redirecting to insurance lead creation...', chips: [], redirect: '/partner/add-lead' },
+
+        // Password and authentication redirects
+        go_forgot_password: { text: 'Redirecting to login page where you can reset your password...', chips: [], redirect: '/login' },
+
+        // Additional redirects for new intents
+        go_hr_dashboard: { text: 'Redirecting to HR Dashboard...', chips: [], redirect: '/admin/dashboard' },
+        perform_logout: { text: 'Logging out...', chips: [], redirect: '/login' },
+        raise_ticket: { text: 'Redirecting to support ticket page...', chips: [], redirect: '/contact' },
+        faq_start: { text: 'Loading FAQ...', chips: [], redirect: '/faq' },
+        faq_search: { text: 'Search FAQ...', chips: [], redirect: '/faq' },
+        candidate_ref_code: { text: 'Please enter your Candidate Reference Code...', chips: [], redirect: '/careers/status' },
+        payment_mobile: { text: 'Redirecting to mobile recharge...', chips: [], redirect: '/services/mobile-recharge' },
+        payment_electricity: { text: 'Redirecting to electricity bill payment...', chips: [], redirect: '/services/electricity' },
+        payment_loan: { text: 'Redirecting to loan repayment...', chips: [], redirect: '/services/loan-repayment' },
+        payment_transfer: { text: 'Redirecting to money transfer...', chips: [], redirect: '/services/money-transfer' }
       };
 
       return actionResponses[action] || this.getDefaultResponse();

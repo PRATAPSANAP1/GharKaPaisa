@@ -79,6 +79,7 @@ const REDIRECT_ACTIONS = {
   go_add_lead_card: '/partner/add-lead',
   go_add_lead_loan: '/partner/add-lead',
   go_add_lead_insurance: '/partner/add-lead',
+  go_forgot_password: '/login',
 };
 
 export default function Chatbot() {
@@ -171,6 +172,23 @@ export default function Chatbot() {
 
   // Chip click handler
   const handleChipClick = async (action, label) => {
+    // Handle role-specific lead creation redirects
+    if (action === 'go_add_lead_card' || action === 'go_add_lead_loan' || action === 'go_add_lead_insurance') {
+      addMessage({ sender: 'user', text: label, timestamp: new Date() });
+
+      // Route based on user role
+      if (userRole === 'EMPLOYEE') {
+        navigate('/employee/add-lead');
+      } else if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN') {
+        navigate(userRole === 'SUPER_ADMIN' ? '/super-admin/leads' : '/admin/leads');
+      } else {
+        // PARTNER and TEAM_MEMBER go to partner add-lead
+        navigate('/partner/add-lead');
+      }
+      setIsOpen(false);
+      return;
+    }
+
     if (REDIRECT_ACTIONS[action]) {
       addMessage({ sender: 'user', text: label, timestamp: new Date() });
       navigate(REDIRECT_ACTIONS[action]);

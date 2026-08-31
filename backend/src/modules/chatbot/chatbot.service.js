@@ -8,6 +8,7 @@ const applicationService = require('./chatbot.application.service');
 const partnerService = require('./chatbot.partner.service');
 const employeeService = require('./chatbot.employee.service');
 const responseService = require('./chatbot.response.service');
+const securityService = require('./chatbot.security.service');
 const { INTENTS } = require('./chatbot.constants');
 const logger = require('../../config/logger');
 
@@ -32,7 +33,24 @@ class ChatbotService {
       // 1. Detect Intent and Extract Entities
       const { intent, entities } = await intentService.detectIntentAndEntities(userMessage);
 
-      // 2. Dispatch to appropriate sub-service based on intent
+      // 2. Security Check for sensitive actions
+      const sensitiveActions = ['approve_application', 'reject_application', 'delete_application', 'admin_action'];
+      if (sensitiveActions.includes(intent)) {
+        const securityCheck = await securityService.performSecurityCheck(req, intent);
+        if (!securityCheck.authorized) {
+          const unauthorizedResponse = securityService.getUnauthorizedResponse(
+            securityCheck.reason,
+            securityCheck.userRole
+          );
+          return responseService.buildTextResponse(
+            unauthorizedResponse.message,
+            context,
+            unauthorizedResponse.chips
+          );
+        }
+      }
+
+      // 3. Dispatch to appropriate sub-service based on intent
       switch (intent) {
         case INTENTS.GREETING:
           return responseService.buildTextResponse(
@@ -82,8 +100,8 @@ class ChatbotService {
           }
 
           if (products.length > 1) {
-            const title = entities.bank 
-              ? `Found ${products.length} ${entities.bank.name} products:` 
+            const title = entities.bank
+              ? `Found ${products.length} ${entities.bank.name} products:`
               : `Found ${products.length} matching products:`;
             const res = await productService.formatProductListResponse(products, title, context);
             res.chips = responseService.getQuickLinks(context);
@@ -125,7 +143,7 @@ class ChatbotService {
         }
       }
 
-      // 3. Dynamic Database Search Fallback
+      // 4. Dynamic Database Search Fallback
       const dbProducts = await searchService.searchProducts(userMessage);
       if (dbProducts.length === 1) {
         const res = await productService.formatExactProductResponse(dbProducts[0], context);
@@ -138,7 +156,7 @@ class ChatbotService {
         return res;
       }
 
-      // 4. Smart No-Result Fallback
+      // 5. Smart No-Result Fallback
       return responseService.buildNoResultResponse(userMessage, context);
     } catch (error) {
       logger.error('Error processing chatbot message:', error);

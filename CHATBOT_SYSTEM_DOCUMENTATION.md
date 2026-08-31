@@ -114,27 +114,28 @@ User opens chatbot on homepage
   ↓
 Bot: "Hello! How can I help you today?"
   ↓
-User clicks: "I want to create a new lead"
+User: "I want to create a new lead"
   ↓
 Bot checks: Is user logged in?
   ↓
-[NO] → Bot: "To create leads, you need to be a registered Partner."
+[NO] → Bot: "To create leads, you need to be a registered Partner. Do you already have a Partner account?"
        ↓
-       Bot: "Already have a Partner account?"
+       [YES] → User clicks: "Login (Existing Partner)" → Redirect: /login
        ↓
-       [YES] → Bot: "Login here" → Link: /login
+       [NO] → User clicks: "Register (New Partner)" → Redirect: /register
        ↓
-       [NO] → Bot: "Register as Partner" → Link: /register
-       ↓
-[YES] → Bot: "Great! I can help you create a lead."
-       ↓
-       Bot: "Which product category?"
+[YES] → Bot: "Great! I can help you create a new lead. Which product category would you like to create a lead for?"
        ↓
        User selects: Credit Card / Loan / Insurance
        ↓
        Bot: "I'll guide you to the lead creation form."
        ↓
-       Redirect: /partner/add-lead (with product pre-selected)
+       Redirect based on role:
+       ├─ PARTNER → /partner/add-lead
+       ├─ TEAM_MEMBER → /partner/add-lead
+       ├─ EMPLOYEE → /employee/add-lead
+       ├─ ADMIN → /admin/leads
+       └─ SUPER_ADMIN → /super-admin/leads
   ↓
 END
 ```
@@ -294,12 +295,71 @@ END
 ```python
 FUNCTION detectUserRole(request):
     token = getAuthToken(request)
-    
+
     IF token exists:
         user = decodeToken(token)
         RETURN user.role  # PARTNER, ADMIN, SUPER_ADMIN, EMPLOYEE
     ELSE:
         RETURN 'PUBLIC'  # Anonymous user
+```
+
+### Algorithm 1.5: Create Lead Intent with Authentication Check
+
+```python
+FUNCTION isCreateLeadIntent(message):
+    leadKeywords = [
+        'create a new lead', 'create new lead', 'i want create lead',
+        'i want to create a new lead', 'i want to create lead',
+        'add lead', 'new lead', 'create lead', 'customer lead'
+    ]
+    RETURN ANY(keyword IN message.lower() FOR keyword IN leadKeywords)
+
+FUNCTION getCreateLeadResponse(userRole):
+    role = (userRole OR 'PUBLIC').upper()
+
+    IF role == 'PUBLIC':
+        RETURN {
+            intent_name: 'public_create_lead',
+            response_template: 'To create leads and earn commissions, you need to be a registered Partner. Do you already have a Partner account?',
+            chips: [
+                { label: 'Login (Existing Partner)', action: 'go_login' },
+                { label: 'Register (New Partner)', action: 'go_register' }
+            ]
+        }
+
+    roleRoutes = {
+        'PARTNER': {
+            response_template: 'Great! I can help you create a new lead. Which product category would you like to create a lead for?',
+            chips: [
+                { label: 'Credit Card', action: 'go_add_lead_card' },
+                { label: 'Loan', action: 'go_add_lead_loan' },
+                { label: 'Insurance', action: 'go_add_lead_insurance' }
+            ]
+        },
+        'TEAM_MEMBER': SAME_AS_PARTNER,
+        'EMPLOYEE': SAME_AS_PARTNER,
+        'ADMIN': {
+            response_template: 'As an Admin, you can access the CRM and Lead Management tools. Would you like to go to the admin tools?',
+            chips: [
+                { label: 'Manage Leads', action: 'go_admin_leads' },
+                { label: 'Applications CRM', action: 'go_admin_applications' }
+            ]
+        },
+        'SUPER_ADMIN': {
+            response_template: 'As Super Admin, you have full access to all lead management tools. Where would you like to go?',
+            chips: [
+                { label: 'Manage Leads', action: 'go_admin_leads' },
+                { label: 'Employee Leads', action: 'go_employee_cards' },
+                { label: 'Partner Products', action: 'go_partner_products' }
+            ]
+        }
+    }
+
+    RETURN {
+        intent_name: role.lower() + '_create_lead',
+        response_template: roleRoutes[role].response_template,
+        chips: roleRoutes[role].chips
+    }
 ```
 
 ---

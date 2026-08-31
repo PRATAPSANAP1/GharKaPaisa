@@ -694,6 +694,336 @@ async function seedDefaultIntents() {
       required_role: ['PUBLIC'],
       is_active: true,
       priority: 6
+    },
+    {
+      intent_name: 'reset_password',
+      description: 'User wants to reset their password',
+      training_phrases: ['reset password', 'forgot password', 'change password', 'i want reset password', 'password reset', 'forgot my password', 'change my password'],
+      response_template: 'I can help you reset your password. You can reset your password through the forgot password page.',
+      chips: JSON.stringify([
+        { label: 'Go to Forgot Password', action: 'go_forgot_password' },
+        { label: 'Login Page', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'],
+      is_active: true,
+      priority: 8
+    },
+    {
+      intent_name: 'forgot_password',
+      description: 'User forgot their password',
+      training_phrases: ['forgot password', 'i forgot my password', 'cannot login', 'cannot remember password', 'login problem'],
+      response_template: 'No problem! You can reset your password using your registered mobile number or email.',
+      chips: JSON.stringify([
+        { label: 'Reset Password', action: 'go_forgot_password' },
+        { label: 'Contact Support', action: 'go_contact' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'],
+      is_active: true,
+      priority: 8
+    },
+    {
+      intent_name: 'login_help',
+      description: 'User needs help with login',
+      training_phrases: ['login help', 'cannot login', 'login issue', 'having trouble logging in', 'login problem'],
+      response_template: 'I can help you with login issues. What seems to be the problem?',
+      chips: JSON.stringify([
+        { label: 'Forgot Password', action: 'forgot_password' },
+        { label: 'Go to Login', action: 'go_login' },
+        { label: 'Contact Support', action: 'go_contact' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'],
+      is_active: true,
+      priority: 7
+    },
+    {
+      intent_name: 'partner_registration',
+      description: 'User wants to become a partner',
+      training_phrases: ['become partner', 'i want to become a partner', 'partner registration', 'register as partner', 'join as partner', 'partner signup'],
+      response_template: 'To become a GharKaPaisa Partner, you can register on our platform. This will be your entry point to earn commissions.',
+      chips: JSON.stringify([
+        { label: 'Register as Partner', action: 'go_register' },
+        { label: 'Login (Existing Partner)', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'partner_login',
+      description: 'User wants to login as partner',
+      training_phrases: ['i already have a partner account', 'partner login', 'login as partner', 'existing partner account'],
+      response_template: 'Great! You can login to your existing Partner account.',
+      chips: JSON.stringify([
+        { label: 'Partner Login', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'track_application',
+      description: 'User wants to track their application',
+      training_phrases: ['track my application', 'i want to track my application', 'track application', 'check my application', 'where is my application'],
+      response_template: 'I can help you track your application status.',
+      chips: JSON.stringify([
+        { label: 'Login to Track', action: 'go_login' },
+        { label: 'Check Status', action: 'public_check_status' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'credit_card_request',
+      description: 'User wants a credit card',
+      training_phrases: ['i want a credit card', 'get credit card', 'apply for credit card', 'credit card application', 'need credit card'],
+      response_template: 'I can help you find the right credit card. Are you looking for a specific type?',
+      chips: JSON.stringify([
+        { label: 'View Credit Cards', action: 'go_cards' },
+        { label: 'Lifetime Free Cards', action: 'go_ltf' },
+        { label: 'Partner Login', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'loan_request',
+      description: 'User wants a loan',
+      training_phrases: ['i want a loan', 'get loan', 'apply for loan', 'loan application', 'need loan', 'personal loan', 'business loan'],
+      response_template: 'I can help you find the right loan option. What type of loan are you looking for?',
+      chips: JSON.stringify([
+        { label: 'Personal Loan', action: 'loans_personal' },
+        { label: 'Business Loan', action: 'loans_business' },
+        { label: 'View All Loans', action: 'go_loans' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'payment_services',
+      description: 'User wants to make payment or money transfer',
+      training_phrases: ['i want to make a payment', 'money transfer', 'mobile recharge', 'electricity bill', 'loan repayment', 'bill payment'],
+      response_template: 'What type of payment service would you like to use?',
+      chips: JSON.stringify([
+        { label: 'Mobile Recharge', action: 'payment_mobile' },
+        { label: 'Electricity Bill', action: 'payment_electricity' },
+        { label: 'Loan Repayment', action: 'payment_loan' },
+        { label: 'Money Transfer', action: 'payment_transfer' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 7
+    },
+    {
+      intent_name: 'view_my_leads',
+      description: 'User wants to view their leads',
+      training_phrases: ['show my leads', 'my leads', 'view leads', 'my customer leads', 'lead list'],
+      response_template: 'I can help you view your leads.',
+      chips: JSON.stringify([
+        { label: 'Login to View Leads', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'my_applications',
+      description: 'User wants to view their applications',
+      training_phrases: ['my applications', 'show my applications', 'view applications', 'my application list'],
+      response_template: 'I can help you view your applications.',
+      chips: JSON.stringify([
+        { label: 'Login to View Applications', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'employee_team',
+      description: 'Employee wants to view their team',
+      training_phrases: ['i want to see my team', 'my team', 'view team', 'team members', 'my team members'],
+      response_template: 'I can help you view your team based on your designation.',
+      chips: JSON.stringify([
+        { label: 'Login to View Team', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'employee_incentive',
+      description: 'Employee wants to view their incentives',
+      training_phrases: ['show my incentives', 'my incentives', 'view incentives', 'incentive earnings', 'how much i earned'],
+      response_template: 'I can help you check your incentive earnings.',
+      chips: JSON.stringify([
+        { label: 'Login to View Incentives', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'complete_kyc',
+      description: 'User wants to complete KYC',
+      training_phrases: ['i want to complete kyc', 'complete kyc', 'kyc verification', 'upload kyc documents', 'kyc process'],
+      response_template: 'I can help you complete your KYC verification.',
+      chips: JSON.stringify([
+        { label: 'Login for KYC', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'upload_documents',
+      description: 'User wants to upload documents',
+      training_phrases: ['upload documents', 'document upload', 'submit documents', 'my documents'],
+      response_template: 'I can help you upload your required documents.',
+      chips: JSON.stringify([
+        { label: 'Login to Upload', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'terms_conditions',
+      description: 'User wants to view terms and conditions',
+      training_phrases: ['terms and conditions', 't&c', 'company terms', 'company policies', 'accept terms'],
+      response_template: 'You can view our company terms and conditions in your profile or onboarding section.',
+      chips: JSON.stringify([
+        { label: 'Login to View Terms', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 7
+    },
+    {
+      intent_name: 'application_details',
+      description: 'User wants to view specific application details',
+      training_phrases: ['show application', 'application details', 'view application', 'check application'],
+      response_template: 'I can help you view application details. Please provide the application reference or login to view your applications.',
+      chips: JSON.stringify([
+        { label: 'Login to View Applications', action: 'go_login' },
+        { label: 'Check Status', action: 'public_check_status' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'admin_applications',
+      description: 'Admin wants to manage applications',
+      training_phrases: ['show applications', 'manage applications', 'admin applications', 'application management'],
+      response_template: 'I can help you with application management.',
+      chips: JSON.stringify([
+        { label: 'Go to Applications', action: 'go_admin_applications' }
+      ]),
+      required_role: ['ADMIN', 'SUPER_ADMIN'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'superadmin_employees',
+      description: 'Super Admin wants to manage employees',
+      training_phrases: ['manage employees', 'employee management', 'admin employees', 'super admin employees'],
+      response_template: 'I can help you with employee management.',
+      chips: JSON.stringify([
+        { label: 'Go to Employee Management', action: 'go_employees' }
+      ]),
+      required_role: ['SUPER_ADMIN'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'hr_candidates',
+      description: 'HR wants to manage interview candidates',
+      training_phrases: ['show interview candidates', 'hr candidates', 'interview candidates', 'candidate management'],
+      response_template: 'I can help you with candidate management.',
+      chips: JSON.stringify([
+        { label: 'Go to HR Dashboard', action: 'go_hr_dashboard' }
+      ]),
+      required_role: ['ADMIN'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'candidate_status',
+      description: 'User wants to check candidate status',
+      training_phrases: ['check interview status', 'candidate status', 'my interview status', 'check my interview'],
+      response_template: 'To check your interview status, please provide your Candidate Reference Code.',
+      chips: JSON.stringify([
+        { label: 'Enter Reference Code', action: 'candidate_ref_code' }
+      ]),
+      required_role: ['PUBLIC'],
+      is_active: true,
+      priority: 9
+    },
+    {
+      intent_name: 'update_profile',
+      description: 'User wants to update their profile',
+      training_phrases: ['update my profile', 'edit profile', 'my profile', 'change profile', 'profile settings'],
+      response_template: 'I can help you update your profile.',
+      chips: JSON.stringify([
+        { label: 'Login to Update Profile', action: 'go_login' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 8
+    },
+    {
+      intent_name: 'logout',
+      description: 'User wants to logout',
+      training_phrases: ['logout', 'sign out', 'log out', 'sign out of account'],
+      response_template: 'I can help you logout from your account.',
+      chips: JSON.stringify([
+        { label: 'Logout', action: 'perform_logout' }
+      ]),
+      required_role: ['PARTNER', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'],
+      is_active: true,
+      priority: 8
+    },
+    {
+      intent_name: 'support_contact',
+      description: 'User needs help or support',
+      training_phrases: ['i need help', 'help', 'support', 'contact support', 'customer support', 'need assistance'],
+      response_template: 'I can help you get support. What would you like to do?',
+      chips: JSON.stringify([
+        { label: 'FAQ', action: 'faq_start' },
+        { label: 'Contact Support', action: 'go_contact' },
+        { label: 'Raise Ticket', action: 'raise_ticket' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'],
+      is_active: true,
+      priority: 7
+    },
+    {
+      intent_name: 'faq_question',
+      description: 'User has a question',
+      training_phrases: ['i have a question', 'question', 'how to', 'what is', 'tell me about'],
+      response_template: 'I can help answer your questions. What would you like to know?',
+      chips: JSON.stringify([
+        { label: 'Search FAQ', action: 'faq_search' },
+        { label: 'Contact Support', action: 'go_contact' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'],
+      is_active: true,
+      priority: 6
+    },
+    {
+      intent_name: 'unauthorized_action',
+      description: 'User tries unauthorized action',
+      training_phrases: ['approve application', 'reject application', 'delete application', 'admin action', 'super admin action'],
+      response_template: 'This action requires administrative authorization. You do not have permission for this action.',
+      chips: JSON.stringify([
+        { label: 'View My Applications', action: 'my_applications' },
+        { label: 'Contact Support', action: 'go_contact' }
+      ]),
+      required_role: ['PUBLIC', 'PARTNER', 'EMPLOYEE'],
+      is_active: true,
+      priority: 5
     }
   ];
 

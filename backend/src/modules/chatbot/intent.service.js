@@ -18,7 +18,30 @@ class IntentService {
     try {
       const messageLower = message.toLowerCase();
 
-      // 1. Get all active intents that match the user role
+      // 0. Check for unauthorized admin actions (security check)
+      if (this.isUnauthorizedAction(messageLower) && userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
+        return this.getUnauthorizedActionResponse();
+      }
+
+      // 0.5. Check for password-related intents (fallback before DB)
+      if (this.isPasswordReset(messageLower)) {
+        return {
+          intent_name: 'reset_password',
+          response_template: 'I can help you reset your password. You can reset your password through the login page.',
+          chips: JSON.stringify([
+            { label: 'Go to Login', action: 'go_login' },
+            { label: 'Contact Support', action: 'go_contact' }
+          ]),
+          confidence_score: 0.9
+        };
+      }
+
+      // 1. Check for create lead intent with authentication handling
+      if (this.isCreateLeadIntent(messageLower)) {
+        return this.getCreateLeadResponse(userRole);
+      }
+
+      // 2. Get all active intents that match the user role
       const { rows } = await query(
         `SELECT * FROM chatbot_intents
          WHERE is_active = true
@@ -32,7 +55,7 @@ class IntentService {
 
       for (const intent of rows) {
         const score = this.calculateMatchScore(messageLower, intent.training_phrases);
-        
+
         if (score > highestScore && score > 0.3) {
           highestScore = score;
           bestMatch = {
@@ -49,7 +72,7 @@ class IntentService {
         return bestMatch;
       }
 
-      // 2. Dynamic Database Product & Bank Search
+      // 3. Dynamic Database Product & Bank Search
       const dbSearchResult = await knowledgeBaseService.searchProducts(messageLower, userRole);
       if (dbSearchResult) {
         return {
@@ -65,6 +88,138 @@ class IntentService {
       logger.error('Error detecting intent:', error);
       return this.getDefaultIntent(userRole);
     }
+  }
+
+  /**
+   * Check if message is about creating a lead
+   * @param {string} message - Lowercase user message
+   * @returns {boolean} - True if create lead related
+   */
+  isCreateLeadIntent(message) {
+    const leadKeywords = [
+      'create a new lead', 'create new lead', 'i want create lead',
+      'i want to create a new lead', 'i want to create lead',
+      'add lead', 'new lead', 'create lead', 'customer lead'
+    ];
+    return leadKeywords.some(keyword => message.includes(keyword));
+  }
+
+  /**
+   * Get create lead response based on authentication and role
+   * @param {string} userRole - User role
+   * @returns {Object} - Response with authentication check and role-based routing
+   */
+  getCreateLeadResponse(userRole) {
+    const role = (userRole || 'PUBLIC').toUpperCase();
+
+    // If user is not authenticated (PUBLIC)
+    if (role === 'PUBLIC') {
+      return {
+        intent_name: 'public_create_lead',
+        response_template: 'To create leads and earn commissions, you need to be a registered Partner. Do you already have a Partner account?',
+        chips: JSON.stringify([
+          { label: 'Login (Existing Partner)', action: 'go_login' },
+          { label: 'Register (New Partner)', action: 'go_register' }
+        ]),
+        confidence_score: 0.95
+      };
+    }
+
+    // If user is authenticated, route based on role
+    const roleRoutes = {
+      'PARTNER': {
+        response_template: 'Great! I can help you create a new lead. Which product category would you like to create a lead for?',
+        chips: JSON.stringify([
+          { label: 'Credit Card', action: 'go_add_lead_card' },
+          { label: 'Loan', action: 'go_add_lead_loan' },
+          { label: 'Insurance', action: 'go_add_lead_insurance' }
+        ])
+      },
+      'TEAM_MEMBER': {
+        response_template: 'Great! I can help you create a new lead. Which product category would you like to create a lead for?',
+        chips: JSON.stringify([
+          { label: 'Credit Card', action: 'go_add_lead_card' },
+          { label: 'Loan', action: 'go_add_lead_loan' },
+          { label: 'Insurance', action: 'go_add_lead_insurance' }
+        ])
+      },
+      'EMPLOYEE': {
+        response_template: 'Great! I can help you create a new lead. Which product category would you like to create a lead for?',
+        chips: JSON.stringify([
+          { label: 'Credit Card', action: 'go_add_lead_card' },
+          { label: 'Loan', action: 'go_add_lead_loan' },
+          { label: 'Insurance', action: 'go_add_lead_insurance' }
+        ])
+      },
+      'ADMIN': {
+        response_template: 'As an Admin, you can access the CRM and Lead Management tools. Would you like to go to the admin tools?',
+        chips: JSON.stringify([
+          { label: 'Manage Leads', action: 'go_admin_leads' },
+          { label: 'Applications CRM', action: 'go_admin_applications' }
+        ])
+      },
+      'SUPER_ADMIN': {
+        response_template: 'As Super Admin, you have full access to all lead management tools. Where would you like to go?',
+        chips: JSON.stringify([
+          { label: 'Manage Leads', action: 'go_admin_leads' },
+          { label: 'Employee Leads', action: 'go_employee_cards' },
+          { label: 'Partner Products', action: 'go_partner_products' }
+        ])
+      }
+    };
+
+    const roleResponse = roleRoutes[role] || roleRoutes['PARTNER'];
+
+    return {
+      intent_name: `${role.toLowerCase()}_create_lead`,
+      response_template: roleResponse.response_template,
+      chips: roleResponse.chips,
+      confidence_score: 0.95
+    };
+  }
+
+  /**
+   * Check if message is about password reset
+   * @param {string} message - Lowercase user message
+   * @returns {boolean} - True if password reset related
+   */
+  isPasswordReset(message) {
+    const passwordKeywords = [
+      'reset password', 'forgot password', 'change password',
+      'password reset', 'forgot my password', 'change my password',
+      'reset my password', 'new password', 'password recovery'
+    ];
+    return passwordKeywords.some(keyword => message.includes(keyword));
+  }
+
+  /**
+   * Check if message is about unauthorized admin actions
+   * @param {string} message - Lowercase user message
+   * @returns {boolean} - True if unauthorized action detected
+   */
+  isUnauthorizedAction(message) {
+    const unauthorizedKeywords = [
+      'approve application', 'reject application', 'delete application',
+      'admin action', 'super admin action', 'approve commission',
+      'release commission', 'manage bank', 'manage product'
+    ];
+    return unauthorizedKeywords.some(keyword => message.includes(keyword));
+  }
+
+  /**
+   * Get unauthorized action response
+   * @returns {Object} - Unauthorized action response
+   */
+  getUnauthorizedActionResponse() {
+    return {
+      intent_name: 'unauthorized_action',
+      response_template: 'This action requires administrative authorization. You do not have permission for this action.',
+      chips: JSON.stringify([
+        { label: 'View My Applications', action: 'my_applications' },
+        { label: 'Contact Support', action: 'go_contact' }
+      ]),
+      confidence_score: 0.95
+    };
   }
 
   /**
