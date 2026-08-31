@@ -44,14 +44,31 @@ export const useAuthStore = create((set, get) => {
 
       try {
         const baseUrl = getApiV1Url();
-        
-        // 1. Silent token refresh using credentials cookie (HttpOnly)
+        const existingToken = localStorage.getItem('token');
+
+        // 1. Try restoring session from existing token if present
+        if (existingToken) {
+          try {
+            const userRes = await axios.get(`${baseUrl}/auth/me`, {
+              headers: { Authorization: `Bearer ${existingToken}` }
+            });
+            if (userRes.data && userRes.data.success) {
+              setAccessToken(existingToken);
+              set({ user: userRes.data.user, token: existingToken, isAuthenticated: true });
+              return;
+            }
+          } catch (tokenErr) {
+            // Token might be expired, proceed to refresh flow
+          }
+        }
+
+        // 2. Silent token refresh using credentials cookie (HttpOnly)
         const response = await axios.post(`${baseUrl}/auth/refresh`, {}, { withCredentials: true });
         
         if (response.data && response.data.success) {
           const { token } = response.data;
           
-          // 2. Hydrate user profile from backend using the fresh access token
+          // Hydrate user profile from backend using fresh access token
           const userRes = await axios.get(`${baseUrl}/auth/me`, {
             headers: { Authorization: `Bearer ${token}` }
           });

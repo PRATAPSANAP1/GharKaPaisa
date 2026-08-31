@@ -291,7 +291,7 @@ export default function PartnerLogin() {
                    role === 'ADMIN' ? '/admin/dashboard' :
                    role === 'HR' ? '/hr/dashboard' :
                    role === 'EMPLOYEE' ? '/employee/dashboard' : '/partner/dashboard');
-                window.location.href = dest;
+                navigate(dest, { replace: true });
               }, 1500);
             } catch (errVal) {
               setStatus("fail");
@@ -557,7 +557,7 @@ export default function PartnerLogin() {
                    role === 'ADMIN' ? '/admin/dashboard' :
                    role === 'HR' ? '/hr/dashboard' :
                    role === 'EMPLOYEE' ? '/employee/dashboard' : '/partner/dashboard');
-                window.location.href = dest;
+                navigate(dest, { replace: true });
               } catch (errVal) {
                 setErr(errVal.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));
                 setLoading(l => ({ ...l, login: false }));

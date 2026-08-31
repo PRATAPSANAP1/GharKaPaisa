@@ -47,14 +47,25 @@ export function registerAuthFailureHandler(handler) {
 
 export function setAccessToken(token) {
   inMemoryAccessToken = token;
+  if (token) {
+    try { localStorage.setItem('token', token); } catch (e) {}
+  } else {
+    try { localStorage.removeItem('token'); } catch (e) {}
+  }
 }
 
 export function getAccessToken() {
+  if (!inMemoryAccessToken && typeof window !== 'undefined') {
+    try { inMemoryAccessToken = localStorage.getItem('token'); } catch (e) {}
+  }
   return inMemoryAccessToken;
 }
 
 export function clearAccessToken() {
   inMemoryAccessToken = null;
+  if (typeof window !== 'undefined') {
+    try { localStorage.removeItem('token'); } catch (e) {}
+  }
 }
 
 // ── Request: attach access token ──────────────────────────────────────────────

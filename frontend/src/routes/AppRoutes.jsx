@@ -168,16 +168,8 @@ const AppRoutes = () => {
         <Route path="/careers/status" element={<ApplicationStatus />} />
         <Route path="/careers/status/:code" element={<ApplicationStatus />} />
 
-        {/* Employee Management System Panel Routes */}
+        {/* Employee Login Redirect */}
         <Route path="/employee/login" element={<Navigate to="/login" replace />} />
-        <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
-        <Route path="/employee/joining-form" element={<JoiningForm />} />
-        <Route path="/employee/terms" element={<TermsAcceptance />} />
-        <Route path="/employee/kyc" element={<KYCSubmission />} />
-        <Route path="/employee/credit-cards" element={<EmployeeCreditCards />} />
-        <Route path="/employee/applications" element={<EmployeeApplications />} />
-        <Route path="/employee/team" element={<MyTeam />} />
-        <Route path="/employee/incentives" element={<MyIncentives />} />
 
         {/* Dynamic CMS Service Pages */}
         <Route path="/recharge" element={<ComingSoon />} />
@@ -265,6 +257,24 @@ const AppRoutes = () => {
             <Route path="/partner/reports" element={<PartnerReports />} />
             <Route path="/partner/notifications" element={<PartnerNotifications />} />
             <Route path="/partner/settings" element={<SettingsPage />} />
+          </Route>
+        </Route>
+      </Route>
+
+      {/* Employee Protected Routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<RoleRoute allowedRoles={['EMPLOYEE', 'HR', 'ADMIN', 'SUPER_ADMIN']} />}>
+          <Route element={<EmployeeLayout />}>
+            <Route path="/employee" element={<Navigate to="/employee/dashboard" replace />} />
+            <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
+            <Route path="/employee/joining-form" element={<JoiningForm />} />
+            <Route path="/employee/terms" element={<TermsAcceptance />} />
+            <Route path="/employee/kyc" element={<KYCSubmission />} />
+            <Route path="/employee/credit-cards" element={<EmployeeCreditCards />} />
+            <Route path="/employee/applications" element={<EmployeeApplications />} />
+            <Route path="/employee/team" element={<MyTeam />} />
+            <Route path="/employee/incentives" element={<MyIncentives />} />
+            <Route path="/employee/profile" element={<EmployeeProfile />} />
           </Route>
         </Route>
       </Route>
