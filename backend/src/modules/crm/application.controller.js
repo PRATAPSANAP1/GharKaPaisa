@@ -2083,7 +2083,9 @@ const submitPartnerApplication = async (req, res, next) => {
       trade_license_number,
       process_type = 'partner_cell',
       agree_terms = true,
-      is_draft = false
+      is_draft = false,
+      pan_number,
+      pan
     } = req.body;
 
     if (!product_id) {
@@ -2171,6 +2173,7 @@ const submitPartnerApplication = async (req, res, next) => {
     const trimmedMobile = mobile ? String(mobile).trim() : null;
     const trimmedName = full_name ? String(full_name).trim() : 'Draft Customer';
     const trimmedEmail = email ? String(email).trim() : null;
+    const cleanPan = (pan_number || pan || '').toString().trim().toUpperCase() || null;
 
     // Resolve canonical process_by and source metadata
     let processByVal = 'partner';
@@ -2227,31 +2230,32 @@ const submitPartnerApplication = async (req, res, next) => {
             city = COALESCE($8, city),
             state = COALESCE($9, state),
             pincode = COALESCE($10, pincode),
+            pan_number = COALESCE($11, pan_number),
             updated_at = NOW() 
-          WHERE id = $11
+          WHERE id = $12
         `, [
           trimmedName, trimmedEmail, monthly_salary || null, company_name || null,
           business_type || null, gst_number || null, trade_license_number || null,
-          city || null, state || null, pincode || null, customerId
+          city || null, state || null, pincode || null, cleanPan, customerId
         ]);
       } else {
         const { rows: [newCust] } = await client.query(`
           INSERT INTO customers 
-            (full_name, mobile, email, monthly_income, company_name, business_type, gst_number, trade_license_number, city, state, pincode, created_by)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
+            (full_name, mobile, email, monthly_income, company_name, business_type, gst_number, trade_license_number, city, state, pincode, pan_number, created_by)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
           RETURNING id
         `, [
           trimmedName, trimmedMobile, trimmedEmail, monthly_salary || null, company_name || null,
           business_type || null, gst_number || null, trade_license_number || null,
-          city || null, state || null, pincode || null, req.user.id
+          city || null, state || null, pincode || null, cleanPan, req.user.id
         ]);
         customerId = newCust.id;
       }
     } else {
       const { rows: [newCust] } = await client.query(`
-        INSERT INTO customers (full_name, email, created_by)
-        VALUES ($1, $2, $3) RETURNING id
-      `, [trimmedName, trimmedEmail, req.user.id]);
+        INSERT INTO customers (full_name, email, pan_number, created_by)
+        VALUES ($1, $2, $3, $4) RETURNING id
+      `, [trimmedName, trimmedEmail, cleanPan, req.user.id]);
       customerId = newCust.id;
     }
 
@@ -2264,13 +2268,13 @@ const submitPartnerApplication = async (req, res, next) => {
         const { rows: [newLead] } = await client.query(`
           INSERT INTO leads (
             lead_number, partner_id, product_id, customer_name, customer_mobile, mobile,
-            customer_email, source, status, process_type, process_by, pipeline_stage, customer_id, created_by, otp_verified
+            customer_email, pan_number, source, status, process_type, process_by, pipeline_stage, customer_id, created_by, otp_verified
           )
-          VALUES ($1, $2, $3, $4, $5, $5, $6, $7, 'confirmed', $8, $9, 'submitted', $10, $11, TRUE)
+          VALUES ($1, $2, $3, $4, $5, $5, $6, $7, $8, 'confirmed', $9, $10, 'submitted', $11, $12, TRUE)
           RETURNING id
         `, [
           leadNum, partnerId, product_id, trimmedName, trimmedMobile,
-          trimmedEmail, sourceVal, process_type, processByVal, customerId, req.user.id
+          trimmedEmail, cleanPan, sourceVal, process_type, processByVal, customerId, req.user.id
         ]);
         syncedLeadId = newLead?.id || null;
         await client.query('RELEASE SAVEPOINT lead_sync_sp');
@@ -2292,18 +2296,37 @@ const submitPartnerApplication = async (req, res, next) => {
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
         (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, commission_amount,
-         status, process_type, process_by, source, business_type, gst_number, trade_license_number, company_name, pincode, city, state, country_code, agree_terms, submitted_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW())
+         status, process_type, process_by, source, business_type, gst_number, trade_license_number, company_name, pincode, city, state, country_code, agree_terms, pan_number, submitted_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW())
       RETURNING *
     `, [
       appNumber, syncedLeadId, customerId, product_id, partnerId, product.bank_id, req.user.id,
       monthly_salary || 0, commission, appStatus, process_type, processByVal, sourceVal, business_type || null,
       gst_number || null, trade_license_number || null, company_name || null,
-      pincode || null, city || null, state || null, country_code, agree_terms,
+      pincode || null, city || null, state || null, country_code, agree_terms, cleanPan
     ]);
 
     if (syncedLeadId && app?.id) {
       await client.query(`UPDATE leads SET application_id = $1 WHERE id = $2`, [app.id, syncedLeadId]);
+    }
+
+    if (app?.id) {
+      try {
+        await client.query('SAVEPOINT phys_details_sp');
+        await client.query(`
+          INSERT INTO physical_application_details (application_id, full_name, mobile, email, pan_number, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+          ON CONFLICT (application_id) DO UPDATE SET
+            pan_number = COALESCE(EXCLUDED.pan_number, physical_application_details.pan_number),
+            full_name = COALESCE(EXCLUDED.full_name, physical_application_details.full_name),
+            mobile = COALESCE(EXCLUDED.mobile, physical_application_details.mobile),
+            email = COALESCE(EXCLUDED.email, physical_application_details.email),
+            updated_at = NOW()
+        `, [app.id, trimmedName, trimmedMobile, trimmedEmail, cleanPan]);
+        await client.query('RELEASE SAVEPOINT phys_details_sp');
+      } catch (physErr) {
+        await client.query('ROLLBACK TO SAVEPOINT phys_details_sp').catch(() => {});
+      }
     }
 
     try {

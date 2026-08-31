@@ -315,6 +315,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         setSelectedProduct(null);
         setCustomerName("");
         setMobile("");
+        setPanNumber("");
         return;
       }
 
@@ -357,6 +358,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         setSelectedProduct(null);
         setCustomerName("");
         setMobile("");
+        setPanNumber("");
         return;
       } else if (processType === 'lead_punching') {
         setToast({
@@ -388,6 +390,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       setSelectedProduct(null);
       setCustomerName("");
       setMobile("");
+      setPanNumber("");
     } catch (err) {
       setToast({
         type: 'error',
