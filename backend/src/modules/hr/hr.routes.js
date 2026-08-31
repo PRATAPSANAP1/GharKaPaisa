@@ -299,13 +299,13 @@ router.post('/candidates/:id/select', async (req, res, next) => {
     if (userRes.rows.length > 0) {
       userId = userRes.rows[0].id;
       await query(
-        `UPDATE users SET role = 'EMPLOYEE', status = 'active', password_hash = $1, designation = $2, department = $3, employee_id = $4 WHERE id = $5`,
+        `UPDATE users SET role = 'EMPLOYEE', status = 'active', password_hash = $1, designation = $2, department = $3, employee_id = $4, must_change_password = true WHERE id = $5`,
         [hashedPassword, offered_designation, offered_department, employee_id, userId]
       );
     } else {
       const newUser = await query(
-        `INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
-         VALUES ($1, $2, $3, 'EMPLOYEE', 'active', $4, $5, $6, $7) RETURNING id`,
+        `INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash, must_change_password)
+         VALUES ($1, $2, $3, 'EMPLOYEE', 'active', $4, $5, $6, $7, true) RETURNING id`,
         [candidate.full_name, candidate.mobile_number, candidate.email_id, employee_id, offered_designation, offered_department, hashedPassword]
       );
       userId = newUser.rows[0].id;

@@ -10,6 +10,8 @@ import {
 import logo from '../assets/logos/logo.png';
 import Chatbot from '../components/Chatbot/Chatbot';
 
+import EmployeeForcePasswordModal from '../modules/employee/components/EmployeeForcePasswordModal';
+
 export default function EmployeeLayout() {
   const { user, logout } = useAuthStore();
   const { C, theme, toggleTheme } = useTheme();
@@ -33,7 +35,7 @@ export default function EmployeeLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate('/employee/login');
+    navigate('/login');
   };
 
   const navItems = [
@@ -215,6 +217,7 @@ export default function EmployeeLayout() {
         </main>
       </div>
 
+      <EmployeeForcePasswordModal isOpen={!!user?.must_change_password} onClose={() => {}} />
       <Chatbot />
     </div>
   );

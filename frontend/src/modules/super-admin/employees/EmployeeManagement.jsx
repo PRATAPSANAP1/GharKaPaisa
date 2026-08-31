@@ -445,6 +445,57 @@ export default function EmployeeManagement() {
                     </div>
                   </div>
 
+                  {/* Joining Form & KYC Inspection Card */}
+                  <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 900, marginBottom: '14px', color: C.teal, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FaUserCircle /> Submitted Joining Form & Verification Details
+                    </h3>
+                    
+                    {emp360Data.joining_details ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', fontSize: '13px' }}>
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>1. Full Name & Email</span>
+                          <strong>{emp360Data.joining_details.full_name}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>{emp360Data.joining_details.email_id}</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>2. Role & Department</span>
+                          <strong>{emp360Data.joining_details.designation}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>{emp360Data.joining_details.department}</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>3. Salary & Joining Date</span>
+                          <strong style={{ color: '#10B981' }}>₹{emp360Data.joining_details.offered_salary} / mo</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>Joining: {emp360Data.joining_details.joining_date ? new Date(emp360Data.joining_details.joining_date).toLocaleDateString() : 'N/A'}</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>4. PAN & Aadhaar</span>
+                          <strong>PAN: {emp360Data.joining_details.pan_number || 'N/A'}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>Aadhaar: {emp360Data.joining_details.aadhaar_number || 'N/A'}</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>5. Bank Account Details</span>
+                          <strong>A/C: {emp360Data.joining_details.bank_account_number || 'N/A'}</strong>
+                          <div style={{ fontSize: '12px', color: C.textMid }}>IFSC: {emp360Data.joining_details.ifsc_code || 'N/A'} ({emp360Data.joining_details.bank_account_holder_name})</div>
+                        </div>
+
+                        <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, display: 'block' }}>6. Qualification & Status</span>
+                          <strong>{emp360Data.joining_details.highest_qualification} ({emp360Data.joining_details.experience_type})</strong>
+                          <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>Form Status: {emp360Data.joining_details.form_status}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '13px', color: C.textMid, fontStyle: 'italic' }}>
+                        Joining Details Form has not been submitted by employee yet.
+                      </div>
+                    )}
+                  </div>
+
                   {/* Onboarding Checklist Matrix */}
                   <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: 900, marginBottom: '12px', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}><FaCheckCircle style={{ color: C.teal }} /> Onboarding & Verification Status Checklist</h3>
@@ -507,7 +558,7 @@ export default function EmployeeManagement() {
                   {/* Action Bar */}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
                     <button onClick={() => handleActivateEmployee(selectedEmp.id, selectedEmp.activation_status)} style={{ background: selectedEmp.activation_status === 'APPROVED' ? '#EF4444' : '#10B981', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>
-                      {selectedEmp.activation_status === 'APPROVED' ? 'Deactivate Employee' : 'Activate Employee'}
+                      {selectedEmp.activation_status === 'APPROVED' ? 'Deactivate Employee' : 'Verify KYC & Approve Employee'}
                     </button>
                   </div>
 

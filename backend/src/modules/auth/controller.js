@@ -1434,12 +1434,12 @@ const updateProfile = async (req, res, next) => {
 const changePassword = async (req, res, next) => {
   try {
     const { oldPassword, newPassword } = req.body;
-    if (!oldPassword || !newPassword) {
-      return error(res, 'Old password and new password are required', 400);
+    if (!newPassword) {
+      return error(res, 'New password is required', 400);
     }
 
     const { rows: [user] } = await query(
-      `SELECT password_hash FROM users WHERE id = $1`,
+      `SELECT password_hash, must_change_password FROM users WHERE id = $1`,
       [req.user.id]
     );
 
@@ -1447,12 +1447,23 @@ const changePassword = async (req, res, next) => {
       return error(res, 'Password login is not enabled for this account', 400);
     }
 
-    const valid = await bcrypt.compare(oldPassword, user.password_hash);
-    if (!valid) {
-      return error(res, 'Invalid old password', 400);
+    if (!user.must_change_password) {
+      if (!oldPassword) {
+        return error(res, 'Old password is required', 400);
+      }
+      const valid = await bcrypt.compare(oldPassword, user.password_hash);
+      if (!valid) {
+        return error(res, 'Invalid old password', 400);
+      }
+    } else if (oldPassword) {
+      const valid = await bcrypt.compare(oldPassword, user.password_hash);
+      if (!valid) {
+        return error(res, 'Invalid temporary password', 400);
+      }
     }
 
     await security.savePassword(req.user.id, newPassword, user.password_hash);
+    await query(`UPDATE users SET must_change_password = false WHERE id = $1`, [req.user.id]);
     await query(`UPDATE refresh_tokens SET revoked = true, revoked_at = NOW() WHERE user_id = $1`, [req.user.id]);
     await security.audit(req.user.id, 'password_changed', req);
 
