@@ -164,21 +164,21 @@ export default function EmployeeManagement() {
   const tlsList = employees.filter(e => e.designation === 'Team Leader');
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '32px 24px', fontFamily: "'Inter', sans-serif", color: C.text }}>
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '12px 16px 24px', fontFamily: "'Inter', sans-serif", color: C.text }}>
       <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
         
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
           <div>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <span style={{ fontSize: '11.5px', fontWeight: 700, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Super Admin Operations
             </span>
-            <h1 style={{ fontSize: '28px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Management Center</h1>
+            <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Management Center</h1>
           </div>
         </div>
 
         {/* Global Stats Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '12px' }}>
           {[
             { label: 'Total Employees', count: stats.total_employees || 0, icon: <FaUsers />, color: C.teal },
             { label: 'Active Employees', count: stats.active_employees || 0, icon: <FaUserCheck />, color: '#10B981' },
@@ -187,20 +187,20 @@ export default function EmployeeManagement() {
             { label: 'Team Leaders', count: stats.total_tls || 0, icon: <FaSitemap />, color: '#3B82F6' },
             { label: 'Telecallers (TC)', count: stats.total_tcs || 0, icon: <FaUsers />, color: '#EC4899' }
           ].map((st, i) => (
-            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: `${st.color}15`, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+            <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: `${st.color}15`, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
                 {st.icon}
               </div>
-              <div>
-                <span style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 700 }}>{st.label}</span>
-                <div style={{ fontSize: '20px', fontWeight: 900, color: C.text }}>{st.count}</div>
+              <div style={{ minWidth: 0 }}>
+                <span style={{ fontSize: '10.5px', color: C.textMid, fontWeight: 700, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{st.label}</span>
+                <div style={{ fontSize: '18px', fontWeight: 900, color: C.text }}>{st.count}</div>
               </div>
             </div>
           ))}
         </div>
 
         {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {[
             { id: 'all', label: 'All Employees Directory', icon: <FaUsers /> },
             { id: 'hierarchy', label: 'Team Hierarchy Tree', icon: <FaSitemap /> },
@@ -213,8 +213,8 @@ export default function EmployeeManagement() {
                 background: activeTab === tab.id ? C.teal : C.card, 
                 color: activeTab === tab.id ? '#fff' : C.textMid, 
                 border: `1px solid ${activeTab === tab.id ? C.teal : C.border}`, 
-                padding: '10px 20px', borderRadius: '12px', fontSize: '14px', 
-                fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' 
+                padding: '8px 16px', borderRadius: '10px', fontSize: '13px', 
+                fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', flexShrink: 0
               }}
             >
               {tab.icon} {tab.label}
@@ -224,7 +224,7 @@ export default function EmployeeManagement() {
 
         {/* Directory Tab View */}
         {activeTab === 'all' && (
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '450px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
             {/* Filters Toolbar */}
             <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '280px' }}>
@@ -332,7 +332,7 @@ export default function EmployeeManagement() {
 
         {/* Hierarchy Tab View */}
         {activeTab === 'hierarchy' && (
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '450px', padding: '24px' }}>
             <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><FaSitemap style={{ color: C.teal }} /> Employee Reporting Hierarchy Architecture</h2>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
@@ -387,7 +387,7 @@ export default function EmployeeManagement() {
 
         {/* Product Links Tab View */}
         {activeTab === 'links' && (
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px' }}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '450px', padding: '24px' }}>
             <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}><FaUniversity style={{ color: C.teal }} /> Employee-Specific Product Referral Links & Fixed Incentives</h2>
             <p style={{ fontSize: '13px', color: C.textMid, marginBottom: '20px' }}>
               Unlike Partner Commission URLs, employee referral links are isolated per employee record using <code>employee_product_links</code>.
