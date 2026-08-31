@@ -87,7 +87,7 @@ const AdminLayout = () => {
   let banks = activeBanks.length > 0 ? activeBanks : DEFAULT_BANKS;
 
   const userRole = (user?.role || '').toUpperCase();
-  const isHR = userRole === 'HR';
+  const isHR = userRole === 'HR' || location.pathname.startsWith('/hr');
   const userDesignation = user?.designation || '';
   const isOpHead = userDesignation === 'Operational Head' || userDesignation === 'OPERATIONAL_HEAD';
   const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
@@ -460,7 +460,7 @@ const AdminLayout = () => {
         {/* Dynamic Inner Page Content */}
         <main style={{ flex: 1, overflowY: 'auto', padding: '16px', boxSizing: 'border-box' }}>
           <Outlet />
-          <Chatbot />
+          {!isHR && <Chatbot />}
         </main>
       </div>
     </div>
