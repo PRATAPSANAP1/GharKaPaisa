@@ -11,7 +11,7 @@ class ChatbotSearchService {
         `SELECT id, name, short_code, logo_url, status, is_active
          FROM banks
          WHERE (is_active = true OR status = 'Active')
-         ORDER BY priority DESC, name ASC`
+         ORDER BY name ASC`
       );
       return rows;
     } catch (error) {
