@@ -145,6 +145,24 @@ export default function Chatbot() {
     setInputValue('');
     setIsTyping(true);
 
+    // Client-side fallback for common intents when backend is unavailable
+    const lowerText = userText.toLowerCase();
+    if (!backendAvailable) {
+      if (lowerText.includes('reset password') || lowerText.includes('forgot password') || lowerText.includes('change password')) {
+        setIsTyping(false);
+        addMessage({
+          sender: 'bot',
+          text: 'I can help you reset your password. You can reset your password through the login page.',
+          timestamp: new Date(),
+          chips: [
+            { label: 'Go to Login', action: 'go_login' },
+            { label: 'Contact Support', action: 'go_contact' }
+          ]
+        });
+        return;
+      }
+    }
+
     try {
       const res = await chatbotAPI.sendMessage(userText, userRole, panel);
       setIsTyping(false);
@@ -161,6 +179,21 @@ export default function Chatbot() {
     } catch (err) {
       setBackendAvailable(false);
       setIsTyping(false);
+
+      // Client-side fallback for password reset
+      if (lowerText.includes('reset password') || lowerText.includes('forgot password') || lowerText.includes('change password')) {
+        addMessage({
+          sender: 'bot',
+          text: 'I can help you reset your password. You can reset your password through the login page.',
+          timestamp: new Date(),
+          chips: [
+            { label: 'Go to Login', action: 'go_login' },
+            { label: 'Contact Support', action: 'go_contact' }
+          ]
+        });
+        return;
+      }
+
       addMessage({
         sender: 'bot',
         text: `I couldn't find an exact match for "${userText}". Try asking for "HDFC credit cards", "SBI loans", or "Lead process".`,

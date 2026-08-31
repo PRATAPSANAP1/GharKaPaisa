@@ -2,6 +2,7 @@ const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
 const knowledgeBaseService = require('./knowledge-base.service');
+const faqService = require('./chatbot.faq.service');
 
 /**
  * Intent Service - Handles NLP intent detection and matching
@@ -12,11 +13,13 @@ class IntentService {
    * Detect intent from user message using keyword matching + dynamic DB lookup
    * @param {string} message - User message text
    * @param {string} userRole - User role (PUBLIC, PARTNER, ADMIN, SUPER_ADMIN, EMPLOYEE)
+   * @param {Object} req - Express request for authentication context
    * @returns {Object} - Detected intent with confidence score
    */
-  async detectIntent(message, userRole = 'PUBLIC') {
+  async detectIntent(message, userRole = 'PUBLIC', req = null) {
     try {
       const messageLower = message.toLowerCase();
+      const isAuthenticated = req?.user ? true : false;
 
       // 0. Check for unauthorized admin actions (security check)
       if (this.isUnauthorizedAction(messageLower) && userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
@@ -72,7 +75,18 @@ class IntentService {
         return bestMatch;
       }
 
-      // 3. Dynamic Database Product & Bank Search
+      // 3. FAQ Knowledge Base Search
+      const faqResult = faqService.searchFAQ(messageLower, userRole, isAuthenticated);
+      if (faqResult.category !== 'fallback') {
+        return {
+          intent_name: 'faq_response',
+          response_template: faqResult.message,
+          chips: JSON.stringify(faqResult.chips || []),
+          confidence_score: 0.9
+        };
+      }
+
+      // 4. Dynamic Database Product & Bank Search
       const dbSearchResult = await knowledgeBaseService.searchProducts(messageLower, userRole);
       if (dbSearchResult) {
         return {
@@ -185,9 +199,10 @@ class IntentService {
    */
   isPasswordReset(message) {
     const passwordKeywords = [
-      'reset password', 'forgot password', 'change password',
+      'reset password', 'reset the password', 'forgot password', 'change password',
       'password reset', 'forgot my password', 'change my password',
-      'reset my password', 'new password', 'password recovery'
+      'reset my password', 'new password', 'password recovery',
+      'i want reset password', 'i want to reset password', 'i want reset the password'
     ];
     return passwordKeywords.some(keyword => message.includes(keyword));
   }

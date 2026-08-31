@@ -698,11 +698,11 @@ async function seedDefaultIntents() {
     {
       intent_name: 'reset_password',
       description: 'User wants to reset their password',
-      training_phrases: ['reset password', 'forgot password', 'change password', 'i want reset password', 'password reset', 'forgot my password', 'change my password'],
-      response_template: 'I can help you reset your password. You can reset your password through the forgot password page.',
+      training_phrases: ['reset password', 'reset the password', 'forgot password', 'change password', 'i want reset password', 'i want to reset password', 'i want reset the password', 'password reset', 'forgot my password', 'change my password'],
+      response_template: 'I can help you reset your password. You can reset your password through the login page.',
       chips: JSON.stringify([
-        { label: 'Go to Forgot Password', action: 'go_forgot_password' },
-        { label: 'Login Page', action: 'go_login' }
+        { label: 'Go to Login', action: 'go_login' },
+        { label: 'Contact Support', action: 'go_contact' }
       ]),
       required_role: ['PUBLIC', 'PARTNER', 'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE'],
       is_active: true,

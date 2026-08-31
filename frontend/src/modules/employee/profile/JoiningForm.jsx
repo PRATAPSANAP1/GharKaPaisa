@@ -209,14 +209,38 @@ export default function JoiningForm() {
               <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.teal || '#0F766E', margin: 0 }}>1. Candidate Information</h3>
             </div>
 
+            {Boolean(form.full_name || form.mobile_number || form.email_id) && (
+              <div style={{ 
+                background: C.teal ? `${C.teal}15` : '#f0fdf4', 
+                border: `1px solid ${C.teal || '#0F766E'}40`, 
+                borderRadius: '12px', 
+                padding: '12px 16px', 
+                marginBottom: '20px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '10px' 
+              }}>
+                <FaCheckCircle style={{ color: C.teal || '#0F766E', fontSize: '18px', flexShrink: 0 }} />
+                <span style={{ fontSize: '13px', color: C.teal || '#0F766E', fontWeight: 700, lineHeight: 1.4 }}>
+                  ✓ Personal information (Full Name, Contact, Email) has been pre-filled from your registered candidate profile.
+                </span>
+              </div>
+            )}
+
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>1. Full Name *</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 700, margin: 0 }}>1. Full Name *</label>
+                  {form.full_name && <span style={{ fontSize: '11px', color: C.teal || '#0F766E', fontWeight: 700 }}>✓ Pre-filled</span>}
+                </div>
                 <input type="text" name="full_name" required value={form.full_name} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontWeight: 700 }} />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>2. Contact Number *</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 700, margin: 0 }}>2. Contact Number *</label>
+                  {form.mobile_number && <span style={{ fontSize: '11px', color: C.teal || '#0F766E', fontWeight: 700 }}>✓ Registered</span>}
+                </div>
                 <input type="tel" name="mobile_number" required value={form.mobile_number} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontWeight: 700 }} />
               </div>
 
@@ -226,7 +250,10 @@ export default function JoiningForm() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>3. Email Address *</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 700, margin: 0 }}>3. Email Address *</label>
+                  {form.email_id && <span style={{ fontSize: '11px', color: C.teal || '#0F766E', fontWeight: 700 }}>✓ Registered</span>}
+                </div>
                 <input type="email" name="email_id" required value={form.email_id} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontWeight: 700 }} />
               </div>
 

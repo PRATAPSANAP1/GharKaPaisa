@@ -396,8 +396,29 @@ export default function InterviewRegistration() {
         </div>
 
         {error && (
-          <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px 16px', borderRadius: '12px', marginBottom: '20px', fontSize: '14px', fontWeight: 600 }}>
-            {error}
+          <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '14px 18px', borderRadius: '14px', marginBottom: '20px', fontSize: '14px', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '18px' }}>⚠️</span>
+              <span>{error}</span>
+            </div>
+            {error.toLowerCase().includes('already registered') && (
+              <div style={{ display: 'flex', gap: '10px', marginTop: '4px', flexWrap: 'wrap' }}>
+                <button 
+                  type="button"
+                  onClick={() => navigate('/careers/status')} 
+                  style={{ background: '#DC2626', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Track Candidate Status →
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => navigate('/employee/login')} 
+                  style={{ background: '#ffffff', border: '1px solid #DC2626', color: '#DC2626', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Login to Employee Portal
+                </button>
+              </div>
+            )}
           </div>
         )}
 

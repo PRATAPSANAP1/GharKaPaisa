@@ -30,13 +30,13 @@ class ChatbotService {
         );
       }
 
-      // 1. Detect Intent and Extract Entities
-      const { intent, entities } = await intentService.detectIntentAndEntities(userMessage);
+      // 1. Detect Intent using new intent service with FAQ support
+      const intentResult = await intentService.detectIntent(userMessage, context.role, req);
 
       // 2. Security Check for sensitive actions
       const sensitiveActions = ['approve_application', 'reject_application', 'delete_application', 'admin_action'];
-      if (sensitiveActions.includes(intent)) {
-        const securityCheck = await securityService.performSecurityCheck(req, intent);
+      if (sensitiveActions.includes(intentResult.intent_name)) {
+        const securityCheck = await securityService.performSecurityCheck(req, intentResult.intent_name);
         if (!securityCheck.authorized) {
           const unauthorizedResponse = securityService.getUnauthorizedResponse(
             securityCheck.reason,
@@ -50,7 +50,20 @@ class ChatbotService {
         }
       }
 
-      // 3. Dispatch to appropriate sub-service based on intent
+      // 3. If FAQ response, return directly
+      if (intentResult.intent_name === 'faq_response') {
+        return {
+          success: true,
+          message: intentResult.response_template,
+          chips: JSON.parse(intentResult.chips),
+          category: 'faq'
+        };
+      }
+
+      // 4. Continue with existing logic for other intents
+      const { intent, entities } = await intentService.detectIntentAndEntities(userMessage);
+
+      // 5. Dispatch to appropriate sub-service based on intent
       switch (intent) {
         case INTENTS.GREETING:
           return responseService.buildTextResponse(
@@ -143,7 +156,7 @@ class ChatbotService {
         }
       }
 
-      // 4. Dynamic Database Search Fallback
+      // 6. Dynamic Database Search Fallback
       const dbProducts = await searchService.searchProducts(userMessage);
       if (dbProducts.length === 1) {
         const res = await productService.formatExactProductResponse(dbProducts[0], context);
@@ -156,7 +169,7 @@ class ChatbotService {
         return res;
       }
 
-      // 5. Smart No-Result Fallback
+      // 7. Smart No-Result Fallback
       return responseService.buildNoResultResponse(userMessage, context);
     } catch (error) {
       logger.error('Error processing chatbot message:', error);
