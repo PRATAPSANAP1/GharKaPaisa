@@ -149,7 +149,12 @@ export default function EmployeeManagement() {
     e.preventDefault();
     if (!hierarchyModalEmp) return;
     try {
-      const res = await api.post(`/employees/${hierarchyModalEmp.id}/hierarchy`, hierarchyForm);
+      const payload = {
+        hierarchy_level: hierarchyForm.hierarchy_level || 'TC',
+        manager_id: hierarchyForm.manager_id || null,
+        team_leader_id: hierarchyForm.team_leader_id || null
+      };
+      const res = await api.post(`/employees/${hierarchyModalEmp.id}/hierarchy`, payload);
       if (res.data.success) {
         alert('Employee hierarchy assigned successfully!');
         setHierarchyModalEmp(null);
@@ -160,8 +165,8 @@ export default function EmployeeManagement() {
     }
   };
 
-  const managersList = employees.filter(e => e.designation === 'Manager');
-  const tlsList = employees.filter(e => e.designation === 'Team Leader');
+  const managersList = employees.filter(e => e.id !== hierarchyModalEmp?.id);
+  const tlsList = employees.filter(e => e.id !== hierarchyModalEmp?.id);
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: '12px 16px 24px', fontFamily: "'Inter', sans-serif", color: C.text }}>

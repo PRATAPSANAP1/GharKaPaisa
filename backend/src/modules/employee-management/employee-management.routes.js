@@ -446,11 +446,14 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
 router.post('/:id/hierarchy', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { team_leader_id, manager_id, hierarchy_level } = req.body;
+    let { team_leader_id, manager_id, hierarchy_level } = req.body;
 
     if (!hierarchy_level) {
       return res.status(400).json({ success: false, message: 'Hierarchy level is required (MANAGER, TEAM_LEADER, TC)' });
     }
+
+    const cleanTlId = (team_leader_id && team_leader_id !== 'null' && team_leader_id !== 'undefined' && String(team_leader_id).trim() !== '') ? String(team_leader_id).trim() : null;
+    const cleanMgrId = (manager_id && manager_id !== 'null' && manager_id !== 'undefined' && String(manager_id).trim() !== '') ? String(manager_id).trim() : null;
 
     // Sync employee designation in employees table
     const mapDesg = { 'MANAGER': 'Manager', 'TEAM_LEADER': 'Team Leader', 'TC': 'TC' };
@@ -460,10 +463,12 @@ router.post('/:id/hierarchy', async (req, res, next) => {
     // Deactivate previous active hierarchy
     await query(`UPDATE employee_hierarchy SET is_active = false WHERE employee_id = $1`, [id]);
 
+    const assignedBy = req.user?.id || req.user?.userId || null;
+
     const { rows } = await query(
       `INSERT INTO employee_hierarchy (employee_id, team_leader_id, manager_id, hierarchy_level, assigned_by, is_active)
        VALUES ($1, $2, $3, $4, $5, true) RETURNING *`,
-      [id, team_leader_id || null, manager_id || null, hierarchy_level.toUpperCase(), req.user.id]
+      [id, cleanTlId, cleanMgrId, hierarchy_level.toUpperCase(), assignedBy]
     );
 
     res.json({ success: true, message: 'Employee hierarchy assigned successfully', data: rows[0] });
