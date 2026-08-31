@@ -55,11 +55,16 @@ async function getCandidateSignedResumeUrl(rawUrl) {
   }
 }
 
-// Helper: Ensure assigned_hr_id columns exist
+// Helper: Ensure assigned_hr_id and selection columns exist
 async function ensureHRColumnsExist() {
   try {
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS assigned_hr_id UUID`);
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS assigned_hr_name VARCHAR(100)`);
+    await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS offered_salary NUMERIC`);
+    await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS offered_designation VARCHAR(100)`);
+    await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS offered_department VARCHAR(100)`);
+    await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS expected_joining_date DATE`);
+    await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS employee_id VARCHAR(50)`);
   } catch (err) {
     logger.warn('Failed to ensure HR columns on employee_candidates:', err.message);
   }
@@ -329,10 +334,19 @@ router.post('/candidates/:id/select', async (req, res, next) => {
       [createdEmp.id]
     );
 
-    // Update candidate status
+    // Update candidate status & selection details
     await query(
-      `UPDATE employee_candidates SET interview_status = 'EMPLOYEE_CREATED', converted_to_employee_id = $1, conversion_date = NOW() WHERE id = $2`,
-      [userId, id]
+      `UPDATE employee_candidates 
+       SET interview_status = 'EMPLOYEE_CREATED', 
+           converted_to_employee_id = $1, 
+           conversion_date = NOW(),
+           offered_salary = $2,
+           offered_designation = $3,
+           offered_department = $4,
+           expected_joining_date = $5,
+           employee_id = $6
+       WHERE id = $7`,
+      [userId, offered_salary, offered_designation, offered_department, expected_joining_date || null, employee_id, id]
     );
 
     res.json({

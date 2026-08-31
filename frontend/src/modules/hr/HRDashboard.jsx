@@ -682,19 +682,21 @@ export default function HRDashboard() {
                   <div>
                     <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Offered Monthly Stipend/Salary</div>
                     <div style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginTop: '2px' }}>
-                      {viewCandModal.offered_salary ? `₹${viewCandModal.offered_salary}` : 'Not assigned yet'}
+                      {viewCandModal.offered_salary || viewCandModal.expected_salary 
+                        ? `₹${viewCandModal.offered_salary || viewCandModal.expected_salary}` 
+                        : 'Not assigned yet'}
                     </div>
                   </div>
                   <div>
                     <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Offered Designation</div>
                     <div style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginTop: '2px' }}>
-                      {viewCandModal.offered_designation || viewCandModal.target_role || 'Not assigned yet'}
+                      {viewCandModal.offered_designation || viewCandModal.target_role || viewCandModal.current_designation || 'Not assigned yet'}
                     </div>
                   </div>
                   <div>
                     <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Offered Department</div>
                     <div style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginTop: '2px' }}>
-                      {viewCandModal.offered_department || 'Not assigned yet'}
+                      {viewCandModal.offered_department || 'Sales & Distribution'}
                     </div>
                   </div>
                   <div>
