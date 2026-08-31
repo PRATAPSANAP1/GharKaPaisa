@@ -5,7 +5,7 @@ import {
   FaPlus, FaCheckCircle, FaTimesCircle, FaEye, FaEdit, FaCheck, FaLock,
   FaFileAlt, FaVideo, FaUniversity, FaBuilding, FaBriefcase, FaIdCard, FaPhone, FaEnvelope, FaClock
 } from 'react-icons/fa';
-import axios from 'axios';
+import api from '../../../services/api';
 
 export default function EmployeeManagement() {
   const { C } = useTheme();
@@ -44,10 +44,10 @@ export default function EmployeeManagement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const statsRes = await axios.get('/api/v1/employees/stats');
+      const statsRes = await api.get('/employees/stats');
       if (statsRes.data.success) setStats(statsRes.data.data);
 
-      const empRes = await axios.get('/api/v1/employees', { 
+      const empRes = await api.get('/employees', { 
         params: { 
           search: searchTerm,
           status: statusFilter,
@@ -56,7 +56,7 @@ export default function EmployeeManagement() {
       });
       if (empRes.data.success) setEmployees(empRes.data.data);
 
-      const prodRes = await axios.get('/api/v1/products');
+      const prodRes = await api.get('/products');
       if (prodRes.data.success) setProductsList(prodRes.data.data || []);
     } catch (err) {
       console.error('Super Admin Employees fetch error:', err);
@@ -72,7 +72,7 @@ export default function EmployeeManagement() {
   const handleActivateEmployee = async (empId, currentActivation) => {
     const newActivation = currentActivation === 'APPROVED' ? 'PENDING' : 'APPROVED';
     try {
-      const res = await axios.post(`/api/v1/employees/${empId}/activate`, {
+      const res = await api.post(`/employees/${empId}/activate`, {
         activation_status: newActivation,
         employee_status: newActivation === 'APPROVED' ? 'ACTIVE' : 'INACTIVE'
       });
@@ -99,7 +99,7 @@ export default function EmployeeManagement() {
     }
 
     try {
-      const res = await axios.post(`/api/v1/employees/${empId}/kyc-verify`, {
+      const res = await api.post(`/employees/${empId}/kyc-verify`, {
         kyc_status: status,
         review_notes: notes ? notes.trim() : null
       });
@@ -119,7 +119,7 @@ export default function EmployeeManagement() {
     setSelectedEmp(emp);
     setLoading360(true);
     try {
-      const res = await axios.get(`/api/v1/employees/${emp.id}`);
+      const res = await api.get(`/employees/${emp.id}`);
       if (res.data.success) {
         setEmp360Data(res.data.data);
       }
@@ -134,7 +134,7 @@ export default function EmployeeManagement() {
     e.preventDefault();
     if (!linkModalEmp || !linkForm.product_id) return;
     try {
-      const res = await axios.post(`/api/v1/employees/${linkModalEmp.id}/product-links`, linkForm);
+      const res = await api.post(`/employees/${linkModalEmp.id}/product-links`, linkForm);
       if (res.data.success) {
         alert('Product link and employee incentive assigned successfully!');
         setLinkModalEmp(null);
@@ -149,7 +149,7 @@ export default function EmployeeManagement() {
     e.preventDefault();
     if (!hierarchyModalEmp) return;
     try {
-      const res = await axios.post(`/api/v1/employees/${hierarchyModalEmp.id}/hierarchy`, hierarchyForm);
+      const res = await api.post(`/employees/${hierarchyModalEmp.id}/hierarchy`, hierarchyForm);
       if (res.data.success) {
         alert('Employee hierarchy assigned successfully!');
         setHierarchyModalEmp(null);
