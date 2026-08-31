@@ -41,83 +41,6 @@ export default function EmployeeManagement() {
     incentive_type: 'FIXED'
   });
 
-  // Partner KYC State
-  const [partners, setPartners] = useState([]);
-  const [loadingPartners, setLoadingPartners] = useState(false);
-  const [partnerSearch, setPartnerSearch] = useState('');
-  const [partnerKycStatus, setPartnerKycStatus] = useState('');
-  const [selectedPartner, setSelectedPartner] = useState(null);
-  const [partnerProfile, setPartnerProfile] = useState(null);
-  const [loadingPartnerProfile, setLoadingPartnerProfile] = useState(false);
-
-  const fetchPartnerData = async () => {
-    setLoadingPartners(true);
-    try {
-      const res = await axios.get('/api/v1/partners', {
-        params: {
-          search: partnerSearch,
-          kyc_status: partnerKycStatus || undefined,
-          limit: 100
-        }
-      });
-      if (res.data?.success) setPartners(res.data.data || []);
-    } catch (err) {
-      console.error('Fetch partners error:', err);
-    } finally {
-      setLoadingPartners(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'partnerKyc') fetchPartnerData();
-  }, [activeTab, partnerSearch, partnerKycStatus]);
-
-  const handleOpenPartnerModal = async (partner) => {
-    setSelectedPartner(partner);
-    setLoadingPartnerProfile(true);
-    try {
-      const res = await axios.get(`/api/v1/partners/${partner.id}/profile`);
-      if (res.data?.success) setPartnerProfile(res.data.data);
-    } catch (err) {
-      console.error('Fetch partner profile error:', err);
-    } finally {
-      setLoadingPartnerProfile(false);
-    }
-  };
-
-  const handleApprovePartnerKYC = async (partnerId) => {
-    if (!window.confirm('Are you sure you want to approve this Partner KYC & activate account?')) return;
-    try {
-      const res = await axios.patch(`/api/v1/partners/${partnerId}/approve`, { approved: true });
-      if (res.data?.success) {
-        alert('Partner KYC approved successfully!');
-        fetchPartnerData();
-        if (selectedPartner && selectedPartner.id === partnerId) {
-          handleOpenPartnerModal(selectedPartner);
-        }
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Partner KYC approval failed.');
-    }
-  };
-
-  const handleRejectPartnerKYC = async (partnerId) => {
-    const reason = prompt('Please enter rejection reason for Partner KYC:');
-    if (!reason || !reason.trim()) return;
-    try {
-      const res = await axios.patch(`/api/v1/partners/${partnerId}/approve`, { approved: false, rejection_reason: reason.trim() });
-      if (res.data?.success) {
-        alert('Partner KYC marked as rejected.');
-        fetchPartnerData();
-        if (selectedPartner && selectedPartner.id === partnerId) {
-          handleOpenPartnerModal(selectedPartner);
-        }
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Partner KYC rejection failed.');
-    }
-  };
-
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -280,7 +203,6 @@ export default function EmployeeManagement() {
         <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px', flexWrap: 'wrap' }}>
           {[
             { id: 'all', label: 'All Employees Directory', icon: <FaUsers /> },
-            { id: 'partnerKyc', label: 'Partner KYC Verification', icon: <FaIdCard /> },
             { id: 'hierarchy', label: 'Team Hierarchy Tree', icon: <FaSitemap /> },
             { id: 'links', label: 'Product Links & Incentives', icon: <FaLink /> }
           ].map(tab => (
@@ -399,83 +321,6 @@ export default function EmployeeManagement() {
                             <FaLink /> Links
                           </button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Partner KYC Tab View */}
-        {activeTab === 'partnerKyc' && (
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ position: 'relative', flex: 1, minWidth: '260px' }}>
-                <FaSearch style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: C.textMid }} />
-                <input 
-                  type="text" 
-                  placeholder="Search partner code, name, mobile, email..." 
-                  value={partnerSearch}
-                  onChange={(e) => setPartnerSearch(e.target.value)}
-                  style={{ width: '100%', padding: '9px 14px 9px 38px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, outline: 'none', fontSize: '13.5px' }}
-                />
-              </div>
-
-              <select value={partnerKycStatus} onChange={(e) => setPartnerKycStatus(e.target.value)} style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}>
-                <option value="">All KYC Statuses</option>
-                <option value="draft">Draft</option>
-                <option value="submitted">Submitted / Pending</option>
-                <option value="approved">Approved / Verified</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </div>
-
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-                <thead>
-                  <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textMid, fontWeight: 700 }}>
-                    <th style={{ padding: '14px 20px' }}>Partner Code</th>
-                    <th style={{ padding: '14px 20px' }}>Partner Name</th>
-                    <th style={{ padding: '14px 20px' }}>Contact</th>
-                    <th style={{ padding: '14px 20px' }}>KYC Status</th>
-                    <th style={{ padding: '14px 20px' }}>Account Status</th>
-                    <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loadingPartners ? (
-                    <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading partner KYC records...</td></tr>
-                  ) : partners.length === 0 ? (
-                    <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No partner profiles found.</td></tr>
-                  ) : partners.map(pt => (
-                    <tr key={pt.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '14px 20px', fontWeight: 900, color: C.teal }}>{pt.partner_code}</td>
-                      <td style={{ padding: '14px 20px', fontWeight: 800, color: C.text }}>
-                        {pt.first_name} {pt.last_name}
-                        {pt.company_name && <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 400 }}>{pt.company_name}</div>}
-                      </td>
-                      <td style={{ padding: '14px 20px' }}>
-                        <div>{pt.mobile}</div>
-                        <div style={{ fontSize: '12px', color: C.textMid }}>{pt.email}</div>
-                      </td>
-                      <td style={{ padding: '14px 20px' }}>
-                        <span style={{ 
-                          padding: '4px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: 800,
-                          background: pt.kyc_status === 'approved' ? '#D1FAE5' : pt.kyc_status === 'rejected' ? '#FEE2E2' : '#FEF3C7',
-                          color: pt.kyc_status === 'approved' ? '#065F46' : pt.kyc_status === 'rejected' ? '#991B1B' : '#92400E'
-                        }}>
-                          {pt.kyc_status ? pt.kyc_status.toUpperCase() : 'PENDING'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px 20px', fontWeight: 700, color: pt.status === 'active' ? '#10B981' : C.textMid }}>
-                        {pt.status ? pt.status.toUpperCase() : 'PENDING'}
-                      </td>
-                      <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                        <button onClick={() => handleOpenPartnerModal(pt)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <FaEye /> Inspect KYC 360°
-                        </button>
                       </td>
                     </tr>
                   ))}
@@ -913,100 +758,6 @@ export default function EmployeeManagement() {
                   <button type="submit" style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>Save Hierarchy</button>
                 </div>
               </form>
-            </div>
-          </div>
-        )}
-
-        {/* ── MODAL: 360° Partner KYC Inspector ── */}
-        {selectedPartner && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-            <div style={{ background: C.card, borderRadius: '24px', padding: '28px', width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}` }}>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
-                <div>
-                  <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal, textTransform: 'uppercase' }}>Super Admin Partner KYC Verification</span>
-                  <h2 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: C.text }}>{selectedPartner.first_name} {selectedPartner.last_name} ({selectedPartner.partner_code})</h2>
-                </div>
-                <button onClick={() => setSelectedPartner(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
-              </div>
-
-              {loadingPartnerProfile ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading partner 360 KYC details...</div>
-              ) : partnerProfile && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  
-                  {/* Profile Summary */}
-                  <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-                    <div>
-                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Mobile Number</div>
-                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{partnerProfile.mobile}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Email Address</div>
-                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{partnerProfile.email}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Company Name</div>
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: C.teal }}>{partnerProfile.company_name || 'Individual'}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>GST Number</div>
-                      <div style={{ fontSize: '14px', fontWeight: 800 }}>{partnerProfile.gst_number || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Current KYC Status</div>
-                      <div style={{ fontSize: '14px', fontWeight: 900, color: partnerProfile.kyc_status === 'approved' ? '#10B981' : '#F59E0B' }}>{partnerProfile.kyc_status ? partnerProfile.kyc_status.toUpperCase() : 'PENDING'}</div>
-                    </div>
-                  </div>
-
-                  {/* Bank Details */}
-                  <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px' }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: 900, marginBottom: '14px', color: C.teal, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <FaUniversity /> Partner Bank Account Details
-                    </h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', fontSize: '13px' }}>
-                      <div><span style={{ fontSize: '11px', color: C.textMid, display: 'block' }}>Bank Name</span><strong>{partnerProfile.bank_name || 'N/A'}</strong></div>
-                      <div><span style={{ fontSize: '11px', color: C.textMid, display: 'block' }}>Account Number</span><strong>{partnerProfile.account_number || 'N/A'}</strong></div>
-                      <div><span style={{ fontSize: '11px', color: C.textMid, display: 'block' }}>IFSC Code</span><strong>{partnerProfile.ifsc_code || 'N/A'}</strong></div>
-                      <div><span style={{ fontSize: '11px', color: C.textMid, display: 'block' }}>Account Holder</span><strong>{partnerProfile.account_holder_name || 'N/A'}</strong></div>
-                    </div>
-                  </div>
-
-                  {/* KYC Documents */}
-                  <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: 900, marginBottom: '12px', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <FaFileAlt style={{ color: C.teal }} /> Uploaded KYC Verification Documents & Video
-                    </h3>
-                    {partnerProfile.kyc_documents?.length === 0 && !partnerProfile.partner_video ? (
-                      <div style={{ fontSize: '12px', color: C.textMid }}>No verification documents or video uploaded by partner yet.</div>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
-                        {partnerProfile.kyc_documents?.map(doc => (
-                          <a key={doc.id} href={doc.signed_url || doc.file_url} target="_blank" rel="noopener noreferrer" style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '10px 14px', borderRadius: '10px', textDecoration: 'none', color: C.teal, fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <FaFileAlt /> {doc.doc_type.toUpperCase()} ({doc.verified ? 'Verified' : 'Pending'})
-                          </a>
-                        ))}
-                        {partnerProfile.partner_video && (
-                          <a href={partnerProfile.partner_video.signed_url || partnerProfile.partner_video.video_url} target="_blank" rel="noopener noreferrer" style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '10px 14px', borderRadius: '10px', textDecoration: 'none', color: C.teal, fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <FaVideo /> KYC Verification Video
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Action Bar */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
-                    <button onClick={() => handleRejectPartnerKYC(selectedPartner.id)} style={{ background: '#EF4444', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>
-                      Reject Partner KYC
-                    </button>
-                    <button onClick={() => handleApprovePartnerKYC(selectedPartner.id)} style={{ background: '#10B981', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>
-                      Verify & Approve Partner KYC
-                    </button>
-                  </div>
-
-                </div>
-              )}
             </div>
           </div>
         )}
