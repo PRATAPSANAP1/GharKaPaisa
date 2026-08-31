@@ -139,8 +139,9 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   const { activeBanks } = useActiveBanks();
 
   const [activeCategory, setActiveCategory] = useState(() => {
-    if (location.pathname.includes('/partner/loans')) return 'loans';
-    if (location.pathname.includes('/partner/insurance')) return 'insurance';
+    if (location.pathname.includes('/loans')) return 'loans';
+    if (location.pathname.includes('/insurance')) return 'insurance';
+    if (location.pathname.includes('/credit-cards')) return 'credit_card';
     return defaultCategory;
   });
 
@@ -175,10 +176,11 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
   }, []);
 
   useEffect(() => {
-    if (location.pathname.includes('/partner/loans')) setActiveCategory('loans');
-    else if (location.pathname.includes('/partner/insurance')) setActiveCategory('insurance');
-    else if (location.pathname.includes('/partner/credit-cards')) setActiveCategory('credit_card');
-  }, [location.pathname]);
+    if (location.pathname.includes('/loans')) setActiveCategory('loans');
+    else if (location.pathname.includes('/insurance')) setActiveCategory('insurance');
+    else if (location.pathname.includes('/credit-cards')) setActiveCategory('credit_card');
+    else setActiveCategory(defaultCategory);
+  }, [location.pathname, defaultCategory]);
 
   // Fetch banks live from database
   useEffect(() => {

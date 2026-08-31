@@ -449,16 +449,16 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
     let matchCategory = false;
     if (activeCategory === 'all') {
       matchCategory = true;
-    } else if (activeCategory === 'credit_card') {
+    } else if (activeCategory === 'credit_card' || activeCategory.includes('card')) {
       matchCategory = pCat.includes('card') || pCat.includes('credit');
-    } else if (activeCategory === 'loans' || activeCategory === 'personal_loan' || activeCategory === 'business_loan' || activeCategory === 'home_loan') {
+    } else if (activeCategory.includes('loan')) {
       matchCategory = pCat.includes('loan');
-    } else if (activeCategory === 'insurance') {
+    } else if (activeCategory.includes('insurance')) {
       matchCategory = pCat.includes('insurance');
     } else if (activeCategory === 'others') {
       matchCategory = !pCat.includes('card') && !pCat.includes('credit') && !pCat.includes('loan') && !pCat.includes('insurance');
     } else {
-      matchCategory = pCat === activeCategory;
+      matchCategory = pCat === activeCategory || pCat.includes(activeCategory);
     }
     const activeBankLower = (activeBank || '').toLowerCase().trim();
     const matchBank = !activeBank || activeBankLower === 'all banks' || activeBankLower === 'all' ||
