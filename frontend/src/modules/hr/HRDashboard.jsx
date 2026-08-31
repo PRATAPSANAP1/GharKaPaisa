@@ -606,8 +606,7 @@ export default function HRDashboard() {
 
                 <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px' }}>
                   <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Salary Expectations</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: C.text, marginTop: '4px' }}>Last CTC: {viewCandModal.last_salary_ctc ? `₹${viewCandModal.last_salary_ctc}` : 'N/A'}</div>
-                  <div style={{ fontSize: '13px', color: C.textMid }}>Expected CTC: {viewCandModal.expected_salary ? `₹${viewCandModal.expected_salary}` : 'N/A'}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: C.text, marginTop: '4px' }}>Expected Salary: {viewCandModal.expected_salary ? `₹${viewCandModal.expected_salary}` : 'N/A'}</div>
                 </div>
 
                 <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px' }}>
