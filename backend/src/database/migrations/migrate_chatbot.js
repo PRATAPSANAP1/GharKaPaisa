@@ -1027,6 +1027,7 @@ async function seedDefaultIntents() {
     }
   ];
 
+  let seededCount = 0;
   for (const intent of defaultIntents) {
     const { rows } = await query(
       `SELECT id FROM chatbot_intents WHERE intent_name = $1`,
@@ -1050,8 +1051,11 @@ async function seedDefaultIntents() {
           intent.priority
         ]
       );
-      logger.info(`✅ Seeded intent: ${intent.intent_name}`);
+      seededCount++;
     }
+  }
+  if (seededCount > 0) {
+    logger.info(`✅ Seeded ${seededCount} chatbot intents`);
   }
 }
 
