@@ -8,7 +8,7 @@ class ChatbotSearchService {
   async getAllActiveBanks() {
     try {
       const { rows } = await query(
-        `SELECT id, name, short_code, logo_url, slug, status, is_active
+        `SELECT id, name, short_code, logo_url, status, is_active
          FROM banks
          WHERE (is_active = true OR status = 'Active')
          ORDER BY priority DESC, name ASC`
@@ -21,14 +21,14 @@ class ChatbotSearchService {
   }
 
   /**
-   * Get bank by ID or slug
+   * Get bank by ID or short code
    */
   async getBankById(bankId) {
     try {
       const { rows } = await query(
-        `SELECT id, name, short_code, logo_url, slug, status, is_active
+        `SELECT id, name, short_code, logo_url, status, is_active
          FROM banks
-         WHERE id::text = $1 OR LOWER(short_code) = LOWER($1) OR LOWER(slug) = LOWER($1)
+         WHERE id::text = $1 OR LOWER(short_code) = LOWER($1) OR LOWER(name) = LOWER($1)
          LIMIT 1`,
         [bankId]
       );
