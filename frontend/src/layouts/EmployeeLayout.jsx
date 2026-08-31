@@ -124,17 +124,21 @@ export default function EmployeeLayout() {
         {/* User Card in Sidebar */}
         <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, background: C.bgSecondary }}>
           <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>{user?.full_name || user?.name || 'Employee User'}</div>
-          <div style={{ fontSize: '11px', color: C.employeePrimary || '#0F766E', fontWeight: 800 }}>ID: {user?.emp_code || user?.employee_id || 'EMP-ACTIVE'}</div>
-          <div style={{ fontSize: '10.5px', color: C.textMid, marginTop: '2px' }}>{user?.designation || 'Sales Associate'} • {user?.role || 'EMPLOYEE'}</div>
-          <div style={{ marginTop: '6px' }}>
-            <span style={{ 
-              padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800,
-              background: isApproved ? '#D1FAE5' : '#FEF3C7',
-              color: isApproved ? '#065F46' : '#92400E'
-            }}>
-              {isApproved ? '● ACCOUNT APPROVED' : '● ONBOARDING PHASE'}
-            </span>
-          </div>
+          {(user?.emp_code || user?.employee_id) && (
+            <div style={{ fontSize: '11px', color: C.employeePrimary || '#0F766E', fontWeight: 800 }}>ID: {user?.emp_code || user?.employee_id}</div>
+          )}
+          <div style={{ fontSize: '10.5px', color: C.textMid, marginTop: '2px' }}>{user?.designation || 'Sales Associate'}</div>
+          {!isApproved && (
+            <div style={{ marginTop: '6px' }}>
+              <span style={{ 
+                padding: '2px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800,
+                background: '#FEF3C7',
+                color: '#92400E'
+              }}>
+                ● ONBOARDING PHASE
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Navigation Menu */}
@@ -222,15 +226,9 @@ export default function EmployeeLayout() {
                 <FaBars />
               </button>
             )}
-            <span style={{ fontSize: isMobile ? '12px' : '13px', fontWeight: 800, color: C.employeePrimary || '#0F766E', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Employee Workspace
-            </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }} ref={dropdownRef}>
-            <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 800 }}>
-              <FaShieldAlt style={{ color: '#10B981' }} /> {user?.role || 'EMPLOYEE'}
-            </div>
 
             {/* Top Right Profile Button & Dropdown */}
             <button 
