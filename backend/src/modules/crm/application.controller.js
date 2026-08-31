@@ -416,7 +416,7 @@ const getApplicationsDashboard = async (req, res, next) => {
     let partnerId = null;
     let userId = req.user?.id || null;
     const userRole = (req.user?.role || '').toUpperCase();
-    const isPartnerOrTeam = ['PARTNER', 'TEAM_MEMBER'].includes(userRole);
+    const isPartnerOrTeam = ['PARTNER', 'TEAM_MEMBER', 'EMPLOYEE'].includes(userRole);
 
     if (isPartnerOrTeam) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
@@ -443,6 +443,7 @@ const getApplicationsDashboard = async (req, res, next) => {
       ? `WHERE (
           combined.partner_id IN (${teamPartnerFilter})
           OR combined.submitted_by = $2::uuid
+          OR combined.employee_id IN (SELECT id FROM employees WHERE user_id = $2::uuid)
           OR combined.submitted_by IN (
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
             UNION SELECT u.id FROM users u WHERE u.created_by = $2::uuid
@@ -472,9 +473,9 @@ const getApplicationsDashboard = async (req, res, next) => {
         COUNT(*) FILTER (WHERE commission_status = 'processed') as comm_paid,
         COALESCE(SUM(commission_amount) FILTER (WHERE commission_status = 'processed'), 0) as total_earnings
       FROM (
-        SELECT a.id, a.partner_id, a.submitted_by, a.status::text, a.commission_status::text, a.commission_amount, a.created_at FROM applications a
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, a.status::text, a.commission_status::text, a.commission_amount, a.created_at FROM applications a
         UNION ALL
-        SELECT l.id, l.partner_id, COALESCE(l.created_by, c.created_by) as submitted_by, l.status::text, 'pending'::text as commission_status, p.commission_value as commission_amount, l.created_at
+        SELECT l.id, l.partner_id, COALESCE(l.created_by, c.created_by) as submitted_by, NULL::uuid as employee_id, l.status::text, 'pending'::text as commission_status, p.commission_value as commission_amount, l.created_at
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
         LEFT JOIN products p ON p.id = l.product_id
@@ -492,13 +493,13 @@ const getApplicationsDashboard = async (req, res, next) => {
       SELECT combined.id, combined.app_number, combined.status, combined.commission_amount, combined.commission_status, combined.created_at,
              combined.customer_name, combined.product_name
       FROM (
-        SELECT a.id, a.app_number, a.status::text, a.commission_amount, a.commission_status::text, a.created_at, a.partner_id, a.submitted_by,
+        SELECT a.id, a.app_number, a.status::text, a.commission_amount, a.commission_status::text, a.created_at, a.partner_id, a.submitted_by, a.employee_id,
                COALESCE(c.full_name, 'Customer') as customer_name, p.name as product_name
         FROM applications a
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         UNION ALL
-        SELECT l.id, COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number, l.status::text, p.commission_value as commission_amount, 'pending'::text as commission_status, l.created_at, l.partner_id, COALESCE(l.created_by, c.created_by) as submitted_by,
+        SELECT l.id, COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number, l.status::text, p.commission_value as commission_amount, 'pending'::text as commission_status, l.created_at, l.partner_id, COALESCE(l.created_by, c.created_by) as submitted_by, NULL::uuid as employee_id,
                COALESCE(NULLIF(l.customer_name, ''), c.full_name, 'Customer') as customer_name, p.name as product_name
         FROM leads l
         LEFT JOIN customers c ON c.mobile = l.mobile
@@ -1196,7 +1197,7 @@ const listApplications = async (req, res, next) => {
     let partnerId = null;
     let userId = null;
     const userRole = (req.user?.role || '').toUpperCase();
-    const isPartnerOrTeam = ['PARTNER', 'TEAM_MEMBER'].includes(userRole);
+    const isPartnerOrTeam = ['PARTNER', 'TEAM_MEMBER', 'EMPLOYEE'].includes(userRole);
 
     if (isPartnerOrTeam) {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
@@ -1256,6 +1257,7 @@ const listApplications = async (req, res, next) => {
             UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid OR user_id = $1::uuid
           )
           OR combined.submitted_by = $8::uuid
+          OR combined.employee_id IN (SELECT id FROM employees WHERE user_id = $8::uuid)
           OR combined.submitted_by IN (
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
             UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid
@@ -1282,6 +1284,7 @@ const listApplications = async (req, res, next) => {
           a.commission_received_at,
           a.commission_paid_at,
           a.submitted_by,
+          a.employee_id,
           COALESCE(NULLIF(su.full_name, ''), NULLIF(TRIM(CONCAT(ap.first_name, ' ', COALESCE(ap.last_name, ''))), ''), su.email, 'Team Member') as submitted_by_name,
           COALESCE(a.process_type, a.source, 'lead_punching') as process_by,
           a.process_type,
@@ -1374,6 +1377,7 @@ const listApplications = async (req, res, next) => {
             UNION SELECT id FROM partner_profiles WHERE user_id = $8::uuid OR user_id = $1::uuid
           )
           OR combined.submitted_by = $8::uuid
+          OR combined.employee_id IN (SELECT id FROM employees WHERE user_id = $8::uuid)
           OR combined.submitted_by IN (
             SELECT user_id FROM partner_profiles WHERE parent_partner_id = $1::uuid OR referred_by_id = $1::uuid
             UNION SELECT u.id FROM users u WHERE u.created_by = $8::uuid
@@ -1384,7 +1388,7 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, a.submitted_by, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -2291,20 +2295,32 @@ const submitPartnerApplication = async (req, res, next) => {
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
     const appNumber = `APP${datePart}${nextval}`;
 
-    const appStatus = process_type === 'direct_bank' ? 'pending' : 'details_submitted';
+    let empId = null;
+    if (req.user?.id) {
+      const { rows: [emp] } = await client.query(`SELECT id FROM employees WHERE user_id = $1`, [req.user.id]);
+      if (emp) empId = emp.id;
+    }
 
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
-        (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, commission_amount,
+        (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, employee_id, loan_amount, commission_amount,
          status, process_type, process_by, source, business_type, gst_number, trade_license_number, company_name, pincode, city, state, country_code, agree_terms, pan_number, submitted_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, NOW())
       RETURNING *
     `, [
-      appNumber, syncedLeadId, customerId, product_id, partnerId, product.bank_id, req.user.id,
+      appNumber, syncedLeadId, customerId, product_id, partnerId, product.bank_id, req.user.id, empId,
       monthly_salary || 0, commission, appStatus, process_type, processByVal, sourceVal, business_type || null,
       gst_number || null, trade_license_number || null, company_name || null,
       pincode || null, city || null, state || null, country_code, agree_terms, cleanPan
     ]);
+
+    if (empId && app?.id) {
+      await client.query(`
+        INSERT INTO employee_incentive_transactions (
+          employee_id, product_id, application_id, transaction_type, amount, status, customer_name
+        ) VALUES ($1, $2, $3, 'EARNED', $4, 'PENDING', $5)
+      `, [empId, product_id, app.id, commission || 500, trimmedName]).catch(e => console.warn('Incentive insert warning:', e.message));
+    }
 
     if (syncedLeadId && app?.id) {
       await client.query(`UPDATE leads SET application_id = $1 WHERE id = $2`, [app.id, syncedLeadId]);
