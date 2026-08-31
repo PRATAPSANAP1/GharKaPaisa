@@ -416,12 +416,17 @@ router.post('/kyc', upload.fields([
         bank_document_url, bank_document_key, kyc_status, submitted_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'SUBMITTED', NOW())
       ON CONFLICT (employee_id) DO UPDATE SET
-        pan_number = EXCLUDED.pan_number,
+        pan_number = COALESCE(EXCLUDED.pan_number, employee_kyc.pan_number),
         pan_document_url = COALESCE(EXCLUDED.pan_document_url, employee_kyc.pan_document_url),
-        aadhaar_number = EXCLUDED.aadhaar_number,
+        pan_document_key = COALESCE(EXCLUDED.pan_document_key, employee_kyc.pan_document_key),
+        aadhaar_number = COALESCE(EXCLUDED.aadhaar_number, employee_kyc.aadhaar_number),
         aadhaar_document_url = COALESCE(EXCLUDED.aadhaar_document_url, employee_kyc.aadhaar_document_url),
-        bank_account_number = EXCLUDED.bank_account_number,
+        aadhaar_document_key = COALESCE(EXCLUDED.aadhaar_document_key, employee_kyc.aadhaar_document_key),
+        bank_account_number = COALESCE(EXCLUDED.bank_account_number, employee_kyc.bank_account_number),
+        bank_account_holder_name = COALESCE(EXCLUDED.bank_account_holder_name, employee_kyc.bank_account_holder_name),
+        ifsc_code = COALESCE(EXCLUDED.ifsc_code, employee_kyc.ifsc_code),
         bank_document_url = COALESCE(EXCLUDED.bank_document_url, employee_kyc.bank_document_url),
+        bank_document_key = COALESCE(EXCLUDED.bank_document_key, employee_kyc.bank_document_key),
         kyc_status = 'SUBMITTED',
         submitted_at = NOW(),
         updated_at = NOW()
@@ -429,7 +434,7 @@ router.post('/kyc', upload.fields([
       [
         empId, pan_number, pan_url, pan_key,
         aadhaar_number, aadhaar_url, aadhaar_key,
-        bank_account_number, bank_account_holder_name, ifsc_code,
+        bank_account_number, bank_account_holder_name || req.employee.full_name, ifsc_code,
         bank_url, bank_key
       ]
     );
@@ -439,6 +444,31 @@ router.post('/kyc', upload.fields([
       `UPDATE employee_onboarding_checklist SET kyc_submitted = true, kyc_submitted_at = NOW(), overall_progress = 75, current_stage = 'KYC_UNDER_REVIEW' WHERE employee_id = $1`,
       [empId]
     );
+
+    // Insert into employee_documents for separate tracking
+    if (pan_url && req.files?.pan_document?.[0]) {
+      await query(
+        `INSERT INTO employee_documents (employee_id, document_type, document_url, document_key, document_file_name, verification_status)
+         VALUES ($1, 'pan', $2, $3, $4, 'PENDING')`,
+        [empId, pan_url, pan_key, req.files.pan_document[0].originalname]
+      ).catch(e => console.warn('PAN doc log warning:', e.message));
+    }
+
+    if (aadhaar_url && req.files?.aadhaar_document?.[0]) {
+      await query(
+        `INSERT INTO employee_documents (employee_id, document_type, document_url, document_key, document_file_name, verification_status)
+         VALUES ($1, 'aadhaar', $2, $3, $4, 'PENDING')`,
+        [empId, aadhaar_url, aadhaar_key, req.files.aadhaar_document[0].originalname]
+      ).catch(e => console.warn('Aadhaar doc log warning:', e.message));
+    }
+
+    if (bank_url && req.files?.bank_document?.[0]) {
+      await query(
+        `INSERT INTO employee_documents (employee_id, document_type, document_url, document_key, document_file_name, verification_status)
+         VALUES ($1, 'bank_proof', $2, $3, $4, 'PENDING')`,
+        [empId, bank_url, bank_key, req.files.bank_document[0].originalname]
+      ).catch(e => console.warn('Bank doc log warning:', e.message));
+    }
 
     res.json({ success: true, message: 'KYC documents submitted for review', data: rows[0] });
 
