@@ -3,9 +3,9 @@ const axios = require('axios');
 
 // ── MSG91 Config (Primary SMS Provider) ─────────────────────────────────────
 // Accepts either MSG91_AUTH_KEY or MSG91_AUTHKEY
-const msg91AuthKey = process.env.MSG91_AUTH_KEY || process.env.MSG91_AUTHKEY;
-const msg91SenderId = process.env.MSG91_SENDER_ID || 'GHARKP';
-const msg91Route = process.env.MSG91_ROUTE || '4';
+const msg91AuthKey = (process.env.MSG91_AUTH_KEY || process.env.MSG91_AUTHKEY || '').trim();
+const msg91SenderId = (process.env.MSG91_SENDER_ID || 'GHARKP').trim();
+const msg91Route = (process.env.MSG91_ROUTE || '4').trim();
 
 if (msg91AuthKey) {
   logger.info('[SMS] MSG91 configured as primary SMS provider');
