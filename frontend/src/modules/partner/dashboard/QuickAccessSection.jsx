@@ -44,28 +44,39 @@ const serviceCatalog = {
 
     // Popular Credit Card Banks
     { id: 'hdfc', category: 'banks', label: 'HDFC Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/hdfc' },
-    { id: 'sbi', category: 'banks', label: 'SBI Card', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/sbi' },
+    { id: 'sbi', category: 'banks', label: 'State Bank of India', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/sbi' },
     { id: 'axis', category: 'banks', label: 'Axis Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/axis' },
-    { id: 'yes', category: 'banks', label: 'Yes Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/yes-bank' },
+    { id: 'indusind', category: 'banks', label: 'IndusInd Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/indusind' },
+    { id: 'kotak', category: 'banks', label: 'Kotak Mahindra Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/kotak' },
+    { id: 'yes', category: 'banks', label: 'YES Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/yes-bank' },
+    { id: 'bob', category: 'banks', label: 'Bank of Baroda', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/bob' },
+    { id: 'dcb', category: 'banks', label: 'DCB Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/dcb' },
+    { id: 'equitas', category: 'banks', label: 'Equitas Small Finance Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/equitas' },
+    { id: 'federal', category: 'banks', label: 'Federal Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/federal' },
     { id: 'icici', category: 'banks', label: 'ICICI Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/icici' },
-    { id: 'kotak', category: 'banks', label: 'Kotak Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/kotak' },
+    { id: 'idfc', category: 'banks', label: 'IDFC First Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/idfc' },
+    { id: 'tata-sbi', category: 'banks', label: 'Tata Co-Brand SBI Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/tata-sbi' },
+    { id: 'rbl', category: 'banks', label: 'RBL Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/rbl' },
+    { id: 'sbm', category: 'banks', label: 'SBM Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/sbm' },
+    { id: 'tata-hdfc', category: 'banks', label: 'Tata Co-Brand HDFC Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/tata-hdfc' },
+    { id: 'au-bank', category: 'banks', label: 'AU Small Finance Bank', icon: FaUniversity, color: '#4F46E5', route: '/credit-cards/au-bank' },
 
     // Loans
-    { id: 'personal-loan', category: 'loans', label: 'Personal Loan', icon: FaUser, color: '#22C55E', route: '/loans' },
-    { id: 'home-loan', category: 'loans', label: 'Home Loan', icon: FaHome, color: '#2563EB', route: '/loans' },
-    { id: 'business-loan', category: 'loans', label: 'Business Loan', icon: FaBriefcase, color: '#7C3AED', route: '/loans' },
-    { id: 'lap', category: 'loans', label: 'Loan Against Property', icon: FaBuilding, color: '#F97316', route: '/loans' },
-    { id: 'car-loan', category: 'loans', label: 'Car Loan', icon: FaCar, color: '#EF4444', route: '/loans' },
-    { id: 'bike-loan', category: 'loans', label: 'Bike Loan', icon: FaMotorcycle, color: '#2563EB', route: '/loans' },
-    { id: 'edu-loan', category: 'loans', label: 'Education Loan', icon: FaGraduationCap, color: '#EC4899', route: '/loans' },
+    { id: 'personal-loan', category: 'loans', label: 'Personal Loan', icon: FaUser, color: '#22C55E', route: '/loans/personal-loan' },
+    { id: 'home-loan', category: 'loans', label: 'Home Loan', icon: FaHome, color: '#2563EB', route: '/loans/home-loan' },
+    { id: 'business-loan', category: 'loans', label: 'Business Loan', icon: FaBriefcase, color: '#7C3AED', route: '/loans/business-loan' },
+    { id: 'lap', category: 'loans', label: 'Loan Against Property', icon: FaBuilding, color: '#F97316', route: '/loans/lap' },
+    { id: 'car-loan', category: 'loans', label: 'Car Loan', icon: FaCar, color: '#EF4444', route: '/loans/car-loan' },
+    { id: 'bike-loan', category: 'loans', label: 'Bike Loan', icon: FaMotorcycle, color: '#2563EB', route: '/loans/bike-loan' },
+    { id: 'edu-loan', category: 'loans', label: 'Education Loan', icon: FaGraduationCap, color: '#EC4899', route: '/loans/education-loan' },
 
     // Insurance
-    { id: 'term-ins', category: 'insurance', label: 'Term Insurance', icon: FaClock, color: '#2563EB', route: '/insurance' },
-    { id: 'health-ins', category: 'insurance', label: 'Health Insurance', icon: FaHeartbeat, color: '#EF4444', route: '/insurance' },
-    { id: 'car-ins', category: 'insurance', label: 'Car Insurance', icon: FaCar, color: '#2563EB', route: '/insurance' },
-    { id: 'bike-ins', category: 'insurance', label: 'Bike Insurance', icon: FaMotorcycle, color: '#22C55E', route: '/insurance' },
-    { id: 'travel-ins', category: 'insurance', label: 'Travel Insurance', icon: FaGlobe, color: '#F97316', route: '/insurance' },
-    { id: 'accident-ins', category: 'insurance', label: 'Personal Accident', icon: FaExclamationTriangle, color: '#7C3AED', route: '/insurance' },
+    { id: 'term-ins', category: 'insurance', label: 'Term Insurance', icon: FaClock, color: '#2563EB', route: '/insurance/term-insurance' },
+    { id: 'health-ins', category: 'insurance', label: 'Health Insurance', icon: FaHeartbeat, color: '#EF4444', route: '/insurance/health-insurance' },
+    { id: 'car-ins', category: 'insurance', label: 'Car Insurance', icon: FaCar, color: '#2563EB', route: '/insurance/car-insurance' },
+    { id: 'bike-ins', category: 'insurance', label: 'Bike Insurance', icon: FaMotorcycle, color: '#22C55E', route: '/insurance/bike-insurance' },
+    { id: 'travel-ins', category: 'insurance', label: 'Travel Insurance', icon: FaGlobe, color: '#F97316', route: '/insurance/travel-insurance' },
+    { id: 'accident-ins', category: 'insurance', label: 'Personal Accident', icon: FaExclamationTriangle, color: '#7C3AED', route: '/insurance/personal-accident' },
 
     // Accounts & Investments
     { id: 'savings', category: 'invest', label: 'Savings Account', icon: FaPiggyBank, color: '#22C55E', route: '/cms/coming-soon' },
@@ -397,8 +408,15 @@ export default function QuickAccessSection() {
   const groupedServices = useMemo(() => {
     const groups = {};
     serviceCatalog.categories.forEach((cat) => {
-      if (cat.id === 'banks' && dynamicBankServices.length > 0) {
-        groups[cat.id] = dynamicBankServices;
+      if (cat.id === 'banks') {
+        const catalogBanks = serviceCatalog.services.filter((s) => s.category === 'banks');
+        if (dynamicBankServices.length > 0) {
+          const dynamicIds = new Set(dynamicBankServices.map(b => b.id));
+          const extra = catalogBanks.filter(b => !dynamicIds.has(b.id));
+          groups[cat.id] = [...dynamicBankServices, ...extra];
+        } else {
+          groups[cat.id] = catalogBanks;
+        }
       } else {
         groups[cat.id] = serviceCatalog.services.filter((s) => s.category === cat.id);
       }
@@ -418,15 +436,24 @@ export default function QuickAccessSection() {
   const handleServiceClick = useCallback((service) => {
     if (service.route) {
       const isEmployeeMode = useLocationObj.pathname.startsWith('/employee');
+      const isPartnerMode = useLocationObj.pathname.startsWith('/partner');
       let targetRoute = service.route;
 
       if (isEmployeeMode) {
         if (targetRoute.startsWith('/credit-cards')) {
           targetRoute = targetRoute.replace('/credit-cards', '/employee/credit-cards');
-        } else if (targetRoute === '/loans') {
-          targetRoute = '/employee/loans';
-        } else if (targetRoute === '/insurance') {
-          targetRoute = '/employee/insurance';
+        } else if (targetRoute.startsWith('/loans')) {
+          targetRoute = targetRoute.replace('/loans', '/employee/loans');
+        } else if (targetRoute.startsWith('/insurance')) {
+          targetRoute = targetRoute.replace('/insurance', '/employee/insurance');
+        }
+      } else if (isPartnerMode) {
+        if (targetRoute.startsWith('/credit-cards')) {
+          targetRoute = targetRoute.replace('/credit-cards', '/partner/credit-cards');
+        } else if (targetRoute.startsWith('/loans')) {
+          targetRoute = targetRoute.replace('/loans', '/partner/loans');
+        } else if (targetRoute.startsWith('/insurance')) {
+          targetRoute = targetRoute.replace('/insurance', '/partner/insurance');
         }
       }
 
