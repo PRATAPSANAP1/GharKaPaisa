@@ -287,7 +287,8 @@ export default function PartnerLogin() {
                 const role = profile.role?.toUpperCase();
                 const dest = from || loginRes.redirect ||
                   (role === 'SUPER_ADMIN' ? '/super-admin/overview' :
-                   role === 'ADMIN' ? '/admin/dashboard' : '/partner/dashboard');
+                   role === 'ADMIN' ? '/admin/dashboard' :
+                   role === 'HR' ? '/hr/dashboard' : '/partner/dashboard');
                 window.location.href = dest;
               }, 1500);
             } catch (errVal) {
@@ -327,6 +328,7 @@ export default function PartnerLogin() {
           const role = profile.role?.toUpperCase();
           if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/super-admin/overview');
           else if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
+          else if (role === 'HR') navigate(location.state?.from?.pathname || '/hr/dashboard');
           else navigate(location.state?.from?.pathname || '/partner/dashboard');
         }
       }, 1500);
@@ -547,7 +549,8 @@ export default function PartnerLogin() {
                 const role = profile.role?.toUpperCase();
                 const dest = from || loginRes.redirect ||
                   (role === 'SUPER_ADMIN' ? '/super-admin/overview' :
-                   role === 'ADMIN' ? '/admin/dashboard' : '/partner/dashboard');
+                   role === 'ADMIN' ? '/admin/dashboard' :
+                   role === 'HR' ? '/hr/dashboard' : '/partner/dashboard');
                 window.location.href = dest;
               } catch (errVal) {
                 setErr(errVal.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));
@@ -598,6 +601,7 @@ export default function PartnerLogin() {
         const role = profile.role?.toUpperCase();
         if (role === 'SUPER_ADMIN') navigate(location.state?.from?.pathname || '/super-admin/overview');
         else if (role === 'ADMIN') navigate(location.state?.from?.pathname || '/admin/dashboard');
+        else if (role === 'HR') navigate(location.state?.from?.pathname || '/hr/dashboard');
         else navigate(location.state?.from?.pathname || '/partner/dashboard');
       }
     } catch (e) {

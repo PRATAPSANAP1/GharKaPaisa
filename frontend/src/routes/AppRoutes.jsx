@@ -269,6 +269,17 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
+      {/* HR Protected Routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<RoleRoute allowedRoles={['HR', 'ADMIN', 'SUPER_ADMIN']} />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/hr" element={<HRDashboard />} />
+            <Route path="/hr/dashboard" element={<HRDashboard />} />
+            <Route path="/hr/candidates" element={<HRDashboard />} />
+          </Route>
+        </Route>
+      </Route>
+
       {/* Admin Protected Routes */}
       <Route element={<ProtectedRoute />}>
         <Route element={<RoleRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
@@ -280,11 +291,6 @@ const AppRoutes = () => {
             <Route path="/admin/leads" element={<ManageLeads />} />
             <Route path="/admin/direct-leads" element={<ManageDirectLeads />} />
 
-            {/* HR Management System Routes */}
-            <Route path="/hr" element={<HRDashboard />} />
-            <Route path="/hr/dashboard" element={<HRDashboard />} />
-            <Route path="/hr/candidates" element={<HRDashboard />} />
-            
             {/* Dynamic Bank & Product Management for Admin */}
             <Route path="/admin/banks" element={<ManageBanks />} />
             <Route path="/admin/products/:categorySlug" element={<ManageAdminProducts />} />

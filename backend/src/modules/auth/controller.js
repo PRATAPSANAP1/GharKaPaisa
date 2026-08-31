@@ -480,8 +480,9 @@ const login = async (req, res, next) => {
 
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/super-admin/overview' :
       user.role === 'ADMIN' ? '/admin/dashboard' :
-        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
-          '/partner/dashboard';
+        user.role === 'HR' ? '/hr/dashboard' :
+          user.role === 'EMPLOYEE' ? '/employee/dashboard' :
+            '/partner/dashboard';
 
     let permissions = null;
     if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
@@ -592,8 +593,9 @@ const loginWithMsg91 = async (req, res, next) => {
 
     const redirectUrl = user.role === 'SUPER_ADMIN' ? '/super-admin/overview' :
       user.role === 'ADMIN' ? '/admin/dashboard' :
-        user.role === 'EMPLOYEE' ? 'https://yohesa-test-three.vercel.app/dashboard' :
-          '/partner/dashboard';
+        user.role === 'HR' ? '/hr/dashboard' :
+          user.role === 'EMPLOYEE' ? '/employee/dashboard' :
+            '/partner/dashboard';
 
     setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
     logger.info(`[MSG91] Mobile login completed for user ${user.id}`);
