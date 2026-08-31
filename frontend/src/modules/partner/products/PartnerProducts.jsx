@@ -1687,10 +1687,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                   {formErrors.mobile && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.mobile}</span>}
                 </div>
 
-                {/* PAN Card Field - Mandatory for SBI Product */}
+                {/* PAN Card Field */}
                 {isSbiProduct && (
                   <div>
-                    <label style={S.label}>PAN Card Number * (Mandatory for SBI Product)</label>
+                    <label style={S.label}>PAN Card Number *</label>
                     <input
                       type="text"
                       placeholder="Enter 10-digit PAN (e.g. ABCDE1234F)"

@@ -1166,7 +1166,7 @@ export default function PartnerApplications() {
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PAN CARD NUMBER</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pan_number || viewAppDetails?.pan || viewAppDetails?.physical_details?.pan_number || 'N/A'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pan_number || viewAppDetails?.pan || viewAppDetails?.physical_details?.pan_number || viewApp?.pan_number || viewApp?.pan || 'N/A'}</div>
                     </div>
                     {(viewAppDetails?.aadhaar_number || viewAppDetails?.physical_details?.aadhaar_number) && (
                       <div>

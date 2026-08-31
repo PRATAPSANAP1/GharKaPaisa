@@ -506,7 +506,7 @@ export default function ProductApplyLanding() {
               {/* Mandatory PAN Card Field for SBI products */}
               {isSbiProduct && (
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>PAN Card Number * (Mandatory for SBI)</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>PAN Card Number *</label>
                   <input
                     type="text"
                     value={panNumber}
