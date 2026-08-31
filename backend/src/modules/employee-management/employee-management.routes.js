@@ -16,11 +16,11 @@ async function syncAndSeedEmployees() {
     await query(`
       INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
       SELECT 
-        c.full_name, c.mobile_number, c.email_id, 'EMPLOYEE', 'active', 
-        REPLACE(c.reference_code, 'REF', 'EMP'), COALESCE(c.target_role, 'TC'), 'Sales & Support',
+        c.full_name, TRIM(c.mobile_number), LOWER(TRIM(c.email_id)), 'EMPLOYEE', 'active', 
+        REPLACE(COALESCE(c.reference_code, 'CAND10001'), 'CAND', 'EMP'), COALESCE(c.target_role, 'TC'), 'Sales & Support',
         '$2a$10$e8w.oF/9Z9sK.9J0U.Y0c.Z0/0.0.0.0.0.0.0.0.0.0'
       FROM employee_candidates c
-      WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.mobile = c.mobile_number OR u.email = c.email_id)
+      WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.mobile = TRIM(c.mobile_number) OR LOWER(u.email) = LOWER(TRIM(c.email_id)))
       ON CONFLICT (mobile) DO NOTHING
     `).catch(e => logger.warn('User candidate sync note:', e.message));
 
@@ -32,7 +32,7 @@ async function syncAndSeedEmployees() {
         employment_type, offered_salary, recruitment_source, employee_status, activation_status
       )
       SELECT 
-        REPLACE(c.reference_code, 'REF', 'EMP'), u.id, c.id, c.full_name, c.mobile_number, c.email_id,
+        REPLACE(COALESCE(c.reference_code, 'CAND10001'), 'CAND', 'EMP'), u.id, c.id, c.full_name, TRIM(c.mobile_number), LOWER(TRIM(c.email_id)),
         c.date_of_birth, c.current_address, COALESCE(c.target_role, 'TC'), 'Sales & Support', CURRENT_DATE,
         COALESCE(c.experience_type, 'Full-time'), COALESCE(c.expected_salary, 18000), COALESCE(c.how_did_you_hear, 'Career Portal'),
         'ONBOARDING', 'PENDING'
@@ -62,22 +62,34 @@ async function syncAndSeedEmployees() {
       ];
 
       for (const s of seedData) {
+        let uId = null;
         const userRes = await query(
           `INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
            VALUES ($1, $2, $3, 'EMPLOYEE', 'active', $4, $5, $6, '$2a$10$e8w.oF/9Z9sK.9J0U.Y0c.Z0/0.0.0.0.0.0.0.0.0.0')
            ON CONFLICT (mobile) DO UPDATE SET employee_id = EXCLUDED.employee_id RETURNING id`,
           [s.name, s.mobile, s.email, s.emp_id, s.desg, s.dept]
-        );
-        const uId = userRes.rows[0]?.id;
+        ).catch(() => null);
+
+        uId = userRes?.rows?.[0]?.id;
+        if (!uId) {
+          const uFind = await query(`SELECT id FROM users WHERE mobile = $1 OR email = $2`, [s.mobile, s.email]);
+          uId = uFind.rows[0]?.id;
+        }
 
         if (uId) {
+          let eId = null;
           const empRes = await query(
             `INSERT INTO employees (employee_id, user_id, full_name, mobile_number, email_id, designation, department, joining_date, employment_type, offered_salary, employee_status, activation_status)
              VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, 'Full-time', $8, $9, $10)
-             ON CONFLICT (mobile_number) DO NOTHING RETURNING id`,
+             ON CONFLICT (mobile_number) DO UPDATE SET full_name = EXCLUDED.full_name RETURNING id`,
             [s.emp_id, uId, s.name, s.mobile, s.email, s.desg, s.dept, s.salary, s.status, s.act]
-          );
-          const eId = empRes.rows[0]?.id;
+          ).catch(() => null);
+
+          eId = empRes?.rows?.[0]?.id;
+          if (!eId) {
+            const eFind = await query(`SELECT id FROM employees WHERE mobile_number = $1 OR email_id = $2`, [s.mobile, s.email]);
+            eId = eFind.rows[0]?.id;
+          }
 
           if (eId) {
             await query(
