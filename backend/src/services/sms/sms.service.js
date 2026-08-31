@@ -228,6 +228,29 @@ const sendLinkedShareSms = async (to, customerName, productName, shareUrl) => {
 };
 
 /**
+ * 7. Employee_invite (DLT Template ID: 6a9558acc9b020871600e4b2 | Sender: GHARKP)
+ * Preview: Welcome to GharKaPaisa! Your Employee ID is ##alphanumeric## . Temp Password: ##alphanumeric## . Click to login: ##url## - GharKaPaisa\nYOHESA MARKETING AND CONSULTATION PRIVATE LIMITED
+ */
+const sendEmployeeInviteSms = async (to, employeeId, tempPassword, loginUrl) => {
+  const empIdStr = String(employeeId || '');
+  const passStr = String(tempPassword || '');
+  const targetUrl = String(loginUrl || 'https://gharkapaisa.in/login');
+
+  const body = `Welcome to GharKaPaisa! Your Employee ID is ${empIdStr} . Temp Password: ${passStr} . Click to login: ${targetUrl} - GharKaPaisa\nYOHESA MARKETING AND CONSULTATION PRIVATE LIMITED`;
+  const templateId = process.env.MSG91_EMPLOYEE_INVITE_TEMPLATE_ID || '6a9558acc9b020871600e4b2';
+
+  const varsMap = {
+    var1: empIdStr,
+    var2: passStr,
+    var3: targetUrl,
+    alphanumeric: empIdStr,
+    url: targetUrl
+  };
+
+  return await sendMsg91FlowSms(to, templateId, varsMap, body);
+};
+
+/**
  * Additional Flow API Wrappers
  */
 const sendPostApplyStep2Sms = async (to, customerName, productName, token) => {
@@ -331,6 +354,7 @@ module.exports = {
   sendApply1Sms,
   sendApplyStep1Sms,
   sendLinkedShareSms,
+  sendEmployeeInviteSms,
   sendPostApplyStep2Sms,
   sendTrackSms,
   sendWithdrawalFailedSms,

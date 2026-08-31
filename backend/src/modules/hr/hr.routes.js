@@ -5,7 +5,7 @@ const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 const roleCheck = require('../../middleware/authorization/role.middleware');
 const bcrypt = require('bcryptjs');
 const { sendEmployeeInvitationEmail } = require('../../services/email/email.service');
-const { sendSms } = require('../../services/sms/sms.service');
+const { sendSms, sendEmployeeInviteSms } = require('../../services/sms/sms.service');
 const logger = require('../../config/logger');
 const { getSignedDownloadUrl } = require('../../services/aws/s3.service');
 
@@ -373,8 +373,8 @@ router.post('/candidates/:id/select', async (req, res, next) => {
       }
 
       if (candidate.mobile_number) {
-        const smsMsg = `Welcome to GharKaPaisa! Your Employee ID is ${employee_id}. Temp Password: ${tempPassword}. Login at https://gharkapaisa.in/login - GharKaPaisa`;
-        sendSms(candidate.mobile_number, smsMsg).catch(e => console.warn(`[INVITE-SMS] Failed to send employee invitation SMS: ${e.message}`));
+        sendEmployeeInviteSms(candidate.mobile_number, employee_id, tempPassword, 'https://gharkapaisa.in/login')
+          .catch(e => console.warn(`[INVITE-SMS] Failed to send employee invitation SMS: ${e.message}`));
       }
     } catch (inviteErr) {
       console.warn(`[INVITE-WARN] Invitation dispatch error: ${inviteErr.message}`);
