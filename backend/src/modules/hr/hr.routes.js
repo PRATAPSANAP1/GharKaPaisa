@@ -373,7 +373,7 @@ router.post('/candidates/:id/select', async (req, res, next) => {
       }
 
       if (candidate.mobile_number) {
-        const smsMsg = `Welcome to GharKaPaisa, ${candidate.full_name}! Your Employee ID is ${employee_id}. Temp Password: ${tempPassword}. Login at https://gharkapaisa.in/login - GharKaPaisa`;
+        const smsMsg = `Welcome to GharKaPaisa! Your Employee ID is ${employee_id}. Temp Password: ${tempPassword}. Login at https://gharkapaisa.in/login - GharKaPaisa`;
         sendSms(candidate.mobile_number, smsMsg).catch(e => console.warn(`[INVITE-SMS] Failed to send employee invitation SMS: ${e.message}`));
       }
     } catch (inviteErr) {
