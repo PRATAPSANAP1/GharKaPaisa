@@ -37,8 +37,8 @@ async function syncAndSeedEmployees() {
         COALESCE(c.experience_type, 'Full-time'), COALESCE(c.expected_salary, 18000), COALESCE(c.how_did_you_hear, 'Career Portal'),
         'ONBOARDING', 'PENDING'
       FROM employee_candidates c
-      JOIN users u ON (u.mobile = c.mobile_number OR u.email = c.email_id)
-      WHERE NOT EXISTS (SELECT 1 FROM employees e WHERE e.candidate_id = c.id OR e.mobile_number = c.mobile_number)
+      LEFT JOIN users u ON (u.mobile = TRIM(c.mobile_number) OR LOWER(u.email) = LOWER(TRIM(c.email_id)))
+      WHERE NOT EXISTS (SELECT 1 FROM employees e WHERE e.candidate_id = c.id OR e.mobile_number = TRIM(c.mobile_number))
       ON CONFLICT (mobile_number) DO NOTHING
     `).catch(e => logger.warn('Employee candidate sync note:', e.message));
 
@@ -99,7 +99,7 @@ router.get('/', async (req, res, next) => {
   try {
     await syncAndSeedEmployees();
 
-    const { status, activation_status, designation, search, limit = 50, offset = 0 } = req.query;
+    const { status, activation_status, designation, search, limit = 200, offset = 0 } = req.query;
     let queryStr = `
       SELECT 
         e.*,
