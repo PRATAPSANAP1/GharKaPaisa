@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { FaArrowLeft, FaIdCard, FaCheckCircle, FaFileAlt, FaUpload } from 'react-icons/fa';
 import axios from 'axios';
+import { getApiV1Url } from '../../../config/api';
 
 export default function KYCSubmission() {
   const { C } = useTheme();
@@ -49,7 +50,7 @@ export default function KYCSubmission() {
       if (aadhaarFile) payload.append('aadhaar_document', aadhaarFile);
       if (bankFile) payload.append('bank_document', bankFile);
 
-      const res = await axios.post('/api/v1/employee/kyc', payload, {
+      const res = await axios.post(`${getApiV1Url()}/employee/kyc`, payload, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 

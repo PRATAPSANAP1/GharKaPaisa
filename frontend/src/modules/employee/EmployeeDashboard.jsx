@@ -6,6 +6,7 @@ import {
   FaIdCard, FaCheckCircle, FaClock, FaUsers, FaCoins, FaSignOutAlt, FaChartLine 
 } from 'react-icons/fa';
 import axios from 'axios';
+import { getApiV1Url } from '../../config/api';
 
 export default function EmployeeDashboard() {
   const { C } = useTheme();
@@ -33,17 +34,17 @@ export default function EmployeeDashboard() {
       }
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      const profileRes = await axios.get('/api/v1/employee/profile');
+      const profileRes = await axios.get(`${getApiV1Url()}/employee/profile`);
       if (profileRes.data.success) {
         setEmployee(profileRes.data.data.employee);
       }
 
-      const statusRes = await axios.get('/api/v1/employee/onboarding-status');
+      const statusRes = await axios.get(`${getApiV1Url()}/employee/onboarding-status`);
       if (statusRes.data.success) {
         setChecklist(statusRes.data.data);
       }
 
-      const incRes = await axios.get('/api/v1/employee/incentives');
+      const incRes = await axios.get(`${getApiV1Url()}/employee/incentives`);
       if (incRes.data.success) {
         setStats(incRes.data.stats || {});
       }

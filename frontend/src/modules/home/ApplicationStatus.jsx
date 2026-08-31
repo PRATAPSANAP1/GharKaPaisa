@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { FaArrowLeft, FaSearch, FaCheckCircle, FaClock, FaTimesCircle, FaUserCheck, FaIdCard } from 'react-icons/fa';
 import axios from 'axios';
+import { getApiV1Url } from '../../config/api';
 
 export default function ApplicationStatus() {
   const { C } = useTheme();
@@ -23,7 +24,7 @@ export default function ApplicationStatus() {
     setStatusData(null);
 
     try {
-      const res = await axios.get(`/api/v1/public/careers/status/${referenceCode}`);
+      const res = await axios.get(`${getApiV1Url()}/public/careers/status/${referenceCode}`);
       if (res.data.success) {
         setStatusData(res.data.data);
       }

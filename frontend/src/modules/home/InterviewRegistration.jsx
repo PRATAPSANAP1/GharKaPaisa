@@ -8,6 +8,7 @@ import {
 import axios from 'axios';
 import { useMsg91OTP } from '../../hooks/useMsg91OTP';
 import { sendRegistrationOtp, verifyRegistrationOtp } from '../../services/auth.api';
+import { getApiV1Url } from '../../config/api';
 
 export default function InterviewRegistration() {
   const { C } = useTheme();
@@ -150,7 +151,7 @@ export default function InterviewRegistration() {
           async (sdkErr) => {
             console.warn('[MSG91 SDK Notice] sendOtp failed, calling backend fallback:', sdkErr);
             try {
-              await axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: mob });
+              await axios.post(`${getApiV1Url()}/public/careers/verify-mobile`, { mobile_number: mob });
             } catch (e) {}
             setMobileOtpSent(true);
             setMobileOtpTimer(60);
@@ -166,7 +167,7 @@ export default function InterviewRegistration() {
 
     // Direct backend API fallback
     try {
-      await axios.post('/api/v1/public/careers/verify-mobile', { mobile_number: mob });
+      await axios.post(`${getApiV1Url()}/public/careers/verify-mobile`, { mobile_number: mob });
       setMobileOtpSent(true);
       setMobileOtpTimer(60);
       setInfoMsg('Verification OTP dispatched to your Mobile number!');
@@ -207,7 +208,7 @@ export default function InterviewRegistration() {
         async (sdkErr) => {
           console.warn('[MSG91 SDK Notice] verifyOtp failed, trying backend verification:', sdkErr);
           try {
-            const res = await axios.post('/api/v1/public/careers/verify-otp', {
+            const res = await axios.post(`${getApiV1Url()}/public/careers/verify-otp`, {
               mobile_number: formData.mobile_number.trim(),
               mobile_otp: String(code).trim(),
               type: 'mobile'
@@ -232,7 +233,7 @@ export default function InterviewRegistration() {
     }
 
     try {
-      const res = await axios.post('/api/v1/public/careers/verify-otp', {
+      const res = await axios.post(`${getApiV1Url()}/public/careers/verify-otp`, {
         mobile_number: formData.mobile_number.trim(),
         mobile_otp: String(code).trim(),
         type: 'mobile'
@@ -264,7 +265,7 @@ export default function InterviewRegistration() {
       setInfoMsg('OTP sent to your email address.');
     } catch (err) {
       try {
-        await axios.post('/api/v1/public/careers/verify-email', { email_id: em });
+        await axios.post(`${getApiV1Url()}/public/careers/verify-email`, { email_id: em });
         setEmailOtpSent(true);
         setEmailOtpTimer(60);
         setInfoMsg('OTP sent to your email address.');
@@ -296,7 +297,7 @@ export default function InterviewRegistration() {
       setInfoMsg('✓ Email address successfully verified!');
     } catch (err) {
       try {
-        const res = await axios.post('/api/v1/public/careers/verify-otp', {
+        const res = await axios.post(`${getApiV1Url()}/public/careers/verify-otp`, {
           email_id: formData.email_id.trim(),
           email_otp: String(code).trim(),
           type: 'email'
@@ -362,7 +363,7 @@ export default function InterviewRegistration() {
         registerPayload.append('resume', resumeFile);
       }
 
-      const regRes = await axios.post('/api/v1/public/careers/register', registerPayload, {
+      const regRes = await axios.post(`${getApiV1Url()}/public/careers/register`, registerPayload, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 

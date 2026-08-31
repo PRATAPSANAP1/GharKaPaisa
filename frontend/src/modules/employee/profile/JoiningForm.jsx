@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { FaArrowLeft, FaUser, FaGraduationCap, FaBriefcase, FaBuilding, FaCheckCircle } from 'react-icons/fa';
 import axios from 'axios';
+import { getApiV1Url } from '../../../config/api';
 
 export default function JoiningForm() {
   const { C } = useTheme();
@@ -61,7 +62,7 @@ export default function JoiningForm() {
       const token = localStorage.getItem('token');
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      const res = await axios.post('/api/v1/employee/joining-form', form);
+      const res = await axios.post(`${getApiV1Url()}/employee/joining-form`, form);
       if (res.data.success) {
         setSubmitted(true);
       }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { FaUser, FaPhone, FaLock, FaIdCard, FaArrowLeft, FaCheckCircle } from 'react-icons/fa';
 import axios from 'axios';
+import { getApiV1Url } from '../../config/api';
 
 export default function EmployeeLogin() {
   const { C } = useTheme();
@@ -25,7 +26,7 @@ export default function EmployeeLogin() {
 
     setLoading(true);
     try {
-      const res = await axios.post('/api/v1/employee/login', {
+      const res = await axios.post(`${getApiV1Url()}/employee/login`, {
         employee_id: employeeId || undefined,
         mobile_number: mobileNumber,
         reference_code: referenceCode || undefined
