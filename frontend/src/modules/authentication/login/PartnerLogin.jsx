@@ -289,7 +289,8 @@ export default function PartnerLogin() {
                 const dest = from || loginRes.redirect ||
                   (role === 'SUPER_ADMIN' ? '/super-admin/overview' :
                    role === 'ADMIN' ? '/admin/dashboard' :
-                   role === 'HR' ? '/hr/dashboard' : '/partner/dashboard');
+                   role === 'HR' ? '/hr/dashboard' :
+                   role === 'EMPLOYEE' ? '/employee/dashboard' : '/partner/dashboard');
                 window.location.href = dest;
               }, 1500);
             } catch (errVal) {
@@ -554,7 +555,8 @@ export default function PartnerLogin() {
                 const dest = from || loginRes.redirect ||
                   (role === 'SUPER_ADMIN' ? '/super-admin/overview' :
                    role === 'ADMIN' ? '/admin/dashboard' :
-                   role === 'HR' ? '/hr/dashboard' : '/partner/dashboard');
+                   role === 'HR' ? '/hr/dashboard' :
+                   role === 'EMPLOYEE' ? '/employee/dashboard' : '/partner/dashboard');
                 window.location.href = dest;
               } catch (errVal) {
                 setErr(errVal.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));
@@ -609,6 +611,7 @@ export default function PartnerLogin() {
         if (role === 'SUPER_ADMIN') navigate(from || '/super-admin/overview');
         else if (role === 'ADMIN') navigate(from || '/admin/dashboard');
         else if (role === 'HR') navigate(from || '/hr/dashboard');
+        else if (role === 'EMPLOYEE') navigate(from || '/employee/dashboard');
         else navigate(from || '/partner/dashboard');
       }
     } catch (e) {

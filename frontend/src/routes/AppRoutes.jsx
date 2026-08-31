@@ -169,7 +169,7 @@ const AppRoutes = () => {
         <Route path="/careers/status/:code" element={<ApplicationStatus />} />
 
         {/* Employee Management System Panel Routes */}
-        <Route path="/employee/login" element={<EmployeeLogin />} />
+        <Route path="/employee/login" element={<Navigate to="/login" replace />} />
         <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
         <Route path="/employee/joining-form" element={<JoiningForm />} />
         <Route path="/employee/terms" element={<TermsAcceptance />} />
