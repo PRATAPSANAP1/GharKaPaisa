@@ -480,6 +480,7 @@ export default function InterviewRegistration() {
             {/* Section 1: Personal Details */}
             <h2 style={{ fontSize: '19px', fontWeight: 800, margin: '0 0 20px 0', color: C.teal || '#0F766E', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
               <FaUser style={{ color: C.teal || '#0F766E' }} /> 1. Personal Details & Contact Verification
+            </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               

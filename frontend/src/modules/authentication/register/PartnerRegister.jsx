@@ -230,9 +230,6 @@ export default function PartnerRegister() {
   const [mobileOtpRequestId, setMobileOtpRequestId] = useState("");
   const mobileVerifyPendingRef = useRef(false);
   const mobileVerifyTimeoutRef = useRef(null);
-  
-  const [referralCode, setReferralCode] = useState("");
-  const [teamCode, setTeamCode] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
