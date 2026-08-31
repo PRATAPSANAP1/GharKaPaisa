@@ -473,12 +473,14 @@ export default function HRDashboard() {
                               >
                                 <FaEye /> View Candidate
                               </button>
-                              <button 
-                                onClick={() => setInterviewModal(cand)}
-                                style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                              >
-                                <FaStar /> Feedback
-                              </button>
+                              {!isSuperAdmin && (
+                                <button 
+                                  onClick={() => setInterviewModal(cand)}
+                                  style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                >
+                                  <FaStar /> Feedback
+                                </button>
+                              )}
                               {!isSuperAdmin && (
                                 <button 
                                   onClick={() => handleOpenSelectModal(cand)}
