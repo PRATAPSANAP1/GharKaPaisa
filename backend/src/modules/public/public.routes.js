@@ -390,6 +390,50 @@ router.post('/register', upload.single('resume'), async (req, res, next) => {
     const { rows } = await query(insertQuery, values);
     const registeredCand = rows[0];
 
+    // Automatically create initial employee and onboarding record for Super Admin & HR visibility
+    (async () => {
+      try {
+        const empCode = reference_code.replace('REF', 'EMP');
+        const userRes = await query(
+          `INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
+           VALUES ($1, $2, $3, 'EMPLOYEE', 'active', $4, $5, 'Sales & Support', '$2a$10$e8w.oF/9Z9sK.9J0U.Y0c.Z0/0.0.0.0.0.0.0.0.0.0')
+           ON CONFLICT (mobile) DO UPDATE SET employee_id = EXCLUDED.employee_id RETURNING id`,
+          [full_name.trim(), mobile_number.trim(), email_id.trim().toLowerCase(), empCode, target_role || 'TC']
+        );
+        const uId = userRes.rows[0]?.id;
+
+        if (uId) {
+          const empRes = await query(
+            `INSERT INTO employees (
+              employee_id, user_id, candidate_id, full_name, mobile_number, email_id,
+              date_of_birth, current_address, designation, department, joining_date,
+              employment_type, offered_salary, recruitment_source, employee_status, activation_status
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6,
+              $7, $8, $9, 'Sales & Support', CURRENT_DATE,
+              $10, $11, $12, 'ONBOARDING', 'PENDING'
+            ) ON CONFLICT (mobile_number) DO NOTHING RETURNING id`,
+            [
+              empCode, uId, registeredCand.id, full_name.trim(), mobile_number.trim(), email_id.trim().toLowerCase(),
+              parseDate(date_of_birth), cleanStr(current_address), target_role || 'TC',
+              experience_type === 'Fresher' ? 'Full-time' : 'Experienced', parseNum(expected_salary) || 18000, how_did_you_hear || 'Career Portal'
+            ]
+          );
+          const eId = empRes.rows[0]?.id;
+
+          if (eId) {
+            await query(
+              `INSERT INTO employee_onboarding_checklist (employee_id, interview_completed, employee_created, overall_progress, current_stage)
+               VALUES ($1, true, true, 20, 'JOINING_FORM_PENDING') ON CONFLICT (employee_id) DO NOTHING`,
+              [eId]
+            );
+          }
+        }
+      } catch (autoErr) {
+        logger.warn('Auto-create employee registration background note:', autoErr.message);
+      }
+    })();
+
     // Check if candidate is assigned to a specific HR user and notify them via email
     if (finalHrName || validReferredByUuid) {
       (async () => {

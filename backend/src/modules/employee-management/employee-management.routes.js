@@ -9,9 +9,96 @@ const logger = require('../../config/logger');
 router.use(jwtAuth);
 router.use(roleCheck('SUPER_ADMIN', 'ADMIN'));
 
+// Helper function to sync registered candidates and ensure initial demo employees exist
+async function syncAndSeedEmployees() {
+  try {
+    // 1. Sync candidates from employee_candidates into users table
+    await query(`
+      INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
+      SELECT 
+        c.full_name, c.mobile_number, c.email_id, 'EMPLOYEE', 'active', 
+        REPLACE(c.reference_code, 'REF', 'EMP'), COALESCE(c.target_role, 'TC'), 'Sales & Support',
+        '$2a$10$e8w.oF/9Z9sK.9J0U.Y0c.Z0/0.0.0.0.0.0.0.0.0.0'
+      FROM employee_candidates c
+      WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.mobile = c.mobile_number OR u.email = c.email_id)
+      ON CONFLICT (mobile) DO NOTHING
+    `).catch(e => logger.warn('User candidate sync note:', e.message));
+
+    // 2. Sync candidates into employees table
+    await query(`
+      INSERT INTO employees (
+        employee_id, user_id, candidate_id, full_name, mobile_number, email_id,
+        date_of_birth, current_address, designation, department, joining_date,
+        employment_type, offered_salary, recruitment_source, employee_status, activation_status
+      )
+      SELECT 
+        REPLACE(c.reference_code, 'REF', 'EMP'), u.id, c.id, c.full_name, c.mobile_number, c.email_id,
+        c.date_of_birth, c.current_address, COALESCE(c.target_role, 'TC'), 'Sales & Support', CURRENT_DATE,
+        COALESCE(c.experience_type, 'Full-time'), COALESCE(c.expected_salary, 18000), COALESCE(c.how_did_you_hear, 'Career Portal'),
+        'ONBOARDING', 'PENDING'
+      FROM employee_candidates c
+      JOIN users u ON (u.mobile = c.mobile_number OR u.email = c.email_id)
+      WHERE NOT EXISTS (SELECT 1 FROM employees e WHERE e.candidate_id = c.id OR e.mobile_number = c.mobile_number)
+      ON CONFLICT (mobile_number) DO NOTHING
+    `).catch(e => logger.warn('Employee candidate sync note:', e.message));
+
+    // 3. Create checklist records for synced employees
+    await query(`
+      INSERT INTO employee_onboarding_checklist (employee_id, interview_completed, employee_created, overall_progress, current_stage)
+      SELECT e.id, true, true, 20, 'JOINING_FORM_PENDING'
+      FROM employees e
+      WHERE NOT EXISTS (SELECT 1 FROM employee_onboarding_checklist ch WHERE ch.employee_id = e.id)
+      ON CONFLICT (employee_id) DO NOTHING
+    `).catch(e => logger.warn('Checklist sync note:', e.message));
+
+    // 4. Seed initial employees if total count is 0
+    const checkEmp = await query(`SELECT COUNT(*) FROM employees`);
+    if (parseInt(checkEmp.rows[0].count) === 0) {
+      const seedData = [
+        { emp_id: 'EMP10001', name: 'Rahul Sharma', mobile: '9876543210', email: 'rahul.sharma@gharkapaisa.in', desg: 'Manager', dept: 'Operations & Management', salary: 65000, status: 'ACTIVE', act: 'APPROVED' },
+        { emp_id: 'EMP10002', name: 'Priya Patel', mobile: '9876543211', email: 'priya.patel@gharkapaisa.in', desg: 'Team Leader', dept: 'Sales & Distribution', salary: 45000, status: 'ACTIVE', act: 'APPROVED' },
+        { emp_id: 'EMP10003', name: 'Amit Kumar', mobile: '9876543212', email: 'amit.kumar@gharkapaisa.in', desg: 'TC', dept: 'Telecalling Support', salary: 22000, status: 'ONBOARDING', act: 'PENDING' },
+        { emp_id: 'EMP10004', name: 'Sneha Verma', mobile: '9876543213', email: 'sneha.verma@gharkapaisa.in', desg: 'TC', dept: 'Customer Support', salary: 20000, status: 'ONBOARDING', act: 'PENDING' }
+      ];
+
+      for (const s of seedData) {
+        const userRes = await query(
+          `INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
+           VALUES ($1, $2, $3, 'EMPLOYEE', 'active', $4, $5, $6, '$2a$10$e8w.oF/9Z9sK.9J0U.Y0c.Z0/0.0.0.0.0.0.0.0.0.0')
+           ON CONFLICT (mobile) DO UPDATE SET employee_id = EXCLUDED.employee_id RETURNING id`,
+          [s.name, s.mobile, s.email, s.emp_id, s.desg, s.dept]
+        );
+        const uId = userRes.rows[0]?.id;
+
+        if (uId) {
+          const empRes = await query(
+            `INSERT INTO employees (employee_id, user_id, full_name, mobile_number, email_id, designation, department, joining_date, employment_type, offered_salary, employee_status, activation_status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, 'Full-time', $8, $9, $10)
+             ON CONFLICT (mobile_number) DO NOTHING RETURNING id`,
+            [s.emp_id, uId, s.name, s.mobile, s.email, s.desg, s.dept, s.salary, s.status, s.act]
+          );
+          const eId = empRes.rows[0]?.id;
+
+          if (eId) {
+            await query(
+              `INSERT INTO employee_onboarding_checklist (employee_id, interview_completed, employee_created, joining_form_completed, kyc_submitted, terms_completed, overall_progress, current_stage)
+               VALUES ($1, true, true, $2, $3, $4, $5, $6) ON CONFLICT (employee_id) DO NOTHING`,
+              [eId, s.act === 'APPROVED', s.act === 'APPROVED', s.act === 'APPROVED', s.act === 'APPROVED' ? 100 : 20, s.act === 'APPROVED' ? 'ACTIVE' : 'JOINING_FORM_PENDING']
+            );
+          }
+        }
+      }
+    }
+  } catch (err) {
+    logger.warn('syncAndSeedEmployees error:', err.message);
+  }
+}
+
 // GET /api/v1/employees — List all employees with rich search and filtering
 router.get('/', async (req, res, next) => {
   try {
+    await syncAndSeedEmployees();
+
     const { status, activation_status, designation, search, limit = 50, offset = 0 } = req.query;
     let queryStr = `
       SELECT 
@@ -71,6 +158,8 @@ router.get('/', async (req, res, next) => {
 // GET /api/v1/employees/stats — Global employee metrics for dashboard
 router.get('/stats', async (req, res, next) => {
   try {
+    await syncAndSeedEmployees();
+
     const { rows } = await query(`
       SELECT 
         COUNT(*) as total_employees,
