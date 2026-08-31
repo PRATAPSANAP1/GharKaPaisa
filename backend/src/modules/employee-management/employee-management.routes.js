@@ -452,6 +452,11 @@ router.post('/:id/hierarchy', async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Hierarchy level is required (MANAGER, TEAM_LEADER, TC)' });
     }
 
+    // Sync employee designation in employees table
+    const mapDesg = { 'MANAGER': 'Manager', 'TEAM_LEADER': 'Team Leader', 'TC': 'TC' };
+    const desg = mapDesg[hierarchy_level.toUpperCase()] || hierarchy_level;
+    await query(`UPDATE employees SET designation = $1, updated_at = NOW() WHERE id = $2`, [desg, id]);
+
     // Deactivate previous active hierarchy
     await query(`UPDATE employee_hierarchy SET is_active = false WHERE employee_id = $1`, [id]);
 
