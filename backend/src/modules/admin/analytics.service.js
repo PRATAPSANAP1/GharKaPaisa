@@ -123,6 +123,43 @@ const getReferralAnalytics = async () => {
     LIMIT 5
   `);
 
+  // Employee Referral Records (Candidates referred by Employees)
+  const { rows: employeeCandidateReferrals } = await query(`
+    SELECT 
+      ec.id, ec.reference_code as referral_code, ec.full_name as referred_name, ec.email_id as referred_email, 
+      ec.mobile_number as referred_mobile, ec.interview_status as status, 'CANDIDATE' as referral_type, 
+      ec.created_at, COALESCE(e.full_name, ec.hr_name, 'Employee Referral') as referrer_name, 
+      COALESCE(e.employee_id, 'EMP') as referrer_code
+    FROM employee_candidates ec
+    LEFT JOIN employees e ON e.id = ec.referred_by_employee_id
+    WHERE ec.referred_by_employee_id IS NOT NULL OR ec.hr_name IS NOT NULL
+    ORDER BY ec.created_at DESC
+    LIMIT 50
+  `);
+
+  // Employee Referral Records (Partners referred by Employees)
+  const { rows: employeePartnerReferrals } = await query(`
+    SELECT 
+      pp.id, pp.partner_code as referral_code, (pp.first_name || ' ' || pp.last_name) as referred_name, 
+      u.email as referred_email, u.mobile as referred_mobile, pp.kyc_status as status, 'PARTNER' as referral_type, 
+      pp.created_at, COALESCE(e.full_name, 'Employee Referral') as referrer_name, 
+      COALESCE(e.employee_id, 'EMP') as referrer_code,
+      (SELECT COUNT(*) FROM applications a WHERE a.partner_id = pp.id) as total_applications,
+      (SELECT COALESCE(SUM(total_earned), 0) FROM partner_wallets pw WHERE pw.partner_id = pp.id) as total_earned
+    FROM partner_profiles pp
+    JOIN users u ON u.id = pp.user_id
+    LEFT JOIN employees e ON e.id = pp.referred_by_employee_id
+    WHERE pp.referred_by_employee_id IS NOT NULL
+    ORDER BY pp.created_at DESC
+    LIMIT 50
+  `);
+
+  const { rows: [empSummary] } = await query(`
+    SELECT
+      (SELECT COUNT(*) FROM employee_candidates WHERE referred_by_employee_id IS NOT NULL OR hr_name IS NOT NULL) as total_candidate_referrals,
+      (SELECT COUNT(*) FROM partner_profiles WHERE referred_by_employee_id IS NOT NULL) as total_partner_referrals
+  `);
+
   return {
     ...summary,
     total_partners: parseInt(summary.total_partners),
@@ -139,7 +176,14 @@ const getReferralAnalytics = async () => {
     referral_conversion_rate: referralConversionRate,
     average_team_size: parseFloat(avgTeam?.avg_team_size || 0),
     top_referrers: topReferrers,
-    top_performing_teams: topTeams
+    top_performing_teams: topTeams,
+    employee_candidate_referrals: employeeCandidateReferrals,
+    employee_partner_referrals: employeePartnerReferrals,
+    employee_referral_summary: {
+      total_candidate_referrals: parseInt(empSummary?.total_candidate_referrals || 0),
+      total_partner_referrals: parseInt(empSummary?.total_partner_referrals || 0),
+      total_employee_referrals: parseInt(empSummary?.total_candidate_referrals || 0) + parseInt(empSummary?.total_partner_referrals || 0)
+    }
   };
 };
 

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useActiveBanks } from '../../../contexts/BanksContext';
 import {
@@ -413,11 +413,26 @@ export default function QuickAccessSection() {
     }));
   }, []);
 
+  const useLocationObj = useLocation();
+
   const handleServiceClick = useCallback((service) => {
     if (service.route) {
-      navigate(service.route);
+      const isEmployeeMode = useLocationObj.pathname.startsWith('/employee');
+      let targetRoute = service.route;
+
+      if (isEmployeeMode) {
+        if (targetRoute.startsWith('/credit-cards')) {
+          targetRoute = targetRoute.replace('/credit-cards', '/employee/credit-cards');
+        } else if (targetRoute === '/loans') {
+          targetRoute = '/employee/loans';
+        } else if (targetRoute === '/insurance') {
+          targetRoute = '/employee/insurance';
+        }
+      }
+
+      navigate(targetRoute);
     }
-  }, [navigate]);
+  }, [navigate, useLocationObj.pathname]);
 
   return (
     <div style={{

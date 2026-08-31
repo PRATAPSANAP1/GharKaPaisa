@@ -82,6 +82,21 @@ export default function InterviewRegistration() {
   });
 
   const [resumeFile, setResumeFile] = useState(null);
+  const [referredByCode, setReferredByCode] = useState('');
+
+  // Check for referral code in URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const refParam = params.get('ref') || params.get('referral_code') || params.get('token');
+    if (refParam) {
+      setReferredByCode(refParam);
+      setFormData(prev => ({
+        ...prev,
+        how_did_you_hear: 'Employee Reference',
+        hr_name: refParam
+      }));
+    }
+  }, []);
 
   // Timers countdown
   useEffect(() => {
@@ -350,6 +365,10 @@ export default function InterviewRegistration() {
       Object.keys(formData).forEach(key => {
         registerPayload.append(key, formData[key]);
       });
+      if (referredByCode) {
+        registerPayload.append('referred_by_employee_id', referredByCode);
+        registerPayload.append('ref', referredByCode);
+      }
       if (resumeFile) {
         registerPayload.append('resume', resumeFile);
       }
@@ -365,7 +384,8 @@ export default function InterviewRegistration() {
         setError(regRes.data.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to submit registration. Please try again.');
+      console.error('Registration submit error:', err);
+      setError(err.response?.data?.message || 'Failed to submit registration. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -432,10 +452,34 @@ export default function InterviewRegistration() {
         {step === 1 && (
           <form onSubmit={handleFormSubmit} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
             
+            {/* Referred By Banner */}
+            {referredByCode && (
+              <div style={{
+                background: `${C.teal || '#0F766E'}15`,
+                border: `1px solid ${C.teal || '#0F766E'}40`,
+                borderRadius: '14px',
+                padding: '12px 16px',
+                marginBottom: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '20px' }}>🤝</span>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>Employee Referral Applied</div>
+                    <div style={{ fontSize: '12px', color: C.textMid }}>You were referred by Employee Code: <strong>{referredByCode}</strong></div>
+                  </div>
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#10B981', background: '#ECFDF5', border: '1px solid #6EE7B7', padding: '4px 10px', borderRadius: '20px' }}>
+                  Verified Link
+                </span>
+              </div>
+            )}
+
             {/* Section 1: Personal Details */}
             <h2 style={{ fontSize: '19px', fontWeight: 800, margin: '0 0 20px 0', color: C.teal || '#0F766E', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
               <FaUser style={{ color: C.teal || '#0F766E' }} /> 1. Personal Details & Contact Verification
-            </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               

@@ -23,9 +23,11 @@ function getDefaultChips(userRole = 'PUBLIC') {
   if (role === 'EMPLOYEE') {
     return [
       { label: 'Punch Credit Card', action: 'go_employee_cards' },
-      { label: 'Lead Process', action: 'lead_process' },
+      { label: 'Apply Loan', action: 'go_employee_loans' },
+      { label: 'Insurance Leads', action: 'go_employee_insurance' },
       { label: 'My Applications', action: 'go_employee_applications' },
-      { label: 'My Incentives', action: 'go_employee_incentives' }
+      { label: 'My Incentives', action: 'go_employee_incentives' },
+      { label: 'My Team', action: 'go_employee_team' }
     ];
   }
 
@@ -60,8 +62,12 @@ const REDIRECT_ACTIONS = {
   go_partner_add_lead: '/partner/leads/add',
   go_partner_applications: '/partner/applications',
   go_employee_cards: '/employee/credit-cards',
+  go_employee_loans: '/employee/loans',
+  go_employee_insurance: '/employee/insurance',
   go_employee_applications: '/employee/applications',
   go_employee_incentives: '/employee/incentives',
+  go_employee_team: '/employee/team',
+  go_employee_dashboard: '/employee/dashboard',
   go_applications: '/partner/applications',
   go_dashboard: '/partner/dashboard',
   go_wallet: '/partner/wallet',

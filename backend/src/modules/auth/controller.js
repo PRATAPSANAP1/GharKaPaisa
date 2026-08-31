@@ -845,6 +845,8 @@ const register = async (req, res, next) => {
         }
       }
 
+      let referredByEmployeeId = null;
+
       // 2. Resolve Referral Code (used ONLY for referral links)
       if (raw_referral_code) {
         const { rows: [refMatch] } = await client.query(`
@@ -860,6 +862,17 @@ const register = async (req, res, next) => {
           if (!parentPartnerId && targetRole === 'PARTNER') {
             parentPartnerId = referredById;
             parentTeamLevel = parseInt(refMatch.team_level || 1);
+          }
+        } else {
+          // Check if raw_referral_code matches an Employee ID
+          const { rows: [empMatch] } = await client.query(`
+            SELECT id FROM employees
+            WHERE LOWER(employee_id) = LOWER($1) OR id::text = $1 OR LOWER(mobile_number) = LOWER($1)
+            LIMIT 1
+          `, [raw_referral_code]);
+
+          if (empMatch) {
+            referredByEmployeeId = empMatch.id;
           }
         }
       }
@@ -894,14 +907,14 @@ const register = async (req, res, next) => {
           INSERT INTO partner_profiles (
             user_id, partner_code, first_name, last_name, current_address,
             business_location, company_name, company_type, gst_number, pincode,
-            parent_partner_id, referred_by_id, team_level, team_joined_at, kyc_status, pan_number, aadhaar_number,
+            parent_partner_id, referred_by_id, referred_by_employee_id, team_level, team_joined_at, kyc_status, pan_number, aadhaar_number,
             allow_team_creation
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::uuid, $12::uuid, $13, CASE WHEN $11::uuid IS NOT NULL THEN NOW() ELSE NULL END, 'draft', $14, $15, $16) RETURNING id
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::uuid, $12::uuid, $13::uuid, $14, CASE WHEN $11::uuid IS NOT NULL THEN NOW() ELSE NULL END, 'draft', $15, $16, $17) RETURNING id
         `, [
           user.id, PartnerCode, first_name, last_name, current_address,
           business_location || '', company_name, company_type, gst_number || null, pincode || null,
-          parentPartnerId, referredById, parentTeamLevel + 1, panVal, aadhaarVal,
+          parentPartnerId, referredById, referredByEmployeeId, parentTeamLevel + 1, panVal, aadhaarVal,
           targetRole === 'PARTNER'
         ]);
         Partner = insertedPartner;

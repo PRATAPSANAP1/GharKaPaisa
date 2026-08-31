@@ -29,6 +29,8 @@ async function ensurePublicTablesExist() {
     `);
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS hr_name VARCHAR(100)`);
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS target_role VARCHAR(100)`);
+    await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS referred_by_employee_id UUID`);
+    await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS referred_by_employee_id UUID`);
   } catch (err) {
     logger.warn('Failed to ensure public tables exist:', err.message);
   }
@@ -325,8 +327,25 @@ router.post('/register', upload.single('resume'), async (req, res, next) => {
     `;
 
     const isUuid = (val) => typeof val === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(val.trim());
-    const validReferredByUuid = isUuid(referred_by_employee_id) ? referred_by_employee_id.trim() : null;
-    const finalHrName = hr_name || (!isUuid(referred_by_employee_id) && referred_by_employee_id ? String(referred_by_employee_id).trim() : null);
+    let validReferredByUuid = isUuid(referred_by_employee_id) ? referred_by_employee_id.trim() : null;
+    const rawRefCode = req.body.ref || req.body.referral_code || referred_by_employee_id || hr_name;
+
+    if (!validReferredByUuid && rawRefCode && typeof rawRefCode === 'string') {
+      const cleanCode = rawRefCode.trim();
+      try {
+        const empMatch = await query(
+          `SELECT id FROM employees WHERE LOWER(employee_id) = LOWER($1) OR id::text = $1 OR LOWER(mobile_number) = LOWER($1) LIMIT 1`,
+          [cleanCode]
+        );
+        if (empMatch.rows.length > 0) {
+          validReferredByUuid = empMatch.rows[0].id;
+        }
+      } catch (e) {
+        logger.warn('Failed to resolve referring employee code:', e.message);
+      }
+    }
+
+    const finalHrName = hr_name || (!isUuid(referred_by_employee_id) && referred_by_employee_id ? String(referred_by_employee_id).trim() : (rawRefCode ? String(rawRefCode).trim() : null));
 
     const cleanStr = (val) => (val && typeof val === 'string' && val.trim() ? val.trim() : null);
     

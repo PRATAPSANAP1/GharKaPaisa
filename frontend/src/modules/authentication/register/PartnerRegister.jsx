@@ -135,6 +135,15 @@ export default function PartnerRegister() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [referralCode, setReferralCode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('ref') || params.get('referral_code') || params.get('token') || '';
+  });
+  const [teamCode, setTeamCode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('team') || params.get('team_code') || '';
+  });
+
   // Flat form state for all steps
   const [form, setForm] = useState(() => ({
     // Step 0 – Personal
