@@ -51,9 +51,28 @@ async function generateCandidateReferenceCode() {
 router.post('/verify-mobile', async (req, res, next) => {
   try {
     await ensurePublicTablesExist();
-    const { mobile_number } = req.body;
-    if (!mobile_number || mobile_number.length < 10) {
+    const cleanMob = mobile_number.trim();
+    if (!cleanMob || cleanMob.length < 10) {
       return res.status(400).json({ success: false, message: 'Valid 10-digit mobile number required' });
+    }
+
+    // 1. Check if mobile exists in users table (any existing role)
+    const userCheck = await query(`SELECT id, role FROM users WHERE mobile = $1`, [cleanMob]);
+    if (userCheck.rows.length > 0) {
+      const roleName = userCheck.rows[0].role || 'User';
+      return res.status(400).json({
+        success: false,
+        message: `This mobile number is already registered in the system as an active ${roleName}. Candidate registration is not allowed.`
+      });
+    }
+
+    // 2. Check if mobile exists in employee_candidates table
+    const candidateCheck = await query(`SELECT id, reference_code FROM employee_candidates WHERE mobile_number = $1`, [cleanMob]);
+    if (candidateCheck.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `This mobile number is already registered as a candidate with Reference Code: ${candidateCheck.rows[0].reference_code}.`
+      });
     }
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = hashOtp(otp);
@@ -84,11 +103,26 @@ router.post('/verify-mobile', async (req, res, next) => {
 router.post('/verify-email', async (req, res, next) => {
   try {
     await ensurePublicTablesExist();
-    const { email_id } = req.body;
-    if (!email_id || !email_id.includes('@')) {
-      return res.status(400).json({ success: false, message: 'Valid email address required' });
-    }
     const cleanEmail = email_id.trim().toLowerCase();
+
+    // 1. Check if email exists in users table (any existing role)
+    const userCheck = await query(`SELECT id, role FROM users WHERE LOWER(email) = LOWER($1)`, [cleanEmail]);
+    if (userCheck.rows.length > 0) {
+      const roleName = userCheck.rows[0].role || 'User';
+      return res.status(400).json({
+        success: false,
+        message: `This email address is already registered in the system as an active ${roleName}. Candidate registration is not allowed.`
+      });
+    }
+
+    // 2. Check if email exists in employee_candidates table
+    const candidateCheck = await query(`SELECT id, reference_code FROM employee_candidates WHERE LOWER(email_id) = LOWER($1)`, [cleanEmail]);
+    if (candidateCheck.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `This email address is already registered as a candidate with Reference Code: ${candidateCheck.rows[0].reference_code}.`
+      });
+    }
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = hashOtp(otp);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -209,18 +243,40 @@ router.post('/register', upload.single('resume'), async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Full name, mobile number, email and qualification are required' });
     }
 
-    // Check duplicate application
-    const existing = await query(
-      `SELECT id, reference_code FROM employee_candidates WHERE mobile_number = $1 OR email_id = $2`,
-      [mobile_number, email_id]
+    const cleanMob = mobile_number.trim();
+    const cleanEmail = email_id.trim().toLowerCase();
+
+    // 1. Check if mobile or email is already registered in users table
+    const existingUser = await query(
+      `SELECT id, role, email, mobile FROM users WHERE mobile = $1 OR LOWER(email) = LOWER($2)`,
+      [cleanMob, cleanEmail]
     );
 
-    if (existing.rows.length > 0) {
-      return res.json({
-        success: true,
+    if (existingUser.rows.length > 0) {
+      const matchedUser = existingUser.rows[0];
+      const roleName = matchedUser.role || 'User';
+      const matchedField = matchedUser.mobile === cleanMob ? 'mobile number' : 'email address';
+      return res.status(400).json({
+        success: false,
+        already_registered: true,
+        message: `This ${matchedField} is already registered in the system as an active ${roleName}. Candidate registration is not allowed.`
+      });
+    }
+
+    // 2. Check duplicate application in employee_candidates table
+    const existingCandidate = await query(
+      `SELECT id, reference_code, mobile_number, email_id FROM employee_candidates WHERE mobile_number = $1 OR LOWER(email_id) = LOWER($2)`,
+      [cleanMob, cleanEmail]
+    );
+
+    if (existingCandidate.rows.length > 0) {
+      const matchedCand = existingCandidate.rows[0];
+      const matchedField = matchedCand.mobile_number === cleanMob ? 'mobile number' : 'email address';
+      return res.status(400).json({
+        success: false,
         already_exists: true,
-        reference_code: existing.rows[0].reference_code,
-        message: `Candidate registration already exists with Reference Code: ${existing.rows[0].reference_code}`
+        reference_code: matchedCand.reference_code,
+        message: `This ${matchedField} is already registered as a candidate with Reference Code: ${matchedCand.reference_code}.`
       });
     }
 

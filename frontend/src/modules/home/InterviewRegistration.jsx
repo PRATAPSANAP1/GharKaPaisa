@@ -172,9 +172,7 @@ export default function InterviewRegistration() {
       setMobileOtpTimer(60);
       setInfoMsg('Verification OTP dispatched to your Mobile number!');
     } catch (err) {
-      setMobileOtpSent(true);
-      setMobileOtpTimer(60);
-      setInfoMsg('Verification OTP dispatched to your Mobile number!');
+      setError(err.response?.data?.message || err.message || 'Failed to send OTP. Please try again.');
     } finally {
       setMobileOtpLoading(false);
     }
@@ -259,19 +257,12 @@ export default function InterviewRegistration() {
 
     setEmailOtpLoading(true);
     try {
-      await sendRegistrationOtp(em);
+      await axios.post(`${getApiV1Url()}/public/careers/verify-email`, { email_id: em });
       setEmailOtpSent(true);
       setEmailOtpTimer(60);
       setInfoMsg('OTP sent to your email address.');
     } catch (err) {
-      try {
-        await axios.post(`${getApiV1Url()}/public/careers/verify-email`, { email_id: em });
-        setEmailOtpSent(true);
-        setEmailOtpTimer(60);
-        setInfoMsg('OTP sent to your email address.');
-      } catch (publicErr) {
-        setError(err.message || publicErr.response?.data?.message || 'Failed to send OTP. Please try again.');
-      }
+      setError(err.response?.data?.message || err.message || 'Failed to send OTP. Please try again.');
     } finally {
       setEmailOtpLoading(false);
     }
