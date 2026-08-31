@@ -196,7 +196,7 @@ router.get('/:id', async (req, res, next) => {
     
     // 1. Employee profile
     const empRes = await query(`
-      SELECT e.*, c.resume_url, c.pan_number as cand_pan, c.aadhaar_number as cand_aadhaar, c.bank_account_number as cand_bank, c.ifsc_code as cand_ifsc
+      SELECT e.*, c.resume_url
       FROM employees e
       LEFT JOIN employee_candidates c ON c.id = e.candidate_id OR c.mobile_number = e.mobile_number
       WHERE e.id = $1
@@ -223,14 +223,14 @@ router.get('/:id', async (req, res, next) => {
 
     if (!kycData) {
       const joiningData = joiningRes.rows[0] || {};
-      if (joiningData.pan_number || joiningData.aadhaar_number || joiningData.bank_account_number || employee.cand_pan || employee.cand_aadhaar || employee.cand_bank) {
+      if (joiningData.pan_number || joiningData.aadhaar_number || joiningData.bank_account_number) {
         kycData = {
-          pan_number: joiningData.pan_number || employee.cand_pan || null,
+          pan_number: joiningData.pan_number || null,
           pan_document_url: null,
-          aadhaar_number: joiningData.aadhaar_number || employee.cand_aadhaar || null,
+          aadhaar_number: joiningData.aadhaar_number || null,
           aadhaar_document_url: null,
-          bank_account_number: joiningData.bank_account_number || employee.cand_bank || null,
-          ifsc_code: joiningData.ifsc_code || employee.cand_ifsc || null,
+          bank_account_number: joiningData.bank_account_number || null,
+          ifsc_code: joiningData.ifsc_code || null,
           bank_document_url: null,
           kyc_status: 'SUBMITTED'
         };
