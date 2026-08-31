@@ -215,7 +215,9 @@ export default function HRDashboard() {
     try {
       const res = await api.post(`/hr/candidates/${selectedCandModal.id}/select`, selectionForm);
       if (res.data.success) {
-        alert(`Candidate Selected! Employee ID Created: ${res.data.data.employee_id}`);
+        const empId = res.data.data?.employee_id;
+        const tempPass = res.data.data?.temp_password;
+        alert(`Candidate Selection Confirmed!\n\nEmployee ID: ${empId}\nTemporary Password: ${tempPass}\n\nAn invitation email and SMS with login credentials have been sent to ${selectedCandModal.full_name} (${selectedCandModal.mobile_number} / ${selectedCandModal.email_id}).`);
         setSelectedCandModal(null);
         fetchHRData();
       }

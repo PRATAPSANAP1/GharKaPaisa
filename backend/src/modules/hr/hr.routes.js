@@ -3,8 +3,9 @@ const router = express.Router();
 const { query } = require('../../config/database');
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 const roleCheck = require('../../middleware/authorization/role.middleware');
-const logger = require('../../config/logger');
-const { getSignedDownloadUrl } = require('../../services/aws/s3.service');
+const bcrypt = require('bcryptjs');
+const { sendEmployeeInvitationEmail } = require('../../services/email/email.service');
+const { sendSms } = require('../../services/sms/sms.service');
 
 // HR Endpoints protected by auth and role (HR, ADMIN, SUPER_ADMIN)
 router.use(jwtAuth);
@@ -290,14 +291,22 @@ router.post('/candidates/:id/select', async (req, res, next) => {
 
     const employee_id = await generateEmployeeId(offered_designation);
 
+    // Generate readable temporary password
+    const tempPassword = `GKP@${Math.floor(100000 + Math.random() * 900000)}`;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(tempPassword, salt);
+
     if (userRes.rows.length > 0) {
       userId = userRes.rows[0].id;
-      await query(`UPDATE users SET role = 'EMPLOYEE', designation = $1, department = $2, employee_id = $3 WHERE id = $4`, [offered_designation, offered_department, employee_id, userId]);
+      await query(
+        `UPDATE users SET role = 'EMPLOYEE', status = 'active', password_hash = $1, designation = $2, department = $3, employee_id = $4 WHERE id = $5`,
+        [hashedPassword, offered_designation, offered_department, employee_id, userId]
+      );
     } else {
       const newUser = await query(
-        `INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department)
-         VALUES ($1, $2, $3, 'EMPLOYEE', 'active', $4, $5, $6) RETURNING id`,
-        [candidate.full_name, candidate.mobile_number, candidate.email_id, employee_id, offered_designation, offered_department]
+        `INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
+         VALUES ($1, $2, $3, 'EMPLOYEE', 'active', $4, $5, $6, $7) RETURNING id`,
+        [candidate.full_name, candidate.mobile_number, candidate.email_id, employee_id, offered_designation, offered_department, hashedPassword]
       );
       userId = newUser.rows[0].id;
     }
@@ -349,11 +358,32 @@ router.post('/candidates/:id/select', async (req, res, next) => {
       [userId, offered_salary, offered_designation, offered_department, expected_joining_date || null, employee_id, id]
     );
 
+    // Send invitation email and SMS to candidate with credentials & login instructions
+    try {
+      if (candidate.email_id) {
+        sendEmployeeInvitationEmail({
+          email: candidate.email_id,
+          fullName: candidate.full_name,
+          employeeId: employee_id,
+          tempPassword,
+          mobileNumber: candidate.mobile_number
+        }).catch(e => console.warn(`[INVITE-EMAIL] Failed to send employee invitation email: ${e.message}`));
+      }
+
+      if (candidate.mobile_number) {
+        const smsMsg = `Welcome to GharKaPaisa, ${candidate.full_name}! Your Employee ID is ${employee_id}. Log in using Mobile: ${candidate.mobile_number} and Temp Password: ${tempPassword} at https://gharkapaisa.in/login - GharKaPaisa`;
+        sendSms(candidate.mobile_number, smsMsg).catch(e => console.warn(`[INVITE-SMS] Failed to send employee invitation SMS: ${e.message}`));
+      }
+    } catch (inviteErr) {
+      console.warn(`[INVITE-WARN] Invitation dispatch error: ${inviteErr.message}`);
+    }
+
     res.json({
       success: true,
-      message: `Candidate selected successfully! Employee ID generated: ${employee_id}`,
+      message: `Candidate selected! Employee ID generated: ${employee_id}. Temporary Password sent via Mobile SMS & Email.`,
       data: {
         employee_id,
+        temp_password: tempPassword,
         employee_record: createdEmp
       }
     });
