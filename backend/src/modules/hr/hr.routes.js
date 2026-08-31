@@ -4,6 +4,7 @@ const { query } = require('../../config/database');
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 const roleCheck = require('../../middleware/authorization/role.middleware');
 const logger = require('../../config/logger');
+const { getSignedDownloadUrl } = require('../../services/aws/s3.service');
 
 // HR Endpoints protected by auth and role (HR, ADMIN, SUPER_ADMIN)
 router.use(jwtAuth);
@@ -32,6 +33,28 @@ async function generateEmployeeId(designation = '') {
   return employeeId;
 }
 
+// Helper: Generate presigned download URL for private S3 resume objects
+async function getCandidateSignedResumeUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return null;
+
+  let key = rawUrl;
+  if (rawUrl.includes('.amazonaws.com/')) {
+    key = rawUrl.split('.amazonaws.com/')[1];
+  } else if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+    return rawUrl;
+  }
+  
+  key = key.split('?')[0];
+
+  try {
+    const signedUrl = await getSignedDownloadUrl(key, 7200); // 2 hours validity
+    return signedUrl;
+  } catch (err) {
+    logger.warn(`Failed to generate presigned S3 download URL for key ${key}: ${err.message}`);
+    return rawUrl;
+  }
+}
+
 // GET /api/v1/hr/candidates — List candidate applications with search and filters
 router.get('/candidates', async (req, res, next) => {
   try {
@@ -55,11 +78,42 @@ router.get('/candidates', async (req, res, next) => {
     const { rows } = await query(queryStr, params);
     const countRes = await query(`SELECT COUNT(*) FROM employee_candidates`);
 
+    const formattedRows = await Promise.all(
+      rows.map(async (cand) => {
+        let signedResumeUrl = cand.resume_url;
+        if (cand.resume_url) {
+          signedResumeUrl = await getCandidateSignedResumeUrl(cand.resume_url);
+        }
+        return {
+          ...cand,
+          resume_url: signedResumeUrl
+        };
+      })
+    );
+
     res.json({
       success: true,
-      data: rows,
+      data: formattedRows,
       total: parseInt(countRes.rows[0].count)
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/v1/hr/candidates/:id/resume — Presigned URL endpoint for candidate resume
+router.get('/candidates/:id/resume', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await query(`SELECT resume_url FROM employee_candidates WHERE id = $1`, [id]);
+    if (rows.length === 0 || !rows[0].resume_url) {
+      return res.status(404).json({ success: false, message: 'Resume document not found for candidate' });
+    }
+    const signedUrl = await getCandidateSignedResumeUrl(rows[0].resume_url);
+    if (req.query.redirect === 'true') {
+      return res.redirect(signedUrl);
+    }
+    res.json({ success: true, url: signedUrl });
   } catch (err) {
     next(err);
   }
