@@ -1,7 +1,27 @@
 const { INTENTS } = require('./chatbot.constants');
 const searchService = require('./chatbot.search.service');
+const baseIntentService = require('./intent.service');
 
 class ChatbotIntentService {
+  /**
+   * Main intent detection method (delegates to intent.service for DB/FAQ lookup)
+   * @param {string} message - User message
+   * @param {string} userRole - User role
+   * @param {Object} req - Request object
+   */
+  async detectIntent(message, userRole = 'PUBLIC', req = null) {
+    if (baseIntentService && typeof baseIntentService.detectIntent === 'function') {
+      return await baseIntentService.detectIntent(message, userRole, req);
+    }
+    const { intent } = await this.detectIntentAndEntities(message || '');
+    return {
+      intent_name: intent || INTENTS.UNKNOWN,
+      confidence_score: 0.9,
+      response_template: null,
+      chips: '[]'
+    };
+  }
+
   /**
    * Parse user message text into intent & extracted entities
    * @param {string} text - User message

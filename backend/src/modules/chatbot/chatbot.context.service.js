@@ -9,9 +9,9 @@ class ChatbotContextService {
    * @returns {Object} Context object
    */
   async buildContext(req) {
-    const user = req.user || null;
-    const role = (user?.role || req.body?.user_role || req.headers['x-user-role'] || USER_ROLES.PUBLIC).toUpperCase();
-    const panel = (req.body?.panel || req.headers['x-user-panel'] || role.toLowerCase());
+    const user = req?.user || null;
+    const role = (user?.role || req?.body?.user_role || req?.headers?.['x-user-role'] || USER_ROLES.PUBLIC).toUpperCase();
+    const panel = (req?.body?.panel || req?.headers?.['x-user-panel'] || role.toLowerCase());
 
     const context = {
       userId: user?.id || null,

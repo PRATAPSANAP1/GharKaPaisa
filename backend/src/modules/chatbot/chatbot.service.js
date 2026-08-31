@@ -261,6 +261,7 @@ class ChatbotService {
       // Default process message with chip label text
       const reqMock = {
         body: { message: label, session_id: sessionId, user_role: userRole },
+        headers: {},
         user: userId ? { id: userId, role: userRole } : null
       };
 
