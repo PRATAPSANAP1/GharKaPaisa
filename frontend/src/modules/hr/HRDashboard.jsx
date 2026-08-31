@@ -183,6 +183,32 @@ export default function HRDashboard() {
     }
   };
 
+  const handleOpenSelectModal = (cand) => {
+    setSelectedCandModal(cand);
+    setSelectionForm({
+      offered_salary: cand.offered_salary || cand.expected_salary || '',
+      offered_designation: cand.offered_designation || cand.target_role || 'Sales Executive',
+      offered_department: cand.offered_department || 'Sales & Distribution',
+      expected_joining_date: cand.expected_joining_date ? String(cand.expected_joining_date).split('T')[0] : ''
+    });
+  };
+
+  const handleAssignHR = async (candidateId, hrId) => {
+    const hrObj = hrAccounts.find(h => String(h.id || h._id) === String(hrId));
+    const hrName = hrObj ? (hrObj.fullName || hrObj.email) : '';
+    try {
+      const res = await api.post(`/hr/candidates/${candidateId}/assign-hr`, {
+        hr_id: hrId || null,
+        hr_name: hrName || null
+      });
+      if (res.data && res.data.success) {
+        fetchHRData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to assign candidate to HR');
+    }
+  };
+
   const handleSelectCandidateSubmit = async (e) => {
     e.preventDefault();
     if (!selectedCandModal) return;
@@ -387,6 +413,7 @@ export default function HRDashboard() {
                         <th style={{ padding: '14px 20px' }}>Contact</th>
                         <th style={{ padding: '14px 20px' }}>Qualification</th>
                         <th style={{ padding: '14px 20px' }}>Experience</th>
+                        {isSuperAdmin && <th style={{ padding: '14px 20px' }}>Assigned HR</th>}
                         <th style={{ padding: '14px 20px' }}>Status</th>
                         <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
                       </tr>
@@ -402,6 +429,31 @@ export default function HRDashboard() {
                           </td>
                           <td style={{ padding: '14px 20px' }}>{cand.highest_qualification}</td>
                           <td style={{ padding: '14px 20px' }}>{cand.experience_type} ({cand.total_experience_years || 0} yrs)</td>
+                          {isSuperAdmin && (
+                            <td style={{ padding: '14px 20px' }}>
+                              <select
+                                value={cand.assigned_hr_id || ''}
+                                onChange={(e) => handleAssignHR(cand.id, e.target.value)}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  background: C.bgSecondary,
+                                  border: `1px solid ${C.border}`,
+                                  color: C.text,
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <option value="">-- Assign HR --</option>
+                                {hrAccounts.map((hr) => (
+                                  <option key={hr.id || hr._id} value={hr.id || hr._id}>
+                                    {hr.fullName || hr.email}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                          )}
                           <td style={{ padding: '14px 20px' }}>
                             <span style={{ 
                               padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 800,
@@ -426,7 +478,7 @@ export default function HRDashboard() {
                                 <FaStar /> Feedback
                               </button>
                               <button 
-                                onClick={() => setSelectedCandModal(cand)}
+                                onClick={() => handleOpenSelectModal(cand)}
                                 style={{ background: C.teal, color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                               >
                                 <FaUserCheck /> Select & Give EMP ID
@@ -621,6 +673,39 @@ export default function HRDashboard() {
                 </div>
               </div>
 
+              {/* Offered Appointment & Stipend Info (Read-Only) */}
+              <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', marginBottom: '24px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: C.teal, marginBottom: '6px' }}>
+                  Offered Appointment & Stipend Details (Read-Only)
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '8px' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Offered Monthly Stipend/Salary</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginTop: '2px' }}>
+                      {viewCandModal.offered_salary ? `₹${viewCandModal.offered_salary}` : 'Not assigned yet'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Offered Designation</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginTop: '2px' }}>
+                      {viewCandModal.offered_designation || viewCandModal.target_role || 'Not assigned yet'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Offered Department</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginTop: '2px' }}>
+                      {viewCandModal.offered_department || 'Not assigned yet'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Assigned HR Manager</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginTop: '2px' }}>
+                      {viewCandModal.assigned_hr_name || viewCandModal.hr_name || 'Unassigned'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Feedback History */}
               {viewCandModal.interview_feedback && (
                 <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', marginBottom: '24px' }}>
@@ -642,7 +727,7 @@ export default function HRDashboard() {
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: `1px solid ${C.border}`, paddingTop: '16px' }}>
                 <button onClick={() => setViewCandModal(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '10px 20px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Close</button>
                 {viewCandModal.interview_status !== 'EMPLOYEE_CREATED' && (
-                  <button onClick={() => { const cand = viewCandModal; setViewCandModal(null); setSelectedCandModal(cand); }} style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>Select Candidate & Give EMP ID</button>
+                  <button onClick={() => { const cand = viewCandModal; setViewCandModal(null); handleOpenSelectModal(cand); }} style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>Select Candidate & Give EMP ID</button>
                 )}
               </div>
             </div>

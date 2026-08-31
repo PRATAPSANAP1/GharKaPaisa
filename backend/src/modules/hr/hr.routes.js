@@ -55,12 +55,34 @@ async function getCandidateSignedResumeUrl(rawUrl) {
   }
 }
 
+// Helper: Ensure assigned_hr_id columns exist
+async function ensureHRColumnsExist() {
+  try {
+    await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS assigned_hr_id UUID`);
+    await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS assigned_hr_name VARCHAR(100)`);
+  } catch (err) {
+    logger.warn('Failed to ensure HR columns on employee_candidates:', err.message);
+  }
+}
+
 // GET /api/v1/hr/candidates — List candidate applications with search and filters
 router.get('/candidates', async (req, res, next) => {
   try {
+    await ensureHRColumnsExist();
     const { status, search, limit = 50, offset = 0 } = req.query;
+
+    const userRole = (req.user?.role || '').toUpperCase();
+    const userId = req.user?.id;
+    const userName = req.user?.full_name || req.user?.fullName || '';
+
     let queryStr = `SELECT * FROM employee_candidates WHERE 1=1`;
     const params = [];
+
+    // HR users see ONLY candidates assigned specifically to them
+    if (userRole === 'HR') {
+      params.push(userId, userName);
+      queryStr += ` AND (assigned_hr_id = $1 OR assigned_hr_name ILIKE $2 OR hr_name ILIKE $2)`;
+    }
 
     if (status) {
       params.push(status);
@@ -76,7 +98,24 @@ router.get('/candidates', async (req, res, next) => {
     params.push(parseInt(limit), parseInt(offset));
 
     const { rows } = await query(queryStr, params);
-    const countRes = await query(`SELECT COUNT(*) FROM employee_candidates`);
+
+    // Count query
+    let countStr = `SELECT COUNT(*) FROM employee_candidates WHERE 1=1`;
+    const countParams = [];
+    if (userRole === 'HR') {
+      countParams.push(userId, userName);
+      countStr += ` AND (assigned_hr_id = $1 OR assigned_hr_name ILIKE $2 OR hr_name ILIKE $2)`;
+    }
+    if (status) {
+      countParams.push(status);
+      countStr += ` AND interview_status = $${countParams.length}`;
+    }
+    if (search) {
+      countParams.push(`%${search}%`);
+      countStr += ` AND (full_name ILIKE $${countParams.length} OR mobile_number ILIKE $${countParams.length} OR email_id ILIKE $${countParams.length} OR reference_code ILIKE $${countParams.length})`;
+    }
+
+    const countRes = await query(countStr, countParams);
 
     const formattedRows = await Promise.all(
       rows.map(async (cand) => {
@@ -94,7 +133,41 @@ router.get('/candidates', async (req, res, next) => {
     res.json({
       success: true,
       data: formattedRows,
-      total: parseInt(countRes.rows[0].count)
+      total: parseInt(countRes.rows[0]?.count || 0)
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/hr/candidates/:id/assign-hr — Assign candidate to specific HR Manager
+router.post('/candidates/:id/assign-hr', async (req, res, next) => {
+  try {
+    await ensureHRColumnsExist();
+    const { id } = req.params;
+    const { hr_id, hr_name } = req.body;
+
+    let hrName = hr_name;
+    if (hr_id && !hrName) {
+      const hrRes = await query(`SELECT full_name FROM users WHERE id = $1`, [hr_id]);
+      if (hrRes.rows.length > 0) {
+        hrName = hrRes.rows[0].full_name;
+      }
+    }
+
+    const { rows } = await query(
+      `UPDATE employee_candidates SET assigned_hr_id = $1, assigned_hr_name = $2, hr_name = $2 WHERE id = $3 RETURNING *`,
+      [hr_id || null, hrName || null, id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Candidate record not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Candidate assigned to HR successfully',
+      data: rows[0]
     });
   } catch (err) {
     next(err);
@@ -122,6 +195,19 @@ router.get('/candidates/:id/resume', async (req, res, next) => {
 // GET /api/v1/hr/candidates/stats — Candidate summary metrics
 router.get('/candidates/stats', async (req, res, next) => {
   try {
+    await ensureHRColumnsExist();
+    const userRole = (req.user?.role || '').toUpperCase();
+    const userId = req.user?.id;
+    const userName = req.user?.full_name || req.user?.fullName || '';
+
+    let whereClause = `WHERE 1=1`;
+    const params = [];
+
+    if (userRole === 'HR') {
+      params.push(userId, userName);
+      whereClause += ` AND (assigned_hr_id = $1 OR assigned_hr_name ILIKE $2 OR hr_name ILIKE $2)`;
+    }
+
     const { rows } = await query(`
       SELECT 
         COUNT(*) as total_candidates,
@@ -131,7 +217,9 @@ router.get('/candidates/stats', async (req, res, next) => {
         COUNT(*) FILTER (WHERE interview_status = 'REJECTED') as rejected,
         COUNT(*) FILTER (WHERE interview_status = 'EMPLOYEE_CREATED') as converted
       FROM employee_candidates
-    `);
+      ${whereClause}
+    `, params);
+
     res.json({ success: true, data: rows[0] });
   } catch (err) {
     next(err);
