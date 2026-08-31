@@ -201,12 +201,50 @@ router.use(jwtAuth);
 // Middleware to resolve employee table record id for authenticated user
 async function resolveEmployee(req, res, next) {
   try {
-    const { rows } = await query(`SELECT * FROM employees WHERE user_id = $1 OR mobile_number = $2`, [req.user.id, req.user.mobile]);
+    let { rows } = await query(
+      `SELECT * FROM employees WHERE user_id = $1 OR mobile_number = $2 OR (email_id IS NOT NULL AND email_id = $3)`, 
+      [req.user.id, req.user.mobile, req.user.email]
+    );
+
     if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Employee profile record not found' });
+      // Auto-create employee record if user registered via candidate portal
+      const candRes = await query(
+        `SELECT * FROM employee_candidates WHERE mobile_number = $1 OR (email_id IS NOT NULL AND email_id = $2)`,
+        [req.user.mobile, req.user.email]
+      );
+      
+      const cand = candRes.rows[0] || {};
+      const empCode = (cand.reference_code || 'EMP10001').replace('CAND', 'EMP').replace('REF', 'EMP');
+
+      const createRes = await query(
+        `INSERT INTO employees (
+          employee_id, user_id, candidate_id, full_name, mobile_number, email_id,
+          designation, department, joining_date, employment_type, offered_salary,
+          employee_status, activation_status
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6,
+          $7, 'Sales & Support', CURRENT_DATE, 'Full-time', 18000,
+          'ONBOARDING', 'PENDING'
+        ) ON CONFLICT (mobile_number) DO UPDATE SET user_id = EXCLUDED.user_id RETURNING *`,
+        [
+          empCode, req.user.id, cand.id || null, req.user.full_name || cand.full_name || 'Employee',
+          req.user.mobile || cand.mobile_number, req.user.email || cand.email_id || null,
+          cand.target_role || 'TC'
+        ]
+      );
+      rows = createRes.rows;
     }
-    req.employee = rows[0];
-    next();
+
+    if (rows.length > 0) {
+      req.employee = rows[0];
+      // Ensure user_id is linked to employee record
+      if (!req.employee.user_id && req.user.id) {
+        await query(`UPDATE employees SET user_id = $1 WHERE id = $2`, [req.user.id, req.employee.id]).catch(() => {});
+      }
+      return next();
+    }
+
+    return res.status(404).json({ success: false, message: 'Employee profile record not found' });
   } catch (err) {
     next(err);
   }

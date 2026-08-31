@@ -183,20 +183,70 @@ router.get('/:id', async (req, res, next) => {
     const { id } = req.params;
     
     // 1. Employee profile
-    const empRes = await query(`SELECT * FROM employees WHERE id = $1`, [id]);
+    const empRes = await query(`
+      SELECT e.*, c.resume_url, c.pan_number as cand_pan, c.aadhaar_number as cand_aadhaar, c.bank_account_number as cand_bank, c.ifsc_code as cand_ifsc
+      FROM employees e
+      LEFT JOIN employee_candidates c ON c.id = e.candidate_id OR c.mobile_number = e.mobile_number
+      WHERE e.id = $1
+    `, [id]);
+
     if (empRes.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Employee not found' });
     }
     const employee = empRes.rows[0];
 
-    // 2. Joining details
-    const joiningRes = await query(`SELECT * FROM employee_joining_details WHERE employee_id = $1`, [id]);
-    // 3. KYC details
-    const kycRes = await query(`SELECT * FROM employee_kyc WHERE employee_id = $1`, [id]);
-    // 4. Documents
-    const docsRes = await query(`SELECT * FROM employee_documents WHERE employee_id = $1`, [id]);
+    // 2. Joining details (check by employee_id or mobile_number)
+    const joiningRes = await query(
+      `SELECT * FROM employee_joining_details WHERE employee_id = $1 OR mobile_number = $2 ORDER BY created_at DESC LIMIT 1`,
+      [id, employee.mobile_number]
+    );
+
+    // 3. KYC details (check by employee_id or mobile_number)
+    const kycRes = await query(
+      `SELECT * FROM employee_kyc WHERE employee_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [id]
+    );
+
+    let kycData = kycRes.rows[0] || null;
+
+    if (!kycData) {
+      const joiningData = joiningRes.rows[0] || {};
+      if (joiningData.pan_number || joiningData.aadhaar_number || joiningData.bank_account_number || employee.cand_pan || employee.cand_aadhaar || employee.cand_bank) {
+        kycData = {
+          pan_number: joiningData.pan_number || employee.cand_pan || null,
+          pan_document_url: null,
+          aadhaar_number: joiningData.aadhaar_number || employee.cand_aadhaar || null,
+          aadhaar_document_url: null,
+          bank_account_number: joiningData.bank_account_number || employee.cand_bank || null,
+          ifsc_code: joiningData.ifsc_code || employee.cand_ifsc || null,
+          bank_document_url: null,
+          kyc_status: 'SUBMITTED'
+        };
+      }
+    }
+
+    // 4. Documents (check employee_documents, plus add candidate resume if present)
+    const docsRes = await query(
+      `SELECT * FROM employee_documents WHERE employee_id = $1 OR mobile_number = $2 ORDER BY uploaded_at DESC`,
+      [id, employee.mobile_number]
+    );
+    let docs = docsRes.rows;
+    if (employee.resume_url && !docs.some(d => d.document_type === 'resume')) {
+      docs.unshift({
+        id: 'cand-resume',
+        document_type: 'resume',
+        document_url: employee.resume_url,
+        document_file_name: 'Candidate_Resume.pdf',
+        verification_status: 'VERIFIED'
+      });
+    }
+
     // 5. Terms acceptance
-    const termsRes = await query(`SELECT * FROM employee_terms_acceptance WHERE employee_id = $1`, [id]);
+    const termsRes = await query(
+      `SELECT * FROM employee_terms_acceptance WHERE employee_id = $1 ORDER BY accepted_at DESC LIMIT 1`,
+      [id]
+    );
+
     // 6. Onboarding checklist
     const checklistRes = await query(`SELECT * FROM employee_onboarding_checklist WHERE employee_id = $1`, [id]);
     // 7. Hierarchy
@@ -232,8 +282,8 @@ router.get('/:id', async (req, res, next) => {
       data: {
         employee,
         joining_details: joiningRes.rows[0] || null,
-        kyc: kycRes.rows[0] || null,
-        documents: docsRes.rows,
+        kyc: kycData,
+        documents: docs,
         terms: termsRes.rows[0] || null,
         checklist: checklistRes.rows[0] || null,
         hierarchy: hierarchyRes.rows[0] || null,
