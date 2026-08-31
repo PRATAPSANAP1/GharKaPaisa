@@ -117,6 +117,14 @@ const createAdmin = async (req, res, next) => {
 
 const listAdmins = async (req, res, next) => {
   try {
+    const roleFilter = req.query.role ? String(req.query.role).trim().toUpperCase() : null;
+    let whereClause = `WHERE role IN ('ADMIN', 'EMPLOYEE', 'HR')`;
+    const params = [];
+    if (roleFilter) {
+      whereClause += ` AND role = $1`;
+      params.push(roleFilter);
+    }
+
     const { rows: admins } = await query(`
       SELECT 
         id as _id, 
@@ -132,9 +140,9 @@ const listAdmins = async (req, res, next) => {
         created_by as "createdBy", 
         created_at as "createdAt"
       FROM users 
-      WHERE role IN ('ADMIN', 'EMPLOYEE')
+      ${whereClause}
       ORDER BY created_at DESC
-    `);
+    `, params);
     const { rows: assignments } = await query(`SELECT aba.admin_id, b.id as bank_id, b.name as bank_name, b.short_code, b.short_code as code, b.logo_url FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id`);
     const adminBankMap = {};
     const adminBankIdMap = {};
