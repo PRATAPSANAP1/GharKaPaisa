@@ -84,6 +84,32 @@ function Toast({ message, type = "success", onClose }) {
 }
 
 
+const getRoleDashboard = (userRole) => {
+  const role = (userRole || '').toUpperCase();
+  if (role === 'SUPER_ADMIN') return '/super-admin/overview';
+  if (role === 'ADMIN') return '/admin/dashboard';
+  if (role === 'HR') return '/hr/dashboard';
+  if (role === 'EMPLOYEE') return '/employee/dashboard';
+  return '/partner/dashboard';
+};
+
+const resolveDestination = (profile, rawFromPath) => {
+  const role = (profile?.role || '').toUpperCase();
+  const defaultDashboard = getRoleDashboard(role);
+
+  if (!rawFromPath || rawFromPath === '/' || rawFromPath === '/login' || rawFromPath === '/admin-login') {
+    return defaultDashboard;
+  }
+
+  if (role === 'EMPLOYEE' && rawFromPath.startsWith('/employee')) return rawFromPath;
+  if (role === 'HR' && rawFromPath.startsWith('/hr')) return rawFromPath;
+  if (role === 'ADMIN' && (rawFromPath.startsWith('/admin') || rawFromPath.startsWith('/hr'))) return rawFromPath;
+  if (role === 'SUPER_ADMIN') return rawFromPath;
+  if ((role === 'PARTNER' || role === 'TEAM_MEMBER') && rawFromPath.startsWith('/partner')) return rawFromPath;
+
+  return defaultDashboard;
+};
+
 export default function PartnerLogin() {
   const { C, isDark } = useTheme();
   const S = makeS(C);
@@ -91,6 +117,15 @@ export default function PartnerLogin() {
   const location = useLocation();
   const { t } = useTranslation();
   const loginStore = useAuthStore((state) => state.login);
+  const user = useAuthStore((state) => state.user);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const dest = getRoleDashboard(user.role);
+      navigate(dest, { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const [form, setForm] = useState({ identity: "", otp: "", password: "" });
   const [method, setMethod] = useState("password"); // "password" or "otp"
@@ -284,13 +319,7 @@ export default function PartnerLogin() {
 
               setTimeout(() => {
                 const rawFrom = location.state?.from?.pathname;
-                const from = (rawFrom && rawFrom !== '/' && rawFrom !== '/login' && rawFrom !== '/admin-login') ? rawFrom : null;
-                const role = profile.role?.toUpperCase();
-                const dest = from || loginRes.redirect ||
-                  (role === 'SUPER_ADMIN' ? '/super-admin/overview' :
-                   role === 'ADMIN' ? '/admin/dashboard' :
-                   role === 'HR' ? '/hr/dashboard' :
-                   role === 'EMPLOYEE' ? '/employee/dashboard' : '/partner/dashboard');
+                const dest = resolveDestination(profile, rawFrom);
                 navigate(dest, { replace: true });
               }, 1500);
             } catch (errVal) {
@@ -550,13 +579,7 @@ export default function PartnerLogin() {
                 loginStore(profile, loginRes.idToken);
 
                 const rawFrom = location.state?.from?.pathname;
-                const from = (rawFrom && rawFrom !== '/' && rawFrom !== '/login' && rawFrom !== '/admin-login') ? rawFrom : null;
-                const role = profile.role?.toUpperCase();
-                const dest = from || loginRes.redirect ||
-                  (role === 'SUPER_ADMIN' ? '/super-admin/overview' :
-                   role === 'ADMIN' ? '/admin/dashboard' :
-                   role === 'HR' ? '/hr/dashboard' :
-                   role === 'EMPLOYEE' ? '/employee/dashboard' : '/partner/dashboard');
+                const dest = resolveDestination(profile, rawFrom);
                 navigate(dest, { replace: true });
               } catch (errVal) {
                 setErr(errVal.message || t('partner.errors.invalidCredentials', 'Invalid credentials. Please try again.'));
@@ -593,26 +616,12 @@ export default function PartnerLogin() {
         (!profile.first_name || !profile.last_name || !profile.mobile || !profile.email);
 
       const rawFrom = location.state?.from?.pathname;
-      const from = (rawFrom && rawFrom !== '/' && rawFrom !== '/login' && rawFrom !== '/admin-login') ? rawFrom : null;
+      const targetDest = resolveDestination(profile, rawFrom);
 
-      if (loginRes.redirect) {
-        if (loginRes.redirect.startsWith('http')) {
-          window.location.href = loginRes.redirect;
-        } else {
-          // Normalize superadmin redirect if it comes from the backend without a hyphen
-          const targetRedirect = (loginRes.redirect === '/superadmin/dashboard' || loginRes.redirect === '/super-admin/dashboard' || loginRes.redirect === '/superadmin') ? '/super-admin/overview' : loginRes.redirect;
-          navigate(from || targetRedirect);
-        }
-      } else if (needsProfileCompletion) {
-        // Redirect to profile page for team members to complete registration
-        navigate('/partner/profile');
+      if (needsProfileCompletion) {
+        navigate('/partner/profile', { replace: true });
       } else {
-        const role = profile.role?.toUpperCase();
-        if (role === 'SUPER_ADMIN') navigate(from || '/super-admin/overview');
-        else if (role === 'ADMIN') navigate(from || '/admin/dashboard');
-        else if (role === 'HR') navigate(from || '/hr/dashboard');
-        else if (role === 'EMPLOYEE') navigate(from || '/employee/dashboard');
-        else navigate(from || '/partner/dashboard');
+        navigate(targetDest, { replace: true });
       }
     } catch (e) {
       // On failure: clear OTP boxes and refocus first input
