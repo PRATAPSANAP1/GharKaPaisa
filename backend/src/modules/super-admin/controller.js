@@ -28,9 +28,6 @@ const createAdmin = async (req, res, next) => {
       return error(res, 'All required fields must be provided', 400);
     }
 
-    const idPrefix = (role === 'HR') ? 'HR-' : 'GKP-';
-    const employeeId = idPrefix + crypto.randomBytes(3).toString('hex').toUpperCase();
-
     if (!['ADMIN', 'EMPLOYEE', 'HR'].includes(role)) {
       return error(res, 'Role must be either ADMIN, EMPLOYEE, or HR', 400);
     }
@@ -62,14 +59,26 @@ const createAdmin = async (req, res, next) => {
       return error(res, 'At least one assigned bank is required for Operational Head or Administrative Operator designation', 400);
     }
 
-    // Check if employeeId already exists
-    let uniqueEmployeeId = employeeId;
+    // Generate unique employeeId in format YOH-TM0985, YOH-HR0123, YOH-ADM0985
+    let code = 'EMP';
+    if (role === 'HR' || desigUpper.includes('HR')) {
+      code = 'HR';
+    } else if (role === 'ADMIN') {
+      code = 'ADM';
+    } else {
+      if (desigUpper.includes('TELECALLER') || desigUpper === 'TC') code = 'TM';
+      else if (desigUpper.includes('TEAM LEADER') || desigUpper === 'TL') code = 'TL';
+      else if (desigUpper.includes('MANAGER')) code = 'MG';
+      else if (desigUpper.includes('SALES')) code = 'SE';
+    }
+
     let isUnique = false;
+    let uniqueEmployeeId = '';
     while (!isUnique) {
+      const num = Math.floor(1000 + Math.random() * 9000);
+      uniqueEmployeeId = `YOH-${code}${String(num).padStart(4, '0')}`;
       const { rows: [existingEmployee] } = await query(`SELECT id FROM users WHERE employee_id = $1`, [uniqueEmployeeId]);
-      if (existingEmployee) {
-        uniqueEmployeeId = idPrefix + crypto.randomBytes(3).toString('hex').toUpperCase();
-      } else {
+      if (!existingEmployee) {
         isUnique = true;
       }
     }

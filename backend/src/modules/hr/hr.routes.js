@@ -9,11 +9,27 @@ const logger = require('../../config/logger');
 router.use(jwtAuth);
 router.use(roleCheck('HR', 'ADMIN', 'SUPER_ADMIN'));
 
-// Helper: Generate Employee ID (e.g. EMP10001)
-async function generateEmployeeId() {
-  const { rows } = await query(`SELECT nextval('employee_id_seq') as seq`);
-  const seqNum = rows[0]?.seq || Math.floor(10000 + Math.random() * 90000);
-  return `EMP${seqNum}`;
+// Helper: Generate unique Employee ID in format like YOH-TM0985, YOH-HR0123
+async function generateEmployeeId(designation = '') {
+  const desigUpper = String(designation || '').toUpperCase();
+  let code = 'TM';
+  if (desigUpper.includes('HR')) code = 'HR';
+  else if (desigUpper.includes('TELECALLER') || desigUpper === 'TC') code = 'TM';
+  else if (desigUpper.includes('TEAM LEADER') || desigUpper === 'TL') code = 'TL';
+  else if (desigUpper.includes('MANAGER')) code = 'MG';
+  else if (desigUpper.includes('SALES')) code = 'SE';
+  
+  let isUnique = false;
+  let employeeId = '';
+  while (!isUnique) {
+    const num = Math.floor(1000 + Math.random() * 9000);
+    employeeId = `YOH-${code}${String(num).padStart(4, '0')}`;
+    const { rows } = await query(`SELECT id FROM users WHERE employee_id = $1`, [employeeId]);
+    if (rows.length === 0) {
+      isUnique = true;
+    }
+  }
+  return employeeId;
 }
 
 // GET /api/v1/hr/candidates — List candidate applications with search and filters
@@ -125,7 +141,7 @@ router.post('/candidates/:id/select', async (req, res, next) => {
     let userRes = await query(`SELECT id FROM users WHERE mobile = $1 OR email = $2`, [candidate.mobile_number, candidate.email_id]);
     let userId = null;
 
-    const employee_id = await generateEmployeeId();
+    const employee_id = await generateEmployeeId(offered_designation);
 
     if (userRes.rows.length > 0) {
       userId = userRes.rows[0].id;
