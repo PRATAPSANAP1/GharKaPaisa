@@ -1,6 +1,6 @@
 import React from 'react';
-import PartnerProducts from '../../partner/products/PartnerProducts';
+import PartnerCategoryOverview from '../../partner/dashboard/PartnerCategoryOverview';
 
-export default function EmployeeCreditCards({ defaultCategory }) {
-  return <PartnerProducts defaultCategory={defaultCategory} />;
+export default function EmployeeCreditCards({ defaultCategory = 'credit_card' }) {
+  return <PartnerCategoryOverview defaultCategory={defaultCategory} />;
 }

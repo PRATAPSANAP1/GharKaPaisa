@@ -271,8 +271,16 @@ const AppRoutes = () => {
             <Route path="/employee/terms" element={<TermsAcceptance />} />
             <Route path="/employee/kyc" element={<KYCSubmission />} />
             <Route path="/employee/credit-cards" element={<EmployeeCreditCards defaultCategory="credit_card" />} />
+            <Route path="/employee/credit-cards/:bankSlug" element={<PartnerEntityDetail />} />
+            <Route path="/employee/credit-cards/:bankSlug/:tab" element={<PartnerEntityDetail />} />
+
             <Route path="/employee/loans" element={<EmployeeCreditCards defaultCategory="loans" />} />
+            <Route path="/employee/loans/:loanTypeSlug" element={<PartnerEntityDetail />} />
+            <Route path="/employee/loans/:loanTypeSlug/product" element={<PartnerEntityDetail />} />
+
             <Route path="/employee/insurance" element={<EmployeeCreditCards defaultCategory="insurance" />} />
+            <Route path="/employee/insurance/:insuranceTypeSlug" element={<PartnerEntityDetail />} />
+            <Route path="/employee/insurance/:insuranceTypeSlug/product" element={<PartnerEntityDetail />} />
             <Route path="/employee/applications" element={<EmployeeApplications />} />
             <Route path="/employee/team" element={<MyTeam />} />
             <Route path="/employee/incentives" element={<MyIncentives />} />

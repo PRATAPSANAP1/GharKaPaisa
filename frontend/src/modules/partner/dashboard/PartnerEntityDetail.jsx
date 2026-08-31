@@ -43,26 +43,29 @@ export default function PartnerEntityDetail() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const isEmployeeMode = location.pathname.includes('/employee');
+  const baseRoute = isEmployeeMode ? '/employee' : '/partner';
+
   // Determine category, targetBank/type, back path, and title based on URL path
   let targetCategory = 'credit_card';
   let entitySlug = bankSlug || 'hdfc';
-  let backPath = '/partner/credit-cards';
+  let backPath = `${baseRoute}/credit-cards`;
   let backLabel = 'All Banks';
   let badgeLabel = 'Bank Credit Cards';
   let pageTitle = `🏦 ${getBankName(entitySlug)} Cards`;
 
-  if (location.pathname.includes('/partner/loans')) {
+  if (location.pathname.includes('/loans')) {
     targetCategory = 'loans';
     entitySlug = loanTypeSlug || bankSlug || 'personal-loan';
-    backPath = '/partner/loans';
+    backPath = `${baseRoute}/loans`;
     backLabel = 'All Loans';
     badgeLabel = 'Loan Category Catalog';
     const formattedName = entitySlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     pageTitle = `🏦 ${formattedName} Offers`;
-  } else if (location.pathname.includes('/partner/insurance')) {
+  } else if (location.pathname.includes('/insurance')) {
     targetCategory = 'insurance';
     entitySlug = insuranceTypeSlug || bankSlug || 'health-insurance';
-    backPath = '/partner/insurance';
+    backPath = `${baseRoute}/insurance`;
     backLabel = 'All Insurance';
     badgeLabel = 'Insurance Policy Catalog';
     const formattedName = entitySlug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());

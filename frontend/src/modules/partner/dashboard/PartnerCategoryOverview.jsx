@@ -313,7 +313,8 @@ export default function PartnerCategoryOverview({ defaultCategory = 'credit_card
       const updated = [bank.slug, ...filtered].slice(0, 8);
       localStorage.setItem('gkp_partner_recent_banks', JSON.stringify(updated));
     } catch (e) {}
-    navigate(`/partner/credit-cards/${bank.slug}`);
+    const basePath = location.pathname.startsWith('/employee') ? '/employee/credit-cards' : '/partner/credit-cards';
+    navigate(`${basePath}/${bank.slug}`);
   };
 
   const loanCategoriesList = useMemo(() => {
