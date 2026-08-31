@@ -3,7 +3,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { 
   FaUsers, FaUserCheck, FaSitemap, FaLink, FaSearch, 
   FaPlus, FaCheckCircle, FaTimesCircle, FaEye, FaEdit, FaCheck, FaLock,
-  FaFileAlt, FaVideo, FaUniversity, FaBuilding, FaBriefcase, FaIdCard, FaPhone, FaEnvelope, FaClock
+  FaFileAlt, FaVideo, FaUniversity, FaBuilding, FaBriefcase, FaIdCard, FaPhone, FaEnvelope, FaClock, FaUserCircle
 } from 'react-icons/fa';
 import api from '../../../services/api';
 
