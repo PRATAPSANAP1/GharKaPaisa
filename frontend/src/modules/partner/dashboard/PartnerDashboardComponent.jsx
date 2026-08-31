@@ -590,7 +590,7 @@ export default function PartnerDashboardComponent({ partner }) {
             <div style={{ height: '1px', width: '32px', background: '#B9A6EA' }} />
           </div>
           <span
-            onClick={() => navigate('/partner/sell-and-earn')}
+            onClick={() => navigate(isEmployee ? '/employee/credit-cards' : '/partner/sell-and-earn')}
             style={{ fontSize: '12.5px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#6E3FD6' }}
           >
             View All →
@@ -614,7 +614,7 @@ export default function PartnerDashboardComponent({ partner }) {
             bg="#E3F5EA"
             color="#2FA35B"
             icon={<PiggyBank size={19} />}
-            onClick={() => navigate('/partner/products?category=personal_loan')}
+            onClick={() => navigate(isEmployee ? '/employee/loans/personal-loan' : '/partner/products?category=personal_loan')}
             isDark={isDark}
             C={C}
           />
@@ -625,7 +625,7 @@ export default function PartnerDashboardComponent({ partner }) {
             bg="#EEE9FB"
             color="#6E3FD6"
             icon={<CreditCard size={19} />}
-            onClick={() => navigate('/partner/credit-cards')}
+            onClick={() => navigate(isEmployee ? '/employee/credit-cards' : '/partner/credit-cards')}
             isDark={isDark}
             C={C}
           />
@@ -636,7 +636,7 @@ export default function PartnerDashboardComponent({ partner }) {
             bg="#FCE7E1"
             color="#E8862E"
             icon={<ShieldPlus size={19} />}
-            onClick={() => navigate('/partner/products?category=insurance')}
+            onClick={() => navigate(isEmployee ? '/employee/insurance' : '/partner/products?category=insurance')}
             isDark={isDark}
             C={C}
           />
@@ -647,7 +647,7 @@ export default function PartnerDashboardComponent({ partner }) {
             bg="#E2ECFB"
             color="#3A78D6"
             icon={<Landmark size={19} />}
-            onClick={() => navigate('/partner/products?category=bank_account')}
+            onClick={() => navigate(isEmployee ? '/employee/credit-cards' : '/partner/products?category=bank_account')}
             isDark={isDark}
             C={C}
           />
@@ -658,7 +658,7 @@ export default function PartnerDashboardComponent({ partner }) {
             bg="#FCE7E1"
             color="#E0473E"
             icon={<TrendingUp size={19} />}
-            onClick={() => navigate('/partner/products?category=demat')}
+            onClick={() => navigate(isEmployee ? '/employee/credit-cards' : '/partner/products?category=demat')}
             isDark={isDark}
             C={C}
           />
@@ -669,7 +669,7 @@ export default function PartnerDashboardComponent({ partner }) {
             bg="#E3F5EA"
             color="#2FA35B"
             icon={<PiggyBank size={19} />}
-            onClick={() => navigate('/partner/products?category=investment')}
+            onClick={() => navigate(isEmployee ? '/employee/credit-cards' : '/partner/products?category=investment')}
             isDark={isDark}
             C={C}
           />
@@ -776,7 +776,7 @@ export default function PartnerDashboardComponent({ partner }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
               <h3 style={{ fontSize: '14px', fontWeight: 800, color: isDark ? C.text : '#111827', margin: 0 }}>Recent Applications</h3>
               <span
-                onClick={() => navigate('/partner/applications')}
+                onClick={() => navigate(isEmployee ? '/employee/applications' : '/partner/applications')}
                 style={{ fontSize: '12px', fontWeight: 700, color: '#6E3FD6', cursor: 'pointer' }}
               >
                 View All
