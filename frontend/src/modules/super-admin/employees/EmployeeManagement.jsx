@@ -203,8 +203,7 @@ export default function EmployeeManagement() {
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {[
             { id: 'all', label: 'All Employees Directory', icon: <FaUsers /> },
-            { id: 'hierarchy', label: 'Team Hierarchy Tree', icon: <FaSitemap /> },
-            { id: 'links', label: 'Product Links & Incentives', icon: <FaLink /> }
+            { id: 'hierarchy', label: 'Team Hierarchy Tree', icon: <FaSitemap /> }
           ].map(tab => (
             <button 
               key={tab.id}
@@ -316,9 +315,6 @@ export default function EmployeeManagement() {
                           </button>
                           <button onClick={() => { setHierarchyModalEmp(emp); setHierarchyForm({ hierarchy_level: emp.designation === 'Manager' ? 'MANAGER' : emp.designation === 'Team Leader' ? 'TEAM_LEADER' : 'TC', manager_id: emp.manager_id || '', team_leader_id: emp.team_leader_id || '' }); }} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <FaSitemap /> Assign Team
-                          </button>
-                          <button onClick={() => setLinkModalEmp(emp)} style={{ background: C.teal, color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <FaLink /> Links
                           </button>
                         </div>
                       </td>
