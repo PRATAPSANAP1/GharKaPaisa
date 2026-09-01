@@ -16,7 +16,8 @@ import {
   Package, 
   RotateCw, 
   AlertTriangle,
-  Eye
+  Eye,
+  Users
 } from 'lucide-react';
 
 export default function SuperAdminOverview() {
@@ -41,6 +42,7 @@ export default function SuperAdminOverview() {
   const [teamList, setTeamList] = useState([]);
   const [applicationsList, setApplicationsList] = useState([]);
   const [adminsList, setAdminsList] = useState([]);
+  const [employeesList, setEmployeesList] = useState([]);
   const [razorpayBalance, setRazorpayBalance] = useState(null);
 
   // Filters & Search
@@ -65,14 +67,15 @@ export default function SuperAdminOverview() {
     setRefreshing(true);
     setFetchError(null);
     try {
-      const [overviewRes, customersRes, partnersRes, teamRes, appsRes, adminsRes, walletBalRes] = await Promise.allSettled([
+      const [overviewRes, customersRes, partnersRes, teamRes, appsRes, adminsRes, walletBalRes, employeesRes] = await Promise.allSettled([
         api.get('/reports/overview'),
         api.get('/reports/customers'),
         api.get('/reports/export-partners'),
         api.get('/team/members'),
         api.get('/applications', { params: { limit: 100 } }),
         api.get('/superadmin/admins'),
-        api.get('/wallet/balance')
+        api.get('/wallet/balance'),
+        api.get('/employees')
       ]);
 
       let hasErrors = false;
@@ -100,6 +103,11 @@ export default function SuperAdminOverview() {
       if (adminsRes.status === 'fulfilled' && adminsRes.value.data?.success) {
         setAdminsList(adminsRes.value.data.data || []);
       } else { hasErrors = true; }
+
+      if (employeesRes.status === 'fulfilled' && employeesRes.value.data?.success) {
+        const empData = employeesRes.value.data.data;
+        setEmployeesList(Array.isArray(empData) ? empData : (empData?.employees || empData?.rows || []));
+      }
 
       if (walletBalRes.status === 'fulfilled' && walletBalRes.value.data?.success) {
         setRazorpayBalance(walletBalRes.value.data.data?.razorpay_balance);
@@ -220,6 +228,9 @@ export default function SuperAdminOverview() {
 
   // Metrics summary
   const stats = {
+    employees: parseInt(overviewData?.employees?.total_employees ?? employeesList.length ?? 0, 10),
+    activeEmployees: parseInt(overviewData?.employees?.active_employees ?? employeesList.filter(e => (e.employee_status || e.activation_status || 'active').toLowerCase() === 'active').length ?? 0, 10),
+
     customers: parseInt(overviewData?.customers?.total_customers ?? customersList.length ?? 0, 10),
     partners: parseInt(overviewData?.Partners?.total ?? partnersList.length ?? 0, 10),
     activePartners: parseInt(overviewData?.Partners?.active ?? partnersList.filter(p => (p.account_status || p.status) === 'active').length ?? 0, 10),
@@ -252,7 +263,7 @@ export default function SuperAdminOverview() {
   const isDataIntegrityMismatch = stats.totalApps !== processSum || stats.invalidProcessApps > 0;
 
 
-  // Top Metric Cards Row (Customers, Partners, Team Members, Applications, Admins, Transactions)
+  // Top Metric Cards Row (Customers, Partners, Employees, Team Members, Applications, Admins, Transactions)
   const topMetricsRow = [
     {
       id: 'customers',
@@ -273,6 +284,16 @@ export default function SuperAdminOverview() {
       color: '#10B981',
       bg: 'rgba(16, 185, 129, 0.1)',
       border: 'rgba(16, 185, 129, 0.25)',
+    },
+    {
+      id: 'employees',
+      tabId: 'employees',
+      label: 'Employees Network',
+      value: stats.employees.toLocaleString('en-IN'),
+      subtext: `${stats.activeEmployees} Active Employees`,
+      color: '#6366F1',
+      bg: 'rgba(99, 102, 241, 0.1)',
+      border: 'rgba(99, 102, 241, 0.25)',
     },
     {
       id: 'team',
@@ -367,7 +388,7 @@ export default function SuperAdminOverview() {
 
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(6, 1fr)',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(7, 1fr)',
         gap: '12px'
       }}>
         {topMetricsRow.map((card) => (
@@ -417,6 +438,7 @@ export default function SuperAdminOverview() {
           { id: 'overview', label: 'System Overview' },
           { id: 'customers', label: `Customers (${stats.customers})` },
           { id: 'partners', label: `Partners (${stats.partners})` },
+          { id: 'employees', label: `Employees (${stats.employees})` },
           { id: 'team', label: `Team Members (${stats.teamMembers})` },
           { id: 'applications', label: `Applications (${stats.totalApps})` },
           { id: 'admins', label: `Admins (${stats.admins})` },
@@ -459,6 +481,7 @@ export default function SuperAdminOverview() {
             {[
               { label: 'Total Admins', value: stats.admins, color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.12)', border: 'rgba(245, 158, 11, 0.3)', icon: <ShieldCheck size={22} color="#F59E0B" />, action: () => setActiveTab('admins') },
               { label: 'Active Admins', value: stats.activeAdmins, color: '#10B981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)', icon: <Zap size={22} color="#10B981" />, action: () => setActiveTab('admins') },
+              { label: 'Total Employees', value: stats.employees, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.3)', icon: <Users size={22} color="#6366F1" />, action: () => navigate('/super-admin/employees') },
               { label: 'Pending KYC', value: stats.pendingKycPartners, color: '#F97316', bg: 'rgba(249, 115, 22, 0.12)', border: 'rgba(249, 115, 22, 0.3)', icon: <Clock size={22} color="#F97316" />, action: () => navigate('/super-admin/partners?kyc_status=pending') },
               { label: 'Total Leads', value: stats.totalApps, color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.12)', border: 'rgba(59, 130, 246, 0.3)', icon: <FileText size={22} color="#3B82F6" />, action: () => navigate('/super-admin/leads') },
               { label: 'Pending Leads', value: stats.pendingApps, color: '#EAB308', bg: 'rgba(234, 179, 8, 0.12)', border: 'rgba(234, 179, 8, 0.3)', icon: <Clock size={22} color="#EAB308" />, action: () => navigate('/super-admin/leads?status=pending') },
@@ -532,20 +555,20 @@ export default function SuperAdminOverview() {
           </div>
 
           {/* Quick Platform Status Breakdown */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '16px' }}>
             <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Applications Process Breakdown</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
-                  <span>Partner Punch</span>
+                  <span>Punch Only</span>
                   <strong style={{ color: '#3B82F6' }}>{stats.leadPunchingApps}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
-                  <span>Linked Share</span>
+                  <span>Share Link</span>
                   <strong style={{ color: '#8B5CF6' }}>{stats.linkedShareApps}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
-                  <span>Direct Bank</span>
+                  <span>Direct Link</span>
                   <strong style={{ color: '#06B6D4' }}>{stats.directBankApps}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
@@ -564,6 +587,30 @@ export default function SuperAdminOverview() {
                 style={{ marginTop: '14px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: C.teal, color: '#fff', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
                 View Applications ({stats.totalApps}) →
+              </button>
+            </div>
+
+            <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Employees Network</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Total Employees</span>
+                  <strong>{stats.employees}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Active Employees</span>
+                  <strong style={{ color: '#10B981' }}>{stats.activeEmployees}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
+                  <span>Internal Staff</span>
+                  <strong style={{ color: '#6366F1' }}>{stats.employees}</strong>
+                </div>
+              </div>
+              <button 
+                onClick={() => navigate('/super-admin/employees')} 
+                style={{ marginTop: '14px', width: '100%', padding: '10px 14px', borderRadius: '8px', background: '#6366F1', color: '#fff', border: 'none', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                Manage Employees Directory →
               </button>
             </div>
 
@@ -738,6 +785,101 @@ export default function SuperAdminOverview() {
                       </td>
                     </tr>
                   ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: EMPLOYEES OVERVIEW */}
+      {activeTab === 'employees' && (
+        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: 0 }}>Employees Directory</h3>
+              <p style={{ fontSize: '13px', color: C.textLight, margin: '2px 0 0 0' }}>All registered employees, sales executives, and internal team staff across GharKaPaisa.</p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="Search employee code, name, mobile..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: '260px' }}
+              />
+              <button
+                onClick={() => navigate('/super-admin/employees')}
+                style={{ background: '#6366F1', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
+              >
+                ⚙️ Employee Operations
+              </button>
+            </div>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase' }}>
+                  <th style={{ padding: '12px 16px' }}>Employee Code</th>
+                  <th style={{ padding: '12px 16px' }}>Employee Name</th>
+                  <th style={{ padding: '12px 16px' }}>Email / Mobile</th>
+                  <th style={{ padding: '12px 16px' }}>Designation / Department</th>
+                  <th style={{ padding: '12px 16px' }}>Status</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {employeesList.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: C.textLight }}>No employee records found.</td>
+                  </tr>
+                ) : (
+                  employeesList
+                    .filter(e => {
+                      if (!searchQuery) return true;
+                      const q = searchQuery.toLowerCase();
+                      const name = (e.full_name || e.employee_name || '').toLowerCase();
+                      const code = (e.employee_id || e.emp_code || '').toLowerCase();
+                      const mobile = (e.mobile_number || e.mobile || '').toLowerCase();
+                      return name.includes(q) || code.includes(q) || mobile.includes(q);
+                    })
+                    .map((e, idx) => (
+                      <tr key={e.id || idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '12px 16px', fontWeight: 800, color: C.purple, fontFamily: 'monospace' }}>
+                          {String(e.employee_id || e.emp_code || 'EMP').replace(/^CAND/, 'YOH-SE')}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>
+                          {e.full_name || e.employee_name || 'Employee'}
+                        </td>
+                        <td style={{ padding: '12px 16px', color: C.textMid }}>
+                          {e.email_id || e.email || 'N/A'}<br/>
+                          <span style={{ fontSize: '11px', color: C.textLight }}>{e.mobile_number || e.mobile || 'N/A'}</span>
+                        </td>
+                        <td style={{ padding: '12px 16px', color: C.textMid }}>
+                          <strong>{e.designation || 'Sales Executive'}</strong>
+                          {e.department && <div style={{ fontSize: '11px', color: C.textLight }}>{e.department}</div>}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{
+                            fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px',
+                            background: (e.employee_status === 'active' || e.activation_status === 'ACTIVE' || e.is_active) ? '#ECFDF5' : '#FEF2F2',
+                            color: (e.employee_status === 'active' || e.activation_status === 'ACTIVE' || e.is_active) ? '#059669' : '#EF4444'
+                          }}>
+                            {((e.employee_status || e.activation_status || (e.is_active ? 'active' : 'inactive'))).toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                          <button
+                            onClick={() => navigate('/super-admin/employees')}
+                            style={{ background: C.teal, color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            👁️ View Management
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                )}
               </tbody>
             </table>
           </div>
