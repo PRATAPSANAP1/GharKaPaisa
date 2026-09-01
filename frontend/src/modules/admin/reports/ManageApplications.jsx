@@ -363,7 +363,7 @@ export default function ManageApplications() {
                     <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase" }}>
                       <th style={{ padding: "14px 16px" }}>App #</th>
                       <th style={{ padding: "14px 16px" }}>Customer Details</th>
-                      <th style={{ padding: "14px 16px" }}>Partner</th>
+                      <th style={{ padding: "14px 16px" }}>Referred By (Partner / Employee)</th>
                       <th style={{ padding: "14px 16px" }}>Product</th>
                       <th style={{ padding: "14px 16px" }}>Applied Amount</th>
                       <th style={{ padding: "14px 16px" }}>Commission</th>
@@ -377,6 +377,39 @@ export default function ManageApplications() {
                       const badge = getStatusBadgeStyle(app.status);
                       const formattedDate = app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
 
+                      const isEmp = Boolean(app.employee_name || app.emp_code || app.employee_id || app.submitter_role === 'EMPLOYEE');
+                      const isPtn = Boolean(app.Partner_first_name || app.partner_first_name || app.Partner_code || app.partner_code || app.partner_id);
+
+                      let referrerBadge = null;
+                      let referrerName = '';
+                      let referrerCode = '';
+
+                      if (isEmp) {
+                        referrerBadge = (
+                          <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, background: '#E0E7FF', color: '#3730A3' }}>
+                            👨‍💼 EMPLOYEE
+                          </span>
+                        );
+                        referrerName = app.employee_name || app.submitted_by_name || 'Employee';
+                        referrerCode = app.emp_code || (app.employee_id ? `EMP-${String(app.employee_id).substring(0, 6)}` : 'EMP');
+                      } else if (isPtn) {
+                        referrerBadge = (
+                          <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, background: '#ECFDF5', color: '#065F46' }}>
+                            🤝 PARTNER
+                          </span>
+                        );
+                        referrerName = `${app.Partner_first_name || app.partner_first_name || 'Partner'} ${app.Partner_last_name || app.partner_last_name || ''}`.trim();
+                        referrerCode = app.Partner_code || app.partner_code || 'N/A';
+                      } else {
+                        referrerBadge = (
+                          <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, background: '#F3F4F6', color: '#4B5563' }}>
+                            👤 DIRECT CUSTOMER
+                          </span>
+                        );
+                        referrerName = 'Direct Online';
+                        referrerCode = 'N/A';
+                      }
+
                       return (
                         <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
                           <td style={{ padding: "14px 16px", fontWeight: 700, fontMono: true }}>{app.app_number}</td>
@@ -385,15 +418,18 @@ export default function ManageApplications() {
                             <div style={{ fontSize: "11px", color: C.textLight }}>{app.customer_mobile}</div>
                           </td>
                           <td style={{ padding: "14px 16px" }}>
-                            <div>{app.Partner_first_name || app.partner_first_name || 'Direct'} {app.Partner_last_name || app.partner_last_name || ''}</div>
-                            <div style={{ fontSize: "11px", color: C.textLight }}>Code: {app.Partner_code || app.partner_code || 'N/A'}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                              {referrerBadge}
+                            </div>
+                            <div style={{ fontWeight: 700, fontSize: '13px' }}>{referrerName}</div>
+                            <div style={{ fontSize: "11px", color: C.textLight }}>Code: {referrerCode}</div>
                             <div style={{
                               marginTop: "4px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase", display: "inline-block",
                               padding: "2px 8px", borderRadius: "6px",
                               background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
                               color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
                             }}>
-                              {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? '🔗 Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? '📱 Customer Apply' : '✍️ Partner Punch'}
+                              {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? '🔗 Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? '📱 Customer Apply' : '✍️ Direct Punch'}
                             </div>
                           </td>
                           <td style={{ padding: "14px 16px" }}>
@@ -594,7 +630,16 @@ export default function ManageApplications() {
                     <div><span style={{ color: C.textLight }}>Occupation / Designation:</span> <strong style={{ color: C.text }}>{appDetail.designation || appDetail.occupation || '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Monthly Income / Salary:</span> <strong style={{ color: '#16a34a', fontWeight: 800 }}>{(appDetail.monthly_salary || appDetail.monthly_income) ? `₹${parseFloat(appDetail.monthly_salary || appDetail.monthly_income).toLocaleString('en-IN')}` : '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Residential Address:</span> <strong style={{ color: C.text }}>{[appDetail.address || appDetail.residential_address || appDetail.flat_no, appDetail.city, appDetail.state, appDetail.pincode].filter(Boolean).join(', ') || '—'}</strong></div>
-                    <div><span style={{ color: C.textLight }}>Partner Code & Name:</span> <strong style={{ color: C.text }}>{appDetail.partner_code ? `${appDetail.partner_code} (${appDetail.partner_first_name || ''} ${appDetail.partner_last_name || ''})` : 'Direct / Admin'}</strong></div>
+                    <div>
+                      <span style={{ color: C.textLight }}>Referred By (Partner / Employee):</span>{' '}
+                      <strong style={{ color: C.text }}>
+                        {appDetail.employee_name || appDetail.emp_code
+                          ? `👨‍💼 Employee: ${appDetail.employee_name} (${appDetail.emp_code || 'EMP'})`
+                          : appDetail.partner_code || appDetail.Partner_first_name || appDetail.partner_first_name
+                          ? `🤝 Partner: ${appDetail.partner_first_name || appDetail.Partner_first_name || ''} ${appDetail.partner_last_name || appDetail.Partner_last_name || ''} (${appDetail.partner_code || appDetail.Partner_code || 'N/A'})`.trim()
+                          : '👤 Direct / Customer Online'}
+                      </strong>
+                    </div>
                   </div>
                 </div>
 
