@@ -230,6 +230,7 @@ const walletCtrl = require('./modules/wallet/controller.js');
 const paymentCtrl = require('./modules/payment/payment.controller.js');
 app.post('/api/v1/partner/referral-click', partnerCtrl.invitePartnerClick);
 app.post('/api/v1/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
+app.post('/api/v1/webhooks/razorpay', walletCtrl.handleRazorpayWebhook);
 
 // Razorpay Standard Checkout Routes (Standardized on /api/v1/payment/*)
 app.post('/api/v1/payment/create-order', paymentCtrl.createOrder);
