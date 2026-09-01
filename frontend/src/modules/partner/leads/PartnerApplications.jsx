@@ -639,9 +639,9 @@ export default function PartnerApplications() {
       return { label: 'Share Link', color: '#14b8a6', bg: '#14b8a618', border: '#14b8a640' };
     }
     if (p.includes('direct') || p.includes('bank') || p.includes('partner_self')) {
-      return { label: 'Direct Apply', color: '#3b82f6', bg: '#3b82f618', border: '#3b82f640' };
+      return { label: 'Direct Link', color: '#3b82f6', bg: '#3b82f618', border: '#3b82f640' };
     }
-    return { label: 'Partner Punch', color: '#8b5cf6', bg: '#8b5cf618', border: '#8b5cf640' };
+    return { label: 'Punch Only', color: '#8b5cf6', bg: '#8b5cf618', border: '#8b5cf640' };
   };
 
   const getStepProgress = (status, commStatus) => {

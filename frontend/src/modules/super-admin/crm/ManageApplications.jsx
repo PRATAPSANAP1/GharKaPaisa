@@ -653,9 +653,9 @@ export default function ManageApplications() {
                 <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Process By / Channel</label>
                 <select style={{ ...S.input, width: '100%' }} value={processByFilter} onChange={e => setProcessByFilter(e.target.value)}>
                   <option value="">All Process Types</option>
-                  <option value="partner_punch">Partner Punch</option>
-                  <option value="partner_share">Partner Share Link</option>
-                  <option value="customer_direct">Customer Direct Apply</option>
+                  <option value="partner_punch">Punch Only</option>
+                  <option value="partner_share">Share Link</option>
+                  <option value="customer_direct">Direct Link</option>
                 </select>
               </div>
 
@@ -741,7 +741,7 @@ export default function ManageApplications() {
                           background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
                           color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
                         }}>
-                          {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? 'Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? 'Customer Apply' : 'Partner Punch'}
+                          {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? 'Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? 'Direct Link' : 'Punch Only'}
                         </div>
                       </td>
                       <td style={{ padding: '14px 16px' }}>
