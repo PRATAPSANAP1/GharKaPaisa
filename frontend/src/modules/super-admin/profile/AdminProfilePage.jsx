@@ -379,14 +379,14 @@ export default function AdminProfilePage() {
                   <div style={{ background: C.bg, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>RazorpayX Live Balance</span>
                     <div style={{ fontSize: '24px', fontWeight: 900, color: '#10B981', marginTop: '4px' }}>
-                      ₹{razorpayData ? parseFloat(razorpayData.available_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '2,00,000.00'}
+                      ₹{razorpayData ? parseFloat(razorpayData.available_balance ?? razorpayData.balance ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}
                     </div>
                   </div>
 
                   <div style={{ background: C.bg, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, textTransform: 'uppercase' }}>Merchant ID</span>
                     <div style={{ fontSize: '16px', fontWeight: 900, color: C.text, marginTop: '8px', fontFamily: 'monospace' }}>
-                      T4BVfpEJbKO8WV
+                      {razorpayData?.merchant_id || 'T4BVfpEJbKO8WV'}
                     </div>
                   </div>
 
@@ -415,25 +415,25 @@ export default function AdminProfilePage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
                   <div style={{ background: C.bgSecondary, padding: '12px 14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
                     <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Account Owner</span>
-                    <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginTop: '2px' }}>Sharad Kumar</strong>
-                    <span style={{ fontSize: '11px', color: C.teal, fontWeight: 700 }}>Role: Owner</span>
+                    <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginTop: '2px' }}>{user?.full_name || user?.first_name || 'Authorized Owner'}</strong>
+                    <span style={{ fontSize: '11px', color: C.teal, fontWeight: 700 }}>Role: {user?.role?.replace('_', ' ') || 'Owner'}</span>
                   </div>
 
                   <div style={{ background: C.bgSecondary, padding: '12px 14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
                     <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Merchant ID</span>
-                    <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginTop: '2px', fontFamily: 'monospace' }}>T4BVfpEJbKO8WV</strong>
+                    <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginTop: '2px', fontFamily: 'monospace' }}>{razorpayData?.merchant_id || 'T4BVfpEJbKO8WV'}</strong>
                     <span style={{ fontSize: '11px', color: C.textLight }}>Razorpay Corporate Merchant</span>
                   </div>
 
                   <div style={{ background: C.bgSecondary, padding: '12px 14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
                     <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Phone Number</span>
-                    <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginTop: '2px' }}>+91 8087 179438</strong>
+                    <strong style={{ fontSize: '14px', color: C.text, display: 'block', marginTop: '2px' }}>{user?.mobile || user?.phone || 'Registered Contact'}</strong>
                     <span style={{ fontSize: '11px', color: C.green, fontWeight: 700 }}>Registered & Verified</span>
                   </div>
 
                   <div style={{ background: C.bgSecondary, padding: '12px 14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
                     <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 700 }}>Login Email</span>
-                    <strong style={{ fontSize: '13.5px', color: C.text, display: 'block', marginTop: '2px' }}>sharadyohesa@gmail.com</strong>
+                    <strong style={{ fontSize: '13.5px', color: C.text, display: 'block', marginTop: '2px' }}>{user?.email || 'admin@gharkapaisa.in'}</strong>
                     <span style={{ fontSize: '11px', color: C.teal, fontWeight: 700 }}>Primary Admin Auth</span>
                   </div>
 
@@ -589,7 +589,7 @@ export default function AdminProfilePage() {
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Ramesh Kumar"
+                        placeholder="Enter full name"
                         value={beneficiaryForm.name}
                         onChange={e => setBeneficiaryForm({ ...beneficiaryForm, name: e.target.value })}
                         style={S.input}
