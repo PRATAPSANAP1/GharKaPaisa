@@ -1516,7 +1516,7 @@ const getApplication = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const { rows: [app] } = await query(`
+    let { rows: [app] } = await query(`
       SELECT a.*, 
         COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
         COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
