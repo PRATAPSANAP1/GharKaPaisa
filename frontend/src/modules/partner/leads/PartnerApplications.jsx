@@ -5,6 +5,7 @@ import api from '../../../services/api';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuthStore } from '../../../app/store/authStore';
 import AdminDocumentVerificationModal from '../../admin/reports/AdminDocumentVerificationModal';
+import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
 import { 
   Search, Filter, Download, Upload, CheckCircle2, Clock, 
   XCircle, AlertCircle, Phone, MessageSquare, ArrowUpRight, 
@@ -1545,63 +1546,12 @@ export default function PartnerApplications() {
         );
       })()}
 
-      {/* ═══ MODAL 5: EXPORT CSV DIALOG ═══ */}
-      {showExportModal && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', padding: 16 }}>
-          <div style={{ width: '100%', maxWidth: 460, background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Download size={18} color="#10b981" /> Export Applications CSV
-              </h3>
-              <button onClick={() => setShowExportModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
-            </div>
-
-            <p style={{ fontSize: 12.5, color: textMuted, margin: 0, lineHeight: 1.5 }}>
-              Download CSV report of applications owned by your account and your downline team members.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {teamMembers.length > 0 && (
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Filter Member</label>
-                  <select value={memberFilter} onChange={e => setMemberFilter(e.target.value)} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
-                    <option value="">All Team Members & Self</option>
-                    {teamMembers.map(m => (
-                      <option key={m.id || m.user_id} value={m.user_id || m.id}>
-                        {m.full_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.email} ({m.partner_code || 'Member'})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: textMuted, display: 'block', marginBottom: 4 }}>Filter Status</label>
-                <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...selectStyle, width: '100%', boxSizing: 'border-box' }}>
-                  <option value="">All Statuses</option>
-                  <option value="pending">Pending</option>
-                  <option value="submitted">Applied / Submitted</option>
-                  <option value="under_review">Under Review</option>
-                  <option value="approved">Approved</option>
-                  <option value="disbursed">Disbursed</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
-
-              <div style={{ fontSize: 12, fontWeight: 700, color: accent, background: `${accent}12`, padding: '10px 12px', borderRadius: 10 }}>
-                📊 Total Matching Records: <strong>{applications.length}</strong>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
-              <button type="button" onClick={() => setShowExportModal(false)} style={{ padding: '9px 18px', borderRadius: 12, border: `1px solid ${border}`, background: 'transparent', color: textPrimary, fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
-              <button type="button" onClick={handleExecuteExportCSV} style={{ padding: '9px 22px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Download size={14} /> Download CSV File
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ═══ MODAL 5: EXPORT APPLICATIONS MODAL ═══ */}
+      <ExportApplicationsModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        defaultApplications={applications}
+      />
 
       {/* ═══ MODAL 6: SHARE APPLICATION DETAIL LINK MODAL ═══ */}
       {showShareModal && shareData && (

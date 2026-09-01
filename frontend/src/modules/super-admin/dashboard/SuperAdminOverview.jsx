@@ -19,6 +19,7 @@ import {
   Eye,
   Users
 } from 'lucide-react';
+import DailyAnalyticsSection from '../../../components/Admin/DailyAnalyticsSection';
 
 export default function SuperAdminOverview() {
   const { C, isDark } = useTheme();
@@ -651,6 +652,9 @@ export default function SuperAdminOverview() {
               </div>
             </div>
           </div>
+
+          {/* Day-Wise Operational Analysis Section */}
+          <DailyAnalyticsSection />
 
         </div>
       )}

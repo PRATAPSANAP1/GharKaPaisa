@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import AdminDocumentVerificationModal from '../../admin/reports/AdminDocumentVerificationModal';
+import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
 import { 
   MdSearch, MdFilterList, MdCheckCircle, MdBlock, 
   MdCompareArrows, MdHistory, MdFileDownload, MdClose,
@@ -44,8 +45,8 @@ export default function ManageApplications() {
   const [activeTab, setActiveTab] = useState('applications'); // 'applications' | 'partner_share'
 
   const [applications, setApplications] = useState([]);
-  const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Pagination & Filter States
   const [page, setPage] = useState(1);
@@ -508,32 +509,7 @@ export default function ManageApplications() {
   };
 
   const handleExportCSV = () => {
-    if (applications.length === 0) return alert('No applications found to export.');
-    let csvContent = 'data:text/csv;charset=utf-8,';
-    csvContent += 'Application ID,Customer Name,Partner Code,Product,Bank,Status,Commission Status,Commission Amount,Created At\n';
-
-    applications.forEach(a => {
-      const row = [
-        `"${a.app_number}"`,
-        `"${a.customer_name}"`,
-        `"${a.Partner_code}"`,
-        `"${a.product_name}"`,
-        `"${a.bank_name}"`,
-        `"${a.status}"`,
-        `"${a.commission_status}"`,
-        `"₹${a.commission_amount || 0}"`,
-        `"${new Date(a.created_at).toLocaleDateString()}"`
-      ].join(',');
-      csvContent += row + '\n';
-    });
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'GKP_Applications_Queue.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    setIsExportModalOpen(true);
   };
 
   return (
@@ -1659,6 +1635,12 @@ export default function ManageApplications() {
         />
       )}
 
+      {/* Export Applications Modal */}
+      <ExportApplicationsModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        defaultApplications={applications}
+      />
     </div>
   );
 }

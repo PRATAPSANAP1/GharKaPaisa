@@ -543,6 +543,71 @@ const postScheduleReportController = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// GET /reports/daily-analytics — Day-wise analysis for Employee Logins, New Applications, Approved Applications
+const getDailyAnalytics = async (req, res, next) => {
+  try {
+    const { days = 14 } = req.query;
+    const numDays = Math.min(Math.max(parseInt(days, 10) || 14, 7), 60);
+
+    const { rows } = await query(`
+      WITH date_series AS (
+        SELECT generate_series(
+          CURRENT_DATE - INTERVAL '1 day' * ($1::int - 1),
+          CURRENT_DATE,
+          INTERVAL '1 day'
+        )::date AS day_date
+      ),
+      apps_daily AS (
+        SELECT 
+          created_at::date AS day_date,
+          COUNT(*)::int AS new_applications,
+          COUNT(*) FILTER (WHERE LOWER(status::text) IN ('approved','disbursed','commission_released','commission_received','super_admin_approved'))::int AS approved_applications
+        FROM applications
+        WHERE created_at >= CURRENT_DATE - INTERVAL '1 day' * $1::int
+        GROUP BY created_at::date
+      ),
+      emp_logins_daily AS (
+        SELECT 
+          last_login::date AS day_date,
+          COUNT(DISTINCT u.id)::int AS employee_logins
+        FROM users u
+        WHERE UPPER(u.role::text) IN ('EMPLOYEE', 'SALES_EXECUTIVE', 'FIELD_EXECUTIVE', 'HR')
+          AND u.last_login IS NOT NULL
+          AND u.last_login >= CURRENT_DATE - INTERVAL '1 day' * $1::int
+        GROUP BY u.last_login::date
+      )
+      SELECT 
+        TO_CHAR(ds.day_date, 'YYYY-MM-DD') AS date_iso,
+        TO_CHAR(ds.day_date, 'DD Mon YYYY') AS formatted_date,
+        COALESCE(e.employee_logins, 0)::int AS employee_logins,
+        COALESCE(a.new_applications, 0)::int AS new_applications,
+        COALESCE(a.approved_applications, 0)::int AS approved_applications
+      FROM date_series ds
+      LEFT JOIN apps_daily a ON a.day_date = ds.day_date
+      LEFT JOIN emp_logins_daily e ON e.day_date = ds.day_date
+      ORDER BY ds.day_date DESC;
+    `, [numDays]);
+
+    const totals = rows.reduce(
+      (acc, r) => {
+        acc.employee_logins += parseInt(r.employee_logins, 10) || 0;
+        acc.new_applications += parseInt(r.new_applications, 10) || 0;
+        acc.approved_applications += parseInt(r.approved_applications, 10) || 0;
+        return acc;
+      },
+      { employee_logins: 0, new_applications: 0, approved_applications: 0 }
+    );
+
+    return success(res, {
+      period_days: numDays,
+      daily_metrics: rows,
+      summary_totals: totals
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = { 
   getApplicationsReport,
   getCustomersReport, 
@@ -563,5 +628,6 @@ module.exports = {
   getBanksReportController,
   getRevenueReportController,
   postReportExportController,
-  postScheduleReportController
+  postScheduleReportController,
+  getDailyAnalytics
 };

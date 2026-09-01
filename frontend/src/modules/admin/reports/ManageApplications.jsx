@@ -4,6 +4,7 @@ import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers, Eye } from 'lucide-react';
 import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
+import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
 import { useAuthStore } from '../../../app/store/authStore';
 
 export default function ManageApplications() {
@@ -36,6 +37,7 @@ export default function ManageApplications() {
   const [selectedApp, setSelectedApp] = useState(null);
   const [appDetail, setAppDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [timelines, setTimelines] = useState([]);
   const [superAdminRemark, setSuperAdminRemark] = useState("");
   const [submittingApprove, setSubmittingApprove] = useState(false);
@@ -308,6 +310,13 @@ export default function ManageApplications() {
           </select>
           <button type="submit" style={{ ...S.btn("primary", false), padding: "10px 20px" }}>
             Search
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsExportModalOpen(true)}
+            style={{ ...S.btn("outline", false), padding: "10px 18px", display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto" }}
+          >
+            <Icons.download size={16} /> Export Applications
           </button>
         </form>
       </div>
@@ -715,6 +724,12 @@ export default function ManageApplications() {
           onRefresh={fetchApplications}
         />
       )}
+      {/* Export Applications Modal */}
+      <ExportApplicationsModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        defaultApplications={apps}
+      />
     </div>
   );
 }

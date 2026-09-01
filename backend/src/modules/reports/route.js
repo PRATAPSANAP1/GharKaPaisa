@@ -30,5 +30,6 @@ router.get('/payouts-export', reportCtrl.exportPayoutsReport);
 router.get('/partners-export', reportCtrl.exportPartnersReport);
 router.get('/export-partners', reportCtrl.exportPartnersReport);
 router.get('/application-clicks', reportCtrl.getApplicationClickReport);
+router.get('/daily-analytics', reportCtrl.getDailyAnalytics);
 
 module.exports = router;

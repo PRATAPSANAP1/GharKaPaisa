@@ -6,6 +6,7 @@ import {
   Users, FileText, Wallet, Clock, TrendingUp, CheckCircle2, 
   AlertCircle, RefreshCw, Shield, Layers, Award, ArrowUpRight, BarChart3
 } from 'lucide-react';
+import DailyAnalyticsSection from '../../../components/Admin/DailyAnalyticsSection';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -139,6 +140,10 @@ export default function AdminDashboard() {
           </div>
         ))}
       </div>
+
+      {/* Day-Wise Analysis Section */}
+      <DailyAnalyticsSection />
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
         
         {/* Top Performing Partners Table */}
