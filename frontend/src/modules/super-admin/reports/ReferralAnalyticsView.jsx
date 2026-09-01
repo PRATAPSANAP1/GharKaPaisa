@@ -149,7 +149,7 @@ export default function ReferralAnalyticsView() {
             color: activeTab === 'employee' ? C.teal : C.textMid
           }}
         >
-          👨‍💼 Employee Referral Hub ({employee_referral_summary.total_employee_referrals})
+          Employee Referral Hub ({employee_referral_summary.total_employee_referrals})
         </button>
         <button
           onClick={() => setActiveTab('partner')}
@@ -164,7 +164,7 @@ export default function ReferralAnalyticsView() {
             color: activeTab === 'partner' ? C.blue : C.textMid
           }}
         >
-          🤝 Partner Downline Network ({total_team_members})
+          Partner Downline Network ({total_team_members})
         </button>
       </div>
 

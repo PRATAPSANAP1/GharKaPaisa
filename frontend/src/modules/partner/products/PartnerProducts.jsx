@@ -2404,7 +2404,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                   gap: '8px'
                 }}
               >
-                ✍️ Fill Customer Details as Partner
+                Fill Customer Details as Partner
               </button>
             </div>
 

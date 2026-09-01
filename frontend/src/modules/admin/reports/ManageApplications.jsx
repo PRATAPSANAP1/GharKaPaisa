@@ -387,7 +387,7 @@ export default function ManageApplications() {
                       if (isEmp) {
                         referrerBadge = (
                           <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, background: '#E0E7FF', color: '#3730A3' }}>
-                            👨‍💼 EMPLOYEE
+                            EMPLOYEE
                           </span>
                         );
                         referrerName = app.employee_name || app.submitted_by_name || 'Employee';
@@ -395,7 +395,7 @@ export default function ManageApplications() {
                       } else if (isPtn) {
                         referrerBadge = (
                           <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, background: '#ECFDF5', color: '#065F46' }}>
-                            🤝 PARTNER
+                            PARTNER
                           </span>
                         );
                         referrerName = `${app.Partner_first_name || app.partner_first_name || 'Partner'} ${app.Partner_last_name || app.partner_last_name || ''}`.trim();
@@ -403,7 +403,7 @@ export default function ManageApplications() {
                       } else {
                         referrerBadge = (
                           <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, background: '#F3F4F6', color: '#4B5563' }}>
-                            👤 DIRECT CUSTOMER
+                            DIRECT CUSTOMER
                           </span>
                         );
                         referrerName = 'Direct Online';
@@ -429,7 +429,7 @@ export default function ManageApplications() {
                               background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
                               color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
                             }}>
-                              {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? '🔗 Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? '📱 Customer Apply' : '✍️ Direct Punch'}
+                              {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? 'Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? 'Customer Apply' : 'Direct Punch'}
                             </div>
                           </td>
                           <td style={{ padding: "14px 16px" }}>
@@ -634,10 +634,10 @@ export default function ManageApplications() {
                       <span style={{ color: C.textLight }}>Referred By (Partner / Employee):</span>{' '}
                       <strong style={{ color: C.text }}>
                         {appDetail.employee_name || appDetail.emp_code
-                          ? `👨‍💼 Employee: ${appDetail.employee_name} (${appDetail.emp_code || 'EMP'})`
+                          ? `Employee: ${appDetail.employee_name} (${appDetail.emp_code || 'EMP'})`
                           : appDetail.partner_code || appDetail.Partner_first_name || appDetail.partner_first_name
-                          ? `🤝 Partner: ${appDetail.partner_first_name || appDetail.Partner_first_name || ''} ${appDetail.partner_last_name || appDetail.Partner_last_name || ''} (${appDetail.partner_code || appDetail.Partner_code || 'N/A'})`.trim()
-                          : '👤 Direct / Customer Online'}
+                          ? `Partner: ${appDetail.partner_first_name || appDetail.Partner_first_name || ''} ${appDetail.partner_last_name || appDetail.Partner_last_name || ''} (${appDetail.partner_code || appDetail.Partner_code || 'N/A'})`.trim()
+                          : 'Direct / Customer Online'}
                       </strong>
                     </div>
                   </div>

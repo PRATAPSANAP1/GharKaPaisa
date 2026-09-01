@@ -565,7 +565,7 @@ export default function ManageCommissions() {
                 >
                   <option value="all">👥 All Roles (Partner & Team)</option>
                   <option value="partner">⭐ Primary Partners</option>
-                  <option value="team">🤝 Team Members (Downlines)</option>
+                  <option value="team">Team Members (Downlines)</option>
                 </select>
               </div>
 

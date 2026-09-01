@@ -465,7 +465,6 @@ export default function InterviewRegistration() {
                 justifyContent: 'space-between'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '20px' }}>🤝</span>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>Employee Referral Applied</div>
                     <div style={{ fontSize: '12px', color: C.textMid }}>You were referred by Employee Code: <strong>{referredByCode}</strong></div>

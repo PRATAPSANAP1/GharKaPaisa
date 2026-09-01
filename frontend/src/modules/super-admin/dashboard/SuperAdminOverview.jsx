@@ -1058,7 +1058,7 @@ export default function SuperAdminOverview() {
           <div style={{ width: '100%', maxWidth: '760px', maxHeight: '90vh', overflowY: 'auto', background: C.card, borderRadius: '20px', padding: '24px', border: `1px solid ${C.border}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '16px', marginBottom: '20px' }}>
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>🤝 Partner 360 Master Record</h3>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>Partner 360 Master Record</h3>
                 <span style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>Code: {selectedPartner.partner_code}</span>
               </div>
               <button onClick={() => setSelectedPartner(null)} style={{ background: 'none', border: 'none', fontSize: '20px', color: C.textLight, cursor: 'pointer' }}>✕</button>
@@ -1196,7 +1196,7 @@ export default function SuperAdminOverview() {
               </div>
 
               <div style={{ background: C.bg, padding: '12px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
-                <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>🤝 Partner & Channel</span>
+                <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase' }}>Partner & Channel</span>
                 <div style={{ fontWeight: 800, color: C.purple, fontSize: '14px', marginTop: '4px' }}>{selectedAppTrace.application?.partner_code || 'DIRECT'}</div>
                 <div style={{ fontSize: '12px', color: C.textMid }}>{selectedAppTrace.application?.partner_name || 'Direct Bank Flow'}</div>
                 <div style={{ fontSize: '11px', color: C.textLight }}>Lead ID: {selectedAppTrace.application?.lead_id || 'N/A'}</div>
