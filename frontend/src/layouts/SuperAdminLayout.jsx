@@ -177,7 +177,7 @@ const SuperAdminLayout = () => {
       ]
     },
     {
-      title: "LEAD TRACKING",
+      title: "LEAD & APPLICATIONS",
       items: [
         { path: '/super-admin/leads', label: 'Leads', icon: <Icons.trending size={16} /> },
         { path: '/super-admin/direct-leads', label: 'Direct Card Leads', icon: <Icons.creditCard size={16} /> },
@@ -185,7 +185,7 @@ const SuperAdminLayout = () => {
       ]
     },
     {
-      title: "PRODUCTS & PARTNERS",
+      title: "PRODUCTS & BANKS",
       items: [
         { path: '/super-admin/banks', label: 'Manage Banks', icon: <Icons.wallet size={16} /> },
         {
@@ -202,18 +202,23 @@ const SuperAdminLayout = () => {
       ]
     },
     {
+      title: "FINANCE",
+      items: [
+        { path: '/super-admin/wallet', label: 'Wallet & Settlements', icon: <Icons.wallet size={16} /> },
+        { path: '/super-admin/commissions', label: 'Commission Manager', icon: <Icons.gift size={16} /> }
+      ]
+    },
+    {
       title: "MODIFY WEBSITE",
       isModifyGroup: true,
       items: [
         { path: '/super-admin/banners', label: 'Banners', icon: <Icons.gift size={16} /> },
-        { path: '/super-admin/sections', label: 'Homepage Sections', icon: <Icons.profile size={16} /> },
+        { path: '/super-admin/sections', label: 'Homepage Sections', icon: <Icons.profile size={16} /> }
       ]
     },
     {
-      title: "SYSTEM UTILITIES",
+      title: "SYSTEM & REPORTS",
       items: [
-        { path: '/super-admin/wallet', label: 'Wallet & Settlements', icon: <Icons.wallet size={16} /> },
-        { path: '/super-admin/commissions', label: 'Commission Manager', icon: <Icons.gift size={16} /> },
         { path: '/super-admin/announcements', label: 'Announcements Manager', icon: <Icons.gift size={16} /> },
         { path: '/super-admin/support', label: 'Support Tickets', icon: <Icons.profile size={16} /> },
         { path: '/super-admin/audit', label: 'Audit Logs', icon: <Icons.clock size={16} /> },

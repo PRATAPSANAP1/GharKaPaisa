@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import api from '../services/api';
+import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
 
 // Import local fallback partner banner images
 import offerBanner from '../modules/partner/banner/offer.png';
@@ -9,25 +10,24 @@ import referenceBanner from '../modules/partner/banner/reference.png';
 import teamBanner from '../modules/partner/banner/team.png';
 import team2Banner from '../modules/partner/banner/team (2).png';
 
-// Default static fallback banners using the 4 images in partner/banner
 const defaultBanners = [
   {
     id: 'team-1',
     image: teamBanner,
     alt: 'Add Team Member - Build Your Network',
-    link: '/partner/team'
+    link: '/partner/team-network'
   },
   {
     id: 'team-2',
     image: team2Banner,
     alt: 'Team Growth & Rewards',
-    link: '/partner/team'
+    link: '/partner/team-network'
   },
   {
     id: 'refer',
     image: referenceBanner,
     alt: 'Refer and Earn',
-    link: '/partner/referral'
+    link: '/partner/team-network'
   },
   {
     id: 'offer',
@@ -67,7 +67,7 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
             subtitle: b.subtitle,
             btn_text: b.btn_text,
             alt: b.title || 'Partner Banner',
-            link: b.click_url || (showOnlyRefer ? '/partner/referral' : '/partner/team')
+            link: b.click_url || (showOnlyRefer ? '/partner/team-network' : '/partner/team-network')
           }));
           setDynamicBanners(mapped);
         }
@@ -79,22 +79,31 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
     fetchTeamBanners();
   }, [showOnlyRefer]);
 
-  // Determine active list of banners (Dynamic from Super Admin or Default Fallback)
+  // Determine active list of banners
   const activeBanners = dynamicBanners.length > 0
     ? dynamicBanners
-    : (showOnlyRefer ? defaultBanners.filter(b => b.id.includes('refer')) : defaultBanners.filter(b => b.id.includes('team')));
+    : (showOnlyRefer ? defaultBanners.filter(b => b.id.includes('refer')) : defaultBanners);
 
+  // Infinite Auto-Rotate Slider Effect (Loops continuously)
   useEffect(() => {
-    if (!isMobile || activeBanners.length <= 1) return;
-    
-    const interval = setInterval(() => {
-      if (!isPaused) {
-        setCurrentIndex((prev) => (prev + 1) % activeBanners.length);
-      }
-    }, 4000); // Rotate every 4 seconds
+    if (activeBanners.length <= 1 || isPaused) return;
 
-    return () => clearInterval(interval);
-  }, [isPaused, activeBanners.length, isMobile]);
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % activeBanners.length);
+    }, 4000); // Rotates every 4 seconds continuously
+
+    return () => clearInterval(timer);
+  }, [isPaused, activeBanners.length]);
+
+  const handleNext = (e) => {
+    if (e) e.stopPropagation();
+    setCurrentIndex((prev) => (prev + 1) % activeBanners.length);
+  };
+
+  const handlePrev = (e) => {
+    if (e) e.stopPropagation();
+    setCurrentIndex((prev) => (prev - 1 + activeBanners.length) % activeBanners.length);
+  };
 
   const handleBannerClick = (link) => {
     if (!link) return;
@@ -108,34 +117,39 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
   const isEmployee = location.pathname.includes('/employee');
   if (isEmployee || !activeBanners.length) return null;
 
-  // On desktop, render team & offer banners in a clean responsive grid
-  if (!isMobile && activeBanners.length > 1) {
-    return (
-      <div style={{ display: 'grid', gridTemplateColumns: activeBanners.length > 2 ? 'repeat(auto-fit, minmax(280px, 1fr))' : 'repeat(2, 1fr)', gap: '16px', width: '100%' }}>
-        {activeBanners.map((banner) => (
+  return (
+    <div
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      style={{
+        width: '100%',
+        position: 'relative',
+        borderRadius: '20px',
+        overflow: 'hidden',
+        boxShadow: isDark ? 'none' : '0 8px 24px rgba(0,0,0,0.08)',
+        border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`,
+        background: isDark ? C.card : '#FFFFFF',
+        height: isMobile ? '160px' : '280px'
+      }}
+    >
+      {/* Banner Slides Stack */}
+      {activeBanners.map((banner, idx) => {
+        const isActive = idx === currentIndex;
+        return (
           <div
-            key={banner.id}
+            key={banner.id || idx}
             onClick={() => handleBannerClick(banner.link)}
             style={{
-              width: '100%',
-              borderRadius: '16px',
-              overflow: 'hidden',
+              position: 'absolute',
+              inset: 0,
+              opacity: isActive ? 1 : 0,
+              pointerEvents: isActive ? 'auto' : 'none',
+              transition: 'opacity 0.6s ease-in-out',
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
-              transition: 'transform 0.2s ease, boxShadow 0.2s ease',
-              border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`,
-              aspectRatio: '16 / 7',
-              height: 'auto',
-              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               background: C.bgSecondary
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 14px rgba(0,0,0,0.06)';
             }}
           >
             <img
@@ -149,9 +163,11 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
                 height: '100%',
                 objectFit: 'cover',
                 objectPosition: 'center',
-                display: 'block',
+                display: 'block'
               }}
             />
+
+            {/* Title / Overlay Subtitle if available */}
             {banner.title && (
               <div
                 style={{
@@ -159,20 +175,20 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  padding: '14px 18px',
+                  padding: '16px 20px',
                   background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)',
                   color: '#ffffff',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '2px',
+                  gap: '4px',
                   zIndex: 2
                 }}
               >
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#ffffff' }}>
+                <h3 style={{ margin: 0, fontSize: isMobile ? '13px' : '16px', fontWeight: 800, color: '#ffffff' }}>
                   {banner.title}
                 </h3>
                 {banner.subtitle && (
-                  <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.9)', opacity: 0.9 }}>
+                  <p style={{ margin: 0, fontSize: isMobile ? '11px' : '12px', color: 'rgba(255,255,255,0.9)' }}>
                     {banner.subtitle}
                   </p>
                 )}
@@ -181,8 +197,8 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
                     style={{
                       marginTop: '6px',
                       alignSelf: 'flex-start',
-                      padding: '4px 12px',
-                      borderRadius: '6px',
+                      padding: '5px 14px',
+                      borderRadius: '8px',
                       background: C.primary || '#6E3FD6',
                       color: '#ffffff',
                       fontWeight: 700,
@@ -197,103 +213,74 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
               </div>
             )}
           </div>
-        ))}
-      </div>
-    );
-  }
+        );
+      })}
 
-  // On mobile or single banner mode
-  const currentBanner = activeBanners[currentIndex] || activeBanners[0];
-
-  return (
-    <div
-      style={{
-        width: '100%',
-        position: 'relative',
-        overflow: 'hidden',
-        borderRadius: '16px',
-        cursor: 'pointer',
-        aspectRatio: '16 / 7',
-        height: 'auto',
-        boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
-        border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`,
-        background: C.bgSecondary
-      }}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onClick={() => handleBannerClick(currentBanner?.link)}
-    >
-      <img
-        src={currentBanner?.image}
-        alt={currentBanner?.alt}
-        onError={(e) => {
-          e.currentTarget.src = showOnlyRefer ? referenceBanner : teamBanner;
-        }}
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: 'center',
-          display: 'block',
-        }}
-      />
-
-      {currentBanner?.title && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: '12px 16px',
-            background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)',
-            color: '#ffffff',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2px',
-            zIndex: 2
-          }}
-        >
-          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#ffffff' }}>
-            {currentBanner.title}
-          </h3>
-          {currentBanner.subtitle && (
-            <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.9)', opacity: 0.9 }}>
-              {currentBanner.subtitle}
-            </p>
-          )}
-          {currentBanner.btn_text && (
-            <button
-              style={{
-                marginTop: '4px',
-                alignSelf: 'flex-start',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                background: C.primary || '#6E3FD6',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '10px',
-                border: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              {currentBanner.btn_text}
-            </button>
-          )}
-        </div>
+      {/* Navigation Arrows */}
+      {activeBanners.length > 1 && (
+        <>
+          <button
+            onClick={handlePrev}
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              background: 'rgba(0,0,0,0.45)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 10,
+              transition: 'background 0.2s'
+            }}
+          >
+            <MdChevronLeft size={24} />
+          </button>
+          <button
+            onClick={handleNext}
+            style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              background: 'rgba(0,0,0,0.45)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#ffffff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 10,
+              transition: 'background 0.2s'
+            }}
+          >
+            <MdChevronRight size={24} />
+          </button>
+        </>
       )}
 
-      {/* Dots indicator - only show if multiple banners */}
+      {/* Carousel Indicator Dots */}
       {activeBanners.length > 1 && (
         <div
           style={{
             position: 'absolute',
-            bottom: '10px',
+            bottom: '12px',
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
-            gap: '6px',
-            zIndex: 3
+            gap: '8px',
+            zIndex: 10
           }}
         >
           {activeBanners.map((_, index) => (
@@ -304,11 +291,13 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
                 setCurrentIndex(index);
               }}
               style={{
-                width: index === currentIndex ? '18px' : '6px',
-                height: '6px',
-                borderRadius: '3px',
+                width: index === currentIndex ? '24px' : '8px',
+                height: '8px',
+                borderRadius: '4px',
                 backgroundColor: index === currentIndex ? '#FFFFFF' : 'rgba(255, 255, 255, 0.5)',
-                transition: 'all 0.3s ease',
+                boxShadow: index === currentIndex ? '0 2px 6px rgba(0,0,0,0.3)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
               }}
             />
           ))}

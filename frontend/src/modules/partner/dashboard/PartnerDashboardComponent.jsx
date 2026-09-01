@@ -112,7 +112,7 @@ const ServiceItem = ({ icon, label, bg, color, onClick, isDark, C }) => (
   </div>
 );
 
-const EarnCard = ({ title, value, valueColor, bg, color, icon, onClick, isDark, C }) => (
+const EarnCard = ({ title, value, valueColor, bg, color, icon, onClick, isDark, C, hideEarn = false }) => (
   <div
     onClick={onClick}
     style={{
@@ -123,7 +123,7 @@ const EarnCard = ({ title, value, valueColor, bg, color, icon, onClick, isDark, 
       flexDirection: 'column',
       justifyContent: 'space-between',
       cursor: 'pointer',
-      minHeight: '120px',
+      minHeight: hideEarn ? '92px' : '120px',
       boxShadow: isDark ? 'none' : '0 2px 10px rgba(0,0,0,0.05)',
       border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.04)'}`,
       transition: 'transform 0.15s ease, boxShadow 0.15s ease'
@@ -146,12 +146,19 @@ const EarnCard = ({ title, value, valueColor, bg, color, icon, onClick, isDark, 
         {icon}
       </IconCircle>
     </div>
-    <div style={{ marginTop: '8px' }}>
-      <p style={{ fontSize: '10.5px', color: isDark ? C.textLight : '#6B7280', margin: '0 0 2px 0' }}>Earn upto</p>
-      <p style={{ fontWeight: 800, fontSize: '17px', color: valueColor, margin: 0, whiteSpace: 'nowrap' }}>
-        {value}
-      </p>
-    </div>
+    {!hideEarn ? (
+      <div style={{ marginTop: '8px' }}>
+        <p style={{ fontSize: '10.5px', color: isDark ? C.textLight : '#6B7280', margin: '0 0 2px 0' }}>Earn upto</p>
+        <p style={{ fontWeight: 800, fontSize: '17px', color: valueColor, margin: 0, whiteSpace: 'nowrap' }}>
+          {value}
+        </p>
+      </div>
+    ) : (
+      <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', fontWeight: 700, color: color }}>
+        <span>Apply Now</span>
+        <span style={{ fontSize: '14px' }}>→</span>
+      </div>
+    )}
   </div>
 );
 
@@ -274,8 +281,16 @@ export default function PartnerDashboardComponent({ partner }) {
     fetchAllDashboardData();
   }, [partnerId]);
 
-  // Auto-rotate banners
-  const bannerSlides = banners.map(b => ({
+  // Auto-rotate banners with default fallback list if API is empty
+  const defaultOfferBanners = [
+    { title: 'Lifetime Free Credit Cards', image_url: 'lifetimefree card.png', click_url: '/partner/credit-cards' },
+    { title: 'Instant Personal Loans', image_url: 'loan.png', click_url: '/partner/products?category=personal_loan' },
+    { title: 'Smart EMI Credit Cards', image_url: 'smart emi.png', click_url: '/partner/credit-cards' },
+    { title: 'HDFC Bank Pixel Credit Card', image_url: 'hdfc pixel card.png', click_url: '/partner/credit-cards' },
+    { title: 'Exclusive Financial Offers', image_url: 'offerbanner.png', click_url: '/partner/products' }
+  ];
+
+  const bannerSlides = (banners.length > 0 ? banners : defaultOfferBanners).map(b => ({
     title: b.title,
     subtitle: b.subtitle,
     btnText: b.btn_text || 'Apply Now',
@@ -295,7 +310,7 @@ export default function PartnerDashboardComponent({ partner }) {
     if (isPaused || bannerSlides.length <= 1) return;
     const interval = setInterval(() => {
       setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
-    }, 5000);
+    }, 4000);
     return () => clearInterval(interval);
   }, [isPaused, bannerSlides.length]);
 
@@ -580,12 +595,12 @@ export default function PartnerDashboardComponent({ partner }) {
 
 
 
-        {/* ──── SELL & EARN HEADER & GRID ──── */}
+        {/* ──── SELL & EARN / PRODUCTS HEADER & GRID ──── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: '0', paddingRight: '0', marginTop: '28px', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, justifyContent: 'center' }}>
             <div style={{ height: '1px', width: '32px', background: '#B9A6EA' }} />
             <span style={{ fontWeight: 800, fontSize: '13px', letterSpacing: '0.05em', color: isDark ? C.text : '#111827', textTransform: 'uppercase' }}>
-              SELL &amp; EARN
+              {isEmployee ? 'PRODUCTS' : 'SELL & EARN'}
             </span>
             <div style={{ height: '1px', width: '32px', background: '#B9A6EA' }} />
           </div>
@@ -597,7 +612,7 @@ export default function PartnerDashboardComponent({ partner }) {
           </span>
         </div>
 
-        {/* Sell & Earn Grid (Reference Design) */}
+        {/* Sell & Earn / Products Grid */}
         <div
           style={{
             display: 'grid',
@@ -617,6 +632,7 @@ export default function PartnerDashboardComponent({ partner }) {
             onClick={() => navigate(isEmployee ? '/employee/loans/personal-loan' : '/partner/products?category=personal_loan')}
             isDark={isDark}
             C={C}
+            hideEarn={isEmployee}
           />
           <EarnCard
             title="Credit Cards"
@@ -628,6 +644,7 @@ export default function PartnerDashboardComponent({ partner }) {
             onClick={() => navigate(isEmployee ? '/employee/credit-cards' : '/partner/credit-cards')}
             isDark={isDark}
             C={C}
+            hideEarn={isEmployee}
           />
           <EarnCard
             title="Insurance"
@@ -639,6 +656,7 @@ export default function PartnerDashboardComponent({ partner }) {
             onClick={() => navigate(isEmployee ? '/employee/insurance' : '/partner/products?category=insurance')}
             isDark={isDark}
             C={C}
+            hideEarn={isEmployee}
           />
           <EarnCard
             title="Bank Accounts"
@@ -650,6 +668,7 @@ export default function PartnerDashboardComponent({ partner }) {
             onClick={() => navigate(isEmployee ? '/employee/credit-cards' : '/partner/products?category=bank_account')}
             isDark={isDark}
             C={C}
+            hideEarn={isEmployee}
           />
           <EarnCard
             title="Demat Accounts"
@@ -661,6 +680,7 @@ export default function PartnerDashboardComponent({ partner }) {
             onClick={() => navigate(isEmployee ? '/employee/credit-cards' : '/partner/products?category=demat')}
             isDark={isDark}
             C={C}
+            hideEarn={isEmployee}
           />
           <EarnCard
             title="Investment"
@@ -672,6 +692,7 @@ export default function PartnerDashboardComponent({ partner }) {
             onClick={() => navigate(isEmployee ? '/employee/credit-cards' : '/partner/products?category=investment')}
             isDark={isDark}
             C={C}
+            hideEarn={isEmployee}
           />
         </div>
 
