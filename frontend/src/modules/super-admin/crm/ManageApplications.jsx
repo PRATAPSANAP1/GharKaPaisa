@@ -952,7 +952,7 @@ export default function ManageApplications() {
 
             {/* Drawer Tab Header */}
             <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, background: C.card }}>
-              {['overview', 'timeline', 'documents', 'notes'].map((t) => (
+              {['overview', 'timeline', 'documents'].map((t) => (
                 <button
                   key={t}
                   onClick={() => setActiveDrawerTab(t)}
@@ -1066,23 +1066,6 @@ export default function ManageApplications() {
                 </div>
               )}
 
-              {/* Tab 4: Notes & Remarks */}
-              {activeDrawerTab === 'notes' && (
-                <div>
-                  <form onSubmit={handleAddNote} style={{ marginBottom: '16px' }}>
-                    <textarea
-                      style={{ ...S.input, height: '70px', padding: '10px', fontSize: '12.5px', marginBottom: '8px' }}
-                      placeholder="Add an administrative remark or internal note..."
-                      value={noteForm.note}
-                      onChange={e => setNoteForm({ ...noteForm, note: e.target.value })}
-                    />
-                    <button type="submit" disabled={postingNote} style={{ padding: '6px 14px', borderRadius: '8px', background: C.purple, color: '#fff', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer' }}>
-                      {postingNote ? 'Posting...' : 'Post Remark'}
-                    </button>
-                  </form>
-                </div>
-              )}
-
             </div>
 
             {/* ── MODAL BOTTOM ACTIONS (PROCESS-AWARE - MAX 3 BUTTONS PER ROW) ── */}
@@ -1134,15 +1117,8 @@ export default function ManageApplications() {
                       Reject App
                     </button>
 
-                    {/* Button 5: Add Remark (Digital) / Bank Final Status (Physical) */}
-                    {isDigital ? (
-                      <button
-                        onClick={() => setActiveDrawerTab('notes')}
-                        style={{ padding: '8px 4px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
-                      >
-                        Add Remark
-                      </button>
-                    ) : (
+                    {/* Button 5: Bank Final Status (Physical Only) */}
+                    {!isDigital && (
                       <button
                         onClick={() => openAuditModal(selectedApp, 'final')}
                         style={{ padding: '8px 4px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
