@@ -315,8 +315,8 @@ const AppRoutes = () => {
             <Route path="/admin/banks" element={<ManageBanks />} />
             <Route path="/admin/products/:categorySlug" element={<ManageAdminProducts />} />
             <Route path="/admin/products" element={<ManageAdminProducts />} />
-            <Route path="/admin/product-links" element={<Navigate to="/admin/products/credit_card" replace />} />
-            <Route path="/admin/products/links" element={<Navigate to="/admin/products/credit_card" replace />} />
+            <Route path="/admin/product-links" element={<ManageProductLinks />} />
+            <Route path="/admin/products/links" element={<ManageProductLinks />} />
 
             {/* Admin Bank-Wise Credit Card Applications */}
             <Route path="/admin/credit-cards/:bankSlug/:tab" element={<ManageBankCardApplications />} />
@@ -363,7 +363,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/banners" element={<ManageBanners />} />
             <Route path="/super-admin/products/:categorySlug" element={<ManageAdminProducts />} />
             <Route path="/super-admin/products" element={<ManageAdminProducts />} />
-            <Route path="/super-admin/product-links" element={<Navigate to="/super-admin/products/credit_card" replace />} />
+            <Route path="/super-admin/product-links" element={<ManageProductLinks />} />
             <Route path="/super-admin/banks" element={<ManageBanks />} />
             <Route path="/super-admin/sections" element={<ManageSections />} />
             <Route path="/super-admin/services" element={<ManageServices />} />

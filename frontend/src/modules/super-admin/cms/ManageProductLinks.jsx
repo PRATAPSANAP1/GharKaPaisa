@@ -4,8 +4,9 @@ import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { 
   MdFilterList, MdSearch, MdEdit, MdContentCopy, 
   MdHistory, MdBlock, MdCheckCircle, MdLibraryAdd, 
-  MdFileDownload, MdArrowBack, MdClose 
+  MdFileDownload, MdArrowBack, MdClose, MdDelete, MdAddLink, MdLaunch
 } from 'react-icons/md';
+import AssignEmployeeLinksModal from './AssignEmployeeLinksModal';
 
 const CATEGORIES = [
   { id: 'credit_card', label: 'Credit Card' },
@@ -31,12 +32,59 @@ export default function ManageProductLinks() {
   const { C } = useTheme();
   const S = makeS(C);
 
+  const [activeTab, setActiveTab] = useState('global'); // 'global' | 'employee_links'
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+
   const [products, setProducts] = useState([]);
   const [banks, setBanks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  // Employee Custom Links state
+  const [assignedLinks, setAssignedLinks] = useState([]);
+  const [empLinksLoading, setEmpLinksLoading] = useState(false);
+  const [empSearchQuery, setEmpSearchQuery] = useState('');
+  const [empBankFilterVal, setEmpBankFilterVal] = useState('');
+
+  const fetchAssignedEmployeeLinks = async () => {
+    setEmpLinksLoading(true);
+    try {
+      const res = await api.get('/employees/assigned-product-links', {
+        params: {
+          search: empSearchQuery.trim() || undefined,
+          bank_id: empBankFilterVal || undefined
+        }
+      });
+      if (res.data?.success) {
+        setAssignedLinks(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to load assigned employee links:', err);
+    } finally {
+      setEmpLinksLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'employee_links') {
+      fetchAssignedEmployeeLinks();
+    }
+  }, [activeTab, empBankFilterVal]);
+
+  const handleDeleteAssignedLink = async (id, empName, prodName) => {
+    if (!window.confirm(`Are you sure you want to unassign custom bank link for ${empName} (${prodName})?`)) return;
+    try {
+      const res = await api.delete(`/employees/assigned-product-links/${id}`);
+      if (res.data?.success) {
+        triggerToast('Employee custom bank link unassigned successfully!');
+        fetchAssignedEmployeeLinks();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to unassign product link.');
+    }
+  };
 
   // Filters & Query
   const [search, setSearch] = useState('');
@@ -296,12 +344,17 @@ export default function ManageProductLinks() {
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>Product Link Management</h2>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>Configure application, redirection, and campaign attributes for products</p>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>Manage global product links and assign employee-specific bank referral links</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          {activeTab === 'employee_links' && (
+            <button onClick={() => setAssignModalOpen(true)} style={{ ...S.btn('primary'), display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <MdAddLink size={18} /> Assign Bank Link to Employee(s)
+            </button>
+          )}
           <button onClick={exportCSV} style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px' }}>
             <MdFileDownload /> Export CSV
           </button>
@@ -311,41 +364,217 @@ export default function ManageProductLinks() {
         </div>
       </div>
 
-      {/* Filters Area */}
-      <div style={{ ...S.card, padding: '16px', marginBottom: '24px' }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end' }}>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Search Products</label>
-            <div style={{ position: 'relative' }}>
-              <input 
-                style={{ ...S.input, paddingLeft: '32px' }} 
-                placeholder="Search name or bank..." 
-                value={search} 
-                onChange={e => setSearch(e.target.value)} 
-              />
-              <MdSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} />
+      {/* Tab Navigation */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px' }}>
+        <button
+          onClick={() => setActiveTab('global')}
+          style={{
+            padding: '10px 18px', borderRadius: '10px', fontWeight: 800, fontSize: '13.5px', border: 'none', cursor: 'pointer',
+            background: activeTab === 'global' ? C.primary : C.bgSecondary,
+            color: activeTab === 'global' ? '#fff' : C.textMid,
+            transition: 'all 0.15s'
+          }}
+        >
+          Global Product Links
+        </button>
+        <button
+          onClick={() => setActiveTab('employee_links')}
+          style={{
+            padding: '10px 18px', borderRadius: '10px', fontWeight: 800, fontSize: '13.5px', border: 'none', cursor: 'pointer',
+            background: activeTab === 'employee_links' ? C.primary : C.bgSecondary,
+            color: activeTab === 'employee_links' ? '#fff' : C.textMid,
+            display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s'
+          }}
+        >
+          <span>Employee Custom Bank Links</span>
+          <span style={{
+            fontSize: '11px', fontWeight: 700,
+            background: activeTab === 'employee_links' ? 'rgba(255,255,255,0.25)' : `${C.primary}15`,
+            color: activeTab === 'employee_links' ? '#fff' : C.primary,
+            padding: '2px 8px', borderRadius: '10px'
+          }}>
+            {assignedLinks.length}
+          </span>
+        </button>
+      </div>
+
+      {/* EMPLOYEE CUSTOM LINKS VIEW */}
+      {activeTab === 'employee_links' ? (
+        <div>
+          {/* Filter Bar for Employee Custom Links */}
+          <div style={{ ...S.card, padding: '16px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+              <div style={{ flex: 1, minWidth: '220px', position: 'relative' }}>
+                <input 
+                  style={{ ...S.input, paddingLeft: '32px' }} 
+                  placeholder="Search employee name, code, bank, or product..." 
+                  value={empSearchQuery} 
+                  onChange={e => setEmpSearchQuery(e.target.value)} 
+                />
+                <MdSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} />
+              </div>
+              <div style={{ width: '200px' }}>
+                <select 
+                  style={S.input} 
+                  value={empBankFilterVal} 
+                  onChange={e => setEmpBankFilterVal(e.target.value)}
+                >
+                  <option value="">All Banks</option>
+                  {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+              <button 
+                type="button" 
+                onClick={fetchAssignedEmployeeLinks} 
+                style={S.btn('primary')}
+              >
+                Search
+              </button>
+              <button 
+                type="button" 
+                onClick={() => { setEmpSearchQuery(''); setEmpBankFilterVal(''); setTimeout(fetchAssignedEmployeeLinks, 0); }} 
+                style={S.btn('outline')}
+              >
+                Reset
+              </button>
             </div>
           </div>
-          <div style={{ width: '180px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Category</label>
-            <select style={S.input} value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1); }}>
-              <option value="">All Categories</option>
-              {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
+
+          {/* Assigned Links Table */}
+          {empLinksLoading ? (
+            <div style={{ ...S.card, padding: '48px', textAlign: 'center' }}>
+              <div style={{ display: 'inline-block', width: '32px', height: '32px', border: `3px solid ${C.border}`, borderTopColor: C.primary, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <div style={{ marginTop: '12px', fontSize: '14px', color: C.textLight }}>Loading assigned employee links...</div>
+            </div>
+          ) : assignedLinks.length === 0 ? (
+            <div style={{ ...S.card, padding: '48px', textAlign: 'center' }}>
+              <h3 style={{ color: C.text, margin: 0 }}>No employee custom bank links assigned yet</h3>
+              <p style={{ color: C.textLight, fontSize: '13px', margin: '8px 0 16px' }}>
+                Click <strong>"Assign Bank Link to Employee(s)"</strong> above to assign direct bank referral URLs to specific employees.
+              </p>
+              <button onClick={() => setAssignModalOpen(true)} style={{ ...S.btn('primary'), display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <MdAddLink size={18} /> Assign Custom Bank Link
+              </button>
+            </div>
+          ) : (
+            <div style={{ ...S.card, padding: 0, overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, fontSize: '11px', textTransform: 'uppercase', color: C.textLight }}>
+                      <th style={{ padding: '14px 16px' }}>Employee</th>
+                      <th style={{ padding: '14px 16px' }}>Bank & Product</th>
+                      <th style={{ padding: '14px 16px' }}>Assigned Custom Bank URL</th>
+                      <th style={{ padding: '14px 16px' }}>Incentive</th>
+                      <th style={{ padding: '14px 16px' }}>Status</th>
+                      <th style={{ padding: '14px 16px' }}>Assigned By</th>
+                      <th style={{ padding: '14px 16px', textAlign: 'center' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody style={{ fontSize: '13px' }}>
+                    {assignedLinks.map(link => (
+                      <tr key={link.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
+                        <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                          <div style={{ fontWeight: 800, color: C.text }}>{link.employee_name}</div>
+                          <div style={{ fontSize: '11px', color: C.primary, fontWeight: 700, marginTop: '2px' }}>
+                            {link.emp_code || 'YOH-SE'}
+                          </div>
+                          {link.employee_mobile && (
+                            <div style={{ fontSize: '10.5px', color: C.textLight }}>{link.employee_mobile}</div>
+                          )}
+                        </td>
+                        <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                          <div style={{ fontWeight: 800, color: C.text }}>{link.product_name}</div>
+                          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
+                            {link.bank_name || 'Bank'} • <span style={{ textTransform: 'capitalize' }}>{link.product_category?.replace(/_/g, ' ')}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px 16px', verticalAlign: 'top', maxWidth: '340px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: C.bgSecondary, padding: '6px 10px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
+                            <span style={{ fontFamily: 'monospace', fontSize: '11px', color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                              {link.employee_referral_url}
+                            </span>
+                            <button onClick={() => handleCopy(link.employee_referral_url)} title="Copy URL" style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.primary, padding: '2px' }}>
+                              <MdContentCopy size={14} />
+                            </button>
+                            <a href={link.employee_referral_url} target="_blank" rel="noreferrer" title="Open Link" style={{ color: C.textLight, padding: '2px', display: 'flex' }}>
+                              <MdLaunch size={14} />
+                            </a>
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px 16px', verticalAlign: 'top', fontWeight: 800, color: C.green }}>
+                          ₹{link.incentive_amount || 0}
+                        </td>
+                        <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
+                          <span style={{
+                            fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '12px',
+                            background: link.status === 'ACTIVE' ? `${C.green}15` : `${C.red}15`,
+                            color: link.status === 'ACTIVE' ? C.green : C.red
+                          }}>
+                            {link.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px 16px', verticalAlign: 'top', fontSize: '11px', color: C.textLight }}>
+                          <div>{link.assigned_by_name || 'Super Admin'}</div>
+                          <div style={{ marginTop: '2px' }}>{new Date(link.updated_at || link.created_at).toLocaleDateString()}</div>
+                        </td>
+                        <td style={{ padding: '14px 16px', verticalAlign: 'middle', textAlign: 'center' }}>
+                          <button 
+                            onClick={() => handleDeleteAssignedLink(link.id, link.employee_name, link.product_name)}
+                            title="Unassign Link"
+                            style={{ border: `1px solid ${C.red}40`, background: `${C.red}10`, color: C.red, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', fontWeight: 600 }}
+                          >
+                            <MdDelete size={14} /> Unassign
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* GLOBAL PRODUCT LINKS VIEW */
+        <>
+          {/* Filters Area */}
+          <div style={{ ...S.card, padding: '16px', marginBottom: '24px' }}>
+            <form onSubmit={handleSearchSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1, minWidth: '200px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Search Products</label>
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    style={{ ...S.input, paddingLeft: '32px' }} 
+                    placeholder="Search name or bank..." 
+                    value={search} 
+                    onChange={e => setSearch(e.target.value)} 
+                  />
+                  <MdSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} />
+                </div>
+              </div>
+              <div style={{ width: '180px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Category</label>
+                <select style={S.input} value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1); }}>
+                  <option value="">All Categories</option>
+                  {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
+              </div>
+              <div style={{ width: '180px' }}>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Bank Partner</label>
+                <select style={S.input} value={bankFilter} onChange={e => { setBankFilter(e.target.value); setPage(1); }}>
+                  <option value="">All Banks</option>
+                  {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button type="submit" style={S.btn('primary')}>Search</button>
+                <button type="button" onClick={() => { setSearch(''); setCategoryFilter(''); setBankFilter(''); setPage(1); setTimeout(fetchData, 0); }} style={S.btn('outline')}>Reset</button>
+              </div>
+            </form>
           </div>
-          <div style={{ width: '180px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Bank Partner</label>
-            <select style={S.input} value={bankFilter} onChange={e => { setBankFilter(e.target.value); setPage(1); }}>
-              <option value="">All Banks</option>
-              {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="submit" style={S.btn('primary')}>Search</button>
-            <button type="button" onClick={() => { setSearch(''); setCategoryFilter(''); setBankFilter(''); setPage(1); setTimeout(fetchData, 0); }} style={S.btn('outline')}>Reset</button>
-          </div>
-        </form>
-      </div>
+        </>
+      )}
 
       {errorMsg && <div style={{ padding: '16px', background: `${C.red}10`, color: C.red, marginBottom: '16px', borderRadius: '8px' }}>{errorMsg}</div>}
 
@@ -704,6 +933,18 @@ export default function ManageProductLinks() {
           </div>
         </div>
       )}
+
+      {/* ASSIGN EMPLOYEE LINKS MODAL */}
+      <AssignEmployeeLinksModal
+        isOpen={assignModalOpen}
+        onClose={() => setAssignModalOpen(false)}
+        onSuccess={(msg) => {
+          triggerToast(msg || 'Custom bank links assigned successfully!');
+          fetchAssignedEmployeeLinks();
+        }}
+        banks={banks}
+        products={products}
+      />
     </div>
   );
 }

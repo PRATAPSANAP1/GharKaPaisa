@@ -195,7 +195,8 @@ const SuperAdminLayout = () => {
           subItems: [
             { path: '/super-admin/products/credit_card', label: 'Credit Cards', icon: <Icons.creditCard size={16} /> },
             { path: '/super-admin/products/loans', label: 'Loans', icon: <Icons.trending size={16} /> },
-            { path: '/super-admin/products/insurance', label: 'Insurance', icon: <Icons.wallet size={16} /> }
+            { path: '/super-admin/products/insurance', label: 'Insurance', icon: <Icons.wallet size={16} /> },
+            { path: '/super-admin/product-links', label: 'Product & Employee Links', icon: <Icons.wallet size={16} /> }
           ]
         }
       ]
