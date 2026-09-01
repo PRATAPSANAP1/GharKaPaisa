@@ -955,6 +955,28 @@ const adminAdjustWallet = async (partnerId, amount, txnType, description, proces
   try {
     await client.query('BEGIN');
 
+    // Resolve canonical partner_profiles.id from user_id if needed
+    let resolvedPartnerId = partnerId;
+    const { rows: [pRec] } = await client.query(
+      `SELECT id FROM partner_profiles WHERE id = $1 OR user_id = $1 LIMIT 1`,
+      [partnerId]
+    );
+
+    if (pRec) {
+      resolvedPartnerId = pRec.id;
+    } else {
+      const partnerCode = 'SYS' + String(Math.floor(10000 + Math.random() * 90000));
+      const { rows: [uRec] } = await client.query(`SELECT first_name, last_name FROM users WHERE id = $1`, [partnerId]);
+      const { rows: [newP] } = await client.query(`
+        INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
+        VALUES ($1, $2, $3, $4, 'active', 'approved')
+        RETURNING id
+      `, [partnerId, partnerCode, uRec?.first_name || 'Admin', uRec?.last_name || 'System']);
+      resolvedPartnerId = newP.id;
+    }
+
+    partnerId = resolvedPartnerId;
+
     // Get/ensure wallet
     let { rows: [wallet] } = await client.query(
       `SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
