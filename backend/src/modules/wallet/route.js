@@ -30,6 +30,9 @@ router.patch('/admin/fund-requests/:id/reconcile', authorize('SUPER_ADMIN', 'ADM
 
 router.post('/admin/adjust', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.adminAdjustWalletController);
 router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
+router.post('/admin/withdrawals/:id/approve', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.approveWithdrawalController);
+router.post('/admin/withdrawals/:id/reject', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.rejectWithdrawalController);
+router.post('/admin/withdrawals/:id/process', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);
 router.get('/my-withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
 router.get('/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
 router.patch('/withdrawals/:id/process', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.processWithdrawalRequest);

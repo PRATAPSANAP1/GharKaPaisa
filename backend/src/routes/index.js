@@ -36,6 +36,7 @@ const chatbotRoute = require('../modules/chatbot/chatbot.routes.js');
 
 // ── Webhooks & Public Actions ──────────────────────────────────
 router.post('/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
+router.post('/webhooks/razorpay', walletCtrl.handleRazorpayWebhook);
 router.post('/partner/referral-click', partnerCtrl.invitePartnerClick);
 
 // ── Public Homepage & Catalog Content (No auth required) ────────

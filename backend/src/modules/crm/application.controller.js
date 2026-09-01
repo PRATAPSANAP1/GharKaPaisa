@@ -2301,6 +2301,8 @@ const submitPartnerApplication = async (req, res, next) => {
       if (emp) empId = emp.id;
     }
 
+    const appStatus = is_draft ? 'draft' : 'applied';
+
     const { rows: [app] } = await client.query(`
       INSERT INTO applications
         (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, employee_id, loan_amount, commission_amount,
