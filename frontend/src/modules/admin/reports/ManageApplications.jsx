@@ -391,7 +391,11 @@ export default function ManageApplications() {
                           </span>
                         );
                         referrerName = app.employee_name || app.submitted_by_name || 'Employee';
-                        referrerCode = app.emp_code || (app.employee_id ? `EMP-${String(app.employee_id).substring(0, 6)}` : 'EMP');
+                        let rawCode = app.emp_code || (app.employee_id ? String(app.employee_id) : 'EMP');
+                        if (rawCode.startsWith('CAND')) {
+                          rawCode = rawCode.replace(/^CAND/, 'YOH-SE');
+                        }
+                        referrerCode = rawCode;
                       } else if (isPtn) {
                         referrerBadge = (
                           <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, background: '#ECFDF5', color: '#065F46' }}>
@@ -634,7 +638,7 @@ export default function ManageApplications() {
                       <span style={{ color: C.textLight }}>Referred By (Partner / Employee):</span>{' '}
                       <strong style={{ color: C.text }}>
                         {appDetail.employee_name || appDetail.emp_code
-                          ? `Employee: ${appDetail.employee_name} (${appDetail.emp_code || 'EMP'})`
+                          ? `Employee: ${appDetail.employee_name} (${String(appDetail.emp_code || 'EMP').replace(/^CAND/, 'YOH-SE')})`
                           : appDetail.partner_code || appDetail.Partner_first_name || appDetail.partner_first_name
                           ? `Partner: ${appDetail.partner_first_name || appDetail.Partner_first_name || ''} ${appDetail.partner_last_name || appDetail.Partner_last_name || ''} (${appDetail.partner_code || appDetail.Partner_code || 'N/A'})`.trim()
                           : 'Direct / Customer Online'}

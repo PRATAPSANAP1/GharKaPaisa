@@ -1303,7 +1303,12 @@ const listApplications = async (req, res, next) => {
           ap.partner_code,
           ap.first_name as partner_first_name,
           ap.last_name as partner_last_name,
-          emp.employee_id as emp_code,
+          COALESCE(
+            NULLIF(CASE WHEN su.employee_id LIKE 'YOH-%' THEN su.employee_id END, ''),
+            NULLIF(CASE WHEN emp.employee_id LIKE 'YOH-%' THEN emp.employee_id END, ''),
+            NULLIF(su.employee_id, ''),
+            NULLIF(emp.employee_id, '')
+          ) as emp_code,
           emp.full_name as employee_name,
           emp.designation as employee_designation,
           su.role as submitter_role,
@@ -1534,7 +1539,13 @@ const getApplication = async (req, res, next) => {
         p.name as product_name, p.category, p.features, p.commission_type, p.commission_value,
         b.name as bank_name, b.short_code as bank_code,
         ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name,
-        emp.employee_id as emp_code, emp.full_name as employee_name, emp.designation as employee_designation
+        COALESCE(
+          NULLIF(CASE WHEN su.employee_id LIKE 'YOH-%' THEN su.employee_id END, ''),
+          NULLIF(CASE WHEN emp.employee_id LIKE 'YOH-%' THEN emp.employee_id END, ''),
+          NULLIF(su.employee_id, ''),
+          NULLIF(emp.employee_id, '')
+        ) as emp_code,
+        emp.full_name as employee_name, emp.designation as employee_designation
       FROM applications a
       LEFT JOIN leads l ON l.id = a.lead_id
       LEFT JOIN customers c ON c.id = a.customer_id
@@ -1542,6 +1553,7 @@ const getApplication = async (req, res, next) => {
       LEFT JOIN banks b ON b.id = p.bank_id
       LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
       LEFT JOIN employees emp ON (emp.id = a.employee_id OR emp.user_id = a.submitted_by)
+      LEFT JOIN users su ON su.id = a.submitted_by
       WHERE a.id::text = $1 OR a.app_number = $1 OR a.tracking_token = $1 OR a.lead_id::text = $1 OR a.bank_application_number = $1 OR a.bank_ref_number = $1
     `, [id]);
 
