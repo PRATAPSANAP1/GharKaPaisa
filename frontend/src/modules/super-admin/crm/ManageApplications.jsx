@@ -86,6 +86,34 @@ export default function ManageApplications() {
   const [noteForm, setNoteForm] = useState({ note: '', visibility: 'public' });
   const [postingNote, setPostingNote] = useState(false);
 
+  // Partner / Employee Filter lists
+  const [partnersList, setPartnersList] = useState([]);
+  const [employeesList, setEmployeesList] = useState([]);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const [pRes, eRes] = await Promise.all([
+          api.get('/admin/partners', { params: { limit: 1000 } }).catch(() => null),
+          api.get('/employees', { params: { limit: 1000 } }).catch(() => null)
+        ]);
+        if (pRes?.data?.success && Array.isArray(pRes.data.data)) {
+          setPartnersList(pRes.data.data);
+        } else if (Array.isArray(pRes?.data)) {
+          setPartnersList(pRes.data);
+        }
+        if (eRes?.data?.success && Array.isArray(eRes.data.data)) {
+          setEmployeesList(eRes.data.data);
+        } else if (Array.isArray(eRes?.data)) {
+          setEmployeesList(eRes.data);
+        }
+      } catch (err) {
+        console.error('Error fetching agents for filter:', err);
+      }
+    };
+    fetchAgents();
+  }, []);
+
   // Table row 3-dots action menu open state
   const [actionMenuAppId, setActionMenuAppId] = useState(null);
 
@@ -130,21 +158,39 @@ export default function ManageApplications() {
   const fetchApplications = async () => {
     setLoading(true);
     try {
+      const activePartnerId = (partnerFilter && partnerFilter !== 'ALL_PARTNERS' && partnerFilter !== 'ALL_EMPLOYEES') ? partnerFilter.trim() : undefined;
+      const activeSourceType = sourceTypeFilter !== 'all' ? sourceTypeFilter : (partnerFilter === 'ALL_PARTNERS' ? 'partner' : partnerFilter === 'ALL_EMPLOYEES' ? 'employee' : undefined);
+
       const res = await api.get('/applications', {
         params: {
           page,
           limit,
           status: statusFilter !== 'all' ? statusFilter : undefined,
           commission_status: commFilter !== 'all' ? commFilter : undefined,
-          partner_id: partnerFilter.trim() || undefined,
+          partner_id: activePartnerId,
+          source_type: activeSourceType,
           process_by: processTypeFilter !== 'all' ? processTypeFilter : undefined,
           search: search.trim() || undefined
         }
       });
       if (res.data?.success) {
-        setApplications(res.data.data || []);
+        let list = res.data.data || [];
+        if (partnerFilter === 'ALL_PARTNERS' || sourceTypeFilter === 'partner') {
+          list = list.filter(a => a.partner_code || a.partner_id || (a.process_by && String(a.process_by).toLowerCase().includes('partner')));
+        } else if (partnerFilter === 'ALL_EMPLOYEES' || sourceTypeFilter === 'employee') {
+          list = list.filter(a => a.employee_code || a.employee_id || (a.process_by && String(a.process_by).toLowerCase().includes('employee')));
+        } else if (partnerFilter && partnerFilter !== 'ALL_PARTNERS' && partnerFilter !== 'ALL_EMPLOYEES') {
+          const pf = partnerFilter.toLowerCase();
+          list = list.filter(a => 
+            (a.partner_code && a.partner_code.toLowerCase().includes(pf)) ||
+            (a.employee_code && a.employee_code.toLowerCase().includes(pf)) ||
+            (a.partner_id && String(a.partner_id).toLowerCase().includes(pf)) ||
+            (a.employee_id && String(a.employee_id).toLowerCase().includes(pf))
+          );
+        }
+        setApplications(list);
         setTotalPages(res.data.pagination?.pages || 1);
-        setTotalCount(res.data.pagination?.total || (res.data.data ? res.data.data.length : 0));
+        setTotalCount(res.data.pagination?.total || list.length);
       }
     } catch (e) {
       console.error('Applications load failed:', e);
@@ -520,22 +566,68 @@ export default function ManageApplications() {
 
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Source Type</label>
-                <select style={{ ...S.input, height: '36px', fontSize: '12.5px' }} value={sourceTypeFilter} onChange={e => setSourceTypeFilter(e.target.value)}>
-                  <option value="all">All Sources</option>
-                  <option value="partner">Partner</option>
-                  <option value="employee">Employee</option>
-                  <option value="customer">Customer</option>
+                <select 
+                  style={{ ...S.input, height: '36px', fontSize: '12.5px' }} 
+                  value={sourceTypeFilter} 
+                  onChange={e => {
+                    const val = e.target.value;
+                    setSourceTypeFilter(val);
+                    if (val === 'partner') setPartnerFilter('ALL_PARTNERS');
+                    else if (val === 'employee') setPartnerFilter('ALL_EMPLOYEES');
+                    else if (val === 'all') setPartnerFilter('');
+                  }}
+                >
+                  <option value="all">All Sources (Partners &amp; Employees &amp; Direct)</option>
+                  <option value="partner">All Partners Only</option>
+                  <option value="employee">All Employees Only</option>
+                  <option value="customer">Customer Only</option>
                 </select>
               </div>
 
               <div>
-                <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Partner / Employee Code</label>
-                <input
+                <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Partner / Employee Agent</label>
+                <select
                   style={{ ...S.input, height: '36px', fontSize: '12.5px' }}
-                  placeholder="e.g. AG21200 or EMP1024"
                   value={partnerFilter}
-                  onChange={e => setPartnerFilter(e.target.value)}
-                />
+                  onChange={e => {
+                    const val = e.target.value;
+                    setPartnerFilter(val);
+                    if (val === 'ALL_PARTNERS') setSourceTypeFilter('partner');
+                    else if (val === 'ALL_EMPLOYEES') setSourceTypeFilter('employee');
+                  }}
+                >
+                  <option value="">All Partners &amp; Employees</option>
+                  <option value="ALL_PARTNERS">All Partners Only</option>
+                  <option value="ALL_EMPLOYEES">All Employees Only</option>
+                  
+                  {partnersList.length > 0 && (
+                    <optgroup label="── PARTNERS ──">
+                      {partnersList.map((p, idx) => {
+                        const code = p.partner_code || p.code || p.referral_code || p.id;
+                        const name = p.full_name || p.name || p.partner_name || 'Partner';
+                        return (
+                          <option key={`p_${p.id || code || idx}`} value={code}>
+                            {name} ({code})
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  )}
+
+                  {employeesList.length > 0 && (
+                    <optgroup label="── EMPLOYEES ──">
+                      {employeesList.map((e, idx) => {
+                        const code = e.employee_code || e.code || e.emp_code || e.id;
+                        const name = e.full_name || e.name || e.employee_name || 'Employee';
+                        return (
+                          <option key={`e_${e.id || code || idx}`} value={code}>
+                            {name} ({code})
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  )}
+                </select>
               </div>
 
               <div>
