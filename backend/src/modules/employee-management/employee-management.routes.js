@@ -422,16 +422,21 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
     await query(
       `UPDATE employee_onboarding_checklist 
        SET kyc_verified = $1, kyc_verified_at = $2, 
-           overall_progress = $3, 
-           current_stage = $4 
-       WHERE employee_id = $5`,
-      [isVerified, isVerified ? new Date() : null, isVerified ? 90 : 75, isVerified ? 'VERIFIED_PENDING_ACTIVATION' : 'KYC_REJECTED', id]
+           activated = $3, activated_at = $4,
+           overall_progress = $5, 
+           current_stage = $6 
+       WHERE employee_id = $7`,
+      [isVerified, isVerified ? new Date() : null, isVerified, isVerified ? new Date() : null, isVerified ? 100 : 75, isVerified ? 'ACTIVE' : 'KYC_REJECTED', id]
     );
 
-    // Update employee activation status if verified
+    // Update employee activation status and user account status if verified
     if (isVerified) {
       await query(
         `UPDATE employees SET activation_status = 'APPROVED', employee_status = 'ACTIVE', activated_at = NOW() WHERE id = $1`,
+        [id]
+      );
+      await query(
+        `UPDATE users SET status = 'active' WHERE id = (SELECT user_id FROM employees WHERE id = $1) AND id IS NOT NULL`,
         [id]
       );
     }

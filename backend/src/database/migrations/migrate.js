@@ -4539,6 +4539,13 @@ const migrate = async () => {
   } catch (chatbotMigErr) {
     logger.error('Failed to run Chatbot System migration:', chatbotMigErr.message);
   }
+
+  try {
+    const migrateAddFunds = require('./migrate_add_funds');
+    await migrateAddFunds();
+  } catch (addFundsMigErr) {
+    logger.error('Failed to run Add Funds migration:', addFundsMigErr.message);
+  }
   if (require.main === module) {
     process.exit(0);
   }

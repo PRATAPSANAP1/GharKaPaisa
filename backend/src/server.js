@@ -137,6 +137,7 @@ app.use(express.text({ type: 'application/json', limit: '50kb' }));
 app.use((req, res, next) => {
   if (req.is('application/json') && typeof req.body === 'string') {
     const raw = req.body;
+    req.rawBody = raw;
     try {
       // Try parsing standard JSON first to avoid corrupting valid payloads
       req.body = JSON.parse(raw);

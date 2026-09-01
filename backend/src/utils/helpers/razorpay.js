@@ -250,9 +250,56 @@ const createRazorpayPayout = async (fundAccountId, amountRupees, withdrawalId, o
   }
 };
 
+// Validate Fund Account (Penny Drop validation) in Razorpay
+const validateRazorpayFundAccount = async (fundAccountId, partnerId) => {
+  const url = 'https://api.razorpay.com/v1/fund_accounts/validations';
+  const requestBody = {
+    account_number: MERCHANT_ACCOUNT || 'RAZORPAYX_ACC',
+    fund_account: {
+      id: fundAccountId
+    },
+    amount: 100, // 1 INR in paise
+    currency: 'INR',
+    notes: {
+      partner_id: partnerId ? partnerId.toString() : ''
+    }
+  };
+
+  if (!isLive) {
+    const responseBody = {
+      id: `fav_sim_${crypto.randomBytes(6).toString('hex')}`,
+      entity: 'fund_account_validation',
+      fund_account_id: fundAccountId,
+      status: 'completed',
+      results: {
+        account_status: 'active',
+        registered_name: 'Validated Partner'
+      },
+      created_at: Math.floor(Date.now() / 1000)
+    };
+    return responseBody;
+  }
+
+  try {
+    const auth = Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString('base64');
+    const res = await axios.post(url, requestBody, {
+      headers: {
+        Authorization: `Basic ${auth}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return res.data;
+  } catch (err) {
+    const errorResponse = err.response ? err.response.data : { message: err.message };
+    logger.error('Failed to validate Razorpay fund account:', errorResponse);
+    throw new Error(errorResponse.error?.description || 'Failed to validate fund account with Razorpay');
+  }
+};
+
 module.exports = {
   createRazorpayContact,
   createRazorpayFundAccount,
+  validateRazorpayFundAccount,
   createRazorpayPayout,
   getRazorpayBalance,
   isLive

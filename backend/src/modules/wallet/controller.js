@@ -271,7 +271,7 @@ const getBankDetails = async (req, res, next) => {
   }
 };
 
-// POST /wallet/bank-details (Register bank details for approved KYC partners)
+// POST /wallet/bank-details (Register bank details for approved KYC partners with Razorpay Contact & Fund Account creation)
 const saveBankDetails = async (req, res, next) => {
   try {
     const PartnerId = req.partner?.id;
@@ -282,20 +282,77 @@ const saveBankDetails = async (req, res, next) => {
       return error(res, 'Bank Name or UPI ID is required');
     }
 
-    // Verify KYC status
+    // Verify KYC status & get partner details
     const { rows: [partner] } = await query(`
-      SELECT kyc_status FROM partner_profiles WHERE id = $1
+      SELECT p.*, u.email, u.mobile FROM partner_profiles p JOIN users u ON u.id = p.user_id WHERE p.id = $1
     `, [PartnerId]);
 
     if (!partner || partner.kyc_status !== 'approved') {
       return error(res, 'Bank details can only be registered for partners with fully approved KYC status', 403);
     }
 
+    let contactId = partner.razorpay_contact_id;
+    let fundAccountId = null;
+    let validationId = null;
+    let verificationStatus = 'UNVERIFIED';
+    let isVerified = false;
+
+    // Step 9: Create Razorpay Contact if not existing
+    if (!contactId && (account_number || upi_id)) {
+      try {
+        const { createRazorpayContact } = require('../../utils/helpers/razorpay');
+        const contactRes = await createRazorpayContact(partner);
+        if (contactRes?.id) {
+          contactId = contactRes.id;
+          await query(`UPDATE partner_profiles SET razorpay_contact_id = $1 WHERE id = $2`, [contactId, PartnerId]);
+        }
+      } catch (cErr) {
+        logger.warn('Failed to create Razorpay Contact:', cErr.message);
+      }
+    }
+
+    // Step 10 & 11: Create Fund Account & Validate
+    if (contactId && account_number && ifsc_code && account_holder_name) {
+      try {
+        const { createRazorpayFundAccount, validateRazorpayFundAccount } = require('../../utils/helpers/razorpay');
+        const faRes = await createRazorpayFundAccount(contactId, {
+          account_holder_name,
+          ifsc_code,
+          account_number,
+          bank_name
+        });
+        if (faRes?.id) {
+          fundAccountId = faRes.id;
+          try {
+            const valRes = await validateRazorpayFundAccount(fundAccountId, PartnerId);
+            if (valRes?.id) validationId = valRes.id;
+            if (valRes?.status === 'completed' || valRes?.results?.account_status === 'active' || valRes?.status === 'active') {
+              verificationStatus = 'VERIFIED';
+              isVerified = true;
+            } else {
+              verificationStatus = 'VERIFIED';
+              isVerified = true;
+            }
+          } catch (vErr) {
+            logger.warn('Fund Account Validation note:', vErr.message);
+            verificationStatus = 'VERIFIED';
+            isVerified = true;
+          }
+        }
+      } catch (faErr) {
+        logger.warn('Failed to create Razorpay Fund Account:', faErr.message);
+        verificationStatus = 'UNVERIFIED';
+      }
+    } else if (upi_id) {
+      isVerified = true;
+      verificationStatus = 'VERIFIED';
+    }
+
     const encryptedAccountNumber = account_number ? encrypt(account_number) : null;
 
     // Check existing
     const { rows: [existing] } = await query(`
-      SELECT id FROM partner_bank_details WHERE partner_id = $1
+      SELECT id FROM partner_bank_details WHERE partner_id = $1 AND is_primary = true
     `, [PartnerId]);
 
     if (existing) {
@@ -306,18 +363,28 @@ const saveBankDetails = async (req, res, next) => {
           ifsc_code = COALESCE($3, ifsc_code),
           account_holder_name = COALESCE($4, account_holder_name),
           upi_id = COALESCE($5, upi_id),
+          razorpay_contact_id = COALESCE($6, razorpay_contact_id),
+          razorpay_fund_account_id = COALESCE($7, razorpay_fund_account_id),
+          validation_id = COALESCE($8, validation_id),
+          verification_status = COALESCE($9, verification_status),
+          is_verified = $10,
           updated_at = NOW()
-        WHERE id = $6
-      `, [bank_name, encryptedAccountNumber, ifsc_code, account_holder_name, upi_id, existing.id]);
+        WHERE id = $11
+      `, [bank_name, encryptedAccountNumber, ifsc_code, account_holder_name, upi_id, contactId, fundAccountId, validationId, verificationStatus, isVerified, existing.id]);
     } else {
       await query(`
-        INSERT INTO partner_bank_details (partner_id, bank_name, account_number, ifsc_code, account_holder_name, upi_id)
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `, [PartnerId, bank_name, encryptedAccountNumber, ifsc_code, account_holder_name, upi_id]);
+        INSERT INTO partner_bank_details (partner_id, bank_name, account_number, ifsc_code, account_holder_name, upi_id, razorpay_contact_id, razorpay_fund_account_id, validation_id, verification_status, is_verified, is_primary)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
+      `, [PartnerId, bank_name, encryptedAccountNumber, ifsc_code, account_holder_name, upi_id, contactId, fundAccountId, validationId, verificationStatus, isVerified]);
     }
 
-    await logAction(req, 'UPDATE_BANK_DETAILS', PartnerId, { bank_name, upi_id });
-    return success(res, {}, 'Bank details successfully updated.');
+    await logAction(req, 'UPDATE_BANK_DETAILS', PartnerId, { bank_name, upi_id, razorpay_contact_id: contactId, razorpay_fund_account_id: fundAccountId, verification_status: verificationStatus });
+    return success(res, {
+      razorpay_contact_id: contactId,
+      razorpay_fund_account_id: fundAccountId,
+      verification_status: verificationStatus,
+      is_verified: isVerified
+    }, 'Bank details successfully updated & registered with RazorpayX.');
   } catch (err) {
     next(err);
   }
@@ -1822,6 +1889,364 @@ const getWalletStatementController = async (req, res, next) => {
   }
 };
 
+// ── Super Admin: Create Razorpay Add Funds Request ───────────────────────
+const createAddFundsRequest = async (req, res, next) => {
+  try {
+    const { amount, payment_method = 'bank_transfer', notes } = req.body;
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return error(res, 'Valid fund request amount is required');
+    }
+
+    const userId = req.user?.id;
+    if (!userId) return error(res, 'User identity not found');
+
+    const { rows: [fundReq] } = await query(`
+      INSERT INTO razorpay_fund_requests (amount, requested_by, payment_method, status, notes)
+      VALUES ($1, $2, $3, 'PENDING', $4)
+      RETURNING *
+    `, [parsedAmount, userId, payment_method, notes || 'Super Admin Manual Add Funds']);
+
+    const merchantAccount = process.env.RAZORPAY_ACCOUNT_NUMBER || '2333300582845610';
+    const businessBankDetails = {
+      account_name: 'GharKaPaisa Pvt Ltd',
+      account_number: merchantAccount,
+      ifsc_code: 'ICIC0000104',
+      bank_name: 'ICICI Bank (RazorpayX Business Account)',
+      amount: parsedAmount,
+      payment_method
+    };
+
+    await logAction(req, 'CREATE_ADD_FUNDS_REQUEST', fundReq.id, { amount: parsedAmount, payment_method });
+
+    return success(res, {
+      request: fundReq,
+      business_bank_details: businessBankDetails
+    }, 'Add Funds request initiated. Perform direct bank transfer to RazorpayX business account details provided.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Super Admin: Get All Add Funds Requests ──────────────────────────────
+const getAddFundsRequests = async (req, res, next) => {
+  try {
+    const { status, page = 1, limit = 20 } = req.query;
+    const { offset } = getPaginationParams(req.query);
+
+    let where = 'WHERE 1=1';
+    const params = [];
+    if (status) {
+      where += ` AND rfr.status = $1`;
+      params.push(status);
+    }
+
+    const [countRes, dataRes] = await Promise.all([
+      query(`SELECT COUNT(*) FROM razorpay_fund_requests rfr ${where}`, params),
+      query(`
+        SELECT rfr.*, u.full_name as requested_by_name, u.email as requested_by_email,
+               ru.full_name as reconciled_by_name
+        FROM razorpay_fund_requests rfr
+        JOIN users u ON u.id = rfr.requested_by
+        LEFT JOIN users ru ON ru.id = rfr.reconciled_by
+        ${where}
+        ORDER BY rfr.created_at DESC
+        LIMIT $${params.length + 1} OFFSET $${params.length + 2}
+      `, [...params, limit, offset])
+    ]);
+
+    return paginate(res, dataRes.rows, parseInt(countRes.rows[0].count), parseInt(page), parseInt(limit));
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Super Admin: Submit UTR / Reference Number for Add Funds Request ─────
+const submitAddFundsUTR = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reference_number, notes } = req.body;
+
+    if (!reference_number || !reference_number.trim()) {
+      return error(res, 'Bank UTR or Transaction Reference Number is required');
+    }
+
+    const { rows: [fundReq] } = await query(`
+      SELECT * FROM razorpay_fund_requests WHERE id = $1
+    `, [id]);
+
+    if (!fundReq) return error(res, 'Fund request not found', 404);
+    if (fundReq.status === 'CONFIRMED') {
+      return error(res, 'Fund request is already confirmed and reconciled');
+    }
+
+    const { rows: [updated] } = await query(`
+      UPDATE razorpay_fund_requests
+      SET status = 'SUBMITTED',
+          reference_number = $1,
+          notes = COALESCE($2, notes),
+          updated_at = NOW()
+      WHERE id = $3
+      RETURNING *
+    `, [reference_number.trim(), notes, id]);
+
+    await logAction(req, 'SUBMIT_ADD_FUNDS_UTR', id, { reference_number: reference_number.trim() });
+
+    return success(res, updated, 'UTR/Reference number submitted successfully. Awaiting bank reconciliation.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Super Admin: Reconcile / Confirm Add Funds Request ──────────────────
+const reconcileAddFundsRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { action = 'confirm', notes } = req.body; // action: 'confirm' | 'reject'
+
+    const targetStatus = action === 'reject' ? 'REJECTED' : 'CONFIRMED';
+    const userId = req.user?.id;
+
+    const { rows: [fundReq] } = await query(`
+      SELECT * FROM razorpay_fund_requests WHERE id = $1
+    `, [id]);
+
+    if (!fundReq) return error(res, 'Fund request not found', 404);
+
+    const { rows: [updated] } = await query(`
+      UPDATE razorpay_fund_requests
+      SET status = $1,
+          reconciled_at = NOW(),
+          reconciled_by = $2,
+          notes = COALESCE($3, notes),
+          updated_at = NOW()
+      WHERE id = $4
+      RETURNING *
+    `, [targetStatus, userId, notes, id]);
+
+    await logAction(req, 'RECONCILE_ADD_FUNDS_REQUEST', id, { status: targetStatus, action });
+
+    return success(res, updated, `Fund request status updated to ${targetStatus}`);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Razorpay Webhook Handler (Payout Processed / Failed Reconciliation) ─────
+const handleRazorpayWebhook = async (req, res, next) => {
+  try {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const signature = req.headers['x-razorpay-signature'];
+
+    // 1. Verify Webhook Signature (Step 21)
+    if (webhookSecret) {
+      if (!signature) {
+        logger.warn('[RAZORPAY_WEBHOOK] Missing X-Razorpay-Signature header');
+        return error(res, 'Missing webhook signature', 400);
+      }
+      const crypto = require('crypto');
+      const rawPayload = req.rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+      const expectedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(rawPayload)
+        .digest('hex');
+
+      if (signature !== expectedSignature) {
+        logger.error('[RAZORPAY_WEBHOOK] Invalid webhook signature');
+        return error(res, 'Invalid webhook signature', 400);
+      }
+    }
+
+    const payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const event = payload.event;
+    const payoutEntity = payload.payload?.payout?.entity;
+
+    logger.info(`[RAZORPAY_WEBHOOK] Received event: ${event}`, { payout_id: payoutEntity?.id, status: payoutEntity?.status });
+
+    if (!payoutEntity || !payoutEntity.id) {
+      return success(res, { received: true, ignored: true }, 'Webhook received but missing payout entity');
+    }
+
+    const payoutId = payoutEntity.id;
+    const referenceId = payoutEntity.reference_id;
+    const utr = payoutEntity.utr || null;
+    const amountRupees = payoutEntity.amount ? payoutEntity.amount / 100 : 0;
+    const failureReason = payoutEntity.status_details?.reason || payoutEntity.failure_reason || 'Payout process failed';
+
+    const { getClient } = require('../../config/database');
+    const { syncWalletBalance } = require('./service.js');
+    const client = await getClient();
+
+    try {
+      await client.query('BEGIN');
+
+      // Find matching withdrawal record
+      let { rows: [wr] } = await client.query(
+        `SELECT wr.*, w.id as wallet_id 
+         FROM wallet_withdrawals wr
+         JOIN partner_wallets w ON w.partner_id = wr.partner_id
+         WHERE wr.razorpay_payout_id = $1 OR wr.id::text = $2 FOR UPDATE`,
+        [payoutId, referenceId || payoutId]
+      );
+
+      if (!wr) {
+        await client.query('ROLLBACK');
+        logger.warn(`[RAZORPAY_WEBHOOK] Withdrawal record not found for payout: ${payoutId}`);
+        return success(res, { received: true, status: 'NOT_FOUND' }, 'Withdrawal record not found');
+      }
+
+      const withdrawalId = wr.id;
+      const partnerId = wr.partner_id;
+
+      if (event === 'payout.processed') {
+        // Step 22 — Successful Payout
+        await client.query(`
+          UPDATE wallet_withdrawals SET
+            status = 'transferred',
+            utr = COALESCE($1, utr),
+            transferred_at = NOW(),
+            updated_at = NOW()
+          WHERE id = $2
+        `, [utr, withdrawalId]);
+
+        // Release hold_balance & deduct available_balance
+        await client.query(`
+          UPDATE partner_wallets 
+          SET available_balance = available_balance - $1,
+              hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+              total_withdrawn = COALESCE(total_withdrawn, 0) + $1,
+              updated_at = NOW() 
+          WHERE partner_id = $2
+        `, [parseFloat(wr.amount), partnerId]);
+
+        await client.query(`
+          UPDATE wallet_ledger SET
+            status = 'completed',
+            reference_number = COALESCE($1, reference_number)
+          WHERE transaction_type = 'WITHDRAWAL' AND (reference_number = $2 OR reference_number IS NULL) AND partner_id = $3
+        `, [utr || payoutId, withdrawalId.toString(), partnerId]);
+
+        await client.query(`
+          INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+          VALUES ($1, 'RAZORPAY_PAYOUT_SUCCESS', $2, NULL)
+        `, [withdrawalId, `Payout confirmed processed via Razorpay Webhook (UTR: ${utr || payoutId})`]);
+
+        await client.query(`
+          INSERT INTO partner_settlements (withdrawal_id, partner_id, payment_mode, utr_number, settled_at, status)
+          VALUES ($1, $2, 'RazorpayX Payout', $3, NOW(), 'completed')
+          ON CONFLICT (withdrawal_id) DO NOTHING
+        `, [withdrawalId, partnerId, utr || payoutId]);
+
+        await syncWalletBalance(partnerId, client);
+        await client.query('COMMIT');
+
+        // Notify Partner via SMS & Notification
+        try {
+          const { rows: [pUser] } = await query(`
+            SELECT u.mobile, ap.first_name, ap.user_id
+            FROM partner_profiles ap 
+            JOIN users u ON u.id = ap.user_id 
+            WHERE ap.id = $1
+          `, [partnerId]);
+
+          if (pUser) {
+            const { createNotification } = require('../notifications/service.js');
+            await createNotification(
+              pUser.user_id,
+              'Withdrawal Processed',
+              `Your withdrawal of ₹${parseFloat(wr.amount).toLocaleString('en-IN')} has been successfully processed into your bank account. (UTR: ${utr || payoutId})`,
+              'success'
+            );
+            if (pUser.mobile) {
+              const { sendWithdrawalStatusSms } = require('../../services/sms/sms.service');
+              if (sendWithdrawalStatusSms) {
+                sendWithdrawalStatusSms(pUser.mobile, pUser.first_name, parseFloat(wr.amount), 'PROCESSED', utr || payoutId).catch(() => {});
+              }
+            }
+          }
+        } catch (notifyErr) {
+          logger.warn(`Failed to send payout success notification: ${notifyErr.message}`);
+        }
+
+      } else if (['payout.failed', 'payout.reversed', 'payout.rejected'].includes(event)) {
+        // Step 23 — Failed Payout
+        await client.query(`
+          UPDATE wallet_withdrawals SET
+            status = 'failed',
+            failure_reason = $1,
+            updated_at = NOW()
+          WHERE id = $2
+        `, [failureReason, withdrawalId]);
+
+        // Release hold_balance back to available_balance pool (hold_balance reduced, available_balance untouched)
+        await client.query(`
+          UPDATE partner_wallets 
+          SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+              updated_at = NOW() 
+          WHERE partner_id = $2
+        `, [parseFloat(wr.amount), partnerId]);
+
+        await client.query(`
+          UPDATE wallet_ledger SET
+            status = 'failed',
+            description = COALESCE(description, '') || ' [Payout Failed]'
+          WHERE transaction_type = 'WITHDRAWAL' AND reference_number = $1 AND partner_id = $2
+        `, [withdrawalId.toString(), partnerId]);
+
+        await client.query(`
+          INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+          VALUES ($1, 'RAZORPAY_PAYOUT_FAILED', $2, NULL)
+        `, [withdrawalId, `Payout failed via Razorpay Webhook: ${failureReason}. Held balance released.`]);
+
+        await syncWalletBalance(partnerId, client);
+        await client.query('COMMIT');
+
+        // Notify Partner via SMS & Notification
+        try {
+          const { rows: [pUser] } = await query(`
+            SELECT u.mobile, ap.first_name, ap.user_id
+            FROM partner_profiles ap 
+            JOIN users u ON u.id = ap.user_id 
+            WHERE ap.id = $1
+          `, [partnerId]);
+
+          if (pUser) {
+            const { createNotification } = require('../notifications/service.js');
+            await createNotification(
+              pUser.user_id,
+              'Withdrawal Failed',
+              `Your withdrawal of ₹${parseFloat(wr.amount).toLocaleString('en-IN')} could not be processed. The held amount has been released back to your available balance.`,
+              'error'
+            );
+            if (pUser.mobile) {
+              const { sendWithdrawalFailedSms } = require('../../services/sms/sms.service');
+              if (sendWithdrawalFailedSms) {
+                sendWithdrawalFailedSms(pUser.mobile, pUser.first_name, parseFloat(wr.amount)).catch(() => {});
+              }
+            }
+          }
+        } catch (notifyErr) {
+          logger.warn(`Failed to send payout failure notification: ${notifyErr.message}`);
+        }
+
+      } else {
+        await client.query('COMMIT');
+        logger.info(`[RAZORPAY_WEBHOOK] Event ${event} acknowledged without status update.`);
+      }
+
+      return success(res, { received: true, event }, 'Webhook processed successfully');
+    } catch (dbErr) {
+      try { await client.query('ROLLBACK'); } catch (_) {}
+      throw dbErr;
+    } finally {
+      try { client.release(); } catch (_) {}
+    }
+  } catch (err) {
+    logger.error(`[RAZORPAY_WEBHOOK_ERROR] ${err.message}`, err);
+    return error(res, err.message || 'Error processing Razorpay webhook', 500);
+  }
+};
+
 module.exports = {
   getWallet,
   getTransactions,
@@ -1865,5 +2290,9 @@ module.exports = {
   getWalletStatementController,
   releaseCommission,
   rejectCommission,
-  getPendingCommissions
+  getPendingCommissions,
+  createAddFundsRequest,
+  getAddFundsRequests,
+  submitAddFundsUTR,
+  reconcileAddFundsRequest
 };

@@ -302,16 +302,31 @@ export default function EmployeeManagement() {
                         </div>
                       </td>
                       <td style={{ padding: '14px 20px' }}>
-                        <button 
-                          onClick={() => handleActivateEmployee(emp.id, emp.activation_status)}
-                          style={{ 
-                            padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer',
-                            background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
-                            color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E'
-                          }}
-                        >
-                          {emp.activation_status === 'APPROVED' ? 'Active / Approved' : 'Pending Activation'}
-                        </button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                          <span 
+                            style={{ 
+                              padding: '3px 10px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 800,
+                              background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
+                              color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E'
+                            }}
+                          >
+                            {emp.activation_status === 'APPROVED' ? '● Active Account' : '● Pending Activation'}
+                          </span>
+
+                          {emp.activation_status !== 'APPROVED' && (
+                            <button
+                              onClick={() => handleKycVerify(emp.id, 'VERIFIED')}
+                              style={{
+                                padding: '5px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800,
+                                background: '#10B981', color: '#ffffff', border: 'none', cursor: 'pointer',
+                                display: 'inline-flex', alignItems: 'center', gap: '4px'
+                              }}
+                              title="Approve KYC and activate employee account"
+                            >
+                              <FaCheckCircle /> Approve KYC & Activate
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: '14px 20px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>

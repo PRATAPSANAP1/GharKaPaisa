@@ -39,6 +39,20 @@ export default function ManageWallet() {
     narration: 'GharKaPaisa Commission'
   });
 
+  // Add Funds State
+  const [addFundsModalOpen, setAddFundsModalOpen] = useState(false);
+  const [addFundsStep, setAddFundsStep] = useState(1);
+  const [addFundsForm, setAddFundsForm] = useState({
+    amount: '',
+    payment_method: 'bank_transfer',
+    notes: '',
+    reference_number: ''
+  });
+  const [createdFundReq, setCreatedFundReq] = useState(null);
+  const [fundRequests, setFundRequests] = useState([]);
+  const [fundReqPage, setFundReqPage] = useState(1);
+  const [copiedField, setCopiedField] = useState('');
+
   // Loadings
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -78,6 +92,20 @@ export default function ManageWallet() {
       console.error('Failed to load Razorpay account summary', e);
     } finally {
       setRazorpayLoading(false);
+    }
+  };
+
+  const loadFundRequests = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/wallet/admin/fund-requests', { params: { page: fundReqPage, limit: 20 } });
+      if (res.data?.success) {
+        setFundRequests(res.data.data?.data || res.data.data || []);
+      }
+    } catch (e) {
+      console.error('Failed to load fund requests:', e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -175,11 +203,12 @@ export default function ManageWallet() {
 
   useEffect(() => {
     if (activeTab === 'withdrawals') loadWithdrawals();
+    if (activeTab === 'fund_requests') loadFundRequests();
     if (activeTab === 'wallets') loadWallets();
     if (activeTab === 'ledger') loadLedger();
     if (activeTab === 'commissions') loadCommissions();
     if (activeTab === 'reconciliation') loadReconciliation();
-  }, [activeTab, wPage, wStatus, oPage, oSearch, lPage, lType, lStatus, lSearch, cPage]);
+  }, [activeTab, wPage, wStatus, oPage, oSearch, lPage, lType, lStatus, lSearch, cPage, fundReqPage]);
 
   const handleOpenPayModal = (withdrawal) => {
     const partnerCode = withdrawal.partner_code ? `(${withdrawal.partner_code})` : '';
@@ -211,6 +240,80 @@ export default function ManageWallet() {
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleInitiateAddFunds = async (e) => {
+    e.preventDefault();
+    if (!addFundsForm.amount || parseFloat(addFundsForm.amount) <= 0) {
+      return alert('Please enter a valid amount');
+    }
+    setActionLoading(true);
+    try {
+      const res = await api.post('/wallet/admin/fund-requests', {
+        amount: addFundsForm.amount,
+        payment_method: addFundsForm.payment_method,
+        notes: addFundsForm.notes
+      });
+      if (res.data?.success) {
+        setCreatedFundReq(res.data.data);
+        setAddFundsStep(2);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to initiate fund request');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSubmitUTR = async (e) => {
+    e.preventDefault();
+    if (!createdFundReq?.request?.id) return;
+    if (!addFundsForm.reference_number || !addFundsForm.reference_number.trim()) {
+      return alert('Please enter the UTR or Reference Number');
+    }
+    setActionLoading(true);
+    try {
+      const res = await api.patch(`/wallet/admin/fund-requests/${createdFundReq.request.id}/submit`, {
+        reference_number: addFundsForm.reference_number,
+        notes: addFundsForm.notes
+      });
+      if (res.data?.success) {
+        alert('UTR / Reference number submitted successfully!');
+        setAddFundsModalOpen(false);
+        setAddFundsStep(1);
+        setAddFundsForm({ amount: '', payment_method: 'bank_transfer', notes: '', reference_number: '' });
+        setCreatedFundReq(null);
+        if (activeTab === 'fund_requests') loadFundRequests();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to submit UTR');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReconcileFundReq = async (id, action) => {
+    const actionLabel = action === 'confirm' ? 'confirm & reconcile' : 'reject';
+    if (!window.confirm(`Are you sure you want to ${actionLabel} this fund request?`)) return;
+    setActionLoading(true);
+    try {
+      const res = await api.patch(`/wallet/admin/fund-requests/${id}/reconcile`, { action });
+      if (res.data?.success) {
+        alert(`Fund request ${action === 'confirm' ? 'confirmed' : 'rejected'} successfully!`);
+        loadFundRequests();
+        loadRazorpayAccount();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Reconciliation update failed');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCopyText = (text, label) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(label);
+    setTimeout(() => setCopiedField(''), 2500);
   };
 
   const handleAdjustSubmit = async (e) => {
@@ -327,13 +430,28 @@ export default function ManageWallet() {
                 {razorpayLoading ? 'Syncing...' : '↻ Refresh'}
               </button>
             </div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: '6px 0 2px 0' }}>
-              ₹{parseFloat(razorpayData?.available_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '6px' }}>
+              <div>
+                <div style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: '2px 0' }}>
+                  ₹{parseFloat(razorpayData?.available_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </div>
+                <div style={{ fontSize: '12px', color: C.textLight }}>
+                  RazorpayX Business Account Balance
+                </div>
+              </div>
+              <button
+                onClick={() => { setAddFundsStep(1); setAddFundsModalOpen(true); }}
+                style={{
+                  background: C.teal, color: '#fff', border: 'none', borderRadius: '10px',
+                  padding: '8px 16px', fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px', boxShadow: `0 4px 12px ${C.teal}35`
+                }}
+              >
+                + Add Funds
+              </button>
             </div>
-
           </div>
-          
-
         </div>
 
         {/* Card 2: Internal GharKaPaisa Partner Liability Wallet */}
@@ -373,6 +491,7 @@ export default function ManageWallet() {
       <div style={{ display: 'flex', gap: '8px', background: isDark ? '#18181B' : C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '6px', width: 'fit-content', overflowX: 'auto', maxWidth: '100%' }}>
         {[
           { id: 'withdrawals', label: 'Withdrawal Settlements' },
+          { id: 'fund_requests', label: 'Add Funds Requests' },
           { id: 'commissions', label: 'Pending Commission Approvals' },
           { id: 'wallets', label: 'Partner Balances Overview' },
           { id: 'ledger', label: 'Ledger Audit Trail' },
@@ -401,6 +520,101 @@ export default function ManageWallet() {
           <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>Loading wallet financial records...</div>
         ) : (
           <div style={{ padding: '24px', overflowX: 'auto' }}>
+            {activeTab === 'fund_requests' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>
+                      RazorpayX Manual Fund Top-Up Requests
+                    </h3>
+                    <span style={{ fontSize: '12px', color: C.textLight }}>Manual bank transfer reconciliation & Razorpay balance updates</span>
+                  </div>
+                  <button
+                    onClick={() => { setAddFundsStep(1); setAddFundsModalOpen(true); }}
+                    style={{ ...S.btn('primary'), background: C.teal, padding: '8px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    + New Add Funds Request
+                  </button>
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: isDark ? '#18181B' : C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase', textAlign: 'left' }}>
+                      <th style={{ padding: '12px 16px' }}>Date</th>
+                      <th style={{ padding: '12px 16px' }}>Requested By</th>
+                      <th style={{ padding: '12px 16px' }}>Funding Method</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Amount</th>
+                      <th style={{ padding: '12px 16px' }}>UTR / Reference</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center' }}>Status</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'center' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fundRequests.length === 0 ? (
+                      <tr><td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: C.textLight }}>No fund requests recorded. Click "+ New Add Funds Request" above to initiate one.</td></tr>
+                    ) : (
+                      fundRequests.map(fr => (
+                        <tr key={fr.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '14px 16px' }}>{new Date(fr.created_at).toLocaleString()}</td>
+                          <td style={{ padding: '14px 16px', fontWeight: 700 }}>
+                            {fr.requested_by_name || 'Super Admin'}
+                            <div style={{ fontSize: '11px', color: C.textLight }}>{fr.requested_by_email}</div>
+                          </td>
+                          <td style={{ padding: '14px 16px', textTransform: 'capitalize' }}>
+                            <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', background: isDark ? '#27272A' : '#F1F5F9', color: C.text, fontWeight: 700 }}>
+                              {fr.payment_method?.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 900, color: C.green, fontSize: '14px' }}>
+                            ₹{parseFloat(fr.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td style={{ padding: '14px 16px', fontFamily: 'monospace' }}>
+                            {fr.reference_number ? (
+                              <strong style={{ color: C.text }}>{fr.reference_number}</strong>
+                            ) : (
+                              <span style={{ color: C.textLight, fontSize: '12px', fontStyle: 'italic' }}>Pending UTR</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <span style={{
+                              fontSize: '11px', padding: '4px 10px', borderRadius: '12px', fontWeight: 800,
+                              background: fr.status === 'CONFIRMED' ? '#DCFCE7' : fr.status === 'SUBMITTED' ? '#FEF3C7' : fr.status === 'REJECTED' ? '#FEE2E2' : '#F3F4F6',
+                              color: fr.status === 'CONFIRMED' ? '#15803D' : fr.status === 'SUBMITTED' ? '#B45309' : fr.status === 'REJECTED' ? '#B91C1C' : '#4B5563'
+                            }}>
+                              {fr.status}
+                            </span>
+                          </td>
+                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            {fr.status !== 'CONFIRMED' && fr.status !== 'REJECTED' && (
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                <button
+                                  onClick={() => handleReconcileFundReq(fr.id, 'confirm')}
+                                  disabled={actionLoading}
+                                  style={{ ...S.btn('primary'), background: C.green, padding: '4px 10px', fontSize: '11px', borderRadius: '6px' }}
+                                >
+                                  Confirm / Reconcile
+                                </button>
+                                <button
+                                  onClick={() => handleReconcileFundReq(fr.id, 'reject')}
+                                  disabled={actionLoading}
+                                  style={{ ...S.btn('outline'), color: C.red, borderColor: C.red, padding: '4px 10px', fontSize: '11px', borderRadius: '6px' }}
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                            {fr.status === 'CONFIRMED' && (
+                              <span style={{ fontSize: '11px', color: C.textLight }}>Reconciled</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
             {activeTab === 'withdrawals' && (
               <div>
                 <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
@@ -960,6 +1174,179 @@ export default function ManageWallet() {
                 <MdLock size={16} /> {actionLoading ? 'Initiating Payout...' : 'Confirm & Transfer Payout'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ MODAL: ADD FUNDS TO RAZORPAYX ═══ */}
+      {addFundsModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '16px' }}>
+          <div style={{ ...S.card, background: isDark ? '#18181B' : '#FFFFFF', maxWidth: '520px', width: '100%', padding: '24px', borderRadius: '18px', border: `1px solid ${C.border}`, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)' }}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '19px', fontWeight: 800, color: C.text }}>Add Funds</h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>Top up RazorpayX Business Account Balance</span>
+              </div>
+              <button onClick={() => setAddFundsModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight, padding: '4px' }}><MdClose size={22} /></button>
+            </div>
+
+            {/* STEP 1: Enter Amount & Funding Method */}
+            {addFundsStep === 1 && (
+              <form onSubmit={handleInitiateAddFunds} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>Amount</label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: '14px', top: '12px', fontWeight: 800, color: C.textMid, fontSize: '16px' }}>₹</span>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      step="any"
+                      placeholder="e.g. 50000"
+                      value={addFundsForm.amount}
+                      onChange={e => setAddFundsForm({ ...addFundsForm, amount: e.target.value })}
+                      style={{ ...S.input, paddingLeft: '32px', fontSize: '16px', fontWeight: 800 }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>Funding Method</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {[
+                      { id: 'bank_transfer', title: 'Bank Transfer', desc: 'NEFT / RTGS / IMPS from company bank account' },
+                      { id: 'upi', title: 'UPI', desc: 'Direct UPI transfer to Razorpay VPA' }
+                    ].map(method => (
+                      <label
+                        key={method.id}
+                        onClick={() => setAddFundsForm({ ...addFundsForm, payment_method: method.id })}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                          border: `1.5px solid ${addFundsForm.payment_method === method.id ? C.teal : C.border}`,
+                          background: addFundsForm.payment_method === method.id ? `${C.teal}10` : (isDark ? '#27272A' : '#FFF'),
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="funding_method"
+                          checked={addFundsForm.payment_method === method.id}
+                          onChange={() => {}}
+                        />
+                        <div>
+                          <strong style={{ fontSize: '13.5px', color: C.text, display: 'block' }}>{method.title}</strong>
+                          <span style={{ fontSize: '11.5px', color: C.textLight }}>{method.desc}</span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Notes (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Monthly Partner Commission Pool Top-Up"
+                    value={addFundsForm.notes}
+                    onChange={e => setAddFundsForm({ ...addFundsForm, notes: e.target.value })}
+                    style={S.input}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '10px', borderTop: `1px solid ${C.border}` }}>
+                  <button type="button" onClick={() => setAddFundsModalOpen(false)} style={{ ...S.btn('outline'), padding: '10px 18px', fontSize: '13px', borderRadius: '10px' }}>Cancel</button>
+                  <button
+                    type="submit"
+                    disabled={actionLoading}
+                    style={{ ...S.btn('primary'), background: C.teal, padding: '10px 24px', fontSize: '13.5px', fontWeight: 800, borderRadius: '10px' }}
+                  >
+                    {actionLoading ? 'Initiating...' : 'Continue'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* STEP 2: Display RazorpayX Business Account Details for Transfer & Submit UTR */}
+            {addFundsStep === 2 && createdFundReq && (
+              <form onSubmit={handleSubmitUTR} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ background: isDark ? '#27272A' : '#F8FAFC', padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: C.teal, marginBottom: '10px', letterSpacing: '0.5px' }}>
+                    Transfer Funds To
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: C.textLight }}>Account Name:</span>
+                      <strong style={{ color: C.text }}>{createdFundReq.business_bank_details?.account_name || 'GharKaPaisa Pvt Ltd'}</strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isDark ? '#18181B' : '#FFF', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
+                      <div>
+                        <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>Account Number:</span>
+                        <strong style={{ fontFamily: 'monospace', fontSize: '14px', color: C.text }}>{createdFundReq.business_bank_details?.account_number}</strong>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(createdFundReq.business_bank_details?.account_number, 'account_number')}
+                        style={{ ...S.btn('outline'), padding: '4px 10px', fontSize: '11px', borderRadius: '6px' }}
+                      >
+                        {copiedField === 'account_number' ? 'Copied!' : 'Copy Account Number'}
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isDark ? '#18181B' : '#FFF', padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
+                      <div>
+                        <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>IFSC Code:</span>
+                        <strong style={{ fontFamily: 'monospace', fontSize: '14px', color: C.text }}>{createdFundReq.business_bank_details?.ifsc_code}</strong>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(createdFundReq.business_bank_details?.ifsc_code, 'ifsc')}
+                        style={{ ...S.btn('outline'), padding: '4px 10px', fontSize: '11px', borderRadius: '6px' }}
+                      >
+                        {copiedField === 'ifsc' ? 'Copied!' : 'Copy IFSC'}
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: C.textLight }}>Amount:</span>
+                      <strong style={{ fontSize: '16px', color: C.green, fontWeight: 900 }}>
+                        ₹{parseFloat(createdFundReq.business_bank_details?.amount || addFundsForm.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 800, color: C.text, display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Bank UTR / Transaction Reference Number *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. UTR1234567890 / N12345678"
+                    value={addFundsForm.reference_number}
+                    onChange={e => setAddFundsForm({ ...addFundsForm, reference_number: e.target.value })}
+                    style={{ ...S.input, fontWeight: 700, fontFamily: 'monospace' }}
+                  />
+                  <span style={{ fontSize: '11px', color: C.textLight, marginTop: '4px', display: 'block' }}>
+                    Perform the bank transfer from your netbanking app, then paste the UTR number here for reconciliation.
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '10px', borderTop: `1px solid ${C.border}` }}>
+                  <button type="button" onClick={() => setAddFundsStep(1)} style={{ ...S.btn('outline'), padding: '10px 18px', fontSize: '13px', borderRadius: '10px' }}>Back</button>
+                  <button
+                    type="submit"
+                    disabled={actionLoading}
+                    style={{ ...S.btn('primary'), background: C.teal, padding: '10px 24px', fontSize: '13.5px', fontWeight: 800, borderRadius: '10px' }}
+                  >
+                    {actionLoading ? 'Submitting...' : 'Submit UTR & Record Transfer'}
+                  </button>
+                </div>
+              </form>
+            )}
+
           </div>
         </div>
       )}

@@ -21,6 +21,13 @@ router.put('/bank-details', requireApprovedPartnerOrAdmin, validateBankDetails, 
 // Withdrawals Routing (Admin & Polymorphic Partner Handlers)
 router.get('/admin/overview', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.getWalletOverview);
 router.get('/admin/razorpay/balance', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.getRazorpayAccountSummary);
+
+// Razorpay Add Funds Requests (Super Admin)
+router.post('/admin/fund-requests', authorize('SUPER_ADMIN', 'ADMIN'), walletCtrl.createAddFundsRequest);
+router.get('/admin/fund-requests', authorize('SUPER_ADMIN', 'ADMIN'), walletCtrl.getAddFundsRequests);
+router.patch('/admin/fund-requests/:id/submit', authorize('SUPER_ADMIN', 'ADMIN'), walletCtrl.submitAddFundsUTR);
+router.patch('/admin/fund-requests/:id/reconcile', authorize('SUPER_ADMIN', 'ADMIN'), walletCtrl.reconcileAddFundsRequest);
+
 router.post('/admin/adjust', authorize('ADMIN', 'SUPER_ADMIN'), walletCtrl.adminAdjustWalletController);
 router.get('/admin/withdrawals', requireApprovedPartnerOrAdmin, walletCtrl.listWithdrawals);
 router.get('/my-withdrawals', requireApprovedPartner, walletCtrl.listPartnerWithdrawals);
