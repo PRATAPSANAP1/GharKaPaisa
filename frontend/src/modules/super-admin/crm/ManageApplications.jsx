@@ -37,6 +37,14 @@ export default function ManageApplications() {
   const [searchParams] = useSearchParams();
   const urlStatus = searchParams.get('status');
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Verification modal state
   const [verifyModalApp, setVerifyModalApp] = useState(null);
   const [verifyModalTab, setVerifyModalTab] = useState('qd');
@@ -765,11 +773,11 @@ export default function ManageApplications() {
 
       </div>
 
-      {/* ── 360° APPLICATION DETAILS RIGHT-SIDE DRAWER ── */}
+      {/* ── 360° APPLICATION DETAILS CENTERED MODAL ── */}
       {detailDrawerOpen && selectedApp && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '8px' : '16px' }}>
           
-          <div style={{ width: '100%', maxWidth: '580px', height: '100vh', background: C.card, borderLeft: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', boxShadow: '-12px 0 36px rgba(0,0,0,0.25)' }}>
+          <div style={{ width: '100%', maxWidth: '820px', maxHeight: isMobile ? '94vh' : '90vh', background: C.card, borderRadius: isMobile ? '16px' : '20px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
             
             {/* Drawer Header */}
             <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: C.bgSecondary }}>
@@ -820,7 +828,7 @@ export default function ManageApplications() {
                   {/* Customer Info Card */}
                   <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
                     <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>Customer Profile</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', fontSize: '12.5px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '10px', fontSize: '12.5px' }}>
                       <div><span style={{ color: C.textLight }}>Phone:</span> <strong style={{ color: C.text }}>{selectedApp.customer_mobile || selectedApp.mobile || 'N/A'}</strong></div>
                       <div><span style={{ color: C.textLight }}>City:</span> <strong style={{ color: C.text }}>{selectedApp.city || 'N/A'}</strong></div>
                       <div><span style={{ color: C.textLight }}>PAN:</span> <strong style={{ color: C.text }}>{selectedApp.pan_number || selectedApp.pan || 'N/A'}</strong></div>
@@ -831,7 +839,7 @@ export default function ManageApplications() {
                   {/* Product & Attribution Card */}
                   <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
                     <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>Product &amp; Source Attribution</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', fontSize: '12.5px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(1, 1fr)' : 'repeat(2, 1fr)', gap: '10px', fontSize: '12.5px' }}>
                       <div><span style={{ color: C.textLight }}>Bank:</span> <strong style={{ color: C.text }}>{selectedApp.bank_name || 'Bank Partner'}</strong></div>
                       <div><span style={{ color: C.textLight }}>Product:</span> <strong style={{ color: C.text }}>{selectedApp.product_name || 'Financial Product'}</strong></div>
                       <div><span style={{ color: C.textLight }}>Process:</span> <strong style={{ color: C.text }}>{selectedApp.process_by || 'Direct Link'}</strong></div>
@@ -927,9 +935,9 @@ export default function ManageApplications() {
 
             </div>
 
-            {/* ── DRAWER BOTTOM ACTIONS (MAX 3 BUTTONS PER ROW) ── */}
+            {/* ── MODAL BOTTOM ACTIONS (MAX 3 BUTTONS PER ROW) ── */}
             <div style={{ padding: '16px', borderTop: `1px solid ${C.border}`, background: C.bgSecondary }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '8px' }}>
                 <button
                   onClick={() => setVerifyModalApp(selectedApp)}
                   style={{ padding: '8px 4px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
