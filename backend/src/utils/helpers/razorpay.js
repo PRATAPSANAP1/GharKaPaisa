@@ -7,7 +7,7 @@ const KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_TQq4luJsMjMjXF';
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '50gNCr5bmZt7VWZA5POmNh9x';
 const MERCHANT_ACCOUNT = process.env.RAZORPAY_ACCOUNT_NUMBER;
 
-const isLive = !!(KEY_ID && KEY_SECRET);
+const isLive = !!(KEY_ID && KEY_SECRET && KEY_ID.startsWith('rzp_live_'));
 
 // Helper to log payout API request/responses
 const logPayoutApiCall = async (withdrawalId, request, response, httpStatus, retryCount = 0) => {
@@ -121,60 +121,68 @@ const createRazorpayFundAccount = async (contactId, bankDetails, withdrawalId) =
 
 // Fetch Banking Balance from RazorpayX
 const getRazorpayBalance = async () => {
-  if (!isLive) {
-    // Dynamic Simulator Mode balance based on real database payouts
-    let totalPayouts = 0;
+  // 1. Try fetching real balance from Razorpay API
+  if (KEY_ID && KEY_SECRET) {
     try {
-      const { rows: [payoutRes] } = await query(
-        `SELECT COALESCE(SUM(amount), 0) as total FROM wallet_withdrawals WHERE status IN ('transferred', 'processed', 'successful', 'SUCCESS')`
-      );
-      totalPayouts = parseFloat(payoutRes?.total || 0);
-    } catch (_) {}
+      const auth = Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString('base64');
+      const url = MERCHANT_ACCOUNT 
+        ? `https://api.razorpay.com/v1/banking_balances?account_number=${MERCHANT_ACCOUNT}`
+        : `https://api.razorpay.com/v1/banking_balances`;
+      const res = await axios.get(url, {
+        headers: {
+          Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 5000
+      });
 
-    const dynamicBalance = Math.max(0, 200000.00 - totalPayouts);
-
-    return {
-      success: true,
-      balance: dynamicBalance,
-      currency: 'INR',
-      account_number: MERCHANT_ACCOUNT || 'RAZORPAYX_TEST_ACC',
-      is_simulated: true,
-      updated_at: new Date().toISOString()
-    };
-  }
-
-  try {
-    const auth = Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString('base64');
-    const url = `https://api.razorpay.com/v1/banking_balances?account_number=${MERCHANT_ACCOUNT}`;
-    const res = await axios.get(url, {
-      headers: {
-        Authorization: `Basic ${auth}`,
-        'Content-Type': 'application/json'
+      const balanceData = res.data?.items?.[0] || res.data;
+      if (balanceData && balanceData.balance !== undefined) {
+        const balanceRupees = balanceData.balance / 100;
+        return {
+          success: true,
+          balance: balanceRupees,
+          currency: balanceData.currency || 'INR',
+          account_number: MERCHANT_ACCOUNT || balanceData.account_number || '2333300582845610',
+          is_simulated: false,
+          updated_at: new Date().toISOString()
+        };
       }
-    });
-
-    const balanceData = res.data?.items?.[0] || res.data;
-    const balanceRupees = balanceData.balance ? balanceData.balance / 100 : 0;
-    return {
-      success: true,
-      balance: balanceRupees,
-      currency: balanceData.currency || 'INR',
-      account_number: MERCHANT_ACCOUNT,
-      is_simulated: false,
-      updated_at: new Date().toISOString()
-    };
-  } catch (err) {
-    logger.error('Failed to fetch Razorpay balance:', err.message);
-    // Fallback if banking_balances is restricted or in test keys
-    return {
-      success: true,
-      balance: 200000.00,
-      currency: 'INR',
-      account_number: MERCHANT_ACCOUNT || 'RAZORPAYX_ACC',
-      is_simulated: true,
-      updated_at: new Date().toISOString()
-    };
+    } catch (err) {
+      logger.info(`[RAZORPAY_BALANCE_API] API call notice (${err.message}). Using dynamic ledger reconciliation.`);
+    }
   }
+
+  // 2. Dynamic ledger balance calculation: (Initial Seed + Confirmed Add Funds - Completed Payouts)
+  let totalAddFunds = 0;
+  let totalPayouts = 0;
+  try {
+    const { rows: [fundRes] } = await query(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM razorpay_fund_requests WHERE status = 'CONFIRMED'`
+    );
+    totalAddFunds = parseFloat(fundRes?.total || 0);
+
+    const { rows: [payoutRes] } = await query(
+      `SELECT COALESCE(SUM(amount), 0) as total FROM wallet_withdrawals WHERE status IN ('transferred', 'processed', 'successful', 'SUCCESS')`
+    );
+    totalPayouts = parseFloat(payoutRes?.total || 0);
+  } catch (err) {
+    logger.warn('Failed to calculate dynamic balance from DB:', err.message);
+  }
+
+  const initialBaseBalance = 250000.00;
+  const dynamicBalance = Math.max(0, initialBaseBalance + totalAddFunds - totalPayouts);
+
+  return {
+    success: true,
+    balance: dynamicBalance,
+    total_added: totalAddFunds,
+    total_withdrawn: totalPayouts,
+    currency: 'INR',
+    account_number: MERCHANT_ACCOUNT || '2333300582845610',
+    is_simulated: true,
+    updated_at: new Date().toISOString()
+  };
 };
 
 // Create a payout via Razorpay
