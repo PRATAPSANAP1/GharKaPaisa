@@ -363,7 +363,6 @@ export default function AdminProfilePage() {
                       <MdAccountBalanceWallet style={{ color: '#3B82F6', fontSize: '22px' }} />
                       RazorpayX Master Merchant Account
                     </h3>
-                    <span style={{ fontSize: '12px', color: C.textLight }}>Real-time payout balance, top-ups, and bank account provisioning</span>
                   </div>
                   <button
                     onClick={fetchRazorpaySummary}
@@ -447,13 +446,10 @@ export default function AdminProfilePage() {
 
               {/* 2. Direct Virtual Bank Top-Up Details Card */}
               <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <MdAccountBalance style={{ color: C.teal }} />
                   <span>RazorpayX Virtual Bank Details (Auto Transfer Top-Up)</span>
                 </h4>
-                <p style={{ fontSize: '12.5px', color: C.textLight, margin: '0 0 16px 0' }}>
-                  Transfer funds via NEFT, RTGS, or IMPS from your corporate bank account directly to this Virtual Bank Account to instantly top up your RazorpayX balance.
-                </p>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
                   {[
@@ -481,13 +477,10 @@ export default function AdminProfilePage() {
 
               {/* 3. Add Money / Online Top Up Section */}
               <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <MdAdd style={{ color: C.primary, fontSize: '20px' }} />
                   <span>Add Money / Instant Top-Up to Razorpay Account</span>
                 </h4>
-                <p style={{ fontSize: '12.5px', color: C.textLight, margin: '0 0 16px 0' }}>
-                  Instantly recharge your Razorpay account using UPI, NetBanking, Credit/Debit Cards or QR Code scanning.
-                </p>
 
                 {topupSuccessMsg && (
                   <div style={{ padding: '12px 16px', background: `${C.green}15`, color: C.green, border: `1px solid ${C.green}`, borderRadius: '10px', fontSize: '13px', fontWeight: 700, marginBottom: '16px' }}>
@@ -568,13 +561,10 @@ export default function AdminProfilePage() {
 
               {/* 4. Add Bank Account Directly to RazorpayX */}
               <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <MdAccountBalanceWallet style={{ color: '#8B5CF6', fontSize: '20px' }} />
                   <span>Add Beneficiary Account Directly to RazorpayX</span>
                 </h4>
-                <p style={{ fontSize: '12.5px', color: C.textLight, margin: '0 0 16px 0' }}>
-                  Provision & register beneficiary bank account credentials directly on RazorpayX for automated commission payouts and settlements.
-                </p>
 
                 {beneficiaryMsg.text && (
                   <div style={{ padding: '12px 16px', background: beneficiaryMsg.type === 'success' ? `${C.green}15` : `${C.red}15`, color: beneficiaryMsg.type === 'success' ? C.green : C.red, border: `1px solid ${beneficiaryMsg.type === 'success' ? C.green : C.red}`, borderRadius: '10px', fontSize: '13px', fontWeight: 700, marginBottom: '16px' }}>
