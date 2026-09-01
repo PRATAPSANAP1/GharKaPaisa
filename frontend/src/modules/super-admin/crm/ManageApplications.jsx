@@ -374,28 +374,41 @@ export default function ManageApplications() {
 
   const getAgentLabel = (app) => {
     if (!app) return 'Direct';
-    if (app.partner_name || app.partner_full_name) {
-      return `${app.partner_name || app.partner_full_name} (${app.partner_code || app.partner_id || 'PAR'})`;
+    
+    // Check direct fields on app object
+    const appPName = app.partner_name || app.partner_full_name || (app.partner_first_name ? `${app.partner_first_name} ${app.partner_last_name || ''}`.trim() : null);
+    if (appPName) {
+      return `${appPName} (${app.partner_code || app.partner_id || 'PAR'})`;
     }
-    if (app.employee_name || app.employee_full_name) {
-      return `${app.employee_name || app.employee_full_name} (${app.employee_code || app.employee_id || 'EMP'})`;
+    
+    const appEName = app.employee_name || app.employee_full_name || (app.employee_first_name ? `${app.employee_first_name} ${app.employee_last_name || ''}`.trim() : null);
+    if (appEName) {
+      return `${appEName} (${app.employee_code || app.employee_id || 'EMP'})`;
     }
     
     // Match in partnersList
     const pCode = app.partner_code || app.partner_id;
     if (pCode) {
       const matchP = partnersList.find(p => p.partner_code === pCode || p.code === pCode || String(p.id) === String(pCode));
-      if (matchP) return `${matchP.full_name || matchP.name} (${pCode})`;
+      if (matchP) {
+        const pName = matchP.full_name || matchP.name || matchP.partner_name || (`${matchP.first_name || ''} ${matchP.last_name || ''}`.trim()) || 'Partner';
+        return `${pName} (${pCode})`;
+      }
     }
 
     // Match in employeesList
     const eCode = app.employee_code || app.employee_id;
     if (eCode) {
       const matchE = employeesList.find(e => e.employee_code === eCode || e.code === eCode || String(e.id) === String(eCode));
-      if (matchE) return `${matchE.full_name || matchE.name} (${eCode})`;
+      if (matchE) {
+        const eName = matchE.full_name || matchE.name || matchE.employee_name || (`${matchE.first_name || ''} ${matchE.last_name || ''}`.trim()) || 'Employee';
+        return `${eName} (${eCode})`;
+      }
     }
 
-    return app.partner_code || app.employee_code || 'Direct';
+    if (app.partner_code) return `Partner (${app.partner_code})`;
+    if (app.employee_code) return `Employee (${app.employee_code})`;
+    return 'Direct';
   };
 
   const renderProcessBadge = (app) => {
@@ -1080,31 +1093,32 @@ export default function ManageApplications() {
 
                 return (
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '8px' }}>
-                    {/* Button 1: Verify Docs / QD */}
+                    {/* Button 1: Remark (Digital) / Verify QD Form (Physical) */}
                     <button
                       onClick={() => openAuditModal(selectedApp, isDigital ? 'remark' : 'qd')}
                       style={{ padding: '8px 4px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
                     >
-                      {isDigital ? 'Verify Docs (Audit)' : 'Verify QD Form'}
+                      {isDigital ? 'Remark' : 'Verify QD Form'}
                     </button>
 
-                    {/* Button 2: Ops Verify / Stage Tracking */}
-                    <button
-                      onClick={() => isDigital ? openAuditModal(selectedApp, 'remark') : handleUpdateStatus(selectedApp.id, 'operational_verified')}
-                      style={{ padding: '8px 4px', borderRadius: '8px', background: isDigital ? C.card : '#0D9488', border: isDigital ? `1px solid ${C.border}` : 'none', color: isDigital ? C.text : '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
-                    >
-                      {isDigital ? 'Stage Tracking' : 'Ops Verify'}
-                    </button>
+                    {/* Button 2: Ops Verify (Physical) / Bank Final Status (Digital) */}
+                    {isDigital ? (
+                      <button
+                        onClick={() => openAuditModal(selectedApp, 'final')}
+                        style={{ padding: '8px 4px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
+                      >
+                        Bank Final Status
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleUpdateStatus(selectedApp.id, 'operational_verified')}
+                        style={{ padding: '8px 4px', borderRadius: '8px', background: '#0D9488', color: '#fff', fontSize: '11px', fontWeight: 800, border: 'none', cursor: 'pointer', textAlign: 'center' }}
+                      >
+                        Ops Verify
+                      </button>
+                    )}
 
-                    {/* Button 3: Bank Final Status */}
-                    <button
-                      onClick={() => openAuditModal(selectedApp, 'final')}
-                      style={{ padding: '8px 4px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
-                    >
-                      Bank Final Status
-                    </button>
-
-                    {/* Row 2: Approve, Reject, Delete */}
+                    {/* Button 3: Approve App */}
                     <button
                       onClick={() => handleUpdateStatus(selectedApp.id, 'approved')}
                       style={{ padding: '8px 4px', borderRadius: '8px', background: '#059669', color: '#fff', fontSize: '11px', fontWeight: 800, border: 'none', cursor: 'pointer', textAlign: 'center' }}
@@ -1112,6 +1126,7 @@ export default function ManageApplications() {
                       Approve App
                     </button>
 
+                    {/* Button 4: Reject App */}
                     <button
                       onClick={() => handleUpdateStatus(selectedApp.id, 'rejected')}
                       style={{ padding: '8px 4px', borderRadius: '8px', background: '#DC2626', color: '#fff', fontSize: '11px', fontWeight: 800, border: 'none', cursor: 'pointer', textAlign: 'center' }}
@@ -1119,6 +1134,24 @@ export default function ManageApplications() {
                       Reject App
                     </button>
 
+                    {/* Button 5: Add Remark (Digital) / Bank Final Status (Physical) */}
+                    {isDigital ? (
+                      <button
+                        onClick={() => setActiveDrawerTab('notes')}
+                        style={{ padding: '8px 4px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
+                      >
+                        Add Remark
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => openAuditModal(selectedApp, 'final')}
+                        style={{ padding: '8px 4px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
+                      >
+                        Bank Final Status
+                      </button>
+                    )}
+
+                    {/* Button 6: Delete Record */}
                     <button
                       onClick={() => handleDeleteApplication(selectedApp.id, selectedApp.app_number)}
                       style={{ padding: '8px 4px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.15)', color: '#DC2626', border: '1px solid rgba(239,68,68,0.3)', fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
