@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Download, Calendar, Filter, X, Check, FileText } from 'lucide-react';
+import { Download, Calendar, Filter, X, Check, FileText, Clock, History, CalendarDays, BarChart2, Edit3, Globe } from 'lucide-react';
 import api from '../../services/api';
 
 export default function ExportApplicationsModal({ isOpen, onClose, defaultApplications = [] }) {
@@ -8,7 +8,7 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
 
   const getTodayStr = () => new Date().toISOString().split('T')[0];
 
-  const [period, setPeriod] = useState('all'); // 'today', '7days', '30days', 'custom', 'all'
+  const [period, setPeriod] = useState('all'); // 'today', 'yesterday', '7days', '30days', 'this_month', 'custom', 'all'
   const [fromDate, setFromDate] = useState(getTodayStr());
   const [toDate, setToDate] = useState(getTodayStr());
   const [statusFilter, setStatusFilter] = useState('all');
@@ -50,7 +50,6 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
   const handleExportDownload = async () => {
     setExporting(true);
     try {
-      // 1. Filter applications locally or attempt server export
       let filtered = [...defaultApplications];
 
       if (period !== 'all') {
@@ -120,6 +119,16 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
     }
   };
 
+  const PERIOD_OPTIONS = [
+    { id: 'today', label: 'Today', icon: <Calendar size={14} /> },
+    { id: 'yesterday', label: 'Yesterday', icon: <History size={14} /> },
+    { id: '7days', label: 'Last 7 Days', icon: <Clock size={14} /> },
+    { id: '30days', label: 'Last 30 Days', icon: <CalendarDays size={14} /> },
+    { id: 'this_month', label: 'This Month', icon: <BarChart2 size={14} /> },
+    { id: 'custom', label: 'Custom Range', icon: <Edit3 size={14} /> },
+    { id: 'all', label: 'All Time', icon: <Globe size={14} /> }
+  ];
+
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10000,
@@ -129,7 +138,7 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
     }}>
       <div style={{
         background: C.card, borderRadius: '24px', border: `1px solid ${C.border}`,
-        width: '100%', maxWidth: '520px', padding: '24px', position: 'relative',
+        width: '100%', maxWidth: '540px', padding: '24px', position: 'relative',
         boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)'
       }}>
         {/* Close Button */}
@@ -157,15 +166,7 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
               Select Application Period
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
-              {[
-                { id: 'today', label: '📅 Today' },
-                { id: 'yesterday', label: '⏮️ Yesterday' },
-                { id: '7days', label: '📆 Last 7 Days' },
-                { id: '30days', label: '🗓️ Last 30 Days' },
-                { id: 'this_month', label: '📊 This Month' },
-                { id: 'custom', label: '✏️ Custom Range' },
-                { id: 'all', label: '🌐 All Time' }
-              ].map(item => (
+              {PERIOD_OPTIONS.map(item => (
                 <button
                   key={item.id}
                   onClick={() => handlePeriodChange(item.id)}
@@ -178,10 +179,15 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
                     fontSize: '12.5px',
                     fontWeight: period === item.id ? 800 : 600,
                     cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justify: 'center',
+                    gap: '6px',
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  {item.label}
+                  {item.icon}
+                  <span>{item.label}</span>
                 </button>
               ))}
             </div>

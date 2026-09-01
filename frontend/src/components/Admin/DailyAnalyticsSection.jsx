@@ -177,7 +177,7 @@ export default function DailyAnalyticsSection() {
                           background: row.employee_logins > 0 ? 'rgba(99, 102, 241, 0.15)' : C.bg,
                           color: row.employee_logins > 0 ? '#6366F1' : C.textMid
                         }}>
-                          👤 {row.employee_logins}
+                          {row.employee_logins}
                         </span>
                       </td>
 
@@ -192,7 +192,7 @@ export default function DailyAnalyticsSection() {
                           background: row.new_applications > 0 ? 'rgba(59, 130, 246, 0.15)' : C.bg,
                           color: row.new_applications > 0 ? '#3B82F6' : C.textMid
                         }}>
-                          📄 {row.new_applications}
+                          {row.new_applications}
                         </span>
                       </td>
 
@@ -207,7 +207,7 @@ export default function DailyAnalyticsSection() {
                           background: row.approved_applications > 0 ? 'rgba(16, 185, 129, 0.15)' : C.bg,
                           color: row.approved_applications > 0 ? '#10B981' : C.textMid
                         }}>
-                          ✅ {row.approved_applications}
+                          {row.approved_applications}
                         </span>
                       </td>
 
