@@ -188,9 +188,11 @@ export default function ManageApplications() {
             (a.employee_id && String(a.employee_id).toLowerCase().includes(pf))
           );
         }
+        const total = res.data.pagination?.total || list.length;
+        const computedPages = Math.max(1, Math.ceil(total / limit));
         setApplications(list);
-        setTotalPages(res.data.pagination?.pages || 1);
-        setTotalCount(res.data.pagination?.total || list.length);
+        setTotalCount(total);
+        setTotalPages(computedPages);
       }
     } catch (e) {
       console.error('Applications load failed:', e);
@@ -382,7 +384,7 @@ export default function ManageApplications() {
   };
 
   return (
-    <div style={{ fontFamily: 'Inter, sans-serif', paddingBottom: '60px' }}>
+    <div style={{ fontFamily: 'Inter, sans-serif', paddingBottom: '140px' }}>
       
       {/* ── 1. PAGE HEADER ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
@@ -813,7 +815,7 @@ export default function ManageApplications() {
         )}
 
         {/* ── 5. PAGINATION INFORMATION & PAGE SIZE SELECTOR ── */}
-        <div style={{ padding: '14px 20px', background: C.bgSecondary, borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ padding: '14px 20px', background: C.bgSecondary, borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', position: 'relative', zIndex: 20, marginBottom: '16px' }}>
           
           <div style={{ fontSize: '12.5px', color: C.textLight }}>
             Showing <strong>{(page - 1) * limit + 1}–{Math.min(page * limit, totalCount)}</strong> of <strong>{totalCount}</strong> applications
