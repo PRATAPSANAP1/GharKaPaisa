@@ -7,7 +7,8 @@ import {
   Share2, Copy, MessageSquare, Smartphone, Save, Sliders, Activity
 } from 'lucide-react';
 
-const AdminDocumentVerificationModal = ({ application, onClose, onRefresh, initialTab = 'qd', showAllTabs = false }) => {
+const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawApp, onClose, onRefresh, initialTab = 'qd', showAllTabs = false }) => {
+  const application = rawApplication || rawApp || {};
   // Normalize initialTab ('qd' | 'remark' | 'final' | 'timeline' | legacy aliases)
   const getTabKey = (tab) => {
     if (tab === 'details' || tab === 'qd') return 'qd';

@@ -983,6 +983,7 @@ export default function ManageApplications() {
       {/* DOCUMENT VERIFICATION MODAL */}
       {verifyModalApp && (
         <AdminDocumentVerificationModal
+          application={verifyModalApp}
           app={verifyModalApp}
           initialTab={verifyModalTab}
           onClose={() => setVerifyModalApp(null)}
