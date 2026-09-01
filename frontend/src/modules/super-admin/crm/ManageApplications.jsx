@@ -136,20 +136,23 @@ export default function ManageApplications() {
   const [shareLeads, setShareLeads] = useState([]);
   const [shareLoading, setShareLoading] = useState(false);
 
-  // KPI Metrics Calculation
+  // Global Stats from backend /applications/dashboard
+  const [globalStats, setGlobalStats] = useState(null);
+
+  // KPI Metrics Calculation from backend DB stats or fallback
   const kpis = {
-    total: totalCount || applications.length,
-    pending: applications.filter(a => ['submitted', 'pending', 'lead_created', 'created', 'initiated', 'new', 'draft'].includes((a.status || '').toLowerCase())).length,
-    underReview: applications.filter(a => ['under_review', 'under review', 'verification', 'in_progress', 'bank_verification'].includes((a.status || '').toLowerCase())).length,
-    approved: applications.filter(a => ['approved', 'operational_verified', 'super_admin_approved', 'sanctioned', 'disbursed'].includes((a.status || '').toLowerCase())).length,
-    rejected: applications.filter(a => ['rejected', 'declined', 'cancelled'].includes((a.status || '').toLowerCase())).length
+    total: globalStats?.total ?? totalCount ?? applications.length,
+    pending: globalStats?.pending ?? applications.filter(a => ['submitted', 'pending', 'lead_created', 'created', 'initiated', 'new', 'draft'].includes((a.status || '').toLowerCase())).length,
+    underReview: globalStats?.under_review ?? applications.filter(a => ['under_review', 'under review', 'verification', 'in_progress', 'bank_verification'].includes((a.status || '').toLowerCase())).length,
+    approved: globalStats?.approved ?? applications.filter(a => ['approved', 'operational_verified', 'super_admin_approved', 'sanctioned', 'disbursed'].includes((a.status || '').toLowerCase())).length,
+    rejected: globalStats?.rejected ?? applications.filter(a => ['rejected', 'declined', 'cancelled'].includes((a.status || '').toLowerCase())).length
   };
 
   // Today's Activity Stats
   const todayStr = new Date().toISOString().split('T')[0];
   const todayApps = applications.filter(a => (a.created_at || '').startsWith(todayStr));
   const todayStats = {
-    newLeads: todayApps.length,
+    newLeads: globalStats?.today ?? todayApps.length,
     underReview: todayApps.filter(a => (a.status || '').toLowerCase().includes('review') || (a.status || '').toLowerCase().includes('verification')).length,
     approved: todayApps.filter(a => (a.status || '').toLowerCase().includes('approved') || (a.status || '').toLowerCase().includes('verified')).length,
     rejected: todayApps.filter(a => (a.status || '').toLowerCase().includes('reject')).length
@@ -161,18 +164,25 @@ export default function ManageApplications() {
       const activePartnerId = (partnerFilter && partnerFilter !== 'ALL_PARTNERS' && partnerFilter !== 'ALL_EMPLOYEES') ? partnerFilter.trim() : undefined;
       const activeSourceType = sourceTypeFilter !== 'all' ? sourceTypeFilter : (partnerFilter === 'ALL_PARTNERS' ? 'partner' : partnerFilter === 'ALL_EMPLOYEES' ? 'employee' : undefined);
 
-      const res = await api.get('/applications', {
-        params: {
-          page,
-          limit,
-          status: statusFilter !== 'all' ? statusFilter : undefined,
-          commission_status: commFilter !== 'all' ? commFilter : undefined,
-          partner_id: activePartnerId,
-          source_type: activeSourceType,
-          process_by: processTypeFilter !== 'all' ? processTypeFilter : undefined,
-          search: search.trim() || undefined
-        }
-      });
+      const [res, dashRes] = await Promise.all([
+        api.get('/applications', {
+          params: {
+            page,
+            limit,
+            status: statusFilter !== 'all' ? statusFilter : undefined,
+            commission_status: commFilter !== 'all' ? commFilter : undefined,
+            partner_id: activePartnerId,
+            source_type: activeSourceType,
+            process_by: processTypeFilter !== 'all' ? processTypeFilter : undefined,
+            search: search.trim() || undefined
+          }
+        }),
+        api.get('/applications/dashboard').catch(() => null)
+      ]);
+
+      if (dashRes?.data?.data?.stats) {
+        setGlobalStats(dashRes.data.data.stats);
+      }
       if (res.data?.success) {
         let list = res.data.data || [];
         if (partnerFilter === 'ALL_PARTNERS' || sourceTypeFilter === 'partner') {
