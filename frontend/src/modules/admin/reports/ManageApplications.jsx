@@ -2,13 +2,19 @@ import React, { useState, useEffect } from 'react';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
-import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers, Eye } from 'lucide-react';
+import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers, Eye, Download } from 'lucide-react';
+import { 
+  MdSearch, MdFilterList, MdDownload, MdAdd, MdHourglassEmpty, MdTrackChanges, 
+  MdCheckCircle, MdCancel, MdChevronLeft, MdChevronRight, MdClose, MdMoreVert, 
+  MdVisibility, MdHistory, MdDelete, MdExpandMore, MdChevronRight as MdChevronRightIcon 
+} from 'react-icons/md';
+import { FaFileAlt } from 'react-icons/fa';
 import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
 import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
 import { useAuthStore } from '../../../app/store/authStore';
 
 export default function ManageApplications() {
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const S = makeS(C);
 
   const user = useAuthStore((state) => state.user);
@@ -28,10 +34,12 @@ export default function ManageApplications() {
   const [allCount, setAllCount] = useState(0);
   const [backendStatusCounts, setBackendStatusCounts] = useState(null);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Detail / Review Modal State
   const [selectedApp, setSelectedApp] = useState(null);
@@ -42,23 +50,48 @@ export default function ManageApplications() {
   const [superAdminRemark, setSuperAdminRemark] = useState("");
   const [submittingApprove, setSubmittingApprove] = useState(false);
 
-  // Status Update State
-  const [newStatus, setNewStatus] = useState("");
-  const [bankRefNumber, setBankRefNumber] = useState("");
-  const [approvedAmount, setApprovedAmount] = useState("");
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [notes, setNotes] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
+  // Table row 3-dots action menu
+  const [actionMenuAppId, setActionMenuAppId] = useState(null);
+
+  // Agent Lookup lists
+  const [partnersList, setPartnersList] = useState([]);
+  const [employeesList, setEmployeesList] = useState([]);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const [pRes, eRes] = await Promise.all([
+          api.get('/admin/partners', { params: { limit: 1000 } }).catch(() => null),
+          api.get('/employees', { params: { limit: 1000 } }).catch(() => null)
+        ]);
+        
+        let pArr = pRes?.data?.data?.partners || pRes?.data?.data || pRes?.data?.partners || pRes?.data || [];
+        if (!Array.isArray(pArr) && typeof pArr === 'object') {
+          pArr = pArr.rows || Object.values(pArr).find(v => Array.isArray(v)) || [];
+        }
+        setPartnersList(Array.isArray(pArr) ? pArr : []);
+
+        let eArr = eRes?.data?.data?.employees || eRes?.data?.data || eRes?.data?.employees || eRes?.data || [];
+        if (!Array.isArray(eArr) && typeof eArr === 'object') {
+          eArr = eArr.rows || Object.values(eArr).find(v => Array.isArray(v)) || [];
+        }
+        setEmployeesList(Array.isArray(eArr) ? eArr : []);
+      } catch (err) {
+        console.error('Error fetching agents for filter:', err);
+      }
+    };
+    fetchAgents();
+  }, []);
 
   const fetchApplications = async () => {
-    if (apps.length === 0) setLoading(true);
+    setLoading(true);
     setErr("");
     try {
       const res = await api.get("/applications", {
         params: {
           page,
-          limit: 100,
-          search: search || undefined,
+          limit,
+          search: search.trim() || undefined,
           status: status || undefined,
         },
       });
@@ -83,7 +116,7 @@ export default function ManageApplications() {
 
   useEffect(() => {
     fetchApplications();
-  }, [page, status]);
+  }, [page, limit, status]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -97,11 +130,6 @@ export default function ManageApplications() {
     setLoadingDetail(true);
     setSuperAdminRemark("");
     setTimelines([]);
-    setNewStatus("");
-    setBankRefNumber("");
-    setApprovedAmount("");
-    setRejectionReason("");
-    setNotes("");
     const targetId = app?.id || app?.application_id || app?.app_number || app?.lead_id;
     try {
       const [res, tRes] = await Promise.all([
@@ -114,10 +142,6 @@ export default function ManageApplications() {
         const realAppId = det.app_number || det.id || app?.app_number || app?.id || det.application_id || app?.application_id;
         const merged = { ...app, ...det, ...pd, real_id: realAppId, app_number: det.app_number || app?.app_number };
         setAppDetail(merged);
-        setNewStatus(isOpsHeadOrSuperAdmin ? (det.status || "operational_verified") : "operational_verified");
-        setBankRefNumber(det.bank_ref_number || pd.bank_ref_number || "");
-        setApprovedAmount(det.approved_amount || pd.approved_amount || "");
-        setRejectionReason(det.rejection_reason || pd.decline_reason || "");
       }
       if (tRes?.data?.success) {
         setTimelines(tRes.data.data || []);
@@ -184,35 +208,6 @@ export default function ManageApplications() {
     }
   };
 
-  const handleUpdateStatus = async (e) => {
-    e.preventDefault();
-    if (!newStatus) return alert("Please select a status.");
-    if (newStatus === "rejected" && !rejectionReason.trim()) {
-      return alert("Rejection reason is required when status is rejected.");
-    }
-
-    setActionLoading(true);
-    try {
-      const res = await api.patch(`/applications/${selectedApp.id}/status`, {
-        status: newStatus,
-        bank_ref_number: bankRefNumber.trim() || undefined,
-        approved_amount: approvedAmount ? parseFloat(approvedAmount) : undefined,
-        rejection_reason: newStatus === "rejected" ? rejectionReason.trim() : undefined,
-        notes: notes.trim() || undefined,
-      });
-
-      if (res.data?.success) {
-        alert("Application status updated successfully!");
-        setSelectedApp(null);
-        fetchApplications();
-      }
-    } catch (e) {
-      alert(e.response?.data?.message || "Failed to update application status.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const STATUS_TABS = [
     { id: '', label: 'All Applications', color: C.primary, bg: `${C.primary}15` },
     { id: 'pending', label: 'Pending', color: '#f59e0b', bg: '#f59e0b15' },
@@ -247,10 +242,198 @@ export default function ManageApplications() {
     }
   };
 
+  const getInitials = (name) => {
+    if (!name) return 'CU';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const getAgentLabel = (app) => {
+    if (!app) return 'Direct';
+    
+    const appPName = app.partner_name || app.partner_full_name || (app.partner_first_name ? `${app.partner_first_name} ${app.partner_last_name || ''}`.trim() : null);
+    const appEName = app.employee_name || app.employee_full_name || (app.employee_first_name ? `${app.employee_first_name} ${app.employee_last_name || ''}`.trim() : null);
+
+    const pCode = app.partner_code || app.Partner_code || app.partner_id;
+    const eCode = app.employee_code || app.emp_code || app.employee_id;
+
+    let pName = appPName;
+    if (!pName && pCode && partnersList.length > 0) {
+      const matchP = partnersList.find(p => 
+        (p.partner_code && p.partner_code === pCode) || 
+        (p.code && p.code === pCode) || 
+        (p.id && String(p.id) === String(pCode))
+      );
+      if (matchP) {
+        pName = matchP.full_name || matchP.name || matchP.partner_name || (`${matchP.first_name || ''} ${matchP.last_name || ''}`.trim());
+      }
+    }
+
+    let eName = appEName;
+    if (!eName && eCode && employeesList.length > 0) {
+      const matchE = employeesList.find(e => 
+        (e.employee_code && e.employee_code === eCode) || 
+        (e.emp_code && e.emp_code === eCode) ||
+        (e.code && e.code === eCode) || 
+        (e.id && String(e.id) === String(eCode))
+      );
+      if (matchE) {
+        eName = matchE.full_name || matchE.name || matchE.employee_name || (`${matchE.first_name || ''} ${matchE.last_name || ''}`.trim());
+      }
+    }
+
+    if (pName && pName.toLowerCase() !== 'partner') {
+      return `${pName} (${pCode || 'PAR'})`;
+    }
+
+    if (eName && eName.toLowerCase() !== 'employee') {
+      return `${eName} (${eCode || 'EMP'})`;
+    }
+
+    if (pCode) return `Partner ${pCode} (${pCode})`;
+    if (eCode) return `Employee ${eCode} (${eCode})`;
+    return 'Direct';
+  };
+
+  const renderProcessBadge = (app) => {
+    const processBy = app?.process_by || app?.source || '';
+    const proc = (processBy || '').toLowerCase();
+    let badgeText = 'Direct Link';
+    let badgeBg = '#F3E8FF';
+    let badgeColor = '#7E22CE';
+    let codeLabel = getAgentLabel(app);
+
+    if (proc.includes('share') || proc.includes('partner_share')) {
+      badgeText = 'Share Link';
+      badgeBg = '#E0F2FE';
+      badgeColor = '#0369A1';
+    } else if (proc.includes('punch') || proc.includes('manual')) {
+      badgeText = 'Punch Only';
+      badgeBg = '#CCFBF1';
+      badgeColor = '#0F766E';
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <span style={{ fontSize: '11px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', background: badgeBg, color: badgeColor, width: 'fit-content' }}>
+          {badgeText}
+        </span>
+        <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight }}>{codeLabel}</span>
+      </div>
+    );
+  };
+
+  const kpis = {
+    total: total || apps.length,
+    pending: backendStatusCounts?.pending ?? apps.filter(a => ['submitted', 'pending', 'lead_created', 'created'].includes((a.status || '').toLowerCase())).length,
+    underReview: backendStatusCounts?.under_review ?? apps.filter(a => ['under_review', 'verification', 'in_progress', 'details_submitted'].includes((a.status || '').toLowerCase())).length,
+    approved: backendStatusCounts?.approved ?? apps.filter(a => ['approved', 'operational_verified', 'super_admin_approved'].includes((a.status || '').toLowerCase())).length,
+    rejected: backendStatusCounts?.rejected ?? apps.filter(a => ['rejected', 'declined', 'cancelled'].includes((a.status || '').toLowerCase())).length
+  };
+
+  const totalPages = Math.ceil((total || 1) / limit);
+
   return (
-    <div>
-      {/* Status-Wise Summary Tabs */}
-      <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '20px' }}>
+    <div style={{ fontFamily: 'Inter, sans-serif', paddingBottom: '100px' }}>
+      
+      {/* ── 1. PAGE HEADER ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
+        <div>
+          <h2 style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.02em' }}>
+            Applications Management
+          </h2>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
+            Track, verify, update and manage operations for all submitted customer applications.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button 
+            onClick={() => setIsExportModalOpen(true)}
+            style={{
+              padding: '9px 16px', borderRadius: '10px', background: C.card, color: C.text,
+              border: `1px solid ${C.border}`, fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+            }}
+          >
+            <MdDownload size={18} />
+            <span>Export</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── 2. TOP KPI SUMMARY CARDS ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+        
+        {/* Total Applications */}
+        <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Total Applications</span>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(99, 102, 241, 0.1)', color: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FaFileAlt size={16} />
+            </div>
+          </div>
+          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.total.toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* Pending Review */}
+        <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Pending Review</span>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <MdHourglassEmpty size={18} />
+            </div>
+          </div>
+          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.pending}</span>
+          </div>
+        </div>
+
+        {/* Under Review */}
+        <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Details Submitted</span>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <MdTrackChanges size={18} />
+            </div>
+          </div>
+          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.underReview}</span>
+          </div>
+        </div>
+
+        {/* Approved */}
+        <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Approved</span>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <MdCheckCircle size={18} />
+            </div>
+          </div>
+          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.approved}</span>
+          </div>
+        </div>
+
+        {/* Rejected */}
+        <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Rejected</span>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <MdCancel size={18} />
+            </div>
+          </div>
+          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.rejected}</span>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── 3. STATUS FILTER TABS ── */}
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '16px' }}>
         {STATUS_TABS.map((tab) => {
           const isActive = status === tab.id;
           const count = tab.id === ''
@@ -261,11 +444,11 @@ export default function ManageApplications() {
               key={tab.id}
               onClick={() => { setStatus(tab.id); setPage(1); }}
               style={{
-                display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '12px',
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '10px',
                 background: isActive ? tab.color : C.card,
                 color: isActive ? '#ffffff' : C.text,
                 border: `1px solid ${isActive ? tab.color : C.border}`,
-                fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap',
+                fontWeight: 700, fontSize: '12.5px', cursor: 'pointer', whiteSpace: 'nowrap',
                 transition: 'all 0.2s ease',
                 boxShadow: isActive ? `0 4px 12px ${tab.color}35` : 'none'
               }}
@@ -274,7 +457,7 @@ export default function ManageApplications() {
               <span style={{
                 background: isActive ? 'rgba(255,255,255,0.25)' : tab.bg,
                 color: isActive ? '#ffffff' : tab.color,
-                padding: '2px 8px', borderRadius: '20px', fontSize: '11px', fontWeight: 800
+                padding: '2px 7px', borderRadius: '20px', fontSize: '11px', fontWeight: 800
               }}>
                 {count}
               </span>
@@ -283,241 +466,215 @@ export default function ManageApplications() {
         })}
       </div>
 
-      {/* Filter Options */}
-      <div style={{ ...S.card, padding: "16px", marginBottom: "24px" }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" }}>
-          <div style={{ flex: 1, minWidth: "200px" }}>
+      {/* ── 4. SEARCH BAR ── */}
+      <div style={{ background: C.card, borderRadius: '14px', padding: '14px', border: `1px solid ${C.border}`, marginBottom: '20px' }}>
+        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ flex: 1, position: 'relative' }}>
             <input
-              style={S.input}
-              placeholder="Search by App #, Customer Name, Mobile..."
+              style={{ ...S.input, paddingLeft: '38px', height: '40px', fontSize: '13px', borderRadius: '10px' }}
+              placeholder="Search by customer name, mobile, application ID, PAN..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight, fontSize: '20px' }} />
           </div>
-          <select
-            style={{ ...S.input, width: "auto", minWidth: "180px" }}
-            value={status}
-            onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="details_submitted">Details Submitted</option>
-            <option value="operational_verified">Operational Verified</option>
-            <option value="approved">Approved</option>
-            <option value="commission_received">Commission Received</option>
-            <option value="rejected">Rejected</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          <button type="submit" style={{ ...S.btn("primary", false), padding: "10px 20px" }}>
+
+          <button type="submit" style={{ ...S.btn("primary", false), padding: "0 20px", height: "40px", borderRadius: "10px" }}>
             Search
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsExportModalOpen(true)}
-            style={{ ...S.btn("outline", false), padding: "10px 18px", display: "flex", alignItems: "center", gap: "6px", marginLeft: "auto" }}
-          >
-            <Icons.download size={16} /> Export Applications
           </button>
         </form>
       </div>
 
-      {/* ── Unified Applications Table (Newest First) ── */}
+      {/* ── 5. APPLICATIONS TABLE ── */}
       {err && (
-        <div style={{ padding: "16px", background: `${C.red}10`, border: `1px solid ${C.red}30`, borderRadius: "12px", color: C.red, marginBottom: "16px" }}>
+        <div style={{ padding: "14px", background: `${C.red}10`, border: `1px solid ${C.red}30`, borderRadius: "12px", color: C.red, marginBottom: "16px" }}>
           {err}
         </div>
       )}
 
-      {loading ? (
-        <div style={{ ...S.card, textAlign: "center", padding: "48px", color: C.textLight }}>
-          <div className="animate-spin" style={{ width: "24px", height: "24px", border: `3px solid ${C.teal}`, borderTopColor: "transparent", borderRadius: "50%", margin: "0 auto 8px" }}></div>
-          Loading applications...
-        </div>
-      ) : apps.length === 0 ? (
-        <div style={{ ...S.card, textAlign: "center", padding: "48px", color: C.textLight }}>No applications found matching criteria.</div>
-      ) : (
-        (() => {
-          const sortedApps = [...apps].sort((a, b) => {
-            const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.id || 0);
-            const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.id || 0);
-            return timeB - timeA;
-          });
+      <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: C.textLight }}>
+            <div className="animate-spin" style={{ width: '28px', height: '28px', border: `3px solid ${C.teal}`, borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 12px' }}></div>
+            Fetching applications...
+          </div>
+        ) : apps.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: C.textLight }}>
+            <FaFileAlt size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+            <div style={{ fontWeight: 700, fontSize: '15px', color: C.text }}>No applications found</div>
+            <div style={{ fontSize: '13px', marginTop: '4px' }}>Try adjusting your search query or filters.</div>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <th style={{ padding: '14px 16px' }}>App #</th>
+                  <th style={{ padding: '14px 16px' }}>Customer Details</th>
+                  <th style={{ padding: '14px 16px' }}>Product &amp; Bank</th>
+                  <th style={{ padding: '14px 16px' }}>Attribution</th>
+                  <th style={{ padding: '14px 16px' }}>Applied Amount</th>
+                  <th style={{ padding: '14px 16px' }}>Status</th>
+                  <th style={{ padding: '14px 16px' }}>Date</th>
+                  <th style={{ padding: '14px 16px', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody style={{ fontSize: '13px', color: C.text }}>
+                {apps.map((app) => {
+                  const badge = getStatusBadgeStyle(app.status);
+                  const formattedDate = app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+                  const custName = app.customer_name || app.full_name || 'Customer';
 
-          return (
-            <div
-              style={{
-                ...S.card,
-                padding: 0,
-                borderRadius: "16px",
-                overflow: "hidden",
-                border: `1px solid ${C.border}`
-              }}
-            >
-              <div style={{
-                padding: "16px 20px",
-                background: C.bgSecondary,
-                borderBottom: `1px solid ${C.border}`,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
-              }}>
-                <h3 style={{ fontSize: "15px", fontWeight: 800, color: C.text, margin: 0 }}>
-                  Applications ({sortedApps.length})
-                </h3>
-              </div>
+                  return (
+                    <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      
+                      {/* App Number */}
+                      <td style={{ padding: '14px 16px', fontWeight: 800, fontFamily: 'monospace', color: C.teal }}>
+                        {app.app_number || `APP${app.id}`}
+                      </td>
 
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                  <thead>
-                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase" }}>
-                      <th style={{ padding: "14px 16px" }}>App #</th>
-                      <th style={{ padding: "14px 16px" }}>Customer Details</th>
-                      <th style={{ padding: "14px 16px" }}>Referred By (Partner / Employee)</th>
-                      <th style={{ padding: "14px 16px" }}>Product</th>
-                      <th style={{ padding: "14px 16px" }}>Applied Amount</th>
-                      <th style={{ padding: "14px 16px" }}>Commission</th>
-                      <th style={{ padding: "14px 16px" }}>Status</th>
-                      <th style={{ padding: "14px 16px" }}>Date</th>
-                      <th style={{ padding: "14px 16px", textAlign: "right" }}>Actions</th>
+                      {/* Customer Info */}
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: C.bgSecondary, color: C.primary, fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}` }}>
+                            {getInitials(custName)}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 800, color: C.text }}>{custName}</div>
+                            <div style={{ fontSize: '11px', color: C.textLight }}>{app.customer_mobile || app.mobile || 'No Mobile'}</div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Product & Bank */}
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ fontWeight: 700 }}>{app.product_name || app.category || 'Financial Product'}</div>
+                        <div style={{ fontSize: '11px', color: C.textLight }}>{app.bank_name || app.bank_code || 'Bank Partner'}</div>
+                      </td>
+
+                      {/* Source Attribution & Agent */}
+                      <td style={{ padding: '14px 16px' }}>
+                        {renderProcessBadge(app)}
+                      </td>
+
+                      {/* Amount */}
+                      <td style={{ padding: '14px 16px', fontWeight: 700 }}>
+                        {app.loan_amount && Number(app.loan_amount) > 0 
+                          ? `₹${parseFloat(app.loan_amount).toLocaleString("en-IN")}`
+                          : (app.monthly_income || app.salary) 
+                            ? `₹${parseFloat(app.monthly_income || app.salary).toLocaleString("en-IN")} / mo` 
+                            : 'N/A'}
+                      </td>
+
+                      {/* Status */}
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{
+                          display: "inline-block", padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: 800, textTransform: "uppercase",
+                          background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`
+                        }}>
+                          {badge.label}
+                        </span>
+                      </td>
+
+                      {/* Date */}
+                      <td style={{ padding: '14px 16px', fontSize: '12px', color: C.textLight, whiteSpace: 'nowrap' }}>
+                        {formattedDate}
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
+                          {isOpsHeadOrSuperAdmin && (
+                            <button
+                              onClick={() => handleViewDetails(app)}
+                              style={{ background: "#7c3aed15", border: "1px solid #7c3aed40", color: "#7c3aed", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                            >
+                              <Eye size={12} /> Review
+                            </button>
+                          )}
+                          <button
+                            onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
+                            style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                          >
+                            <FileText size={12} /> QD
+                          </button>
+                          <button
+                            onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
+                            style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: 'center', gap: "4px" }}
+                          >
+                            <FileEdit size={12} /> Remark
+                          </button>
+                          <button
+                            onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }}
+                            style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                          >
+                            <Building2 size={12} /> Final
+                          </button>
+                        </div>
+                      </td>
+
                     </tr>
-                  </thead>
-                  <tbody style={{ fontSize: "13.5px", color: C.text }}>
-                    {sortedApps.map((app) => {
-                      const badge = getStatusBadgeStyle(app.status);
-                      const formattedDate = app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-                      const isEmp = Boolean(app.employee_name || app.emp_code || app.employee_id || app.submitter_role === 'EMPLOYEE');
-                      const isPtn = Boolean(app.Partner_first_name || app.partner_first_name || app.Partner_code || app.partner_code || app.partner_id);
+        {/* ── PAGINATION BAR ── */}
+        <div style={{ padding: '14px 20px', background: C.bgSecondary, borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          
+          <div style={{ fontSize: '12.5px', color: C.textLight }}>
+            Showing <strong>{(page - 1) * limit + 1}–{Math.min(page * limit, total)}</strong> of <strong>{total}</strong> applications
+          </div>
 
-                      let referrerBadge = null;
-                      let referrerName = '';
-                      let referrerCode = '';
-
-                      if (isEmp) {
-                        referrerBadge = (
-                          <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, background: '#E0E7FF', color: '#3730A3' }}>
-                            EMPLOYEE
-                          </span>
-                        );
-                        referrerName = app.employee_name || app.submitted_by_name || 'Employee';
-                        let rawCode = app.emp_code || (app.employee_id ? String(app.employee_id) : 'EMP');
-                        if (rawCode.startsWith('CAND')) {
-                          rawCode = rawCode.replace(/^CAND/, 'YOH-SE');
-                        }
-                        referrerCode = rawCode;
-                      } else if (isPtn) {
-                        referrerBadge = (
-                          <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, background: '#ECFDF5', color: '#065F46' }}>
-                            PARTNER
-                          </span>
-                        );
-                        referrerName = `${app.Partner_first_name || app.partner_first_name || 'Partner'} ${app.Partner_last_name || app.partner_last_name || ''}`.trim();
-                        referrerCode = app.Partner_code || app.partner_code || 'N/A';
-                      } else {
-                        referrerBadge = (
-                          <span style={{ padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, background: '#F3F4F6', color: '#4B5563' }}>
-                            DIRECT CUSTOMER
-                          </span>
-                        );
-                        referrerName = 'Direct Online';
-                        referrerCode = 'N/A';
-                      }
-
-                      return (
-                        <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
-                          <td style={{ padding: "14px 16px", fontWeight: 700, fontMono: true }}>{app.app_number}</td>
-                          <td style={{ padding: "14px 16px" }}>
-                            <div style={{ fontWeight: 600 }}>{app.customer_name}</div>
-                            <div style={{ fontSize: "11px", color: C.textLight }}>{app.customer_mobile}</div>
-                          </td>
-                          <td style={{ padding: "14px 16px" }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                              {referrerBadge}
-                            </div>
-                            <div style={{ fontWeight: 700, fontSize: '13px' }}>{referrerName}</div>
-                            <div style={{ fontSize: "11px", color: C.textLight }}>Code: {referrerCode}</div>
-                            <div style={{
-                              marginTop: "4px", fontSize: "10px", fontWeight: 800, textTransform: "uppercase", display: "inline-block",
-                              padding: "2px 8px", borderRadius: "6px",
-                              background: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? `${C.teal}15` : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? `${C.blue}15` : `${C.purple}15`,
-                              color: (app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? C.teal : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? C.blue : C.purple
-                            }}>
-                              {(app.process_by === 'partner_share' || app.process_by === 'share_link' || (app.process_by && app.process_by.includes('share'))) ? 'Share Link' : (app.process_by === 'customer_direct' || app.process_by === 'direct' || (app.process_by && app.process_by.includes('direct'))) ? 'Direct Link' : 'Punch Only'}
-                            </div>
-                          </td>
-                          <td style={{ padding: "14px 16px" }}>
-                            <div style={{ fontWeight: 500 }}>{app.product_name}</div>
-                            <div style={{ fontSize: "11px", color: C.textLight, textTransform: "capitalize" }}>{app.category} • {app.bank_code}</div>
-                          </td>
-                          <td style={{ padding: "14px 16px", fontWeight: 600 }}>
-                            {app.loan_amount && Number(app.loan_amount) > 0 
-                              ? `₹${parseFloat(app.loan_amount).toLocaleString("en-IN")}`
-                              : (app.monthly_income || app.salary) 
-                                ? `₹${parseFloat(app.monthly_income || app.salary).toLocaleString("en-IN")} / mo` 
-                                : 'N/A'}
-                          </td>
-                          <td style={{ padding: "14px 16px", color: C.green, fontWeight: 700 }}>
-                            ₹{parseFloat(app.commission_amount || 0).toLocaleString("en-IN")}
-                          </td>
-                          <td style={{ padding: "14px 16px" }}>
-                            <span style={{
-                              display: "inline-block", padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: 800, textTransform: "uppercase",
-                              background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`
-                            }}>
-                              {badge.label}
-                            </span>
-                          </td>
-                          <td style={{ padding: "14px 16px", fontSize: "12px", color: C.textLight, whiteSpace: "nowrap" }}>
-                            {formattedDate}
-                          </td>
-                          <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px", alignItems: "center" }}>
-                              {(() => {
-                                return (
-                                  <>
-                                    {isOpsHeadOrSuperAdmin && (
-                                      <button
-                                        onClick={() => handleViewDetails(app)}
-                                        style={{ background: "#7c3aed15", border: "1px solid #7c3aed40", color: "#7c3aed", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                                      >
-                                        <Eye size={12} /> Review
-                                      </button>
-                                    )}
-                                    <button
-                                      onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
-                                      style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                                    >
-                                      <FileText size={12} /> QD
-                                    </button>
-                                    <button
-                                      onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
-                                      style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: 'center', gap: "4px" }}
-                                    >
-                                      <FileEdit size={12} /> Remark
-                                    </button>
-                                    <button
-                                      onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }}
-                                      style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                                    >
-                                      <Building2 size={12} /> Final
-                                    </button>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            
+            {/* Items Per Page Select */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '12px', color: C.textLight }}>Per page:</span>
+              <select
+                value={limit}
+                onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+                style={{ ...S.input, height: '32px', padding: '2px 8px', fontSize: '12px', borderRadius: '6px' }}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
             </div>
-          );
-        })()
-      )}
 
-      {/* Review / Detail Modal */}
+            {/* Page Navigation Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                style={{ width: '32px', height: '32px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.card, color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: page <= 1 ? 'not-allowed' : 'pointer', opacity: page <= 1 ? 0.5 : 1 }}
+              >
+                <MdChevronLeft size={20} />
+              </button>
+
+              <span style={{ fontSize: '12px', fontWeight: 800, color: C.text, padding: '0 8px' }}>
+                Page {page} of {totalPages || 1}
+              </span>
+
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage(prev => Math.min(prev + 1, totalPages))}
+                style={{ width: '32px', height: '32px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.card, color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: page >= totalPages ? 'not-allowed' : 'pointer', opacity: page >= totalPages ? 0.5 : 1 }}
+              >
+                <MdChevronRight size={20} />
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ── 360° REVIEW DETAIL MODAL ── */}
       {selectedApp && (
         <div style={{
           position: "fixed", top: 0, left: 0, width: "100%", height: "100%", zIndex: 10000,
@@ -528,7 +685,7 @@ export default function ManageApplications() {
             width: "100%", maxWidth: "850px", maxHeight: "92vh", overflowY: "auto", padding: "24px", position: "relative",
             boxShadow: "0 25px 50px -12px rgba(0,0,0,0.35)"
           }}>
-            {/* Close */}
+            {/* Close Button */}
             <button
               onClick={() => setSelectedApp(null)}
               style={{ position: "absolute", top: "16px", right: "16px", background: "none", border: "none", color: C.textLight, cursor: "pointer" }}
@@ -558,7 +715,7 @@ export default function ManageApplications() {
                 <div style={{ background: `${C.primary}08`, border: `1.5px solid ${C.primary}30`, padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                     <div style={{ fontWeight: 800, fontSize: '14px', color: C.primary, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <CheckCircle2 size={18} /> Operational Verification & Status Upgrade
+                      <CheckCircle2 size={18} /> Operational Verification &amp; Status Upgrade
                     </div>
                     <span style={{
                       fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '12px',
@@ -659,7 +816,7 @@ export default function ManageApplications() {
                 {/* Part 2: Operational Processing & Remark Form */}
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
                   <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#0d9488', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                    Part 2: Operational Processing & Remark Form
+                    Part 2: Operational Processing &amp; Remark Form
                   </h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
                     <div><span style={{ color: C.textLight }}>Appcode Status:</span> <strong style={{ color: C.text }}>{appDetail.appcode_status || 'Appcode Pending'}</strong></div>
@@ -674,7 +831,7 @@ export default function ManageApplications() {
                 {/* Part 3: Bank Remark & Final Form */}
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
                   <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: '#9333ea', margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                    Part 3: Bank Remark & Final Form
+                    Part 3: Bank Remark &amp; Final Form
                   </h4>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
                     <div><span style={{ color: C.textLight }}>App / Bank Reference #:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.bank_ref_number || appDetail.bank_application_number || appDetail.app_number || '—'}</strong></div>
@@ -724,6 +881,7 @@ export default function ManageApplications() {
           onRefresh={fetchApplications}
         />
       )}
+
       {/* Export Applications Modal */}
       <ExportApplicationsModal
         isOpen={isExportModalOpen}
