@@ -7,7 +7,10 @@ import {
   MdCompareArrows, MdHistory, MdFileDownload, MdClose, MdRefresh,
   MdArrowForward, MdTrendingUp, MdAccountBalanceWallet, MdLock,
   MdFilterList, MdTrendingDown, MdPeople, MdAttachMoney, MdPictureAsPdf,
-  MdFileUpload, MdReceipt, MdAssignmentReturn, MdLayers, MdCheck
+  MdFileUpload, MdReceipt, MdAssignmentReturn, MdLayers, MdCheck,
+  MdCalendarToday, MdAddCard, MdCheckCircleOutline, MdPieChart,
+  MdScale, MdFlashOn, MdBuild, MdCloudUpload, MdDescription,
+  MdBarChart, MdAssignment
 } from 'react-icons/md';
 
 // ── Default Mock Data Fallbacks for 100% Dynamic Visual Completeness ────────
@@ -210,7 +213,7 @@ export default function ManageWallet() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {/* Date Selector */}
           <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
-            📅 <span>{filters.dateRange}</span>
+            <MdCalendarToday size={15} style={{ color: C.teal }} /> <span>{filters.dateRange}</span>
           </div>
 
           {/* Filter Toggle Button */}
@@ -375,7 +378,7 @@ export default function ManageWallet() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: C.teal }}>💸</span> 1. Withdrawal Settlements
+                <MdAccountBalanceWallet style={{ color: C.teal }} size={18} /> 1. Withdrawal Settlements
               </h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Track and manage withdrawal requests</span>
             </div>
@@ -427,7 +430,7 @@ export default function ManageWallet() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: '#EA580C' }}>📥</span> 2. Add Funds Requests
+                <MdAddCard style={{ color: '#EA580C' }} size={18} /> 2. Add Funds Requests
               </h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Manage employee/partner add funds</span>
             </div>
@@ -479,7 +482,7 @@ export default function ManageWallet() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ color: '#9333EA' }}>⚙️</span> 3. Pending Commission Approvals
+                <MdLayers style={{ color: '#9333EA' }} size={18} /> 3. Pending Commission Approvals
               </h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Review and approve pending commissions</span>
             </div>
@@ -530,7 +533,9 @@ export default function ManageWallet() {
         <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>📊 4. Partner Balances Overview</h3>
+              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MdPieChart style={{ color: '#3B82F6' }} size={18} /> 4. Partner Balances Overview
+              </h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Overview of partner wallet balances</span>
             </div>
             <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('partners'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
@@ -604,7 +609,9 @@ export default function ManageWallet() {
         <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>📜 5. Ledger Audit Trail</h3>
+              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MdReceipt style={{ color: C.teal }} size={18} /> 5. Ledger Audit Trail
+              </h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Track all wallet transactions and financial logs</span>
             </div>
             <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('ledger'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
@@ -653,7 +660,9 @@ export default function ManageWallet() {
         <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>⚖️ 6. Wallet Reconciliation</h3>
+              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MdScale style={{ color: C.teal }} size={18} /> 6. Wallet Reconciliation
+              </h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Reconcile wallet balances and verify transactions</span>
             </div>
             <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('reconciliation'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
@@ -707,18 +716,20 @@ export default function ManageWallet() {
 
       {/* ── QUICK ACTIONS TOOLBAR (BOTTOM) ── */}
       <div style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <h4 style={{ fontSize: '13.5px', fontWeight: 900, color: C.text, margin: 0 }}>⚡ Quick Actions & Financial Operations</h4>
+        <h4 style={{ fontSize: '13.5px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <MdFlashOn style={{ color: '#F59E0B' }} size={18} /> Quick Actions & Financial Operations
+        </h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px' }}>
           {[
-            { label: 'Manual Wallet Adjustment', icon: '🛠️', action: () => setManualAdjModal(true) },
-            { label: 'Add Funds to Wallet', icon: '💳', action: () => setAddFundsModal(true) },
-            { label: 'Approve Settlement', icon: '✅', action: () => alert('Opening Bulk Settlement Approval Drawer...') },
-            { label: 'Bulk Settlement Upload', icon: '📤', action: () => setBulkUploadModal(true) },
-            { label: 'Wallet Statement Report', icon: '📄', action: () => alert('Generating Wallet Statement Report PDF...') },
-            { label: 'Settlement Report', icon: '📊', action: () => alert('Downloading Settlement Summary Excel...') },
-            { label: 'Partner Statement', icon: '📑', action: () => alert('Generating Partner Statement Report...') },
-            { label: 'Download Ledger', icon: '💾', action: () => alert('Downloading Ledger Audit Trail CSV...') },
-            { label: 'Reconciliation Report', icon: '⚖️', action: () => alert('Generating Wallet Reconciliation Audit Report...') },
+            { label: 'Manual Wallet Adjustment', icon: <MdBuild size={22} style={{ color: C.teal }} />, action: () => setManualAdjModal(true) },
+            { label: 'Add Funds to Wallet', icon: <MdAddCard size={22} style={{ color: '#EA580C' }} />, action: () => setAddFundsModal(true) },
+            { label: 'Approve Settlement', icon: <MdCheckCircle size={22} style={{ color: '#10B981' }} />, action: () => alert('Opening Bulk Settlement Approval Drawer...') },
+            { label: 'Bulk Settlement Upload', icon: <MdCloudUpload size={22} style={{ color: '#3B82F6' }} />, action: () => setBulkUploadModal(true) },
+            { label: 'Wallet Statement Report', icon: <MdDescription size={22} style={{ color: '#8B5CF6' }} />, action: () => alert('Generating Wallet Statement Report PDF...') },
+            { label: 'Settlement Report', icon: <MdBarChart size={22} style={{ color: '#EC4899' }} />, action: () => alert('Downloading Settlement Summary Excel...') },
+            { label: 'Partner Statement', icon: <MdAssignment size={22} style={{ color: '#14B8A6' }} />, action: () => alert('Generating Partner Statement Report...') },
+            { label: 'Download Ledger', icon: <MdFileDownload size={22} style={{ color: '#6366F1' }} />, action: () => alert('Downloading Ledger Audit Trail CSV...') },
+            { label: 'Reconciliation Report', icon: <MdScale size={22} style={{ color: '#F59E0B' }} />, action: () => alert('Generating Wallet Reconciliation Audit Report...') },
           ].map((act, idx) => (
             <button
               key={idx}
@@ -855,13 +866,13 @@ export default function ManageWallet() {
                 ← Back to Wallet Overview
               </button>
               <div>
-                <h2 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: C.text }}>
-                  {activeFullViewModal === 'withdrawals' && '💸 Full View: Withdrawal Settlements'}
-                  {activeFullViewModal === 'add_funds' && '📥 Full View: Add Funds Requests'}
-                  {activeFullViewModal === 'commissions' && '⚙️ Full View: Pending Commission Approvals'}
-                  {activeFullViewModal === 'partners' && '📊 Full View: Partner Balances Overview'}
-                  {activeFullViewModal === 'ledger' && '📜 Full View: Ledger Audit Trail'}
-                  {activeFullViewModal === 'reconciliation' && '⚖️ Full View: Wallet Reconciliation Audit'}
+                <h2 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {activeFullViewModal === 'withdrawals' && <><MdAccountBalanceWallet style={{ color: C.teal }} /> Full View: Withdrawal Settlements</>}
+                  {activeFullViewModal === 'add_funds' && <><MdAddCard style={{ color: '#EA580C' }} /> Full View: Add Funds Requests</>}
+                  {activeFullViewModal === 'commissions' && <><MdLayers style={{ color: '#9333EA' }} /> Full View: Pending Commission Approvals</>}
+                  {activeFullViewModal === 'partners' && <><MdPieChart style={{ color: '#3B82F6' }} /> Full View: Partner Balances Overview</>}
+                  {activeFullViewModal === 'ledger' && <><MdReceipt style={{ color: C.teal }} /> Full View: Ledger Audit Trail</>}
+                  {activeFullViewModal === 'reconciliation' && <><MdScale style={{ color: C.teal }} /> Full View: Wallet Reconciliation Audit</>}
                 </h2>
                 <span style={{ fontSize: '12px', color: C.textLight, fontWeight: 500 }}>
                   Detailed record list, full history, instant search and bulk operations
