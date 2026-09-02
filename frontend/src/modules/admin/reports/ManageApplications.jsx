@@ -615,7 +615,10 @@ export default function ManageApplications() {
                     <optgroup label="── PARTNERS ──">
                       {partnersList.map((p, idx) => {
                         const code = p.partner_code || p.code || p.referral_code || p.id;
-                        const name = p.full_name || p.name || p.partner_name || 'Partner';
+                        const firstName = p.first_name || '';
+                        const lastName = p.last_name || '';
+                        const combined = `${firstName} ${lastName}`.trim();
+                        const name = p.full_name || p.name || p.partner_name || (combined.length > 0 ? combined : 'Partner');
                         return (
                           <option key={`p_${p.id || code || idx}`} value={code}>
                             {name} ({code})
@@ -628,8 +631,11 @@ export default function ManageApplications() {
                   {employeesList.length > 0 && (
                     <optgroup label="── EMPLOYEES ──">
                       {employeesList.map((e, idx) => {
-                        const code = e.employee_code || e.code || e.emp_code || e.id;
-                        const name = e.full_name || e.name || e.employee_name || 'Employee';
+                        const code = e.employee_code || e.emp_code || e.code || e.id;
+                        const firstName = e.first_name || '';
+                        const lastName = e.last_name || '';
+                        const combined = `${firstName} ${lastName}`.trim();
+                        const name = e.full_name || e.name || e.employee_name || (combined.length > 0 ? combined : 'Employee');
                         return (
                           <option key={`e_${e.id || code || idx}`} value={code}>
                             {name} ({code})
