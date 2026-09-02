@@ -704,30 +704,152 @@ router.post('/:id/activate', async (req, res, next) => {
   }
 });
 
-// POST /api/v1/employees/:id/kyc-verify — Super Admin & HR Approve or Reject Employee KYC
+// POST /api/v1/employees/:id/kyc-verify — Super Admin & HR Approve or Reject Employee KYC (Document-Level & Overall)
 router.post('/:id/kyc-verify', async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { kyc_status, review_notes } = req.body; // 'VERIFIED' or 'REJECTED'
+    const { 
+      kyc_status, 
+      review_notes,
+      pan_action, pan_reason,
+      aadhaar_action, aadhaar_reason,
+      bank_action, bank_reason
+    } = req.body;
 
-    if (!kyc_status || !['VERIFIED', 'REJECTED'].includes(kyc_status)) {
-      return res.status(400).json({ success: false, message: 'Status must be VERIFIED or REJECTED' });
+    // Fetch existing KYC record
+    const existingRes = await query(`SELECT * FROM employee_kyc WHERE employee_id = $1`, [id]);
+    const existing = existingRes.rows[0] || {};
+
+    let pan_status = existing.pan_status || 'PENDING';
+    let pan_verified = existing.pan_verified || false;
+    let pan_rejection_reason = existing.pan_rejection_reason || null;
+
+    let aadhaar_status = existing.aadhaar_status || 'PENDING';
+    let aadhaar_verified = existing.aadhaar_verified || false;
+    let aadhaar_rejection_reason = existing.aadhaar_rejection_reason || null;
+
+    let bank_status = existing.bank_status || 'PENDING';
+    let bank_verified = existing.bank_verified || false;
+    let bank_rejection_reason = existing.bank_rejection_reason || null;
+
+    // Handle document level decisions if provided
+    if (pan_action) {
+      if (pan_action === 'VERIFIED') {
+        pan_status = 'VERIFIED';
+        pan_verified = true;
+        pan_rejection_reason = null;
+      } else if (pan_action === 'REJECTED') {
+        pan_status = 'REJECTED';
+        pan_verified = false;
+        pan_rejection_reason = pan_reason || review_notes || 'PAN document unclear or invalid';
+      }
     }
 
-    const isVerified = kyc_status === 'VERIFIED';
+    if (aadhaar_action) {
+      if (aadhaar_action === 'VERIFIED') {
+        aadhaar_status = 'VERIFIED';
+        aadhaar_verified = true;
+        aadhaar_rejection_reason = null;
+      } else if (aadhaar_action === 'REJECTED') {
+        aadhaar_status = 'REJECTED';
+        aadhaar_verified = false;
+        aadhaar_rejection_reason = aadhaar_reason || review_notes || 'Aadhaar document unclear or invalid';
+      }
+    }
+
+    if (bank_action) {
+      if (bank_action === 'VERIFIED') {
+        bank_status = 'VERIFIED';
+        bank_verified = true;
+        bank_rejection_reason = null;
+      } else if (bank_action === 'REJECTED') {
+        bank_status = 'REJECTED';
+        bank_verified = false;
+        bank_rejection_reason = bank_reason || review_notes || 'Bank proof document unclear or invalid';
+      }
+    }
+
+    // Handle bulk overall decision fallback
+    if (kyc_status === 'VERIFIED' && !pan_action && !aadhaar_action && !bank_action) {
+      pan_status = 'VERIFIED'; pan_verified = true; pan_rejection_reason = null;
+      aadhaar_status = 'VERIFIED'; aadhaar_verified = true; aadhaar_rejection_reason = null;
+      bank_status = 'VERIFIED'; bank_verified = true; bank_rejection_reason = null;
+    } else if (kyc_status === 'REJECTED' && !pan_action && !aadhaar_action && !bank_action) {
+      if (!pan_verified) { pan_status = 'REJECTED'; pan_verified = false; pan_rejection_reason = review_notes || 'PAN rejected'; }
+      if (!aadhaar_verified) { aadhaar_status = 'REJECTED'; aadhaar_verified = false; aadhaar_rejection_reason = review_notes || 'Aadhaar rejected'; }
+      if (!bank_verified) { bank_status = 'REJECTED'; bank_verified = false; bank_rejection_reason = review_notes || 'Bank proof rejected'; }
+    }
+
+    // Determine final overall KYC status
+    let finalKycStatus = 'UNDER_REVIEW';
+    if (pan_status === 'VERIFIED' && aadhaar_status === 'VERIFIED' && bank_status === 'VERIFIED') {
+      finalKycStatus = 'VERIFIED';
+    } else if (pan_status === 'REJECTED' || aadhaar_status === 'REJECTED' || bank_status === 'REJECTED') {
+      finalKycStatus = 'REJECTED';
+    }
+
+    const isFullyVerified = finalKycStatus === 'VERIFIED';
 
     // Update employee_kyc table
     await query(
-      `INSERT INTO employee_kyc (employee_id, kyc_status, reviewed_by, reviewed_at, review_notes, updated_at)
-       VALUES ($1, $2, $3, NOW(), $4, NOW())
-       ON CONFLICT (employee_id) DO UPDATE SET
-         kyc_status = EXCLUDED.kyc_status,
-         reviewed_by = EXCLUDED.reviewed_by,
-         reviewed_at = NOW(),
-         review_notes = EXCLUDED.review_notes,
-         updated_at = NOW()`,
-      [id, kyc_status, req.user.id, review_notes || null]
+      `INSERT INTO employee_kyc (
+        employee_id, pan_status, pan_verified, pan_rejection_reason,
+        aadhaar_status, aadhaar_verified, aadhaar_rejection_reason,
+        bank_status, bank_verified, bank_rejection_reason,
+        kyc_status, reviewed_by, reviewed_at, review_notes, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), $13, NOW())
+      ON CONFLICT (employee_id) DO UPDATE SET
+        pan_status = EXCLUDED.pan_status,
+        pan_verified = EXCLUDED.pan_verified,
+        pan_rejection_reason = EXCLUDED.pan_rejection_reason,
+        aadhaar_status = EXCLUDED.aadhaar_status,
+        aadhaar_verified = EXCLUDED.aadhaar_verified,
+        aadhaar_rejection_reason = EXCLUDED.aadhaar_rejection_reason,
+        bank_status = EXCLUDED.bank_status,
+        bank_verified = EXCLUDED.bank_verified,
+        bank_rejection_reason = EXCLUDED.bank_rejection_reason,
+        kyc_status = EXCLUDED.kyc_status,
+        reviewed_by = EXCLUDED.reviewed_by,
+        reviewed_at = NOW(),
+        review_notes = EXCLUDED.review_notes,
+        updated_at = NOW()`,
+      [
+        id,
+        pan_status, pan_verified, pan_rejection_reason,
+        aadhaar_status, aadhaar_verified, aadhaar_rejection_reason,
+        bank_status, bank_verified, bank_rejection_reason,
+        finalKycStatus, req.user.id, review_notes || null
+      ]
     );
+
+    // Update employee_documents table for source-of-truth consistency
+    await query(`
+      UPDATE employee_documents 
+      SET verification_status = CASE 
+            WHEN document_type = 'pan' THEN $2::varchar
+            WHEN document_type = 'aadhaar' THEN $3::varchar
+            WHEN document_type = 'bank_proof' THEN $4::varchar
+            ELSE verification_status 
+          END,
+          rejection_reason = CASE 
+            WHEN document_type = 'pan' THEN $5::text
+            WHEN document_type = 'aadhaar' THEN $6::text
+            WHEN document_type = 'bank_proof' THEN $7::text
+            ELSE rejection_reason 
+          END,
+          verified_by = $8,
+          verified_at = NOW()
+      WHERE employee_id = $1
+    `, [
+      id,
+      pan_status === 'VERIFIED' ? 'APPROVED' : (pan_status === 'REJECTED' ? 'REJECTED' : 'PENDING'),
+      aadhaar_status === 'VERIFIED' ? 'APPROVED' : (aadhaar_status === 'REJECTED' ? 'REJECTED' : 'PENDING'),
+      bank_status === 'VERIFIED' ? 'APPROVED' : (bank_status === 'REJECTED' ? 'REJECTED' : 'PENDING'),
+      pan_rejection_reason,
+      aadhaar_rejection_reason,
+      bank_rejection_reason,
+      req.user.id
+    ]).catch(() => {});
 
     // Update onboarding checklist
     await query(
@@ -737,11 +859,17 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
            overall_progress = $5, 
            current_stage = $6 
        WHERE employee_id = $7`,
-      [isVerified, isVerified ? new Date() : null, isVerified, isVerified ? new Date() : null, isVerified ? 100 : 75, isVerified ? 'ACTIVE' : 'KYC_REJECTED', id]
+      [
+        isFullyVerified, isFullyVerified ? new Date() : null,
+        isFullyVerified, isFullyVerified ? new Date() : null,
+        isFullyVerified ? 100 : 75,
+        isFullyVerified ? 'ACTIVE' : (finalKycStatus === 'REJECTED' ? 'KYC_REJECTED' : 'KYC_UNDER_REVIEW'),
+        id
+      ]
     );
 
-    // Update employee activation status and user account status if verified
-    if (isVerified) {
+    // Update employee activation status and user account status
+    if (isFullyVerified) {
       await query(
         `UPDATE employees SET activation_status = 'APPROVED', employee_status = 'ACTIVE', activated_at = NOW() WHERE id = $1`,
         [id]
@@ -750,9 +878,28 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
         `UPDATE users SET status = 'active' WHERE id = (SELECT user_id FROM employees WHERE id = $1) AND id IS NOT NULL`,
         [id]
       );
+    } else {
+      await query(
+        `UPDATE employees SET activation_status = 'REJECTED', employee_status = 'ONBOARDING' WHERE id = $1`,
+        [id]
+      );
+      await query(
+        `UPDATE users SET status = 'inactive' WHERE id = (SELECT user_id FROM employees WHERE id = $1) AND id IS NOT NULL`,
+        [id]
+      );
     }
 
-    res.json({ success: true, message: `Employee KYC marked as ${kyc_status}`, status: kyc_status });
+    res.json({
+      success: true,
+      message: isFullyVerified ? 'Employee KYC verified and account activated' : 'Document review updated',
+      kyc_status: finalKycStatus,
+      documents: {
+        pan: { status: pan_status, reason: pan_rejection_reason },
+        aadhaar: { status: aadhaar_status, reason: aadhaar_rejection_reason },
+        bank: { status: bank_status, reason: bank_rejection_reason }
+      }
+    });
+
   } catch (err) {
     next(err);
   }

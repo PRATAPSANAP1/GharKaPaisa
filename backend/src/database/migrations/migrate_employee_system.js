@@ -227,6 +227,10 @@ const migrateEmployeeSystem = async () => {
       )
     `);
 
+    await query(`ALTER TABLE employee_kyc ADD COLUMN IF NOT EXISTS pan_status VARCHAR(20) DEFAULT 'PENDING'`);
+    await query(`ALTER TABLE employee_kyc ADD COLUMN IF NOT EXISTS aadhaar_status VARCHAR(20) DEFAULT 'PENDING'`);
+    await query(`ALTER TABLE employee_kyc ADD COLUMN IF NOT EXISTS bank_status VARCHAR(20) DEFAULT 'PENDING'`);
+
     await query(`CREATE INDEX IF NOT EXISTS idx_employee_kyc_employee_id ON employee_kyc(employee_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_employee_kyc_status ON employee_kyc(kyc_status)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_employee_kyc_pan ON employee_kyc(pan_number)`);

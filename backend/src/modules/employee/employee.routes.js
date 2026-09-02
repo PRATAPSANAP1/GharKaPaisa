@@ -432,90 +432,171 @@ router.post('/kyc', upload.fields([
 ]), async (req, res, next) => {
   try {
     const empId = req.employee.id;
+
+    // 1. Mandatory 3-Step Pre-requisite Check: Joining Form and Terms Acceptance must be completed first
+    const checklistRes = await query(`SELECT * FROM employee_onboarding_checklist WHERE employee_id = $1`, [empId]);
+    const checklist = checklistRes.rows[0] || {};
+
+    const joiningRes = await query(`SELECT id, form_status FROM employee_joining_details WHERE employee_id = $1`, [empId]);
+    const isJoiningDone = checklist.joining_form_completed || joiningRes.rows.length > 0;
+
+    const termsRes = await query(`SELECT id, accepted FROM employee_terms_acceptance WHERE employee_id = $1`, [empId]);
+    const isTermsDone = checklist.terms_completed || (termsRes.rows.length > 0 && termsRes.rows[0].accepted);
+
+    if (!isJoiningDone || !isTermsDone) {
+      const pendingSteps = [];
+      if (!isJoiningDone) pendingSteps.push('Employee Joining Form');
+      if (!isTermsDone) pendingSteps.push('Terms & Video Verification');
+      return res.status(400).json({
+        success: false,
+        message: `Cannot submit KYC. Please complete the following prior steps first: ${pendingSteps.join(' and ')}.`
+      });
+    }
+
     const { pan_number, aadhaar_number, bank_account_number, bank_account_holder_name, ifsc_code } = req.body;
 
-    let pan_url = null, pan_key = null;
-    let aadhaar_url = null, aadhaar_key = null;
-    let bank_url = null, bank_key = null;
+    // Fetch existing KYC record to preserve individual VERIFIED statuses when re-uploading other documents
+    const existingKycRes = await query(`SELECT * FROM employee_kyc WHERE employee_id = $1`, [empId]);
+    const existingKyc = existingKycRes.rows[0] || {};
 
+    let pan_url = existingKyc.pan_document_url || null;
+    let pan_key = existingKyc.pan_document_key || null;
+    let aadhaar_url = existingKyc.aadhaar_document_url || null;
+    let aadhaar_key = existingKyc.aadhaar_document_key || null;
+    let bank_url = existingKyc.bank_document_url || null;
+    let bank_key = existingKyc.bank_document_key || null;
+
+    let pan_status = existingKyc.pan_status || 'PENDING';
+    let pan_verified = existingKyc.pan_verified || false;
+    let pan_rejection_reason = existingKyc.pan_rejection_reason || null;
+
+    let aadhaar_status = existingKyc.aadhaar_status || 'PENDING';
+    let aadhaar_verified = existingKyc.aadhaar_verified || false;
+    let aadhaar_rejection_reason = existingKyc.aadhaar_rejection_reason || null;
+
+    let bank_status = existingKyc.bank_status || 'PENDING';
+    let bank_verified = existingKyc.bank_verified || false;
+    let bank_rejection_reason = existingKyc.bank_rejection_reason || null;
+
+    // If new PAN document uploaded: reset PAN status to UNDER_REVIEW
     if (req.files?.pan_document?.[0]) {
       const s3Res = await uploadToS3(req.files.pan_document[0].buffer, req.files.pan_document[0].originalname, 'employee-kyc');
       pan_url = s3Res.url;
       pan_key = s3Res.key;
+      pan_status = 'UNDER_REVIEW';
+      pan_verified = false;
+      pan_rejection_reason = null;
     }
 
+    // If new Aadhaar document uploaded: reset Aadhaar status to UNDER_REVIEW
     if (req.files?.aadhaar_document?.[0]) {
       const s3Res = await uploadToS3(req.files.aadhaar_document[0].buffer, req.files.aadhaar_document[0].originalname, 'employee-kyc');
       aadhaar_url = s3Res.url;
       aadhaar_key = s3Res.key;
+      aadhaar_status = 'UNDER_REVIEW';
+      aadhaar_verified = false;
+      aadhaar_rejection_reason = null;
     }
 
+    // If new Bank document uploaded: reset Bank status to UNDER_REVIEW
     if (req.files?.bank_document?.[0]) {
       const s3Res = await uploadToS3(req.files.bank_document[0].buffer, req.files.bank_document[0].originalname, 'employee-kyc');
       bank_url = s3Res.url;
       bank_key = s3Res.key;
+      bank_status = 'UNDER_REVIEW';
+      bank_verified = false;
+      bank_rejection_reason = null;
+    }
+
+    // If initial submission (or newly provided number without prior status)
+    if (pan_number && pan_status === 'PENDING') pan_status = 'UNDER_REVIEW';
+    if (aadhaar_number && aadhaar_status === 'PENDING') aadhaar_status = 'UNDER_REVIEW';
+    if (bank_account_number && bank_status === 'PENDING') bank_status = 'UNDER_REVIEW';
+
+    // Determine overall KYC status
+    let overallKycStatus = 'UNDER_REVIEW';
+    if (pan_status === 'VERIFIED' && aadhaar_status === 'VERIFIED' && bank_status === 'VERIFIED') {
+      overallKycStatus = 'VERIFIED';
+    } else if (pan_status === 'REJECTED' || aadhaar_status === 'REJECTED' || bank_status === 'REJECTED') {
+      // If any document is still rejected and hasn't been re-uploaded
+      overallKycStatus = 'REJECTED';
     }
 
     const { rows } = await query(
       `INSERT INTO employee_kyc (
-        employee_id, pan_number, pan_document_url, pan_document_key,
-        aadhaar_number, aadhaar_document_url, aadhaar_document_key,
+        employee_id, pan_number, pan_document_url, pan_document_key, pan_status, pan_verified, pan_rejection_reason,
+        aadhaar_number, aadhaar_document_url, aadhaar_document_key, aadhaar_status, aadhaar_verified, aadhaar_rejection_reason,
         bank_account_number, bank_account_holder_name, ifsc_code,
-        bank_document_url, bank_document_key, kyc_status, submitted_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'SUBMITTED', NOW())
+        bank_document_url, bank_document_key, bank_status, bank_verified, bank_rejection_reason,
+        kyc_status, submitted_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW())
       ON CONFLICT (employee_id) DO UPDATE SET
         pan_number = COALESCE(EXCLUDED.pan_number, employee_kyc.pan_number),
         pan_document_url = COALESCE(EXCLUDED.pan_document_url, employee_kyc.pan_document_url),
         pan_document_key = COALESCE(EXCLUDED.pan_document_key, employee_kyc.pan_document_key),
+        pan_status = EXCLUDED.pan_status,
+        pan_verified = EXCLUDED.pan_verified,
+        pan_rejection_reason = EXCLUDED.pan_rejection_reason,
         aadhaar_number = COALESCE(EXCLUDED.aadhaar_number, employee_kyc.aadhaar_number),
         aadhaar_document_url = COALESCE(EXCLUDED.aadhaar_document_url, employee_kyc.aadhaar_document_url),
         aadhaar_document_key = COALESCE(EXCLUDED.aadhaar_document_key, employee_kyc.aadhaar_document_key),
+        aadhaar_status = EXCLUDED.aadhaar_status,
+        aadhaar_verified = EXCLUDED.aadhaar_verified,
+        aadhaar_rejection_reason = EXCLUDED.aadhaar_rejection_reason,
         bank_account_number = COALESCE(EXCLUDED.bank_account_number, employee_kyc.bank_account_number),
         bank_account_holder_name = COALESCE(EXCLUDED.bank_account_holder_name, employee_kyc.bank_account_holder_name),
         ifsc_code = COALESCE(EXCLUDED.ifsc_code, employee_kyc.ifsc_code),
         bank_document_url = COALESCE(EXCLUDED.bank_document_url, employee_kyc.bank_document_url),
         bank_document_key = COALESCE(EXCLUDED.bank_document_key, employee_kyc.bank_document_key),
-        kyc_status = 'SUBMITTED',
+        bank_status = EXCLUDED.bank_status,
+        bank_verified = EXCLUDED.bank_verified,
+        bank_rejection_reason = EXCLUDED.bank_rejection_reason,
+        kyc_status = EXCLUDED.kyc_status,
         submitted_at = NOW(),
         updated_at = NOW()
       RETURNING *`,
       [
-        empId, pan_number, pan_url, pan_key,
-        aadhaar_number, aadhaar_url, aadhaar_key,
-        bank_account_number, bank_account_holder_name || req.employee.full_name, ifsc_code,
-        bank_url, bank_key
+        empId,
+        pan_number || existingKyc.pan_number || null, pan_url, pan_key, pan_status, pan_verified, pan_rejection_reason,
+        aadhaar_number || existingKyc.aadhaar_number || null, aadhaar_url, aadhaar_key, aadhaar_status, aadhaar_verified, aadhaar_rejection_reason,
+        bank_account_number || existingKyc.bank_account_number || null, bank_account_holder_name || req.employee.full_name, ifsc_code || existingKyc.ifsc_code || null,
+        bank_url, bank_key, bank_status, bank_verified, bank_rejection_reason,
+        overallKycStatus
       ]
     );
 
     // Update checklist
     await query(
-      `UPDATE employee_onboarding_checklist SET kyc_submitted = true, kyc_submitted_at = NOW(), overall_progress = 75, current_stage = 'KYC_UNDER_REVIEW' WHERE employee_id = $1`,
-      [empId]
+      `UPDATE employee_onboarding_checklist 
+       SET kyc_submitted = true, kyc_submitted_at = NOW(), 
+           overall_progress = 75, current_stage = $1 
+       WHERE employee_id = $2`,
+      [overallKycStatus === 'VERIFIED' ? 'ACTIVE' : 'KYC_UNDER_REVIEW', empId]
     );
 
-    // Insert into employee_documents for separate tracking
-    if (pan_url && req.files?.pan_document?.[0]) {
+    // Sync into employee_documents for individual document tracking
+    if (req.files?.pan_document?.[0]) {
       await query(
         `INSERT INTO employee_documents (employee_id, document_type, document_url, document_key, document_file_name, verification_status)
          VALUES ($1, 'pan', $2, $3, $4, 'PENDING')`,
         [empId, pan_url, pan_key, req.files.pan_document[0].originalname]
-      ).catch(e => console.warn('PAN doc log warning:', e.message));
+      ).catch(() => {});
     }
 
-    if (aadhaar_url && req.files?.aadhaar_document?.[0]) {
+    if (req.files?.aadhaar_document?.[0]) {
       await query(
         `INSERT INTO employee_documents (employee_id, document_type, document_url, document_key, document_file_name, verification_status)
          VALUES ($1, 'aadhaar', $2, $3, $4, 'PENDING')`,
         [empId, aadhaar_url, aadhaar_key, req.files.aadhaar_document[0].originalname]
-      ).catch(e => console.warn('Aadhaar doc log warning:', e.message));
+      ).catch(() => {});
     }
 
-    if (bank_url && req.files?.bank_document?.[0]) {
+    if (req.files?.bank_document?.[0]) {
       await query(
         `INSERT INTO employee_documents (employee_id, document_type, document_url, document_key, document_file_name, verification_status)
          VALUES ($1, 'bank_proof', $2, $3, $4, 'PENDING')`,
         [empId, bank_url, bank_key, req.files.bank_document[0].originalname]
-      ).catch(e => console.warn('Bank doc log warning:', e.message));
+      ).catch(() => {});
     }
 
     res.json({ success: true, message: 'KYC documents submitted for review', data: rows[0] });
