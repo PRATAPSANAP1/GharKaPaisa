@@ -97,16 +97,18 @@ export default function ManageApplications() {
           api.get('/admin/partners', { params: { limit: 1000 } }).catch(() => null),
           api.get('/employees', { params: { limit: 1000 } }).catch(() => null)
         ]);
-        if (pRes?.data?.success && Array.isArray(pRes.data.data)) {
-          setPartnersList(pRes.data.data);
-        } else if (Array.isArray(pRes?.data)) {
-          setPartnersList(pRes.data);
+        
+        let pArr = pRes?.data?.data?.partners || pRes?.data?.data || pRes?.data?.partners || pRes?.data || [];
+        if (!Array.isArray(pArr) && typeof pArr === 'object') {
+          pArr = pArr.rows || Object.values(pArr).find(v => Array.isArray(v)) || [];
         }
-        if (eRes?.data?.success && Array.isArray(eRes.data.data)) {
-          setEmployeesList(eRes.data.data);
-        } else if (Array.isArray(eRes?.data)) {
-          setEmployeesList(eRes.data);
+        setPartnersList(Array.isArray(pArr) ? pArr : []);
+
+        let eArr = eRes?.data?.data?.employees || eRes?.data?.data || eRes?.data?.employees || eRes?.data || [];
+        if (!Array.isArray(eArr) && typeof eArr === 'object') {
+          eArr = eArr.rows || Object.values(eArr).find(v => Array.isArray(v)) || [];
         }
+        setEmployeesList(Array.isArray(eArr) ? eArr : []);
       } catch (err) {
         console.error('Error fetching agents for filter:', err);
       }
@@ -377,37 +379,48 @@ export default function ManageApplications() {
     
     // Check direct fields on app object
     const appPName = app.partner_name || app.partner_full_name || (app.partner_first_name ? `${app.partner_first_name} ${app.partner_last_name || ''}`.trim() : null);
-    if (appPName) {
-      return `${appPName} (${app.partner_code || app.partner_id || 'PAR'})`;
-    }
-    
     const appEName = app.employee_name || app.employee_full_name || (app.employee_first_name ? `${app.employee_first_name} ${app.employee_last_name || ''}`.trim() : null);
-    if (appEName) {
-      return `${appEName} (${app.employee_code || app.employee_id || 'EMP'})`;
-    }
-    
-    // Match in partnersList
-    const pCode = app.partner_code || app.partner_id;
-    if (pCode) {
-      const matchP = partnersList.find(p => p.partner_code === pCode || p.code === pCode || String(p.id) === String(pCode));
+
+    const pCode = app.partner_code || app.Partner_code || app.partner_id;
+    const eCode = app.employee_code || app.emp_code || app.employee_id;
+
+    // Search in partnersList
+    let pName = appPName;
+    if (!pName && pCode && partnersList.length > 0) {
+      const matchP = partnersList.find(p => 
+        (p.partner_code && p.partner_code === pCode) || 
+        (p.code && p.code === pCode) || 
+        (p.id && String(p.id) === String(pCode))
+      );
       if (matchP) {
-        const pName = matchP.full_name || matchP.name || matchP.partner_name || (`${matchP.first_name || ''} ${matchP.last_name || ''}`.trim()) || 'Partner';
-        return `${pName} (${pCode})`;
+        pName = matchP.full_name || matchP.name || matchP.partner_name || (`${matchP.first_name || ''} ${matchP.last_name || ''}`.trim());
       }
     }
 
-    // Match in employeesList
-    const eCode = app.employee_code || app.employee_id;
-    if (eCode) {
-      const matchE = employeesList.find(e => e.employee_code === eCode || e.code === eCode || String(e.id) === String(eCode));
+    // Search in employeesList
+    let eName = appEName;
+    if (!eName && eCode && employeesList.length > 0) {
+      const matchE = employeesList.find(e => 
+        (e.employee_code && e.employee_code === eCode) || 
+        (e.emp_code && e.emp_code === eCode) ||
+        (e.code && e.code === eCode) || 
+        (e.id && String(e.id) === String(eCode))
+      );
       if (matchE) {
-        const eName = matchE.full_name || matchE.name || matchE.employee_name || (`${matchE.first_name || ''} ${matchE.last_name || ''}`.trim()) || 'Employee';
-        return `${eName} (${eCode})`;
+        eName = matchE.full_name || matchE.name || matchE.employee_name || (`${matchE.first_name || ''} ${matchE.last_name || ''}`.trim());
       }
     }
 
-    if (app.partner_code) return `Partner (${app.partner_code})`;
-    if (app.employee_code) return `Employee (${app.employee_code})`;
+    if (pName && pName.toLowerCase() !== 'partner') {
+      return `${pName} (${pCode || 'PAR'})`;
+    }
+
+    if (eName && eName.toLowerCase() !== 'employee') {
+      return `${eName} (${eCode || 'EMP'})`;
+    }
+
+    if (pCode) return `Partner ${pCode} (${pCode})`;
+    if (eCode) return `Employee ${eCode} (${eCode})`;
     return 'Direct';
   };
 
