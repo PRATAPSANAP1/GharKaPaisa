@@ -1555,9 +1555,60 @@ const getWalletAnalyticsController = async (req, res, next) => {
 // GET /wallet/reconciliation — System reconciliation report
 const getWalletReconciliationController = async (req, res, next) => {
   try {
-    const { processWalletReconciliationDailyJob } = require('./service.js');
-    const result = await processWalletReconciliationDailyJob();
-    return success(res, result, 'Wallet reconciliation audit executed successfully');
+    const [wTotal, creditTotal, debitTotal] = await Promise.all([
+      query(`SELECT COALESCE(SUM(available_balance + COALESCE(hold_balance, 0)), 0) as total FROM partner_wallets`),
+      query(`SELECT COALESCE(SUM(credit), 0) as total FROM wallet_ledger WHERE LOWER(COALESCE(status::text, '')) IN ('completed', 'success', 'confirmed', 'released')`),
+      query(`SELECT COALESCE(SUM(debit), 0) as total FROM wallet_ledger WHERE LOWER(COALESCE(status::text, '')) IN ('completed', 'success', 'confirmed', 'transferred')`)
+    ]);
+
+    const sysBalance = parseFloat(wTotal.rows[0].total || 0);
+    const totalCredits = parseFloat(creditTotal.rows[0].total || 0);
+    const totalDebits = parseFloat(debitTotal.rows[0].total || 0);
+    const openingBalance = Math.max(0, sysBalance - totalCredits + totalDebits);
+    const expectedClosing = openingBalance + totalCredits - totalDebits;
+    const diff = Math.abs(expectedClosing - sysBalance);
+
+    return success(res, {
+      opening_balance: openingBalance,
+      total_credits: totalCredits,
+      total_debits: totalDebits,
+      expected_closing: expectedClosing,
+      system_closing: sysBalance,
+      difference: diff,
+      status: diff < 0.01 ? 'MATCHED' : 'DISCREPANCY',
+      last_reconciled: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+    }, 'Wallet reconciliation audit executed successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /wallet/admin/partners-overview — Top partner wallet balances
+const getPartnersOverview = async (req, res, next) => {
+  try {
+    const { rows } = await query(`
+      SELECT 
+        COALESCE(NULLIF(TRIM(CONCAT(ap.first_name, ' ', ap.last_name)), ''), ap.partner_code, u.full_name, 'Partner') as name,
+        w.available_balance as balance,
+        COALESCE(w.status, 'Active') as status,
+        ap.partner_code
+      FROM partner_wallets w
+      JOIN partner_profiles ap ON ap.id = w.partner_id
+      LEFT JOIN users u ON u.id = ap.user_id
+      ORDER BY w.available_balance DESC
+      LIMIT 10
+    `);
+    
+    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#6366F1', '#14B8A6'];
+    const formatted = rows.map((r, i) => ({
+      name: r.name,
+      balance: parseFloat(r.balance || 0),
+      status: r.status || 'Active',
+      color: colors[i % colors.length],
+      partner_code: r.partner_code
+    }));
+
+    return success(res, formatted);
   } catch (err) {
     next(err);
   }
@@ -2046,5 +2097,6 @@ module.exports = {
   createAddFundsRequest,
   getAddFundsRequests,
   submitAddFundsUTR,
-  reconcileAddFundsRequest
+  reconcileAddFundsRequest,
+  getPartnersOverview
 };

@@ -373,6 +373,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/commissions" element={<SuperAdminCommission />} />
             <Route path="/super-admin/commission-rules" element={<Navigate to="/super-admin/commissions" replace />} />
             <Route path="/super-admin/wallet" element={<ManageWallet />} />
+            <Route path="/super-admin/wallet-settlement" element={<ManageWallet />} />
             <Route path="/super-admin/notifications" element={<NotificationCenter />} />
             <Route path="/super-admin/announcements" element={<ManageAnnouncements />} />
             <Route path="/super-admin/profile" element={<AdminProfilePage />} />

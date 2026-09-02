@@ -344,26 +344,59 @@ router.get('/profile', async (req, res, next) => {
       WHERE h.employee_id = $1 AND h.is_active = true
     `, [empId]);
 
-    // 7. Incentives summary
-    const incRes = await query(`
+    // 8. Dynamic performance & team statistics
+    const appsRes = await query(`
       SELECT 
-        COALESCE(SUM(amount) FILTER (WHERE status = 'COMPLETED'), 0) as total_earned,
-        COALESCE(SUM(amount) FILTER (WHERE status = 'PENDING'), 0) as pending_incentives,
-        COUNT(*) as total_transactions
-      FROM employee_incentive_transactions
-      WHERE employee_id = $1
+        COUNT(*) as total_applications,
+        COUNT(*) FILTER (WHERE UPPER(status) IN ('APPROVED', 'DISBURSED', 'COMPLETED')) as approved_applications
+      FROM applications
+      WHERE employee_id = $1 OR submitted_by = $2
+    `, [empId, req.user.id]);
+
+    const leadsRes = await query(`
+      SELECT COUNT(*) as leads_count
+      FROM customers
+      WHERE created_by = $1
+    `, [req.user.id]);
+
+    const teamRes = await query(`
+      SELECT 
+        COUNT(*) as team_size,
+        COUNT(*) FILTER (WHERE is_active = true) as active_members
+      FROM employee_hierarchy
+      WHERE manager_id = $1 OR team_leader_id = $1
     `, [empId]);
+
+    const appsData = appsRes.rows[0] || {};
+    const leadsData = leadsRes.rows[0] || {};
+    const teamData = teamRes.rows[0] || {};
 
     res.json({
       success: true,
       data: {
-        employee: employee,
+        employee: {
+          ...employee,
+          total_applications: parseInt(appsData.total_applications || 0),
+          approved_applications: parseInt(appsData.approved_applications || 0),
+          leads_count: parseInt(leadsData.leads_count || 0),
+          team_size: parseInt(teamData.team_size || 0),
+          active_members: parseInt(teamData.active_members || 0)
+        },
         joining_details: joiningRes.rows[0] || null,
         kyc: kycData,
         terms: termsRes.rows[0] || null,
         documents: docsRes.rows || [],
-        hierarchy: hierarchyRes.rows[0] || null,
-        incentives_summary: incRes.rows[0] || null
+        hierarchy: {
+          ...(hierarchyRes.rows[0] || {}),
+          team_size: parseInt(teamData.team_size || 0),
+          active_members: parseInt(teamData.active_members || 0)
+        },
+        incentives_summary: incRes.rows[0] || null,
+        total_applications: parseInt(appsData.total_applications || 0),
+        approved_applications: parseInt(appsData.approved_applications || 0),
+        leads_count: parseInt(leadsData.leads_count || 0),
+        team_size: parseInt(teamData.team_size || 0),
+        active_members: parseInt(teamData.active_members || 0)
       }
     });
   } catch (err) {

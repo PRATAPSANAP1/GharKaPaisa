@@ -213,29 +213,48 @@ export default function EmployeeLayout() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }} ref={dropdownRef}>
 
-            {/* Top Right Profile Button */}
-            <button 
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              style={{
-                background: C.bgSecondary,
-                border: `1px solid ${C.border}`,
-                borderRadius: '30px',
-                padding: '6px 14px 6px 8px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                color: C.text,
-                fontSize: '13px',
-                fontWeight: 700
-              }}
-            >
-              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: C.employeePrimary || '#0F766E', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 900 }}>
-                {(user?.full_name || user?.name || 'E').charAt(0).toUpperCase()}
-              </div>
-              {!isMobile && <span>{user?.full_name || user?.name}</span>}
-              <FaChevronDown style={{ fontSize: '10px', color: C.textMid, transform: profileMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-            </button>
+            {/* Top Right Profile Photo Button (Click opens features dropdown) */}
+            {(() => {
+              const savedPhoto = localStorage.getItem('employee_profile_photo') || user?.profile_photo_url || user?.avatar_url;
+              return (
+                <button 
+                  onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                  title="Profile Menu & Account Options"
+                  style={{
+                    background: C.bgSecondary,
+                    border: `2px solid ${profileMenuOpen ? (C.employeePrimary || '#0F766E') : C.border}`,
+                    borderRadius: '50%',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: profileMenuOpen ? '0 0 0 3px rgba(15, 118, 110, 0.25)' : 'none'
+                  }}
+                >
+                  {savedPhoto ? (
+                    <img 
+                      src={savedPhoto} 
+                      alt="Profile" 
+                      style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div style={{ 
+                      width: '36px', height: '36px', borderRadius: '50%', 
+                      background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)', 
+                      color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                      fontSize: '15px', fontWeight: 900, textTransform: 'uppercase',
+                      boxShadow: '0 2px 8px rgba(15, 118, 110, 0.3)'
+                    }}>
+                      {(user?.full_name || user?.name || 'E').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </button>
+              );
+            })()}
 
             {/* Profile Dropdown Menu */}
             {profileMenuOpen && (

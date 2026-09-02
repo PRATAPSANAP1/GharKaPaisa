@@ -355,20 +355,42 @@ export default function EmployeeSettingsPortal() {
               </h2>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px', fontSize: '13px' }}>
                 <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>Employee Ref ID</span>
-                  <strong style={{ display: 'block', fontSize: '14px' }}>{empCode}</strong>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Employee Ref ID</span>
+                  <strong style={{ display: 'block', fontSize: '14px', color: C.text, marginTop: '2px' }}>{empCode}</strong>
                 </div>
                 <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>Designation</span>
-                  <strong style={{ display: 'block', fontSize: '14px', color: C.teal }}>{designation}</strong>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Designation</span>
+                  <strong style={{ display: 'block', fontSize: '14px', color: C.teal, marginTop: '2px' }}>{designation}</strong>
                 </div>
                 <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>Reporting Manager</span>
-                  <strong style={{ display: 'block', fontSize: '14px' }}>{hierarchy.manager_name || jDetails.reporting_manager || 'Super Admin'}</strong>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Department</span>
+                  <strong style={{ display: 'block', fontSize: '14px', color: C.text, marginTop: '2px' }}>{department}</strong>
                 </div>
                 <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>Work Location</span>
-                  <strong style={{ display: 'block', fontSize: '14px' }}>{jDetails.work_location || emp.work_location || 'Office'}</strong>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Reporting Manager</span>
+                  <strong style={{ display: 'block', fontSize: '14px', color: C.text, marginTop: '2px' }}>{hierarchy.manager_name || jDetails.reporting_manager || 'Super Admin'}</strong>
+                </div>
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Work Location</span>
+                  <strong style={{ display: 'block', fontSize: '14px', color: C.text, marginTop: '2px' }}>{jDetails.work_location || emp.work_location || 'Office / Main Branch'}</strong>
+                </div>
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Employment Type & Status</span>
+                  <strong style={{ display: 'block', fontSize: '14px', color: '#10B981', marginTop: '2px' }}>
+                    {jDetails.employment_type || emp.employment_type || 'Full-Time Regular'} (Active)
+                  </strong>
+                </div>
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Joining Date</span>
+                  <strong style={{ display: 'block', fontSize: '14px', color: C.text, marginTop: '2px' }}>
+                    {jDetails.joining_date ? new Date(jDetails.joining_date).toLocaleDateString() : 'Verified Employee'}
+                  </strong>
+                </div>
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Target & Incentives</span>
+                  <strong style={{ display: 'block', fontSize: '14px', color: '#3B82F6', marginTop: '2px' }}>
+                    {jDetails.target_applicable ? 'Standard Incentive Model' : 'Performance Tier Matrix'}
+                  </strong>
                 </div>
               </div>
             </div>
@@ -378,18 +400,33 @@ export default function EmployeeSettingsPortal() {
           {activeTab === 'appearance' && (
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 900, color: C.teal, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <FaPalette /> 7. Appearance & Visual Preferences
+                <FaPalette /> 7. Appearance & Visual Theme Settings
               </h2>
 
-              <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', marginBottom: '20px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 12px 0' }}>Theme Mode</h3>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button onClick={() => setTheme('light')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: `2px solid ${theme === 'light' ? C.teal : C.border}`, background: '#fff', color: '#000', fontWeight: 800, cursor: 'pointer' }}>
-                    Light Mode
-                  </button>
-                  <button onClick={() => setTheme('dark')} style={{ flex: 1, padding: '12px', borderRadius: '10px', border: `2px solid ${theme === 'dark' ? C.teal : C.border}`, background: '#0F172A', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>
-                    Dark Mode
-                  </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 12px 0' }}>Theme Interface Mode</h3>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <button onClick={() => setTheme('light')} style={{ flex: 1, padding: '14px', borderRadius: '12px', border: `2px solid ${theme === 'light' ? C.teal : C.border}`, background: '#FFF', color: '#0F172A', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      ☀️ Light Theme
+                    </button>
+                    <button onClick={() => setTheme('dark')} style={{ flex: 1, padding: '14px', borderRadius: '12px', border: `2px solid ${theme === 'dark' ? C.teal : C.border}`, background: '#0F172A', color: '#FFF', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      🌙 Dark Theme
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 8px 0' }}>Display Contrast & Scaling</h3>
+                  <p style={{ fontSize: '12.5px', color: C.textMid, margin: '0 0 12px 0' }}>Adjust portal visual density and font scaling preference.</p>
+                  <div style={{ display: 'flex', gap: '10px', fontSize: '13px' }}>
+                    <button onClick={() => alert('Standard scaling active (100%)')} style={{ padding: '8px 16px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, fontWeight: 700, cursor: 'pointer', color: C.text }}>
+                      100% Standard
+                    </button>
+                    <button onClick={() => alert('Compact scaling active (85%)')} style={{ padding: '8px 16px', borderRadius: '8px', border: `1px solid ${C.teal}`, background: `${C.teal}15`, fontWeight: 800, cursor: 'pointer', color: C.teal }}>
+                      85% Compact (Recommended)
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -399,9 +436,40 @@ export default function EmployeeSettingsPortal() {
           {activeTab === 'preferences' && (
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 900, color: C.teal, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <FaMobileAlt /> 8. Portal & Display Preferences
+                <FaMobileAlt /> 8. Application & Workspace Preferences
               </h2>
-              <div style={{ fontSize: '13px', color: C.textMid }}>Customize table row density and default filter selections.</div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ background: C.bgSecondary, padding: '18px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 10px 0' }}>Default Filter & Date Ranges</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 800, color: C.textMid, marginBottom: '4px' }}>DEFAULT DASHBOARD RANGE</label>
+                      <select style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontWeight: 700 }}>
+                        <option>Current Month (Default)</option>
+                        <option>Last 30 Days</option>
+                        <option>Current Financial Quarter</option>
+                        <option>All Time Records</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 800, color: C.textMid, marginBottom: '4px' }}>DEFAULT EXPORT FORMAT</label>
+                      <select style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontWeight: 700 }}>
+                        <option>CSV Spreadsheet (.csv)</option>
+                        <option>Excel Workbook (.xlsx)</option>
+                        <option>PDF Summary (.pdf)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ background: C.bgSecondary, padding: '18px', borderRadius: '16px', border: `1px solid ${C.border}` }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 10px 0' }}>Data Sync & Live Auto-Refresh</h3>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', cursor: 'pointer', fontWeight: 700 }}>
+                    <input type="checkbox" defaultChecked /> Automatically refresh lead statuses and applications every 60 seconds
+                  </label>
+                </div>
+              </div>
             </div>
           )}
 
@@ -409,31 +477,37 @@ export default function EmployeeSettingsPortal() {
           {activeTab === 'help' && (
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 900, color: C.teal, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <FaQuestionCircle /> 9. Help Center & Support Contact
+                <FaQuestionCircle /> 9. Help Desk & Support Desk
               </h2>
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '14px', marginBottom: '24px' }}>
-                <button onClick={() => setShowSupportModal(true)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '16px', borderRadius: '14px', cursor: 'pointer', textAlign: 'center', color: C.text }}>
-                  <FaHeadset style={{ fontSize: '24px', color: C.teal, marginBottom: '8px' }} />
-                  <strong style={{ display: 'block', fontSize: '14px' }}>Raise Support Ticket</strong>
+                <button onClick={() => setShowSupportModal(true)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '18px', borderRadius: '16px', cursor: 'pointer', textAlign: 'center', color: C.text, transition: 'all 0.2s' }}>
+                  <FaHeadset style={{ fontSize: '26px', color: C.teal, marginBottom: '8px' }} />
+                  <strong style={{ display: 'block', fontSize: '14px' }}>Raise Ticket</strong>
+                  <span style={{ fontSize: '11.5px', color: C.textMid }}>Submit support request</span>
                 </button>
-                <button onClick={() => alert('HR Contact: hr@gharkapaisa.in')} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '16px', borderRadius: '14px', cursor: 'pointer', textAlign: 'center', color: C.text }}>
-                  <FaUser style={{ fontSize: '24px', color: C.teal, marginBottom: '8px' }} />
+                <button onClick={() => alert('HR Contact: hr@gharkapaisa.in | Phone: +91 98765 43210')} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '18px', borderRadius: '16px', cursor: 'pointer', textAlign: 'center', color: C.text }}>
+                  <FaUser style={{ fontSize: '26px', color: C.teal, marginBottom: '8px' }} />
                   <strong style={{ display: 'block', fontSize: '14px' }}>Contact HR</strong>
+                  <span style={{ fontSize: '11.5px', color: C.textMid }}>hr@gharkapaisa.in</span>
                 </button>
-                <button onClick={() => alert(`Manager: ${hierarchy.manager_name || 'Assigned Manager'}`)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '16px', borderRadius: '14px', cursor: 'pointer', textAlign: 'center', color: C.text }}>
-                  <FaBuilding style={{ fontSize: '24px', color: C.teal, marginBottom: '8px' }} />
+                <button onClick={() => alert(`Manager Contact: ${hierarchy.manager_name || 'Super Admin'}`)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '18px', borderRadius: '16px', cursor: 'pointer', textAlign: 'center', color: C.text }}>
+                  <FaBuilding style={{ fontSize: '26px', color: C.teal, marginBottom: '8px' }} />
                   <strong style={{ display: 'block', fontSize: '14px' }}>Contact Manager</strong>
+                  <span style={{ fontSize: '11.5px', color: C.textMid }}>{hierarchy.manager_name || 'Super Admin'}</span>
                 </button>
               </div>
 
-              {/* Support Ticket Modal */}
+              {/* Support Ticket Form Modal */}
               {showSupportModal && (
-                <form onSubmit={handleSupportTicketSubmit} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px' }}>
-                  <h3 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 12px 0' }}>Raise Support Ticket</h3>
-                  <input type="text" required placeholder="Ticket Subject" value={ticketForm.subject} onChange={(e) => setTicketForm(p => ({ ...p, subject: e.target.value }))} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, marginBottom: '10px' }} />
-                  <textarea required rows={3} placeholder="Describe your issue..." value={ticketForm.description} onChange={(e) => setTicketForm(p => ({ ...p, description: e.target.value }))} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, marginBottom: '10px' }} />
-                  <button type="submit" style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}>Submit Ticket</button>
+                <form onSubmit={handleSupportTicketSubmit} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', marginBottom: '20px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 12px 0' }}>Submit Employee Support Request</h3>
+                  <input type="text" required placeholder="Ticket Subject (e.g. Incentive discrepancy / Lead re-assignment)" value={ticketForm.subject} onChange={(e) => setTicketForm(p => ({ ...p, subject: e.target.value }))} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, marginBottom: '10px' }} />
+                  <textarea required rows={3} placeholder="Provide details about your query or technical issue..." value={ticketForm.description} onChange={(e) => setTicketForm(p => ({ ...p, description: e.target.value }))} style={{ width: '100%', padding: '10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, marginBottom: '10px' }} />
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <button type="button" onClick={() => setShowSupportModal(false)} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.text, padding: '8px 14px', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                    <button type="submit" style={{ background: C.teal, color: '#FFF', border: 'none', padding: '8px 18px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}>Submit Ticket</button>
+                  </div>
                 </form>
               )}
             </div>
@@ -445,11 +519,29 @@ export default function EmployeeSettingsPortal() {
               <h2 style={{ fontSize: '18px', fontWeight: 900, color: C.teal, margin: '0 0 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <FaFileContract /> 10. Legal & Compliance Policies
               </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
-                <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: C.teal, fontWeight: 700, textDecoration: 'none' }}>Workplace Terms & Conditions ↗</a>
-                <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: C.teal, fontWeight: 700, textDecoration: 'none' }}>Data Protection & Privacy Policy ↗</a>
-                <div style={{ marginTop: '16px', fontSize: '11.5px', color: C.textMid }}>
-                  GharKaPaisa Enterprise Platform Version v2.4.0
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13px' }}>
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', color: C.text }}>Workplace Code of Conduct</h4>
+                  <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: C.textMid }}>
+                    Enforces ethics, non-disclosure, customer data protection, and professional standards across all team operations.
+                  </p>
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: C.teal, fontWeight: 800, textDecoration: 'none', fontSize: '12px' }}>
+                    View Full Workplace Policy ↗
+                  </a>
+                </div>
+
+                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', color: C.text }}>Customer PII & Data Privacy Policy</h4>
+                  <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: C.textMid }}>
+                    Governs customer data processing, masking rules, and compliance under India's Digital Personal Data Protection Act (DPDP).
+                  </p>
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: C.teal, fontWeight: 800, textDecoration: 'none', fontSize: '12px' }}>
+                    View Privacy & DPDP Compliance Policy ↗
+                  </a>
+                </div>
+
+                <div style={{ marginTop: '12px', padding: '12px', background: `${C.teal}10`, border: `1px solid ${C.teal}30`, borderRadius: '10px', fontSize: '12px', color: C.text }}>
+                  <strong>GharKaPaisa Enterprise Platform Version:</strong> v2.4.0 (Production Release)
                 </div>
               </div>
             </div>
