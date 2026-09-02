@@ -127,16 +127,16 @@ export default function SuperAdminReports() {
   const totalIncentivesEarned = parseFloat(wallet.total_earned || apps.total_commission || 0);
 
   const kpiData = {
-    totalEmployees: parseInt(partners.total || 0, 10) || 1248,
-    employeeGrowth: "+8.5% vs last month",
-    totalApplications: totalAppsCount || 5432,
-    appGrowth: "+12.3% vs last month",
-    approvedApplications: approvedAppsCount || 2843,
-    approvedGrowth: "+15.7% vs last month",
-    approvalRate: totalAppsCount > 0 ? `${((approvedAppsCount / totalAppsCount) * 100).toFixed(2)}%` : "52.36%",
-    rateGrowth: "+2.6% vs last month",
-    totalIncentives: totalIncentivesEarned > 0 ? Number(totalIncentivesEarned).toLocaleString('en-IN') : "1,24,56,780",
-    incentiveGrowth: "+18.6% vs last month"
+    totalEmployees: parseInt(partners.total || 0, 10),
+    employeeGrowth: partners.growth || "+0.0%",
+    totalApplications: totalAppsCount,
+    appGrowth: apps.growth || "+0.0%",
+    approvedApplications: approvedAppsCount,
+    approvedGrowth: apps.approved_growth || "+0.0%",
+    approvalRate: totalAppsCount > 0 ? `${((approvedAppsCount / totalAppsCount) * 100).toFixed(1)}%` : "0.0%",
+    rateGrowth: apps.rate_growth || "+0.0%",
+    totalIncentives: Number(totalIncentivesEarned).toLocaleString('en-IN'),
+    incentiveGrowth: wallet.growth || "+0.0%"
   };
 
   // Dynamic Product Category Calculations (Strictly Credit Cards, Loans, Insurance)
@@ -231,25 +231,19 @@ export default function SuperAdminReports() {
     }
   ];
 
-  // Top Performing Employees
+  // Top Performing Employees (Dynamic from backend)
   const topEmployeesList = Array.isArray(topPerformersData) && topPerformersData.length > 0
     ? topPerformersData.map((p, idx) => ({
-        id: p.partner_code || `EMP-${1001 + idx}`,
+        id: p.partner_code || p.employee_id || `EMP-${1001 + idx}`,
         rank: idx + 1,
-        name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Employee',
-        role: idx % 2 === 0 ? 'Team Leader' : 'Telecaller',
+        name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.name || 'Employee',
+        role: p.role || p.designation || (idx % 2 === 0 ? 'Team Leader' : 'Telecaller'),
         avatarBg: ['#3B82F6', '#EC4899', '#8B5CF6', '#10B981', '#F59E0B'][idx % 5],
-        applications: parseInt(p.total_apps || 300 - idx * 25, 10),
-        approved: parseInt(p.approved || 150 - idx * 15, 10),
-        incentives: Number(p.commission_earned || 18000 - idx * 2000).toLocaleString('en-IN')
+        applications: parseInt(p.total_apps || p.applications_count || 0, 10),
+        approved: parseInt(p.approved || p.approved_count || 0, 10),
+        incentives: Number(p.commission_earned || p.total_incentives || 0).toLocaleString('en-IN')
       }))
-    : [
-        { id: "YOH-TL1001", rank: 1, name: "Rohit Kumar", role: "Team Leader", avatarBg: "#3B82F6", applications: 356, approved: 189, incentives: "18,750" },
-        { id: "YOH-TC2001", rank: 2, name: "Priya Singh", role: "Telecaller", avatarBg: "#EC4899", applications: 289, approved: 156, incentives: "14,320" },
-        { id: "YOH-TC2002", rank: 3, name: "Ankit Verma", role: "Telecaller", avatarBg: "#8B5CF6", applications: 265, approved: 142, incentives: "13,210" },
-        { id: "YOH-TC2003", rank: 4, name: "Neha Patel", role: "Telecaller", avatarBg: "#10B981", applications: 241, approved: 128, incentives: "11,860" },
-        { id: "YOH-TC2004", rank: 5, name: "Vikram Joshi", role: "Telecaller", avatarBg: "#F59E0B", applications: 219, approved: 112, incentives: "10,450" }
-      ];
+    : [];
 
   // Detailed Reports Cards Catalog
   const detailedReportsList = [
@@ -266,10 +260,7 @@ export default function SuperAdminReports() {
   // Export Data to CSV function
   const handleDownloadReportCSV = (reportTitle) => {
     const filename = `${reportTitle.toLowerCase().replace(/\s+/g, '_')}_${modalFilterDates.from}_to_${modalFilterDates.to}.csv`;
-    const rowsToExport = modalTableData.length > 0 ? modalTableData : [
-      { id: "REC-1001", ref: "Rohit Kumar (YOH-TL1001)", cat: "Credit Cards", status: "APPROVED", amount: "18750", date: "2026-08-15" },
-      { id: "REC-1002", ref: "Priya Singh (YOH-TC2001)", cat: "Loans", status: "APPROVED", amount: "14320", date: "2026-08-18" }
-    ];
+    const rowsToExport = modalTableData;
 
     const sampleData = [
       ["Report Name", reportTitle],
@@ -283,7 +274,7 @@ export default function SuperAdminReports() {
         r.cat || r.product_name || 'Financial Product',
         r.status || 'APPROVED',
         `₹${r.amount || r.approved_amount || r.commission_amount || 0}`,
-        r.date || r.application_date || '2026-08-15'
+        r.date || r.application_date || new Date().toISOString().split('T')[0]
       ])
     ];
 
@@ -784,7 +775,7 @@ export default function SuperAdminReports() {
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
               <span style={{ fontSize: '12px', fontWeight: 800, color: C.text }}>
-                {modalLoading ? 'Loading records...' : `Filtered Results (Showing ${modalTableData.length > 0 ? modalTableData.length : 3} Records)`}
+                {modalLoading ? 'Loading records...' : `Filtered Results (Showing ${modalTableData.length} Records)`}
               </span>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button onClick={() => handleDownloadReportCSV(activeReportModal.title)} style={{ background: '#059669', color: '#FFF', border: 'none', padding: '7px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -812,31 +803,18 @@ export default function SuperAdminReports() {
                   {modalTableData.length > 0 ? modalTableData.map((r, i) => (
                     <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
                       <td style={{ padding: '8px 10px', fontWeight: 800 }}>{r.app_number || r.id || `REC-${1001 + i}`}</td>
-                      <td style={{ padding: '8px 10px' }}>{r.customer_name || r.name || r.full_name || 'Employee / Ref'}</td>
+                      <td style={{ padding: '8px 10px', fontWeight: 700 }}>{r.customer_name || r.name || r.full_name || 'Employee / Ref'}</td>
                       <td style={{ padding: '8px 10px' }}>{r.product_name || r.category || 'Financial Product'}</td>
                       <td style={{ padding: '8px 10px' }}><span style={{ color: r.status === 'REJECTED' ? '#EF4444' : '#10B981', fontWeight: 800 }}>{(r.status || 'APPROVED').toUpperCase()}</span></td>
-                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800 }}>₹{r.approved_amount || r.commission_amount || 15000}</td>
-                      <td style={{ padding: '8px 10px', color: C.textMid }}>{r.application_date ? new Date(r.application_date).toLocaleDateString() : '2026-08-15'}</td>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800 }}>₹{Number(r.approved_amount || r.commission_amount || r.amount || 0).toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '8px 10px', color: C.textMid }}>{r.application_date ? new Date(r.application_date).toLocaleDateString() : new Date().toLocaleDateString()}</td>
                     </tr>
                   )) : (
-                    <>
-                      <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                        <td style={{ padding: '8px 10px', fontWeight: 800 }}>REC-1001</td>
-                        <td style={{ padding: '8px 10px' }}>Rohit Kumar (YOH-TL1001)</td>
-                        <td style={{ padding: '8px 10px' }}>Credit Cards</td>
-                        <td style={{ padding: '8px 10px' }}><span style={{ color: '#10B981', fontWeight: 800 }}>APPROVED</span></td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800 }}>₹18,750</td>
-                        <td style={{ padding: '8px 10px', color: C.textMid }}>2026-08-15</td>
-                      </tr>
-                      <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                        <td style={{ padding: '8px 10px', fontWeight: 800 }}>REC-1002</td>
-                        <td style={{ padding: '8px 10px' }}>Priya Singh (YOH-TC2001)</td>
-                        <td style={{ padding: '8px 10px' }}>Loans</td>
-                        <td style={{ padding: '8px 10px' }}><span style={{ color: '#10B981', fontWeight: 800 }}>APPROVED</span></td>
-                        <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800 }}>₹14,320</td>
-                        <td style={{ padding: '8px 10px', color: C.textMid }}>2026-08-18</td>
-                      </tr>
-                    </>
+                    <tr>
+                      <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
+                        {modalLoading ? 'Loading report data from database...' : 'No matching records found for the selected date range and filters.'}
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>
