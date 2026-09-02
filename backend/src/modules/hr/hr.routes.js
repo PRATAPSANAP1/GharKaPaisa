@@ -13,15 +13,16 @@ const { getSignedDownloadUrl } = require('../../services/aws/s3.service');
 router.use(jwtAuth);
 router.use(roleCheck('HR', 'ADMIN', 'SUPER_ADMIN'));
 
-// Helper: Generate unique Employee ID in format like YOH-TM0985, YOH-HR0123
+// Helper: Generate unique Employee ID in format like YOH-SE9983, YOH-TL2324, YOH-MGR0985
 async function generateEmployeeId(designation = '') {
   const desigUpper = String(designation || '').toUpperCase();
-  let code = 'TM';
+  let code = 'SE';
   if (desigUpper.includes('HR')) code = 'HR';
-  else if (desigUpper.includes('TELECALLER') || desigUpper === 'TC') code = 'TM';
-  else if (desigUpper.includes('TEAM LEADER') || desigUpper === 'TL') code = 'TL';
-  else if (desigUpper.includes('MANAGER')) code = 'MG';
-  else if (desigUpper.includes('SALES')) code = 'SE';
+  else if (desigUpper.includes('ADMIN')) code = 'ADM';
+  else if (desigUpper.includes('TEAM LEADER') || desigUpper.includes('TL') || desigUpper === 'TL') code = 'TL';
+  else if (desigUpper.includes('MANAGER') || desigUpper.includes('MGR')) code = 'MGR';
+  else if (desigUpper.includes('TELECALLER') || desigUpper.includes('TC') || desigUpper.includes('SALES') || desigUpper.includes('EXECUTIVE') || desigUpper === 'SE') code = 'SE';
+  else code = 'SE';
   
   let isUnique = false;
   let employeeId = '';

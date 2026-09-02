@@ -18,6 +18,7 @@ export default function KYCSubmission() {
   const [existingAadhaarUrl, setExistingAadhaarUrl] = useState('');
   const [existingBankUrl, setExistingBankUrl] = useState('');
   const [kycStatus, setKycStatus] = useState('NOT_SUBMITTED');
+  const [reviewNotes, setReviewNotes] = useState('');
 
   const [panFile, setPanFile] = useState(null);
   const [aadhaarFile, setAadhaarFile] = useState(null);
@@ -56,11 +57,14 @@ export default function KYCSubmission() {
           setExistingPanUrl(kyc.pan_document_url || '');
           setExistingAadhaarUrl(kyc.aadhaar_document_url || '');
           setExistingBankUrl(kyc.bank_document_url || '');
+          setReviewNotes(kyc.review_notes || kyc.pan_rejection_reason || kyc.aadhaar_rejection_reason || kyc.bank_rejection_reason || '');
 
           if (kyc.kyc_status) {
             setKycStatus(kyc.kyc_status);
             if (kyc.kyc_status === 'SUBMITTED' || kyc.kyc_status === 'UNDER_REVIEW' || kyc.kyc_status === 'VERIFIED') {
               setSubmitted(true);
+            } else if (kyc.kyc_status === 'REJECTED') {
+              setSubmitted(false); // Enable resubmission form
             }
           }
         }
@@ -171,6 +175,12 @@ export default function KYCSubmission() {
                     : 'Your KYC documents and bank details are safely stored in the database and currently under review by HR & Super Admin.')
                 }
               </p>
+
+              {kycStatus === 'REJECTED' && reviewNotes && (
+                <div style={{ marginTop: '10px', fontSize: '13px', fontWeight: 800, color: '#991B1B', background: '#FEE2E2', border: '1px solid #FCA5A5', padding: '8px 12px', borderRadius: '8px' }}>
+                  HR/Admin Note: "{reviewNotes}"
+                </div>
+              )}
 
               {/* View Existing Documents Bar */}
               {(existingPanUrl || existingAadhaarUrl || existingBankUrl) && (

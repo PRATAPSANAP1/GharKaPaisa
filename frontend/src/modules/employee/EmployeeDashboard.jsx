@@ -13,6 +13,7 @@ export default function EmployeeDashboard() {
   const navigate = useNavigate();
 
   const [employee, setEmployee] = useState(null);
+  const [kycData, setKycData] = useState(null);
   const [checklist, setChecklist] = useState({});
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
@@ -36,6 +37,7 @@ export default function EmployeeDashboard() {
       const profileRes = await axios.get(`${getApiV1Url()}/employee/profile`);
       if (profileRes.data.success) {
         setEmployee(profileRes.data.data.employee);
+        setKycData(profileRes.data.data.kyc);
       }
 
       const statusRes = await axios.get(`${getApiV1Url()}/employee/onboarding-status`);
@@ -79,6 +81,8 @@ export default function EmployeeDashboard() {
     return <PartnerDashboardComponent partner={partnerAdapter} />;
   }
 
+  const isKycRejected = kycData?.kyc_status === 'REJECTED';
+
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: isMobile ? '16px 8px 60px' : '24px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -105,16 +109,66 @@ export default function EmployeeDashboard() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
             <span style={{ 
               padding: '6px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800,
-              background: '#FEF3C7',
-              color: '#92400E'
+              background: isKycRejected ? '#FEE2E2' : '#FEF3C7',
+              color: isKycRejected ? '#991B1B' : '#92400E'
             }}>
-              ● Onboarding Phase
+              ● {isKycRejected ? 'KYC Re-upload Required' : 'Onboarding Phase'}
             </span>
             <button onClick={handleLogout} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 14px', borderRadius: '10px', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <FaSignOutAlt /> Sign Out
             </button>
           </div>
         </div>
+
+        {/* KYC Rejection Warning Banner */}
+        {isKycRejected && (
+          <div style={{
+            background: '#FEF2F2',
+            border: '2px solid #EF4444',
+            borderRadius: '20px',
+            padding: '20px 24px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justify: 'space-between',
+            gap: '16px',
+            flexWrap: 'wrap',
+            boxShadow: '0 4px 16px rgba(239,68,68,0.15)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0, fontWeight: 900 }}>
+                ⚠️
+              </div>
+              <div>
+                <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 900, color: '#991B1B' }}>
+                  Action Required: Employee KYC Verification Rejected
+                </h3>
+                <p style={{ margin: 0, fontSize: '13px', color: '#7F1D1D', lineHeight: 1.4 }}>
+                  {kycData?.review_notes ? `HR Feedback: "${kycData.review_notes}"` : 'Your uploaded KYC documents (PAN, Aadhaar, or Bank proof) were rejected by HR/Admin. Please re-upload correct documents to proceed.'}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => navigate('/employee/kyc')}
+              style={{
+                background: '#DC2626',
+                color: '#ffffff',
+                border: 'none',
+                padding: '12px 22px',
+                borderRadius: '12px',
+                fontWeight: 900,
+                fontSize: '13.5px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(220,38,38,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <FaIdCard /> Re-upload KYC Documents ↗
+            </button>
+          </div>
+        )}
 
         {/* Onboarding Checklist Widget */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: isMobile ? '16px' : '28px', marginBottom: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
@@ -153,13 +207,19 @@ export default function EmployeeDashboard() {
               <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Terms acceptance & verification video</p>
             </div>
 
-            <div onClick={() => navigate('/employee/kyc')} style={{ background: C.bgSecondary, border: `1px solid ${checklist?.kyc_verified ? C.teal : C.border}`, borderRadius: '16px', padding: '16px', cursor: 'pointer' }}>
+            <div onClick={() => navigate('/employee/kyc')} style={{ background: C.bgSecondary, border: `2px solid ${isKycRejected ? '#EF4444' : (checklist?.kyc_verified ? C.teal : C.border)}`, borderRadius: '16px', padding: '16px', cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <FaIdCard style={{ color: checklist?.kyc_verified ? C.teal : C.textMid, fontSize: '20px' }} />
-                {checklist?.kyc_verified ? <FaCheckCircle style={{ color: C.teal }} /> : <span style={{ fontSize: '11px', fontWeight: 800, color: '#F59E0B' }}>Pending Review</span>}
+                <FaIdCard style={{ color: isKycRejected ? '#DC2626' : (checklist?.kyc_verified ? C.teal : C.textMid), fontSize: '20px' }} />
+                {isKycRejected ? (
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '2px 8px', borderRadius: '8px' }}>REJECTED - Re-upload</span>
+                ) : (
+                  checklist?.kyc_verified ? <FaCheckCircle style={{ color: C.teal }} /> : <span style={{ fontSize: '11px', fontWeight: 800, color: '#F59E0B' }}>Pending Review</span>
+                )}
               </div>
               <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>3. Document & KYC</h4>
-              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>PAN, Aadhaar & Bank document submission</p>
+              <p style={{ fontSize: '12px', color: isKycRejected ? '#DC2626' : C.textMid, margin: 0, fontWeight: isKycRejected ? 700 : 400 }}>
+                {isKycRejected ? 'Click here to re-upload documents' : 'PAN, Aadhaar & Bank document submission'}
+              </p>
             </div>
 
             <div style={{ background: C.bgSecondary, border: `1px solid ${checklist?.activated ? C.teal : C.border}`, borderRadius: '16px', padding: '16px' }}>

@@ -214,7 +214,17 @@ async function resolveEmployee(req, res, next) {
       );
       
       const cand = candRes.rows[0] || {};
-      const empCode = (cand.reference_code || 'EMP10001').replace('CAND', 'EMP').replace('REF', 'EMP');
+      const desigUpper = String(cand.target_role || cand.current_designation || 'TC').toUpperCase();
+      let code = 'SE';
+      if (desigUpper.includes('TEAM LEADER') || desigUpper.includes('TL') || desigUpper === 'TL') code = 'TL';
+      else if (desigUpper.includes('MANAGER') || desigUpper.includes('MGR')) code = 'MGR';
+      else if (desigUpper.includes('HR')) code = 'HR';
+
+      let empCode = cand.employee_id || '';
+      if (!empCode.startsWith('YOH-')) {
+        const num = Math.floor(1000 + Math.random() * 9000);
+        empCode = `YOH-${code}${String(num).padStart(4, '0')}`;
+      }
 
       const createRes = await query(
         `INSERT INTO employees (

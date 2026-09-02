@@ -59,17 +59,17 @@ const createAdmin = async (req, res, next) => {
       return error(res, 'At least one assigned bank is required for Operational Head or Administrative Operator designation', 400);
     }
 
-    // Generate unique employeeId in format YOH-TM0985, YOH-HR0123, YOH-ADM0985
-    let code = 'EMP';
+    // Generate unique employeeId in format YOH-SE9983, YOH-TL2324, YOH-MGR0985, YOH-HR0123
+    let code = 'SE';
     if (role === 'HR' || desigUpper.includes('HR')) {
       code = 'HR';
     } else if (role === 'ADMIN') {
       code = 'ADM';
     } else {
-      if (desigUpper.includes('TELECALLER') || desigUpper === 'TC') code = 'TM';
-      else if (desigUpper.includes('TEAM LEADER') || desigUpper === 'TL') code = 'TL';
-      else if (desigUpper.includes('MANAGER')) code = 'MG';
-      else if (desigUpper.includes('SALES')) code = 'SE';
+      if (desigUpper.includes('TEAM LEADER') || desigUpper.includes('TL') || desigUpper === 'TL') code = 'TL';
+      else if (desigUpper.includes('MANAGER') || desigUpper.includes('MGR')) code = 'MGR';
+      else if (desigUpper.includes('TELECALLER') || desigUpper.includes('TC') || desigUpper.includes('SALES') || desigUpper.includes('EXECUTIVE') || desigUpper === 'SE') code = 'SE';
+      else code = 'SE';
     }
 
     let isUnique = false;
