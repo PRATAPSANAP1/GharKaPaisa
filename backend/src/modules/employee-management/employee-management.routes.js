@@ -713,7 +713,8 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
       review_notes,
       pan_action, pan_reason,
       aadhaar_action, aadhaar_reason,
-      bank_action, bank_reason
+      bank_action, bank_reason,
+      video_action, video_reason
     } = req.body;
 
     // Fetch existing KYC record
@@ -731,6 +732,10 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
     let bank_status = existing.bank_status || 'PENDING';
     let bank_verified = existing.bank_verified || false;
     let bank_rejection_reason = existing.bank_rejection_reason || null;
+
+    let video_status = existing.video_status || 'PENDING';
+    let video_verified = existing.video_verified || false;
+    let video_rejection_reason = existing.video_rejection_reason || null;
 
     // Handle document level decisions if provided
     if (pan_action) {
@@ -766,6 +771,18 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
         bank_status = 'REJECTED';
         bank_verified = false;
         bank_rejection_reason = bank_reason || review_notes || 'Bank proof document unclear or invalid';
+      }
+    }
+
+    if (video_action) {
+      if (video_action === 'VERIFIED') {
+        video_status = 'VERIFIED';
+        video_verified = true;
+        video_rejection_reason = null;
+      } else if (video_action === 'REJECTED') {
+        video_status = 'REJECTED';
+        video_verified = false;
+        video_rejection_reason = video_reason || review_notes || 'Video verification unclear or invalid';
       }
     }
 
