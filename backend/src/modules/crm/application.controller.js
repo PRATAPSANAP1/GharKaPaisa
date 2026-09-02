@@ -1278,7 +1278,7 @@ const listApplications = async (req, res, next) => {
           a.commission_status::text,
           a.created_at,
           a.updated_at,
-          COALESCE(a.bank_ref_number, a.app_number) as bank_application_number,
+          COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, '')) as bank_application_number,
           a.bank_ref_number,
           NULL::text as appcode_status,
           a.soft_approval_status,
@@ -2721,7 +2721,7 @@ const exportApplicationsCSV = async (req, res, next) => {
           a.commission_status::text,
           a.commission_amount,
           COALESCE(a.source, 'partner_punch') as process_by,
-          COALESCE(a.bank_ref_number, a.app_number) as bank_application_number,
+          COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, '')) as bank_application_number,
           NULL::text as appcode_status,
           a.soft_approval_status,
           a.iqa_stage,
@@ -2839,15 +2839,16 @@ const exportApplicationsCSV = async (req, res, next) => {
       return cleanPan;
     };
 
-    const formatBankAppNumber = (bankAppNo) => {
+    const formatBankAppNumber = (bankAppNo, sysAppNo) => {
       if (!bankAppNo || String(bankAppNo).trim() === '' || String(bankAppNo).toUpperCase() === 'N/A' || String(bankAppNo).toUpperCase() === 'NA') return 'NA';
+      if (sysAppNo && String(bankAppNo).trim() === String(sysAppNo).trim()) return 'NA';
       return String(bankAppNo).trim();
     };
 
     for (const row of rows) {
       const mobVal = hideCustomerMobile ? 'REDACTED' : (row.customer_mobile || '');
       const panVal = formatPanNumber(row.pan_number);
-      const bankAppNoVal = formatBankAppNumber(row.bank_application_number);
+      const bankAppNoVal = formatBankAppNumber(row.bank_application_number, row.app_number);
 
       csvLines.push([
         `"${(row.app_number || '').replace(/"/g, '""')}"`,

@@ -1293,29 +1293,36 @@ export default function PartnerApplications() {
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                        <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>
-                          {viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number || 'Pending'}
-                        </div>
-                        {(viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number) && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const numToCopy = viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number;
-                              if (numToCopy && numToCopy !== 'Pending') {
-                                navigator.clipboard.writeText(numToCopy);
-                                alert(`📋 Copied Bank Application Number: ${numToCopy}`);
-                              }
-                            }}
-                            title="Copy Bank Application Number"
-                            style={{
-                              padding: '2px 8px', borderRadius: 6, border: '1px solid #3b82f640',
-                              background: '#3b82f615', color: '#3b82f6', fontSize: 10, fontWeight: 800,
-                              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3
-                            }}
-                          >
-                            <Copy size={11} /> Copy
-                          </button>
-                        )}
+                        {(() => {
+                          const rawNum = viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number || '';
+                          const sysNum = viewAppDetails?.app_number || viewApp?.app_number || '';
+                          const displayNum = (!rawNum || rawNum === sysNum || rawNum.toUpperCase() === 'NA' || rawNum.toUpperCase() === 'N/A' || rawNum === 'Pending') ? 'NA' : rawNum;
+                          const hasValidNum = displayNum !== 'NA';
+
+                          return (
+                            <>
+                              <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>
+                                {displayNum}
+                              </div>
+                              {hasValidNum && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(displayNum);
+                                    alert(`📋 Copied Bank Application Number: ${displayNum}`);
+                                  }}
+                                  title="Copy Bank Application Number"
+                                  style={{
+                                    border: 'none', background: 'transparent', cursor: 'pointer',
+                                    color: '#2563eb', padding: '2px 4px', display: 'inline-flex', alignItems: 'center'
+                                  }}
+                                >
+                                  <Copy size={13} />
+                                </button>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div>

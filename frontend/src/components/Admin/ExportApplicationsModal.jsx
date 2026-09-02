@@ -143,7 +143,8 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         const iqaStage = a.iqa_stage || 'N/A';
         
         const rawBankAppNo = a.bank_application_number || a.bank_ref_number || '';
-        const bankAppNo = (!rawBankAppNo || String(rawBankAppNo).trim() === '' || String(rawBankAppNo).toUpperCase() === 'N/A' || String(rawBankAppNo).toUpperCase() === 'NA') ? 'NA' : String(rawBankAppNo).trim();
+        const sysAppNo = a.app_number || '';
+        const bankAppNo = (!rawBankAppNo || String(rawBankAppNo).trim() === '' || String(rawBankAppNo).trim() === String(sysAppNo).trim() || String(rawBankAppNo).toUpperCase() === 'N/A' || String(rawBankAppNo).toUpperCase() === 'NA') ? 'NA' : String(rawBankAppNo).trim();
         
         const vkycStage = a.vkyc_stage || a.vkyc_status || 'N/A';
         const vkycLink = a.vkyc_url || 'N/A';

@@ -112,8 +112,15 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [finalStatus, setFinalStatus] = useState(sanitizeVal(application?.final_status) || sanitizeVal(application?.physical_details?.final_status) || sanitizeVal(application?.status) || 'None');
   const [appFileGenerated, setAppFileGenerated] = useState(sanitizeVal(application?.app_file_generated) || sanitizeVal(application?.appfile_generated) || sanitizeVal(application?.physical_details?.app_file_generated) || 'None');
   const [declineReason, setDeclineReason] = useState(sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.decline_reason));
-  const [eligibleReQd, setEligibleReQd] = useState(sanitizeVal(application?.eligible_reqd) || sanitizeVal(application?.physical_details?.eligible_reqd) || 'No');
-  const [bankRefNumber, setBankRefNumber] = useState(sanitizeVal(application?.bank_ref_number) || sanitizeVal(application?.bank_application_number) || sanitizeVal(application?.physical_details?.bank_ref_number));
+  const resolveBankRefNo = (rawRef, sysNo) => {
+    const s = sanitizeVal(rawRef);
+    if (!s || s === sysNo || s.toUpperCase() === 'NA' || s.toUpperCase() === 'N/A') return '';
+    return s;
+  };
+  const [bankRefNumber, setBankRefNumber] = useState(resolveBankRefNo(
+    application?.bank_application_number || application?.bank_ref_number || application?.physical_details?.bank_ref_number || application?.physical_details?.bank_application_number,
+    application?.app_number
+  ));
   const [approvedAmount, setApprovedAmount] = useState(sanitizeVal(application?.approved_amount) || sanitizeVal(application?.physical_details?.approved_amount) || sanitizeVal(application?.loan_amount));
 
   // 4. Real Database Status Snapshot (for Real DB Status vs Selected Status UI display)
@@ -229,7 +236,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         if (pd.company_address || app.company_address) setCompanyAddress(pd.company_address || app.company_address || app.office_address || '');
         if (pd.mother_name || app.mother_name) setMotherName(pd.mother_name || app.mother_name || '');
         if (app.app_number) setAppNumber(app.app_number || app.application_no || '');
-        if (app.bank_ref_number || app.bank_application_number || pd.bank_ref_number || pd.bank_application_number) setBankRefNumber(app.bank_ref_number || app.bank_application_number || pd.bank_ref_number || pd.bank_application_number || '');
+        setBankRefNumber(resolveBankRefNo(
+          app.bank_application_number || app.bank_ref_number || pd.bank_application_number || pd.bank_ref_number,
+          app.app_number || application?.app_number
+        ));
         if (app.vkyc_url || pd.vkyc_url) setVkycUrl(app.vkyc_url || pd.vkyc_url || '');
 
         if (app.status) setCurrentStatus(app.status);
