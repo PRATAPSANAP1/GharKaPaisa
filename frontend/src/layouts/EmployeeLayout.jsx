@@ -86,9 +86,7 @@ export default function EmployeeLayout() {
     ...(isManagerOrTL ? [{ path: '/employee/team', label: 'My Team Architecture', icon: <FaUsers /> }] : [])
   ] : [
     { path: '/employee/dashboard', label: 'Employee Dashboard', icon: <FaChartPie /> },
-    { path: '/employee/joining-form', label: 'Joining Registration', icon: <FaFileAlt /> },
-    { path: '/employee/terms', label: 'Terms & Conditions Video', icon: <FaFileContract /> },
-    { path: '/employee/kyc', label: 'KYC & Verification', icon: <FaCheckCircle /> },
+    { path: '/employee/kyc', label: 'Employee Onboarding & KYC', icon: <FaCheckCircle /> },
     { path: '/employee/profile', label: 'Employee Profile', icon: <FaUserCircle /> }
   ];
 
