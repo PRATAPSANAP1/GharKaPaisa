@@ -43,11 +43,11 @@ async function syncAndSeedEmployees() {
       INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
       SELECT 
         c.full_name, TRIM(c.mobile_number), LOWER(TRIM(c.email_id)), 'EMPLOYEE', 'active', 
-        REPLACE(COALESCE(c.reference_code, 'CAND10001'), 'CAND', 'EMP'), COALESCE(c.target_role, 'TC'), 'Sales & Support',
+        COALESCE(c.employee_id, 'YOH-SE' || FLOOR(1000 + RANDOM() * 9000)::text), COALESCE(c.offered_designation, c.target_role, 'TC'), 'Sales & Support',
         '$2a$10$e8w.oF/9Z9sK.9J0U.Y0c.Z0/0.0.0.0.0.0.0.0.0.0'
       FROM employee_candidates c
-      WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.mobile = TRIM(c.mobile_number) OR LOWER(u.email) = LOWER(TRIM(c.email_id)))
-      ON CONFLICT (mobile) DO NOTHING
+      WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.mobile = TRIM(c.mobile_number) OR (u.email IS NOT NULL AND LOWER(u.email) = LOWER(TRIM(c.email_id))))
+      ON CONFLICT (mobile) DO UPDATE SET role = 'EMPLOYEE'
     `).catch(e => logger.warn('User candidate sync note:', e.message));
 
     // 2. Sync candidates into employees table
@@ -58,17 +58,43 @@ async function syncAndSeedEmployees() {
         employment_type, offered_salary, recruitment_source, employee_status, activation_status
       )
       SELECT 
-        REPLACE(COALESCE(c.reference_code, 'CAND10001'), 'CAND', 'EMP'), u.id, c.id, c.full_name, TRIM(c.mobile_number), LOWER(TRIM(c.email_id)),
-        c.date_of_birth, c.current_address, COALESCE(c.target_role, 'TC'), 'Sales & Support', CURRENT_DATE,
-        COALESCE(c.experience_type, 'Full-time'), COALESCE(c.expected_salary, 18000), COALESCE(c.how_did_you_hear, 'Career Portal'),
+        COALESCE(u.employee_id, c.employee_id, 'YOH-SE' || FLOOR(1000 + RANDOM() * 9000)::text), u.id, c.id, c.full_name, TRIM(c.mobile_number), LOWER(TRIM(c.email_id)),
+        c.date_of_birth, c.current_address, COALESCE(c.offered_designation, c.target_role, 'TC'), 'Sales & Support', CURRENT_DATE,
+        COALESCE(c.experience_type, 'Full-time'), COALESCE(c.offered_salary, c.expected_salary, 18000), COALESCE(c.how_did_you_hear, 'Career Portal'),
         'ONBOARDING', 'PENDING'
       FROM employee_candidates c
-      LEFT JOIN users u ON (u.mobile = TRIM(c.mobile_number) OR LOWER(u.email) = LOWER(TRIM(c.email_id)))
+      LEFT JOIN users u ON (u.mobile = TRIM(c.mobile_number) OR (u.email IS NOT NULL AND LOWER(u.email) = LOWER(TRIM(c.email_id))))
       WHERE NOT EXISTS (SELECT 1 FROM employees e WHERE e.candidate_id = c.id OR e.mobile_number = TRIM(c.mobile_number))
-      ON CONFLICT (mobile_number) DO NOTHING
+      ON CONFLICT (mobile_number) DO UPDATE SET user_id = EXCLUDED.user_id
     `).catch(e => logger.warn('Employee candidate sync note:', e.message));
 
-    // 3. Create checklist records for synced employees
+    // 3. Sync users with role EMPLOYEE or HR into employees table (catches directly registered/created users)
+    await query(`
+      INSERT INTO employees (
+        employee_id, user_id, full_name, mobile_number, email_id,
+        designation, department, joining_date, employment_type, offered_salary,
+        employee_status, activation_status
+      )
+      SELECT 
+        COALESCE(u.employee_id, 'YOH-SE' || FLOOR(1000 + RANDOM() * 9000)::text), u.id, u.full_name, TRIM(u.mobile), LOWER(TRIM(u.email)),
+        COALESCE(u.designation, 'Sales Executive'), COALESCE(u.department, 'Sales & Support'), CURRENT_DATE,
+        'Full-time', 18000,
+        'ONBOARDING', 'PENDING'
+      FROM users u
+      WHERE u.role IN ('EMPLOYEE', 'HR')
+        AND NOT EXISTS (SELECT 1 FROM employees e WHERE e.user_id = u.id OR e.mobile_number = TRIM(u.mobile))
+      ON CONFLICT (mobile_number) DO UPDATE SET user_id = EXCLUDED.user_id
+    `).catch(e => logger.warn('User-to-employee sync note:', e.message));
+
+    // 4. Update users.employee_id from employees table if users.employee_id is null
+    await query(`
+      UPDATE users u
+      SET employee_id = e.employee_id
+      FROM employees e
+      WHERE e.user_id = u.id AND (u.employee_id IS NULL OR u.employee_id = '')
+    `).catch(e => logger.warn('User employee_id sync note:', e.message));
+
+    // 5. Create checklist records for synced employees
     await query(`
       INSERT INTO employee_onboarding_checklist (employee_id, interview_completed, employee_created, overall_progress, current_stage)
       SELECT e.id, true, true, 20, 'JOINING_FORM_PENDING'
