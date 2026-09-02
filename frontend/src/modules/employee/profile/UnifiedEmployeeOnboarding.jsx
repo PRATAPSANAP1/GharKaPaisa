@@ -146,7 +146,7 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
           email_id: jDetails.email_id || emp.email_id || emp.email || '',
           current_address: jDetails.current_address || emp.current_address || '',
           permanent_address: jDetails.permanent_address || '',
-          designation: jDetails.designation || emp.designation || 'Sales Executive',
+          designation: jDetails.designation || emp.designation || 'Telecaller',
           department: jDetails.department || emp.department || 'Sales & Distribution',
           joining_date: jDetails.joining_date ? new Date(jDetails.joining_date).toISOString().split('T')[0] : (emp.joining_date ? new Date(emp.joining_date).toISOString().split('T')[0] : prev.joining_date),
           work_location: jDetails.work_location || emp.work_location || 'Office',
@@ -541,7 +541,17 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '28px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>Designation *</label>
-                <input type="text" name="designation" required value={joiningForm.designation} onChange={handleJoiningChange} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontWeight: 700 }} />
+                <select
+                  name="designation"
+                  required
+                  value={joiningForm.designation}
+                  onChange={handleJoiningChange}
+                  style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  <option value="Manager">Manager</option>
+                  <option value="Team Leader">Team Leader</option>
+                  <option value="Telecaller">Telecaller</option>
+                </select>
               </div>
 
               <div>
