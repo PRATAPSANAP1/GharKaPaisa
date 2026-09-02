@@ -3,7 +3,8 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { 
   FaUsers, FaUserCheck, FaSitemap, FaLink, FaSearch, 
   FaPlus, FaCheckCircle, FaTimesCircle, FaEye, FaEdit, FaCheck, FaLock,
-  FaFileAlt, FaVideo, FaUniversity, FaBuilding, FaBriefcase, FaIdCard, FaPhone, FaEnvelope, FaClock, FaUserCircle
+  FaFileAlt, FaVideo, FaUniversity, FaBuilding, FaBriefcase, FaIdCard, FaPhone, FaEnvelope, FaClock, FaUserCircle,
+  FaUserTimes, FaUnlink
 } from 'react-icons/fa';
 import api from '../../../services/api';
 
@@ -17,6 +18,9 @@ export default function EmployeeManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [designationFilter, setDesignationFilter] = useState('');
+
+  // Hierarchy Tree selected Manager
+  const [selectedManagerId, setSelectedManagerId] = useState(null);
 
   // Modals state
   const [selectedEmp, setSelectedEmp] = useState(null);
@@ -162,6 +166,19 @@ export default function EmployeeManagement() {
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Hierarchy assignment failed');
+    }
+  };
+
+  const handleUnassignHierarchy = async (empId, empName, empCode) => {
+    if (!window.confirm(`Are you sure you want to unassign ${empName} (${empCode || 'N/A'}) from this team hierarchy?`)) return;
+    try {
+      const res = await api.post(`/employees/${empId}/unassign-hierarchy`);
+      if (res.data.success) {
+        alert(`${empName} unassigned from team hierarchy successfully.`);
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Unassignment failed');
     }
   };
 
@@ -349,86 +366,263 @@ export default function EmployeeManagement() {
         )}
 
         {/* Hierarchy Tab View */}
-        {activeTab === 'hierarchy' && (
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '450px', padding: '24px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 900, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}><FaSitemap style={{ color: C.teal }} /> Employee Reporting Hierarchy Architecture</h2>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+        {activeTab === 'hierarchy' && (() => {
+          const currentMgr = managersList.find(m => m.id === selectedManagerId) || managersList[0];
+          const activeMgrId = currentMgr?.id;
+
+          const managerTLs = activeMgrId ? tlsList.filter(tl => tl.manager_id === activeMgrId || tl.manager_name === currentMgr?.full_name) : [];
+          const allManagerTCs = activeMgrId ? employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === activeMgrId || tc.manager_name === currentMgr?.full_name)) : [];
+          const directTCs = allManagerTCs.filter(tc => !tc.team_leader_id && !tc.team_leader_name);
+
+          return (
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '500px', padding: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaSitemap style={{ color: C.teal }} /> Team Hierarchy Visual Tree Architecture
+                  </h2>
+                  <p style={{ fontSize: '12px', color: C.textMid, margin: '4px 0 0' }}>
+                    Select a Manager to view their full tree structure (Manager → Team Leaders → Telecallers) and manage team assignments.
+                  </p>
+                </div>
+              </div>
+
               {managersList.length === 0 ? (
-                <div style={{ padding: '20px', color: C.textMid }}>No Manager roles configured yet. Assign designation 'Manager' to start structuring team hierarchy.</div>
-              ) : managersList.map(mgr => {
-                const managerTLs = tlsList.filter(tl => tl.manager_id === mgr.id || tl.manager_name === mgr.full_name);
-                const allManagerTCs = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === mgr.id || tc.manager_name === mgr.full_name));
-                const directTCs = allManagerTCs.filter(tc => !tc.team_leader_id && !tc.team_leader_name);
-
-                return (
-                  <div key={mgr.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
-                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#8B5CF6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>
-                        M
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '15px', fontWeight: 900 }}>{mgr.full_name}</div>
-                        <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>Manager ({mgr.employee_id})</div>
-                      </div>
+                <div style={{ padding: '40px', textAlign: 'center', background: C.bgSecondary, borderRadius: '16px', border: `1px dashed ${C.border}` }}>
+                  <FaUserTimes style={{ fontSize: '32px', color: C.textMid, marginBottom: '12px' }} />
+                  <div style={{ fontSize: '15px', fontWeight: 800, color: C.text }}>No Manager Roles Configured</div>
+                  <div style={{ fontSize: '13px', color: C.textMid, marginTop: '4px' }}>
+                    Click "Assign Team" on any employee in the Directory tab and set their hierarchy level to "Manager".
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Top Row: Manager Selection Cards / Tabs */}
+                  <div style={{ marginBottom: '28px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                      Select Manager ({managersList.length})
                     </div>
+                    <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
+                      {managersList.map(mgr => {
+                        const isSelected = (mgr.id === activeMgrId);
+                        const tlsUnderMgr = tlsList.filter(tl => tl.manager_id === mgr.id || tl.manager_name === mgr.full_name);
+                        const tcsUnderMgr = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === mgr.id || tc.manager_name === mgr.full_name));
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '8px' }}>
-                      {/* Team Leaders under this Manager */}
-                      {managerTLs.length > 0 && (
-                        <div>
-                          <div style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '6px' }}>Team Leaders ({managerTLs.length})</div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {managerTLs.map(tl => {
-                              const tlTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
-                              return (
-                                <div key={tl.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px' }}>
-                                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#3B82F6' }}>TL: {tl.full_name} ({tl.employee_id})</div>
-                                  <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Assigned TCs: {tlTCs.length}</div>
-
-                                  {tlTCs.length > 0 && (
-                                    <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                      {tlTCs.map(tc => (
-                                        <span key={tc.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700 }}>
-                                          {tc.full_name} ({tc.employee_id})
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Direct TCs under Manager (No TL) */}
-                      {directTCs.length > 0 && (
-                        <div style={{ marginTop: managerTLs.length > 0 ? '6px' : '0' }}>
-                          <div style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '6px' }}>Direct Telecallers / Team Members ({directTCs.length})</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                            {directTCs.map(tc => (
-                              <span key={tc.id} style={{ background: C.card, border: `1px solid ${C.border}`, padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: C.text }}>
-                                {tc.full_name} ({tc.employee_id})
+                        return (
+                          <div
+                            key={mgr.id}
+                            onClick={() => setSelectedManagerId(mgr.id)}
+                            style={{
+                              flexShrink: 0,
+                              minWidth: '220px',
+                              padding: '14px 16px',
+                              borderRadius: '14px',
+                              cursor: 'pointer',
+                              background: isSelected ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : C.bgSecondary,
+                              color: isSelected ? '#FFFFFF' : C.text,
+                              border: isSelected ? 'none' : `1px solid ${C.border}`,
+                              boxShadow: isSelected ? '0 8px 20px rgba(16, 185, 129, 0.25)' : 'none',
+                              transition: 'all 0.2s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justify: 'space-between',
+                              gap: '12px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: isSelected ? 'rgba(255,255,255,0.2)' : '#8B5CF6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px' }}>
+                                M
+                              </div>
+                              <div>
+                                <div style={{ fontSize: '14px', fontWeight: 900, whiteSpace: 'nowrap' }}>{mgr.full_name}</div>
+                                <div style={{ fontSize: '11px', opacity: isSelected ? 0.9 : 0.7, fontWeight: 700 }}>{mgr.employee_id}</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                              <span style={{ fontSize: '11px', fontWeight: 900, padding: '3px 8px', borderRadius: '10px', background: isSelected ? 'rgba(255,255,255,0.25)' : C.card, color: isSelected ? '#FFF' : C.teal }}>
+                                {tlsUnderMgr.length} TLs · {tcsUnderMgr.length} TCs
                               </span>
-                            ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-
-                      {managerTLs.length === 0 && directTCs.length === 0 && (
-                        <div style={{ fontSize: '12.5px', color: C.textMid, fontStyle: 'italic', padding: '8px 0' }}>
-                          No Team Leaders or Telecallers assigned under this Manager yet.<br/>
-                          <span style={{ fontSize: '11.5px', color: C.teal, fontWeight: 700 }}>Tip: Click 'Assign Team' on an employee in the Directory tab to assign this Manager.</span>
-                        </div>
-                      )}
+                        );
+                      })}
                     </div>
                   </div>
-                );
-              })}
+
+                  {/* Visual Tree Diagram for Selected Manager */}
+                  {currentMgr && (
+                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+                      
+                      {/* LEVEL 1: MANAGER NODE */}
+                      <div style={{ background: C.card, border: `2px solid ${C.teal}`, borderRadius: '16px', padding: '16px 20px', minWidth: '280px', maxWidth: '360px', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', position: 'relative', zIndex: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                          <span style={{ background: '#8B5CF6', color: '#FFF', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
+                            LEVEL 1 · MANAGER
+                          </span>
+                          <button
+                            onClick={() => handleUnassignHierarchy(currentMgr.id, currentMgr.full_name, currentMgr.employee_id)}
+                            title="Unassign / Reset Manager Hierarchy"
+                            style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <FaUnlink style={{ fontSize: '10px' }} /> Disassign
+                          </button>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#8B5CF6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px', flexShrink: 0 }}>
+                            {currentMgr.full_name?.charAt(0) || 'M'}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '16px', fontWeight: 900, color: C.text }}>{currentMgr.full_name}</div>
+                            <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>ID: {currentMgr.employee_id}</div>
+                            {currentMgr.mobile_number && <div style={{ fontSize: '11px', color: C.textMid }}>📱 {currentMgr.mobile_number}</div>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stem Line Connecting Manager to TL Level */}
+                      {(managerTLs.length > 0 || directTCs.length > 0) ? (
+                        <>
+                          <div style={{ width: '2px', height: '28px', background: C.teal, margin: '0 auto' }}></div>
+
+                          {/* Level 2 horizontal connector branch bar if multiple nodes */}
+                          <div style={{ width: '100%', overflowX: 'auto', padding: '0 10px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', alignItems: 'flex-start', minWidth: 'max-content', margin: '0 auto' }}>
+                              
+                              {/* TEAM LEADERS BRANCHES */}
+                              {managerTLs.map(tl => {
+                                const tlTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
+                                return (
+                                  <div key={tl.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '260px', maxWidth: '320px' }}>
+                                    
+                                    {/* Stem line to TL node */}
+                                    <div style={{ width: '2px', height: '20px', background: C.teal }}></div>
+
+                                    {/* LEVEL 2: TEAM LEADER NODE */}
+                                    <div style={{ background: C.card, border: `2px solid #3B82F6`, borderRadius: '14px', padding: '14px 16px', width: '100%', boxShadow: '0 4px 16px rgba(0,0,0,0.04)', boxSizing: 'border-box' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+                                        <span style={{ background: '#3B82F6', color: '#FFF', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '6px' }}>
+                                          LEVEL 2 · TL
+                                        </span>
+                                        <button
+                                          onClick={() => handleUnassignHierarchy(tl.id, tl.full_name, tl.employee_id)}
+                                          title="Unassign Team Leader"
+                                          style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                        >
+                                          <FaUnlink style={{ fontSize: '10px' }} /> Disassign
+                                        </button>
+                                      </div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#3B82F6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px', flexShrink: 0 }}>
+                                          TL
+                                        </div>
+                                        <div>
+                                          <div style={{ fontSize: '14px', fontWeight: 900, color: C.text }}>{tl.full_name}</div>
+                                          <div style={{ fontSize: '11px', color: '#3B82F6', fontWeight: 800 }}>ID: {tl.employee_id}</div>
+                                        </div>
+                                      </div>
+
+                                      <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${C.border}`, paddingTop: '8px' }}>
+                                        <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid }}>Assigned TCs: {tlTCs.length}</span>
+                                        <button
+                                          onClick={() => { setHierarchyModalEmp(tl); setHierarchyForm({ hierarchy_level: 'TEAM_LEADER', manager_id: activeMgrId || '', team_leader_id: '' }); }}
+                                          style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                                        >
+                                          <FaPlus style={{ fontSize: '9px', marginRight: '3px' }} /> Assign TCs
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Stem line to Level 3 TCs */}
+                                    <div style={{ width: '2px', height: '20px', background: '#3B82F6' }}></div>
+
+                                    {/* LEVEL 3: TELECALLERS UNDER THIS TL */}
+                                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      {tlTCs.length === 0 ? (
+                                        <div style={{ background: C.card, border: `1px dashed ${C.border}`, borderRadius: '10px', padding: '10px', textAlign: 'center', fontSize: '11px', color: C.textMid }}>
+                                          No TCs assigned to this TL yet.
+                                        </div>
+                                      ) : tlTCs.map(tc => (
+                                        <div key={tc.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#10B981', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '11px', flexShrink: 0 }}>
+                                              TC
+                                            </div>
+                                            <div style={{ overflow: 'hidden' }}>
+                                              <div style={{ fontSize: '12px', fontWeight: 800, color: C.text, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{tc.full_name}</div>
+                                              <div style={{ fontSize: '10px', color: C.textMid }}>{tc.employee_id}</div>
+                                            </div>
+                                          </div>
+                                          <button
+                                            onClick={() => handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id)}
+                                            title="Unassign TC from Team"
+                                            style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '3px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}
+                                          >
+                                            Disassign
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {/* DIRECT TELECALLERS BRANCH (NO TL) */}
+                              {directTCs.length > 0 && (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '260px', maxWidth: '320px' }}>
+                                  <div style={{ width: '2px', height: '20px', background: '#F59E0B' }}></div>
+
+                                  <div style={{ background: C.card, border: `2px solid #F59E0B`, borderRadius: '14px', padding: '14px 16px', width: '100%', boxSizing: 'border-box' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
+                                      <span style={{ background: '#F59E0B', color: '#FFF', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '6px' }}>
+                                        DIRECT MEMBERS ({directTCs.length})
+                                      </span>
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, marginBottom: '10px' }}>
+                                      Reporting directly to Manager (No TL)
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                      {directTCs.map(tc => (
+                                        <div key={tc.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#F59E0B', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '11px', flexShrink: 0 }}>
+                                              TC
+                                            </div>
+                                            <div style={{ overflow: 'hidden' }}>
+                                              <div style={{ fontSize: '12px', fontWeight: 800, color: C.text, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{tc.full_name}</div>
+                                              <div style={{ fontSize: '10px', color: C.textMid }}>{tc.employee_id}</div>
+                                            </div>
+                                          </div>
+                                          <button
+                                            onClick={() => handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id)}
+                                            title="Unassign Direct Member from Manager"
+                                            style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '3px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}
+                                          >
+                                            Disassign
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ marginTop: '20px', padding: '20px', textAlign: 'center', color: C.textMid, fontSize: '13px' }}>
+                          No Team Leaders or Telecallers assigned under <strong>{currentMgr.full_name}</strong> yet.<br/>
+                          <span style={{ fontSize: '12px', color: C.teal, fontWeight: 700 }}>Go to the Directory tab and click "Assign Team" on an employee to link them to this Manager.</span>
+                        </div>
+                      )}
+
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Product Links Tab View */}
         {activeTab === 'links' && (

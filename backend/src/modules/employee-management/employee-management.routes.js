@@ -704,6 +704,24 @@ router.post('/:id/hierarchy', async (req, res, next) => {
   }
 });
 
+// POST /api/v1/employees/:id/unassign-hierarchy — Unassign / Remove employee from team hierarchy
+router.post('/:id/unassign-hierarchy', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Deactivate active hierarchy for this employee
+    await query(`UPDATE employee_hierarchy SET is_active = false WHERE employee_id = $1`, [id]);
+
+    // Clear hierarchy assignment in active records where this employee was assigned as Manager or TL
+    await query(`UPDATE employee_hierarchy SET team_leader_id = NULL WHERE team_leader_id = $1 AND is_active = true`, [id]);
+    await query(`UPDATE employee_hierarchy SET manager_id = NULL WHERE manager_id = $1 AND is_active = true`, [id]);
+
+    res.json({ success: true, message: 'Employee unassigned from team hierarchy successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/v1/employees/:id/product-links — Assign product link to an employee
 router.post('/:id/product-links', async (req, res, next) => {
   try {
