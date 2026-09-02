@@ -241,6 +241,195 @@ router.get('/stats', async (req, res, next) => {
   }
 });
 
+// GET /api/v1/employees/assigned-product-links — List assigned employee custom product links
+router.get('/assigned-product-links', async (req, res, next) => {
+  try {
+    const { search, employee_id, bank_id, product_id } = req.query;
+
+    let whereConditions = [];
+    let queryParams = [];
+
+    if (employee_id) {
+      queryParams.push(employee_id);
+      whereConditions.push(`pl.employee_id = $${queryParams.length}`);
+    }
+
+    if (bank_id) {
+      queryParams.push(bank_id);
+      whereConditions.push(`p.bank_id = $${queryParams.length}`);
+    }
+
+    if (product_id) {
+      queryParams.push(product_id);
+      whereConditions.push(`pl.product_id = $${queryParams.length}`);
+    }
+
+    if (search && search.trim()) {
+      queryParams.push(`%${search.trim()}%`);
+      const pIdx = queryParams.length;
+      whereConditions.push(`(e.full_name ILIKE $${pIdx} OR e.employee_id ILIKE $${pIdx} OR p.name ILIKE $${pIdx} OR b.name ILIKE $${pIdx})`);
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+    const { rows } = await query(`
+      SELECT 
+        pl.*,
+        e.full_name as employee_name,
+        e.employee_id as emp_code,
+        e.mobile_number as employee_mobile,
+        e.email_id as employee_email,
+        p.name as product_name,
+        p.category as product_category,
+        p.image_url as product_image,
+        b.name as bank_name,
+        u.full_name as assigned_by_name
+      FROM employee_product_links pl
+      JOIN employees e ON e.id = pl.employee_id
+      JOIN products p ON p.id = pl.product_id
+      LEFT JOIN banks b ON b.id = p.bank_id
+      LEFT JOIN users u ON u.id = pl.assigned_by
+      ${whereClause}
+      ORDER BY pl.updated_at DESC, pl.created_at DESC
+    `, queryParams);
+
+    res.json({ success: true, count: rows.length, data: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/v1/employees/assigned-product-links/:id — Unassign employee link
+router.delete('/assigned-product-links/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await query(`DELETE FROM employee_product_links WHERE id = $1 RETURNING *`, [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Assigned link record not found' });
+    }
+    res.json({ success: true, message: 'Employee custom bank link unassigned successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/employees/bulk-product-links — Bulk assign product links to employees
+router.post('/bulk-product-links', async (req, res, next) => {
+  try {
+    const { employee_ids, product_id, incentive_amount, incentive_type = 'FIXED' } = req.body;
+
+    if (!Array.isArray(employee_ids) || employee_ids.length === 0 || !product_id || !incentive_amount) {
+      return res.status(400).json({ success: false, message: 'Employee IDs array, Product ID, and incentive amount are required' });
+    }
+
+    const assigned = [];
+    for (const empId of employee_ids) {
+      const empRes = await query(`SELECT employee_id FROM employees WHERE id = $1`, [empId]);
+      if (empRes.rows.length === 0) continue;
+      const empCode = empRes.rows[0].employee_id;
+      const referralUrl = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${product_id}?emp=${empCode}`;
+
+      const { rows } = await query(
+        `INSERT INTO employee_product_links (
+          employee_id, product_id, employee_referral_url, incentive_amount, incentive_type, status, assigned_by
+        ) VALUES ($1, $2, $3, $4, $5, 'ACTIVE', $6)
+        ON CONFLICT (employee_id, product_id) DO UPDATE 
+        SET employee_referral_url = EXCLUDED.employee_referral_url,
+            incentive_amount = EXCLUDED.incentive_amount,
+            incentive_type = EXCLUDED.incentive_type,
+            status = 'ACTIVE',
+            updated_at = NOW()
+        RETURNING *`,
+        [empId, product_id, referralUrl, parseFloat(incentive_amount), incentive_type, req.user.id]
+      );
+      if (rows[0]) assigned.push(rows[0]);
+    }
+
+    res.json({ success: true, message: `Product links assigned to ${assigned.length} employees`, data: assigned });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/employees/assign-custom-product-links — Super Admin Assign custom bank links to select employees & products
+router.post('/assign-custom-product-links', async (req, res, next) => {
+  try {
+    let { employee_ids, product_ids, bank_id, custom_bank_url, incentive_amount = 0, status = 'ACTIVE' } = req.body;
+
+    if (!custom_bank_url || !custom_bank_url.trim()) {
+      return res.status(400).json({ success: false, message: 'Custom bank link URL is required' });
+    }
+
+    // Resolve employee_ids if 'ALL' or array
+    let empList = [];
+    if (employee_ids === 'ALL' || (Array.isArray(employee_ids) && employee_ids.length === 0)) {
+      const allEmps = await query(`SELECT id, employee_id, full_name FROM employees WHERE employee_status != 'TERMINATED'`);
+      empList = allEmps.rows;
+    } else if (Array.isArray(employee_ids)) {
+      const emps = await query(`SELECT id, employee_id, full_name FROM employees WHERE id = ANY($1::uuid[]) OR user_id = ANY($1::uuid[])`, [employee_ids]);
+      empList = emps.rows;
+    }
+
+    if (empList.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one valid employee must be selected' });
+    }
+
+    // Resolve product_ids
+    let prodList = [];
+    if (Array.isArray(product_ids) && product_ids.length > 0) {
+      const prods = await query(`SELECT id, name, bank_id FROM products WHERE id = ANY($1::uuid[])`, [product_ids]);
+      prodList = prods.rows;
+    } else if (bank_id) {
+      const prods = await query(`SELECT id, name, bank_id FROM products WHERE bank_id = $1 AND is_active = true`, [bank_id]);
+      prodList = prods.rows;
+    }
+
+    if (prodList.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one valid product must be selected' });
+    }
+
+    const assignedResults = [];
+    const cleanUrl = custom_bank_url.trim();
+
+    for (const emp of empList) {
+      for (const prod of prodList) {
+        // Support optional dynamic placeholder {emp_code}
+        const finalUrl = cleanUrl.replace(/\{emp_code\}/g, emp.employee_id || emp.id);
+
+        const { rows } = await query(
+          `INSERT INTO employee_product_links (
+            employee_id, product_id, employee_referral_url, incentive_amount, incentive_type, status, assigned_by
+          ) VALUES ($1, $2, $3, $4, 'FIXED', $5, $6)
+          ON CONFLICT (employee_id, product_id) DO UPDATE 
+          SET employee_referral_url = EXCLUDED.employee_referral_url,
+              incentive_amount = COALESCE(EXCLUDED.incentive_amount, employee_product_links.incentive_amount),
+              status = EXCLUDED.status,
+              updated_at = NOW()
+          RETURNING *`,
+          [emp.id, prod.id, finalUrl, parseFloat(incentive_amount) || 0, status, req.user.id]
+        );
+
+        if (rows[0]) assignedResults.push(rows[0]);
+
+        await query(
+          `UPDATE employee_onboarding_checklist SET links_assigned = true, links_assigned_at = NOW() WHERE employee_id = $1`,
+          [emp.id]
+        ).catch(() => {});
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Custom bank link assigned to ${empList.length} employee(s) across ${prodList.length} product(s). (${assignedResults.length} link records updated)`,
+      count: assignedResults.length,
+      data: assignedResults
+    });
+
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/v1/employees/:id — Complete Employee 360 view
 router.get('/:id', async (req, res, next) => {
   try {
@@ -562,195 +751,6 @@ router.post('/:id/product-links', async (req, res, next) => {
 
     res.json({ success: true, message: 'Employee product link assigned successfully', data: rows[0] });
 
-  } catch (err) {
-    next(err);
-  }
-});
-
-// POST /api/v1/employees/bulk-product-links — Bulk assign product links to employees
-router.post('/bulk-product-links', async (req, res, next) => {
-  try {
-    const { employee_ids, product_id, incentive_amount, incentive_type = 'FIXED' } = req.body;
-
-    if (!Array.isArray(employee_ids) || employee_ids.length === 0 || !product_id || !incentive_amount) {
-      return res.status(400).json({ success: false, message: 'Employee IDs array, Product ID, and incentive amount are required' });
-    }
-
-    const assigned = [];
-    for (const empId of employee_ids) {
-      const empRes = await query(`SELECT employee_id FROM employees WHERE id = $1`, [empId]);
-      if (empRes.rows.length === 0) continue;
-      const empCode = empRes.rows[0].employee_id;
-      const referralUrl = `${process.env.FRONTEND_URL || 'https://gharkapaisa.in'}/apply/${product_id}?emp=${empCode}`;
-
-      const { rows } = await query(
-        `INSERT INTO employee_product_links (
-          employee_id, product_id, employee_referral_url, incentive_amount, incentive_type, status, assigned_by
-        ) VALUES ($1, $2, $3, $4, $5, 'ACTIVE', $6)
-        ON CONFLICT (employee_id, product_id) DO UPDATE 
-        SET employee_referral_url = EXCLUDED.employee_referral_url,
-            incentive_amount = EXCLUDED.incentive_amount,
-            incentive_type = EXCLUDED.incentive_type,
-            status = 'ACTIVE',
-            updated_at = NOW()
-        RETURNING *`,
-        [empId, product_id, referralUrl, parseFloat(incentive_amount), incentive_type, req.user.id]
-      );
-      if (rows[0]) assigned.push(rows[0]);
-    }
-
-    res.json({ success: true, message: `Product links assigned to ${assigned.length} employees`, data: assigned });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// POST /api/v1/employees/assign-custom-product-links — Super Admin Assign custom bank links to select employees & products
-router.post('/assign-custom-product-links', async (req, res, next) => {
-  try {
-    let { employee_ids, product_ids, bank_id, custom_bank_url, incentive_amount = 0, status = 'ACTIVE' } = req.body;
-
-    if (!custom_bank_url || !custom_bank_url.trim()) {
-      return res.status(400).json({ success: false, message: 'Custom bank link URL is required' });
-    }
-
-    // Resolve employee_ids if 'ALL' or array
-    let empList = [];
-    if (employee_ids === 'ALL' || (Array.isArray(employee_ids) && employee_ids.length === 0)) {
-      const allEmps = await query(`SELECT id, employee_id, full_name FROM employees WHERE employee_status != 'TERMINATED'`);
-      empList = allEmps.rows;
-    } else if (Array.isArray(employee_ids)) {
-      const emps = await query(`SELECT id, employee_id, full_name FROM employees WHERE id = ANY($1::uuid[]) OR user_id = ANY($1::uuid[])`, [employee_ids]);
-      empList = emps.rows;
-    }
-
-    if (empList.length === 0) {
-      return res.status(400).json({ success: false, message: 'At least one valid employee must be selected' });
-    }
-
-    // Resolve product_ids
-    let prodList = [];
-    if (Array.isArray(product_ids) && product_ids.length > 0) {
-      const prods = await query(`SELECT id, name, bank_id FROM products WHERE id = ANY($1::uuid[])`, [product_ids]);
-      prodList = prods.rows;
-    } else if (bank_id) {
-      const prods = await query(`SELECT id, name, bank_id FROM products WHERE bank_id = $1 AND is_active = true`, [bank_id]);
-      prodList = prods.rows;
-    }
-
-    if (prodList.length === 0) {
-      return res.status(400).json({ success: false, message: 'At least one valid product must be selected' });
-    }
-
-    const assignedResults = [];
-    const cleanUrl = custom_bank_url.trim();
-
-    for (const emp of empList) {
-      for (const prod of prodList) {
-        // Support optional dynamic placeholder {emp_code}
-        const finalUrl = cleanUrl.replace(/\{emp_code\}/g, emp.employee_id || emp.id);
-
-        const { rows } = await query(
-          `INSERT INTO employee_product_links (
-            employee_id, product_id, employee_referral_url, incentive_amount, incentive_type, status, assigned_by
-          ) VALUES ($1, $2, $3, $4, 'FIXED', $5, $6)
-          ON CONFLICT (employee_id, product_id) DO UPDATE 
-          SET employee_referral_url = EXCLUDED.employee_referral_url,
-              incentive_amount = COALESCE(EXCLUDED.incentive_amount, employee_product_links.incentive_amount),
-              status = EXCLUDED.status,
-              updated_at = NOW()
-          RETURNING *`,
-          [emp.id, prod.id, finalUrl, parseFloat(incentive_amount) || 0, status, req.user.id]
-        );
-
-        if (rows[0]) assignedResults.push(rows[0]);
-
-        await query(
-          `UPDATE employee_onboarding_checklist SET links_assigned = true, links_assigned_at = NOW() WHERE employee_id = $1`,
-          [emp.id]
-        ).catch(() => {});
-      }
-    }
-
-    res.json({
-      success: true,
-      message: `Custom bank link assigned to ${empList.length} employee(s) across ${prodList.length} product(s). (${assignedResults.length} link records updated)`,
-      count: assignedResults.length,
-      data: assignedResults
-    });
-
-  } catch (err) {
-    next(err);
-  }
-});
-
-// GET /api/v1/employees/assigned-product-links — List assigned employee custom product links
-router.get('/assigned-product-links', async (req, res, next) => {
-  try {
-    const { search, employee_id, bank_id, product_id } = req.query;
-
-    let whereConditions = [];
-    let queryParams = [];
-
-    if (employee_id) {
-      queryParams.push(employee_id);
-      whereConditions.push(`pl.employee_id = $${queryParams.length}`);
-    }
-
-    if (bank_id) {
-      queryParams.push(bank_id);
-      whereConditions.push(`p.bank_id = $${queryParams.length}`);
-    }
-
-    if (product_id) {
-      queryParams.push(product_id);
-      whereConditions.push(`pl.product_id = $${queryParams.length}`);
-    }
-
-    if (search && search.trim()) {
-      queryParams.push(`%${search.trim()}%`);
-      const pIdx = queryParams.length;
-      whereConditions.push(`(e.full_name ILIKE $${pIdx} OR e.employee_id ILIKE $${pIdx} OR p.name ILIKE $${pIdx} OR b.name ILIKE $${pIdx})`);
-    }
-
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-
-    const { rows } = await query(`
-      SELECT 
-        pl.*,
-        e.full_name as employee_name,
-        e.employee_id as emp_code,
-        e.mobile_number as employee_mobile,
-        e.email_id as employee_email,
-        p.name as product_name,
-        p.category as product_category,
-        p.image_url as product_image,
-        b.name as bank_name,
-        u.full_name as assigned_by_name
-      FROM employee_product_links pl
-      JOIN employees e ON e.id = pl.employee_id
-      JOIN products p ON p.id = pl.product_id
-      LEFT JOIN banks b ON b.id = p.bank_id
-      LEFT JOIN users u ON u.id = pl.assigned_by
-      ${whereClause}
-      ORDER BY pl.updated_at DESC, pl.created_at DESC
-    `, queryParams);
-
-    res.json({ success: true, count: rows.length, data: rows });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// DELETE /api/v1/employees/assigned-product-links/:id — Unassign employee link
-router.delete('/assigned-product-links/:id', async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { rows } = await query(`DELETE FROM employee_product_links WHERE id = $1 RETURNING *`, [id]);
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Assigned link record not found' });
-    }
-    res.json({ success: true, message: 'Employee custom bank link unassigned successfully' });
   } catch (err) {
     next(err);
   }
