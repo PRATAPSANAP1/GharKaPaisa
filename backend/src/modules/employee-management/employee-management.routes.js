@@ -242,11 +242,23 @@ router.get('/', async (req, res, next) => {
     await query(`
       UPDATE employees 
       SET designation = CASE 
-        WHEN designation ILIKE '%Manager%' OR hierarchy_level = 'MANAGER' THEN 'Manager'
-        WHEN designation ILIKE '%Team Leader%' OR designation = 'TL' OR hierarchy_level = 'TEAM_LEADER' THEN 'Team Leader'
+        WHEN designation ILIKE '%Manager%' THEN 'Manager'
+        WHEN designation ILIKE '%Team Leader%' OR designation = 'TL' THEN 'Team Leader'
         ELSE 'TC'
       END
-      WHERE designation NOT IN ('Manager', 'Team Leader', 'TC')
+      WHERE designation NOT IN ('Manager', 'Team Leader', 'TC') OR designation IS NULL
+    `).catch(() => {});
+
+    await query(`
+      UPDATE employees e
+      SET designation = CASE 
+        WHEN h.hierarchy_level = 'MANAGER' THEN 'Manager'
+        WHEN h.hierarchy_level = 'TEAM_LEADER' THEN 'Team Leader'
+        WHEN h.hierarchy_level = 'TC' THEN 'TC'
+        ELSE e.designation
+      END
+      FROM employee_hierarchy h
+      WHERE h.employee_id = e.id AND h.is_active = true
     `).catch(() => {});
 
     if (designation) {
