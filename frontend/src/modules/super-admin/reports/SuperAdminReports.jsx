@@ -140,21 +140,23 @@ export default function SuperAdminReports() {
   };
 
   // Dynamic Product Category Calculations
-  const defaultCategories = [
-    { category: "Credit Cards", count: 2356, percentage: 43.4, color: "#3B82F6" },
-    { category: "Loans", count: 1725, percentage: 31.8, color: "#10B981" },
-    { category: "Insurance", count: 892, percentage: 16.4, color: "#F59E0B" },
-    { category: "Banking Accounts", count: 459, percentage: 8.4, color: "#8B5CF6" }
-  ];
-
   const categoryMap = Array.isArray(productDistData) && productDistData.length > 0
-    ? productDistData.map((item, idx) => ({
-        category: item.category || item.product_name || `Product ${idx + 1}`,
-        count: parseInt(item.total || 0, 10),
-        percentage: totalAppsCount > 0 ? parseFloat(((parseInt(item.total || 0, 10) / totalAppsCount) * 100).toFixed(1)) : 25,
-        color: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'][idx % 5]
-      }))
-    : defaultCategories;
+    ? productDistData.map((item, idx) => {
+        const cnt = parseInt(item.total || item.count || 0, 10);
+        const pct = totalAppsCount > 0 ? parseFloat(((cnt / totalAppsCount) * 100).toFixed(1)) : 0;
+        return {
+          category: item.category || item.product_name || `Category ${idx + 1}`,
+          count: cnt,
+          percentage: pct,
+          color: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'][idx % 6]
+        };
+      })
+    : [
+        { category: "Credit Cards", count: 0, percentage: 0, color: "#3B82F6" },
+        { category: "Loans", count: 0, percentage: 0, color: "#10B981" },
+        { category: "Insurance", count: 0, percentage: 0, color: "#F59E0B" },
+        { category: "Banking Accounts", count: 0, percentage: 0, color: "#8B5CF6" }
+      ];
 
   // Status Distribution
   const statusData = [
@@ -239,6 +241,38 @@ export default function SuperAdminReports() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+
+  // Dynamic Chart Points Calculation from backend daily analytics
+  const chartPoints = (dailyAnalyticsData && dailyAnalyticsData.length > 0)
+    ? dailyAnalyticsData.slice().reverse()
+    : [
+        { formatted_date: '01 Aug', new_applications: 14, approved_applications: 8 },
+        { formatted_date: '06 Aug', new_applications: 22, approved_applications: 14 },
+        { formatted_date: '11 Aug', new_applications: 35, approved_applications: 22 },
+        { formatted_date: '16 Aug', new_applications: 48, approved_applications: 31 },
+        { formatted_date: '21 Aug', new_applications: 40, approved_applications: 26 },
+        { formatted_date: '26 Aug', new_applications: 56, approved_applications: 39 },
+        { formatted_date: '31 Aug', new_applications: 68, approved_applications: 45 }
+      ];
+
+  const maxAppVal = Math.max(...chartPoints.map(p => Math.max(p.new_applications || 0, p.approved_applications || 0)), 10);
+  const svgW = 800;
+  const svgH = 150;
+  const gapX = chartPoints.length > 1 ? svgW / (chartPoints.length - 1) : svgW;
+
+  const totalPolyPoints = chartPoints.map((p, i) => {
+    const x = Math.round(i * gapX);
+    const y = Math.round(svgH - ((p.new_applications || 0) / maxAppVal) * (svgH - 25) - 10);
+    return `${x},${y}`;
+  }).join(' ');
+
+  const approvedPolyPoints = chartPoints.map((p, i) => {
+    const x = Math.round(i * gapX);
+    const y = Math.round(svgH - ((p.approved_applications || 0) / maxAppVal) * (svgH - 25) - 10);
+    return `${x},${y}`;
+  }).join(' ');
+
+  const areaPolyPoints = `0,${svgH} ${totalPolyPoints} ${svgW},${svgH}`;
 
   return (
     <div style={{ 
@@ -390,7 +424,7 @@ export default function SuperAdminReports() {
 
       </div>
 
-      {/* 3. 📈 APPLICATIONS OVERVIEW LINE CHART & DISTRIBUTION GRID */}
+      {/* 3. 📈 DYNAMIC APPLICATIONS OVERVIEW LINE CHART & DISTRIBUTION GRID */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
         
         {/* Chart Panel: Applications Overview */}
@@ -401,7 +435,6 @@ export default function SuperAdminReports() {
               <div style={{ display: 'flex', gap: '14px', marginTop: '4px', fontSize: '11.5px', fontWeight: 700 }}>
                 <span style={{ color: '#2563EB', display: 'flex', alignItems: 'center', gap: '5px' }}>● Total Applications</span>
                 <span style={{ color: '#10B981', display: 'flex', alignItems: 'center', gap: '5px' }}>● Approved</span>
-                <span style={{ color: '#EF4444', display: 'flex', alignItems: 'center', gap: '5px' }}>● Rejected</span>
               </div>
             </div>
 
@@ -423,12 +456,12 @@ export default function SuperAdminReports() {
             </div>
           </div>
 
-          <div style={{ height: '190px', width: '100%', position: 'relative' }}>
-            <svg viewBox="0 0 800 190" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-              <line x1="0" y1="30" x2="800" y2="30" stroke={C.border} strokeDasharray="4 4" />
-              <line x1="0" y1="75" x2="800" y2="75" stroke={C.border} strokeDasharray="4 4" />
-              <line x1="0" y1="120" x2="800" y2="120" stroke={C.border} strokeDasharray="4 4" />
-              <line x1="0" y1="165" x2="800" y2="165" stroke={C.border} strokeDasharray="4 4" />
+          <div style={{ height: '180px', width: '100%', position: 'relative' }}>
+            <svg viewBox="0 0 800 150" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+              <line x1="0" y1="20" x2="800" y2="20" stroke={C.border} strokeDasharray="4 4" />
+              <line x1="0" y1="60" x2="800" y2="60" stroke={C.border} strokeDasharray="4 4" />
+              <line x1="0" y1="100" x2="800" y2="100" stroke={C.border} strokeDasharray="4 4" />
+              <line x1="0" y1="140" x2="800" y2="140" stroke={C.border} strokeDasharray="4 4" />
 
               <defs>
                 <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
@@ -436,19 +469,21 @@ export default function SuperAdminReports() {
                   <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.0" />
                 </linearGradient>
               </defs>
-              <path d="M0,110 Q100,100 200,60 T400,80 T600,40 T800,20 L800,170 L0,170 Z" fill="url(#totalGrad)" />
-              <path d="M0,110 Q100,100 200,60 T400,80 T600,40 T800,20" fill="none" stroke="#2563EB" strokeWidth="3" />
-              <path d="M0,135 Q100,125 200,95 T400,115 T600,70 T800,50" fill="none" stroke="#10B981" strokeWidth="2.5" />
-              <path d="M0,165 Q100,160 200,150 T400,155 T600,145 T800,140" fill="none" stroke="#EF4444" strokeWidth="2" />
+              
+              <polygon points={areaPolyPoints} fill="url(#totalGrad)" />
+              <polyline points={totalPolyPoints} fill="none" stroke="#2563EB" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              <polyline points={approvedPolyPoints} fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+              {chartPoints.map((p, i) => {
+                const x = Math.round(i * gapX);
+                const y = Math.round(svgH - ((p.new_applications || 0) / maxAppVal) * (svgH - 25) - 10);
+                return <circle key={i} cx={x} cy={y} r="4" fill="#2563EB" stroke="#FFF" strokeWidth="1.5" />;
+              })}
             </svg>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '10.5px', color: C.textMid, fontWeight: 700 }}>
-              <span>01 Aug</span>
-              <span>06 Aug</span>
-              <span>11 Aug</span>
-              <span>16 Aug</span>
-              <span>21 Aug</span>
-              <span>26 Aug</span>
-              <span>31 Aug</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '10.5px', color: C.textMid, fontWeight: 700 }}>
+              {chartPoints.map((p, i) => (
+                <span key={i}>{p.formatted_date || p.date_iso || `Day ${i+1}`}</span>
+              ))}
             </div>
           </div>
         </div>
@@ -467,7 +502,7 @@ export default function SuperAdminReports() {
                   <span><strong>{item.count.toLocaleString()}</strong> ({item.percentage}%)</span>
                 </div>
                 <div style={{ width: '100%', height: '7px', background: C.bgSecondary, borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ width: `${item.percentage}%`, height: '100%', background: item.color, borderRadius: '4px' }} />
+                  <div style={{ width: `${Math.min(item.percentage, 100)}%`, height: '100%', background: item.color, borderRadius: '4px' }} />
                 </div>
               </div>
             ))}
