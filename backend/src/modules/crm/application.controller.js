@@ -1288,6 +1288,8 @@ const listApplications = async (req, res, next) => {
           a.vkyc_url,
           a.dispatch_status,
           a.bank_remark,
+          COALESCE(a.user_remark, a.notes) as user_remark,
+          COALESCE(a.user_remark, a.notes) as notes,
           a.final_status,
           NULL::text as app_file_generated,
           a.decline_reason,
@@ -1947,11 +1949,13 @@ const updateBankProcessingStatus = async (req, res, next) => {
     const { 
       status, bank_ref_number, rejection_reason, approved_amount,
       appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
-      bank_remark, final_status, decline_reason, eligible_reqd,
+      bank_remark, user_remark, user_notes, notes, final_status, decline_reason, eligible_reqd,
       // Form 1 Customer Application Details
       customer_mobile, customer_name, dob, customer_email, pan_number,
       company_name, designation, address, company_address, mother_name, vkyc_url
     } = req.body;
+
+    const userRemarkVal = user_remark || user_notes || notes || null;
 
     const validStatuses = ['under_review', 'approved', 'rejected', 'disbursed', 'in_process', 'app_file_generated', 'decline', 'technical_error'];
     const currentStatus = (status && validStatuses.includes(status)) ? status : 'under_review';
@@ -2003,15 +2007,17 @@ const updateBankProcessingStatus = async (req, res, next) => {
               company_address = COALESCE($22, company_address),
               mother_name = COALESCE($23, mother_name),
               vkyc_url = COALESCE($24, vkyc_url),
+              user_remark = COALESCE($25, user_remark),
+              notes = COALESCE($25, notes),
               updated_at = NOW()
-          WHERE id = $25
+          WHERE id = $26
         `, [
           currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount,
           appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
           dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
           eligible_reqd || null, customer_mobile || null, customer_name || null, dob || null,
           customer_email || null, pan_number || null, company_name || null, designation || null,
-          address || null, company_address || null, mother_name || null, vkyc_url || null, id
+          address || null, company_address || null, mother_name || null, vkyc_url || null, userRemarkVal, id
         ]);
 
         await query(`
@@ -2046,14 +2052,16 @@ const updateBankProcessingStatus = async (req, res, next) => {
           company_address = COALESCE($16, company_address),
           mother_name = COALESCE($17, mother_name),
           vkyc_url = COALESCE($18, vkyc_url),
+          user_remark = COALESCE($19, user_remark),
+          notes = COALESCE($19, notes),
           updated_at = NOW()
-      WHERE id = $19
+      WHERE id = $20
     `, [
       currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount,
       appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
       dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
       eligible_reqd || null, dob || null, designation || null, company_address || null,
-      mother_name || null, vkyc_url || null, id
+      mother_name || null, vkyc_url || null, userRemarkVal, id
     ]);
 
     const titleMap = {

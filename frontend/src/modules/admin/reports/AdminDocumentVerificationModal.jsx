@@ -108,6 +108,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
   // 3. Final Status & Bank Remarks State
   const [bankRemark, setBankRemark] = useState(sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark));
+  const [userRemark, setUserRemark] = useState(sanitizeVal(application?.user_remark) || sanitizeVal(application?.notes) || '');
   const [finalStatus, setFinalStatus] = useState(sanitizeVal(application?.final_status) || sanitizeVal(application?.physical_details?.final_status) || sanitizeVal(application?.status) || 'None');
   const [appFileGenerated, setAppFileGenerated] = useState(sanitizeVal(application?.app_file_generated) || sanitizeVal(application?.appfile_generated) || sanitizeVal(application?.physical_details?.app_file_generated) || 'None');
   const [declineReason, setDeclineReason] = useState(sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.decline_reason));
@@ -123,7 +124,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     iqaStage: sanitizeVal(application?.iqa_stage) || sanitizeVal(application?.physical_details?.iqa_stage),
     dispatchStatus: sanitizeVal(application?.dispatch_status) || sanitizeVal(application?.physical_details?.dispatch_status),
     finalStatus: sanitizeVal(application?.final_status) || sanitizeVal(application?.physical_details?.final_status) || sanitizeVal(application?.status) || 'In Process',
-    bankRemark: sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark)
+    bankRemark: sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark),
+    userRemark: sanitizeVal(application?.user_remark) || sanitizeVal(application?.notes)
   });
 
   // Share / Send to Customer State
@@ -238,6 +240,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         const realDispatch = sanitizeVal(app.dispatch_status) || sanitizeVal(pd.dispatch_status);
         const realFinal = sanitizeVal(app.final_status) || sanitizeVal(pd.final_status) || sanitizeVal(app.status) || 'In Process';
         const realRemark = sanitizeVal(app.bank_remark) || sanitizeVal(pd.bank_remark);
+        const realUserRemark = sanitizeVal(app.user_remark) || sanitizeVal(app.notes) || '';
 
         setRealData({
           appcodeStatus: realAppcode,
@@ -246,7 +249,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           iqaStage: realIqa,
           dispatchStatus: realDispatch,
           finalStatus: realFinal,
-          bankRemark: realRemark
+          bankRemark: realRemark,
+          userRemark: realUserRemark
         });
 
         setAppcodeStatus(realAppcode);
@@ -255,6 +259,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         setIqaStage(realIqa);
         setDispatchStatus(realDispatch);
         setBankRemark(realRemark);
+        setUserRemark(realUserRemark);
         setFinalStatus(realFinal);
         if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
         if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
@@ -278,9 +283,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const handleSaveDetails = async (formType) => {
     setActionLoading(true);
     try {
-      let payload = {};
+      let payload = {
+        user_remark: userRemark,
+        notes: userRemark
+      };
       if (formType === 'qd') {
         payload = {
+          ...payload,
           customer_mobile: customerMobile,
           customer_name: customerName,
           dob,
@@ -305,6 +314,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         };
       } else if (formType === 'remark') {
         payload = {
+          ...payload,
           appcode_status: appcodeStatus,
           soft_approval_status: softApprovalStatus,
           iqa_stage: iqaStage,
@@ -325,6 +335,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           targetStatus = 'approved';
         }
         payload = {
+          ...payload,
           bank_remark: bankRemark,
           final_status: finalStatus,
           app_file_generated: appFileGenerated,
@@ -955,6 +966,21 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     </select>
                   </div>
 
+                  {/* Order 8: USER REMARK (TEXT FIELD) */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
+                      <MessageSquare size={14} /> USER REMARK (Employee / Partner Remark)
+                    </label>
+                    <textarea
+                      disabled={isLockedStatus}
+                      value={userRemark}
+                      onChange={(e) => setUserRemark(e.target.value)}
+                      placeholder="Enter user remark / notes for this application..."
+                      rows={3}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #93c5fd', fontSize: '13px', background: isLockedStatus ? '#f8fafc' : '#eff6ff', fontWeight: 600, color: '#1e3a8a' }}
+                    />
+                  </div>
+
                 </div>
 
                 <div style={{
@@ -1038,9 +1064,24 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     </select>
                   </div>
 
-                  {/* 3. BANK REMARK */}
+                  {/* 3. USER REMARK */}
                   <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. BANK REMARK</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
+                      <MessageSquare size={14} /> USER REMARK (Employee / Partner Remark)
+                    </label>
+                    <textarea
+                      disabled={isLockedStatus}
+                      value={userRemark}
+                      onChange={(e) => setUserRemark(e.target.value)}
+                      placeholder="Enter user remark / notes..."
+                      rows={2}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #93c5fd', fontSize: '13px', background: isLockedStatus ? '#f8fafc' : '#eff6ff', fontWeight: 600, color: '#1e3a8a' }}
+                    />
+                  </div>
+
+                  {/* 4. BANK REMARK */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. BANK REMARK</label>
                     <textarea
                       disabled={!canEditFinal}
                       value={bankRemark}

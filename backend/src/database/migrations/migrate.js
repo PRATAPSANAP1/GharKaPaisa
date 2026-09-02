@@ -385,6 +385,8 @@ const migrate = async () => {
     ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50),
     ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50),
     ADD COLUMN IF NOT EXISTS bank_remark TEXT,
+    ADD COLUMN IF NOT EXISTS user_remark TEXT,
+    ADD COLUMN IF NOT EXISTS notes TEXT,
     ADD COLUMN IF NOT EXISTS final_status VARCHAR(50),
     ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
     ADD COLUMN IF NOT EXISTS decline_reason TEXT,
@@ -398,7 +400,9 @@ const migrate = async () => {
 
     ALTER TABLE leads 
     ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50),
-    ADD COLUMN IF NOT EXISTS vkyc_url TEXT;
+    ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
+    ADD COLUMN IF NOT EXISTS user_remark TEXT,
+    ADD COLUMN IF NOT EXISTS notes TEXT;
   `);
 
   // ── KYC Documents ────────────────────────────────────────────

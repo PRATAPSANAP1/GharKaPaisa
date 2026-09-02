@@ -1357,6 +1357,12 @@ export default function PartnerApplications() {
                         </div>
                       );
                     })()}
+                    {(viewAppDetails?.user_remark || viewAppDetails?.notes) && (
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>USER REMARK</div>
+                        <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px' }}>{viewAppDetails?.user_remark || viewAppDetails?.notes}</div>
+                      </div>
+                    )}
                     {(viewAppDetails?.bank_remark || viewAppDetails?.physical_details?.bank_remark) && (
                       <div style={{ gridColumn: 'span 2' }}>
                         <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>

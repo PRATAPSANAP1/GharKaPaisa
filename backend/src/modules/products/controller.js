@@ -562,16 +562,16 @@ const resolvePartnerCommissions = async (productsList, req) => {
   // Check if request is from an Employee user
   const isEmployee = req?.user && ['EMPLOYEE', 'HR'].includes(req.user.role?.toUpperCase());
   if (isEmployee) {
-    let empId = req.user.employee_id;
-    if (!empId && req.user.id) {
+    let empUuid = null;
+    if (req.user?.id || req.user?.employee_id || req.user?.mobile) {
       const { rows: [emp] } = await query(
-        `SELECT id FROM employees WHERE user_id = $1 OR mobile_number = $2 LIMIT 1`,
-        [req.user.id, req.user.mobile]
+        `SELECT id FROM employees WHERE user_id = $1 OR employee_id = $2 OR mobile_number = $3 LIMIT 1`,
+        [req.user.id || null, req.user.employee_id || '', req.user.mobile || '']
       );
-      if (emp) empId = emp.id;
+      if (emp) empUuid = emp.id;
     }
 
-    if (empId) {
+    if (empUuid) {
       const productIds = productsList.map(p => p.id).filter(Boolean);
       let empLinksMap = {};
       if (productIds.length > 0) {
@@ -579,7 +579,7 @@ const resolvePartnerCommissions = async (productsList, req) => {
           `SELECT product_id, incentive_amount, incentive_type, employee_referral_url, status
            FROM employee_product_links
            WHERE employee_id = $1 AND product_id = ANY($2::uuid[]) AND status = 'ACTIVE'`,
-          [empId, productIds]
+          [empUuid, productIds]
         );
         empLinks.forEach(l => {
           empLinksMap[l.product_id] = l;
