@@ -358,7 +358,8 @@ export default function EmployeeManagement() {
                 <div style={{ padding: '20px', color: C.textMid }}>No Manager roles configured yet. Assign designation 'Manager' to start structuring team hierarchy.</div>
               ) : managersList.map(mgr => {
                 const managerTLs = tlsList.filter(tl => tl.manager_id === mgr.id || tl.manager_name === mgr.full_name);
-                const managerTCs = employees.filter(tc => tc.designation === 'TC' && (tc.manager_id === mgr.id || tc.manager_name === mgr.full_name));
+                const allManagerTCs = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === mgr.id || tc.manager_name === mgr.full_name));
+                const directTCs = allManagerTCs.filter(tc => !tc.team_leader_id && !tc.team_leader_name);
 
                 return (
                   <div key={mgr.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px' }}>
@@ -372,29 +373,55 @@ export default function EmployeeManagement() {
                       </div>
                     </div>
 
-                    {/* Team Leaders under this Manager */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingLeft: '12px' }}>
-                      {managerTLs.length === 0 ? (
-                        <div style={{ fontSize: '12px', color: C.textMid }}>No direct Team Leaders assigned.</div>
-                      ) : managerTLs.map(tl => {
-                        const tlTCs = managerTCs.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
-                        return (
-                          <div key={tl.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px' }}>
-                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#3B82F6' }}>TL: {tl.full_name} ({tl.employee_id})</div>
-                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '4px' }}>Assigned TCs: {tlTCs.length}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingLeft: '8px' }}>
+                      {/* Team Leaders under this Manager */}
+                      {managerTLs.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '6px' }}>Team Leaders ({managerTLs.length})</div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {managerTLs.map(tl => {
+                              const tlTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
+                              return (
+                                <div key={tl.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px' }}>
+                                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#3B82F6' }}>TL: {tl.full_name} ({tl.employee_id})</div>
+                                  <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Assigned TCs: {tlTCs.length}</div>
 
-                            {tlTCs.length > 0 && (
-                              <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                {tlTCs.map(tc => (
-                                  <span key={tc.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700 }}>
-                                    {tc.full_name} ({tc.employee_id})
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                                  {tlTCs.length > 0 && (
+                                    <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                      {tlTCs.map(tc => (
+                                        <span key={tc.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700 }}>
+                                          {tc.full_name} ({tc.employee_id})
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
+                        </div>
+                      )}
+
+                      {/* Direct TCs under Manager (No TL) */}
+                      {directTCs.length > 0 && (
+                        <div style={{ marginTop: managerTLs.length > 0 ? '6px' : '0' }}>
+                          <div style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '6px' }}>Direct Telecallers / Team Members ({directTCs.length})</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {directTCs.map(tc => (
+                              <span key={tc.id} style={{ background: C.card, border: `1px solid ${C.border}`, padding: '4px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: C.text }}>
+                                {tc.full_name} ({tc.employee_id})
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {managerTLs.length === 0 && directTCs.length === 0 && (
+                        <div style={{ fontSize: '12.5px', color: C.textMid, fontStyle: 'italic', padding: '8px 0' }}>
+                          No Team Leaders or Telecallers assigned under this Manager yet.<br/>
+                          <span style={{ fontSize: '11.5px', color: C.teal, fontWeight: 700 }}>Tip: Click 'Assign Team' on an employee in the Directory tab to assign this Manager.</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
