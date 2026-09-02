@@ -68,7 +68,49 @@ async function syncAndSeedEmployees() {
       ON CONFLICT (mobile_number) DO UPDATE SET user_id = EXCLUDED.user_id
     `).catch(e => logger.warn('Employee candidate sync note:', e.message));
 
-    // 3. Sync users with role EMPLOYEE or HR into employees table (catches directly registered/created users)
+    // 3. Ensure hr_profiles table exists and sync HR users
+    await query(`
+      CREATE TABLE IF NOT EXISTS hr_profiles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        employee_id VARCHAR(50) UNIQUE NOT NULL,
+        full_name VARCHAR(150) NOT NULL,
+        email VARCHAR(150) NOT NULL,
+        mobile_number VARCHAR(20) NOT NULL,
+        designation VARCHAR(100) DEFAULT 'HR Manager',
+        department VARCHAR(100) DEFAULT 'Human Resources',
+        status VARCHAR(20) DEFAULT 'active',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `).catch(() => {});
+
+    await query(`
+      INSERT INTO hr_profiles (user_id, employee_id, full_name, email, mobile_number, designation, department, status)
+      SELECT 
+        u.id, 
+        COALESCE(u.employee_id, 'YOH-HR' || FLOOR(1000 + RANDOM() * 9000)::text), 
+        u.full_name, 
+        LOWER(TRIM(u.email)), 
+        TRIM(u.mobile), 
+        COALESCE(u.designation, 'HR Manager'), 
+        COALESCE(u.department, 'Human Resources'), 
+        'active'
+      FROM users u
+      WHERE u.role = 'HR'
+        AND NOT EXISTS (SELECT 1 FROM hr_profiles hp WHERE hp.user_id = u.id OR hp.mobile_number = TRIM(u.mobile))
+      ON CONFLICT DO NOTHING;
+    `).catch(e => logger.warn('HR sync note:', e.message));
+
+    // Remove any HR records from employees table so they do not show on super-admin/employees
+    await query(`
+      DELETE FROM employees 
+      WHERE user_id IN (SELECT id FROM users WHERE role = 'HR')
+         OR designation ILIKE '%HR%' 
+         OR designation ILIKE '%Human Resource%'
+    `).catch(() => {});
+
+    // 4. Sync non-HR users with role EMPLOYEE into employees table (catches directly registered/created users)
     await query(`
       INSERT INTO employees (
         employee_id, user_id, full_name, mobile_number, email_id,
@@ -77,11 +119,12 @@ async function syncAndSeedEmployees() {
       )
       SELECT 
         COALESCE(u.employee_id, 'YOH-SE' || FLOOR(1000 + RANDOM() * 9000)::text), u.id, u.full_name, TRIM(u.mobile), LOWER(TRIM(u.email)),
-        COALESCE(u.designation, 'Sales Executive'), COALESCE(u.department, 'Sales & Support'), CURRENT_DATE,
+        COALESCE(u.designation, 'TC'), COALESCE(u.department, 'Sales & Support'), CURRENT_DATE,
         'Full-time', 18000,
         'ONBOARDING', 'PENDING'
       FROM users u
-      WHERE u.role IN ('EMPLOYEE', 'HR')
+      WHERE u.role = 'EMPLOYEE'
+        AND (u.designation IS NULL OR (u.designation NOT ILIKE '%HR%' AND u.designation NOT ILIKE '%Human Resource%'))
         AND NOT EXISTS (SELECT 1 FROM employees e WHERE e.user_id = u.id OR e.mobile_number = TRIM(u.mobile))
       ON CONFLICT (mobile_number) DO UPDATE SET user_id = EXCLUDED.user_id
     `).catch(e => logger.warn('User-to-employee sync note:', e.message));
@@ -175,11 +218,13 @@ router.get('/', async (req, res, next) => {
         (SELECT COUNT(*) FROM applications app WHERE app.employee_id = e.id) as total_applications,
         (SELECT COALESCE(SUM(amount), 0) FROM employee_incentive_transactions it WHERE it.employee_id = e.id AND it.status = 'COMPLETED') as total_incentives_earned
       FROM employees e
+      LEFT JOIN users u ON u.id = e.user_id
       LEFT JOIN employee_onboarding_checklist c ON c.employee_id = e.id
       LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
       LEFT JOIN employees tl ON tl.id = h.team_leader_id
       LEFT JOIN employees mgr ON mgr.id = h.manager_id
-      WHERE 1=1
+      WHERE (u.role IS NULL OR u.role = 'EMPLOYEE')
+        AND (e.designation NOT ILIKE '%HR%' AND e.designation NOT ILIKE '%Human Resource%')
     `;
     const params = [];
 
@@ -226,7 +271,13 @@ router.get('/', async (req, res, next) => {
     params.push(parseInt(limit), parseInt(offset));
 
     const { rows } = await query(queryStr, params);
-    const countRes = await query(`SELECT COUNT(*) FROM employees`);
+    const countRes = await query(`
+      SELECT COUNT(*) 
+      FROM employees e 
+      LEFT JOIN users u ON u.id = e.user_id 
+      WHERE (u.role IS NULL OR u.role = 'EMPLOYEE')
+        AND (e.designation NOT ILIKE '%HR%' AND e.designation NOT ILIKE '%Human Resource%')
+    `);
 
     res.json({
       success: true,
@@ -246,13 +297,16 @@ router.get('/stats', async (req, res, next) => {
     const { rows } = await query(`
       SELECT 
         COUNT(*) as total_employees,
-        COUNT(*) FILTER (WHERE employee_status = 'ACTIVE') as active_employees,
-        COUNT(*) FILTER (WHERE employee_status = 'ONBOARDING') as onboarding_employees,
-        COUNT(*) FILTER (WHERE activation_status = 'PENDING') as pending_activation,
-        COUNT(*) FILTER (WHERE designation = 'Manager') as total_managers,
-        COUNT(*) FILTER (WHERE designation = 'Team Leader') as total_tls,
-        COUNT(*) FILTER (WHERE designation = 'TC') as total_tcs
-      FROM employees
+        COUNT(*) FILTER (WHERE e.employee_status = 'ACTIVE') as active_employees,
+        COUNT(*) FILTER (WHERE e.employee_status = 'ONBOARDING') as onboarding_employees,
+        COUNT(*) FILTER (WHERE e.activation_status = 'PENDING') as pending_activation,
+        COUNT(*) FILTER (WHERE e.designation = 'Manager') as total_managers,
+        COUNT(*) FILTER (WHERE e.designation = 'Team Leader') as total_tls,
+        COUNT(*) FILTER (WHERE e.designation = 'TC') as total_tcs
+      FROM employees e
+      LEFT JOIN users u ON u.id = e.user_id
+      WHERE (u.role IS NULL OR u.role = 'EMPLOYEE')
+        AND (e.designation NOT ILIKE '%HR%' AND e.designation NOT ILIKE '%Human Resource%')
     `);
     res.json({ success: true, data: rows[0] });
   } catch (err) {
