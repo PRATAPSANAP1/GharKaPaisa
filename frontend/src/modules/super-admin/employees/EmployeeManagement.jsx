@@ -1204,7 +1204,6 @@ export default function EmployeeManagement() {
                         { label: 'Terms & Video', status: emp360Data.checklist?.terms_completed },
                         { label: 'Joining Form', status: emp360Data.checklist?.joining_form_completed },
                         { label: 'KYC Verified', status: emp360Data.checklist?.kyc_verified },
-                        { label: 'Links Assigned', status: emp360Data.checklist?.links_assigned },
                         { label: 'Activated', status: emp360Data.checklist?.activated }
                       ].map((item, i) => (
                         <div key={i} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '10px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
