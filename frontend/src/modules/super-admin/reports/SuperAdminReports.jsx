@@ -139,39 +139,96 @@ export default function SuperAdminReports() {
     incentiveGrowth: "+18.6% vs last month"
   };
 
-  // Dynamic Product Category Calculations
-  const categoryMap = Array.isArray(productDistData) && productDistData.length > 0
-    ? productDistData.map((item, idx) => {
-        const cnt = parseInt(item.total || item.count || 0, 10);
-        const pct = totalAppsCount > 0 ? parseFloat(((cnt / totalAppsCount) * 100).toFixed(1)) : 0;
-        return {
-          category: item.category || item.product_name || `Category ${idx + 1}`,
-          count: cnt,
-          percentage: pct,
-          color: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'][idx % 6]
-        };
-      })
-    : [
-        { category: "Credit Cards", count: 0, percentage: 0, color: "#3B82F6" },
-        { category: "Loans", count: 0, percentage: 0, color: "#10B981" },
-        { category: "Insurance", count: 0, percentage: 0, color: "#F59E0B" },
-        { category: "Banking Accounts", count: 0, percentage: 0, color: "#8B5CF6" }
-      ];
-
-  // Status Distribution
-  const statusData = [
-    { status: "Approved", count: approvedAppsCount || 2843, percentage: 52.36, color: "#10B981" },
-    { status: "In Review", count: parseInt(apps.pending || 0, 10) || 1245, percentage: 22.92, color: "#F59E0B" },
-    { status: "Rejected", count: parseInt(apps.rejected || 0, 10) || 897, percentage: 16.52, color: "#EF4444" },
-    { status: "Pending", count: parseInt(leads.pending_leads || 0, 10) || 447, percentage: 8.23, color: "#3B82F6" }
+  // Dynamic Product Category Calculations (Strictly Credit Cards, Loans, Insurance)
+  const allowedCategories = [
+    { name: "Credit Cards", color: "#3B82F6" },
+    { name: "Loans", color: "#10B981" },
+    { name: "Insurance", color: "#F59E0B" }
   ];
 
-  // Channels Distribution
+  const categoryMap = allowedCategories.map((catObj) => {
+    const found = Array.isArray(productDistData)
+      ? productDistData.find(p => {
+          const n = (p.category || p.product_name || p.name || '').toLowerCase();
+          return n.includes(catObj.name.toLowerCase().slice(0, 4)) || (catObj.name === "Credit Cards" && n.includes("card"));
+        })
+      : null;
+    const cnt = parseInt(found?.total || found?.count || 0, 10);
+    const pct = totalAppsCount > 0 ? parseFloat(((cnt / totalAppsCount) * 100).toFixed(1)) : 0;
+    return {
+      category: catObj.name,
+      count: cnt,
+      percentage: pct,
+      color: catObj.color
+    };
+  });
+
+  // Status Distribution (Dynamic Calculation)
+  const appApproved = parseInt(apps.approved || approvedAppsCount || 0, 10);
+  const appReview = parseInt(apps.pending || 0, 10);
+  const appRejected = parseInt(apps.rejected || 0, 10);
+  const appPending = parseInt(leads.pending_leads || 0, 10);
+  const totalStatusCount = appApproved + appReview + appRejected + appPending;
+
+  const statusData = [
+    { 
+      status: "Approved", 
+      count: appApproved, 
+      percentage: totalStatusCount > 0 ? parseFloat(((appApproved / totalStatusCount) * 100).toFixed(1)) : 0, 
+      color: "#10B981" 
+    },
+    { 
+      status: "In Review", 
+      count: appReview, 
+      percentage: totalStatusCount > 0 ? parseFloat(((appReview / totalStatusCount) * 100).toFixed(1)) : 0, 
+      color: "#F59E0B" 
+    },
+    { 
+      status: "Rejected", 
+      count: appRejected, 
+      percentage: totalStatusCount > 0 ? parseFloat(((appRejected / totalStatusCount) * 100).toFixed(1)) : 0, 
+      color: "#EF4444" 
+    },
+    { 
+      status: "Pending", 
+      count: appPending, 
+      percentage: totalStatusCount > 0 ? parseFloat(((appPending / totalStatusCount) * 100).toFixed(1)) : 0, 
+      color: "#3B82F6" 
+    }
+  ];
+
+  // Channels Distribution (Dynamic Calculation)
+  const empCount = parseInt(apps.lead_punching_count || apps.employee_count || 0, 10);
+  const partnerCount = parseInt(apps.linked_share_count || apps.partner_count || 0, 10);
+  const hrCount = parseInt(apps.physical_process_count || apps.hr_count || 0, 10);
+  const otherCount = parseInt(apps.direct_bank_count || apps.other_count || 0, 10);
+  const totalChannelApps = empCount + partnerCount + hrCount + otherCount;
+
   const channelData = [
-    { name: "Employee Panel", count: parseInt(apps.lead_punching_count || 0, 10) || 2858, percentage: 52.6, color: "#0F766E" },
-    { name: "Bank / Partner API", count: parseInt(apps.linked_share_count || 0, 10) || 1654, percentage: 30.4, color: "#2563EB" },
-    { name: "Manual Entry (HR)", count: parseInt(apps.physical_process_count || 0, 10) || 652, percentage: 12.0, color: "#D97706" },
-    { name: "Other Sources", count: parseInt(apps.direct_bank_count || 0, 10) || 270, percentage: 5.0, color: "#6B7280" }
+    { 
+      name: "Employee Panel", 
+      count: empCount, 
+      percentage: totalChannelApps > 0 ? parseFloat(((empCount / totalChannelApps) * 100).toFixed(1)) : 0, 
+      color: "#0F766E" 
+    },
+    { 
+      name: "Bank / Partner API", 
+      count: partnerCount, 
+      percentage: totalChannelApps > 0 ? parseFloat(((partnerCount / totalChannelApps) * 100).toFixed(1)) : 0, 
+      color: "#2563EB" 
+    },
+    { 
+      name: "Manual Entry (HR)", 
+      count: hrCount, 
+      percentage: totalChannelApps > 0 ? parseFloat(((hrCount / totalChannelApps) * 100).toFixed(1)) : 0, 
+      color: "#D97706" 
+    },
+    { 
+      name: "Other Sources", 
+      count: otherCount, 
+      percentage: totalChannelApps > 0 ? parseFloat(((otherCount / totalChannelApps) * 100).toFixed(1)) : 0, 
+      color: "#6B7280" 
+    }
   ];
 
   // Top Performing Employees
@@ -242,17 +299,32 @@ export default function SuperAdminReports() {
     URL.revokeObjectURL(url);
   };
 
+  // Format Date to DD/MM (e.g. 01/09, 05/09)
+  const formatDateDDMM = (rawDate, idx) => {
+    if (!rawDate) return `${String(idx * 4 + 1).padStart(2, '0')}/09`;
+    if (typeof rawDate === 'string' && /^\d{2}\/\d{2}$/.test(rawDate)) return rawDate;
+    try {
+      const d = new Date(rawDate);
+      if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        return `${day}/${month}`;
+      }
+    } catch (e) {}
+    return `${String(idx * 4 + 1).padStart(2, '0')}/09`;
+  };
+
   // Dynamic Chart Points Calculation from backend daily analytics
   const chartPoints = (dailyAnalyticsData && dailyAnalyticsData.length > 0)
     ? dailyAnalyticsData.slice().reverse()
     : [
-        { formatted_date: '01 Aug', new_applications: 14, approved_applications: 8 },
-        { formatted_date: '06 Aug', new_applications: 22, approved_applications: 14 },
-        { formatted_date: '11 Aug', new_applications: 35, approved_applications: 22 },
-        { formatted_date: '16 Aug', new_applications: 48, approved_applications: 31 },
-        { formatted_date: '21 Aug', new_applications: 40, approved_applications: 26 },
-        { formatted_date: '26 Aug', new_applications: 56, approved_applications: 39 },
-        { formatted_date: '31 Aug', new_applications: 68, approved_applications: 45 }
+        { formatted_date: '01/09', new_applications: 14, approved_applications: 8 },
+        { formatted_date: '05/09', new_applications: 22, approved_applications: 14 },
+        { formatted_date: '09/09', new_applications: 35, approved_applications: 22 },
+        { formatted_date: '13/09', new_applications: 48, approved_applications: 31 },
+        { formatted_date: '17/09', new_applications: 40, approved_applications: 26 },
+        { formatted_date: '21/09', new_applications: 56, approved_applications: 39 },
+        { formatted_date: '25/09', new_applications: 68, approved_applications: 45 }
       ];
 
   const maxAppVal = Math.max(...chartPoints.map(p => Math.max(p.new_applications || 0, p.approved_applications || 0)), 10);
@@ -482,7 +554,7 @@ export default function SuperAdminReports() {
             </svg>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '10.5px', color: C.textMid, fontWeight: 700 }}>
               {chartPoints.map((p, i) => (
-                <span key={i}>{p.formatted_date || p.date_iso || `Day ${i+1}`}</span>
+                <span key={i}>{formatDateDDMM(p.formatted_date || p.date_iso || p.date, i)}</span>
               ))}
             </div>
           </div>
