@@ -8,7 +8,7 @@ import {
   MdCheckCircle, MdCancel, MdChevronLeft, MdChevronRight, MdClose, MdMoreVert,
   MdVisibility, MdHistory, MdDelete, MdExpandMore, MdChevronRight as MdChevronRightIcon
 } from 'react-icons/md';
-import { FaFileAlt } from 'react-icons/fa';
+import { FaFileAlt, FaSlidersH } from 'react-icons/fa';
 import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
 import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
 import { useAuthStore } from '../../../app/store/authStore';
