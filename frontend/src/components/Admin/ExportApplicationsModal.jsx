@@ -1,10 +1,33 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuthStore } from '../../app/store/authStore';
 import { Download, Calendar, Filter, X, Check, FileText, Clock, History, CalendarDays, BarChart2, Edit3, Globe } from 'lucide-react';
 import api from '../../services/api';
 
 export default function ExportApplicationsModal({ isOpen, onClose, defaultApplications = [] }) {
   const { C, isDark } = useTheme();
+  const user = useAuthStore((state) => state.user);
+  const userRole = (user?.role || user?.user_role || '').toUpperCase();
+  const userDesignation = (user?.designation || '').toUpperCase();
+  const isAdminOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
+  const isEmployeeRole = userRole === 'EMPLOYEE' || window.location.pathname.startsWith('/employee');
+  const hideCustomerMobile = isAdminOperator || isEmployeeRole;
+
+  const maskMobileNumber = (mobile) => {
+    if (!mobile) return 'N/A';
+    const str = String(mobile).trim();
+    const digitsOnly = str.replace(/\D/g, '');
+    if (digitsOnly.length >= 10) {
+      const mainDigits = digitsOnly.slice(-10);
+      const visiblePart = mainDigits.slice(0, 4);
+      const prefix = str.startsWith('+91') ? '+91 ' : (str.length > 10 ? str.slice(0, str.length - 10) : '');
+      return `${prefix}${visiblePart}******`;
+    }
+    if (str.length > 6) {
+      return str.slice(0, str.length - 6) + '******';
+    }
+    return str.replace(/\d/g, '*');
+  };
 
   const getTodayStr = () => new Date().toISOString().split('T')[0];
 
@@ -84,22 +107,42 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
 
       // Generate CSV
       let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
-      csvContent += 'Application No,Customer Name,Customer Mobile,Email,Product Name,Bank Name,Process Type,Referrer / Code,Status,Commission Amount,Created Date\n';
+      csvContent += 'Application No,Customer Name,Customer Mobile,Email,PAN Number,City,State,Pincode,Product Name,Bank Name,Process Type,Referrer / Code,Status,Commission Amount,APPCODE Status,Soft Approval Status,IQA Stage,Bank Application Number,VKYC Stage,VKYC Link,Dispatch Status,Final Status,App File Generated,Bank Remark,Decline Reason,Eligible Re-QD,Approved Amount,Created Date\n';
 
       filtered.forEach(a => {
-        const appNo = a.app_number || a.application_no || a.id;
+        const appNo = a.app_number || a.application_no || a.id || '';
         const custName = a.customer_name || a.full_name || 'N/A';
-        const custMobile = a.customer_mobile || a.mobile || 'N/A';
+        const rawMobile = a.customer_mobile || a.mobile || 'N/A';
+        const custMobile = hideCustomerMobile ? 'REDACTED' : rawMobile;
         const custEmail = a.customer_email || a.email || 'N/A';
+        const panNo = a.pan_number || a.pan || 'N/A';
+        const city = a.city || 'N/A';
+        const state = a.state || 'N/A';
+        const pincode = a.pincode || 'N/A';
         const prodName = a.product_name || 'N/A';
         const bankName = a.bank_name || 'N/A';
         const process = (a.process_type || a.process_by || 'Direct Link').replace(/_/g, ' ');
         const refCode = a.emp_code || a.Partner_code || a.partner_code || a.referrer_code || 'N/A';
         const status = (a.status || 'pending').replace(/_/g, ' ');
         const comm = a.commission_amount || 0;
+
+        // Remark & Final form fields
+        const appcodeStatus = a.appcode_status || 'N/A';
+        const softApprovalStatus = a.soft_approval_status || 'N/A';
+        const iqaStage = a.iqa_stage || 'N/A';
+        const bankAppNo = a.bank_application_number || a.bank_ref_number || 'N/A';
+        const vkycStage = a.vkyc_stage || a.vkyc_status || 'N/A';
+        const vkycLink = a.vkyc_url || 'N/A';
+        const dispatchStatus = a.dispatch_status || 'N/A';
+        const finalStatus = a.final_status || 'N/A';
+        const appFileGen = a.app_file_generated || 'N/A';
+        const bankRemark = String(a.bank_remark || 'N/A').replace(/"/g, '""');
+        const declineReason = String(a.decline_reason || 'N/A').replace(/"/g, '""');
+        const eligibleReqd = a.eligible_reqd || 'N/A';
+        const appAmt = a.approved_amount || 0;
         const date = a.created_at ? new Date(a.created_at).toLocaleDateString('en-IN') : 'N/A';
 
-        csvContent += `"${appNo}","${custName}","${custMobile}","${custEmail}","${prodName}","${bankName}","${process}","${refCode}","${status}","${comm}","${date}"\n`;
+        csvContent += `"${appNo}","${custName}","${custMobile}","${custEmail}","${panNo}","${city}","${state}","${pincode}","${prodName}","${bankName}","${process}","${refCode}","${status}","${comm}","${appcodeStatus}","${softApprovalStatus}","${iqaStage}","${bankAppNo}","${vkycStage}","${vkycLink}","${dispatchStatus}","${finalStatus}","${appFileGen}","${bankRemark}","${declineReason}","${eligibleReqd}","${appAmt}","${date}"\n`;
       });
 
       const encodedUri = encodeURI(csvContent);

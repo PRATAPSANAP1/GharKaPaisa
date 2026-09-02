@@ -1278,7 +1278,20 @@ const listApplications = async (req, res, next) => {
           a.commission_status::text,
           a.created_at,
           a.updated_at,
+          COALESCE(a.bank_application_number, a.bank_ref_number) as bank_application_number,
           a.bank_ref_number,
+          a.appcode_status,
+          a.soft_approval_status,
+          a.iqa_stage,
+          COALESCE(a.vkyc_stage, a.vkyc_status) as vkyc_stage,
+          a.vkyc_status,
+          a.vkyc_url,
+          a.dispatch_status,
+          a.bank_remark,
+          a.final_status,
+          a.app_file_generated,
+          a.decline_reason,
+          a.eligible_reqd,
           a.submitted_at,
           a.approved_at,
           a.commission_received_at,
@@ -1291,9 +1304,10 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
           COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
           c.email as customer_email,
-          c.pan_number,
-          COALESCE(l.city, c.city) as city,
-          c.state,
+          COALESCE(a.pan_number, c.pan_number) as pan_number,
+          COALESCE(a.city, l.city, c.city) as city,
+          COALESCE(a.state, c.state) as state,
+          COALESCE(a.pincode, c.pincode) as pincode,
           c.employment_type,
           c.monthly_income,
           p.name as product_name,
@@ -2620,8 +2634,13 @@ const importApplications = async (req, res, next) => {
 const exportApplicationsCSV = async (req, res, next) => {
   try {
     const userRole = (req.user?.role || req.user?.user_role || '').toUpperCase();
+    const userDesignation = (req.user?.designation || '').toUpperCase();
     const userId = req.user?.id;
     
+    const isAdminOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
+    const isEmployeeRole = userRole === 'EMPLOYEE';
+    const hideCustomerMobile = isAdminOperator || isEmployeeRole;
+
     let partnerId = req.partner?.id;
     if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && !partnerId && userId) {
       const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [userId]);
@@ -2659,6 +2678,11 @@ const exportApplicationsCSV = async (req, res, next) => {
           a.app_number,
           COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
           COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
+          c.email as customer_email,
+          COALESCE(a.pan_number, c.pan_number) as pan_number,
+          COALESCE(a.city, l.city, c.city) as city,
+          COALESCE(a.state, c.state) as state,
+          COALESCE(a.pincode, c.pincode) as pincode,
           COALESCE(NULLIF(su.full_name, ''), NULLIF(TRIM(CONCAT(ap.first_name, ' ', COALESCE(ap.last_name, ''))), ''), su.email, 'Team Member') as submitted_by_name,
           p.name as product_name,
           p.category,
@@ -2667,6 +2691,19 @@ const exportApplicationsCSV = async (req, res, next) => {
           a.commission_status::text,
           a.commission_amount,
           COALESCE(a.source, 'partner_punch') as process_by,
+          COALESCE(a.bank_application_number, a.bank_ref_number) as bank_application_number,
+          a.appcode_status,
+          a.soft_approval_status,
+          a.iqa_stage,
+          COALESCE(a.vkyc_stage, a.vkyc_status) as vkyc_stage,
+          a.vkyc_url,
+          a.dispatch_status,
+          a.final_status,
+          a.app_file_generated,
+          a.bank_remark,
+          a.decline_reason,
+          a.eligible_reqd,
+          a.approved_amount,
           a.created_at,
           a.partner_id,
           a.submitted_by
@@ -2684,6 +2721,11 @@ const exportApplicationsCSV = async (req, res, next) => {
           COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number,
           COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
           COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
+          c.email as customer_email,
+          COALESCE(l.pan_number, c.pan_number) as pan_number,
+          COALESCE(l.city, c.city) as city,
+          COALESCE(l.state, c.state) as state,
+          COALESCE(l.pincode, c.pincode) as pincode,
           COALESCE(NULLIF(su.full_name, ''), NULLIF(TRIM(CONCAT(ap.first_name, ' ', COALESCE(ap.last_name, ''))), ''), su.email, 'Team Member') as submitted_by_name,
           p.name as product_name,
           p.category,
@@ -2692,6 +2734,19 @@ const exportApplicationsCSV = async (req, res, next) => {
           'pending'::text as commission_status,
           p.commission_value as commission_amount,
           COALESCE(l.source, 'partner_share') as process_by,
+          NULL as bank_application_number,
+          NULL as appcode_status,
+          NULL as soft_approval_status,
+          NULL as iqa_stage,
+          NULL as vkyc_stage,
+          NULL as vkyc_url,
+          NULL as dispatch_status,
+          NULL as final_status,
+          NULL as app_file_generated,
+          NULL as bank_remark,
+          NULL as decline_reason,
+          NULL as eligible_reqd,
+          NULL as approved_amount,
           l.created_at,
           l.partner_id,
           COALESCE(l.created_by, c.created_by) as submitted_by
@@ -2708,23 +2763,73 @@ const exportApplicationsCSV = async (req, res, next) => {
       LIMIT 10000
     `, params);
 
-    const csvHeaders = ['App / Lead Number', 'Customer Name', 'Mobile', 'Submitted By / Member', 'Product', 'Category', 'Bank', 'Status', 'Commission Status', 'Commission Amount', 'Source', 'Date'];
+    const csvHeaders = [
+      'App / Lead Number',
+      'Customer Name',
+      'Customer Mobile',
+      'Email',
+      'PAN Number',
+      'City',
+      'State',
+      'Pincode',
+      'Submitted By / Member',
+      'Product',
+      'Category',
+      'Bank',
+      'Process Type',
+      'Status',
+      'Commission Status',
+      'Commission Amount',
+      'APPCODE Status',
+      'Soft Approval Status',
+      'IQA Stage',
+      'Bank Application Number',
+      'VKYC Stage',
+      'VKYC Link',
+      'Dispatch Status',
+      'Final Status',
+      'App File Generated',
+      'Bank Remark',
+      'Decline Reason',
+      'Eligible Re-QD',
+      'Approved Amount',
+      'Date'
+    ];
     const csvLines = [csvHeaders.join(',')];
 
     for (const row of rows) {
+      const mobVal = hideCustomerMobile ? 'REDACTED' : (row.customer_mobile || '');
       csvLines.push([
-        row.app_number || '',
+        `"${(row.app_number || '').replace(/"/g, '""')}"`,
         `"${(row.customer_name || '').replace(/"/g, '""')}"`,
-        row.customer_mobile || '',
+        `"${mobVal}"`,
+        `"${(row.customer_email || '').replace(/"/g, '""')}"`,
+        `"${(row.pan_number || '').replace(/"/g, '""')}"`,
+        `"${(row.city || '').replace(/"/g, '""')}"`,
+        `"${(row.state || '').replace(/"/g, '""')}"`,
+        `"${(row.pincode || '').replace(/"/g, '""')}"`,
         `"${(row.submitted_by_name || '').replace(/"/g, '""')}"`,
         `"${(row.product_name || '').replace(/"/g, '""')}"`,
         `"${(row.category || '').replace(/"/g, '""')}"`,
         `"${(row.bank_name || '').replace(/"/g, '""')}"`,
-        row.status || '',
-        row.commission_status || '',
+        `"${(row.process_by || '').replace(/"/g, '""')}"`,
+        `"${(row.status || '').replace(/"/g, '""')}"`,
+        `"${(row.commission_status || '').replace(/"/g, '""')}"`,
         `"₹${row.commission_amount || 0}"`,
-        row.process_by || '',
-        row.created_at ? new Date(row.created_at).toISOString() : ''
+        `"${(row.appcode_status || '').replace(/"/g, '""')}"`,
+        `"${(row.soft_approval_status || '').replace(/"/g, '""')}"`,
+        `"${(row.iqa_stage || '').replace(/"/g, '""')}"`,
+        `"${(row.bank_application_number || '').replace(/"/g, '""')}"`,
+        `"${(row.vkyc_stage || '').replace(/"/g, '""')}"`,
+        `"${(row.vkyc_url || '').replace(/"/g, '""')}"`,
+        `"${(row.dispatch_status || '').replace(/"/g, '""')}"`,
+        `"${(row.final_status || '').replace(/"/g, '""')}"`,
+        `"${(row.app_file_generated || '').replace(/"/g, '""')}"`,
+        `"${(row.bank_remark || '').replace(/"/g, '""')}"`,
+        `"${(row.decline_reason || '').replace(/"/g, '""')}"`,
+        `"${(row.eligible_reqd || '').replace(/"/g, '""')}"`,
+        `"₹${row.approved_amount || 0}"`,
+        `"${row.created_at ? new Date(row.created_at).toISOString() : ''}"`
       ].join(','));
     }
 

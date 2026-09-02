@@ -70,7 +70,7 @@ export default function PartnerApplications() {
   const isTeamMember = userRole === 'TEAM_MEMBER';
   const isAdminOrSuperAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR'].includes(userRole);
   const isPartnerRole = ['PARTNER', 'TEAM_MEMBER'].includes(userRole) && !isAdminOrSuperAdmin;
-  const isEmployeeRole = userRole === 'EMPLOYEE';
+  const isEmployeeRole = userRole === 'EMPLOYEE' || window.location.pathname.startsWith('/employee');
 
   const maskMobileNumber = (mobile) => {
     if (!mobile) return 'N/A';
@@ -592,6 +592,10 @@ export default function PartnerApplications() {
     }
   };
 
+  const userDesignation = (user?.designation || '').toUpperCase();
+  const isAdminOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
+  const hideCustomerMobileInCsv = isAdminOperator || isEmployeeRole;
+
   const handleExportCSV = () => {
     setShowExportModal(true);
   };
@@ -601,24 +605,59 @@ export default function PartnerApplications() {
       alert('No application records found matching current filters to export.');
       return;
     }
-    let csvContent = 'data:text/csv;charset=utf-8,';
-    csvContent += 'Application / Lead ID,Customer Name,Customer Mobile,Submitted By / Member,Process Type,Product,Category,Bank,Application Status,Commission Status,Commission Amount,Date\n';
+    let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
+    csvContent += 'Application / Lead ID,Customer Name,Customer Mobile,Email,PAN Number,City,State,Pincode,Submitted By / Member,Process Type,Product,Category,Bank,Application Status,Commission Status,Commission Amount,APPCODE Status,Soft Approval Status,IQA Stage,Bank Application Number,VKYC Stage,VKYC Link,Dispatch Status,Final Status,App File Generated,Bank Remark,Decline Reason,Eligible Re-QD,Approved Amount,Date\n';
 
     applications.forEach(a => {
       const proc = getProcessByBadge(a.process_by, a.process_type);
+      const rawMob = a.customer_mobile || a.mobile || '';
+      const mobVal = hideCustomerMobileInCsv ? 'REDACTED' : rawMob;
+
+      const appcodeStatus = a.appcode_status || 'N/A';
+      const softApprovalStatus = a.soft_approval_status || 'N/A';
+      const iqaStage = a.iqa_stage || 'N/A';
+      const bankAppNo = a.bank_application_number || a.bank_ref_number || 'N/A';
+      const vkycStage = a.vkyc_stage || a.vkyc_status || 'N/A';
+      const vkycLink = a.vkyc_url || 'N/A';
+      const dispatchStatus = a.dispatch_status || 'N/A';
+      const finalStatus = a.final_status || 'N/A';
+      const appFileGen = a.app_file_generated || 'N/A';
+      const bankRemark = String(a.bank_remark || 'N/A').replace(/"/g, '""');
+      const declineReason = String(a.decline_reason || 'N/A').replace(/"/g, '""');
+      const eligibleReqd = a.eligible_reqd || 'N/A';
+      const appAmt = a.approved_amount || 0;
+
       const row = [
-        `"${a.app_number}"`,
-        `"${a.customer_name}"`,
-        `"${formatMobileForDisplay(a.customer_mobile || a.mobile)}"`,
-        `"${a.submitted_by_name || (a.partner_first_name ? `${a.partner_first_name} ${a.partner_last_name || ''}`.trim() : 'Partner')}"`,
+        `"${a.app_number || ''}"`,
+        `"${(a.customer_name || '').replace(/"/g, '""')}"`,
+        `"${mobVal}"`,
+        `"${(a.customer_email || a.email || '').replace(/"/g, '""')}"`,
+        `"${(a.pan_number || '').replace(/"/g, '""')}"`,
+        `"${(a.city || '').replace(/"/g, '""')}"`,
+        `"${(a.state || '').replace(/"/g, '""')}"`,
+        `"${(a.pincode || '').replace(/"/g, '""')}"`,
+        `"${(a.submitted_by_name || (a.partner_first_name ? `${a.partner_first_name} ${a.partner_last_name || ''}`.trim() : 'Partner')).replace(/"/g, '""')}"`,
         `"${proc.label.replace(/[^\w\s]/gi, '').trim()}"`,
-        `"${a.product_name}"`,
-        `"${a.category}"`,
-        `"${a.bank_name}"`,
-        `"${a.status}"`,
-        `"${a.commission_status}"`,
+        `"${(a.product_name || '').replace(/"/g, '""')}"`,
+        `"${(a.category || '').replace(/"/g, '""')}"`,
+        `"${(a.bank_name || '').replace(/"/g, '""')}"`,
+        `"${(a.status || '').replace(/"/g, '""')}"`,
+        `"${(a.commission_status || '').replace(/"/g, '""')}"`,
         `"₹${a.commission_amount || 0}"`,
-        `"${new Date(a.created_at).toLocaleDateString()}"`
+        `"${appcodeStatus.replace(/"/g, '""')}"`,
+        `"${softApprovalStatus.replace(/"/g, '""')}"`,
+        `"${iqaStage.replace(/"/g, '""')}"`,
+        `"${bankAppNo.replace(/"/g, '""')}"`,
+        `"${vkycStage.replace(/"/g, '""')}"`,
+        `"${vkycLink.replace(/"/g, '""')}"`,
+        `"${dispatchStatus.replace(/"/g, '""')}"`,
+        `"${finalStatus.replace(/"/g, '""')}"`,
+        `"${appFileGen.replace(/"/g, '""')}"`,
+        `"${bankRemark}"`,
+        `"${declineReason}"`,
+        `"${eligibleReqd.replace(/"/g, '""')}"`,
+        `"₹${appAmt}"`,
+        `"${new Date(a.created_at).toLocaleDateString('en-IN')}"`
       ].join(',');
       csvContent += row + '\n';
     });

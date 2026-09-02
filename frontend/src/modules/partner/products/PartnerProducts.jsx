@@ -39,11 +39,11 @@ const getCategoryIcon = (cat, props = { size: 24 }) => {
   return <MdAccountBalanceWallet color="#8B5CF6" {...props} />;
 };
 
-const getMarketingBadges = (p) => {
+const getMarketingBadges = (p, isEmployee = false) => {
   const val = parseFloat(p.commission_value || 0);
   const cat = p.category?.toLowerCase() || '';
   const badges = [];
-  if (val >= 1200) badges.push('High Commission');
+  if (val >= 1200) badges.push(isEmployee ? 'High Incentive' : 'High Commission');
   if (cat.includes('card')) {
     if (p.name.toLowerCase().includes('pixel') || p.name.toLowerCase().includes('zone')) {
       badges.push('Lifetime Free');
@@ -115,6 +115,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   // Filters & Sorting & Pagination
   const [searchParams] = useSearchParams();
   const location = useLocation();
+  const isEmployee = user?.role === 'EMPLOYEE' || (location?.pathname && location.pathname.startsWith('/employee'));
 
   // Normalize bank name string
   const getNormalizedBank = (bankStr) => {
@@ -676,7 +677,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
           {[
             { id: 'all', label: t('All Cards') },
             { id: 'ltf', label: t('Lifetime Free') },
-            { id: 'high_payout', label: t('High Payout (₹1000+)') },
+            { id: 'high_payout', label: isEmployee ? t('High Incentive (₹1000+)') : t('High Payout (₹1000+)') },
             { id: 'high_approval', label: t('High Approval (88%+)') }
           ].map(feat => {
             const isActive = featureFilter === feat.id;
@@ -700,8 +701,8 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
           })}
         </div>
 
-        {/* Commission */}
-        <p style={sectionLabel}>{t("Commission")}</p>
+        {/* Commission / Incentives */}
+        <p style={sectionLabel}>{isEmployee ? t("Incentives") : t("Commission")}</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
           {[0, 500, 1000, 1500].map(val => {
             const isActive = minCommission === val;
@@ -719,7 +720,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                 }}
                 className={isActive ? "" : "hover-bg-button"}
               >
-                {val === 0 ? t('Any Payout') : `₹${val}+`}
+                {val === 0 ? (isEmployee ? t('Any Incentive') : t('Any Payout')) : `₹${val}+`}
               </button>
             );
           })}
@@ -1286,7 +1287,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                 const approvalRate = getApprovalRate(product);
                 const cardDetails = getCardDetails(product.id || product.name.toLowerCase().replace(/[^a-z0-9]/g, '-'), product.name);
                 const eligibilityCriteria = cardDetails.eligibility?.criteria || 'Min Age: 21 | Income details apply';
-                const badges = getMarketingBadges(product);
+                const badges = getMarketingBadges(product, isEmployee);
                 const categoryIcon = getCategoryIcon(product.category, { size: isMobile ? 22 : 26 });
 
                 let keyFeatures = [];
@@ -1421,7 +1422,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                       {/* Payout & Commission Row */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: isMobile ? '11px' : '12.5px', color: C.textLight, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          {t("Partner Payout")}
+                          {isEmployee ? t("Incentives") : t("Partner Payout")}
                         </span>
                         <span style={{ fontSize: isMobile ? '22px' : '28px', fontWeight: 800, color: C.green }}>
                           ₹{parseFloat(product.commission_value || 0).toLocaleString('en-IN')}
@@ -1644,7 +1645,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                 Apply for {selectedProduct.name}
               </h3>
               <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
-                Payout: <strong style={{ color: C.green }}>₹{parseFloat(selectedProduct.commission_value || 0).toLocaleString('en-IN')}</strong>
+                {isEmployee ? "Incentive: " : "Payout: "}<strong style={{ color: C.green }}>₹{parseFloat(selectedProduct.commission_value || 0).toLocaleString('en-IN')}</strong>
               </p>
             </div>
 
