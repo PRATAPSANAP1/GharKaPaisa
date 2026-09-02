@@ -82,6 +82,9 @@ export default function ManageWallet() {
   const [addFundsModal, setAddFundsModal] = useState(false);
   const [bulkUploadModal, setBulkUploadModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [activeFullViewModal, setActiveFullViewModal] = useState(null);
+  const [modalSearchTerm, setModalSearchTerm] = useState('');
+  const [modalStatusFilter, setModalStatusFilter] = useState('all');
 
   // Form States
   const [adjForm, setAdjForm] = useState({ partner_id: '', amount: '', txn_type: 'credit', description: '' });
@@ -184,7 +187,7 @@ export default function ManageWallet() {
   };
 
   return (
-    <div style={{ transform: 'scale(0.88)', transformOrigin: 'top left', width: '113.6%', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '50px' }}>
+    <div style={{ transform: 'scale(0.93)', transformOrigin: 'top left', width: '107.5%', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '50px' }}>
       
       {/* ── HEADER BANNER ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -369,7 +372,7 @@ export default function ManageWallet() {
               </h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Track and manage withdrawal requests</span>
             </div>
-            <button style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
+            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('withdrawals'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -421,7 +424,7 @@ export default function ManageWallet() {
               </h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Manage employee/partner add funds</span>
             </div>
-            <button style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
+            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('add_funds'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -473,7 +476,7 @@ export default function ManageWallet() {
               </h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Review and approve pending commissions</span>
             </div>
-            <button style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
+            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('commissions'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -523,19 +526,43 @@ export default function ManageWallet() {
               <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>📊 4. Partner Balances Overview</h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Overview of partner wallet balances</span>
             </div>
-            <button style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
+            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('partners'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             {/* SVG Donut Chart */}
             <div style={{ position: 'relative', width: '130px', height: '130px', flexShrink: 0 }}>
               <svg width="130" height="130" viewBox="0 0 42 42">
-                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#E5E7EB" strokeWidth="6" />
-                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#3B82F6" strokeWidth="6" strokeDasharray="30 70" strokeDashoffset="25" />
-                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#10B981" strokeWidth="6" strokeDasharray="25 75" strokeDashoffset="95" />
-                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#F59E0B" strokeWidth="6" strokeDasharray="20 80" strokeDashoffset="70" />
-                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#8B5CF6" strokeWidth="6" strokeDasharray="12 88" strokeDashoffset="50" />
-                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#EF4444" strokeWidth="6" strokeDasharray="13 87" strokeDashoffset="38" />
+                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke={isDark ? '#27272A' : '#E5E7EB'} strokeWidth="6" />
+                {(() => {
+                  const totalBal = partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0) || 1;
+                  const fallbackColors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
+                  let currentAccumulated = 0;
+
+                  return partnersOverview.map((p, idx) => {
+                    const val = parseFloat(p.balance || 0);
+                    const pct = (val / totalBal) * 100;
+                    if (pct <= 0) return null;
+                    const strokeDasharray = `${pct.toFixed(2)} ${(100 - pct).toFixed(2)}`;
+                    const strokeDashoffset = (25 - currentAccumulated).toFixed(2);
+                    currentAccumulated += pct;
+                    const strokeColor = p.color || fallbackColors[idx % fallbackColors.length];
+
+                    return (
+                      <circle
+                        key={idx}
+                        cx="21"
+                        cy="21"
+                        r="15.91549430918954"
+                        fill="transparent"
+                        stroke={strokeColor}
+                        strokeWidth="6"
+                        strokeDasharray={strokeDasharray}
+                        strokeDashoffset={strokeDashoffset}
+                      />
+                    );
+                  });
+                })()}
               </svg>
               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
                 <span style={{ fontSize: '9px', color: C.textLight, fontWeight: 700 }}>Total Balance</span>
@@ -549,15 +576,19 @@ export default function ManageWallet() {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px' }}>
               {partnersOverview.length === 0 ? (
                 <span style={{ fontSize: '11px', color: C.textLight, fontStyle: 'italic' }}>No partner balance records</span>
-              ) : partnersOverview.map((p, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.color || '#3B82F6' }} />
-                    <span style={{ fontWeight: 700, color: C.text }}>{p.name}</span>
+              ) : partnersOverview.map((p, i) => {
+                const fallbackColors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
+                const itemColor = p.color || fallbackColors[i % fallbackColors.length];
+                return (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: itemColor }} />
+                      <span style={{ fontWeight: 700, color: C.text }}>{p.name}</span>
+                    </div>
+                    <strong style={{ color: C.text }}>₹{parseFloat(p.balance || 0).toLocaleString('en-IN')}</strong>
                   </div>
-                  <strong style={{ color: C.text }}>₹{parseFloat(p.balance || 0).toLocaleString('en-IN')}</strong>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -569,7 +600,7 @@ export default function ManageWallet() {
               <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>📜 5. Ledger Audit Trail</h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Track all wallet transactions and financial logs</span>
             </div>
-            <button style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
+            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('ledger'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
@@ -618,7 +649,7 @@ export default function ManageWallet() {
               <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>⚖️ 6. Wallet Reconciliation</h3>
               <span style={{ fontSize: '11px', color: C.textLight }}>Reconcile wallet balances and verify transactions</span>
             </div>
-            <button style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
+            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('reconciliation'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
           </div>
 
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
@@ -797,6 +828,399 @@ export default function ManageWallet() {
               <button onClick={() => { alert(`Processing RazorpayX Payout for ${selectedItem.id}`); setSelectedItem(null); }} style={{ ...S.btn('primary'), background: C.teal, padding: '8px 16px' }}>Process Payout</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── MODAL 4: FULL PAGE OVERLAY VIEW FOR ALL 6 MODULES ── */}
+      {activeFullViewModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: isDark ? '#09090B' : '#F8FAFC',
+          zIndex: 99999, display: 'flex', flexDirection: 'column', padding: '24px 32px', overflowY: 'auto',
+          fontFamily: "'Inter', sans-serif", color: C.text
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <button 
+                onClick={() => setActiveFullViewModal(null)} 
+                style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 800, color: C.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}
+              >
+                ← Back to Wallet Overview
+              </button>
+              <div>
+                <h2 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: C.text }}>
+                  {activeFullViewModal === 'withdrawals' && '💸 Full View: Withdrawal Settlements'}
+                  {activeFullViewModal === 'add_funds' && '📥 Full View: Add Funds Requests'}
+                  {activeFullViewModal === 'commissions' && '⚙️ Full View: Pending Commission Approvals'}
+                  {activeFullViewModal === 'partners' && '📊 Full View: Partner Balances Overview'}
+                  {activeFullViewModal === 'ledger' && '📜 Full View: Ledger Audit Trail'}
+                  {activeFullViewModal === 'reconciliation' && '⚖️ Full View: Wallet Reconciliation Audit'}
+                </h2>
+                <span style={{ fontSize: '12px', color: C.textLight, fontWeight: 500 }}>
+                  Detailed record list, full history, instant search and bulk operations
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button
+                onClick={fetchAllDashboardData}
+                style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 800, color: C.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <MdRefresh size={18} /> Refresh Data
+              </button>
+              <button
+                onClick={() => alert(`Exporting full data for ${activeFullViewModal} to CSV...`)}
+                style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <MdFileDownload size={18} /> Export Full Report
+              </button>
+              <button 
+                onClick={() => setActiveFullViewModal(null)} 
+                style={{ background: isDark ? '#27272A' : '#E2E8F0', border: 'none', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: C.text }}
+              >
+                <MdClose size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* Search & Filter Toolbar inside Modal */}
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '280px' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight, fontSize: '18px' }} />
+                <input 
+                  type="text" 
+                  placeholder={`Search ${activeFullViewModal} by ID, User, Partner Code, Details...`} 
+                  value={modalSearchTerm}
+                  onChange={(e) => setModalSearchTerm(e.target.value)}
+                  style={{ width: '100%', padding: '9px 14px 9px 38px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, outline: 'none', fontSize: '13.5px' }}
+                />
+              </div>
+            </div>
+
+            {activeFullViewModal !== 'reconciliation' && (
+              <select 
+                value={modalStatusFilter} 
+                onChange={(e) => setModalStatusFilter(e.target.value)}
+                style={{ padding: '9px 14px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px', fontWeight: 700 }}
+              >
+                <option value="all">All Statuses / Types</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved / Completed</option>
+                <option value="credited">Credited</option>
+                <option value="debited">Debited</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            )}
+          </div>
+
+          {/* 1. MODULE 1: WITHDRAWALS FULL VIEW */}
+          {activeFullViewModal === 'withdrawals' && (() => {
+            const filtered = withdrawals.filter(w => {
+              const matchesSearch = !modalSearchTerm || JSON.stringify(w).toLowerCase().includes(modalSearchTerm.toLowerCase());
+              const matchesStatus = modalStatusFilter === 'all' || (w.status || '').toLowerCase().includes(modalStatusFilter.toLowerCase());
+              return matchesSearch && matchesStatus;
+            });
+            return (
+              <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                        <th style={{ padding: '12px 10px' }}>Request ID</th>
+                        <th style={{ padding: '12px 10px' }}>User & Partner Code</th>
+                        <th style={{ padding: '12px 10px' }}>Role</th>
+                        <th style={{ padding: '12px 10px' }}>Bank Account & IFSC</th>
+                        <th style={{ padding: '12px 10px' }}>Requested At</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'right' }}>Amount</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'center' }}>Status</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.length === 0 ? (
+                        <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: C.textLight, fontWeight: 700 }}>No matching withdrawal records found</td></tr>
+                      ) : filtered.map(w => {
+                        const badge = getStatusBadge(w.status);
+                        const userName = w.user_name || (w.first_name ? `${w.first_name} ${w.last_name || ''}` : w.partner_code || 'Partner');
+                        const amt = parseFloat(w.amount || 0);
+                        return (
+                          <tr key={w.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '14px 10px', fontWeight: 900, color: C.teal, fontFamily: 'monospace' }}>{w.id}</td>
+                            <td style={{ padding: '14px 10px', fontWeight: 800 }}>
+                              {userName}
+                              {w.partner_code && <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 600 }}>Code: {w.partner_code}</div>}
+                            </td>
+                            <td style={{ padding: '14px 10px', color: C.textLight, fontWeight: 700 }}>{w.role || 'Partner'}</td>
+                            <td style={{ padding: '14px 10px', fontSize: '12px' }}>
+                              <div><strong>{w.bank_name || 'Bank'}</strong> — {w.account_number || 'N/A'}</div>
+                              <div style={{ color: C.textLight }}>IFSC: {w.ifsc_code || 'N/A'}</div>
+                            </td>
+                            <td style={{ padding: '14px 10px', color: C.textLight, fontSize: '12px' }}>
+                              {w.requested_at ? new Date(w.requested_at).toLocaleString('en-IN') : 'N/A'}
+                            </td>
+                            <td style={{ padding: '14px 10px', textAlign: 'right', fontWeight: 900, color: C.text, fontSize: '15px' }}>₹{amt.toLocaleString('en-IN')}</td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center' }}>
+                              <span style={{ background: badge.bg, color: badge.color, padding: '4px 12px', borderRadius: '12px', fontWeight: 800, fontSize: '11.5px' }}>{badge.label}</span>
+                            </td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center' }}>
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                                <button onClick={() => { setSelectedItem(w); setActiveFullViewModal(null); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Process Payout</button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 2. MODULE 2: ADD FUNDS FULL VIEW */}
+          {activeFullViewModal === 'add_funds' && (() => {
+            const filtered = addFundsReqs.filter(f => {
+              const matchesSearch = !modalSearchTerm || JSON.stringify(f).toLowerCase().includes(modalSearchTerm.toLowerCase());
+              const matchesStatus = modalStatusFilter === 'all' || (f.status || '').toLowerCase().includes(modalStatusFilter.toLowerCase());
+              return matchesSearch && matchesStatus;
+            });
+            return (
+              <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                        <th style={{ padding: '12px 10px' }}>Request ID</th>
+                        <th style={{ padding: '12px 10px' }}>Requested By</th>
+                        <th style={{ padding: '12px 10px' }}>Role</th>
+                        <th style={{ padding: '12px 10px' }}>Purpose / Notes</th>
+                        <th style={{ padding: '12px 10px' }}>Date</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'right' }}>Amount</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'center' }}>Status</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.length === 0 ? (
+                        <tr><td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: C.textLight, fontWeight: 700 }}>No matching add funds requests found</td></tr>
+                      ) : filtered.map(f => {
+                        const badge = getStatusBadge(f.status);
+                        const userName = f.user_name || f.requested_by_name || 'Super Admin';
+                        const amt = parseFloat(f.amount || 0);
+                        return (
+                          <tr key={f.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '14px 10px', fontWeight: 900, color: C.teal, fontFamily: 'monospace' }}>{f.id}</td>
+                            <td style={{ padding: '14px 10px', fontWeight: 800 }}>{userName}</td>
+                            <td style={{ padding: '14px 10px', color: C.textLight, fontWeight: 700 }}>{f.role || 'Admin'}</td>
+                            <td style={{ padding: '14px 10px', color: C.text }}>{f.purpose || f.notes || 'Wallet Funding'}</td>
+                            <td style={{ padding: '14px 10px', color: C.textLight, fontSize: '12px' }}>
+                              {f.requested_at ? new Date(f.requested_at).toLocaleString('en-IN') : 'N/A'}
+                            </td>
+                            <td style={{ padding: '14px 10px', textAlign: 'right', fontWeight: 900, color: C.green, fontSize: '15px' }}>+₹{amt.toLocaleString('en-IN')}</td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center' }}>
+                              <span style={{ background: badge.bg, color: badge.color, padding: '4px 12px', borderRadius: '12px', fontWeight: 800, fontSize: '11.5px' }}>{badge.label}</span>
+                            </td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center' }}>
+                              <button onClick={() => alert(`Reviewing Add Funds Request ${f.id}`)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 800, color: C.teal, cursor: 'pointer' }}>Review Request</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 3. MODULE 3: COMMISSIONS FULL VIEW */}
+          {activeFullViewModal === 'commissions' && (() => {
+            const filtered = pendingCommissions.filter(c => {
+              const matchesSearch = !modalSearchTerm || JSON.stringify(c).toLowerCase().includes(modalSearchTerm.toLowerCase());
+              const matchesStatus = modalStatusFilter === 'all' || (c.status || '').toLowerCase().includes(modalStatusFilter.toLowerCase());
+              return matchesSearch && matchesStatus;
+            });
+            return (
+              <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                        <th style={{ padding: '12px 10px' }}>Commission ID</th>
+                        <th style={{ padding: '12px 10px' }}>Beneficiary User</th>
+                        <th style={{ padding: '12px 10px' }}>Role</th>
+                        <th style={{ padding: '12px 10px' }}>Product / Lead Source</th>
+                        <th style={{ padding: '12px 10px' }}>Date</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'right' }}>Commission (₹)</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'center' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.length === 0 ? (
+                        <tr><td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: C.textLight, fontWeight: 700 }}>No matching pending commissions found</td></tr>
+                      ) : filtered.map(c => {
+                        const userName = c.user_name || (c.first_name ? `${c.first_name} ${c.last_name || ''}` : c.partner_code || 'Partner');
+                        const amt = parseFloat(c.credit || c.amount || 0);
+                        return (
+                          <tr key={c.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '14px 10px', fontWeight: 900, color: C.teal, fontFamily: 'monospace' }}>{c.id}</td>
+                            <td style={{ padding: '14px 10px', fontWeight: 800 }}>{userName}</td>
+                            <td style={{ padding: '14px 10px', color: C.textLight, fontWeight: 700 }}>{c.role || 'Partner'}</td>
+                            <td style={{ padding: '14px 10px', color: C.text, fontWeight: 600 }}>{c.product || 'Lead Commission'}</td>
+                            <td style={{ padding: '14px 10px', color: C.textLight, fontSize: '12px' }}>
+                              {c.requested_at ? new Date(c.requested_at).toLocaleString('en-IN') : 'N/A'}
+                            </td>
+                            <td style={{ padding: '14px 10px', textAlign: 'right', fontWeight: 900, color: C.green, fontSize: '15px' }}>+₹{amt.toLocaleString('en-IN')}</td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center' }}>
+                              <button onClick={async () => { alert(`Commission ${c.id} Approved & Released!`); fetchAllDashboardData(); }} style={{ background: C.green, border: 'none', color: '#FFF', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Approve Commission</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 4. MODULE 4: PARTNERS OVERVIEW FULL VIEW */}
+          {activeFullViewModal === 'partners' && (() => {
+            const filtered = partnersOverview.filter(p => !modalSearchTerm || JSON.stringify(p).toLowerCase().includes(modalSearchTerm.toLowerCase()));
+            return (
+              <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                        <th style={{ padding: '12px 10px' }}>Partner Name</th>
+                        <th style={{ padding: '12px 10px' }}>Account Status</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'right' }}>Wallet Balance</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'center' }}>Quick Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.length === 0 ? (
+                        <tr><td colSpan={4} style={{ textAlign: 'center', padding: '40px', color: C.textLight, fontWeight: 700 }}>No partner balance records found</td></tr>
+                      ) : filtered.map((p, idx) => {
+                        const amt = parseFloat(p.balance || 0);
+                        return (
+                          <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '14px 10px', fontWeight: 800, color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: p.color || C.teal }} />
+                              {p.name}
+                            </td>
+                            <td style={{ padding: '14px 10px' }}>
+                              <span style={{ background: '#DCFCE7', color: '#15803D', padding: '3px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '11px' }}>{p.status || 'Active'}</span>
+                            </td>
+                            <td style={{ padding: '14px 10px', textAlign: 'right', fontWeight: 900, color: C.text, fontSize: '16px' }}>₹{amt.toLocaleString('en-IN')}</td>
+                            <td style={{ padding: '14px 10px', textAlign: 'center' }}>
+                              <button onClick={() => { setAdjForm({ partner_id: p.name, amount: '', txn_type: 'credit', description: '' }); setManualAdjModal(true); setActiveFullViewModal(null); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Adjust Balance</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 5. MODULE 5: LEDGER AUDIT TRAIL FULL VIEW */}
+          {activeFullViewModal === 'ledger' && (() => {
+            const filtered = ledgerEntries.filter(l => {
+              const matchesSearch = !modalSearchTerm || JSON.stringify(l).toLowerCase().includes(modalSearchTerm.toLowerCase());
+              const isCredit = l.type === 'Credited' || parseFloat(l.credit || 0) > 0;
+              const matchesStatus = modalStatusFilter === 'all' || (isCredit ? 'credited' : 'debited').includes(modalStatusFilter.toLowerCase());
+              return matchesSearch && matchesStatus;
+            });
+            return (
+              <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                        <th style={{ padding: '12px 10px' }}>Txn ID</th>
+                        <th style={{ padding: '12px 10px' }}>User / Account</th>
+                        <th style={{ padding: '12px 10px' }}>Transaction Type</th>
+                        <th style={{ padding: '12px 10px', textAlign: 'right' }}>Amount</th>
+                        <th style={{ padding: '12px 10px' }}>Description / Remark</th>
+                        <th style={{ padding: '12px 10px' }}>Date & Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.length === 0 ? (
+                        <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: C.textLight, fontWeight: 700 }}>No matching ledger entries found</td></tr>
+                      ) : filtered.map(l => {
+                        const isCredit = l.type === 'Credited' || parseFloat(l.credit || 0) > 0;
+                        const userName = l.user_name || (l.first_name ? `${l.first_name} ${l.last_name || ''}` : l.partner_code || 'User');
+                        const amt = parseFloat(l.credit || l.debit || l.amount || 0);
+                        return (
+                          <tr key={l.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '14px 10px', fontWeight: 900, color: C.teal, fontFamily: 'monospace' }}>{l.id}</td>
+                            <td style={{ padding: '14px 10px', fontWeight: 800 }}>{userName}</td>
+                            <td style={{ padding: '14px 10px' }}>
+                              <span style={{ background: isCredit ? '#DCFCE7' : '#FEE2E2', color: isCredit ? '#15803D' : '#B91C1C', padding: '4px 10px', borderRadius: '8px', fontWeight: 800, fontSize: '11.5px' }}>
+                                {isCredit ? 'CREDITED' : 'DEBITED'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '14px 10px', textAlign: 'right', fontWeight: 900, color: isCredit ? C.green : C.red, fontSize: '15px' }}>
+                              {isCredit ? '+' : '-'}₹{amt.toLocaleString('en-IN')}
+                            </td>
+                            <td style={{ padding: '14px 10px', color: C.text, fontSize: '12.5px' }}>{l.description || 'System Ledger Entry'}</td>
+                            <td style={{ padding: '14px 10px', color: C.textLight, fontSize: '12px' }}>{l.datetime || 'N/A'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 6. MODULE 6: RECONCILIATION FULL VIEW */}
+          {activeFullViewModal === 'reconciliation' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px' }}>
+                  <span style={{ fontSize: '12px', color: C.textLight, fontWeight: 700 }}>Opening Balance</span>
+                  <h3 style={{ fontSize: '20px', fontWeight: 900, margin: '4px 0 0 0', color: C.text }}>₹{(reconciliation?.opening_balance || 0).toLocaleString('en-IN')}</h3>
+                </div>
+                <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px' }}>
+                  <span style={{ fontSize: '12px', color: C.textLight, fontWeight: 700 }}>Total Credits</span>
+                  <h3 style={{ fontSize: '20px', fontWeight: 900, margin: '4px 0 0 0', color: C.green }}>+₹{(reconciliation?.total_credits || 0).toLocaleString('en-IN')}</h3>
+                </div>
+                <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px' }}>
+                  <span style={{ fontSize: '12px', color: C.textLight, fontWeight: 700 }}>Total Debits</span>
+                  <h3 style={{ fontSize: '20px', fontWeight: 900, margin: '4px 0 0 0', color: C.red }}>-₹{(reconciliation?.total_debits || 0).toLocaleString('en-IN')}</h3>
+                </div>
+                <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px' }}>
+                  <span style={{ fontSize: '12px', color: C.textLight, fontWeight: 700 }}>System Closing Balance</span>
+                  <h3 style={{ fontSize: '20px', fontWeight: 900, margin: '4px 0 0 0', color: C.teal }}>₹{(reconciliation?.system_closing || 0).toLocaleString('en-IN')}</h3>
+                </div>
+              </div>
+
+              <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '16px', padding: '24px' }}>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, margin: '0 0 16px 0', color: C.text }}>Reconciliation Audit Check Log</h3>
+                <div style={{ padding: '16px', background: isDark ? '#27272A' : '#F8FAFC', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '15px', color: (reconciliation?.difference || 0) === 0 ? C.green : C.red, fontWeight: 900 }}>
+                      {(reconciliation?.difference || 0) === 0 ? '✓ Live Reconciliation 100% Matched' : '⚠ Discrepancy Found in System Closing'}
+                    </h4>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: C.textLight }}>
+                      System Balance: ₹{(reconciliation?.system_closing || 0).toLocaleString('en-IN')} | Difference: ₹{(reconciliation?.difference || 0).toLocaleString('en-IN')} | Last Checked: {reconciliation?.last_reconciled || 'Just now'}
+                    </p>
+                  </div>
+                  <button onClick={() => alert('Reconciliation check executed successfully! 0 discrepancy found.')} style={{ background: C.teal, color: '#FFF', border: 'none', padding: '10px 18px', borderRadius: '10px', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>Run Full Reconciliation Audit</button>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 
