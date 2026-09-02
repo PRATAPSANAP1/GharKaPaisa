@@ -47,6 +47,29 @@ export default function ManageProductLinks() {
   const [empLinksLoading, setEmpLinksLoading] = useState(false);
   const [empSearchQuery, setEmpSearchQuery] = useState('');
   const [empBankFilterVal, setEmpBankFilterVal] = useState('');
+  const [viewEmpCardsModal, setViewEmpCardsModal] = useState({ open: false, employee: null });
+
+  // Group assigned links by employee so each employee appears as 1 single record in the table
+  const groupedAssignedLinks = React.useMemo(() => {
+    const map = new Map();
+    (assignedLinks || []).forEach(link => {
+      const empId = link.employee_id || link.emp_code || link.employee_name;
+      if (!map.has(empId)) {
+        map.set(empId, {
+          employee_id: link.employee_id,
+          employee_name: link.employee_name,
+          emp_code: link.emp_code,
+          employee_mobile: link.employee_mobile,
+          employee_email: link.employee_email,
+          assigned_by_name: link.assigned_by_name,
+          updated_at: link.updated_at || link.created_at,
+          links: []
+        });
+      }
+      map.get(empId).links.push(link);
+    });
+    return Array.from(map.values());
+  }, [assignedLinks]);
 
   const fetchAssignedEmployeeLinks = async () => {
     setEmpLinksLoading(true);
@@ -80,6 +103,16 @@ export default function ManageProductLinks() {
       if (res.data?.success) {
         triggerToast('Employee custom bank link unassigned successfully!');
         fetchAssignedEmployeeLinks();
+
+        // Dynamically update view cards modal if currently open
+        setViewEmpCardsModal(prev => {
+          if (!prev.open || !prev.employee) return prev;
+          const updatedLinks = prev.employee.links.filter(l => l.id !== id);
+          if (updatedLinks.length === 0) {
+            return { open: false, employee: null };
+          }
+          return { ...prev, employee: { ...prev.employee, links: updatedLinks } };
+        });
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to unassign product link.');
@@ -450,7 +483,7 @@ export default function ManageProductLinks() {
             color: activeTab === 'employee_links' ? '#fff' : C.primary,
             padding: '2px 8px', borderRadius: '10px'
           }}>
-            {assignedLinks.length}
+            {groupedAssignedLinks.length}
           </span>
         </button>
       </div>
@@ -503,7 +536,7 @@ export default function ManageProductLinks() {
               <div style={{ display: 'inline-block', width: '32px', height: '32px', border: `3px solid ${C.border}`, borderTopColor: C.primary, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
               <div style={{ marginTop: '12px', fontSize: '14px', color: C.textLight }}>Loading assigned employee links...</div>
             </div>
-          ) : assignedLinks.length === 0 ? (
+          ) : groupedAssignedLinks.length === 0 ? (
             <div style={{ ...S.card, padding: '48px', textAlign: 'center' }}>
               <h3 style={{ color: C.text, margin: 0 }}>No employee custom bank links assigned yet</h3>
               <p style={{ color: C.textLight, fontSize: '13px', margin: '8px 0 16px' }}>
@@ -520,72 +553,57 @@ export default function ManageProductLinks() {
                   <thead>
                     <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, fontSize: '11px', textTransform: 'uppercase', color: C.textLight }}>
                       <th style={{ padding: '14px 16px' }}>Employee</th>
-                      <th style={{ padding: '14px 16px' }}>Bank & Product</th>
-                      <th style={{ padding: '14px 16px' }}>Assigned Custom Bank URL</th>
-                      <th style={{ padding: '14px 16px' }}>Incentive</th>
-                      <th style={{ padding: '14px 16px' }}>Status</th>
+                      <th style={{ padding: '14px 16px' }}>Assigned Cards & Banks</th>
                       <th style={{ padding: '14px 16px' }}>Assigned By</th>
                       <th style={{ padding: '14px 16px', textAlign: 'center' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody style={{ fontSize: '13px' }}>
-                    {assignedLinks.map(link => (
-                      <tr key={link.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
-                        <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
-                          <div style={{ fontWeight: 800, color: C.text }}>{link.employee_name}</div>
-                          <div style={{ fontSize: '11px', color: C.primary, fontWeight: 700, marginTop: '2px' }}>
-                            {link.emp_code || 'YOH-SE'}
-                          </div>
-                          {link.employee_mobile && (
-                            <div style={{ fontSize: '10.5px', color: C.textLight }}>{link.employee_mobile}</div>
-                          )}
-                        </td>
-                        <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
-                          <div style={{ fontWeight: 800, color: C.text }}>{link.product_name}</div>
-                          <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
-                            {link.bank_name || 'Bank'} • <span style={{ textTransform: 'capitalize' }}>{link.product_category?.replace(/_/g, ' ')}</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '14px 16px', verticalAlign: 'top', maxWidth: '340px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: C.bgSecondary, padding: '6px 10px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
-                            <span style={{ fontFamily: 'monospace', fontSize: '11px', color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                              {link.employee_referral_url}
-                            </span>
-                            <button onClick={() => handleCopy(link.employee_referral_url)} title="Copy URL" style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.primary, padding: '2px' }}>
-                              <MdContentCopy size={14} />
+                    {groupedAssignedLinks.map(empGroup => {
+                      const bankNames = Array.from(new Set(empGroup.links.map(l => l.bank_name).filter(Boolean)));
+                      return (
+                        <tr key={empGroup.employee_id || empGroup.emp_code} style={{ borderBottom: `1px solid ${C.border}60` }}>
+                          <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                            <div style={{ fontWeight: 800, color: C.text }}>{empGroup.employee_name}</div>
+                            <div style={{ fontSize: '11px', color: C.primary, fontWeight: 700, marginTop: '2px' }}>
+                              {empGroup.emp_code || 'YOH-SE'}
+                            </div>
+                            {empGroup.employee_mobile && (
+                              <div style={{ fontSize: '10.5px', color: C.textLight }}>{empGroup.employee_mobile}</div>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <span style={{
+                                fontSize: '12px', fontWeight: 800, padding: '3px 10px', borderRadius: '12px',
+                                background: `${C.primary}15`, color: C.primary
+                              }}>
+                                {empGroup.links.length} Card(s) Assigned
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '11.5px', color: C.textLight }}>
+                              Banks: <strong>{bankNames.length > 0 ? bankNames.join(', ') : 'Partner Banks'}</strong>
+                            </div>
+                          </td>
+                          <td style={{ padding: '14px 16px', verticalAlign: 'middle', fontSize: '11px', color: C.textLight }}>
+                            <div>{empGroup.assigned_by_name || 'Super Admin'}</div>
+                            <div style={{ marginTop: '2px' }}>{new Date(empGroup.updated_at).toLocaleDateString()}</div>
+                          </td>
+                          <td style={{ padding: '14px 16px', verticalAlign: 'middle', textAlign: 'center' }}>
+                            <button 
+                              onClick={() => setViewEmpCardsModal({ open: true, employee: empGroup })}
+                              style={{
+                                border: `1px solid ${C.primary}40`, background: `${C.primary}10`, color: C.primary,
+                                padding: '8px 16px', borderRadius: '10px', cursor: 'pointer',
+                                display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700
+                              }}
+                            >
+                              <MdLaunch size={15} /> View Assigned Cards ({empGroup.links.length})
                             </button>
-                            <a href={link.employee_referral_url} target="_blank" rel="noreferrer" title="Open Link" style={{ color: C.textLight, padding: '2px', display: 'flex' }}>
-                              <MdLaunch size={14} />
-                            </a>
-                          </div>
-                        </td>
-                        <td style={{ padding: '14px 16px', verticalAlign: 'top', fontWeight: 800, color: C.green }}>
-                          ₹{link.incentive_amount || 0}
-                        </td>
-                        <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
-                          <span style={{
-                            fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '12px',
-                            background: link.status === 'ACTIVE' ? `${C.green}15` : `${C.red}15`,
-                            color: link.status === 'ACTIVE' ? C.green : C.red
-                          }}>
-                            {link.status}
-                          </span>
-                        </td>
-                        <td style={{ padding: '14px 16px', verticalAlign: 'top', fontSize: '11px', color: C.textLight }}>
-                          <div>{link.assigned_by_name || 'Super Admin'}</div>
-                          <div style={{ marginTop: '2px' }}>{new Date(link.updated_at || link.created_at).toLocaleDateString()}</div>
-                        </td>
-                        <td style={{ padding: '14px 16px', verticalAlign: 'middle', textAlign: 'center' }}>
-                          <button 
-                            onClick={() => handleDeleteAssignedLink(link.id, link.employee_name, link.product_name)}
-                            title="Unassign Link"
-                            style={{ border: `1px solid ${C.red}40`, background: `${C.red}10`, color: C.red, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', fontWeight: 600 }}
-                          >
-                            <MdDelete size={14} /> Unassign
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -986,6 +1004,104 @@ export default function ManageProductLinks() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
               <button onClick={() => setHistoryModalOpen(false)} style={S.btn('outline')}>Close History</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW EMPLOYEE ASSIGNED CARDS MODAL */}
+      {viewEmpCardsModal.open && viewEmpCardsModal.employee && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1200,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            ...S.card,
+            width: '100%', maxWidth: '750px', maxHeight: '90vh',
+            overflowY: 'auto', padding: '24px', position: 'relative',
+            borderRadius: '20px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            {/* Close Button */}
+            <button 
+              onClick={() => setViewEmpCardsModal({ open: false, employee: null })}
+              style={{
+                position: 'absolute', top: '20px', right: '20px',
+                background: C.bgSecondary, border: 'none', cursor: 'pointer',
+                width: '34px', height: '34px', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textLight
+              }}
+            >
+              <MdClose size={20} />
+            </button>
+
+            {/* Header */}
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: 0 }}>
+                Assigned Cards & Custom Links
+              </h3>
+              <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
+                Employee: <strong style={{ color: C.text }}>{viewEmpCardsModal.employee.employee_name}</strong> ({viewEmpCardsModal.employee.emp_code || 'YOH-SE'}) • <span style={{ color: C.primary, fontWeight: 700 }}>{viewEmpCardsModal.employee.links.length} Assigned Card(s)</span>
+              </p>
+            </div>
+
+            {/* Cards List */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {viewEmpCardsModal.employee.links.map(link => (
+                <div key={link.id} style={{
+                  background: C.bgSecondary, border: `1px solid ${C.border}`,
+                  borderRadius: '12px', padding: '16px', display: 'flex',
+                  flexDirection: 'column', gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <div style={{ fontSize: '15px', fontWeight: 800, color: C.text }}>
+                        {link.product_name}
+                      </div>
+                      {/* Bank name below side */}
+                      <div style={{ fontSize: '12px', color: C.primary, fontWeight: 700, marginTop: '2px' }}>
+                        Bank: {link.bank_name || 'Partner Bank'} • <span style={{ textTransform: 'capitalize', color: C.textLight }}>{link.product_category?.replace(/_/g, ' ')}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 800, color: C.green, background: `${C.green}15`, padding: '4px 10px', borderRadius: '12px' }}>
+                        Incentive: ₹{link.incentive_amount || 0}
+                      </span>
+                      <button 
+                        onClick={() => handleDeleteAssignedLink(link.id, link.employee_name, link.product_name)}
+                        title="Unassign Link"
+                        style={{
+                          border: `1px solid ${C.red}40`, background: `${C.red}10`, color: C.red,
+                          padding: '6px 14px', borderRadius: '8px', cursor: 'pointer',
+                          display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700
+                        }}
+                      >
+                        <MdDelete size={15} /> Unassign
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Custom Bank Referral URL */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: C.card, padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: C.textLight }}>Custom URL:</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '11.5px', color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                      {link.employee_referral_url}
+                    </span>
+                    <button onClick={() => handleCopy(link.employee_referral_url)} title="Copy URL" style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.primary, padding: '2px' }}>
+                      <MdContentCopy size={16} />
+                    </button>
+                    <a href={link.employee_referral_url} target="_blank" rel="noreferrer" title="Open Link" style={{ color: C.textLight, padding: '2px', display: 'flex' }}>
+                      <MdLaunch size={16} />
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button onClick={() => setViewEmpCardsModal({ open: false, employee: null })} style={S.btn('outline')}>
+                Close
+              </button>
             </div>
           </div>
         </div>
