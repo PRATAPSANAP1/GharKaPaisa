@@ -837,10 +837,10 @@ const updateApplyTokenDetails = async (req, res, next) => {
     } else {
       const { rows: [existingLead] } = await query(`
         SELECT id FROM leads
-        WHERE (tracking_token = $1 OR (product_id = $2 AND partner_id = $3 AND (mobile = $4 OR customer_mobile = $4)))
+        WHERE (tracking_token = $1 OR (product_id = $2 AND (mobile = $3 OR customer_mobile = $3)))
           AND status NOT IN ('rejected', 'cancelled')
         ORDER BY created_at DESC LIMIT 1
-      `, [token, shareData.product_id, shareData.partner_id, cleanMobile]);
+      `, [token, shareData.product_id, cleanMobile]);
 
       if (existingLead) {
         targetLeadId = existingLead.id;
@@ -861,19 +861,46 @@ const updateApplyTokenDetails = async (req, res, next) => {
         const leadNum = 'LEAD-' + Date.now().toString(36).toUpperCase();
         const { rows: [parentP] } = shareData.partner_id ? await query(`SELECT parent_partner_id FROM partner_profiles WHERE id = $1`, [shareData.partner_id]).catch(() => ({ rows: [] })) : { rows: [] };
         
-        const { rows: [newLead] } = await query(`
-          INSERT INTO leads (
-            lead_number, partner_id, parent_partner_id, created_by, customer_id,
-            product_id, customer_name, mobile, customer_mobile, city, pan_number, status, process_type, process_by,
-            otp_verified, source, priority, pipeline_stage, tracking_token
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, 'pending', 'linked_share', 'partner', TRUE, 'linked_share', 'medium', 'details_submitted', $11)
-          RETURNING *
-        `, [
-          leadNum, shareData.partner_id || null, parentP?.parent_partner_id || null, partnerUserId, targetCustomerId,
-          shareData.product_id, cleanName || 'Customer', cleanMobile, cleanCity || null, cleanPan || null, token
-        ]);
-        targetLeadId = newLead.id;
+        try {
+          const { rows: [newLead] } = await query(`
+            INSERT INTO leads (
+              lead_number, partner_id, parent_partner_id, created_by, customer_id,
+              product_id, customer_name, mobile, customer_mobile, city, pan_number, status, process_type, process_by,
+              otp_verified, source, priority, pipeline_stage, tracking_token
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, 'pending', 'linked_share', 'partner', TRUE, 'linked_share', 'medium', 'details_submitted', $11)
+            RETURNING *
+          `, [
+            leadNum, shareData.partner_id || null, parentP?.parent_partner_id || null, partnerUserId, targetCustomerId,
+            shareData.product_id, cleanName || 'Customer', cleanMobile, cleanCity || null, cleanPan || null, token
+          ]);
+          targetLeadId = newLead.id;
+        } catch (insertErr) {
+          if (insertErr.code === '23505') {
+            const { rows: [fallbackLead] } = await query(`
+              UPDATE leads
+              SET pipeline_stage = 'details_submitted', status = 'pending',
+                  customer_id = COALESCE($2, customer_id),
+                  customer_name = COALESCE(NULLIF($3, ''), customer_name),
+                  city = COALESCE(NULLIF($4, ''), city),
+                  pan_number = COALESCE(NULLIF($5, ''), pan_number),
+                  process_type = 'linked_share',
+                  process_by = 'partner',
+                  source = 'linked_share',
+                  updated_at = NOW()
+              WHERE product_id = $1 AND (mobile = $6 OR customer_mobile = $6)
+              RETURNING *
+            `, [shareData.product_id, targetCustomerId, cleanName, cleanCity, cleanPan, cleanMobile]);
+
+            if (fallbackLead) {
+              targetLeadId = fallbackLead.id;
+            } else {
+              throw insertErr;
+            }
+          } else {
+            throw insertErr;
+          }
+        }
       }
     }
 
