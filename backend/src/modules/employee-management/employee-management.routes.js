@@ -103,12 +103,16 @@ async function syncAndSeedEmployees() {
     `).catch(e => logger.warn('HR sync note:', e.message));
 
     // Remove any HR records from employees table so they do not show on super-admin/employees
-    await query(`
-      DELETE FROM employees 
-      WHERE user_id IN (SELECT id FROM users WHERE role = 'HR')
-         OR designation ILIKE '%HR%' 
-         OR designation ILIKE '%Human Resource%'
-    `).catch(() => {});
+    const hrEmpSubquery = `SELECT id FROM employees WHERE user_id IN (SELECT id FROM users WHERE role = 'HR') OR designation ILIKE '%HR%' OR designation ILIKE '%Human Resource%'`;
+    await query(`DELETE FROM employee_onboarding_checklist WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
+    await query(`DELETE FROM employee_hierarchy WHERE employee_id IN (${hrEmpSubquery}) OR team_leader_id IN (${hrEmpSubquery}) OR manager_id IN (${hrEmpSubquery})`).catch(() => {});
+    await query(`DELETE FROM employee_joining_details WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
+    await query(`DELETE FROM employee_kyc WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
+    await query(`DELETE FROM employee_documents WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
+    await query(`DELETE FROM employee_terms_acceptance WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
+    await query(`DELETE FROM employee_product_links WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
+    await query(`DELETE FROM employee_incentive_transactions WHERE employee_id IN (${hrEmpSubquery})`).catch(() => {});
+    await query(`DELETE FROM employees WHERE id IN (${hrEmpSubquery})`).catch(e => logger.warn('Delete HR employees note:', e.message));
 
     // 4. Sync non-HR users with role EMPLOYEE into employees table (catches directly registered/created users)
     await query(`

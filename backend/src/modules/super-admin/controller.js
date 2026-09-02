@@ -150,7 +150,16 @@ const createAdmin = async (req, res, next) => {
           status = 'active'
       `, [dbUser.id, uniqueEmployeeId, fullName, email, formattedMobile, designation || 'HR Manager', department || 'Human Resources']).catch(e => logger.warn('HR profile sync note:', e.message));
 
-      // Ensure HR is removed from employees table
+      // Ensure HR is removed from employees table (and clean up child FK records)
+      const targetEmpSubquery = `SELECT id FROM employees WHERE user_id = $1 OR mobile_number = $2`;
+      await query(`DELETE FROM employee_onboarding_checklist WHERE employee_id IN (${targetEmpSubquery})`, [dbUser.id, formattedMobile]).catch(() => {});
+      await query(`DELETE FROM employee_hierarchy WHERE employee_id IN (${targetEmpSubquery})`, [dbUser.id, formattedMobile]).catch(() => {});
+      await query(`DELETE FROM employee_joining_details WHERE employee_id IN (${targetEmpSubquery})`, [dbUser.id, formattedMobile]).catch(() => {});
+      await query(`DELETE FROM employee_kyc WHERE employee_id IN (${targetEmpSubquery})`, [dbUser.id, formattedMobile]).catch(() => {});
+      await query(`DELETE FROM employee_documents WHERE employee_id IN (${targetEmpSubquery})`, [dbUser.id, formattedMobile]).catch(() => {});
+      await query(`DELETE FROM employee_terms_acceptance WHERE employee_id IN (${targetEmpSubquery})`, [dbUser.id, formattedMobile]).catch(() => {});
+      await query(`DELETE FROM employee_product_links WHERE employee_id IN (${targetEmpSubquery})`, [dbUser.id, formattedMobile]).catch(() => {});
+      await query(`DELETE FROM employee_incentive_transactions WHERE employee_id IN (${targetEmpSubquery})`, [dbUser.id, formattedMobile]).catch(() => {});
       await query(`DELETE FROM employees WHERE user_id = $1 OR mobile_number = $2`, [dbUser.id, formattedMobile]).catch(() => {});
     }
 
