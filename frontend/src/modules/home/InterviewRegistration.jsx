@@ -450,7 +450,28 @@ export default function InterviewRegistration() {
 
         {/* STEP 1: Registration Form with Inline Real-time OTP Verification */}
         {step === 1 && (
-          <form onSubmit={handleFormSubmit} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
+          <form 
+            onSubmit={handleFormSubmit} 
+            className="interview-reg-form"
+            style={{ 
+              background: C.card, 
+              border: `1px solid ${C.border}`, 
+              borderRadius: '24px', 
+              padding: '32px', 
+              boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
+              boxSizing: 'border-box',
+              width: '100%',
+              overflow: 'hidden'
+            }}
+          >
+            <style>{`
+              @media (max-width: 640px) {
+                .interview-reg-form {
+                  padding: 20px 14px !important;
+                  border-radius: 16px !important;
+                }
+              }
+            `}</style>
             
             {/* Referred By Banner */}
             {referredByCode && (
@@ -481,7 +502,7 @@ export default function InterviewRegistration() {
               <FaUser style={{ color: C.teal || '#0F766E' }} /> 1. Personal Details & Contact Verification
             </h2>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '16px', marginBottom: '24px' }}>
               
               {/* Full Name */}
               <div style={{ gridColumn: '1 / -1' }}>
@@ -493,14 +514,14 @@ export default function InterviewRegistration() {
                   value={formData.full_name} 
                   onChange={handleInputChange} 
                   placeholder="Enter full name" 
-                  style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} 
+                  style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, boxSizing: 'border-box' }} 
                 />
               </div>
 
               {/* Mobile Number & Inline OTP */}
-              <div>
+              <div style={{ width: '100%', minWidth: 0 }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Mobile Number *</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch', width: '100%' }}>
                   <input 
                     type="tel" 
                     name="mobile_number" 
@@ -509,7 +530,7 @@ export default function InterviewRegistration() {
                     value={formData.mobile_number} 
                     onChange={handleInputChange} 
                     placeholder="10 digit mobile number" 
-                    style={{ flex: 1, padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} 
+                    style={{ flex: 1, minWidth: 0, width: '100%', padding: '10px 12px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, boxSizing: 'border-box' }} 
                   />
                   <button
                     type="button"
@@ -520,10 +541,15 @@ export default function InterviewRegistration() {
                       color: mobilePreVerified ? '#059669' : C.teal || '#0F766E',
                       border: mobilePreVerified ? '1px solid #6EE7B7' : `1px solid ${C.teal || '#0F766E'}`,
                       borderRadius: '10px',
-                      padding: '0 14px',
+                      padding: '0 12px',
                       fontSize: '12px',
                       fontWeight: 700,
-                      cursor: (mobilePreVerified || mobileOtpLoading || (mobileOtpSent && mobileOtpTimer > 0)) ? 'not-allowed' : 'pointer'
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      cursor: (mobilePreVerified || mobileOtpLoading || (mobileOtpSent && mobileOtpTimer > 0)) ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                   >
                     {mobilePreVerified ? '✓ Verified' : mobileOtpSent ? (mobileOtpTimer > 0 ? `Resend in ${mobileOtpTimer}s` : 'Resend OTP') : (mobileOtpLoading ? 'Sending...' : 'Send OTP')}
@@ -532,7 +558,7 @@ export default function InterviewRegistration() {
 
                 {/* Inline Mobile OTP Box */}
                 {mobileOtpSent && !mobilePreVerified && (
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'stretch', width: '100%' }}>
                     <input 
                       type="text" 
                       maxLength={6} 
@@ -543,13 +569,27 @@ export default function InterviewRegistration() {
                         if (val.length === 6) handleVerifyMobileOtp(val);
                       }} 
                       placeholder="Enter 6-digit Mobile OTP" 
-                      style={{ flex: 1, padding: '8px 12px', background: C.bgSecondary, border: `1px solid ${C.teal}`, borderRadius: '8px', fontSize: '13px', color: C.text }} 
+                      style={{ flex: 1, minWidth: 0, width: '100%', padding: '8px 12px', background: C.bgSecondary, border: `1px solid ${C.teal}`, borderRadius: '8px', fontSize: '13px', color: C.text, boxSizing: 'border-box' }} 
                     />
                     <button
                       type="button"
                       onClick={() => handleVerifyMobileOtp()}
                       disabled={mobileVerifyLoading || mobileOtp.length < 6}
-                      style={{ background: C.teal || '#0F766E', color: '#fff', border: 'none', borderRadius: '8px', padding: '0 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ 
+                        background: C.teal || '#0F766E', 
+                        color: '#fff', 
+                        border: 'none', 
+                        borderRadius: '8px', 
+                        padding: '0 12px', 
+                        fontSize: '12px', 
+                        fontWeight: 700, 
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        cursor: (mobileVerifyLoading || mobileOtp.length < 6) ? 'not-allowed' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
                     >
                       {mobileVerifyLoading ? 'Verifying...' : 'Verify OTP'}
                     </button>
@@ -558,9 +598,9 @@ export default function InterviewRegistration() {
               </div>
 
               {/* Email ID & Inline OTP */}
-              <div>
+              <div style={{ width: '100%', minWidth: 0 }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Email ID *</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'stretch', width: '100%' }}>
                   <input 
                     type="email" 
                     name="email_id" 
@@ -569,7 +609,7 @@ export default function InterviewRegistration() {
                     value={formData.email_id} 
                     onChange={handleInputChange} 
                     placeholder="name@example.com" 
-                    style={{ flex: 1, padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }} 
+                    style={{ flex: 1, minWidth: 0, width: '100%', padding: '10px 12px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, boxSizing: 'border-box' }} 
                   />
                   <button
                     type="button"
@@ -580,10 +620,15 @@ export default function InterviewRegistration() {
                       color: emailPreVerified ? '#059669' : C.teal || '#0F766E',
                       border: emailPreVerified ? '1px solid #6EE7B7' : `1px solid ${C.teal || '#0F766E'}`,
                       borderRadius: '10px',
-                      padding: '0 14px',
+                      padding: '0 12px',
                       fontSize: '12px',
                       fontWeight: 700,
-                      cursor: (emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)) ? 'not-allowed' : 'pointer'
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                      cursor: (emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)) ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                   >
                     {emailPreVerified ? '✓ Verified' : emailOtpSent ? (emailOtpTimer > 0 ? `Resend in ${emailOtpTimer}s` : 'Resend OTP') : (emailOtpLoading ? 'Sending...' : 'Send OTP')}
@@ -592,7 +637,7 @@ export default function InterviewRegistration() {
 
                 {/* Inline Email OTP Box */}
                 {emailOtpSent && !emailPreVerified && (
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'stretch', width: '100%' }}>
                     <input 
                       type="text" 
                       maxLength={6} 
@@ -603,13 +648,27 @@ export default function InterviewRegistration() {
                         if (val.length === 6) handleVerifyEmailOtp(val);
                       }} 
                       placeholder="Enter 6-digit Email OTP" 
-                      style={{ flex: 1, padding: '8px 12px', background: C.bgSecondary, border: `1px solid ${C.teal}`, borderRadius: '8px', fontSize: '13px', color: C.text }} 
+                      style={{ flex: 1, minWidth: 0, width: '100%', padding: '8px 12px', background: C.bgSecondary, border: `1px solid ${C.teal}`, borderRadius: '8px', fontSize: '13px', color: C.text, boxSizing: 'border-box' }} 
                     />
                     <button
                       type="button"
                       onClick={() => handleVerifyEmailOtp()}
                       disabled={emailVerifyLoading || emailOtp.length < 6}
-                      style={{ background: C.teal || '#0F766E', color: '#fff', border: 'none', borderRadius: '8px', padding: '0 14px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                      style={{ 
+                        background: C.teal || '#0F766E', 
+                        color: '#fff', 
+                        border: 'none', 
+                        borderRadius: '8px', 
+                        padding: '0 12px', 
+                        fontSize: '12px', 
+                        fontWeight: 700, 
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        cursor: (emailVerifyLoading || emailOtp.length < 6) ? 'not-allowed' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
                     >
                       {emailVerifyLoading ? 'Verifying...' : 'Verify OTP'}
                     </button>

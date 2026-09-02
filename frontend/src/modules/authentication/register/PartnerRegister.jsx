@@ -1369,14 +1369,14 @@ export default function PartnerRegister() {
                   {/* Mobile & OTP */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-mobile" style={S.label}>{t("onboarding.mobileNumber", "Mobile Number")}</label>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <div style={{ position: "relative", flex: 1 }}>
+                    <div style={{ display: "flex", gap: "8px", width: "100%", alignItems: "stretch" }}>
+                      <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
                         <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.phone size={14} /></span>
                         <input
                           type="tel"
                           {...inputProps("mobile")}
                           placeholder={t("onboarding.mobilePlaceholder", "10-digit Mobile Number")}
-                          style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
+                          style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px", width: "100%", minWidth: 0, boxSizing: "border-box" }}
                           disabled={form.mobilePreVerified}
                         />
                       </div>
@@ -1393,8 +1393,13 @@ export default function PartnerRegister() {
                           padding: "0 12px",
                           fontSize: "12px",
                           fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          flexShrink: 0,
                           cursor: mobileActionDisabled ? "not-allowed" : "pointer",
-                          opacity: mobileActionDisabled ? 0.6 : 1
+                          opacity: mobileActionDisabled ? 0.6 : 1,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
                         }}
                         disabled={mobileActionDisabled}
                       >
@@ -1409,9 +1414,9 @@ export default function PartnerRegister() {
 
                     {/* Mobile OTP verify inputs */}
                     {mobileOtpSent && !form.mobilePreVerified && (
-                      <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                      <div style={{ display: "flex", gap: "8px", marginTop: "4px", width: "100%", alignItems: "stretch" }}>
                         <input
-                          style={{ ...S.input, flex: 1, paddingVertical: "10px" }}
+                          style={{ ...S.input, flex: 1, minWidth: 0, width: "100%", paddingVertical: "10px", boxSizing: "border-box" }}
                           value={form.mobileOtp}
                           inputMode="numeric"
                           autoComplete="one-time-code"
@@ -1444,7 +1449,12 @@ export default function PartnerRegister() {
                             padding: "0 12px",
                             fontSize: "12px",
                             fontWeight: 700,
-                            cursor: (mobileVerifyLoading || form.mobileOtp.trim().length < 6) ? "not-allowed" : "pointer"
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                            cursor: (mobileVerifyLoading || form.mobileOtp.trim().length < 6) ? "not-allowed" : "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
                           }}
                         >
                           <span id="label-verify-mobile-otp">{mobileVerifyLoading ? t("onboarding.otpVerifying", "Verifying...") : t("onboarding.otpVerify", "Verify OTP")}</span>
@@ -1456,14 +1466,14 @@ export default function PartnerRegister() {
                   {/* Email & OTP */}
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     <label id="label-email" style={S.label}>{t("onboarding.emailAddress", "Email Address")}</label>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <div style={{ position: "relative", flex: 1 }}>
+                    <div style={{ display: "flex", gap: "8px", width: "100%", alignItems: "stretch" }}>
+                      <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
                         <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: C.textLight, display: "flex" }}><Icons.mail size={14} /></span>
                         <input
                           type="email"
                           {...inputProps("email")}
                           placeholder={t("onboarding.emailPlaceholder", "name@domain.com")}
-                          style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px" }}
+                          style={{ ...S.input, paddingLeft: "36px", paddingVertical: "10px", width: "100%", minWidth: 0, boxSizing: "border-box" }}
                           disabled={form.emailPreVerified}
                           autoComplete="email"
                         />
@@ -1481,8 +1491,13 @@ export default function PartnerRegister() {
                           padding: "0 12px",
                           fontSize: "12px",
                           fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          flexShrink: 0,
                           cursor: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)) ? "not-allowed" : "pointer",
-                          opacity: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)) ? 0.6 : 1
+                          opacity: (form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)) ? 0.6 : 1,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center"
                         }}
                         disabled={form.emailPreVerified || emailOtpLoading || (emailOtpSent && emailOtpTimer > 0)}
                       >
@@ -1497,9 +1512,9 @@ export default function PartnerRegister() {
 
                     {/* Email OTP verify inputs */}
                     {emailOtpSent && !form.emailPreVerified && (
-                      <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                      <div style={{ display: "flex", gap: "8px", marginTop: "4px", width: "100%", alignItems: "stretch" }}>
                         <input
-                          style={{ ...S.input, flex: 1, paddingVertical: "10px" }}
+                          style={{ ...S.input, flex: 1, minWidth: 0, width: "100%", paddingVertical: "10px", boxSizing: "border-box" }}
                           value={form.emailOtp}
                           inputMode="numeric"
                           autoComplete="one-time-code"
@@ -1522,7 +1537,7 @@ export default function PartnerRegister() {
                         <button
                           id="btn-verify-email-otp"
                           type="button"
-                          onClick={handleVerifyRegistrationOtp}
+                          onClick={() => handleVerifyRegistrationOtp()}
                           disabled={emailOtpLoading || form.emailOtp.trim().length < 6}
                           style={{
                             background: "#0D6EFD",
@@ -1532,7 +1547,12 @@ export default function PartnerRegister() {
                             padding: "0 12px",
                             fontSize: "12px",
                             fontWeight: 700,
-                            cursor: (emailOtpLoading || form.emailOtp.trim().length < 6) ? "not-allowed" : "pointer"
+                            whiteSpace: "nowrap",
+                            flexShrink: 0,
+                            cursor: (emailOtpLoading || form.emailOtp.trim().length < 6) ? "not-allowed" : "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center"
                           }}
                         >
                           <span id="label-verify-email-otp">{emailOtpLoading ? t("onboarding.otpVerifying", "Verifying...") : t("onboarding.otpVerify", "Verify OTP")}</span>

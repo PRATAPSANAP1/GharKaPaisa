@@ -319,7 +319,7 @@ const listPartners = async (req, res, next) => {
     const isPrivacyOn = privacySetting && privacySetting.value === 'on';
     const shouldMask = isPrivacyOn && req.user && req.user.role === 'ADMIN';
 
-    let where = 'WHERE 1=1';
+    let where = "WHERE (u.role IS NULL OR u.role IN ('PARTNER', 'TEAM_MEMBER') OR u.role NOT IN ('EMPLOYEE', 'ADMIN', 'HR', 'SUPER_ADMIN'))";
     const values = [];
     let idx = 1;
 

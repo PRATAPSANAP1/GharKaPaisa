@@ -45,6 +45,12 @@ export default function SuperAdminOverview() {
   const [adminsList, setAdminsList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
   const [razorpayBalance, setRazorpayBalance] = useState(null);
+  const [financialsLedger, setFinancialsLedger] = useState([]);
+  const [financialsWithdrawals, setFinancialsWithdrawals] = useState([]);
+  const [financialsSubTab, setFinancialsSubTab] = useState('ledger');
+  const [finSearch, setFinSearch] = useState('');
+  const [finTypeFilter, setFinTypeFilter] = useState('all');
+  const [finStatusFilter, setFinStatusFilter] = useState('all');
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,7 +74,9 @@ export default function SuperAdminOverview() {
     setRefreshing(true);
     setFetchError(null);
     try {
-      const [overviewRes, customersRes, partnersRes, teamRes, appsRes, adminsRes, walletBalRes, employeesRes] = await Promise.allSettled([
+      const [
+        overviewRes, customersRes, partnersRes, teamRes, appsRes, adminsRes, walletBalRes, employeesRes, ledgerRes, withdrawalsRes
+      ] = await Promise.allSettled([
         api.get('/reports/overview'),
         api.get('/reports/customers'),
         api.get('/reports/export-partners'),
@@ -76,7 +84,9 @@ export default function SuperAdminOverview() {
         api.get('/applications', { params: { limit: 100 } }),
         api.get('/superadmin/admins'),
         api.get('/wallet/balance'),
-        api.get('/employees')
+        api.get('/employees'),
+        api.get('/wallet/ledger', { params: { limit: 100 } }),
+        api.get('/wallet/admin/withdrawals', { params: { limit: 100 } })
       ]);
 
       let hasErrors = false;
@@ -113,6 +123,14 @@ export default function SuperAdminOverview() {
       if (walletBalRes.status === 'fulfilled' && walletBalRes.value.data?.success) {
         setRazorpayBalance(walletBalRes.value.data.data?.razorpay_balance);
       } else { hasErrors = true; }
+
+      if (ledgerRes.status === 'fulfilled' && ledgerRes.value.data?.success) {
+        setFinancialsLedger(ledgerRes.value.data.data?.data || ledgerRes.value.data.data || []);
+      }
+
+      if (withdrawalsRes.status === 'fulfilled' && withdrawalsRes.value.data?.success) {
+        setFinancialsWithdrawals(withdrawalsRes.value.data.data?.data || withdrawalsRes.value.data.data || []);
+      }
 
       if (hasErrors) {
         setFetchError('Some dashboard metrics could not be loaded from server. Check network connection.');
@@ -1110,28 +1128,309 @@ export default function SuperAdminOverview() {
 
       {/* TAB 7: FINANCIALS */}
       {activeTab === 'financials' && (
-        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 16px 0' }}>RazorpayX & Wallet Settlements</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
-            <div style={{ background: C.bg, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Financial Overview Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '16px' }}>
+            <div style={{ background: C.card, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>RazorpayX Live Balance</span>
               <div style={{ fontSize: '22px', fontWeight: 900, color: '#3B82F6', marginTop: '4px' }}>
                 {razorpayBalance !== null ? `₹${parseFloat(razorpayBalance).toLocaleString('en-IN')}` : '₹0.00'}
               </div>
             </div>
-            <div style={{ background: C.bg, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+            <div style={{ background: C.card, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
               <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Total Commission Paid</span>
               <div style={{ fontSize: '22px', fontWeight: 900, color: '#10B981', marginTop: '4px' }}>
                 ₹{parseFloat(stats.totalCommissionPaid).toLocaleString('en-IN')}
               </div>
             </div>
-            <div style={{ background: C.bg, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Pending Partner Withdrawals</span>
+            <div style={{ background: C.card, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Pending Withdrawals</span>
               <div style={{ fontSize: '22px', fontWeight: 900, color: '#F59E0B', marginTop: '4px' }}>
                 {stats.pendingWithdrawals} Requests
               </div>
             </div>
+            <div style={{ background: C.card, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Total Recorded Transactions</span>
+              <div style={{ fontSize: '22px', fontWeight: 900, color: '#8B5CF6', marginTop: '4px' }}>
+                {financialsLedger.length} Entries
+              </div>
+            </div>
           </div>
+
+          {/* Main Financial Transactions Container */}
+          <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
+            
+            {/* Header & Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '14px' }}>
+              
+              {/* Sub-Tab Selector */}
+              <div style={{ display: 'flex', gap: '8px', background: C.bg, padding: '4px', borderRadius: '10px', border: `1px solid ${C.border}` }}>
+                <button
+                  onClick={() => setFinancialsSubTab('ledger')}
+                  style={{
+                    background: financialsSubTab === 'ledger' ? C.teal : 'transparent',
+                    color: financialsSubTab === 'ledger' ? '#fff' : C.textMid,
+                    border: 'none', borderRadius: '7px', padding: '7px 14px',
+                    fontSize: '13px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease'
+                  }}
+                >
+                  📜 Ledger Transactions ({financialsLedger.length})
+                </button>
+                <button
+                  onClick={() => setFinancialsSubTab('withdrawals')}
+                  style={{
+                    background: financialsSubTab === 'withdrawals' ? C.teal : 'transparent',
+                    color: financialsSubTab === 'withdrawals' ? '#fff' : C.textMid,
+                    border: 'none', borderRadius: '7px', padding: '7px 14px',
+                    fontSize: '13px', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease'
+                  }}
+                >
+                  💸 Withdrawal Payouts ({financialsWithdrawals.length})
+                </button>
+              </div>
+
+              {/* Filters & Search */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                
+                {financialsSubTab === 'ledger' && (
+                  <select
+                    value={finTypeFilter}
+                    onChange={e => setFinTypeFilter(e.target.value)}
+                    style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+                  >
+                    <option value="all">All Types</option>
+                    <option value="COMMISSION">Commission</option>
+                    <option value="WITHDRAWAL">Withdrawal</option>
+                    <option value="MANUAL_ADJUSTMENT">Manual Adjustment</option>
+                    <option value="CREDIT">Credit</option>
+                    <option value="DEBIT">Debit</option>
+                  </select>
+                )}
+
+                <select
+                  value={finStatusFilter}
+                  onChange={e => setFinStatusFilter(e.target.value)}
+                  style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="completed">Completed / Settled</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="processing">Processing</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+
+                <input
+                  type="text"
+                  placeholder="Search partner, TXN ID, UTR, desc..."
+                  value={finSearch}
+                  onChange={e => setFinSearch(e.target.value)}
+                  style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: '13px', width: '220px' }}
+                />
+
+                <button
+                  onClick={() => navigate('/super-admin/wallet')}
+                  style={{ background: '#8B5CF6', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  ⚙️ Full Wallet Management →
+                </button>
+              </div>
+
+            </div>
+
+            {/* SUB-TAB 1: LEDGER TRANSACTIONS */}
+            {financialsSubTab === 'ledger' && (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase' }}>
+                      <th style={{ padding: '12px 16px' }}>Date & Time</th>
+                      <th style={{ padding: '12px 16px' }}>Partner Code / Name</th>
+                      <th style={{ padding: '12px 16px' }}>Transaction Type</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Credit (+</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Debit (-)</th>
+                      <th style={{ padding: '12px 16px' }}>Status</th>
+                      <th style={{ padding: '12px 16px' }}>Description & Ref</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {financialsLedger.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: C.textLight }}>No ledger transaction records found.</td>
+                      </tr>
+                    ) : (
+                      financialsLedger
+                        .filter(txn => {
+                          if (finTypeFilter !== 'all' && String(txn.transaction_type || '').toUpperCase() !== finTypeFilter.toUpperCase()) return false;
+                          if (finStatusFilter !== 'all' && String(txn.status || '').toLowerCase() !== finStatusFilter.toLowerCase()) return false;
+                          if (finSearch) {
+                            const q = finSearch.toLowerCase();
+                            const code = (txn.partner_code || '').toLowerCase();
+                            const name = `${txn.first_name || ''} ${txn.last_name || ''}`.toLowerCase();
+                            const desc = (txn.description || '').toLowerCase();
+                            const ref = (txn.reference_number || txn.utr_number || '').toLowerCase();
+                            return code.includes(q) || name.includes(q) || desc.includes(q) || ref.includes(q);
+                          }
+                          return true;
+                        })
+                        .map((txn, idx) => {
+                          const creditAmt = parseFloat(txn.credit || 0);
+                          const debitAmt = parseFloat(txn.debit || 0);
+                          const isCredit = creditAmt > 0;
+                          
+                          let typeBg = '#EFF6FF';
+                          let typeColor = '#2563EB';
+                          const typeStr = String(txn.transaction_type || '').toUpperCase();
+                          if (typeStr.includes('COMMISSION')) { typeBg = '#ECFDF5'; typeColor = '#059669'; }
+                          else if (typeStr.includes('WITHDRAWAL')) { typeBg = '#FFFBEB'; typeColor = '#D97706'; }
+                          else if (typeStr.includes('ADJUSTMENT')) { typeBg = '#F3E8FF'; typeColor = '#7C3AED'; }
+
+                          return (
+                            <tr key={txn.id || idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                              <td style={{ padding: '12px 16px', color: C.textMid, fontSize: '12px', whiteSpace: 'nowrap' }}>
+                                {new Date(txn.created_at || Date.now()).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                              <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>
+                                <span style={{ color: C.teal, fontFamily: 'monospace' }}>{txn.partner_code || 'SYSTEM'}</span>
+                                {(txn.first_name || txn.last_name) && (
+                                  <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 500 }}>{txn.first_name} {txn.last_name}</div>
+                                )}
+                              </td>
+                              <td style={{ padding: '12px 16px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '4px', background: typeBg, color: typeColor }}>
+                                  {typeStr.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: isCredit ? '#10B981' : C.textLight }}>
+                                {isCredit ? `+₹${creditAmt.toLocaleString('en-IN')}` : '-'}
+                              </td>
+                              <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: debitAmt > 0 ? '#EF4444' : C.textLight }}>
+                                {debitAmt > 0 ? `-₹${debitAmt.toLocaleString('en-IN')}` : '-'}
+                              </td>
+                              <td style={{ padding: '12px 16px' }}>
+                                <span style={{
+                                  fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px',
+                                  background: (txn.status === 'completed' || txn.status === 'success') ? '#ECFDF5' : (txn.status === 'failed' || txn.status === 'rejected' ? '#FEF2F2' : '#FFF7ED'),
+                                  color: (txn.status === 'completed' || txn.status === 'success') ? '#059669' : (txn.status === 'failed' || txn.status === 'rejected' ? '#EF4444' : '#EA580C')
+                                }}>
+                                  {(txn.status || 'COMPLETED').toUpperCase()}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 16px', color: C.textMid, fontSize: '12px', maxWidth: '300px' }}>
+                                {txn.description || 'Wallet Transaction'}
+                                {(txn.reference_number || txn.utr_number) && (
+                                  <div style={{ fontSize: '11px', color: C.teal, fontFamily: 'monospace', marginTop: '2px' }}>
+                                    Ref: {txn.reference_number || txn.utr_number}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* SUB-TAB 2: WITHDRAWAL PAYOUTS */}
+            {financialsSubTab === 'withdrawals' && (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: C.bg, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11px', textTransform: 'uppercase' }}>
+                      <th style={{ padding: '12px 16px' }}>Request Date</th>
+                      <th style={{ padding: '12px 16px' }}>Partner</th>
+                      <th style={{ padding: '12px 16px' }}>Payment Destination</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Gross Amount</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>2% TDS</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Net Payable</th>
+                      <th style={{ padding: '12px 16px' }}>Status & UTR</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {financialsWithdrawals.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: C.textLight }}>No withdrawal payout requests found.</td>
+                      </tr>
+                    ) : (
+                      financialsWithdrawals
+                        .filter(w => {
+                          if (finStatusFilter !== 'all' && String(w.status || '').toLowerCase() !== finStatusFilter.toLowerCase()) return false;
+                          if (finSearch) {
+                            const q = finSearch.toLowerCase();
+                            const code = (w.partner_code || '').toLowerCase();
+                            const name = `${w.first_name || ''} ${w.last_name || ''}`.toLowerCase();
+                            const utr = (w.utr || w.utr_number || '').toLowerCase();
+                            return code.includes(q) || name.includes(q) || utr.includes(q);
+                          }
+                          return true;
+                        })
+                        .map((w, idx) => (
+                          <tr key={w.id || idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '12px 16px', color: C.textMid, fontSize: '12px', whiteSpace: 'nowrap' }}>
+                              {new Date(w.requested_at || w.created_at || Date.now()).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </td>
+                            <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>
+                              {w.first_name} {w.last_name}<br/>
+                              <span style={{ color: C.teal, fontFamily: 'monospace', fontSize: '11px' }}>{w.partner_code}</span>
+                            </td>
+                            <td style={{ padding: '12px 16px', color: C.textMid, fontSize: '12px' }}>
+                              {w.account_number ? (
+                                <div>
+                                  <strong>{w.bank_name || 'Bank Transfer'}</strong><br/>
+                                  <span style={{ fontFamily: 'monospace', fontSize: '11px', color: C.textLight }}>{w.account_number} ({w.ifsc_code})</span>
+                                </div>
+                              ) : (
+                                <div>
+                                  <strong>UPI Payout</strong><br/>
+                                  <span style={{ fontFamily: 'monospace', fontSize: '11px', color: C.textLight }}>{w.upi_id || 'N/A'}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: C.text }}>
+                              ₹{parseFloat(w.amount || 0).toLocaleString('en-IN')}
+                            </td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right', color: '#EF4444', fontWeight: 700 }}>
+                              ₹{parseFloat(w.tds_amount || (parseFloat(w.amount || 0) * 0.02)).toLocaleString('en-IN')}
+                            </td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 900, color: '#10B981' }}>
+                              ₹{parseFloat(w.net_amount || (parseFloat(w.amount || 0) * 0.98)).toLocaleString('en-IN')}
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <span style={{
+                                fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px',
+                                background: (w.status === 'processed' || w.status === 'transferred') ? '#ECFDF5' : (w.status === 'rejected' || w.status === 'failed' ? '#FEF2F2' : '#FFF7ED'),
+                                color: (w.status === 'processed' || w.status === 'transferred') ? '#059669' : (w.status === 'rejected' || w.status === 'failed' ? '#EF4444' : '#EA580C')
+                              }}>
+                                {(w.status || 'PENDING').toUpperCase()}
+                              </span>
+                              {(w.utr || w.utr_number) && (
+                                <div style={{ fontSize: '11px', color: C.teal, fontFamily: 'monospace', marginTop: '2px' }}>
+                                  UTR: {w.utr || w.utr_number}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                              <button
+                                onClick={() => navigate('/super-admin/wallet?tab=withdrawals')}
+                                style={{ background: C.teal, color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                Manage Payout →
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+          </div>
+
         </div>
       )}
 

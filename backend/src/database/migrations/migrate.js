@@ -4546,6 +4546,22 @@ const migrate = async () => {
   } catch (addFundsMigErr) {
     logger.error('Failed to run Add Funds migration:', addFundsMigErr.message);
   }
+
+  // Cleanup orphan partner profiles for non-partner roles (EMPLOYEE, HR, ADMIN, SUPER_ADMIN)
+  try {
+    const { rowCount } = await query(`
+      DELETE FROM partner_profiles 
+      WHERE user_id IN (
+        SELECT id FROM users WHERE role IN ('EMPLOYEE', 'HR', 'ADMIN', 'SUPER_ADMIN')
+      )
+    `);
+    if (rowCount > 0) {
+      logger.info(`[Migration Cleanup] Removed ${rowCount} invalid partner_profiles associated with employee/admin users.`);
+    }
+  } catch (cleanupErr) {
+    logger.warn('Partner profiles cleanup note:', cleanupErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

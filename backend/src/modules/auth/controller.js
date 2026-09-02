@@ -772,21 +772,23 @@ const register = async (req, res, next) => {
           `, [passwordHash, u.id]);
 
           const { rows: [pProf] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [u.id]);
-          if (pProf) {
-            await client.query(`
-              UPDATE partner_profiles SET
-                first_name = COALESCE(NULLIF($1, ''), first_name),
-                last_name = COALESCE(NULLIF($2, ''), last_name),
-                company_name = COALESCE(NULLIF($3, ''), company_name),
-                updated_at = NOW()
-              WHERE id = $4
-            `, [first_name, last_name, company_name, pProf.id]);
-          } else {
-            const secureCode = 'AG' + Math.floor(10000 + Math.random() * 90000);
-            await client.query(`
-              INSERT INTO partner_profiles (user_id, first_name, last_name, partner_code, partner_type, kyc_status)
-              VALUES ($1, $2, $3, $4, $5, 'draft')
-            `, [u.id, first_name || '', last_name || '', secureCode, u.role || 'TEAM_MEMBER']);
+          if (['PARTNER', 'TEAM_MEMBER'].includes(u.role)) {
+            if (pProf) {
+              await client.query(`
+                UPDATE partner_profiles SET
+                  first_name = COALESCE(NULLIF($1, ''), first_name),
+                  last_name = COALESCE(NULLIF($2, ''), last_name),
+                  company_name = COALESCE(NULLIF($3, ''), company_name),
+                  updated_at = NOW()
+                WHERE id = $4
+              `, [first_name, last_name, company_name, pProf.id]);
+            } else {
+              const secureCode = 'AG' + Math.floor(10000 + Math.random() * 90000);
+              await client.query(`
+                INSERT INTO partner_profiles (user_id, first_name, last_name, partner_code, partner_type, kyc_status)
+                VALUES ($1, $2, $3, $4, $5, 'draft')
+              `, [u.id, first_name || '', last_name || '', secureCode, u.role || 'TEAM_MEMBER']);
+            }
           }
 
           await client.query(`
@@ -897,7 +899,9 @@ const register = async (req, res, next) => {
 
       let PartnerCode = null;
 
-      if (targetRole === 'PARTNER' || targetRole === 'TEAM_MEMBER' || role === 'ADMIN' || role === 'SUPER_ADMIN') {
+      const isEmployeeRole = ['EMPLOYEE', 'HR', 'ADMIN', 'SUPER_ADMIN'].includes(String(role || '').toUpperCase()) || ['EMPLOYEE', 'HR', 'ADMIN', 'SUPER_ADMIN'].includes(String(targetRole || '').toUpperCase());
+
+      if ((targetRole === 'PARTNER' || targetRole === 'TEAM_MEMBER') && !isEmployeeRole) {
         // Generate Partner code using atomic sequence
         const { rows: [{ nextval }] } = await client.query(`SELECT nextval('partner_code_seq')`);
         PartnerCode = generatePartnerCode(parseInt(nextval));

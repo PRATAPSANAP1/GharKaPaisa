@@ -43,6 +43,7 @@ const getOverview = async (req, res, next) => {
           COUNT(*) FILTER (WHERE LOWER(COALESCE(u.status::text, 'active')) = 'active') as active,
           COUNT(*) FILTER (WHERE LOWER(COALESCE(ap.kyc_status::text, 'pending')) IN ('pending', 'under_review', 'submitted', 'in_process')) as pending_kyc
         FROM partner_profiles ap JOIN users u ON u.id = ap.user_id
+        WHERE (u.role IS NULL OR u.role IN ('PARTNER', 'TEAM_MEMBER') OR u.role NOT IN ('EMPLOYEE', 'ADMIN', 'HR', 'SUPER_ADMIN'))
       `),
       query(`
         SELECT
@@ -81,6 +82,7 @@ const getOverview = async (req, res, next) => {
         SELECT p.id, p.first_name, p.last_name, p.partner_code, p.created_at, u.email, u.mobile, u.status
         FROM partner_profiles p
         JOIN users u ON u.id = p.user_id
+        WHERE (u.role IS NULL OR u.role IN ('PARTNER', 'TEAM_MEMBER') OR u.role NOT IN ('EMPLOYEE', 'ADMIN', 'HR', 'SUPER_ADMIN'))
         ORDER BY p.created_at DESC
         LIMIT 5
       `),
@@ -317,6 +319,7 @@ const exportPartnersReport = async (req, res, next) => {
       FROM partner_profiles ap
       JOIN users u ON u.id = ap.user_id
       LEFT JOIN partner_wallets w ON w.partner_id = ap.id
+      WHERE (u.role IS NULL OR u.role IN ('PARTNER', 'TEAM_MEMBER') OR u.role NOT IN ('EMPLOYEE', 'ADMIN', 'HR', 'SUPER_ADMIN'))
       ORDER BY u.created_at DESC
     `);
 

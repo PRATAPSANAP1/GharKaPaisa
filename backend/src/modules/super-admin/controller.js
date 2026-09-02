@@ -105,6 +105,22 @@ const createAdmin = async (req, res, next) => {
 
     logger.info(`Super admin ${req.user.email} created new user: ${email} with role: ${role}`);
 
+    if (['EMPLOYEE', 'HR'].includes(role)) {
+      await query(`
+        INSERT INTO employees (
+          employee_id, user_id, full_name, mobile_number, email_id, designation, department, joining_date, employment_type, employee_status, activation_status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, 'Full-time', 'ACTIVE', 'APPROVED')
+        ON CONFLICT (mobile_number) DO UPDATE SET
+          user_id = EXCLUDED.user_id,
+          employee_id = EXCLUDED.employee_id,
+          full_name = EXCLUDED.full_name,
+          designation = EXCLUDED.designation,
+          department = EXCLUDED.department,
+          employee_status = 'ACTIVE',
+          activation_status = 'APPROVED'
+      `, [uniqueEmployeeId, dbUser.id, fullName, formattedMobile, email, designation, department]).catch(e => logger.warn('Employees sync note:', e.message));
+    }
+
     if (bankIds.length > 0) {
       for (const bId of bankIds) {
         await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [dbUser.id, bId, req.user.id]);
