@@ -21,6 +21,7 @@ export default function EmployeeLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 1024 : false);
+  const [imgError, setImgError] = useState(false);
   const dropdownRef = useRef(null);
 
   // Invite Modal State
@@ -215,7 +216,31 @@ export default function EmployeeLayout() {
 
             {/* Top Right Profile Photo Button (Click opens features dropdown) */}
             {(() => {
-              const savedPhoto = localStorage.getItem('employee_profile_photo') || user?.profile_photo_url || user?.avatar_url;
+              const savedPhoto = localStorage.getItem('employee_profile_photo') || user?.profile_photo_url || user?.avatar_url || user?.profile_photo;
+              const renderAvatar = (size = 36) => {
+                if (savedPhoto && !imgError) {
+                  return (
+                    <img 
+                      src={savedPhoto} 
+                      alt="Profile" 
+                      style={{ width: `${size}px`, height: `${size}px`, borderRadius: '50%', objectFit: 'cover' }}
+                      onError={() => setImgError(true)}
+                    />
+                  );
+                }
+                return (
+                  <div style={{ 
+                    width: `${size}px`, height: `${size}px`, borderRadius: '50%', 
+                    background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)', 
+                    color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                    fontSize: `${Math.round(size * 0.42)}px`, fontWeight: 900, textTransform: 'uppercase',
+                    boxShadow: '0 2px 8px rgba(15, 118, 110, 0.3)', flexShrink: 0
+                  }}>
+                    {(user?.full_name || user?.name || 'E').charAt(0).toUpperCase()}
+                  </div>
+                );
+              };
+
               return (
                 <button 
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
@@ -234,24 +259,7 @@ export default function EmployeeLayout() {
                     boxShadow: profileMenuOpen ? '0 0 0 3px rgba(15, 118, 110, 0.25)' : 'none'
                   }}
                 >
-                  {savedPhoto ? (
-                    <img 
-                      src={savedPhoto} 
-                      alt="Profile" 
-                      style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  ) : (
-                    <div style={{ 
-                      width: '36px', height: '36px', borderRadius: '50%', 
-                      background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)', 
-                      color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                      fontSize: '15px', fontWeight: 900, textTransform: 'uppercase',
-                      boxShadow: '0 2px 8px rgba(15, 118, 110, 0.3)'
-                    }}>
-                      {(user?.full_name || user?.name || 'E').charAt(0).toUpperCase()}
-                    </div>
-                  )}
+                  {renderAvatar(36)}
                 </button>
               );
             })()}
@@ -262,7 +270,7 @@ export default function EmployeeLayout() {
                 position: 'absolute',
                 top: '50px',
                 right: 0,
-                width: '260px',
+                width: '270px',
                 background: C.card,
                 border: `1px solid ${C.border}`,
                 borderRadius: '14px',
@@ -273,14 +281,41 @@ export default function EmployeeLayout() {
                 flexDirection: 'column',
                 gap: '2px'
               }}>
-                <div style={{ padding: '10px 12px', borderBottom: `1px solid ${C.border}`, marginBottom: '4px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>{user?.full_name || user?.name}</div>
-                  <div style={{ fontSize: '11px', color: C.textMid }}>{user?.email_id || user?.email}</div>
-                  {empCode && (
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: C.employeePrimary || '#0F766E', marginTop: '2px' }}>
-                      Ref Code: {empCode}
-                    </div>
-                  )}
+                {/* Dropdown Header Card with Employee Profile Photo */}
+                <div style={{ padding: '12px', borderBottom: `1px solid ${C.border}`, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {(() => {
+                    const savedPhoto = localStorage.getItem('employee_profile_photo') || user?.profile_photo_url || user?.avatar_url || user?.profile_photo;
+                    if (savedPhoto && !imgError) {
+                      return (
+                        <img 
+                          src={savedPhoto} 
+                          alt="Profile" 
+                          style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${C.employeePrimary || '#0F766E'}` }}
+                          onError={() => setImgError(true)}
+                        />
+                      );
+                    }
+                    return (
+                      <div style={{ 
+                        width: '42px', height: '42px', borderRadius: '50%', 
+                        background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)', 
+                        color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                        fontSize: '18px', fontWeight: 900, textTransform: 'uppercase',
+                        boxShadow: '0 2px 8px rgba(15, 118, 110, 0.3)', flexShrink: 0
+                      }}>
+                        {(user?.full_name || user?.name || 'E').charAt(0).toUpperCase()}
+                      </div>
+                    );
+                  })()}
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.full_name || user?.name}</div>
+                    <div style={{ fontSize: '11px', color: C.textMid, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.email_id || user?.email}</div>
+                    {empCode && (
+                      <div style={{ fontSize: '11px', fontWeight: 800, color: C.employeePrimary || '#0F766E', marginTop: '2px' }}>
+                        Ref Code: {empCode}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <Link
