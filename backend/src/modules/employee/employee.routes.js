@@ -651,30 +651,38 @@ router.get('/team', async (req, res, next) => {
     const empId = req.employee.id;
     const designation = req.employee.designation;
 
+    const desgUpper = String(designation || '').toUpperCase();
+    const { rows: ownH } = await query(`SELECT hierarchy_level FROM employee_hierarchy WHERE employee_id = $1 AND is_active = true LIMIT 1`, [empId]);
+    const hLevel = (ownH[0]?.hierarchy_level || '').toUpperCase();
+
     let teamMembers = [];
-    if (designation === 'Manager') {
+    if (desgUpper.includes('MANAGER') || hLevel === 'MANAGER') {
       const { rows } = await query(`
-        SELECT e.*, h.hierarchy_level, c.overall_progress
+        SELECT e.*, h.hierarchy_level, c.overall_progress,
+               tl.full_name as team_leader_name
         FROM employees e
         JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
         LEFT JOIN employee_onboarding_checklist c ON c.employee_id = e.id
+        LEFT JOIN employees tl ON tl.id = h.team_leader_id
         WHERE h.manager_id = $1
         ORDER BY e.created_at DESC
       `, [empId]);
       teamMembers = rows;
-    } else if (designation === 'Team Leader') {
+    } else if (desgUpper.includes('TEAM LEADER') || desgUpper.includes('TL') || hLevel === 'TEAM_LEADER') {
       const { rows } = await query(`
-        SELECT e.*, h.hierarchy_level, c.overall_progress
+        SELECT e.*, h.hierarchy_level, c.overall_progress,
+               mgr.full_name as manager_name
         FROM employees e
         JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
         LEFT JOIN employee_onboarding_checklist c ON c.employee_id = e.id
+        LEFT JOIN employees mgr ON mgr.id = h.manager_id
         WHERE h.team_leader_id = $1
         ORDER BY e.created_at DESC
       `, [empId]);
       teamMembers = rows;
     }
 
-    res.json({ success: true, designation, team: teamMembers });
+    res.json({ success: true, designation: designation || hLevel, team: teamMembers });
   } catch (err) {
     next(err);
   }

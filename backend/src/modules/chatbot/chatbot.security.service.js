@@ -155,21 +155,21 @@ class ChatbotSecurityService {
         return { hasAccess: false, reason: 'employee_not_found' };
       }
 
-      const designation = userRows[0].designation;
+      const desgUpper = String(userRows[0].designation || '').toUpperCase();
 
       // TC only sees own data (already checked above)
-      if (designation === 'TC') {
+      if (desgUpper === 'TC') {
         return { hasAccess: false, reason: 'tc_hierarchy_restriction' };
       }
 
       // Manager and TL can see team data
-      if (designation === 'MANAGER' || designation === 'TEAM_LEADER') {
+      if (desgUpper.includes('MANAGER') || desgUpper.includes('TEAM') || desgUpper === 'TL') {
         const { rows: teamRows } = await query(
-          `SELECT team_member_id FROM employee_hierarchy WHERE manager_id = $1`,
+          `SELECT employee_id FROM employee_hierarchy WHERE (manager_id = $1 OR team_leader_id = $1) AND is_active = true`,
           [userId]
         );
 
-        const teamMemberIds = teamRows.map(row => row.team_member_id);
+        const teamMemberIds = teamRows.map(row => row.employee_id);
 
         if (teamMemberIds.length === 0) {
           return { hasAccess: false, reason: 'no_team_members' };
@@ -223,17 +223,17 @@ class ChatbotSecurityService {
           return { hasAccess: false, reason: 'requester_not_found' };
         }
 
-        const designation = requesterRows[0].designation;
+        const desgUpper = String(requesterRows[0].designation || '').toUpperCase();
 
         // TC cannot access other employee data
-        if (designation === 'TC') {
+        if (desgUpper === 'TC') {
           return { hasAccess: false, reason: 'tc_cross_employee_restriction' };
         }
 
         // Manager/TL can access team member data
-        if (designation === 'MANAGER' || designation === 'TEAM_LEADER') {
+        if (desgUpper.includes('MANAGER') || desgUpper.includes('TEAM') || desgUpper === 'TL') {
           const { rows } = await query(
-            `SELECT team_member_id FROM employee_hierarchy WHERE manager_id = $1 AND team_member_id = $2`,
+            `SELECT employee_id FROM employee_hierarchy WHERE (manager_id = $1 OR team_leader_id = $1) AND employee_id = $2 AND is_active = true`,
             [requesterUserId, targetUserId]
           );
           return { hasAccess: rows.length > 0, reason: rows.length > 0 ? 'team_hierarchy' : 'not_in_team' };

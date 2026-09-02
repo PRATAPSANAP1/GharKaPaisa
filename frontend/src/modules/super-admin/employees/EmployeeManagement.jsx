@@ -165,8 +165,10 @@ export default function EmployeeManagement() {
     }
   };
 
-  const managersList = employees.filter(e => e.id !== hierarchyModalEmp?.id);
-  const tlsList = employees.filter(e => e.id !== hierarchyModalEmp?.id);
+  const managersList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('manager') || e.hierarchy_level === 'MANAGER'));
+  const tlsList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('team leader') || String(e.designation || '').toUpperCase() === 'TL' || e.hierarchy_level === 'TEAM_LEADER'));
+  const selectManagersOptions = managersList.length > 0 ? managersList : employees.filter(e => e.id !== hierarchyModalEmp?.id);
+  const selectTlsOptions = tlsList.length > 0 ? tlsList : employees.filter(e => e.id !== hierarchyModalEmp?.id);
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: '12px 16px 24px', fontFamily: "'Inter', sans-serif", color: C.text }}>
@@ -767,7 +769,7 @@ export default function EmployeeManagement() {
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Assign Reporting Manager</label>
                   <select value={hierarchyForm.manager_id} onChange={(e) => setHierarchyForm({ ...hierarchyForm, manager_id: e.target.value })} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
                     <option value="">Direct / No Manager</option>
-                    {managersList.map(m => (
+                    {selectManagersOptions.map(m => (
                       <option key={m.id} value={m.id}>{m.full_name} ({m.employee_id})</option>
                     ))}
                   </select>
@@ -777,7 +779,7 @@ export default function EmployeeManagement() {
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>Assign Team Leader</label>
                   <select value={hierarchyForm.team_leader_id} onChange={(e) => setHierarchyForm({ ...hierarchyForm, team_leader_id: e.target.value })} style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text }}>
                     <option value="">No Team Leader</option>
-                    {tlsList.map(tl => (
+                    {selectTlsOptions.map(tl => (
                       <option key={tl.id} value={tl.id}>{tl.full_name} ({tl.employee_id})</option>
                     ))}
                   </select>

@@ -28,8 +28,8 @@ export default function MyTeam() {
 
       const res = await axios.get('/api/v1/employee/team');
       if (res.data.success) {
-        setTeam(res.data.data || []);
-        setDesignation(res.data.employee_designation || '');
+        setTeam(res.data.team || res.data.data || []);
+        setDesignation(res.data.designation || res.data.employee_designation || '');
       }
     } catch (err) {
       console.error('Fetch employee team error:', err);
