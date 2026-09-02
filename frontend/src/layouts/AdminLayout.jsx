@@ -115,10 +115,10 @@ const AdminLayout = () => {
         navigate('/hr/dashboard', { replace: true });
       }
     } else if (isBackend) {
-      const allowedPaths = ['/admin/applications', '/admin/credit-cards', '/admin/loans', '/admin/insurance'];
+      const allowedPaths = ['/admin/dashboard', '/admin/applications', '/admin/credit-cards', '/admin/loans', '/admin/insurance'];
       const isAllowed = allowedPaths.some(p => location.pathname.startsWith(p));
       if (!isAllowed) {
-        navigate('/admin/applications', { replace: true });
+        navigate('/admin/dashboard', { replace: true });
       }
     }
   }, [location.pathname, isHR, isBackend, navigate]);
@@ -155,15 +155,15 @@ const AdminLayout = () => {
           </>
         ) : (
           <>
+            {/* Dashboard (Available to all Admin Roles including Administrative Operators) */}
+            <NavLink to="/admin/dashboard" style={navLinkStyle}>
+              <Icons.dashboard size={18} />
+              <span>Dashboard</span>
+            </NavLink>
+
             {/* Full Admin Nav Items (Hidden for Backend admins) */}
             {!isBackend && (
               <>
-                {/* Dashboard */}
-                <NavLink to="/admin/dashboard" style={navLinkStyle}>
-                  <Icons.dashboard size={18} />
-                  <span>Dashboard</span>
-                </NavLink>
-
                 {/* Partners */}
                 <NavLink to="/admin/partners" style={navLinkStyle}>
                   <Icons.profile size={18} />
