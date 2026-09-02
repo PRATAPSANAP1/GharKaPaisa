@@ -201,11 +201,11 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
         setBankReason(kyc.bank_rejection_reason || '');
         setReviewNotes(kyc.review_notes || '');
 
-        if (kyc.kyc_status) {
-          setKycStatus(kyc.kyc_status);
-          if (kyc.kyc_status === 'VERIFIED') {
-            setKycCompleted(true);
-          }
+        const hasKycData = !!(kyc.pan_number || jDetails.pan_number || kyc.aadhaar_number || jDetails.aadhaar_number || kyc.bank_account_number || jDetails.bank_account_number || kyc.pan_document_url || kyc.aadhaar_document_url || kyc.bank_document_url);
+        const resolvedKycStatus = (kyc.kyc_status && kyc.kyc_status !== 'NOT_SUBMITTED') ? kyc.kyc_status : (hasKycData ? 'SUBMITTED' : 'NOT_SUBMITTED');
+        setKycStatus(resolvedKycStatus);
+        if (resolvedKycStatus === 'VERIFIED') {
+          setKycCompleted(true);
         }
       }
     } catch (err) {

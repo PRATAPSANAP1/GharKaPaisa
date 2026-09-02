@@ -226,7 +226,8 @@ Generated On  : ${new Date().toLocaleString()}
   const department = jDetails.department || emp.department || 'Sales & Distribution';
   const empCode = emp.employee_id || emp.emp_code || emp.id || 'EMP-1000';
   const accountStatus = (emp.employee_status || emp.status || emp.activation_status || 'ACTIVE').toUpperCase();
-  const kycState = kyc.kyc_status || 'NOT_SUBMITTED';
+  const hasKycDetails = !!(kyc.pan_number || jDetails.pan_number || kyc.aadhaar_number || jDetails.aadhaar_number || kyc.bank_account_number || jDetails.bank_account_number || kyc.pan_document_url || kyc.aadhaar_document_url || kyc.bank_document_url);
+  const kycState = (kyc.kyc_status && kyc.kyc_status !== 'NOT_SUBMITTED') ? kyc.kyc_status : (hasKycDetails ? 'SUBMITTED' : 'NOT_SUBMITTED');
 
   // Dynamic statistics calculation without hardcoded fallbacks
   const teamSize = hierarchy.team_size !== undefined ? hierarchy.team_size : (emp.team_size !== undefined ? emp.team_size : 0);
@@ -305,12 +306,17 @@ Generated On  : ${new Date().toLocaleString()}
 
                 {/* Verification Badge */}
                 <span style={{ 
-                  background: kycState === 'VERIFIED' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.25)', 
-                  border: `1px solid ${kycState === 'VERIFIED' ? '#10B981' : '#F59E0B'}`,
-                  color: kycState === 'VERIFIED' ? '#34D399' : '#FBBF24',
+                  background: kycState === 'VERIFIED' ? 'rgba(16, 185, 129, 0.25)' : (kycState === 'REJECTED' ? 'rgba(239, 68, 68, 0.25)' : (kycState === 'SUBMITTED' || kycState === 'PENDING' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(245, 158, 11, 0.25)')), 
+                  border: `1px solid ${kycState === 'VERIFIED' ? '#10B981' : (kycState === 'REJECTED' ? '#EF4444' : (kycState === 'SUBMITTED' || kycState === 'PENDING' ? '#3B82F6' : '#F59E0B'))}`,
+                  color: kycState === 'VERIFIED' ? '#34D399' : (kycState === 'REJECTED' ? '#FCA5A5' : (kycState === 'SUBMITTED' || kycState === 'PENDING' ? '#60A5FA' : '#FBBF24')),
                   padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '5px' 
                 }}>
-                  <FaShieldAlt /> {kycState === 'VERIFIED' ? 'KYC Verified' : `KYC: ${kycState}`}
+                  <FaShieldAlt /> {
+                    kycState === 'VERIFIED' ? 'KYC Verified' :
+                    kycState === 'REJECTED' ? 'KYC Rejected (Action Required)' :
+                    (kycState === 'SUBMITTED' || kycState === 'PENDING') ? 'KYC Submitted (Under Review)' :
+                    'KYC Pending Submission'
+                  }
                 </span>
 
                 {/* Account Status Badge */}
@@ -669,8 +675,17 @@ Generated On  : ${new Date().toLocaleString()}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
             <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.teal, margin: 0 }}>Individual KYC & Document Verification Decision Matrix</h3>
-            <span style={{ background: kycState === 'VERIFIED' ? '#D1FAE5' : '#FEF3C7', color: kycState === 'VERIFIED' ? '#065F46' : '#92400E', padding: '4px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 800 }}>
-              OVERALL STATUS: {kycState}
+            <span style={{ 
+              background: kycState === 'VERIFIED' ? '#D1FAE5' : (kycState === 'REJECTED' ? '#FEE2E2' : (kycState === 'SUBMITTED' || kycState === 'PENDING' ? '#DBEAFE' : '#FEF3C7')), 
+              color: kycState === 'VERIFIED' ? '#065F46' : (kycState === 'REJECTED' ? '#991B1B' : (kycState === 'SUBMITTED' || kycState === 'PENDING' ? '#1E40AF' : '#92400E')), 
+              padding: '4px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 800 
+            }}>
+              OVERALL STATUS: {
+                kycState === 'VERIFIED' ? 'VERIFIED' :
+                kycState === 'REJECTED' ? 'REJECTED (ACTION REQUIRED)' :
+                (kycState === 'SUBMITTED' || kycState === 'PENDING') ? 'SUBMITTED (UNDER REVIEW)' :
+                'PENDING SUBMISSION'
+              }
             </span>
           </div>
 

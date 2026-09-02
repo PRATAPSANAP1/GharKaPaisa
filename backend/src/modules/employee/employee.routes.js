@@ -310,7 +310,11 @@ router.get('/profile', async (req, res, next) => {
       [empId]
     );
     let kycData = kycRes.rows[0] || null;
-    if (!kycData && joiningRes.rows[0]) {
+    if (kycData) {
+      if (!kycData.kyc_status) {
+        kycData.kyc_status = (kycData.pan_number || kycData.aadhaar_number || kycData.bank_account_number) ? 'SUBMITTED' : 'NOT_SUBMITTED';
+      }
+    } else if (joiningRes.rows[0]) {
       const jData = joiningRes.rows[0];
       if (jData.pan_number || jData.aadhaar_number || jData.bank_account_number) {
         kycData = {
