@@ -28,10 +28,13 @@ export default function AssignEmployeeLinksModal({ isOpen, onClose, onSuccess, b
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Fetch all active employees when modal opens
+  const [allProdList, setAllProdList] = useState([]);
+
+  // Fetch all active employees and all products when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchEmployees();
+      fetchAllProducts();
     }
   }, [isOpen]);
 
@@ -49,19 +52,54 @@ export default function AssignEmployeeLinksModal({ isOpen, onClose, onSuccess, b
     }
   };
 
+  const fetchAllProducts = async () => {
+    try {
+      const res = await api.get('/products/links?limit=500');
+      if (res.data?.success && res.data.data?.data) {
+        setAllProdList(res.data.data.data);
+      } else if (products && products.length > 0) {
+        setAllProdList(products);
+      }
+    } catch (err) {
+      console.error('Failed to fetch full products list for modal:', err);
+      if (products && products.length > 0) {
+        setAllProdList(products);
+      }
+    }
+  };
+
   // When Bank selection changes, update available products
   useEffect(() => {
-    if (selectedBankId) {
-      const filtered = products.filter(p => p.bank_id === selectedBankId);
+    const listToFilter = allProdList.length > 0 ? allProdList : (products || []);
+    if (selectedBankId && listToFilter.length > 0) {
+      const selectedBankObj = banks.find(b => String(b.id) === String(selectedBankId));
+      const selectedBankName = String(selectedBankObj?.name || '').toLowerCase().trim();
+
+      const filtered = listToFilter.filter(p => {
+        const pBankId = String(p.bank_id || p.bankId || p.bank_uuid || '').trim();
+        const pBankName = String(p.bank_name || p.bank || '').toLowerCase().trim();
+
+        if (pBankId && pBankId === String(selectedBankId).trim()) {
+          return true;
+        }
+        if (selectedBankName && pBankName) {
+          const cleanSel = selectedBankName.replace(/bank/gi, '').trim();
+          const cleanP = pBankName.replace(/bank/gi, '').trim();
+          if (cleanSel && cleanP && (cleanP.includes(cleanSel) || cleanSel.includes(cleanP))) {
+            return true;
+          }
+        }
+        return false;
+      });
       setAvailableProducts(filtered);
       setSelectedProdIds([]);
       setSelectAllProds(false);
     } else {
-      setAvailableProducts(products);
+      setAvailableProducts(listToFilter);
       setSelectedProdIds([]);
       setSelectAllProds(false);
     }
-  }, [selectedBankId, products]);
+  }, [selectedBankId, allProdList, products, banks]);
 
   // Handle Employee Select All
   const handleToggleSelectAllEmps = () => {

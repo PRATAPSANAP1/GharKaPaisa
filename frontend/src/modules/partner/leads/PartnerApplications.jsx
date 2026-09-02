@@ -70,6 +70,31 @@ export default function PartnerApplications() {
   const isTeamMember = userRole === 'TEAM_MEMBER';
   const isAdminOrSuperAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR'].includes(userRole);
   const isPartnerRole = ['PARTNER', 'TEAM_MEMBER'].includes(userRole) && !isAdminOrSuperAdmin;
+  const isEmployeeRole = userRole === 'EMPLOYEE';
+
+  const maskMobileNumber = (mobile) => {
+    if (!mobile) return 'N/A';
+    const str = String(mobile).trim();
+    const digitsOnly = str.replace(/\D/g, '');
+    if (digitsOnly.length >= 10) {
+      const mainDigits = digitsOnly.slice(-10);
+      const visiblePart = mainDigits.slice(0, 4);
+      const prefix = str.startsWith('+91') ? '+91 ' : (str.length > 10 ? str.slice(0, str.length - 10) : '');
+      return `${prefix}${visiblePart}******`;
+    }
+    if (str.length > 6) {
+      return str.slice(0, str.length - 6) + '******';
+    }
+    return str.replace(/\d/g, '*');
+  };
+
+  const formatMobileForDisplay = (mob) => {
+    if (!mob) return 'N/A';
+    if (isEmployeeRole) {
+      return maskMobileNumber(mob);
+    }
+    return mob;
+  };
 
   const getProcessFlags = (procType, procBy) => {
     const pt = String(procType || procBy || '').toLowerCase();
@@ -584,7 +609,7 @@ export default function PartnerApplications() {
       const row = [
         `"${a.app_number}"`,
         `"${a.customer_name}"`,
-        `"${a.customer_mobile}"`,
+        `"${formatMobileForDisplay(a.customer_mobile || a.mobile)}"`,
         `"${a.submitted_by_name || (a.partner_first_name ? `${a.partner_first_name} ${a.partner_last_name || ''}`.trim() : 'Partner')}"`,
         `"${proc.label.replace(/[^\w\s]/gi, '').trim()}"`,
         `"${a.product_name}"`,
@@ -902,7 +927,7 @@ export default function PartnerApplications() {
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span style={{ color: textMuted }}>Mobile:</span>
-                            <span style={{ color: textMuted }}>{app.customer_mobile}</span>
+                            <span style={{ color: textMuted }}>{formatMobileForDisplay(app.customer_mobile || app.mobile)}</span>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <span style={{ color: textMuted }}>Product:</span>
@@ -976,7 +1001,7 @@ export default function PartnerApplications() {
                             </td>
                             <td style={{ padding: '12px 14px' }}>
                               <div style={{ fontWeight: 700, color: textPrimary }}>{app.customer_name}</div>
-                              <div style={{ fontSize: 11, color: textMuted }}>{app.customer_mobile}</div>
+                              <div style={{ fontSize: 11, color: textMuted }}>{formatMobileForDisplay(app.customer_mobile || app.mobile)}</div>
                             </td>
                             <td style={{ padding: '12px 14px' }}>
                               <div style={{ fontWeight: 700, color: textPrimary }}>{app.product_name}</div>
@@ -1155,7 +1180,7 @@ export default function PartnerApplications() {
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>MOBILE NUMBER</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.customer_mobile || viewAppDetails?.mobile || viewAppDetails?.physical_details?.mobile || viewApp?.customer_mobile || 'N/A'}</div>
+                      <div style={{ fontWeight: 800, color: textPrimary }}>{formatMobileForDisplay(viewAppDetails?.customer_mobile || viewAppDetails?.mobile || viewAppDetails?.physical_details?.mobile || viewApp?.customer_mobile)}</div>
                     </div>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PERSONAL EMAIL ID</div>
