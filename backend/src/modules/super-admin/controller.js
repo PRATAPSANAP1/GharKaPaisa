@@ -144,10 +144,10 @@ const createAdmin = async (req, res, next) => {
 const listAdmins = async (req, res, next) => {
   try {
     const roleFilter = req.query.role ? String(req.query.role).trim().toUpperCase() : null;
-    let whereClause = `WHERE role IN ('ADMIN', 'EMPLOYEE', 'HR')`;
+    let whereClause = `WHERE role IN ('ADMIN', 'SUPER_ADMIN')`;
     const params = [];
     if (roleFilter) {
-      whereClause += ` AND role = $1`;
+      whereClause = `WHERE role = $1`;
       params.push(roleFilter);
     }
 

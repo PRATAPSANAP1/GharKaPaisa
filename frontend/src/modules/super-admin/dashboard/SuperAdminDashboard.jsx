@@ -37,6 +37,7 @@ export default function SuperAdminDashboard() {
   
   // Data State
   const [admins, setAdmins] = useState([]);
+  const [adminSearch, setAdminSearch] = useState('');
   const [businessStats, setBusinessStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -140,9 +141,15 @@ export default function SuperAdminDashboard() {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await api.get('/superadmin/admins');
+      const res = await api.get('/superadmin/admins?role=ADMIN');
       if (res.data && res.data.success) {
-        setAdmins(res.data.data.map(a => ({ ...a, _id: a.id, fullName: a.fullName || a.full_name, employeeId: a.employeeId || a.employee_id })));
+        const adminUsers = (res.data.data || [])
+          .filter(a => {
+            const r = String(a.role || '').toUpperCase();
+            return r === 'ADMIN' || r === 'SUPER_ADMIN';
+          })
+          .map(a => ({ ...a, _id: a.id, fullName: a.fullName || a.full_name, employeeId: a.employeeId || a.employee_id }));
+        setAdmins(adminUsers);
       } else {
         setErrorMsg('Failed to load admins list');
       }
@@ -346,9 +353,22 @@ export default function SuperAdminDashboard() {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
+  // Filter admins based on search query (excluding EMPLOYEE role)
+  const filteredAdmins = admins.filter(admin => {
+    if (String(admin.role || '').toUpperCase() === 'EMPLOYEE') return false;
+    if (!adminSearch.trim()) return true;
+    const q = adminSearch.toLowerCase().trim();
+    const name = String(admin.fullName || '').toLowerCase();
+    const email = String(admin.email || '').toLowerCase();
+    const mobile = String(admin.mobile || '').toLowerCase();
+    const empId = String(admin.employeeId || admin.employee_id || '').toLowerCase();
+    const desig = String(admin.designation || '').toLowerCase();
+    return name.includes(q) || email.includes(q) || mobile.includes(q) || empId.includes(q) || desig.includes(q);
+  });
+
   // Pagination logic
-  const totalPages = Math.ceil(admins.length / itemsPerPage);
-  const paginatedAdmins = admins.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(filteredAdmins.length / itemsPerPage);
+  const paginatedAdmins = filteredAdmins.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -361,7 +381,7 @@ export default function SuperAdminDashboard() {
               </div>
               <div>
                 <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, margin: 0 }}>Administrator Directory</h3>
-                <p style={{ fontSize: "13px", color: C.textLight, margin: "2px 0 0 0" }}>View and manage all system administrators and employees</p>
+                <p style={{ fontSize: "13px", color: C.textLight, margin: "2px 0 0 0" }}>View and manage all system administrators</p>
               </div>
             </div>
             <div style={{ display: "flex", gap: "12px" }}>
@@ -379,9 +399,51 @@ export default function SuperAdminDashboard() {
                 onMouseEnter={e => e.currentTarget.style.background = C.tealDim}
                 onMouseLeave={e => e.currentTarget.style.background = C.teal}
               >
-                + Create Admin / Employee
+                + Create Admin
               </button>
             </div>
+          </div>
+
+          {/* Administrator Directory Search Bar */}
+          <div style={{ padding: '14px 24px', background: isDark ? 'rgba(255,255,255,0.02)' : '#F9FAFB', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <input
+                type="text"
+                value={adminSearch}
+                onChange={(e) => { setAdminSearch(e.target.value); setCurrentPage(1); }}
+                placeholder="Search administrators by name, email, mobile, admin ID, designation..."
+                style={{
+                  width: '100%',
+                  height: '38px',
+                  paddingLeft: '36px',
+                  paddingRight: adminSearch ? '36px' : '12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${C.border}`,
+                  background: C.card,
+                  color: C.text,
+                  fontSize: '13px',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight, fontSize: '15px' }}>
+                🔍
+              </span>
+              {adminSearch && (
+                <button
+                  type="button"
+                  onClick={() => { setAdminSearch(''); setCurrentPage(1); }}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: C.textLight, cursor: 'pointer', fontSize: '14px' }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {adminSearch && (
+              <div style={{ fontSize: '12px', fontWeight: 700, color: C.teal, whiteSpace: 'nowrap' }}>
+                Found {filteredAdmins.length} result{filteredAdmins.length !== 1 ? 's' : ''}
+              </div>
+            )}
           </div>
 
           {loading ? (
@@ -394,15 +456,26 @@ export default function SuperAdminDashboard() {
               <Icons.x size={24} style={{ margin: "0 auto 8px" }} />
               <p style={{ fontWeight: 600, margin: 0 }}>{errorMsg}</p>
             </div>
-          ) : admins.length === 0 ? (
+          ) : filteredAdmins.length === 0 ? (
             <div style={{ textAlign: "center", padding: "64px", color: C.textLight }}>
-              <p style={{ fontSize: "16px", margin: 0, color: C.text }}>No administrators provisioned yet.</p>
-              <button 
-                onClick={() => setShowCreateModal(true)}
-                style={{ background: C.teal, border: "none", color: "#FFFFFF", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: 600, padding: "10px 20px", marginTop: "16px" }}
-              >
-                Create First Admin
-              </button>
+              <p style={{ fontSize: "16px", margin: 0, color: C.text }}>
+                {adminSearch ? 'No administrators match your search query.' : 'No administrators provisioned yet.'}
+              </p>
+              {adminSearch ? (
+                <button
+                  onClick={() => setAdminSearch('')}
+                  style={{ background: C.teal, border: "none", color: "#FFFFFF", borderRadius: "8px", cursor: "pointer", fontSize: "13px", fontWeight: 600, padding: "8px 16px", marginTop: "12px" }}
+                >
+                  Clear Search
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setShowCreateModal(true)}
+                  style={{ background: C.teal, border: "none", color: "#FFFFFF", borderRadius: "8px", cursor: "pointer", fontSize: "14px", fontWeight: 600, padding: "10px 20px", marginTop: "16px" }}
+                >
+                  Create First Admin
+                </button>
+              )}
             </div>
           ) : (
             <>
@@ -648,7 +721,7 @@ export default function SuperAdminDashboard() {
             {totalPages > 1 && (
               <div style={{ padding: "16px 24px", borderTop: "1px solid #F3F4F6", display: "flex", alignItems: "center", justifyContent: "space-between", color: "#6B7280", fontSize: "14px" }}>
                 <div>
-                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, admins.length)} of {admins.length} entries
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredAdmins.length)} of {filteredAdmins.length} entries
                 </div>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button 
