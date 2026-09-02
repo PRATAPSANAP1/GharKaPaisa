@@ -536,6 +536,128 @@ export default function ManageApplications() {
               Search
             </button>
           </div>
+
+          {/* Row 2: Expandable Filter Drawer */}
+          {isFilterOpen && (
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: `1px solid ${C.border}`, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+              
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Date Range</label>
+                <select style={{ ...S.input, height: '36px', fontSize: '12.5px' }} value={dateRange} onChange={e => setDateRange(e.target.value)}>
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="last_7_days">Last 7 Days</option>
+                  <option value="last_30_days">Last 30 Days</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Process Type</label>
+                <select style={{ ...S.input, height: '36px', fontSize: '12.5px' }} value={processTypeFilter} onChange={e => setProcessTypeFilter(e.target.value)}>
+                  <option value="all">All Process Types</option>
+                  <option value="punch_only">Lead Punching (Punch Only)</option>
+                  <option value="share_link">Link Sharing (Share Link)</option>
+                  <option value="direct_link">Direct Online</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Source Type</label>
+                <select 
+                  style={{ ...S.input, height: '36px', fontSize: '12.5px' }} 
+                  value={sourceTypeFilter} 
+                  onChange={e => {
+                    const val = e.target.value;
+                    setSourceTypeFilter(val);
+                    if (val === 'partner') setPartnerFilter('ALL_PARTNERS');
+                    else if (val === 'employee') setPartnerFilter('ALL_EMPLOYEES');
+                    else if (val === 'all') setPartnerFilter('');
+                  }}
+                >
+                  <option value="all">All Sources (Partners &amp; Employees &amp; Direct)</option>
+                  <option value="partner">All Partners Only</option>
+                  <option value="employee">All Employees Only</option>
+                  <option value="customer">Customer Only</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Partner / Employee Agent</label>
+                <select
+                  style={{ ...S.input, height: '36px', fontSize: '12.5px' }}
+                  value={partnerFilter}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setPartnerFilter(val);
+                    if (val === 'ALL_PARTNERS') setSourceTypeFilter('partner');
+                    else if (val === 'ALL_EMPLOYEES') setSourceTypeFilter('employee');
+                  }}
+                >
+                  <option value="">All Partners &amp; Employees</option>
+                  <option value="ALL_PARTNERS">All Partners Only</option>
+                  <option value="ALL_EMPLOYEES">All Employees Only</option>
+                  
+                  {partnersList.length > 0 && (
+                    <optgroup label="── PARTNERS ──">
+                      {partnersList.map((p, idx) => {
+                        const code = p.partner_code || p.code || p.referral_code || p.id;
+                        const name = p.full_name || p.name || p.partner_name || 'Partner';
+                        return (
+                          <option key={`p_${p.id || code || idx}`} value={code}>
+                            {name} ({code})
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  )}
+
+                  {employeesList.length > 0 && (
+                    <optgroup label="── EMPLOYEES ──">
+                      {employeesList.map((e, idx) => {
+                        const code = e.employee_code || e.code || e.emp_code || e.id;
+                        const name = e.full_name || e.name || e.employee_name || 'Employee';
+                        return (
+                          <option key={`e_${e.id || code || idx}`} value={code}>
+                            {name} ({code})
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Application Status</label>
+                <select style={{ ...S.input, height: '36px', fontSize: '12.5px' }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                  <option value="all">All Statuses</option>
+                  <option value="submitted">Details Submitted</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="operational_verified">Operational Verified</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Commission Status</label>
+                <select style={{ ...S.input, height: '36px', fontSize: '12.5px' }} value={commFilter} onChange={e => setCommFilter(e.target.value)}>
+                  <option value="all">All Commission States</option>
+                  <option value="pending">Pending</option>
+                  <option value="released">Released</option>
+                  <option value="on_hold">On Hold</option>
+                </select>
+              </div>
+
+              <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+                <button type="button" onClick={clearAllFilters} style={{ padding: '6px 14px', borderRadius: '8px', background: 'transparent', border: `1px solid ${C.border}`, color: C.text, fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                  Clear Filters
+                </button>
+              </div>
+
+            </div>
+          )}
         </form>
       </div>
 
