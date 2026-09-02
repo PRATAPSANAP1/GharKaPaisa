@@ -8,6 +8,8 @@ export const getBankApplyLink = (cardName, bankId, productObj = null) => {
   if (!product) return null;
 
   const rawUrl = (
+    product?.employee_referral_url ||
+    product?.employeeReferralUrl ||
     product?.partner_url ||
     product?.partnerUrl ||
     product?.application_url ||

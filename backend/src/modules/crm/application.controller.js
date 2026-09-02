@@ -2321,18 +2321,40 @@ const submitPartnerApplication = async (req, res, next) => {
       }
     }
 
-    const commission = await calculatePartnerCommission(product_id, partnerId, monthly_salary || 0);
+    let empId = null;
+    let empAssignedUrl = null;
+    let empAssignedIncentive = null;
+
+    if (req.user?.id) {
+      const { rows: [emp] } = await client.query(
+        `SELECT id FROM employees WHERE user_id = $1 OR mobile_number = $2 LIMIT 1`,
+        [req.user.id, req.user.mobile]
+      );
+      if (emp) {
+        empId = emp.id;
+        const { rows: [empLink] } = await client.query(
+          `SELECT incentive_amount, employee_referral_url FROM employee_product_links WHERE employee_id = $1 AND product_id = $2 AND status = 'ACTIVE'`,
+          [empId, product_id]
+        );
+        if (empLink) {
+          if (empLink.incentive_amount) empAssignedIncentive = parseFloat(empLink.incentive_amount);
+          if (empLink.employee_referral_url?.trim()) empAssignedUrl = empLink.employee_referral_url.trim();
+        }
+      }
+    }
+
+    if (empAssignedUrl) {
+      product.partner_url = empAssignedUrl;
+      product.application_url = empAssignedUrl;
+      product.public_url = empAssignedUrl;
+    }
+
+    const commission = empAssignedIncentive !== null ? empAssignedIncentive : await calculatePartnerCommission(product_id, partnerId, monthly_salary || 0);
 
     const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
     const date = new Date();
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
     const appNumber = `APP${datePart}${nextval}`;
-
-    let empId = null;
-    if (req.user?.id) {
-      const { rows: [emp] } = await client.query(`SELECT id FROM employees WHERE user_id = $1`, [req.user.id]);
-      if (emp) empId = emp.id;
-    }
 
     const appStatus = is_draft ? 'draft' : 'details_submitted';
 

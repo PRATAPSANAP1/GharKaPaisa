@@ -559,6 +559,62 @@ const getProductsByCategory = async (req, res, next) => {
 const resolvePartnerCommissions = async (productsList, req) => {
   if (!productsList || productsList.length === 0) return productsList;
 
+  // Check if request is from an Employee user
+  const isEmployee = req?.user && ['EMPLOYEE', 'HR'].includes(req.user.role?.toUpperCase());
+  if (isEmployee) {
+    let empId = req.user.employee_id;
+    if (!empId && req.user.id) {
+      const { rows: [emp] } = await query(
+        `SELECT id FROM employees WHERE user_id = $1 OR mobile_number = $2 LIMIT 1`,
+        [req.user.id, req.user.mobile]
+      );
+      if (emp) empId = emp.id;
+    }
+
+    if (empId) {
+      const productIds = productsList.map(p => p.id).filter(Boolean);
+      let empLinksMap = {};
+      if (productIds.length > 0) {
+        const { rows: empLinks } = await query(
+          `SELECT product_id, incentive_amount, incentive_type, employee_referral_url, status
+           FROM employee_product_links
+           WHERE employee_id = $1 AND product_id = ANY($2::uuid[]) AND status = 'ACTIVE'`,
+          [empId, productIds]
+        );
+        empLinks.forEach(l => {
+          empLinksMap[l.product_id] = l;
+        });
+      }
+
+      return productsList.map(prod => {
+        const empLink = empLinksMap[prod.id];
+        if (empLink) {
+          const incVal = parseFloat(empLink.incentive_amount || 0);
+          const assignedUrl = empLink.employee_referral_url?.trim() || prod.partner_url || prod.public_url || '';
+          return {
+            ...prod,
+            commission_value: incVal,
+            commission_amount: incVal,
+            employee_incentive: incVal,
+            employee_referral_url: assignedUrl,
+            partner_url: assignedUrl || prod.partner_url,
+            application_url: assignedUrl || prod.application_url,
+            public_url: assignedUrl || prod.public_url,
+            redirect_url: assignedUrl || prod.redirect_url
+          };
+        } else {
+          const defaultInc = parseFloat(prod.commission_amount || prod.commission_value || 500);
+          return {
+            ...prod,
+            commission_value: defaultInc,
+            commission_amount: defaultInc,
+            employee_incentive: defaultInc
+          };
+        }
+      });
+    }
+  }
+
   let partnerId = req?.partner?.id || req?.partner?.Partner_id;
   
   if (!partnerId && req?.user && ['PARTNER', 'TEAM_MEMBER'].includes(req.user.role?.toUpperCase())) {

@@ -81,6 +81,24 @@ const generateShareLink = async (req, res, next) => {
       return error(res, 'Product not found', 404);
     }
 
+    // Check for employee assigned custom bank URL
+    let employeeBankUrl = null;
+    if (req.user) {
+      const { rows: [emp] } = await query(
+        `SELECT id FROM employees WHERE user_id = $1 OR mobile_number = $2 LIMIT 1`,
+        [req.user.id, req.user.mobile]
+      );
+      if (emp) {
+        const { rows: [empLink] } = await query(
+          `SELECT employee_referral_url FROM employee_product_links WHERE employee_id = $1 AND product_id = $2 AND status = 'ACTIVE'`,
+          [emp.id, productId]
+        );
+        if (empLink && empLink.employee_referral_url) {
+          employeeBankUrl = empLink.employee_referral_url.trim();
+        }
+      }
+    }
+
     // Generate tracking token
     const trackingToken = generateTrackingToken();
 
@@ -92,7 +110,7 @@ const generateShareLink = async (req, res, next) => {
 
     // Generate share link URL pointing to GharKaPaisa customer detail collection page
     const appUrl = process.env.FRONTEND_URL || 'https://gharkapaisa.in';
-    const directBankUrl = product.partner_url?.trim() || getBankApplyLinkBackend(product.name, product.bank_name || product.bank_code, product);
+    const directBankUrl = employeeBankUrl || product.partner_url?.trim() || getBankApplyLinkBackend(product.name, product.bank_name || product.bank_code, product);
     const shareLink = `${appUrl}/apply/${trackingToken}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Apply for ${product.name} directly using your official application link:\n${shareLink}`)}`;
 
