@@ -646,17 +646,31 @@ export default function EmployeeManagement() {
                   {/* Uploaded Documents List */}
                   <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: 900, marginBottom: '12px', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}><FaFileAlt style={{ color: C.teal }} /> Uploaded Employee Verification Documents</h3>
-                    {emp360Data.documents?.length === 0 ? (
-                      <div style={{ fontSize: '12px', color: C.textMid }}>No verification documents uploaded yet.</div>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
-                        {emp360Data.documents.map(doc => (
-                          <a key={doc.id} href={doc.document_url} target="_blank" rel="noopener noreferrer" style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '10px 14px', borderRadius: '10px', textDecoration: 'none', color: C.teal, fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <FaFileAlt /> {doc.document_type.toUpperCase()}
-                          </a>
-                        ))}
-                      </div>
-                    )}
+                    {(() => {
+                      const uniqueDocs = [];
+                      const seenTypes = new Set();
+                      (emp360Data.documents || []).forEach(doc => {
+                        const typeKey = (doc.document_type || '').toLowerCase().trim();
+                        if (typeKey && !seenTypes.has(typeKey)) {
+                          seenTypes.add(typeKey);
+                          uniqueDocs.push(doc);
+                        }
+                      });
+
+                      if (uniqueDocs.length === 0) {
+                        return <div style={{ fontSize: '12px', color: C.textMid }}>No verification documents uploaded yet.</div>;
+                      }
+
+                      return (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                          {uniqueDocs.map(doc => (
+                            <a key={doc.id} href={doc.document_url} target="_blank" rel="noopener noreferrer" style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '10px 14px', borderRadius: '10px', textDecoration: 'none', color: C.teal, fontSize: '13px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <FaFileAlt /> {(doc.document_type || 'DOCUMENT').toUpperCase().replace('_', ' ')} ↗
+                            </a>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Assigned Product Referral Links */}

@@ -268,8 +268,15 @@ router.get('/:id', async (req, res, next) => {
       `SELECT * FROM employee_documents WHERE employee_id = $1 ORDER BY created_at DESC`,
       [id]
     );
-    let docs = docsRes.rows;
-    if (employee.resume_url && !docs.some(d => d.document_type === 'resume')) {
+    let docsMap = new Map();
+    for (const d of docsRes.rows) {
+      const typeKey = String(d.document_type || '').toLowerCase().trim();
+      if (typeKey && !docsMap.has(typeKey)) {
+        docsMap.set(typeKey, d);
+      }
+    }
+    let docs = Array.from(docsMap.values());
+    if (employee.resume_url && !docs.some(d => String(d.document_type || '').toLowerCase().trim() === 'resume')) {
       docs.unshift({
         id: 'cand-resume',
         document_type: 'resume',
