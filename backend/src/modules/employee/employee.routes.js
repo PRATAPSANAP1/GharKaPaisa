@@ -352,7 +352,7 @@ router.get('/profile', async (req, res, next) => {
     const appsRes = await query(`
       SELECT 
         COUNT(*) as total_applications,
-        COUNT(*) FILTER (WHERE UPPER(status) IN ('APPROVED', 'DISBURSED', 'COMPLETED')) as approved_applications
+        COUNT(*) FILTER (WHERE UPPER(status::text) IN ('APPROVED', 'DISBURSED', 'COMPLETED')) as approved_applications
       FROM applications
       WHERE employee_id = $1 OR submitted_by = $2
     `, [empId, req.user.id]);
