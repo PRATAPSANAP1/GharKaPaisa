@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { 
   FaUserCircle, FaIdCard, FaBuilding, FaEnvelope, FaPhone, FaCheckCircle, 
   FaShieldAlt, FaMapMarkerAlt, FaUniversity, FaVideo, FaFileAlt, 
   FaClock, FaExclamationTriangle, FaExternalLinkAlt, FaBriefcase, FaGraduationCap,
   FaUsers, FaChartPie, FaCoins, FaEdit, FaEllipsisH, FaSitemap, FaHistory,
-  FaCheck, FaTimes, FaList, FaUserTie, FaChevronRight, FaStar, FaAward
+  FaCheck, FaTimes, FaList, FaUserTie, FaChevronRight, FaStar, FaAward, FaCamera
 } from 'react-icons/fa';
 import api from '../../../services/api';
+import CircularImageCropperModal from '../../../components/common/CircularImageCropperModal';
 
 export default function FullEmployeeProfileView({ employeeId = null, isSuperAdmin = false, onClose = null }) {
   const { C } = useTheme();
@@ -34,6 +35,35 @@ export default function FullEmployeeProfileView({ employeeId = null, isSuperAdmi
     emergency_contact_number: ''
   });
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Profile Photo Upload & Circular Cropper State
+  const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem('emp_photo_url') || null);
+  const [cropperSource, setCropperSource] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCropperSource(file);
+      e.target.value = '';
+    }
+  };
+
+  const handleSaveCroppedPhoto = async (croppedDataUrl, blob) => {
+    setProfilePhoto(croppedDataUrl);
+    localStorage.setItem('emp_photo_url', croppedDataUrl);
+    setCropperSource(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('photo', blob, 'profile_photo.png');
+      await api.post('/employee/profile/photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+    } catch (e) {
+      console.log('Saved photo locally');
+    }
+  };
 
   // Initialize edit form data when profileData changes
   useEffect(() => {
@@ -227,13 +257,44 @@ Generated On  : ${new Date().toLocaleString()}
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: '20px' }}>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', width: '100%' }}>
-            {/* Avatar Photo Circle */}
-            <div style={{ 
-              width: isMobile ? '68px' : '88px', height: isMobile ? '68px' : '88px', borderRadius: '50%', background: '#FFF', 
-              color: C.teal || '#0F766E', display: 'flex', alignItems: 'center', justifyContent: 'center', 
-              fontSize: isMobile ? '30px' : '42px', fontWeight: 900, boxShadow: '0 8px 24px rgba(0,0,0,0.2)', flexShrink: 0 
-            }}>
-              {fullName.charAt(0).toUpperCase()}
+            {/* Avatar Photo Circle with Circular Cropper Overlay */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                title="Click to change photo"
+                style={{ 
+                  width: isMobile ? '72px' : '90px', height: isMobile ? '72px' : '90px', borderRadius: '50%', background: '#FFF', 
+                  color: C.teal || '#0F766E', display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                  fontSize: isMobile ? '30px' : '42px', fontWeight: 900, boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                  cursor: 'pointer', overflow: 'hidden', border: '3px solid #FFF', position: 'relative'
+                }}
+              >
+                {profilePhoto ? (
+                  <img src={profilePhoto} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  fullName.charAt(0).toUpperCase()
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title="Update Profile Photo"
+                style={{
+                  position: 'absolute', bottom: '0', right: '0', background: '#38BDF8', color: '#FFF',
+                  border: '2px solid #FFF', borderRadius: '50%', width: '28px', height: '28px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.25)'
+                }}
+              >
+                <FaCamera size={13} />
+              </button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handlePhotoSelect}
+              />
             </div>
 
             <div style={{ minWidth: 0, flex: 1 }}>
@@ -890,6 +951,16 @@ Generated On  : ${new Date().toLocaleString()}
             </form>
           </div>
         </div>
+      )}
+
+      {/* Circular Image Cropper Modal */}
+      {cropperSource && (
+        <CircularImageCropperModal
+          imageSource={cropperSource}
+          onClose={() => setCropperSource(null)}
+          onCropSave={handleSaveCroppedPhoto}
+          title="Crop Employee Profile Photo"
+        />
       )}
 
     </div>

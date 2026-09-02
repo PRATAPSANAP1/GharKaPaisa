@@ -4,9 +4,10 @@ import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
 import ChangePasswordWidget from './ChangePasswordWidget';
+import CircularImageCropperModal from '../../../components/common/CircularImageCropperModal';
 import { 
   MdPerson, MdBusinessCenter, MdAccountBalance, MdSecurity,
-  MdEdit, MdCheckCircle, MdCreditCard, MdClose
+  MdEdit, MdCheckCircle, MdCreditCard, MdClose, MdCameraAlt
 } from 'react-icons/md';
 
 const tabs = [
@@ -144,15 +145,19 @@ export default function PartnerProfile() {
     }
   };
 
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
+  const [cropperSource, setCropperSource] = useState(null);
+
+  const handlePhotoUploadSelect = (e) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Profile photo must be under 2MB');
-      return;
-    }
+    setCropperSource(file);
+    e.target.value = '';
+  };
+
+  const handleCroppedPhotoSave = async (croppedDataUrl, blob) => {
+    setCropperSource(null);
     const formData = new FormData();
-    formData.append('photo', file);
+    formData.append('photo', blob, 'partner_profile.png');
     try {
       await api.post('/partner/profile/photo', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -252,7 +257,7 @@ export default function PartnerProfile() {
             }} onMouseEnter={(e) => e.target.style.opacity = 1} onMouseLeave={(e) => e.target.style.opacity = 0}>
               Change Photo
             </div>
-            <input type="file" id="avatar-upload-input" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
+            <input type="file" id="avatar-upload-input" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUploadSelect} />
           </div>
 
           {/* Name & badges */}
@@ -723,6 +728,16 @@ export default function PartnerProfile() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Circular Image Cropper Modal */}
+      {cropperSource && (
+        <CircularImageCropperModal
+          imageSource={cropperSource}
+          onClose={() => setCropperSource(null)}
+          onCropSave={handleCroppedPhotoSave}
+          title="Crop Partner Profile Photo"
+        />
       )}
     </div>
   );

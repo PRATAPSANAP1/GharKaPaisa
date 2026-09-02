@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import { useAuthStore } from '../../../app/store/authStore';
 import api from '../../../services/api';
+import CircularImageCropperModal from '../../../components/common/CircularImageCropperModal';
 import { 
   MdPerson, MdSecurity, MdEmail, MdPhone, MdShield, MdCheckCircle,
   MdAccountBalanceWallet, MdAdd, MdContentCopy, MdQrCode2, MdCreditCard,
-  MdAccountBalance, MdSettings, MdTrendingUp, MdSwapHoriz, MdLock, MdRefresh
+  MdAccountBalance, MdSettings, MdTrendingUp, MdSwapHoriz, MdLock, MdRefresh, MdCameraAlt
 } from 'react-icons/md';
 
 export default function AdminProfilePage() {
@@ -28,6 +29,38 @@ export default function AdminProfilePage() {
       setActiveTab(tab);
     }
   }, [location.search]);
+
+  // Profile Photo Upload & Circular Cropper State
+  const [profilePhoto, setProfilePhoto] = useState(() => localStorage.getItem('admin_photo_url') || user?.profile_photo_url || null);
+  const [cropperSource, setCropperSource] = useState(null);
+  const adminPhotoInputRef = useRef(null);
+
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCropperSource(file);
+      e.target.value = '';
+    }
+  };
+
+  const handleSaveCroppedPhoto = async (croppedDataUrl, blob) => {
+    setProfilePhoto(croppedDataUrl);
+    localStorage.setItem('admin_photo_url', croppedDataUrl);
+    setCropperSource(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('photo', blob, 'admin_profile.png');
+      const res = await api.post('/auth/profile/photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data?.data) {
+        updateUser(res.data.data);
+      }
+    } catch (e) {
+      console.log('Saved admin photo locally');
+    }
+  };
 
   // Profile Form State
   const [profileForm, setProfileForm] = useState({
@@ -212,13 +245,44 @@ export default function AdminProfilePage() {
           padding: '0 24px 20px', position: 'relative',
           display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '16px', marginTop: '-40px'
         }}>
-          <div style={{
-            width: '80px', height: '80px', borderRadius: '20px',
-            background: C.bgSecondary, border: `4px solid ${C.card}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '36px', color: C.primary, boxShadow: '0 8px 20px rgba(0,0,0,0.1)'
-          }}>
-            👤
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div 
+              onClick={() => adminPhotoInputRef.current?.click()}
+              title="Click to update photo"
+              style={{
+                width: '84px', height: '84px', borderRadius: '50%',
+                background: C.bgSecondary, border: `4px solid ${C.card}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '36px', color: C.primary, boxShadow: '0 8px 20px rgba(0,0,0,0.1)',
+                cursor: 'pointer', overflow: 'hidden'
+              }}
+            >
+              {profilePhoto ? (
+                <img src={profilePhoto} alt="Admin Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                '👤'
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => adminPhotoInputRef.current?.click()}
+              title="Update Profile Photo"
+              style={{
+                position: 'absolute', bottom: '2px', right: '2px', background: C.teal || '#0F766E', color: '#FFF',
+                border: `2px solid ${C.card}`, borderRadius: '50%', width: '28px', height: '28px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.25)'
+              }}
+            >
+              <MdCameraAlt size={14} />
+            </button>
+            <input
+              type="file"
+              ref={adminPhotoInputRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handlePhotoSelect}
+            />
           </div>
           <div style={{ flex: 1, minWidth: '200px' }}>
             <h2 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>
@@ -802,6 +866,16 @@ export default function AdminProfilePage() {
         </div>
 
       </div>
+
+      {/* Circular Image Cropper Modal */}
+      {cropperSource && (
+        <CircularImageCropperModal
+          imageSource={cropperSource}
+          onClose={() => setCropperSource(null)}
+          onCropSave={handleSaveCroppedPhoto}
+          title="Crop Super Admin Profile Photo"
+        />
+      )}
 
     </div>
   );
