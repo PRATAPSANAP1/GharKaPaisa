@@ -4,7 +4,7 @@ import {
   FaUsers, FaUserCheck, FaSitemap, FaLink, FaSearch, 
   FaPlus, FaCheckCircle, FaTimesCircle, FaEye, FaEdit, FaCheck, FaLock,
   FaFileAlt, FaVideo, FaUniversity, FaBuilding, FaBriefcase, FaIdCard, FaPhone, FaEnvelope, FaClock, FaUserCircle,
-  FaUserTimes, FaUnlink
+  FaUserTimes, FaUnlink, FaChartLine, FaTrophy
 } from 'react-icons/fa';
 import api from '../../../services/api';
 
@@ -28,6 +28,8 @@ export default function EmployeeManagement() {
   const [loading360, setLoading360] = useState(false);
   const [linkModalEmp, setLinkModalEmp] = useState(null);
   const [hierarchyModalEmp, setHierarchyModalEmp] = useState(null);
+  const [actionModalEmp, setActionModalEmp] = useState(null);
+  const [perfModalEmp, setPerfModalEmp] = useState(null);
 
   // Hierarchy Form
   const [hierarchyForm, setHierarchyForm] = useState({
@@ -454,28 +456,54 @@ export default function EmployeeManagement() {
                     <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
                       
                       {/* LEVEL 1: MANAGER NODE */}
-                      <div style={{ background: C.card, border: `2px solid ${C.teal}`, borderRadius: '16px', padding: '16px 20px', minWidth: '280px', maxWidth: '360px', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', position: 'relative', zIndex: 2 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                      <div style={{ background: C.card, border: `2px solid ${C.teal}`, borderRadius: '16px', padding: '16px 20px', minWidth: '300px', maxWidth: '380px', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', position: 'relative', zIndex: 2 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
                           <span style={{ background: '#8B5CF6', color: '#FFF', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
                             LEVEL 1 · MANAGER
                           </span>
                           <button
-                            onClick={() => handleUnassignHierarchy(currentMgr.id, currentMgr.full_name, currentMgr.employee_id)}
-                            title="Unassign / Reset Manager Hierarchy"
-                            style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            onClick={() => setActionModalEmp(currentMgr)}
+                            title="Open Manager Options"
+                            style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
                           >
-                            <FaUnlink style={{ fontSize: '10px' }} /> Disassign
+                            ⚡ Options
                           </button>
                         </div>
+                        
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#8B5CF6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px', flexShrink: 0 }}>
+                          <div 
+                            onClick={() => setActionModalEmp(currentMgr)}
+                            style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#8B5CF6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px', flexShrink: 0, cursor: 'pointer' }}
+                          >
                             {currentMgr.full_name?.charAt(0) || 'M'}
                           </div>
-                          <div>
-                            <div style={{ fontSize: '16px', fontWeight: 900, color: C.text }}>{currentMgr.full_name}</div>
+                          <div style={{ flexGrow: 1 }}>
+                            <div style={{ fontSize: '16px', fontWeight: 900, color: C.text, cursor: 'pointer' }} onClick={() => setActionModalEmp(currentMgr)}>{currentMgr.full_name}</div>
                             <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>ID: {currentMgr.employee_id}</div>
                             {currentMgr.mobile_number && <div style={{ fontSize: '11px', color: C.textMid }}>📱 {currentMgr.mobile_number}</div>}
                           </div>
+                        </div>
+
+                        {/* Node Quick Actions */}
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '12px', paddingTop: '10px', borderTop: `1px solid ${C.border}` }}>
+                          <button
+                            onClick={() => handleOpen360View(currentMgr)}
+                            style={{ flex: 1, background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '5px 4px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                          >
+                            <FaEye style={{ fontSize: '10px' }} /> Profile
+                          </button>
+                          <button
+                            onClick={() => setPerfModalEmp(currentMgr)}
+                            style={{ flex: 1, background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.teal, padding: '5px 4px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                          >
+                            <FaChartLine style={{ fontSize: '10px' }} /> Performance
+                          </button>
+                          <button
+                            onClick={() => handleUnassignHierarchy(currentMgr.id, currentMgr.full_name, currentMgr.employee_id)}
+                            style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#EF4444', padding: '5px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
+                          >
+                            <FaUnlink style={{ fontSize: '10px' }} /> Disassign
+                          </button>
                         </div>
                       </div>
 
@@ -492,7 +520,7 @@ export default function EmployeeManagement() {
                               {managerTLs.map(tl => {
                                 const tlTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
                                 return (
-                                  <div key={tl.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '260px', maxWidth: '320px' }}>
+                                  <div key={tl.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '270px', maxWidth: '330px' }}>
                                     
                                     {/* Stem line to TL node */}
                                     <div style={{ width: '2px', height: '20px', background: C.teal }}></div>
@@ -504,30 +532,47 @@ export default function EmployeeManagement() {
                                           LEVEL 2 · TL
                                         </span>
                                         <button
-                                          onClick={() => handleUnassignHierarchy(tl.id, tl.full_name, tl.employee_id)}
-                                          title="Unassign Team Leader"
-                                          style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                          onClick={() => setActionModalEmp(tl)}
+                                          style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '2px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}
                                         >
-                                          <FaUnlink style={{ fontSize: '10px' }} /> Disassign
+                                          ⚡ Options
                                         </button>
                                       </div>
+                                      
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#3B82F6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px', flexShrink: 0 }}>
+                                        <div 
+                                          onClick={() => setActionModalEmp(tl)}
+                                          style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#3B82F6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px', flexShrink: 0, cursor: 'pointer' }}
+                                        >
                                           TL
                                         </div>
-                                        <div>
-                                          <div style={{ fontSize: '14px', fontWeight: 900, color: C.text }}>{tl.full_name}</div>
+                                        <div style={{ flexGrow: 1 }}>
+                                          <div style={{ fontSize: '14px', fontWeight: 900, color: C.text, cursor: 'pointer' }} onClick={() => setActionModalEmp(tl)}>{tl.full_name}</div>
                                           <div style={{ fontSize: '11px', color: '#3B82F6', fontWeight: 800 }}>ID: {tl.employee_id}</div>
                                         </div>
                                       </div>
 
-                                      <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${C.border}`, paddingTop: '8px' }}>
-                                        <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid }}>Assigned TCs: {tlTCs.length}</span>
+                                      <div style={{ marginTop: '10px', display: 'flex', gap: '4px', borderTop: `1px solid ${C.border}`, paddingTop: '8px' }}>
                                         <button
-                                          onClick={() => { setHierarchyModalEmp(tl); setHierarchyForm({ hierarchy_level: 'TEAM_LEADER', manager_id: activeMgrId || '', team_leader_id: '' }); }}
-                                          style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                                          onClick={() => handleOpen360View(tl)}
+                                          title="View Profile"
+                                          style={{ flex: 1, background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '4px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
                                         >
-                                          <FaPlus style={{ fontSize: '9px', marginRight: '3px' }} /> Assign TCs
+                                          <FaEye style={{ fontSize: '9px' }} /> Profile
+                                        </button>
+                                        <button
+                                          onClick={() => setPerfModalEmp(tl)}
+                                          title="View Performance"
+                                          style={{ flex: 1, background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.teal, padding: '4px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                        >
+                                          <FaChartLine style={{ fontSize: '9px' }} /> Perf
+                                        </button>
+                                        <button
+                                          onClick={() => handleUnassignHierarchy(tl.id, tl.full_name, tl.employee_id)}
+                                          title="Disassign TL"
+                                          style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#EF4444', padding: '4px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
+                                        >
+                                          <FaUnlink style={{ fontSize: '9px' }} /> Disassign
                                         </button>
                                       </div>
                                     </div>
@@ -542,8 +587,8 @@ export default function EmployeeManagement() {
                                           No TCs assigned to this TL yet.
                                         </div>
                                       ) : tlTCs.map(tc => (
-                                        <div key={tc.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                        <div key={tc.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', cursor: 'pointer' }} onClick={() => setActionModalEmp(tc)}>
                                             <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#10B981', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '11px', flexShrink: 0 }}>
                                               TC
                                             </div>
@@ -552,13 +597,29 @@ export default function EmployeeManagement() {
                                               <div style={{ fontSize: '10px', color: C.textMid }}>{tc.employee_id}</div>
                                             </div>
                                           </div>
-                                          <button
-                                            onClick={() => handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id)}
-                                            title="Unassign TC from Team"
-                                            style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '3px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}
-                                          >
-                                            Disassign
-                                          </button>
+                                          <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+                                            <button
+                                              onClick={() => handleOpen360View(tc)}
+                                              title="View Profile"
+                                              style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '3px 5px', borderRadius: '5px', fontSize: '10px', cursor: 'pointer' }}
+                                            >
+                                              <FaEye />
+                                            </button>
+                                            <button
+                                              onClick={() => setPerfModalEmp(tc)}
+                                              title="View Performance"
+                                              style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.teal, padding: '3px 5px', borderRadius: '5px', fontSize: '10px', cursor: 'pointer' }}
+                                            >
+                                              <FaChartLine />
+                                            </button>
+                                            <button
+                                              onClick={() => handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id)}
+                                              title="Disassign TC"
+                                              style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '3px 5px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}
+                                            >
+                                              <FaUnlink />
+                                            </button>
+                                          </div>
                                         </div>
                                       ))}
                                     </div>
@@ -568,7 +629,7 @@ export default function EmployeeManagement() {
 
                               {/* DIRECT TELECALLERS BRANCH (NO TL) */}
                               {directTCs.length > 0 && (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '260px', maxWidth: '320px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '270px', maxWidth: '330px' }}>
                                   <div style={{ width: '2px', height: '20px', background: '#F59E0B' }}></div>
 
                                   <div style={{ background: C.card, border: `2px solid #F59E0B`, borderRadius: '14px', padding: '14px 16px', width: '100%', boxSizing: 'border-box' }}>
@@ -583,8 +644,8 @@ export default function EmployeeManagement() {
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                       {directTCs.map(tc => (
-                                        <div key={tc.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                        <div key={tc.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', cursor: 'pointer' }} onClick={() => setActionModalEmp(tc)}>
                                             <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#F59E0B', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '11px', flexShrink: 0 }}>
                                               TC
                                             </div>
@@ -593,13 +654,29 @@ export default function EmployeeManagement() {
                                               <div style={{ fontSize: '10px', color: C.textMid }}>{tc.employee_id}</div>
                                             </div>
                                           </div>
-                                          <button
-                                            onClick={() => handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id)}
-                                            title="Unassign Direct Member from Manager"
-                                            style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '3px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', flexShrink: 0 }}
-                                          >
-                                            Disassign
-                                          </button>
+                                          <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+                                            <button
+                                              onClick={() => handleOpen360View(tc)}
+                                              title="View Profile"
+                                              style={{ background: C.card, border: `1px solid ${C.border}`, color: C.text, padding: '3px 5px', borderRadius: '5px', fontSize: '10px', cursor: 'pointer' }}
+                                            >
+                                              <FaEye />
+                                            </button>
+                                            <button
+                                              onClick={() => setPerfModalEmp(tc)}
+                                              title="View Performance"
+                                              style={{ background: C.card, border: `1px solid ${C.border}`, color: C.teal, padding: '3px 5px', borderRadius: '5px', fontSize: '10px', cursor: 'pointer' }}
+                                            >
+                                              <FaChartLine />
+                                            </button>
+                                            <button
+                                              onClick={() => handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id)}
+                                              title="Disassign TC"
+                                              style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '3px 5px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}
+                                            >
+                                              <FaUnlink />
+                                            </button>
+                                          </div>
                                         </div>
                                       ))}
                                     </div>
@@ -1011,6 +1088,153 @@ export default function EmployeeManagement() {
                   <button type="submit" style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>Save Hierarchy</button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* ── MODAL: Employee Node Action Options (View Profile, Disassign, View Performance) ── */}
+        {actionModalEmp && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', width: '100%', maxWidth: '440px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }}>
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: C.teal, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '20px' }}>
+                    {actionModalEmp.full_name?.charAt(0) || 'E'}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '17px', fontWeight: 900, margin: 0, color: C.text }}>{actionModalEmp.full_name}</h3>
+                    <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>ID: {actionModalEmp.employee_id} • {actionModalEmp.designation || 'Employee'}</div>
+                  </div>
+                </div>
+                <button onClick={() => setActionModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: C.textMid, fontWeight: 900 }}>✕</button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* 1. View Profile */}
+                <button
+                  onClick={() => {
+                    const emp = actionModalEmp;
+                    setActionModalEmp(null);
+                    handleOpen360View(emp);
+                  }}
+                  style={{ width: '100%', padding: '14px 18px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', color: C.text, textAlign: 'left' }}
+                >
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#3B82F6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                    <FaUserCircle />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 900 }}>View 360° Profile</div>
+                    <div style={{ fontSize: '11px', color: C.textMid }}>Inspect KYC details, bank info, and active product links</div>
+                  </div>
+                </button>
+
+                {/* 2. Disassign Employee */}
+                <button
+                  onClick={() => {
+                    const emp = actionModalEmp;
+                    setActionModalEmp(null);
+                    handleUnassignHierarchy(emp.id, emp.full_name, emp.employee_id);
+                  }}
+                  style={{ width: '100%', padding: '14px 18px', background: '#FEF2F2', border: `1px solid #FCA5A5`, borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', color: '#991B1B', textAlign: 'left' }}
+                >
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EF4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                    <FaUnlink />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: '#991B1B' }}>Disassign Employee</div>
+                    <div style={{ fontSize: '11px', color: '#B91C1C' }}>Remove employee from current team & manager hierarchy</div>
+                  </div>
+                </button>
+
+                {/* 3. View Performance */}
+                <button
+                  onClick={() => {
+                    const emp = actionModalEmp;
+                    setActionModalEmp(null);
+                    setPerfModalEmp(emp);
+                  }}
+                  style={{ width: '100%', padding: '14px 18px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', color: C.text, textAlign: 'left' }}
+                >
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                    <FaChartLine />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 900 }}>View Performance</div>
+                    <div style={{ fontSize: '11px', color: C.textMid }}>Track lead submissions, incentives earned, and onboarding stats</div>
+                  </div>
+                </button>
+              </div>
+
+              <div style={{ marginTop: '20px', textAlign: 'right' }}>
+                <button onClick={() => setActionModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 18px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Close</button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ── MODAL: Employee Performance Dashboard ── */}
+        {perfModalEmp && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', width: '100%', maxWidth: '520px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }}>
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                    <FaTrophy />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '17px', fontWeight: 900, margin: 0, color: C.text }}>Performance Analytics</h3>
+                    <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>{perfModalEmp.full_name} ({perfModalEmp.employee_id})</div>
+                  </div>
+                </div>
+                <button onClick={() => setPerfModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: C.textMid, fontWeight: 900 }}>✕</button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px' }}>
+                  <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Total Applications</div>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: C.teal, marginTop: '4px' }}>{perfModalEmp.total_applications || 0}</div>
+                  <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>CRM Applications Processed</div>
+                </div>
+
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px' }}>
+                  <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Incentives Earned</div>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#10B981', marginTop: '4px' }}>₹{Number(perfModalEmp.total_incentives_earned || 0).toLocaleString('en-IN')}</div>
+                  <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Completed payout incentives</div>
+                </div>
+
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px' }}>
+                  <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Active Product Links</div>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#3B82F6', marginTop: '4px' }}>{perfModalEmp.active_links_count || 0}</div>
+                  <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Assigned referral URLs</div>
+                </div>
+
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px' }}>
+                  <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Onboarding Progress</div>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#8B5CF6', marginTop: '4px' }}>{perfModalEmp.overall_progress || 20}%</div>
+                  <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Profile setup score</div>
+                </div>
+              </div>
+
+              <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: C.text }}>Account & KYC Verification Status</span>
+                  <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 900, background: perfModalEmp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7', color: perfModalEmp.activation_status === 'APPROVED' ? '#065F46' : '#92400E' }}>
+                    {perfModalEmp.activation_status || 'PENDING'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: C.textMid }}>
+                  KYC Verified: <strong>{perfModalEmp.kyc_verified ? 'Yes ✅' : 'No ⏳'}</strong> | Terms Accepted: <strong>{perfModalEmp.terms_completed ? 'Yes ✅' : 'No ⏳'}</strong>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button onClick={() => { setPerfModalEmp(null); handleOpen360View(perfModalEmp); }} style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>View Full Profile</button>
+                <button onClick={() => setPerfModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '10px 18px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Close</button>
+              </div>
+
             </div>
           </div>
         )}
