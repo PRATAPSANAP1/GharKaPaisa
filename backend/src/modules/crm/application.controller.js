@@ -1552,6 +1552,8 @@ const getApplication = async (req, res, next) => {
         COALESCE(c.gender, a.gender) as gender,
         COALESCE(c.aadhaar_number, a.aadhaar_number) as aadhaar_number,
         COALESCE(a.designation, c.designation) as designation,
+        COALESCE(a.user_remark, a.notes) as user_remark,
+        COALESCE(a.user_remark, a.notes) as notes,
         p.name as product_name, p.category, p.features, p.commission_type, p.commission_value,
         b.name as bank_name, b.short_code as bank_code,
         ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name,
@@ -2938,6 +2940,9 @@ const updateApplicationDetails = async (req, res, next) => {
       iqa_stage,
       dispatch_status,
       bank_remark,
+      user_remark,
+      notes,
+      user_notes,
       final_status,
       decline_reason,
       eligible_reqd,
@@ -3189,6 +3194,8 @@ const updateApplicationDetails = async (req, res, next) => {
         landmark = COALESCE(NULLIF($32, ''), landmark),
         address = COALESCE(NULLIF($33, ''), address),
         appcode_status = COALESCE(NULLIF($35, ''), appcode_status),
+        user_remark = COALESCE(NULLIF($36, ''), user_remark),
+        notes = COALESCE(NULLIF($36, ''), notes),
         updated_at = NOW()
       WHERE id = $34
       RETURNING *
@@ -3227,7 +3234,8 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(landmark),
       cleanStr(address),
       app.id,
-      cleanStr(appcode_status || req.body.appcode_status)
+      cleanStr(appcode_status || req.body.appcode_status),
+      cleanStr(user_remark || req.body.user_remark || req.body.user_notes || req.body.notes || notes || user_notes)
     ]);
 
     // 2. Update customer details if customer_id exists
