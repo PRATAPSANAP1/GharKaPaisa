@@ -4,7 +4,7 @@ import {
   FaUsers, FaUserCheck, FaSitemap, FaLink, FaSearch, 
   FaPlus, FaCheckCircle, FaTimesCircle, FaEye, FaEdit, FaCheck, FaLock,
   FaFileAlt, FaVideo, FaUniversity, FaBuilding, FaBriefcase, FaIdCard, FaPhone, FaEnvelope, FaClock, FaUserCircle,
-  FaUserTimes, FaUnlink, FaChartLine, FaTrophy
+  FaUserTimes, FaUnlink, FaChartLine, FaTrophy, FaEllipsisV, FaDownload, FaRedo, FaInfoCircle, FaChevronRight
 } from 'react-icons/fa';
 import api from '../../../services/api';
 
@@ -19,8 +19,9 @@ export default function EmployeeManagement() {
   const [statusFilter, setStatusFilter] = useState('');
   const [designationFilter, setDesignationFilter] = useState('');
 
-  // Hierarchy Tree selected Manager
+  // Hierarchy Tree selected Manager & Popovers
   const [selectedManagerId, setSelectedManagerId] = useState(null);
+  const [popoverEmpId, setPopoverEmpId] = useState(null);
 
   // Modals state
   const [selectedEmp, setSelectedEmp] = useState(null);
@@ -182,6 +183,34 @@ export default function EmployeeManagement() {
     } catch (err) {
       alert(err.response?.data?.message || 'Unassignment failed');
     }
+  };
+
+  const handleExportTree = () => {
+    const currentMgr = managersList.find(m => m.id === selectedManagerId) || managersList[0];
+    if (!currentMgr) return alert('No manager tree available to export.');
+    
+    const managerTLs = tlsList.filter(tl => tl.manager_id === currentMgr.id || tl.manager_name === currentMgr.full_name);
+    const allManagerTCs = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === currentMgr.id || tc.manager_name === currentMgr.full_name));
+    
+    let csv = 'Level,Role,Employee Name,Employee ID,Mobile Number,Reporting To\n';
+    csv += `Level 1,Manager,"${currentMgr.full_name}","${currentMgr.employee_id}","${currentMgr.mobile_number || ''}","Direct"\n`;
+    
+    managerTLs.forEach(tl => {
+      csv += `Level 2,Team Leader,"${tl.full_name}","${tl.employee_id}","${tl.mobile_number || ''}","${currentMgr.full_name}"\n`;
+      const tlTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
+      tlTCs.forEach(tc => {
+        csv += `Level 3,Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${tl.full_name}"\n`;
+      });
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Hierarchy_Tree_${currentMgr.full_name.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const managersList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('manager') || e.hierarchy_level === 'MANAGER'));
@@ -380,12 +409,26 @@ export default function EmployeeManagement() {
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '500px', padding: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
                 <div>
-                  <h2 style={{ fontSize: '18px', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FaSitemap style={{ color: C.teal }} /> Team Hierarchy Visual Tree Architecture
+                  <h2 style={{ fontSize: '22px', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: C.text }}>
+                    Team Hierarchy Tree <FaInfoCircle style={{ fontSize: '15px', color: C.textMid, cursor: 'pointer' }} title="Visualize and manage reporting structure" />
                   </h2>
-                  <p style={{ fontSize: '12px', color: C.textMid, margin: '4px 0 0' }}>
-                    Select a Manager to view their full tree structure (Manager → Team Leaders → Telecallers) and manage team assignments.
+                  <p style={{ fontSize: '13px', color: C.textMid, margin: '4px 0 0' }}>
+                    Visualize and manage your organization structure
                   </p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button 
+                    onClick={fetchData} 
+                    style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <FaRedo style={{ fontSize: '12px', color: C.teal }} /> Refresh
+                  </button>
+                  <button 
+                    onClick={handleExportTree} 
+                    style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <FaDownload style={{ fontSize: '12px', color: C.teal }} /> Export Tree
+                  </button>
                 </div>
               </div>
 
@@ -400,226 +443,241 @@ export default function EmployeeManagement() {
               ) : (
                 <>
                   {/* Top Row: Manager Selection Cards / Tabs */}
-                  <div style={{ marginBottom: '28px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
-                      Select Manager ({managersList.length})
+                  <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px', marginBottom: '24px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: C.textMid, marginBottom: '12px' }}>
+                      Select Manager
                     </div>
-                    <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '8px' }}>
-                      {managersList.map(mgr => {
-                        const isSelected = (mgr.id === activeMgrId);
-                        const tlsUnderMgr = tlsList.filter(tl => tl.manager_id === mgr.id || tl.manager_name === mgr.full_name);
-                        const tcsUnderMgr = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === mgr.id || tc.manager_name === mgr.full_name));
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div id="mgrCarousel" style={{ display: 'flex', gap: '12px', overflowX: 'auto', flexGrow: 1, paddingBottom: '4px', scrollBehavior: 'smooth' }}>
+                        {managersList.map(mgr => {
+                          const isSelected = (mgr.id === activeMgrId);
+                          const tlsUnderMgr = tlsList.filter(tl => tl.manager_id === mgr.id || tl.manager_name === mgr.full_name);
+                          const tcsUnderMgr = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === mgr.id || tc.manager_name === mgr.full_name));
+                          const totalMembers = tlsUnderMgr.length + tcsUnderMgr.length;
 
-                        return (
-                          <div
-                            key={mgr.id}
-                            onClick={() => setSelectedManagerId(mgr.id)}
-                            style={{
-                              flexShrink: 0,
-                              minWidth: '220px',
-                              padding: '14px 16px',
-                              borderRadius: '14px',
-                              cursor: 'pointer',
-                              background: isSelected ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' : C.bgSecondary,
-                              color: isSelected ? '#FFFFFF' : C.text,
-                              border: isSelected ? 'none' : `1px solid ${C.border}`,
-                              boxShadow: isSelected ? '0 8px 20px rgba(16, 185, 129, 0.25)' : 'none',
-                              transition: 'all 0.2s ease',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justify: 'space-between',
-                              gap: '12px'
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: isSelected ? 'rgba(255,255,255,0.2)' : '#8B5CF6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px' }}>
-                                M
+                          return (
+                            <div
+                              key={mgr.id}
+                              onClick={() => setSelectedManagerId(mgr.id)}
+                              style={{
+                                flexShrink: 0,
+                                minWidth: '210px',
+                                padding: '12px 16px',
+                                borderRadius: '14px',
+                                cursor: 'pointer',
+                                background: isSelected ? 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)' : C.card,
+                                color: isSelected ? '#FFFFFF' : C.text,
+                                border: isSelected ? 'none' : `1px solid ${C.border}`,
+                                boxShadow: isSelected ? '0 8px 20px rgba(79, 70, 229, 0.25)' : '0 2px 8px rgba(0,0,0,0.03)',
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px'
+                              }}
+                            >
+                              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: isSelected ? 'rgba(255,255,255,0.2)' : '#E0E7FF', color: isSelected ? '#FFF' : '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px', flexShrink: 0 }}>
+                                {mgr.full_name?.charAt(0) || 'M'}
                               </div>
-                              <div>
-                                <div style={{ fontSize: '14px', fontWeight: 900, whiteSpace: 'nowrap' }}>{mgr.full_name}</div>
+                              <div style={{ overflow: 'hidden' }}>
+                                <div style={{ fontSize: '14px', fontWeight: 900, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{mgr.full_name}</div>
                                 <div style={{ fontSize: '11px', opacity: isSelected ? 0.9 : 0.7, fontWeight: 700 }}>{mgr.employee_id}</div>
+                                <div style={{ fontSize: '11px', fontWeight: 800, marginTop: '2px', opacity: isSelected ? 0.95 : 0.8 }}>
+                                  {totalMembers} Members
+                                </div>
                               </div>
                             </div>
-                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              <span style={{ fontSize: '11px', fontWeight: 900, padding: '3px 8px', borderRadius: '10px', background: isSelected ? 'rgba(255,255,255,0.25)' : C.card, color: isSelected ? '#FFF' : C.teal }}>
-                                {tlsUnderMgr.length} TLs · {tcsUnderMgr.length} TCs
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          const el = document.getElementById('mgrCarousel');
+                          if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
+                        }}
+                        style={{ width: '36px', height: '36px', borderRadius: '50%', background: C.card, border: `1px solid ${C.border}`, color: C.textMid, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                      >
+                        <FaChevronRight style={{ fontSize: '12px' }} />
+                      </button>
                     </div>
                   </div>
 
                   {/* Visual Tree Diagram for Selected Manager */}
                   {currentMgr && (
-                    <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '28px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+                    <div onClick={() => setPopoverEmpId(null)} style={{ background: '#F8FAFC', border: `1px solid ${C.border}`, borderRadius: '20px', padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
                       
                       {/* LEVEL 1: MANAGER NODE */}
-                      <div style={{ background: C.card, border: `2px solid ${C.teal}`, borderRadius: '16px', padding: '16px 20px', minWidth: '300px', maxWidth: '380px', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', position: 'relative', zIndex: 2 }}>
+                      <div style={{ background: '#FFFFFF', border: `2px solid #818CF8`, borderRadius: '16px', padding: '16px 20px', minWidth: '320px', maxWidth: '380px', boxShadow: '0 10px 25px rgba(99, 102, 241, 0.08)', position: 'relative', zIndex: 10 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
-                          <span style={{ background: '#8B5CF6', color: '#FFF', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>
-                            LEVEL 1 · MANAGER
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#E0E7FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '16px' }}>
+                              {currentMgr.full_name?.charAt(0) || 'M'}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '15px', fontWeight: 900, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                {currentMgr.full_name}
+                                <span style={{ background: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '12px', textTransform: 'uppercase' }}>
+                                  MANAGER
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 700 }}>{currentMgr.employee_id}</div>
+                            </div>
+                          </div>
                           <button
-                            onClick={() => setActionModalEmp(currentMgr)}
-                            title="Open Manager Options"
-                            style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                            onClick={(e) => { e.stopPropagation(); setPopoverEmpId(popoverEmpId === currentMgr.id ? null : currentMgr.id); }}
+                            title="Employee Actions"
+                            style={{ background: 'transparent', border: 'none', color: '#64748B', padding: '6px 10px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}
                           >
-                            ⚡ Options
+                            <FaEllipsisV />
                           </button>
-                        </div>
-                        
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div 
-                            onClick={() => setActionModalEmp(currentMgr)}
-                            style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#8B5CF6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '18px', flexShrink: 0, cursor: 'pointer' }}
-                          >
-                            {currentMgr.full_name?.charAt(0) || 'M'}
-                          </div>
-                          <div style={{ flexGrow: 1 }}>
-                            <div style={{ fontSize: '16px', fontWeight: 900, color: C.text, cursor: 'pointer' }} onClick={() => setActionModalEmp(currentMgr)}>{currentMgr.full_name}</div>
-                            <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>ID: {currentMgr.employee_id}</div>
-                            {currentMgr.mobile_number && <div style={{ fontSize: '11px', color: C.textMid }}>📱 {currentMgr.mobile_number}</div>}
-                          </div>
                         </div>
 
-                        {/* Node Quick Actions */}
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '12px', paddingTop: '10px', borderTop: `1px solid ${C.border}` }}>
-                          <button
-                            onClick={() => handleOpen360View(currentMgr)}
-                            style={{ flex: 1, background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '5px 4px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
-                          >
-                            <FaEye style={{ fontSize: '10px' }} /> Profile
-                          </button>
-                          <button
-                            onClick={() => setPerfModalEmp(currentMgr)}
-                            style={{ flex: 1, background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.teal, padding: '5px 4px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
-                          >
-                            <FaChartLine style={{ fontSize: '10px' }} /> Performance
-                          </button>
-                          <button
-                            onClick={() => handleUnassignHierarchy(currentMgr.id, currentMgr.full_name, currentMgr.employee_id)}
-                            style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#EF4444', padding: '5px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}
-                          >
-                            <FaUnlink style={{ fontSize: '10px' }} /> Disassign
-                          </button>
+                        <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
+                          <span>📞 {currentMgr.mobile_number || 'N/A'}</span>
+                          <span style={{ fontWeight: 800, color: '#4F46E5' }}>👤 Total Members: {managerTLs.length + allManagerTCs.length}</span>
                         </div>
+
+                        {/* Floating Context Popover Dropdown */}
+                        {popoverEmpId === currentMgr.id && (
+                          <div 
+                            style={{ position: 'absolute', top: '48px', right: '12px', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 12px 30px rgba(0,0,0,0.15)', zIndex: 100, minWidth: '170px', padding: '6px 0' }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div onClick={() => { setPopoverEmpId(null); handleOpen360View(currentMgr); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <FaEye style={{ fontSize: '13px', color: '#64748B' }} /> View Profile
+                            </div>
+                            <div onClick={() => { setPopoverEmpId(null); setHierarchyModalEmp(currentMgr); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <FaEdit style={{ fontSize: '13px', color: '#64748B' }} /> Edit Details
+                            </div>
+                            <div onClick={() => { setPopoverEmpId(null); handleUnassignHierarchy(currentMgr.id, currentMgr.full_name, currentMgr.employee_id); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <FaUnlink style={{ fontSize: '13px', color: '#EF4444' }} /> Disassign Employee
+                            </div>
+                            <div onClick={() => { setPopoverEmpId(null); setPerfModalEmp(currentMgr); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <FaChartLine style={{ fontSize: '13px', color: '#64748B' }} /> View Performance
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Stem Line Connecting Manager to TL Level */}
                       {(managerTLs.length > 0 || directTCs.length > 0) ? (
                         <>
-                          <div style={{ width: '2px', height: '28px', background: C.teal, margin: '0 auto' }}></div>
+                          <div style={{ width: '2px', height: '28px', background: '#818CF8', margin: '0 auto' }}></div>
 
                           {/* Level 2 horizontal connector branch bar if multiple nodes */}
                           <div style={{ width: '100%', overflowX: 'auto', padding: '0 10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', alignItems: 'flex-start', minWidth: 'max-content', margin: '0 auto' }}>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', alignItems: 'flex-start', minWidth: 'max-content', margin: '0 auto' }}>
                               
                               {/* TEAM LEADERS BRANCHES */}
                               {managerTLs.map(tl => {
                                 const tlTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
                                 return (
-                                  <div key={tl.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '270px', maxWidth: '330px' }}>
+                                  <div key={tl.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                     
                                     {/* Stem line to TL node */}
-                                    <div style={{ width: '2px', height: '20px', background: C.teal }}></div>
+                                    <div style={{ width: '2px', height: '20px', background: '#3B82F6' }}></div>
 
                                     {/* LEVEL 2: TEAM LEADER NODE */}
-                                    <div style={{ background: C.card, border: `2px solid #3B82F6`, borderRadius: '14px', padding: '14px 16px', width: '100%', boxShadow: '0 4px 16px rgba(0,0,0,0.04)', boxSizing: 'border-box' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
-                                        <span style={{ background: '#3B82F6', color: '#FFF', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '6px' }}>
-                                          LEVEL 2 · TL
-                                        </span>
+                                    <div style={{ background: '#FFFFFF', border: `2px solid #60A5FA`, borderRadius: '16px', padding: '14px 18px', minWidth: '280px', maxWidth: '320px', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.08)', position: 'relative', zIndex: 9 }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px' }}>
+                                            {tl.full_name?.charAt(0) || 'TL'}
+                                          </div>
+                                          <div>
+                                            <div style={{ fontSize: '14px', fontWeight: 900, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                              {tl.full_name}
+                                              <span style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', fontSize: '9.5px', fontWeight: 900, padding: '2px 6px', borderRadius: '10px' }}>
+                                                TEAM LEADER
+                                              </span>
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{tl.employee_id}</div>
+                                          </div>
+                                        </div>
                                         <button
-                                          onClick={() => setActionModalEmp(tl)}
-                                          style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '2px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}
+                                          onClick={(e) => { e.stopPropagation(); setPopoverEmpId(popoverEmpId === tl.id ? null : tl.id); }}
+                                          style={{ background: 'transparent', border: 'none', color: '#64748B', padding: '4px 8px', fontSize: '13px', cursor: 'pointer' }}
                                         >
-                                          ⚡ Options
+                                          <FaEllipsisV />
                                         </button>
-                                      </div>
-                                      
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <div 
-                                          onClick={() => setActionModalEmp(tl)}
-                                          style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#3B82F6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px', flexShrink: 0, cursor: 'pointer' }}
-                                        >
-                                          TL
-                                        </div>
-                                        <div style={{ flexGrow: 1 }}>
-                                          <div style={{ fontSize: '14px', fontWeight: 900, color: C.text, cursor: 'pointer' }} onClick={() => setActionModalEmp(tl)}>{tl.full_name}</div>
-                                          <div style={{ fontSize: '11px', color: '#3B82F6', fontWeight: 800 }}>ID: {tl.employee_id}</div>
-                                        </div>
                                       </div>
 
-                                      <div style={{ marginTop: '10px', display: 'flex', gap: '4px', borderTop: `1px solid ${C.border}`, paddingTop: '8px' }}>
-                                        <button
-                                          onClick={() => handleOpen360View(tl)}
-                                          title="View Profile"
-                                          style={{ flex: 1, background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '4px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
-                                        >
-                                          <FaEye style={{ fontSize: '9px' }} /> Profile
-                                        </button>
-                                        <button
-                                          onClick={() => setPerfModalEmp(tl)}
-                                          title="View Performance"
-                                          style={{ flex: 1, background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.teal, padding: '4px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
-                                        >
-                                          <FaChartLine style={{ fontSize: '9px' }} /> Perf
-                                        </button>
-                                        <button
-                                          onClick={() => handleUnassignHierarchy(tl.id, tl.full_name, tl.employee_id)}
-                                          title="Disassign TL"
-                                          style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#EF4444', padding: '4px 6px', borderRadius: '6px', fontSize: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}
-                                        >
-                                          <FaUnlink style={{ fontSize: '9px' }} /> Disassign
-                                        </button>
+                                      <div style={{ fontSize: '11.5px', color: '#64748B', display: 'flex', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #F1F5F9' }}>
+                                        <span>📞 {tl.mobile_number || 'N/A'}</span>
+                                        <span style={{ fontWeight: 800, color: '#2563EB' }}>👤 Team Members: {tlTCs.length}</span>
                                       </div>
+
+                                      {/* Popover Dropdown for TL */}
+                                      {popoverEmpId === tl.id && (
+                                        <div 
+                                          style={{ position: 'absolute', top: '44px', right: '10px', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 12px 30px rgba(0,0,0,0.15)', zIndex: 100, minWidth: '170px', padding: '6px 0' }}
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <div onClick={() => { setPopoverEmpId(null); handleOpen360View(tl); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <FaEye style={{ fontSize: '13px', color: '#64748B' }} /> View Profile
+                                          </div>
+                                          <div onClick={() => { setPopoverEmpId(null); setHierarchyModalEmp(tl); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <FaEdit style={{ fontSize: '13px', color: '#64748B' }} /> Edit Details
+                                          </div>
+                                          <div onClick={() => { setPopoverEmpId(null); handleUnassignHierarchy(tl.id, tl.full_name, tl.employee_id); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <FaUnlink style={{ fontSize: '13px', color: '#EF4444' }} /> Disassign Employee
+                                          </div>
+                                          <div onClick={() => { setPopoverEmpId(null); setPerfModalEmp(tl); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <FaChartLine style={{ fontSize: '13px', color: '#64748B' }} /> View Performance
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
 
                                     {/* Stem line to Level 3 TCs */}
-                                    <div style={{ width: '2px', height: '20px', background: '#3B82F6' }}></div>
+                                    {tlTCs.length > 0 && <div style={{ width: '2px', height: '24px', background: '#93C5FD' }}></div>}
 
-                                    {/* LEVEL 3: TELECALLERS UNDER THIS TL */}
-                                    <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                      {tlTCs.length === 0 ? (
-                                        <div style={{ background: C.card, border: `1px dashed ${C.border}`, borderRadius: '10px', padding: '10px', textAlign: 'center', fontSize: '11px', color: C.textMid }}>
-                                          No TCs assigned to this TL yet.
-                                        </div>
-                                      ) : tlTCs.map(tc => (
-                                        <div key={tc.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', cursor: 'pointer' }} onClick={() => setActionModalEmp(tc)}>
-                                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#10B981', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '11px', flexShrink: 0 }}>
-                                              TC
-                                            </div>
-                                            <div style={{ overflow: 'hidden' }}>
-                                              <div style={{ fontSize: '12px', fontWeight: 800, color: C.text, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{tc.full_name}</div>
-                                              <div style={{ fontSize: '10px', color: C.textMid }}>{tc.employee_id}</div>
-                                            </div>
+                                    {/* LEVEL 3: TELECALLERS VERTICAL CARDS IN HORIZONTAL ROW */}
+                                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                      {tlTCs.map(tc => (
+                                        <div 
+                                          key={tc.id} 
+                                          style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '14px 12px', width: '135px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative' }}
+                                        >
+                                          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px', marginBottom: '8px' }}>
+                                            {tc.full_name?.charAt(0) || 'T'}
                                           </div>
-                                          <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
-                                            <button
-                                              onClick={() => handleOpen360View(tc)}
-                                              title="View Profile"
-                                              style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '3px 5px', borderRadius: '5px', fontSize: '10px', cursor: 'pointer' }}
-                                            >
-                                              <FaEye />
-                                            </button>
-                                            <button
-                                              onClick={() => setPerfModalEmp(tc)}
-                                              title="View Performance"
-                                              style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.teal, padding: '3px 5px', borderRadius: '5px', fontSize: '10px', cursor: 'pointer' }}
-                                            >
-                                              <FaChartLine />
-                                            </button>
-                                            <button
-                                              onClick={() => handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id)}
-                                              title="Disassign TC"
-                                              style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '3px 5px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}
-                                            >
-                                              <FaUnlink />
-                                            </button>
+                                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B', marginBottom: '4px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '120px' }}>
+                                            {tc.full_name}
                                           </div>
+                                          <span style={{ background: '#D1FAE5', color: '#047857', fontSize: '9px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                            TELECALLER
+                                          </span>
+                                          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{tc.employee_id}</div>
+                                          <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>{tc.mobile_number || 'N/A'}</div>
+
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); setPopoverEmpId(popoverEmpId === tc.id ? null : tc.id); }}
+                                            style={{ background: 'transparent', border: 'none', color: '#94A3B8', padding: '4px', fontSize: '12px', cursor: 'pointer', marginTop: '6px' }}
+                                          >
+                                            <FaEllipsisV />
+                                          </button>
+
+                                          {/* Popover Dropdown for TC */}
+                                          {popoverEmpId === tc.id && (
+                                            <div 
+                                              style={{ position: 'absolute', bottom: '36px', left: '50%', transform: 'translateX(-50%)', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 12px 30px rgba(0,0,0,0.15)', zIndex: 100, minWidth: '160px', padding: '6px 0', textAlign: 'left' }}
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              <div onClick={() => { setPopoverEmpId(null); handleOpen360View(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <FaEye style={{ fontSize: '12px', color: '#64748B' }} /> View Profile
+                                              </div>
+                                              <div onClick={() => { setPopoverEmpId(null); setHierarchyModalEmp(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <FaEdit style={{ fontSize: '12px', color: '#64748B' }} /> Edit Details
+                                              </div>
+                                              <div onClick={() => { setPopoverEmpId(null); handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <FaUnlink style={{ fontSize: '12px', color: '#EF4444' }} /> Disassign Employee
+                                              </div>
+                                              <div onClick={() => { setPopoverEmpId(null); setPerfModalEmp(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <FaChartLine style={{ fontSize: '12px', color: '#64748B' }} /> View Performance
+                                              </div>
+                                            </div>
+                                          )}
                                         </div>
                                       ))}
                                     </div>
@@ -629,57 +687,61 @@ export default function EmployeeManagement() {
 
                               {/* DIRECT TELECALLERS BRANCH (NO TL) */}
                               {directTCs.length > 0 && (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '270px', maxWidth: '330px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                   <div style={{ width: '2px', height: '20px', background: '#F59E0B' }}></div>
 
-                                  <div style={{ background: C.card, border: `2px solid #F59E0B`, borderRadius: '14px', padding: '14px 16px', width: '100%', boxSizing: 'border-box' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px' }}>
-                                      <span style={{ background: '#F59E0B', color: '#FFF', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '6px' }}>
-                                        DIRECT MEMBERS ({directTCs.length})
-                                      </span>
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, marginBottom: '10px' }}>
-                                      Reporting directly to Manager (No TL)
-                                    </div>
+                                  <div style={{ background: '#FFFBEB', border: `1px solid #FCD34D`, borderRadius: '16px', padding: '12px 16px', marginBottom: '12px', textAlign: 'center' }}>
+                                    <span style={{ background: '#F59E0B', color: '#FFF', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px' }}>
+                                      DIRECT MEMBERS ({directTCs.length})
+                                    </span>
+                                  </div>
 
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                      {directTCs.map(tc => (
-                                        <div key={tc.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', cursor: 'pointer' }} onClick={() => setActionModalEmp(tc)}>
-                                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#F59E0B', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '11px', flexShrink: 0 }}>
-                                              TC
-                                            </div>
-                                            <div style={{ overflow: 'hidden' }}>
-                                              <div style={{ fontSize: '12px', fontWeight: 800, color: C.text, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{tc.full_name}</div>
-                                              <div style={{ fontSize: '10px', color: C.textMid }}>{tc.employee_id}</div>
-                                            </div>
-                                          </div>
-                                          <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
-                                            <button
-                                              onClick={() => handleOpen360View(tc)}
-                                              title="View Profile"
-                                              style={{ background: C.card, border: `1px solid ${C.border}`, color: C.text, padding: '3px 5px', borderRadius: '5px', fontSize: '10px', cursor: 'pointer' }}
-                                            >
-                                              <FaEye />
-                                            </button>
-                                            <button
-                                              onClick={() => setPerfModalEmp(tc)}
-                                              title="View Performance"
-                                              style={{ background: C.card, border: `1px solid ${C.border}`, color: C.teal, padding: '3px 5px', borderRadius: '5px', fontSize: '10px', cursor: 'pointer' }}
-                                            >
-                                              <FaChartLine />
-                                            </button>
-                                            <button
-                                              onClick={() => handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id)}
-                                              title="Disassign TC"
-                                              style={{ background: '#FEE2E2', border: 'none', color: '#EF4444', padding: '3px 5px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, cursor: 'pointer' }}
-                                            >
-                                              <FaUnlink />
-                                            </button>
-                                          </div>
+                                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                    {directTCs.map(tc => (
+                                      <div 
+                                        key={tc.id} 
+                                        style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '14px 12px', width: '135px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative' }}
+                                      >
+                                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px', marginBottom: '8px' }}>
+                                          {tc.full_name?.charAt(0) || 'T'}
                                         </div>
-                                      ))}
-                                    </div>
+                                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B', marginBottom: '4px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '120px' }}>
+                                          {tc.full_name}
+                                        </div>
+                                        <span style={{ background: '#D1FAE5', color: '#047857', fontSize: '9px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                          TELECALLER
+                                        </span>
+                                        <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{tc.employee_id}</div>
+                                        <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>{tc.mobile_number || 'N/A'}</div>
+
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setPopoverEmpId(popoverEmpId === tc.id ? null : tc.id); }}
+                                          style={{ background: 'transparent', border: 'none', color: '#94A3B8', padding: '4px', fontSize: '12px', cursor: 'pointer', marginTop: '6px' }}
+                                        >
+                                          <FaEllipsisV />
+                                        </button>
+
+                                        {popoverEmpId === tc.id && (
+                                          <div 
+                                            style={{ position: 'absolute', bottom: '36px', left: '50%', transform: 'translateX(-50%)', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 12px 30px rgba(0,0,0,0.15)', zIndex: 100, minWidth: '160px', padding: '6px 0', textAlign: 'left' }}
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            <div onClick={() => { setPopoverEmpId(null); handleOpen360View(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              <FaEye style={{ fontSize: '12px', color: '#64748B' }} /> View Profile
+                                            </div>
+                                            <div onClick={() => { setPopoverEmpId(null); setHierarchyModalEmp(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              <FaEdit style={{ fontSize: '12px', color: '#64748B' }} /> Edit Details
+                                            </div>
+                                            <div onClick={() => { setPopoverEmpId(null); handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              <FaUnlink style={{ fontSize: '12px', color: '#EF4444' }} /> Disassign Employee
+                                            </div>
+                                            <div onClick={() => { setPopoverEmpId(null); setPerfModalEmp(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              <FaChartLine style={{ fontSize: '12px', color: '#64748B' }} /> View Performance
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
                                   </div>
                                 </div>
                               )}
@@ -692,6 +754,35 @@ export default function EmployeeManagement() {
                           <span style={{ fontSize: '12px', color: C.teal, fontWeight: 700 }}>Go to the Directory tab and click "Assign Team" on an employee to link them to this Manager.</span>
                         </div>
                       )}
+
+                      {/* Bottom Stats Summary Bar & Legend */}
+                      <div style={{ width: '100%', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                          <div style={{ background: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: '12px', padding: '8px 14px', fontSize: '13px', fontWeight: 900, color: '#4F46E5', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#4F46E5', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>1</div>
+                            Managers
+                          </div>
+                          <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '8px 14px', fontSize: '13px', fontWeight: 900, color: '#2563EB', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#2563EB', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>{managerTLs.length}</div>
+                            Team Leaders
+                          </div>
+                          <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '12px', padding: '8px 14px', fontSize: '13px', fontWeight: 900, color: '#059669', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#059669', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>{allManagerTCs.length}</div>
+                            Telecallers
+                          </div>
+                          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '12px', padding: '8px 14px', fontSize: '13px', fontWeight: 900, color: '#D97706', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#D97706', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>{1 + managerTLs.length + allManagerTCs.length}</div>
+                            Total Employees
+                          </div>
+                        </div>
+
+                        {/* Legend */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12.5px', fontWeight: 700, color: '#64748B' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4F46E5' }}></span> Manager</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2563EB' }}></span> Team Leader</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#059669' }}></span> Telecaller</span>
+                        </div>
+                      </div>
 
                     </div>
                   )}
