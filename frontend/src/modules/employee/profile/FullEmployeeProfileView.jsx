@@ -211,7 +211,7 @@ Generated On  : ${new Date().toLocaleString()}
   }
 
   return (
-    <div style={{ maxWidth: '1120px', margin: '0 auto', fontFamily: "'Inter', sans-serif", color: C.text, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ maxWidth: '1120px', margin: '0 auto', fontFamily: "'Inter', sans-serif", color: C.text, display: 'flex', flexDirection: 'column', gap: '12px' }}>
       
       {/* 1. Header / Basic Information Banner */}
       <div style={{ 

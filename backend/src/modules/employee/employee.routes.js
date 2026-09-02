@@ -282,21 +282,88 @@ router.get('/onboarding-status', async (req, res, next) => {
   }
 });
 
-// GET /api/v1/employee/profile — Employee personal profile details
+// GET /api/v1/employee/profile — Employee personal profile 360 details
 router.get('/profile', async (req, res, next) => {
   try {
     const empId = req.employee.id;
-    const joiningRes = await query(`SELECT * FROM employee_joining_details WHERE employee_id = $1`, [empId]);
-    const kycRes = await query(`SELECT * FROM employee_kyc WHERE employee_id = $1`, [empId]);
-    const termsRes = await query(`SELECT * FROM employee_terms_acceptance WHERE employee_id = $1`, [empId]);
+    const empCode = req.employee.employee_id || req.employee.emp_code;
+    const empMobile = req.employee.mobile_number || req.employee.mobile;
+
+    // 1. Employee profile record
+    const empRes = await query(`
+      SELECT e.*, c.resume_url
+      FROM employees e
+      LEFT JOIN employee_candidates c ON c.id = e.candidate_id OR c.mobile_number = e.mobile_number
+      WHERE e.id = $1
+    `, [empId]);
+    const employee = empRes.rows[0] || req.employee;
+
+    // 2. Joining details
+    const joiningRes = await query(
+      `SELECT * FROM employee_joining_details WHERE employee_id = $1 OR mobile_number = $2 ORDER BY created_at DESC LIMIT 1`,
+      [empId, empMobile]
+    );
+
+    // 3. KYC details
+    const kycRes = await query(
+      `SELECT * FROM employee_kyc WHERE employee_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [empId]
+    );
+    let kycData = kycRes.rows[0] || null;
+    if (!kycData && joiningRes.rows[0]) {
+      const jData = joiningRes.rows[0];
+      if (jData.pan_number || jData.aadhaar_number || jData.bank_account_number) {
+        kycData = {
+          pan_number: jData.pan_number || null,
+          aadhaar_number: jData.aadhaar_number || null,
+          bank_account_number: jData.bank_account_number || null,
+          ifsc_code: jData.ifsc_code || null,
+          kyc_status: 'SUBMITTED'
+        };
+      }
+    }
+
+    // 4. Documents
+    const docsRes = await query(
+      `SELECT * FROM employee_documents WHERE employee_id = $1 ORDER BY created_at DESC`,
+      [empId]
+    );
+
+    // 5. Terms acceptance
+    const termsRes = await query(
+      `SELECT * FROM employee_terms_acceptance WHERE employee_id = $1 ORDER BY accepted_at DESC LIMIT 1`,
+      [empId]
+    );
+
+    // 6. Hierarchy
+    const hierarchyRes = await query(`
+      SELECT h.*, tl.full_name as team_leader_name, mgr.full_name as manager_name
+      FROM employee_hierarchy h
+      LEFT JOIN employees tl ON tl.id = h.team_leader_id
+      LEFT JOIN employees mgr ON mgr.id = h.manager_id
+      WHERE h.employee_id = $1 AND h.is_active = true
+    `, [empId]);
+
+    // 7. Incentives summary
+    const incRes = await query(`
+      SELECT 
+        COALESCE(SUM(amount) FILTER (WHERE status = 'COMPLETED'), 0) as total_earned,
+        COALESCE(SUM(amount) FILTER (WHERE status = 'PENDING'), 0) as pending_incentives,
+        COUNT(*) as total_transactions
+      FROM employee_incentive_transactions
+      WHERE employee_id = $1
+    `, [empId]);
 
     res.json({
       success: true,
       data: {
-        employee: req.employee,
+        employee: employee,
         joining_details: joiningRes.rows[0] || null,
-        kyc: kycRes.rows[0] || null,
-        terms: termsRes.rows[0] || null
+        kyc: kycData,
+        terms: termsRes.rows[0] || null,
+        documents: docsRes.rows || [],
+        hierarchy: hierarchyRes.rows[0] || null,
+        incentives_summary: incRes.rows[0] || null
       }
     });
   } catch (err) {
