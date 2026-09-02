@@ -266,62 +266,119 @@ export default function ManageProductLinks() {
   };
 
   const exportCSV = () => {
-    let csvContent = 'data:text/csv;charset=utf-8,';
-    csvContent += 'Product Name,Category,Bank,Public URL,Partner URL,Redirect Type,Button Text,Tracking,Priority\n';
-    
-    products.forEach((p) => {
-      const row = [
-        `"${p.name}"`,
-        `"${p.category}"`,
-        `"${p.bank_name}"`,
-        `"${p.public_url || ''}"`,
-        `"${p.partner_url || ''}"`,
-        `"${p.redirect_type || 'new_tab'}"`,
-        `"${p.button_text || 'Apply Now'}"`,
-        `"${p.tracking_enabled ? 'Enabled' : 'Disabled'}"`,
-        p.priority || 0
-      ].join(',');
-      csvContent += row + '\n';
-    });
+    let filename = '';
+    let headers = [];
+    let rows = [];
 
-    const encodedUri = encodeURI(csvContent);
+    if (activeTab === 'employee_links') {
+      filename = 'Employee_Custom_Bank_Links_Export.csv';
+      headers = ['Employee Name', 'Employee Code', 'Employee Mobile', 'Product Name', 'Category', 'Bank Partner', 'Assigned Custom Bank URL', 'Incentive Amount', 'Status', 'Assigned By', 'Assigned Date'];
+      rows = (assignedLinks || []).map(link => [
+        link.employee_name || '',
+        link.emp_code || '',
+        link.employee_mobile || '',
+        link.product_name || '',
+        (link.product_category || '').replace(/_/g, ' '),
+        link.bank_name || '',
+        link.employee_referral_url || '',
+        `₹${link.incentive_amount || 0}`,
+        link.status || 'ACTIVE',
+        link.assigned_by_name || 'Super Admin',
+        new Date(link.updated_at || link.created_at).toLocaleDateString()
+      ]);
+    } else {
+      filename = 'Global_Product_Links_Export.csv';
+      headers = ['Product Name', 'Category', 'Bank Partner', 'Public URL', 'Partner URL', 'Short Link', 'Deep Link', 'Tracking Status', 'Priority'];
+      rows = (products || []).map(p => {
+        const shortLink = `${getAPIHost()}/redirect/${p.category}?id=${p.id}`;
+        const deepLink = `${getAPIHost()}/r/AGP_PARTNER/${p.id}`;
+        return [
+          p.name || '',
+          (p.category || '').replace(/_/g, ' '),
+          p.bank_name || '',
+          p.public_url || '',
+          p.partner_url || '',
+          shortLink,
+          deepLink,
+          p.tracking_enabled ? 'Active' : 'Disabled',
+          p.priority || 0
+        ];
+      });
+    }
+
+    const csvRows = [
+      headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ];
+
+    const blob = new Blob(['\ufeff' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'Product_Links_Export.csv');
+    link.href = url;
+    link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    triggerToast('CSV Exported successfully!');
+    URL.revokeObjectURL(url);
+    triggerToast(`Exported ${activeTab === 'employee_links' ? 'Employee Custom Bank Links' : 'Global Product Links'} CSV successfully!`);
   };
 
   const exportExcel = () => {
-    // Generate clean TSV structure for Excel opening
-    let xlsContent = 'data:application/vnd.ms-excel;charset=utf-8,';
-    xlsContent += 'Product Name\tCategory\tBank\tPublic URL\tPartner URL\tRedirect Type\tButton Text\tTracking\tPriority\n';
-    
-    products.forEach((p) => {
-      const row = [
-        p.name,
-        p.category,
-        p.bank_name,
-        p.public_url || '',
-        p.partner_url || '',
-        p.redirect_type || 'new_tab',
-        p.button_text || 'Apply Now',
-        p.tracking_enabled ? 'Enabled' : 'Disabled',
-        p.priority || 0
-      ].join('\t');
-      xlsContent += row + '\n';
-    });
+    let filename = '';
+    let headers = [];
+    let rows = [];
 
-    const encodedUri = encodeURI(xlsContent);
+    if (activeTab === 'employee_links') {
+      filename = 'Employee_Custom_Bank_Links_Export.xls';
+      headers = ['Employee Name', 'Employee Code', 'Employee Mobile', 'Product Name', 'Category', 'Bank Partner', 'Assigned Custom Bank URL', 'Incentive Amount', 'Status', 'Assigned By', 'Assigned Date'];
+      rows = (assignedLinks || []).map(link => [
+        link.employee_name || '',
+        link.emp_code || '',
+        link.employee_mobile || '',
+        link.product_name || '',
+        (link.product_category || '').replace(/_/g, ' '),
+        link.bank_name || '',
+        link.employee_referral_url || '',
+        `₹${link.incentive_amount || 0}`,
+        link.status || 'ACTIVE',
+        link.assigned_by_name || 'Super Admin',
+        new Date(link.updated_at || link.created_at).toLocaleDateString()
+      ]);
+    } else {
+      filename = 'Global_Product_Links_Export.xls';
+      headers = ['Product Name', 'Category', 'Bank Partner', 'Public URL', 'Partner URL', 'Short Link', 'Deep Link', 'Tracking Status', 'Priority'];
+      rows = (products || []).map(p => {
+        const shortLink = `${getAPIHost()}/redirect/${p.category}?id=${p.id}`;
+        const deepLink = `${getAPIHost()}/r/AGP_PARTNER/${p.id}`;
+        return [
+          p.name || '',
+          (p.category || '').replace(/_/g, ' '),
+          p.bank_name || '',
+          p.public_url || '',
+          p.partner_url || '',
+          shortLink,
+          deepLink,
+          p.tracking_enabled ? 'Active' : 'Disabled',
+          p.priority || 0
+        ];
+      });
+    }
+
+    const tsvContent = [
+      headers.join('\t'),
+      ...rows.map(row => row.map(cell => String(cell).replace(/\t/g, ' ')).join('\t'))
+    ].join('\n');
+
+    const blob = new Blob(['\ufeff' + tsvContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'Product_Links_Export.xls');
+    link.href = url;
+    link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    triggerToast('Excel Exported successfully!');
+    URL.revokeObjectURL(url);
+    triggerToast(`Exported ${activeTab === 'employee_links' ? 'Employee Custom Bank Links' : 'Global Product Links'} Excel successfully!`);
   };
 
   const getAPIHost = () => {
