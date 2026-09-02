@@ -40,6 +40,13 @@ export default function ManageApplications() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [searchField, setSearchField] = useState("all");
+  const [dateRange, setDateRange] = useState("all");
+  const [processTypeFilter, setProcessTypeFilter] = useState("all");
+  const [sourceTypeFilter, setSourceTypeFilter] = useState("all");
+  const [partnerFilter, setPartnerFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [commFilter, setCommFilter] = useState("all");
 
   // Detail / Review Modal State
   const [selectedApp, setSelectedApp] = useState(null);
@@ -466,22 +473,69 @@ export default function ManageApplications() {
         })}
       </div>
 
-      {/* ── 4. SEARCH BAR ── */}
-      <div style={{ background: C.card, borderRadius: '14px', padding: '14px', border: `1px solid ${C.border}`, marginBottom: '20px' }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ flex: 1, position: 'relative' }}>
-            <input
-              style={{ ...S.input, paddingLeft: '38px', height: '40px', fontSize: '13px', borderRadius: '10px' }}
-              placeholder="Search by customer name, mobile, application ID, PAN..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight, fontSize: '20px' }} />
-          </div>
+      {/* ── 4. SEARCH & FILTERS BAR ── */}
+      <div style={{ background: C.card, borderRadius: '16px', padding: '16px', border: `1px solid ${C.border}`, marginBottom: '20px' }}>
+        <form onSubmit={handleSearchSubmit}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Search Target Field Selector */}
+            <select
+              value={searchField}
+              onChange={(e) => setSearchField(e.target.value)}
+              style={{
+                height: '40px', padding: '0 12px', borderRadius: '10px',
+                background: C.bgSecondary, border: `1px solid ${C.border}`,
+                color: C.text, fontSize: '12.5px', fontWeight: 700, cursor: 'pointer'
+              }}
+            >
+              <option value="all">Search All Fields</option>
+              <option value="name">Customer Name</option>
+              <option value="mobile">Mobile Number</option>
+              <option value="app_number">Application ID</option>
+              <option value="pan">PAN Card</option>
+            </select>
 
-          <button type="submit" style={{ ...S.btn("primary", false), padding: "0 20px", height: "40px", borderRadius: "10px" }}>
-            Search
-          </button>
+            {/* Main Input */}
+            <div style={{ flex: 1, minWidth: '220px', position: 'relative' }}>
+              <input
+                style={{ ...S.input, paddingLeft: '38px', paddingRight: search ? '36px' : '12px', height: '40px', fontSize: '13px', borderRadius: '10px' }}
+                placeholder={`Search by ${searchField === 'name' ? 'customer name' : searchField === 'mobile' ? 'mobile number' : searchField === 'app_number' ? 'application ID' : searchField === 'pan' ? 'PAN card' : 'customer name, mobile, application ID, PAN'}...`}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <MdSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight, fontSize: '20px' }} />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => { setSearch(''); fetchApplications(); }}
+                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: C.textLight, cursor: 'pointer' }}
+                >
+                  <MdClose size={18} />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              style={{
+                padding: '0 16px', height: '40px', borderRadius: '10px',
+                background: isFilterOpen ? `${C.teal}15` : C.bgSecondary,
+                border: `1px solid ${isFilterOpen ? C.teal : C.border}`,
+                color: isFilterOpen ? C.teal : C.text, fontSize: '13px', fontWeight: 800,
+                display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'
+              }}
+            >
+              <FaSlidersH />
+              <span>Filters</span>
+              {isFilterOpen ? '▲' : '▼'}
+            </button>
+
+            {/* Search Submit */}
+            <button type="submit" style={{ ...S.btn("primary", false), padding: "0 22px", height: "40px", borderRadius: "10px", fontWeight: 800 }}>
+              Search
+            </button>
+          </div>
         </form>
       </div>
 
