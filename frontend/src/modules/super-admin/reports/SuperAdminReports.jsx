@@ -11,6 +11,15 @@ import {
 export default function SuperAdminReports() {
   const { C } = useTheme();
 
+  // Mobile viewport state
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Top Date Range & Frequency State
   const [dateRange, setDateRange] = useState("this_month");
   const [customDates, setCustomDates] = useState({ from: "2026-08-01", to: "2026-08-31" });
