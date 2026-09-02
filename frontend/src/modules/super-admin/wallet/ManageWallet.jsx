@@ -85,6 +85,13 @@ export default function ManageWallet() {
   const [activeFullViewModal, setActiveFullViewModal] = useState(null);
   const [modalSearchTerm, setModalSearchTerm] = useState('');
   const [modalStatusFilter, setModalStatusFilter] = useState('all');
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Form States
   const [adjForm, setAdjForm] = useState({ partner_id: '', amount: '', txn_type: 'credit', description: '' });
@@ -187,20 +194,20 @@ export default function ManageWallet() {
   };
 
   return (
-    <div style={{ transform: 'scale(0.93)', transformOrigin: 'top left', width: '107.5%', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '50px' }}>
+    <div style={isMobile ? { width: '100%', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px', boxSizing: 'border-box' } : { transform: 'scale(0.93)', transformOrigin: 'top left', width: '107.5%', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '50px' }}>
       
       {/* ── HEADER BANNER ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
+          <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
             Wallet & Settlement
           </h1>
-          <p style={{ fontSize: '13.5px', color: C.textLight, margin: '4px 0 0 0', fontWeight: 500 }}>
+          <p style={{ fontSize: isMobile ? '12px' : '13.5px', color: C.textLight, margin: '4px 0 0 0', fontWeight: 500 }}>
             Manage platform wallets, fund requests, commissions and settlement operations
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           {/* Date Selector */}
           <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
             📅 <span>{filters.dateRange}</span>
@@ -284,7 +291,7 @@ export default function ManageWallet() {
       )}
 
       {/* ── TOP 6 KPI CARDS ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px' }}>
         
         {/* Card 1: Total Wallet Balance */}
         <div style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -361,7 +368,7 @@ export default function ManageWallet() {
       </div>
 
       {/* ── ROW 1: 3 MAIN TABLES (SECTIONS 1, 2, 3) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '16px' }}>
         
         {/* SECTION 1: Withdrawal Settlements */}
         <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -517,7 +524,7 @@ export default function ManageWallet() {
       </div>
 
       {/* ── ROW 2: 3 SECTIONS (SECTIONS 4, 5, 6) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '16px' }}>
         
         {/* SECTION 4: Partner Balances Overview */}
         <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -652,7 +659,7 @@ export default function ManageWallet() {
             <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('reconciliation'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
           </div>
 
-          <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '14px', alignItems: 'center' }}>
             {/* Reconciliation Breakdown */}
             <div style={{ flex: 1, background: isDark ? '#27272A' : '#F8FAFC', padding: '12px', borderRadius: '12px', border: `1px solid ${C.border}`, fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={{ fontSize: '11.5px', fontWeight: 800, color: C.text, marginBottom: '2px' }}>Reconciliation Summary</div>
@@ -701,7 +708,7 @@ export default function ManageWallet() {
       {/* ── QUICK ACTIONS TOOLBAR (BOTTOM) ── */}
       <div style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <h4 style={{ fontSize: '13.5px', fontWeight: 900, color: C.text, margin: 0 }}>⚡ Quick Actions & Financial Operations</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px' }}>
           {[
             { label: 'Manual Wallet Adjustment', icon: '🛠️', action: () => setManualAdjModal(true) },
             { label: 'Add Funds to Wallet', icon: '💳', action: () => setAddFundsModal(true) },
@@ -835,7 +842,7 @@ export default function ManageWallet() {
       {activeFullViewModal && (
         <div style={{
           position: 'fixed', inset: 0, background: isDark ? '#09090B' : '#F8FAFC',
-          zIndex: 99999, display: 'flex', flexDirection: 'column', padding: '24px 32px', overflowY: 'auto',
+          zIndex: 99999, display: 'flex', flexDirection: 'column', padding: isMobile ? '16px 12px' : '24px 32px', overflowY: 'auto',
           fontFamily: "'Inter', sans-serif", color: C.text
         }}>
           {/* Header */}
