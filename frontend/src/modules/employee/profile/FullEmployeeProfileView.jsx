@@ -16,6 +16,10 @@ export default function FullEmployeeProfileView({ employeeId = null, isSuperAdmi
   const [activeTab, setActiveTab] = useState('overview');
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
+  // Edit Profile Modal / Actions Dropdown State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false);
+
   // Edit Form Fields State
   const [editFormData, setEditFormData] = useState({
     full_name: '',
