@@ -131,6 +131,19 @@ export default function ManageApplications() {
     fetchApplications();
   };
 
+  const clearAllFilters = () => {
+    setSearch("");
+    setSearchField("all");
+    setStatus("");
+    setStatusFilter("all");
+    setCommFilter("all");
+    setDateRange("all");
+    setProcessTypeFilter("all");
+    setSourceTypeFilter("all");
+    setPartnerFilter("");
+    setPage(1);
+  };
+
   const handleViewDetails = async (app) => {
     setSelectedApp(app);
     setAppDetail(app);
