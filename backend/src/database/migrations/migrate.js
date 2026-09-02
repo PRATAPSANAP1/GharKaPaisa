@@ -379,14 +379,21 @@ const migrate = async () => {
     ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
     ADD COLUMN IF NOT EXISTS salary_slip_url TEXT,
     ADD COLUMN IF NOT EXISTS pan_card_url TEXT,
+    ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(50),
     ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50),
     ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50),
     ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50),
     ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50),
     ADD COLUMN IF NOT EXISTS bank_remark TEXT,
     ADD COLUMN IF NOT EXISTS final_status VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
     ADD COLUMN IF NOT EXISTS decline_reason TEXT,
     ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50),
+    ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS pan_number VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS city VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS state VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS pincode VARCHAR(10),
     ADD COLUMN IF NOT EXISTS approved_amount DECIMAL(15,2);
 
     ALTER TABLE leads 
