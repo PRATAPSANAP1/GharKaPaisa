@@ -4,7 +4,7 @@ import { useAuthStore } from '../app/store/authStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { 
   FaChartPie, FaCreditCard, FaCoins, FaShieldAlt, FaFileAlt, FaUsers, 
-  FaGift, FaUserCircle, FaCheckCircle, FaFileContract, 
+  FaGift, FaUserCircle, FaCheckCircle, FaFileContract, FaCog,
   FaSignOutAlt, FaMoon, FaSun, FaBars, FaTimes, FaChevronDown,
   FaUserPlus, FaHandshake, FaCopy, FaShareAlt
 } from 'react-icons/fa';
@@ -83,11 +83,13 @@ export default function EmployeeLayout() {
     { path: '/employee/insurance', label: 'Insurance', icon: <FaShieldAlt /> },
     { path: '/employee/applications', label: 'My Applications', icon: <FaFileAlt /> },
     { path: '/employee/incentives', label: 'My Incentives', icon: <FaGift /> },
-    ...(isManagerOrTL ? [{ path: '/employee/team', label: 'My Team Architecture', icon: <FaUsers /> }] : [])
+    ...(isManagerOrTL ? [{ path: '/employee/team', label: 'My Team Architecture', icon: <FaUsers /> }] : []),
+    { path: '/employee/settings', label: 'Settings & Preferences', icon: <FaCog /> }
   ] : [
     { path: '/employee/dashboard', label: 'Employee Dashboard', icon: <FaChartPie /> },
     { path: '/employee/kyc', label: 'Employee Onboarding & KYC', icon: <FaCheckCircle /> },
-    { path: '/employee/profile', label: 'Employee Profile', icon: <FaUserCircle /> }
+    { path: '/employee/profile', label: 'Employee Profile', icon: <FaUserCircle /> },
+    { path: '/employee/settings', label: 'Settings & Preferences', icon: <FaCog /> }
   ];
 
   return (
@@ -279,6 +281,25 @@ export default function EmployeeLayout() {
                   }}
                 >
                   <FaUserCircle style={{ color: C.teal, fontSize: '15px' }} /> Employee Profile
+                </Link>
+
+                <Link
+                  to="/employee/settings"
+                  onClick={() => setProfileMenuOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '9px 12px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    color: C.text,
+                    textDecoration: 'none',
+                    background: location.pathname === '/employee/settings' ? C.bgSecondary : 'transparent'
+                  }}
+                >
+                  <FaCog style={{ color: C.teal, fontSize: '15px' }} /> Settings & Preferences
                 </Link>
 
                 {/* Invite Employee Option */}
