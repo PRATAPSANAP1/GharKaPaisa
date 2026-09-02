@@ -2819,14 +2819,34 @@ const exportApplicationsCSV = async (req, res, next) => {
     ];
     const csvLines = [csvHeaders.join(',')];
 
+    const formatPanNumber = (pan) => {
+      if (!pan || String(pan).trim() === '' || String(pan).toUpperCase() === 'N/A' || String(pan).toUpperCase() === 'NA') return 'NA';
+      const cleanPan = String(pan).trim().toUpperCase();
+      if (isAdminOperator || isEmployeeRole) {
+        if (cleanPan.length >= 6) {
+          return 'XXXXXX' + cleanPan.slice(6);
+        }
+        return 'XXXXXX';
+      }
+      return cleanPan;
+    };
+
+    const formatBankAppNumber = (bankAppNo) => {
+      if (!bankAppNo || String(bankAppNo).trim() === '' || String(bankAppNo).toUpperCase() === 'N/A' || String(bankAppNo).toUpperCase() === 'NA') return 'NA';
+      return String(bankAppNo).trim();
+    };
+
     for (const row of rows) {
       const mobVal = hideCustomerMobile ? 'REDACTED' : (row.customer_mobile || '');
+      const panVal = formatPanNumber(row.pan_number);
+      const bankAppNoVal = formatBankAppNumber(row.bank_application_number);
+
       csvLines.push([
         `"${(row.app_number || '').replace(/"/g, '""')}"`,
         `"${(row.customer_name || '').replace(/"/g, '""')}"`,
         `"${mobVal}"`,
         `"${(row.customer_email || '').replace(/"/g, '""')}"`,
-        `"${(row.pan_number || '').replace(/"/g, '""')}"`,
+        `"${panVal.replace(/"/g, '""')}"`,
         `"${(row.city || '').replace(/"/g, '""')}"`,
         `"${(row.state || '').replace(/"/g, '""')}"`,
         `"${(row.pincode || '').replace(/"/g, '""')}"`,
@@ -2841,7 +2861,7 @@ const exportApplicationsCSV = async (req, res, next) => {
         `"${(row.appcode_status || '').replace(/"/g, '""')}"`,
         `"${(row.soft_approval_status || '').replace(/"/g, '""')}"`,
         `"${(row.iqa_stage || '').replace(/"/g, '""')}"`,
-        `"${(row.bank_application_number || '').replace(/"/g, '""')}"`,
+        `"${bankAppNoVal.replace(/"/g, '""')}"`,
         `"${(row.vkyc_stage || '').replace(/"/g, '""')}"`,
         `"${(row.vkyc_url || '').replace(/"/g, '""')}"`,
         `"${(row.dispatch_status || '').replace(/"/g, '""')}"`,

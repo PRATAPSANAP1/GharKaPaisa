@@ -115,7 +115,18 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         const rawMobile = a.customer_mobile || a.mobile || 'N/A';
         const custMobile = hideCustomerMobile ? 'REDACTED' : rawMobile;
         const custEmail = a.customer_email || a.email || 'N/A';
-        const panNo = a.pan_number || a.pan || 'N/A';
+        
+        const rawPan = a.pan_number || a.pan || '';
+        let panNo = 'NA';
+        if (rawPan && String(rawPan).trim() !== '' && String(rawPan).toUpperCase() !== 'N/A' && String(rawPan).toUpperCase() !== 'NA') {
+          const strPan = String(rawPan).trim().toUpperCase();
+          if (hideCustomerMobile) {
+            panNo = strPan.length >= 6 ? 'XXXXXX' + strPan.slice(6) : 'XXXXXX';
+          } else {
+            panNo = strPan;
+          }
+        }
+
         const city = a.city || 'N/A';
         const state = a.state || 'N/A';
         const pincode = a.pincode || 'N/A';
@@ -130,7 +141,10 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         const appcodeStatus = a.appcode_status || 'N/A';
         const softApprovalStatus = a.soft_approval_status || 'N/A';
         const iqaStage = a.iqa_stage || 'N/A';
-        const bankAppNo = a.bank_application_number || a.bank_ref_number || 'N/A';
+        
+        const rawBankAppNo = a.bank_application_number || a.bank_ref_number || '';
+        const bankAppNo = (!rawBankAppNo || String(rawBankAppNo).trim() === '' || String(rawBankAppNo).toUpperCase() === 'N/A' || String(rawBankAppNo).toUpperCase() === 'NA') ? 'NA' : String(rawBankAppNo).trim();
+        
         const vkycStage = a.vkyc_stage || a.vkyc_status || 'N/A';
         const vkycLink = a.vkyc_url || 'N/A';
         const dispatchStatus = a.dispatch_status || 'N/A';
