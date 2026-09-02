@@ -193,9 +193,28 @@ router.get('/', async (req, res, next) => {
       queryStr += ` AND e.activation_status = $${params.length}`;
     }
 
+    // Standardize any legacy designations in DB
+    await query(`
+      UPDATE employees 
+      SET designation = CASE 
+        WHEN designation ILIKE '%Manager%' OR hierarchy_level = 'MANAGER' THEN 'Manager'
+        WHEN designation ILIKE '%Team Leader%' OR designation = 'TL' OR hierarchy_level = 'TEAM_LEADER' THEN 'Team Leader'
+        ELSE 'TC'
+      END
+      WHERE designation NOT IN ('Manager', 'Team Leader', 'TC')
+    `).catch(() => {});
+
     if (designation) {
-      params.push(designation);
-      queryStr += ` AND e.designation = $${params.length}`;
+      if (designation === 'TC' || designation === 'Telecaller (TC)' || designation === 'Telecaller') {
+        queryStr += ` AND (e.designation = 'TC' OR e.designation ILIKE '%Telecaller%' OR (e.designation NOT ILIKE '%Manager%' AND e.designation NOT ILIKE '%Team Leader%' AND e.designation != 'TL'))`;
+      } else if (designation === 'Manager') {
+        queryStr += ` AND (e.designation ILIKE '%Manager%' OR h.hierarchy_level = 'MANAGER')`;
+      } else if (designation === 'Team Leader') {
+        queryStr += ` AND (e.designation ILIKE '%Team Leader%' OR e.designation = 'TL' OR h.hierarchy_level = 'TEAM_LEADER')`;
+      } else {
+        params.push(designation);
+        queryStr += ` AND e.designation = $${params.length}`;
+      }
     }
 
     if (search) {
@@ -699,6 +718,65 @@ router.post('/:id/hierarchy', async (req, res, next) => {
     );
 
     res.json({ success: true, message: 'Employee hierarchy assigned successfully', data: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/employees/bulk-hierarchy — Bulk assign hierarchy for multiple employees
+router.post('/bulk-hierarchy', async (req, res, next) => {
+  try {
+    const { assignments } = req.body; // Array of { employee_id, manager_id, team_leader_id, hierarchy_level }
+    
+    if (!Array.isArray(assignments) || assignments.length === 0) {
+      return res.status(400).json({ success: false, message: 'Assignments array is required' });
+    }
+
+    const assignedBy = req.user?.id || req.user?.userId || null;
+    const results = [];
+    const errors = [];
+
+    // Sync designation mapping
+    const mapDesg = { 'MANAGER': 'Manager', 'TEAM_LEADER': 'Team Leader', 'TC': 'TC' };
+
+    for (const assignment of assignments) {
+      try {
+        const { employee_id, manager_id, team_leader_id, hierarchy_level } = assignment;
+        
+        if (!employee_id || !hierarchy_level) {
+          errors.push({ employee_id, error: 'Missing required fields' });
+          continue;
+        }
+
+        const cleanTlId = (team_leader_id && team_leader_id !== 'null' && team_leader_id !== 'undefined' && String(team_leader_id).trim() !== '') ? String(team_leader_id).trim() : null;
+        const cleanMgrId = (manager_id && manager_id !== 'null' && manager_id !== 'undefined' && String(manager_id).trim() !== '') ? String(manager_id).trim() : null;
+
+        // Sync employee designation
+        const desg = mapDesg[hierarchy_level.toUpperCase()] || hierarchy_level;
+        await query(`UPDATE employees SET designation = $1, updated_at = NOW() WHERE id = $2`, [desg, employee_id]);
+
+        // Deactivate previous active hierarchy
+        await query(`UPDATE employee_hierarchy SET is_active = false WHERE employee_id = $1`, [employee_id]);
+
+        // Insert new hierarchy
+        const { rows } = await query(
+          `INSERT INTO employee_hierarchy (employee_id, team_leader_id, manager_id, hierarchy_level, assigned_by, is_active)
+           VALUES ($1, $2, $3, $4, $5, true) RETURNING *`,
+          [employee_id, cleanTlId, cleanMgrId, hierarchy_level.toUpperCase(), assignedBy]
+        );
+
+        results.push({ employee_id, success: true, data: rows[0] });
+      } catch (err) {
+        errors.push({ employee_id: assignment.employee_id, error: err.message });
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Processed ${assignments.length} assignments, ${results.length} successful, ${errors.length} failed`,
+      results,
+      errors
+    });
   } catch (err) {
     next(err);
   }

@@ -38,7 +38,8 @@ export default function EmployeeManagement() {
     manager_id: '',
     team_leader_id: '',
     selected_tl_ids: [],
-    selected_tc_ids: []
+    selected_tc_ids: [],
+    tl_tc_mapping: {} // Mapping of TL ID to their selected TCs
   });
 
   const openHierarchyModal = (emp) => {
@@ -58,12 +59,25 @@ export default function EmployeeManagement() {
       ))
       .map(e => e.id);
 
+    // Build TL to TC mapping for existing hierarchy
+    const tlTcMapping = {};
+    currentTCs.forEach(tcId => {
+      const tc = employees.find(e => e.id === tcId);
+      if (tc && tc.team_leader_id) {
+        if (!tlTcMapping[tc.team_leader_id]) {
+          tlTcMapping[tc.team_leader_id] = [];
+        }
+        tlTcMapping[tc.team_leader_id].push(tcId);
+      }
+    });
+
     setHierarchyForm({
       hierarchy_level: currentRole,
       manager_id: emp.manager_id || '',
       team_leader_id: emp.team_leader_id || '',
       selected_tl_ids: currentTLs,
-      selected_tc_ids: currentTCs
+      selected_tc_ids: currentTCs,
+      tl_tc_mapping: tlTcMapping
     });
   };
 
@@ -81,38 +95,127 @@ export default function EmployeeManagement() {
       };
       await api.post(`/employees/${hierarchyModalEmp.id}/hierarchy`, payload);
 
-      // 2. If MANAGER role, assign selected TLs to report to this Manager
-      if (role === 'MANAGER' && Array.isArray(hierarchyForm.selected_tl_ids)) {
-        const prevTLs = employees.filter(e => (e.manager_id === hierarchyModalEmp.id || e.manager_name === hierarchyModalEmp.full_name) && (e.designation === 'Team Leader' || e.hierarchy_level === 'TEAM_LEADER'));
+      // 2. If MANAGER role, handle TL assignments and their TC mappings
+      if (role === 'MANAGER') {
+        const bulkAssignments = [];
+        
+        // First, remove previous TL assignments that are no longer selected
+        const prevTLs = employees.filter(e => 
+          (e.manager_id === hierarchyModalEmp.id || e.manager_name === hierarchyModalEmp.full_name) && 
+          (e.designation === 'Team Leader' || e.hierarchy_level === 'TEAM_LEADER')
+        );
+        
         for (const prevTl of prevTLs) {
           if (!hierarchyForm.selected_tl_ids.includes(prevTl.id)) {
-            await api.post(`/employees/${prevTl.id}/hierarchy`, {
+            // Remove this TL from manager
+            bulkAssignments.push({
+              employee_id: prevTl.id,
               hierarchy_level: 'TEAM_LEADER',
               manager_id: null,
               team_leader_id: null
             });
+            
+            // Clear TC assignments for this TL
+            const prevTCs = employees.filter(e => 
+              e.team_leader_id === prevTl.id && 
+              (e.designation === 'TC' || e.hierarchy_level === 'TC')
+            );
+            for (const tc of prevTCs) {
+              bulkAssignments.push({
+                employee_id: tc.id,
+                hierarchy_level: 'TC',
+                manager_id: null,
+                team_leader_id: null
+              });
+            }
           }
         }
+
+        // Assign selected TLs to this manager
         for (const tlId of hierarchyForm.selected_tl_ids) {
-          await api.post(`/employees/${tlId}/hierarchy`, {
+          bulkAssignments.push({
+            employee_id: tlId,
             hierarchy_level: 'TEAM_LEADER',
             manager_id: hierarchyModalEmp.id,
             team_leader_id: null
           });
         }
+
+        // Handle TC assignments based on TL-to-TC mapping
+        const allSelectedTCs = new Set();
+        Object.values(hierarchyForm.tl_tc_mapping || {}).forEach(tcIds => {
+          tcIds.forEach(tcId => allSelectedTCs.add(tcId));
+        });
+
+        // Clear previous TC assignments for this manager that are no longer selected
+        const prevTCs = employees.filter(e => 
+          e.manager_id === hierarchyModalEmp.id && 
+          (e.designation === 'TC' || e.hierarchy_level === 'TC')
+        );
+        
+        for (const tc of prevTCs) {
+          if (!allSelectedTCs.has(tc.id)) {
+            bulkAssignments.push({
+              employee_id: tc.id,
+              hierarchy_level: 'TC',
+              manager_id: null,
+              team_leader_id: null
+            });
+          }
+        }
+
+        // Assign TCs to their respective TLs under this manager
+        for (const [tlId, tcIds] of Object.entries(hierarchyForm.tl_tc_mapping || {})) {
+          for (const tcId of tcIds) {
+            bulkAssignments.push({
+              employee_id: tcId,
+              hierarchy_level: 'TC',
+              manager_id: hierarchyModalEmp.id,
+              team_leader_id: tlId
+            });
+          }
+        }
+
+        // Execute bulk assignment
+        if (bulkAssignments.length > 0) {
+          await api.post('/employees/bulk-hierarchy', { assignments: bulkAssignments });
+        }
       }
 
-      // 3. If MANAGER or TEAM_LEADER role, assign selected TCs to report to this Manager / TL
-      if ((role === 'MANAGER' || role === 'TEAM_LEADER') && Array.isArray(hierarchyForm.selected_tc_ids)) {
-        const targetMgrId = (role === 'MANAGER') ? hierarchyModalEmp.id : (hierarchyForm.manager_id || null);
-        const targetTlId = (role === 'TEAM_LEADER') ? hierarchyModalEmp.id : (hierarchyForm.selected_tl_ids?.[0] || null);
+      // 3. If TEAM_LEADER role, handle TC assignments
+      if (role === 'TEAM_LEADER') {
+        const bulkAssignments = [];
+        
+        // Clear previous TC assignments for this TL
+        const prevTCs = employees.filter(e => 
+          e.team_leader_id === hierarchyModalEmp.id && 
+          (e.designation === 'TC' || e.hierarchy_level === 'TC')
+        );
+        
+        for (const tc of prevTCs) {
+          if (!hierarchyForm.selected_tc_ids.includes(tc.id)) {
+            bulkAssignments.push({
+              employee_id: tc.id,
+              hierarchy_level: 'TC',
+              manager_id: hierarchyForm.manager_id || null,
+              team_leader_id: null
+            });
+          }
+        }
 
+        // Assign selected TCs to this TL
         for (const tcId of hierarchyForm.selected_tc_ids) {
-          await api.post(`/employees/${tcId}/hierarchy`, {
+          bulkAssignments.push({
+            employee_id: tcId,
             hierarchy_level: 'TC',
-            manager_id: targetMgrId,
-            team_leader_id: targetTlId
+            manager_id: hierarchyForm.manager_id || null,
+            team_leader_id: hierarchyModalEmp.id
           });
+        }
+
+        // Execute bulk assignment
+        if (bulkAssignments.length > 0) {
+          await api.post('/employees/bulk-hierarchy', { assignments: bulkAssignments });
         }
       }
 
@@ -257,7 +360,6 @@ export default function EmployeeManagement() {
     if (!currentMgr) return alert('No manager tree available to export.');
     
     const managerTLs = tlsList.filter(tl => tl.manager_id === currentMgr.id || tl.manager_name === currentMgr.full_name);
-    const allManagerTCs = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === currentMgr.id || tc.manager_name === currentMgr.full_name));
     
     let csv = 'Level,Role,Employee Name,Employee ID,Mobile Number,Reporting To\n';
     csv += `Level 1,Manager,"${currentMgr.full_name}","${currentMgr.employee_id}","${currentMgr.mobile_number || ''}","Direct"\n`;
@@ -367,7 +469,6 @@ export default function EmployeeManagement() {
                   <option value="Manager">Manager</option>
                   <option value="Team Leader">Team Leader</option>
                   <option value="TC">Telecaller (TC)</option>
-                  <option value="Sales Executive">Sales Executive</option>
                 </select>
 
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}>
@@ -405,7 +506,9 @@ export default function EmployeeManagement() {
                         {emp.full_name}
                         <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 400 }}>{emp.mobile_number}</div>
                       </td>
-                      <td style={{ padding: '14px 20px' }}>{emp.designation}</td>
+                      <td style={{ padding: '14px 20px', fontWeight: 800 }}>
+                        {String(emp.designation || '').toLowerCase().includes('manager') ? 'Manager' : String(emp.designation || '').toLowerCase().includes('team leader') || String(emp.designation || '').toUpperCase() === 'TL' ? 'Team Leader' : 'Telecaller (TC)'}
+                      </td>
                       <td style={{ padding: '14px 20px', color: C.textMid }}>
                         <div>{emp.manager_name ? `Mgr: ${emp.manager_name}` : 'Direct'}</div>
                         {emp.team_leader_name && <div style={{ fontSize: '12px' }}>TL: {emp.team_leader_name}</div>}
@@ -471,6 +574,17 @@ export default function EmployeeManagement() {
           const managerTLs = activeMgrId ? tlsList.filter(tl => tl.manager_id === activeMgrId || tl.manager_name === currentMgr?.full_name) : [];
           const allManagerTCs = activeMgrId ? employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === activeMgrId || tc.manager_name === currentMgr?.full_name)) : [];
           const directTCs = allManagerTCs.filter(tc => !tc.team_leader_id && !tc.team_leader_name);
+
+          // Build TL to TC mapping for tree visualization
+          const tlTcMapping = {};
+          allManagerTCs.forEach(tc => {
+            if (tc.team_leader_id) {
+              if (!tlTcMapping[tc.team_leader_id]) {
+                tlTcMapping[tc.team_leader_id] = [];
+              }
+              tlTcMapping[tc.team_leader_id].push(tc);
+            }
+          });
 
           return (
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '500px', padding: '24px' }}>
@@ -637,7 +751,7 @@ export default function EmployeeManagement() {
                               
                               {/* TEAM LEADERS BRANCHES */}
                               {managerTLs.map(tl => {
-                                const tlTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
+                                const tlTCs = tlTcMapping[tl.id] || [];
                                 return (
                                   <div key={tl.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                     
@@ -1221,7 +1335,19 @@ export default function EmployeeManagement() {
                   </label>
                   <select 
                     value={hierarchyForm.hierarchy_level} 
-                    onChange={(e) => setHierarchyForm({ ...hierarchyForm, hierarchy_level: e.target.value })} 
+                    onChange={(e) => {
+                      const newRole = e.target.value;
+                      // Reset form fields when role changes
+                      setHierarchyForm({
+                        ...hierarchyForm,
+                        hierarchy_level: newRole,
+                        selected_tl_ids: [],
+                        selected_tc_ids: [],
+                        tl_tc_mapping: {},
+                        manager_id: '',
+                        team_leader_id: ''
+                      });
+                    }} 
                     style={{ width: '100%', padding: '11px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px', fontWeight: 700 }}
                   >
                     <option value="MANAGER">Manager</option>
@@ -1261,7 +1387,12 @@ export default function EmployeeManagement() {
                                       const newIds = e.target.checked
                                         ? [...currentList, tl.id]
                                         : currentList.filter(id => id !== tl.id);
-                                      setHierarchyForm({ ...hierarchyForm, selected_tl_ids: newIds });
+                                      // Also clear TC mapping for unselected TL
+                                      const newMapping = { ...hierarchyForm.tl_tc_mapping };
+                                      if (!e.target.checked) {
+                                        delete newMapping[tl.id];
+                                      }
+                                      setHierarchyForm({ ...hierarchyForm, selected_tl_ids: newIds, tl_tc_mapping: newMapping });
                                     }}
                                   />
                                   <span style={{ fontWeight: checked ? 800 : 600 }}>{tl.full_name} ({tl.employee_id})</span>
@@ -1272,42 +1403,75 @@ export default function EmployeeManagement() {
                       </div>
                     </div>
 
-                    {/* Select Telecaller(s) for Manager */}
-                    <div style={{ marginBottom: '20px' }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, marginBottom: '2px', color: C.text }}>
-                        Select Telecaller(s)
-                      </label>
-                      <span style={{ fontSize: '11.5px', color: C.teal, display: 'block', marginBottom: '8px', fontWeight: 700 }}>
-                        Initially None (Select one or more Telecallers)
-                      </span>
-                      <div style={{ maxHeight: '150px', overflowY: 'auto', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '8px' }}>
-                        {employees.filter(e => e.id !== hierarchyModalEmp.id && (e.designation === 'TC' || e.hierarchy_level === 'TC')).length === 0 ? (
-                          <div style={{ fontSize: '12px', color: C.textMid, padding: '8px', textAlign: 'center' }}>No Telecallers available</div>
-                        ) : (
-                          employees
-                            .filter(e => e.id !== hierarchyModalEmp.id && (e.designation === 'TC' || e.hierarchy_level === 'TC'))
-                            .map(tc => {
-                              const checked = (hierarchyForm.selected_tc_ids || []).includes(tc.id);
-                              return (
-                                <label key={tc.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', fontSize: '13px', color: C.text, cursor: 'pointer', borderRadius: '8px', background: checked ? '#ECFDF5' : 'transparent', marginBottom: '4px' }}>
-                                  <input 
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={(e) => {
-                                      const currentList = hierarchyForm.selected_tc_ids || [];
-                                      const newIds = e.target.checked
-                                        ? [...currentList, tc.id]
-                                        : currentList.filter(id => id !== tc.id);
-                                      setHierarchyForm({ ...hierarchyForm, selected_tc_ids: newIds });
-                                    }}
-                                  />
-                                  <span style={{ fontWeight: checked ? 800 : 600 }}>{tc.full_name} ({tc.employee_id})</span>
-                                </label>
-                              );
-                            })
-                        )}
+                    {/* Contextual TC selection for each selected TL */}
+                    {(hierarchyForm.selected_tl_ids || []).length > 0 && (
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, marginBottom: '2px', color: C.text }}>
+                          Assign Telecallers to Team Leaders
+                        </label>
+                        <span style={{ fontSize: '11.5px', color: C.teal, display: 'block', marginBottom: '8px', fontWeight: 700 }}>
+                          Select TCs for each Team Leader (Initially None)
+                        </span>
+                        
+                        {(hierarchyForm.selected_tl_ids || []).map(tlId => {
+                          const tl = employees.find(e => e.id === tlId);
+                          if (!tl) return null;
+                          
+                          const assignedTCs = hierarchyForm.tl_tc_mapping?.[tlId] || [];
+                          const availableTCs = employees.filter(e => 
+                            e.id !== hierarchyModalEmp.id && 
+                            (e.designation === 'TC' || e.hierarchy_level === 'TC')
+                          );
+                          
+                          return (
+                            <div key={tlId} style={{ marginBottom: '16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px' }}>
+                              <div style={{ fontSize: '12px', fontWeight: 800, color: '#3B82F6', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ background: '#3B82F6', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px' }}>TL</span>
+                                {tl.full_name} ({tl.employee_id})
+                              </div>
+                              
+                              <div style={{ maxHeight: '120px', overflowY: 'auto', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '6px' }}>
+                                {availableTCs.length === 0 ? (
+                                  <div style={{ fontSize: '11px', color: C.textMid, padding: '6px', textAlign: 'center' }}>No Telecallers available</div>
+                                ) : (
+                                  availableTCs.map(tc => {
+                                    const checked = assignedTCs.includes(tc.id);
+                                    return (
+                                      <label key={tc.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', fontSize: '12px', color: C.text, cursor: 'pointer', borderRadius: '6px', background: checked ? '#ECFDF5' : 'transparent', marginBottom: '2px' }}>
+                                        <input 
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={(e) => {
+                                            const currentMapping = hierarchyForm.tl_tc_mapping || {};
+                                            const currentTCs = currentMapping[tlId] || [];
+                                            const newTCs = e.target.checked
+                                              ? [...currentTCs, tc.id]
+                                              : currentTCs.filter(id => id !== tc.id);
+                                            
+                                            setHierarchyForm({
+                                              ...hierarchyForm,
+                                              tl_tc_mapping: {
+                                                ...currentMapping,
+                                                [tlId]: newTCs
+                                              }
+                                            });
+                                          }}
+                                        />
+                                        <span style={{ fontWeight: checked ? 700 : 500 }}>{tc.full_name} ({tc.employee_id})</span>
+                                      </label>
+                                    );
+                                  })
+                                )}
+                              </div>
+                              
+                              <div style={{ marginTop: '6px', fontSize: '11px', color: C.textMid }}>
+                                {assignedTCs.length > 0 ? `${assignedTCs.length} TC(s) assigned` : 'No TCs assigned'}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
+                    )}
                   </>
                 )}
 
