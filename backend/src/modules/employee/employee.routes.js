@@ -348,6 +348,16 @@ router.get('/profile', async (req, res, next) => {
       WHERE h.employee_id = $1 AND h.is_active = true
     `, [empId]);
 
+    // 7. Incentives summary
+    const incRes = await query(`
+      SELECT 
+        COALESCE(SUM(amount), 0) as total_incentives,
+        COALESCE(SUM(CASE WHEN UPPER(status::text) = 'PAID' THEN amount ELSE 0 END), 0) as paid_incentives,
+        COALESCE(SUM(CASE WHEN UPPER(status::text) = 'PENDING' THEN amount ELSE 0 END), 0) as pending_incentives
+      FROM employee_incentives
+      WHERE employee_id = $1
+    `, [empId]).catch(() => ({ rows: [{ total_incentives: 0, paid_incentives: 0, pending_incentives: 0 }] }));
+
     // 8. Dynamic performance & team statistics
     const appsRes = await query(`
       SELECT 
