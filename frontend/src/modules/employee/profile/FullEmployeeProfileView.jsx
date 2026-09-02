@@ -198,13 +198,14 @@ Generated On  : ${new Date().toLocaleString()}
   const accountStatus = (emp.employee_status || emp.status || emp.activation_status || 'ACTIVE').toUpperCase();
   const kycState = kyc.kyc_status || 'NOT_SUBMITTED';
 
-  // Statistics calculation fallbacks
-  const teamSize = hierarchy.team_size || (emp.designation === 'Manager' ? 12 : (emp.designation === 'Team Leader' ? 5 : 0));
-  const totalApps = emp.total_applications || 24;
-  const approvedApps = emp.approved_applications || 20;
-  const approvalRate = totalApps > 0 ? ((approvedApps / totalApps) * 100).toFixed(1) : '100.0';
-  const totalIncentives = incSummary.total_earned || emp.total_incentives || 14500;
-  const leadsGenerated = emp.leads_count || 48;
+  // Dynamic statistics calculation without hardcoded fallbacks
+  const teamSize = hierarchy.team_size !== undefined ? hierarchy.team_size : (emp.team_size !== undefined ? emp.team_size : 0);
+  const totalApps = emp.total_applications !== undefined ? emp.total_applications : (emp.applications_count !== undefined ? emp.applications_count : 0);
+  const approvedApps = emp.approved_applications !== undefined ? emp.approved_applications : (emp.approved_count !== undefined ? emp.approved_count : 0);
+  const approvalRate = totalApps > 0 ? ((approvedApps / totalApps) * 100).toFixed(1) : '0.0';
+  const totalIncentives = incSummary.total_earned !== undefined ? incSummary.total_earned : (emp.total_incentives !== undefined ? emp.total_incentives : 0);
+  const leadsGenerated = emp.leads_count !== undefined ? emp.leads_count : 0;
+  const activeMembers = hierarchy.active_members !== undefined ? hierarchy.active_members : (teamSize > 0 ? teamSize : 0);
 
   if (loading) {
     return (
@@ -215,7 +216,7 @@ Generated On  : ${new Date().toLocaleString()}
   }
 
   return (
-    <div style={{ maxWidth: '1120px', margin: '0 auto', fontFamily: "'Inter', sans-serif", color: C.text, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+    <div style={{ maxWidth: '1240px', margin: '0 auto', fontFamily: "'Inter', sans-serif", color: C.text, display: 'flex', flexDirection: 'column', gap: '12px', zoom: 0.85 }}>
       
       {/* 1. Header / Basic Information Banner */}
       <div style={{ 
@@ -395,7 +396,7 @@ Generated On  : ${new Date().toLocaleString()}
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '14px 12px', textAlign: 'center' }}>
           <span style={{ fontSize: '10.5px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', display: 'block' }}>Active Members</span>
-          <strong style={{ fontSize: '18px', fontWeight: 900, color: '#F59E0B' }}>{teamSize > 0 ? teamSize - 1 : 1}</strong>
+          <strong style={{ fontSize: '18px', fontWeight: 900, color: '#F59E0B' }}>{activeMembers}</strong>
         </div>
       </div>
 
@@ -685,20 +686,40 @@ Generated On  : ${new Date().toLocaleString()}
 
       {/* TAB 6: PERFORMANCE */}
       {activeTab === 'performance' && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '28px' }}>
-          <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.teal, margin: '0 0 20px 0' }}>Performance Metrics & Conversion Analytics</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 900, color: C.teal, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FaAward /> Performance Metrics & Conversion Analytics
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(3, 1fr)', gap: '14px' }}>
             <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>Total Applications</span>
-              <strong style={{ display: 'block', fontSize: '20px', color: C.text }}>{totalApps}</strong>
+              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Total Applications</span>
+              <strong style={{ display: 'block', fontSize: '22px', fontWeight: 900, color: C.text, marginTop: '2px' }}>{totalApps}</strong>
+              <span style={{ fontSize: '11px', color: C.textMid }}>Applications Punched & Tracked</span>
             </div>
             <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>Approved Conversions</span>
-              <strong style={{ display: 'block', fontSize: '20px', color: '#10B981' }}>{approvedApps}</strong>
+              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Approved Conversions</span>
+              <strong style={{ display: 'block', fontSize: '22px', fontWeight: 900, color: '#10B981', marginTop: '2px' }}>{approvedApps}</strong>
+              <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>Successfully Approved</span>
             </div>
             <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>Approval Conversion Rate</span>
-              <strong style={{ display: 'block', fontSize: '20px', color: '#3B82F6' }}>{approvalRate}%</strong>
+              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Approval Rate</span>
+              <strong style={{ display: 'block', fontSize: '22px', fontWeight: 900, color: '#3B82F6', marginTop: '2px' }}>{approvalRate}%</strong>
+              <span style={{ fontSize: '11px', color: '#3B82F6', fontWeight: 700 }}>Overall Conversion Ratio</span>
+            </div>
+            <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Total Incentives</span>
+              <strong style={{ display: 'block', fontSize: '22px', fontWeight: 900, color: '#059669', marginTop: '2px' }}>₹{Number(totalIncentives).toLocaleString('en-IN')}</strong>
+              <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700 }}>Commissions & Payouts</span>
+            </div>
+            <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Leads Generated</span>
+              <strong style={{ display: 'block', fontSize: '22px', fontWeight: 900, color: '#8B5CF6', marginTop: '2px' }}>{leadsGenerated}</strong>
+              <span style={{ fontSize: '11px', color: '#8B5CF6', fontWeight: 700 }}>Customer Leads Created</span>
+            </div>
+            <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Team Subordinates</span>
+              <strong style={{ display: 'block', fontSize: '22px', fontWeight: 900, color: '#F59E0B', marginTop: '2px' }}>{teamSize}</strong>
+              <span style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 700 }}>Direct Network Members</span>
             </div>
           </div>
         </div>
