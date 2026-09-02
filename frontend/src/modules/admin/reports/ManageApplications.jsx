@@ -3,10 +3,10 @@ import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
 import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers, Eye, Download } from 'lucide-react';
-import { 
-  MdSearch, MdFilterList, MdDownload, MdAdd, MdHourglassEmpty, MdTrackChanges, 
-  MdCheckCircle, MdCancel, MdChevronLeft, MdChevronRight, MdClose, MdMoreVert, 
-  MdVisibility, MdHistory, MdDelete, MdExpandMore, MdChevronRight as MdChevronRightIcon 
+import {
+  MdSearch, MdFilterList, MdDownload, MdAdd, MdHourglassEmpty, MdTrackChanges,
+  MdCheckCircle, MdCancel, MdChevronLeft, MdChevronRight, MdClose, MdMoreVert,
+  MdVisibility, MdHistory, MdDelete, MdExpandMore, MdChevronRight as MdChevronRightIcon
 } from 'react-icons/md';
 import { FaFileAlt } from 'react-icons/fa';
 import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
@@ -64,7 +64,7 @@ export default function ManageApplications() {
           api.get('/admin/partners', { params: { limit: 1000 } }).catch(() => null),
           api.get('/employees', { params: { limit: 1000 } }).catch(() => null)
         ]);
-        
+
         let pArr = pRes?.data?.data?.partners || pRes?.data?.data || pRes?.data?.partners || pRes?.data || [];
         if (!Array.isArray(pArr) && typeof pArr === 'object') {
           pArr = pArr.rows || Object.values(pArr).find(v => Array.isArray(v)) || [];
@@ -251,7 +251,7 @@ export default function ManageApplications() {
 
   const getAgentLabel = (app) => {
     if (!app) return 'Direct';
-    
+
     const appPName = app.partner_name || app.partner_full_name || (app.partner_first_name ? `${app.partner_first_name} ${app.partner_last_name || ''}`.trim() : null);
     const appEName = app.employee_name || app.employee_full_name || (app.employee_first_name ? `${app.employee_first_name} ${app.employee_last_name || ''}`.trim() : null);
 
@@ -260,9 +260,9 @@ export default function ManageApplications() {
 
     let pName = appPName;
     if (!pName && pCode && partnersList.length > 0) {
-      const matchP = partnersList.find(p => 
-        (p.partner_code && p.partner_code === pCode) || 
-        (p.code && p.code === pCode) || 
+      const matchP = partnersList.find(p =>
+        (p.partner_code && p.partner_code === pCode) ||
+        (p.code && p.code === pCode) ||
         (p.id && String(p.id) === String(pCode))
       );
       if (matchP) {
@@ -272,10 +272,10 @@ export default function ManageApplications() {
 
     let eName = appEName;
     if (!eName && eCode && employeesList.length > 0) {
-      const matchE = employeesList.find(e => 
-        (e.employee_code && e.employee_code === eCode) || 
+      const matchE = employeesList.find(e =>
+        (e.employee_code && e.employee_code === eCode) ||
         (e.emp_code && e.emp_code === eCode) ||
-        (e.code && e.code === eCode) || 
+        (e.code && e.code === eCode) ||
         (e.id && String(e.id) === String(eCode))
       );
       if (matchE) {
@@ -336,7 +336,7 @@ export default function ManageApplications() {
 
   return (
     <div style={{ fontFamily: 'Inter, sans-serif', paddingBottom: '100px' }}>
-      
+
       {/* ── 1. PAGE HEADER ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
         <div>
@@ -349,7 +349,7 @@ export default function ManageApplications() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button 
+          <button
             onClick={() => setIsExportModalOpen(true)}
             style={{
               padding: '9px 16px', borderRadius: '10px', background: C.card, color: C.text,
@@ -364,7 +364,7 @@ export default function ManageApplications() {
 
       {/* ── 2. TOP KPI SUMMARY CARDS ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-        
+
         {/* Total Applications */}
         <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -509,13 +509,11 @@ export default function ManageApplications() {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th style={{ padding: '14px 16px' }}>App #</th>
-                  <th style={{ padding: '14px 16px' }}>Customer Details</th>
+                  <th style={{ padding: '14px 16px' }}>App ID &amp; Date</th>
+                  <th style={{ padding: '14px 16px' }}>Customer</th>
+                  <th style={{ padding: '14px 16px' }}>Source &amp; Process</th>
                   <th style={{ padding: '14px 16px' }}>Product &amp; Bank</th>
-                  <th style={{ padding: '14px 16px' }}>Attribution</th>
-                  <th style={{ padding: '14px 16px' }}>Applied Amount</th>
-                  <th style={{ padding: '14px 16px' }}>Status</th>
-                  <th style={{ padding: '14px 16px' }}>Date</th>
+                  <th style={{ padding: '14px 16px' }}>Status &amp; Commission</th>
                   <th style={{ padding: '14px 16px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -528,15 +526,20 @@ export default function ManageApplications() {
                   return (
                     <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                       
-                      {/* App Number */}
-                      <td style={{ padding: '14px 16px', fontWeight: 800, fontFamily: 'monospace', color: C.teal }}>
-                        {app.app_number || `APP${app.id}`}
+                      {/* App ID & Date */}
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ fontWeight: 800, color: C.teal, fontFamily: 'monospace', fontSize: '12.5px' }}>
+                          {app.app_number || `APP${app.id}`}
+                        </div>
+                        <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
+                          {formattedDate}
+                        </div>
                       </td>
 
                       {/* Customer Info */}
                       <td style={{ padding: '14px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: C.bgSecondary, color: C.primary, fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}` }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: C.bgSecondary, color: C.primary, fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}`, flexShrink: 0 }}>
                             {getInitials(custName)}
                           </div>
                           <div>
@@ -546,39 +549,30 @@ export default function ManageApplications() {
                         </div>
                       </td>
 
-                      {/* Product & Bank */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <div style={{ fontWeight: 700 }}>{app.product_name || app.category || 'Financial Product'}</div>
-                        <div style={{ fontSize: '11px', color: C.textLight }}>{app.bank_name || app.bank_code || 'Bank Partner'}</div>
-                      </td>
-
-                      {/* Source Attribution & Agent */}
+                      {/* Source & Process */}
                       <td style={{ padding: '14px 16px' }}>
                         {renderProcessBadge(app)}
                       </td>
 
-                      {/* Amount */}
-                      <td style={{ padding: '14px 16px', fontWeight: 700 }}>
-                        {app.loan_amount && Number(app.loan_amount) > 0 
-                          ? `₹${parseFloat(app.loan_amount).toLocaleString("en-IN")}`
-                          : (app.monthly_income || app.salary) 
-                            ? `₹${parseFloat(app.monthly_income || app.salary).toLocaleString("en-IN")} / mo` 
-                            : 'N/A'}
-                      </td>
-
-                      {/* Status */}
+                      {/* Product & Bank */}
                       <td style={{ padding: '14px 16px' }}>
-                        <span style={{
-                          display: "inline-block", padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: 800, textTransform: "uppercase",
-                          background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`
-                        }}>
-                          {badge.label}
-                        </span>
+                        <div style={{ fontWeight: 800, color: C.text }}>{app.bank_name || app.bank_code || 'Bank Partner'}</div>
+                        <div style={{ fontSize: '11px', color: C.textLight }}>{app.product_name || app.category || 'Financial Product'}</div>
                       </td>
 
-                      {/* Date */}
-                      <td style={{ padding: '14px 16px', fontSize: '12px', color: C.textLight, whiteSpace: 'nowrap' }}>
-                        {formattedDate}
+                      {/* Status & Commission */}
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <span style={{
+                            display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "10.5px", fontWeight: 800, textTransform: "uppercase", width: "fit-content",
+                            background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`
+                          }}>
+                            {badge.label}
+                          </span>
+                          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>
+                            Comm: <span style={{ color: app.commission_released || app.commission_status === 'processed' ? '#059669' : C.textMid }}>₹{parseFloat(app.commission_amount || 0).toLocaleString('en-IN')} ({app.commission_released || app.commission_status === 'processed' ? 'Released' : 'Pending'})</span>
+                          </div>
+                        </div>
                       </td>
 
                       {/* Actions */}
@@ -623,13 +617,13 @@ export default function ManageApplications() {
 
         {/* ── PAGINATION BAR ── */}
         <div style={{ padding: '14px 20px', background: C.bgSecondary, borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-          
+
           <div style={{ fontSize: '12.5px', color: C.textLight }}>
             Showing <strong>{(page - 1) * limit + 1}–{Math.min(page * limit, total)}</strong> of <strong>{total}</strong> applications
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            
+
             {/* Items Per Page Select */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '12px', color: C.textLight }}>Per page:</span>
@@ -697,7 +691,7 @@ export default function ManageApplications() {
               <div style={{ textAlign: "center", padding: "40px", color: C.textLight, fontWeight: 600 }}>Loading details...</div>
             ) : appDetail ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                
+
                 {/* Header Summary */}
                 <div style={{ borderBottom: `1px solid ${C.border}`, paddingBottom: '14px', marginRight: '40px' }}>
                   <span style={{ fontSize: '11px', fontWeight: 800, background: `${C.primary}15`, color: C.primary, padding: '2px 8px', borderRadius: '4px', fontFamily: 'monospace' }}>
@@ -726,7 +720,7 @@ export default function ManageApplications() {
                       Current Status: {(appDetail.status || 'pending').replace(/_/g, ' ')}
                     </span>
                   </div>
-                  
+
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Operational Remark / Approval Note</label>
                     <textarea
@@ -806,8 +800,8 @@ export default function ManageApplications() {
                         {appDetail.employee_name || appDetail.emp_code
                           ? `Employee: ${appDetail.employee_name} (${String(appDetail.emp_code || 'EMP').replace(/^CAND/, 'YOH-SE')})`
                           : appDetail.partner_code || appDetail.Partner_first_name || appDetail.partner_first_name
-                          ? `Partner: ${appDetail.partner_first_name || appDetail.Partner_first_name || ''} ${appDetail.partner_last_name || appDetail.Partner_last_name || ''} (${appDetail.partner_code || appDetail.Partner_code || 'N/A'})`.trim()
-                          : 'Direct / Customer Online'}
+                            ? `Partner: ${appDetail.partner_first_name || appDetail.Partner_first_name || ''} ${appDetail.partner_last_name || appDetail.Partner_last_name || ''} (${appDetail.partner_code || appDetail.Partner_code || 'N/A'})`.trim()
+                            : 'Direct / Customer Online'}
                       </strong>
                     </div>
                   </div>
