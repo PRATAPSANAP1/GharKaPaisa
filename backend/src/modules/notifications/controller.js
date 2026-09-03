@@ -567,16 +567,23 @@ const getAnnouncementStats = async (req, res, next) => {
   }
 };
 
+// Helper to resolve announcement by UUID or Code safely without PostgreSQL type error
+const getAnnouncementByIdOrCode = async (idOrCode) => {
+  if (!idOrCode) return null;
+  const { rows: [ann] } = await query(`
+    SELECT a.*, u.full_name as creator_name, u.email as creator_email
+    FROM announcements a
+    LEFT JOIN users u ON u.id = a.created_by
+    WHERE a.id::text = $1 OR a.announcement_id = $1
+  `, [idOrCode]);
+  return ann || null;
+};
+
 // GET /superadmin/announcement/:id/analytics
 const getAnnouncementAnalytics = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { rows: [ann] } = await query(`
-      SELECT a.*, u.full_name as creator_name, u.email as creator_email
-      FROM announcements a
-      LEFT JOIN users u ON u.id = a.created_by
-      WHERE a.id = $1 OR a.announcement_id = $1
-    `, [id]);
+    const ann = await getAnnouncementByIdOrCode(id);
 
     if (!ann) return notFound(res, 'Announcement not found');
 
@@ -710,7 +717,7 @@ const updateAnnouncement = async (req, res, next) => {
       expires_at, start_date, end_date, redirect_url, status 
     } = req.body;
 
-    const { rows: [existing] } = await query(`SELECT * FROM announcements WHERE id = $1 OR announcement_id = $1`, [id]);
+    const existing = await getAnnouncementByIdOrCode(id);
     if (!existing) return notFound(res, 'Announcement not found');
 
     const finalStatus = status ? status.toUpperCase() : existing.status;
@@ -801,7 +808,7 @@ const cancelAnnouncement = async (req, res, next) => {
 const deleteAnnouncement = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { rows: [existing] } = await query(`SELECT * FROM announcements WHERE id = $1 OR announcement_id = $1`, [id]);
+    const existing = await getAnnouncementByIdOrCode(id);
     if (!existing) return notFound(res, 'Announcement not found');
 
     await logAnnouncementAudit(existing.id, 'Deleted Announcement', req.user.id, req.user.full_name || 'Super Admin', existing, {});
@@ -816,21 +823,23 @@ const recordAnnouncementRead = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const ann = await getAnnouncementByIdOrCode(id);
+    const annUuid = ann ? ann.id : id;
 
     await query(`
       INSERT INTO announcement_recipients (announcement_id, user_id, read_at)
       VALUES ($1, $2, NOW())
       ON CONFLICT (announcement_id, user_id) 
       DO UPDATE SET read_at = COALESCE(announcement_recipients.read_at, NOW())
-    `, [id, userId]);
+    `, [annUuid, userId]);
 
     await query(`
       INSERT INTO announcement_reads (announcement_id, user_id, read_at)
       VALUES ($1, $2, NOW())
       ON CONFLICT (announcement_id, user_id) DO NOTHING
-    `, [id, userId]);
+    `, [annUuid, userId]);
 
-    await query(`UPDATE announcements SET views_count = views_count + 1 WHERE id = $1`, [id]);
+    await query(`UPDATE announcements SET views_count = views_count + 1 WHERE id = $1`, [annUuid]);
 
     return success(res, {}, 'Announcement read recorded');
   } catch (err) {
@@ -842,20 +851,22 @@ const recordAnnouncementAck = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
+    const ann = await getAnnouncementByIdOrCode(id);
+    const annUuid = ann ? ann.id : id;
 
     await query(`
       UPDATE announcement_recipients 
       SET acknowledged_at = NOW(), read_at = COALESCE(read_at, NOW()) 
       WHERE announcement_id = $1 AND user_id = $2
-    `, [id, userId]);
+    `, [annUuid, userId]);
 
     await query(`
       UPDATE announcement_reads 
       SET acknowledged_at = NOW() 
       WHERE announcement_id = $1 AND user_id = $2
-    `, [id, userId]);
+    `, [annUuid, userId]);
 
-    await query(`UPDATE announcements SET acknowledgements_count = acknowledgements_count + 1 WHERE id = $1`, [id]);
+    await query(`UPDATE announcements SET acknowledgements_count = acknowledgements_count + 1 WHERE id = $1`, [annUuid]);
 
     return success(res, {}, 'Announcement acknowledged successfully');
   } catch (err) {
