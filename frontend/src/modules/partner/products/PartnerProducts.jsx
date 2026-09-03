@@ -17,6 +17,7 @@ import {
 import { FaBalanceScale } from 'react-icons/fa';
 import { getCardDetails } from '../../home/components/CreditCards/CardDetailsData';
 import { getBankApplyLink } from '../../home/components/CreditCards/cardLinkHelper';
+import PincodeAutoComplete, { isSbiPincodeValid } from '../../../components/PincodeAutoComplete';
 
 const CATEGORIES = [
   { id: 'all', label: 'All Products' },
@@ -191,6 +192,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   const [countryCode, setCountryCode] = useState("+91");
   const [mobile, setMobile] = useState("");
   const [panNumber, setPanNumber] = useState("");
+  const [pincode, setPincode] = useState("");
   const [processType, setProcessType] = useState("lead_punching"); // 'lead_punching', 'linked_share', 'direct_bank'
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
@@ -254,6 +256,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
     setCountryCode("+91");
     setMobile("");
     setPanNumber("");
+    setPincode("");
     setProcessType("lead_punching");
     setFormErrors({});
   };
@@ -277,6 +280,11 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       if (!panNumber.trim() || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber.trim().toUpperCase())) {
         errors.panNumber = "Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).";
       }
+      if (!pincode.trim() || !/^\d{6}$/.test(pincode.trim())) {
+        errors.pincode = "Please enter a valid 6-digit Pincode.";
+      } else if (!isSbiPincodeValid(pincode.trim())) {
+        errors.pincode = "You can't add lead for this pincode";
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -297,6 +305,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         mobile: mobile.trim(),
         pan_number: panNumber.trim().toUpperCase() || undefined,
         pan: panNumber.trim().toUpperCase() || undefined,
+        pincode: pincode.trim() || undefined,
         process_type: processType,
         agree_terms: true
       };
@@ -1691,20 +1700,35 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                   {formErrors.mobile && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.mobile}</span>}
                 </div>
 
-                {/* PAN Card Field */}
+                {/* PAN Card & Pincode Fields (Shown when product bank is SBI) */}
                 {isSbiProduct && (
-                  <div>
-                    <label style={S.label}>PAN Card Number *</label>
-                    <input
-                      type="text"
-                      placeholder="Enter 10-digit PAN (e.g. ABCDE1234F)"
-                      maxLength={10}
-                      value={panNumber}
-                      onChange={(e) => { setPanNumber(e.target.value.toUpperCase()); setFormErrors(prev => ({ ...prev, panNumber: null })); }}
-                      style={{ ...S.input, height: '44px', fontSize: '14px', textTransform: 'uppercase', fontFamily: 'monospace', borderColor: formErrors.panNumber ? C.red : C.border }}
-                    />
-                    {formErrors.panNumber && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.panNumber}</span>}
-                  </div>
+                  <>
+                    <div>
+                      <label style={S.label}>PAN Card Number *</label>
+                      <input
+                        type="text"
+                        placeholder="Enter 10-digit PAN (e.g. ABCDE1234F)"
+                        maxLength={10}
+                        value={panNumber}
+                        onChange={(e) => { setPanNumber(e.target.value.toUpperCase()); setFormErrors(prev => ({ ...prev, panNumber: null })); }}
+                        style={{ ...S.input, height: '44px', fontSize: '14px', textTransform: 'uppercase', fontFamily: 'monospace', borderColor: formErrors.panNumber ? C.red : C.border }}
+                      />
+                      {formErrors.panNumber && <span style={{ fontSize: '11.5px', color: C.red, marginTop: '4px', display: 'block' }}>{formErrors.panNumber}</span>}
+                    </div>
+
+                    <div>
+                      <label style={S.label}>Enter Pincode *</label>
+                      <PincodeAutoComplete
+                        value={pincode}
+                        onChange={(val) => { setPincode(val); setFormErrors(prev => ({ ...prev, pincode: null })); }}
+                        onSelect={({ pincode: pin }) => { setPincode(pin); setFormErrors(prev => ({ ...prev, pincode: null })); }}
+                        isSbiOnly={true}
+                        placeholder="Enter 6-digit Pincode"
+                        error={formErrors.pincode}
+                        C={C}
+                      />
+                    </div>
+                  </>
                 )}
 
                 {/* 3. Process By (3 Modes) */}

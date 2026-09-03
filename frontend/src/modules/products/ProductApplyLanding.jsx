@@ -5,6 +5,7 @@ import { getApiV1Url } from '../../config/api';
 import { getCleanImageUrl } from '../../utils/urlHelper';
 import { useFormPersistence } from '../../hooks/useFormPersistence';
 import LoadingLogo from '../../components/Loader/LoadingLogo';
+import PincodeAutoComplete, { isSbiPincodeValid } from '../../components/PincodeAutoComplete';
 
 export default function ProductApplyLanding() {
   const { partnerCode, productId } = useParams();
@@ -19,6 +20,7 @@ export default function ProductApplyLanding() {
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [panNumber, setPanNumber] = useState('');
+  const [pincode, setPincode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState('');
@@ -80,6 +82,11 @@ export default function ProductApplyLanding() {
       if (!panNumber.trim() || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber.trim().toUpperCase())) {
         return alert('Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).');
       }
+      if (!pincode.trim() || !/^\d{6}$/.test(pincode.trim())) {
+        return alert('Please enter a valid 6-digit Pincode.');
+      } else if (!isSbiPincodeValid(pincode.trim())) {
+        return alert("You can't add lead for this pincode");
+      }
     }
 
     setSubmitting(true);
@@ -92,6 +99,7 @@ export default function ProductApplyLanding() {
           customer_mobile: customerMobile.trim().replace(/\D/g, '').slice(-10),
           pan_number: panNumber.trim().toUpperCase() || undefined,
           pan: panNumber.trim().toUpperCase() || undefined,
+          pincode: pincode.trim() || undefined,
           partner_code: partnerCode || searchParams.get('partner') || null
         })
       });
@@ -503,27 +511,40 @@ export default function ProductApplyLanding() {
                 </div>
               </div>
 
-              {/* Mandatory PAN Card Field for SBI products */}
+              {/* Mandatory PAN Card & Pincode Fields for SBI products */}
               {isSbiProduct && (
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>PAN Card Number *</label>
-                  <input
-                    type="text"
-                    value={panNumber}
-                    onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
-                    placeholder="ABCDE1234F"
-                    required
-                    maxLength={10}
-                    style={{
-                      width: '100%', boxSizing: 'border-box', padding: '12px 14px',
-                      background: '#0F172A', border: `1.5px solid ${borderColor}`, borderRadius: '12px',
-                      color: textPrimary, fontSize: '14px', fontWeight: 700, outline: 'none',
-                      textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'monospace'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = themeColor}
-                    onBlur={(e) => e.target.style.borderColor = borderColor}
-                  />
-                </div>
+                <>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>PAN Card Number *</label>
+                    <input
+                      type="text"
+                      value={panNumber}
+                      onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
+                      placeholder="ABCDE1234F"
+                      required
+                      maxLength={10}
+                      style={{
+                        width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+                        background: '#0F172A', border: `1.5px solid ${borderColor}`, borderRadius: '12px',
+                        color: textPrimary, fontSize: '14px', fontWeight: 700, outline: 'none',
+                        textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'monospace'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = themeColor}
+                      onBlur={(e) => e.target.style.borderColor = borderColor}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 700, color: textSecondary, display: 'block', marginBottom: '6px' }}>Enter Pincode *</label>
+                    <PincodeAutoComplete
+                      value={pincode}
+                      onChange={(val) => setPincode(val)}
+                      onSelect={({ pincode: pin }) => setPincode(pin)}
+                      isSbiOnly={true}
+                      placeholder="Enter 6-digit Pincode"
+                    />
+                  </div>
+                </>
               )}
 
               <button
