@@ -543,7 +543,26 @@ export default function ManageProducts() {
                       <tr key={p.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
                         <td style={{ padding: "14px 16px" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            {p.logo && <img src={p.logo} alt="logo" style={{ width: "24px", height: "24px", borderRadius: "4px", objectFit: "contain" }} />}
+                            {(() => {
+                              const imgSrc = getCleanImageUrl(p.image_url || p.logo || p.image || p.bank_logo);
+                              return imgSrc ? (
+                                <img
+                                  src={imgSrc}
+                                  alt={p.name}
+                                  onError={(e) => {
+                                    if (p.bank_logo && e.target.src !== getCleanImageUrl(p.bank_logo)) {
+                                      e.target.src = getCleanImageUrl(p.bank_logo);
+                                    } else {
+                                      e.target.onerror = null;
+                                      e.target.style.display = 'none';
+                                    }
+                                  }}
+                                  style={{ width: "32px", height: "32px", borderRadius: "6px", objectFit: "contain" }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: "18px" }}>💳</span>
+                              );
+                            })()}
                             <div>
                               <div style={{ fontWeight: 800 }}>{p.name}</div>
                               <div style={{ fontSize: "10px", color: C.textLight }}>{p.bank_name}</div>
@@ -940,7 +959,24 @@ export default function ManageProducts() {
             </button>
 
             <div style={{ display: "flex", gap: "16px", alignItems: "center", borderBottom: `1px solid ${C.border}`, paddingBottom: "16px", marginBottom: "16px" }}>
-              {viewProduct.logo && <img src={viewProduct.logo} alt="bank" style={{ width: "48px", height: "48px", objectFit: "contain" }} />}
+              {(() => {
+                const imgSrc = getCleanImageUrl(viewProduct.image_url || viewProduct.logo || viewProduct.image || viewProduct.bank_logo);
+                return imgSrc ? (
+                  <img
+                    src={imgSrc}
+                    alt="bank"
+                    onError={(e) => {
+                      if (viewProduct.bank_logo && e.target.src !== getCleanImageUrl(viewProduct.bank_logo)) {
+                        e.target.src = getCleanImageUrl(viewProduct.bank_logo);
+                      } else {
+                        e.target.onerror = null;
+                        e.target.style.display = 'none';
+                      }
+                    }}
+                    style={{ width: "48px", height: "48px", objectFit: "contain" }}
+                  />
+                ) : null;
+              })()}
               <div>
                 <h3 style={{ fontSize: "17px", fontWeight: 800, color: C.text, margin: 0 }}>{viewProduct.name}</h3>
                 <span style={{ fontSize: "12px", color: C.textLight }}>Issuer: {viewProduct.bank_name} | Category: {viewProduct.category?.replace(/_/g, " ")}</span>

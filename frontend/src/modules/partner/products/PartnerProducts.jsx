@@ -1380,11 +1380,26 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                           fontSize: isMobile ? '20px' : '24px',
                           boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
                         }}>
-                          {product.image_url ? (
-                            <img src={getCleanImageUrl(product.image_url)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '3px' }} />
-                          ) : (
-                            categoryIcon
-                          )}
+                          {(() => {
+                            const imgSrc = getCleanImageUrl(product.image_url || product.logo || product.image || product.bank_logo);
+                            return imgSrc ? (
+                              <img
+                                src={imgSrc}
+                                alt={product.name}
+                                onError={(e) => {
+                                  if (product.bank_logo && e.target.src !== getCleanImageUrl(product.bank_logo)) {
+                                    e.target.src = getCleanImageUrl(product.bank_logo);
+                                  } else {
+                                    e.target.onerror = null;
+                                    e.target.style.display = 'none';
+                                  }
+                                }}
+                                style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '3px' }}
+                              />
+                            ) : (
+                              categoryIcon
+                            );
+                          })()}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <h3 style={{

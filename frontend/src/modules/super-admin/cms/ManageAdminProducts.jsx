@@ -703,11 +703,26 @@ export default function ManageAdminProducts() {
               paginatedProducts.map(prod => (
                 <tr key={prod.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                   <td style={{ padding: '14px 16px' }}>
-                    {prod.image_url ? (
-                      <img src={getCleanImageUrl(prod.image_url)} alt={prod.name} style={{ height: '36px', width: '56px', objectFit: 'contain', borderRadius: '6px' }} />
-                    ) : (
-                      <span style={{ fontSize: '20px' }}>💳</span>
-                    )}
+                    {(() => {
+                      const imgSrc = getCleanImageUrl(prod.image_url || prod.logo || prod.image || prod.bank_logo);
+                      return imgSrc ? (
+                        <img
+                          src={imgSrc}
+                          alt={prod.name}
+                          onError={(e) => {
+                            if (prod.bank_logo && e.target.src !== getCleanImageUrl(prod.bank_logo)) {
+                              e.target.src = getCleanImageUrl(prod.bank_logo);
+                            } else {
+                              e.target.onerror = null;
+                              e.target.style.display = 'none';
+                              if (e.target.nextSibling) e.target.nextSibling.style.display = 'inline-block';
+                            }
+                          }}
+                          style={{ height: '36px', width: '56px', objectFit: 'contain', borderRadius: '6px' }}
+                        />
+                      ) : null;
+                    })()}
+                    <span style={{ fontSize: '20px', display: (prod.image_url || prod.logo || prod.image || prod.bank_logo) ? 'none' : 'inline-block' }}>💳</span>
                   </td>
                   <td style={{ padding: '14px 16px', fontWeight: 800, color: C.text }}>
                     {prod.name}

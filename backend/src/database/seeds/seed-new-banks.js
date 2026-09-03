@@ -34,6 +34,7 @@ const NEW_BANK_CARDS = [
     seo_title: 'Tata Neu Infinity HDFC Bank Credit Card – Apply Online | GharKaPaisa',
     seo_description: 'Apply for Tata Neu Infinity HDFC Bank Credit Card. Get 5% NeuCoins on Tata brands & RuPay UPI spends.',
     seo_keywords: 'tata neu infinity hdfc credit card, tata co-brand hdfc credit card, apply hdfc credit card',
+    image_url: 'https://d28wu8o6itv89p.cloudfront.net/images/TataNeuInfinityHDFCCardpng-1681283626786.png',
     min_age: 21, max_age: 65, min_income: 25000, display_order: 1, priority: 1
   },
   {
@@ -62,6 +63,7 @@ const NEW_BANK_CARDS = [
     seo_title: 'Tata Neu Plus HDFC Bank Credit Card – Apply Online | GharKaPaisa',
     seo_description: 'Apply for Tata Neu Plus HDFC Bank Credit Card. Get 2% NeuCoins on Tata Neu app and partner Tata brands.',
     seo_keywords: 'tata neu plus hdfc credit card, tata co-brand hdfc credit card, apply hdfc credit card',
+    image_url: 'https://d28wu8o6itv89p.cloudfront.net/images/TataNeuPlusHDFCCardpng-1681283688921.png',
     min_age: 21, max_age: 65, min_income: 25000, display_order: 2, priority: 2
   },
   {
@@ -90,6 +92,7 @@ const NEW_BANK_CARDS = [
     seo_title: 'Tata Neu Business Infinity HDFC Credit Card – Apply Online | GharKaPaisa',
     seo_description: 'Apply for Tata Neu Business Infinity HDFC Credit Card. Earn 5% NeuCoins on business & Tata brand spends.',
     seo_keywords: 'tata neu business infinity hdfc credit card, tata co-brand hdfc business card',
+    image_url: 'https://d28wu8o6itv89p.cloudfront.net/images/TataNeuInfinityHDFCCardpng-1681283626786.png',
     min_age: 21, max_age: 65, min_income: 35000, display_order: 3, priority: 3
   },
   {
@@ -530,11 +533,11 @@ async function runSeed() {
           sub_category, joining_fee, interest_rate, rewards, cashback,
           lounge_access, fuel_surcharge, compare_specs, fees_structure,
           commissions_json, features_list, benefits_list, required_documents,
-          visibility, seo_metadata
+          visibility, seo_metadata, image_url
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
           $31,$32,$33,$34,$35,$36,$37,
-          $38,$39,$40,$41,$42,$43,$44,$45
+          $38,$39,$40,$41,$42,$43,$44,$45,$46
         )
         ON CONFLICT (bank_id, name) DO UPDATE SET
           category = EXCLUDED.category,
@@ -568,6 +571,7 @@ async function runSeed() {
           required_documents = EXCLUDED.required_documents,
           visibility = EXCLUDED.visibility,
           seo_metadata = EXCLUDED.seo_metadata,
+          image_url = COALESCE(EXCLUDED.image_url, products.image_url),
           is_active = true,
           status = 'Active'
         RETURNING (xmin = 0) AS is_insert
@@ -582,7 +586,7 @@ async function runSeed() {
         card.sub_category, fees.joining_fee, fees.interest_rate, card.short_description || null, card.short_description || null,
         compareSpecs.lounge_access, compareSpecs.fuel_surcharge, JSON.stringify(compareSpecs), JSON.stringify(fees),
         JSON.stringify(commissions), JSON.stringify(card.features || []), JSON.stringify(card.benefits ? [{ title: 'Key Benefits', description: card.benefits }] : []), JSON.stringify(docsArray),
-        JSON.stringify(visibility), JSON.stringify(seoMetadata)
+        JSON.stringify(visibility), JSON.stringify(seoMetadata), card.image_url || null
       ]);
 
       if (result.rows[0]?.is_insert) {
