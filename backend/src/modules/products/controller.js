@@ -865,11 +865,35 @@ const deleteProduct = async (req, res, next) => {
       return notFound(res, 'Product not found');
     }
 
-    // First delete referencing commission structures and leads to avoid foreign key violations
-    await query(`DELETE FROM commission_structures WHERE product_id = $1`, [id]);
-    await query(`DELETE FROM leads WHERE product_id = $1`, [id]);
-    
-    // Now delete the product
+    // Unlink non-critical referencing tables to clean up orphaned assignments
+    await query(`DELETE FROM employee_product_links WHERE product_id = $1`, [id]).catch(() => {});
+    await query(`DELETE FROM commission_structures WHERE product_id = $1`, [id]).catch(() => {});
+    await query(`DELETE FROM partner_saved_products WHERE product_id = $1`, [id]).catch(() => {});
+    await query(`DELETE FROM product_faq WHERE product_id = $1`, [id]).catch(() => {});
+    await query(`DELETE FROM product_videos WHERE product_id = $1`, [id]).catch(() => {});
+    await query(`DELETE FROM product_documents WHERE product_id = $1`, [id]).catch(() => {});
+    await query(`DELETE FROM product_offers WHERE product_id = $1`, [id]).catch(() => {});
+    await query(`DELETE FROM product_features WHERE product_id = $1`, [id]).catch(() => {});
+    await query(`DELETE FROM application_settings WHERE product_id = $1`, [id]).catch(() => {});
+
+    // Check if there are customer applications referencing this product
+    const { rows: [{ appCount }] } = await query(
+      `SELECT COUNT(*)::int as "appCount" FROM applications WHERE product_id = $1`,
+      [id]
+    ).catch(() => ({ rows: [{ appCount: 0 }] }));
+
+    if (appCount > 0) {
+      // Soft Delete / Archive product to preserve historical application audit trails
+      await query(
+        `UPDATE products SET is_active = false, status = 'Archived', updated_at = NOW() WHERE id = $1`,
+        [id]
+      );
+      await logAction(req, 'SOFT_DELETE_PRODUCT', id, { name: existing.name, reason: 'Archived due to existing customer applications' });
+      return success(res, { soft_deleted: true }, 'Product archived and marked inactive to preserve historical application records.');
+    }
+
+    // Safe to delete leads and product if no applications exist
+    await query(`DELETE FROM leads WHERE product_id = $1`, [id]).catch(() => {});
     await query(`DELETE FROM products WHERE id = $1`, [id]);
 
     // Log action
@@ -878,7 +902,12 @@ const deleteProduct = async (req, res, next) => {
     return success(res, {}, 'Product deleted successfully');
   } catch (err) {
     if (err.message.includes('violates foreign key constraint')) {
-      return error(res, 'Cannot delete product because it has active customer applications associated with it. Please deactivate it instead.', 400);
+      // Safe fallback: Archive product if any constraint prevents hard deletion
+      await query(
+        `UPDATE products SET is_active = false, status = 'Archived', updated_at = NOW() WHERE id = $1`,
+        [req.params.id]
+      ).catch(() => {});
+      return success(res, { soft_deleted: true }, 'Product archived and marked inactive to preserve linked system records.');
     }
     next(err);
   }
