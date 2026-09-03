@@ -73,9 +73,38 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
   const handleExportDownload = async () => {
     setExporting(true);
     try {
-      let filtered = [...defaultApplications];
+      let filtered = [];
 
-      if (period !== 'all') {
+      try {
+        const queryParams = {
+          page: 1,
+          limit: 50000,
+        };
+
+        if (period !== 'all') {
+          queryParams.from_date = fromDate;
+          queryParams.to_date = toDate;
+          queryParams.period = period;
+        }
+
+        if (statusFilter !== 'all') {
+          queryParams.status = statusFilter;
+        }
+
+        const res = await api.get('/applications', { params: queryParams });
+        if (res.data?.success && Array.isArray(res.data?.data)) {
+          filtered = res.data.data;
+        } else if (Array.isArray(res.data)) {
+          filtered = res.data;
+        } else {
+          filtered = [...defaultApplications];
+        }
+      } catch (fetchErr) {
+        console.warn('Backend full export fetch failed, falling back to loaded records:', fetchErr);
+        filtered = [...defaultApplications];
+      }
+
+      if (period !== 'all' && filtered.length > 0 && !filtered[0]._fromBackendFiltered) {
         const from = new Date(fromDate + 'T00:00:00');
         const to = new Date(toDate + 'T23:59:59');
 
@@ -85,7 +114,7 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         });
       }
 
-      if (statusFilter !== 'all') {
+      if (statusFilter !== 'all' && filtered.length > 0) {
         filtered = filtered.filter(app => {
           const stat = (app.status || '').toLowerCase();
           if (statusFilter === 'approved') {

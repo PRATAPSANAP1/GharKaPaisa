@@ -1187,10 +1187,10 @@ const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{
 const listApplications = async (req, res, next) => {
   try {
     let { page, limit, offset } = getPaginationParams(req.query);
-    limit = Math.min(Math.max(parseInt(limit) || 10, 1), 100);
+    limit = Math.min(Math.max(parseInt(limit) || 10, 1), 50000);
     offset = (Math.max(parseInt(page) || 1, 1) - 1) * limit;
 
-    const { status, partner_id, partner_id: q_partner_id, product_id, search, bank_id, process_by, operation_head_id, operation_head, member_id, category } = req.query;
+    const { status, partner_id, partner_id: q_partner_id, product_id, search, bank_id, process_by, operation_head_id, operation_head, member_id, category, from_date, to_date, start_date, end_date, period } = req.query;
     const targetPartnerId = q_partner_id || partner_id;
     const targetOpHeadId = isUuid(operation_head_id) ? operation_head_id : (isUuid(operation_head) ? operation_head : null);
 
@@ -1211,6 +1211,40 @@ const listApplications = async (req, res, next) => {
       userId = req.user.id;
     }
 
+    let calcFromDate = from_date || start_date || null;
+    let calcToDate = to_date || end_date || null;
+
+    if (period && period !== 'all' && !calcFromDate) {
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      if (period === 'today') {
+        calcFromDate = todayStr;
+        calcToDate = todayStr;
+      } else if (period === 'yesterday') {
+        const yest = new Date(today);
+        yest.setDate(yest.getDate() - 1);
+        calcFromDate = yest.toISOString().split('T')[0];
+        calcToDate = calcFromDate;
+      } else if (period === '7days' || period === 'last_7_days') {
+        const d = new Date(today);
+        d.setDate(d.getDate() - 7);
+        calcFromDate = d.toISOString().split('T')[0];
+        calcToDate = todayStr;
+      } else if (period === '30days' || period === 'last_30_days') {
+        const d = new Date(today);
+        d.setDate(d.getDate() - 30);
+        calcFromDate = d.toISOString().split('T')[0];
+        calcToDate = todayStr;
+      } else if (period === 'this_month') {
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        calcFromDate = firstDay.toISOString().split('T')[0];
+        calcToDate = todayStr;
+      }
+    }
+
+    const validFromDate = calcFromDate ? `${calcFromDate}T00:00:00` : null;
+    const validToDate = calcToDate ? `${calcToDate}T23:59:59` : null;
+
     const validPartnerId = isUuid(partnerId) ? partnerId : null;
     const validProductId = isUuid(product_id) ? product_id : null;
     const validBankId = isUuid(bank_id) ? bank_id : null;
@@ -1226,16 +1260,16 @@ const listApplications = async (req, res, next) => {
 
     let opHeadBankFilterSQL = '';
     let countOpHeadBankFilterSQL = '';
-    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus];
-    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus];
+    const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
+    const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
 
     const userDesignation = (req.user?.designation || '').toUpperCase();
     const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
     if (!isPartnerOrTeam && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
       if (abRows.length > 0) {
-        opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $16::uuid) OR combined.operation_head_id = $16::uuid)`;
-        countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $14::uuid) OR combined.operation_head_id = $14::uuid)`;
+        opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $18::uuid) OR combined.operation_head_id = $18::uuid)`;
+        countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $16::uuid) OR combined.operation_head_id = $16::uuid)`;
         queryParams.push(req.user.id);
         countQueryParams.push(req.user.id);
       }
@@ -1381,6 +1415,8 @@ const listApplications = async (req, res, next) => {
           OR ($15::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
           OR ($15::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
         )
+        AND ($16::timestamp IS NULL OR combined.created_at >= $16::timestamp)
+        AND ($17::timestamp IS NULL OR combined.created_at <= $17::timestamp)
         ${opHeadBankFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
@@ -1414,7 +1450,7 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category, a.created_at
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -1459,6 +1495,8 @@ const listApplications = async (req, res, next) => {
           OR ($13::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
           OR ($13::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
         )
+        AND ($14::timestamp IS NULL OR combined.created_at >= $14::timestamp)
+        AND ($15::timestamp IS NULL OR combined.created_at <= $15::timestamp)
         ${countOpHeadBankFilterSQL}
     `, countQueryParams);
 
