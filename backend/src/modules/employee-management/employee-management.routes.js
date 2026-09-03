@@ -1092,4 +1092,444 @@ router.post('/:id/product-links', async (req, res, next) => {
   }
 });
 
+// ── GET /api/v1/employees/incentives/overview — Super Admin Employee Incentives Dashboard Data ──
+router.get('/incentives/overview', async (req, res, next) => {
+  try {
+    const {
+      startDate,
+      endDate,
+      employee_id,
+      role,
+      manager_id,
+      team_leader_id,
+      product_id,
+      bank_id,
+      status,
+      search,
+      page = 1,
+      limit = 20
+    } = req.query;
+
+    let whereConditions = [];
+    let params = [];
+
+    if (startDate) {
+      params.push(startDate);
+      whereConditions.push(`it.created_at >= $${params.length}`);
+    }
+    if (endDate) {
+      params.push(endDate + ' 23:59:59');
+      whereConditions.push(`it.created_at <= $${params.length}`);
+    }
+    if (employee_id) {
+      params.push(employee_id);
+      whereConditions.push(`it.employee_id = $${params.length}`);
+    }
+    if (role) {
+      params.push(role);
+      whereConditions.push(`(e.designation ILIKE $${params.length} OR h.hierarchy_level = UPPER($${params.length}))`);
+    }
+    if (manager_id) {
+      params.push(manager_id);
+      whereConditions.push(`h.manager_id = $${params.length}`);
+    }
+    if (team_leader_id) {
+      params.push(team_leader_id);
+      whereConditions.push(`h.team_leader_id = $${params.length}`);
+    }
+    if (product_id) {
+      params.push(product_id);
+      whereConditions.push(`it.product_id = $${params.length}`);
+    }
+    if (bank_id) {
+      params.push(bank_id);
+      whereConditions.push(`p.bank_id = $${params.length}`);
+    }
+    if (status) {
+      params.push(status.toUpperCase());
+      whereConditions.push(`UPPER(it.status::text) = $${params.length}`);
+    }
+    if (search) {
+      params.push(`%${search}%`);
+      const sIdx = params.length;
+      whereConditions.push(`(
+        e.full_name ILIKE $${sIdx} OR 
+        e.employee_id ILIKE $${sIdx} OR 
+        a.app_number ILIKE $${sIdx} OR 
+        it.customer_name ILIKE $${sIdx}
+      )`);
+    }
+
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+    // 1. KPI Cards Summary Query
+    const kpiQuery = `
+      SELECT 
+        COALESCE(SUM(it.amount), 0) as total_earned,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as total_paid,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending_payouts,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'IN_REVIEW' THEN it.amount ELSE 0 END), 0) as in_review,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('ON_HOLD', 'HELD') THEN it.amount ELSE 0 END), 0) as on_hold,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('REJECTED', 'CANCELLED') THEN it.amount ELSE 0 END), 0) as rejected,
+        COUNT(DISTINCT it.employee_id) as employees_earned,
+        COUNT(it.id) as total_transactions,
+        COUNT(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN 1 END) as approved_transactions,
+        COUNT(CASE WHEN UPPER(it.status::text) IN ('REJECTED', 'CANCELLED') THEN 1 END) as rejected_transactions
+      FROM employee_incentive_transactions it
+      LEFT JOIN employees e ON e.id = it.employee_id
+      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
+      LEFT JOIN products p ON p.id = it.product_id
+      LEFT JOIN applications a ON a.id = it.application_id
+      ${whereClause}
+    `;
+
+    const kpiRes = await query(kpiQuery, params);
+    const kpi = kpiRes.rows[0] || {};
+    const totalEarned = parseFloat(kpi.total_earned || 0);
+    const employeesEarned = parseInt(kpi.employees_earned || 0);
+    kpi.avg_incentive_per_employee = employeesEarned > 0 ? Math.round(totalEarned / employeesEarned) : 0;
+
+    // 2. Incentive Trend Overview (Grouped by Date)
+    const trendQuery = `
+      SELECT 
+        TO_CHAR(it.created_at, 'YYYY-MM-DD') as date,
+        COALESCE(SUM(it.amount), 0) as earned,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending
+      FROM employee_incentive_transactions it
+      LEFT JOIN employees e ON e.id = it.employee_id
+      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
+      LEFT JOIN products p ON p.id = it.product_id
+      LEFT JOIN applications a ON a.id = it.application_id
+      ${whereClause}
+      GROUP BY TO_CHAR(it.created_at, 'YYYY-MM-DD')
+      ORDER BY date ASC
+      LIMIT 30
+    `;
+    const trendRes = await query(trendQuery, params);
+
+    // 3. Incentives by Role Breakdown
+    const roleQuery = `
+      SELECT 
+        COALESCE(e.designation, h.hierarchy_level, 'Telecaller') as role,
+        COALESCE(SUM(it.amount), 0) as earned,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
+        COUNT(DISTINCT it.employee_id) as count
+      FROM employee_incentive_transactions it
+      LEFT JOIN employees e ON e.id = it.employee_id
+      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
+      LEFT JOIN products p ON p.id = it.product_id
+      LEFT JOIN applications a ON a.id = it.application_id
+      ${whereClause}
+      GROUP BY COALESCE(e.designation, h.hierarchy_level, 'Telecaller')
+      ORDER BY earned DESC
+    `;
+    const roleRes = await query(roleQuery, params);
+
+    // 4. Incentives by Status Breakdown
+    const statusQuery = `
+      SELECT 
+        UPPER(it.status::text) as status,
+        COALESCE(SUM(it.amount), 0) as amount,
+        COUNT(it.id) as count
+      FROM employee_incentive_transactions it
+      LEFT JOIN employees e ON e.id = it.employee_id
+      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
+      LEFT JOIN products p ON p.id = it.product_id
+      LEFT JOIN applications a ON a.id = it.application_id
+      ${whereClause}
+      GROUP BY UPPER(it.status::text)
+      ORDER BY amount DESC
+    `;
+    const statusRes = await query(statusQuery, params);
+
+    // 5. Top Earning Employees Leaderboard
+    const topEmployeesQuery = `
+      SELECT 
+        e.id as employee_uuid,
+        e.employee_id as emp_code,
+        e.full_name,
+        COALESCE(e.designation, h.hierarchy_level, 'TC') as role,
+        COUNT(DISTINCT it.application_id) as applications,
+        COUNT(DISTINCT CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.application_id END) as approved,
+        COALESCE(SUM(it.amount), 0) as earned,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending
+      FROM employee_incentive_transactions it
+      JOIN employees e ON e.id = it.employee_id
+      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
+      LEFT JOIN products p ON p.id = it.product_id
+      LEFT JOIN applications a ON a.id = it.application_id
+      ${whereClause}
+      GROUP BY e.id, e.employee_id, e.full_name, e.designation, h.hierarchy_level
+      ORDER BY earned DESC
+      LIMIT 10
+    `;
+    const topEmployeesRes = await query(topEmployeesQuery, params);
+
+    // 6. Incentives by Product
+    const productQuery = `
+      SELECT 
+        p.id as product_id,
+        p.name as product_name,
+        b.name as bank_name,
+        COALESCE(p.category_slug, 'credit_card') as category_slug,
+        COUNT(DISTINCT it.application_id) as applications,
+        COUNT(DISTINCT CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.application_id END) as approved,
+        COALESCE(SUM(it.amount), 0) as earned,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending
+      FROM employee_incentive_transactions it
+      JOIN products p ON p.id = it.product_id
+      LEFT JOIN banks b ON b.id = p.bank_id
+      LEFT JOIN employees e ON e.id = it.employee_id
+      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
+      LEFT JOIN applications a ON a.id = it.application_id
+      ${whereClause}
+      GROUP BY p.id, p.name, b.name, p.category_slug
+      ORDER BY earned DESC
+      LIMIT 15
+    `;
+    const productRes = await query(productQuery, params);
+
+    // 7. Recent Incentive Payouts
+    const payoutsQuery = `
+      SELECT 
+        it.id as payout_id,
+        e.full_name as employee_name,
+        e.employee_id as emp_code,
+        it.amount,
+        COALESCE(it.paid_at, it.updated_at, it.created_at) as paid_date,
+        COALESCE(it.payment_reference, 'N/A') as payment_reference,
+        it.payment_method,
+        it.status
+      FROM employee_incentive_transactions it
+      JOIN employees e ON e.id = it.employee_id
+      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
+      LEFT JOIN products p ON p.id = it.product_id
+      LEFT JOIN applications a ON a.id = it.application_id
+      ${whereClause}
+      ORDER BY it.created_at DESC
+      LIMIT 10
+    `;
+    const payoutsRes = await query(payoutsQuery, params);
+
+    // 8. Hierarchy Tree View (Managers -> TLs -> TCs)
+    const hierarchyQuery = `
+      SELECT 
+        m.id as manager_id,
+        m.full_name as manager_name,
+        m.employee_id as manager_code,
+        tl.id as tl_id,
+        tl.full_name as tl_name,
+        tl.employee_id as tl_code,
+        e.id as emp_id,
+        e.full_name as emp_name,
+        e.employee_id as emp_code,
+        e.designation,
+        COALESCE(SUM(it.amount), 0) as total_incentives,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid_incentives,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending_incentives,
+        COUNT(DISTINCT it.application_id) as total_apps
+      FROM employees e
+      JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
+      LEFT JOIN employees tl ON tl.id = h.team_leader_id
+      LEFT JOIN employees m ON m.id = h.manager_id
+      LEFT JOIN employee_incentive_transactions it ON it.employee_id = e.id
+      GROUP BY m.id, m.full_name, m.employee_id, tl.id, tl.full_name, tl.employee_id, e.id, e.full_name, e.employee_id, e.designation
+      ORDER BY m.full_name ASC, tl.full_name ASC, e.full_name ASC
+    `;
+    const hierarchyRes = await query(hierarchyQuery);
+
+    // Group hierarchy into structured tree
+    const hierarchyTree = [];
+    const managerMap = {};
+    (hierarchyRes.rows || []).forEach(row => {
+      const mgrKey = row.manager_id || 'unassigned_mgr';
+      if (!managerMap[mgrKey]) {
+        managerMap[mgrKey] = {
+          id: row.manager_id,
+          name: row.manager_name || 'Direct / Unassigned Manager',
+          code: row.manager_code || 'N/A',
+          total_incentives: 0,
+          paid_incentives: 0,
+          pending_incentives: 0,
+          total_apps: 0,
+          team_leaders: {}
+        };
+        hierarchyTree.push(managerMap[mgrKey]);
+      }
+
+      managerMap[mgrKey].total_incentives += parseFloat(row.total_incentives || 0);
+      managerMap[mgrKey].paid_incentives += parseFloat(row.paid_incentives || 0);
+      managerMap[mgrKey].pending_incentives += parseFloat(row.pending_incentives || 0);
+      managerMap[mgrKey].total_apps += parseInt(row.total_apps || 0);
+
+      const tlKey = row.tl_id || 'unassigned_tl';
+      if (!managerMap[mgrKey].team_leaders[tlKey]) {
+        managerMap[mgrKey].team_leaders[tlKey] = {
+          id: row.tl_id,
+          name: row.tl_name || 'Direct / Unassigned TL',
+          code: row.tl_code || 'N/A',
+          total_incentives: 0,
+          paid_incentives: 0,
+          pending_incentives: 0,
+          total_apps: 0,
+          telecallers: []
+        };
+      }
+
+      managerMap[mgrKey].team_leaders[tlKey].total_incentives += parseFloat(row.total_incentives || 0);
+      managerMap[mgrKey].team_leaders[tlKey].paid_incentives += parseFloat(row.paid_incentives || 0);
+      managerMap[mgrKey].team_leaders[tlKey].pending_incentives += parseFloat(row.pending_incentives || 0);
+      managerMap[mgrKey].team_leaders[tlKey].total_apps += parseInt(row.total_apps || 0);
+
+      managerMap[mgrKey].team_leaders[tlKey].telecallers.push({
+        id: row.emp_id,
+        name: row.emp_name,
+        code: row.emp_code,
+        designation: row.designation,
+        total_incentives: parseFloat(row.total_incentives || 0),
+        paid_incentives: parseFloat(row.paid_incentives || 0),
+        pending_incentives: parseFloat(row.pending_incentives || 0),
+        total_apps: parseInt(row.total_apps || 0)
+      });
+    });
+
+    // Convert team_leaders dictionary to array for frontend
+    hierarchyTree.forEach(m => {
+      m.team_leaders = Object.values(m.team_leaders);
+    });
+
+    // 9. Paginated Main Incentive Details Table Query
+    const pNum = Math.max(1, parseInt(page));
+    const pLimit = Math.max(1, parseInt(limit));
+    const offset = (pNum - 1) * pLimit;
+
+    const countQuery = `
+      SELECT COUNT(it.id) as total
+      FROM employee_incentive_transactions it
+      LEFT JOIN employees e ON e.id = it.employee_id
+      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
+      LEFT JOIN products p ON p.id = it.product_id
+      LEFT JOIN applications a ON a.id = it.application_id
+      ${whereClause}
+    `;
+    const countRes = await query(countQuery, params);
+    const totalRecords = parseInt(countRes.rows[0]?.total || 0);
+
+    const mainTableParams = [...params, pLimit, offset];
+    const mainTableQuery = `
+      SELECT 
+        it.id as incentive_id,
+        it.employee_id,
+        e.full_name as employee_name,
+        e.employee_id as emp_code,
+        COALESCE(e.designation, h.hierarchy_level, 'Telecaller') as role,
+        p.id as product_id,
+        p.name as product_name,
+        p.category_slug,
+        b.name as bank_name,
+        a.id as application_id,
+        a.app_number,
+        a.status as application_status,
+        a.created_at as approval_date,
+        it.transaction_type,
+        it.amount as incentive_earned,
+        CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END as incentive_paid,
+        CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END as pending_amount,
+        it.status,
+        it.hold_until,
+        it.hold_reason,
+        it.payment_method,
+        it.payment_reference,
+        it.paid_at,
+        it.customer_name,
+        it.created_at,
+        it.updated_at,
+        mgr.full_name as manager_name,
+        tl.full_name as team_leader_name
+      FROM employee_incentive_transactions it
+      JOIN employees e ON e.id = it.employee_id
+      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
+      LEFT JOIN employees mgr ON mgr.id = h.manager_id
+      LEFT JOIN employees tl ON tl.id = h.team_leader_id
+      LEFT JOIN products p ON p.id = it.product_id
+      LEFT JOIN banks b ON b.id = p.bank_id
+      LEFT JOIN applications a ON a.id = it.application_id
+      ${whereClause}
+      ORDER BY it.created_at DESC
+      LIMIT $${mainTableParams.length - 1} OFFSET $${mainTableParams.length}
+    `;
+    const tableRes = await query(mainTableQuery, mainTableParams);
+
+    res.json({
+      success: true,
+      kpi,
+      trend: trendRes.rows,
+      by_role: roleRes.rows,
+      by_status: statusRes.rows,
+      top_employees: topEmployeesRes.rows,
+      by_product: productRes.rows,
+      recent_payouts: payoutsRes.rows,
+      hierarchy: hierarchyTree,
+      table: {
+        data: tableRes.rows,
+        pagination: {
+          total: totalRecords,
+          page: pNum,
+          limit: pLimit,
+          totalPages: Math.ceil(totalRecords / pLimit)
+        }
+      }
+    });
+
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── PUT /api/v1/employees/incentives/:id/status — Super Admin Update Payout/Incentive Status ──
+router.post('/incentives/:id/update-status', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, payment_reference, payment_method = 'BANK_TRANSFER', hold_reason } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'Status is required' });
+    }
+
+    const uppercaseStatus = status.toUpperCase();
+    const isPaid = uppercaseStatus === 'PAID' || uppercaseStatus === 'COMPLETED';
+
+    const { rows } = await query(
+      `UPDATE employee_incentive_transactions
+       SET status = $1,
+           payment_reference = COALESCE($2, payment_reference),
+           payment_method = COALESCE($3, payment_method),
+           hold_reason = COALESCE($4, hold_reason),
+           paid_at = CASE WHEN $5::boolean THEN NOW() ELSE paid_at END,
+           updated_at = NOW(),
+           processed_by = $6
+       WHERE id = $7
+       RETURNING *`,
+      [uppercaseStatus, payment_reference || null, payment_method, hold_reason || null, isPaid, req.user?.id || null, id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Incentive transaction not found' });
+    }
+
+    res.json({
+      success: true,
+      message: `Incentive transaction updated to ${uppercaseStatus}`,
+      data: rows[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
+
