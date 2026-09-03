@@ -788,20 +788,26 @@ export default function EmployeeManagement() {
                         </div>
                       </td>
                       <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                          <button onClick={() => openDeptModal(emp)} style={{ background: `${C.teal}15`, border: `1px solid ${C.teal}40`, color: C.teal, padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <FaBuilding /> Manage Depts
-                          </button>
-                          <button onClick={() => openBonusModal(emp)} style={{ background: '#F59E0B15', border: '1px solid #F59E0B40', color: '#B45309', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <FaCoins /> Manage Bonus
-                          </button>
-                          <button onClick={() => handleOpen360View(emp)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <FaEye /> 360 View
-                          </button>
-                          <button onClick={() => openHierarchyModal(emp)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <FaSitemap /> Assign Team
-                          </button>
-                        </div>
+                        <button 
+                          onClick={() => setActionModalEmp(emp)}
+                          style={{ 
+                            background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, 
+                            color: '#ffffff', 
+                            border: 'none', 
+                            padding: '7px 14px', 
+                            borderRadius: '10px', 
+                            fontSize: '12.5px', 
+                            fontWeight: 800, 
+                            cursor: 'pointer', 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            gap: '6px',
+                            boxShadow: '0 2px 8px rgba(13, 148, 136, 0.25)',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <FaEllipsisV /> Actions
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -2031,14 +2037,19 @@ export default function EmployeeManagement() {
           </div>
         )}
 
-        {/* ── MODAL: Employee Node Action Options (View Profile, Disassign, View Performance) ── */}
+        {/* ── MODAL: Employee Quick Actions Popup (Manage Depts, Manage Bonus, 360 View, Assign Team) ── */}
         {actionModalEmp && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', width: '100%', maxWidth: '440px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }}>
-              
+          <div 
+            style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+            onClick={() => setActionModalEmp(null)}
+          >
+            <div 
+              style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', width: '100%', maxWidth: '480px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: C.teal, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '20px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '20px' }}>
                     {actionModalEmp.full_name?.charAt(0) || 'E'}
                   </div>
                   <div>
@@ -2049,66 +2060,83 @@ export default function EmployeeManagement() {
                 <button onClick={() => setActionModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: C.textMid, fontWeight: 900 }}>✕</button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* 1. View Profile */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                {/* 1. Manage Depts */}
+                <button
+                  onClick={() => {
+                    const emp = actionModalEmp;
+                    setActionModalEmp(null);
+                    openDeptModal(emp);
+                  }}
+                  style={{ width: '100%', padding: '16px 14px', background: `${C.teal}08`, border: `1px solid ${C.teal}30`, borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left', transition: 'all 0.2s ease' }}
+                >
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${C.teal}20`, color: C.teal, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                    <FaBuilding />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>Manage Depts</div>
+                    <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Assign bank & department access</div>
+                  </div>
+                </button>
+
+                {/* 2. Manage Bonus */}
+                <button
+                  onClick={() => {
+                    const emp = actionModalEmp;
+                    setActionModalEmp(null);
+                    openBonusModal(emp);
+                  }}
+                  style={{ width: '100%', padding: '16px 14px', background: '#F59E0B08', border: '1px solid #F59E0B30', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left', transition: 'all 0.2s ease' }}
+                >
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F59E0B20', color: '#B45309', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                    <FaCoins />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>Manage Bonus</div>
+                    <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Set card targets & bonus rates</div>
+                  </div>
+                </button>
+
+                {/* 3. 360 View */}
                 <button
                   onClick={() => {
                     const emp = actionModalEmp;
                     setActionModalEmp(null);
                     handleOpen360View(emp);
                   }}
-                  style={{ width: '100%', padding: '14px 18px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', color: C.text, textAlign: 'left' }}
+                  style={{ width: '100%', padding: '16px 14px', background: '#3B82F608', border: '1px solid #3B82F630', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left', transition: 'all 0.2s ease' }}
                 >
-                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#3B82F6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                    <FaUserCircle />
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#3B82F620', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                    <FaEye />
                   </div>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: 900 }}>View 360° Profile</div>
-                    <div style={{ fontSize: '11px', color: C.textMid }}>Inspect KYC details, bank info, and active product links</div>
+                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>360 View</div>
+                    <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Inspect KYC, links & profile 360</div>
                   </div>
                 </button>
 
-                {/* 2. Disassign Employee */}
+                {/* 4. Assign Team */}
                 <button
                   onClick={() => {
                     const emp = actionModalEmp;
                     setActionModalEmp(null);
-                    handleUnassignHierarchy(emp.id, emp.full_name, emp.employee_id);
+                    openHierarchyModal(emp);
                   }}
-                  style={{ width: '100%', padding: '14px 18px', background: '#FEF2F2', border: `1px solid #FCA5A5`, borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', color: '#991B1B', textAlign: 'left' }}
+                  style={{ width: '100%', padding: '16px 14px', background: '#8B5CF608', border: '1px solid #8B5CF630', borderRadius: '16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px', cursor: 'pointer', color: C.text, textAlign: 'left', transition: 'all 0.2s ease' }}
                 >
-                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EF4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                    <FaUnlink />
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#8B5CF620', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+                    <FaSitemap />
                   </div>
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: 900, color: '#991B1B' }}>Disassign Employee</div>
-                    <div style={{ fontSize: '11px', color: '#B91C1C' }}>Remove employee from current team & manager hierarchy</div>
-                  </div>
-                </button>
-
-                {/* 3. View Performance */}
-                <button
-                  onClick={() => {
-                    const emp = actionModalEmp;
-                    setActionModalEmp(null);
-                    setPerfModalEmp(emp);
-                  }}
-                  style={{ width: '100%', padding: '14px 18px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer', color: C.text, textAlign: 'left' }}
-                >
-                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
-                    <FaChartLine />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '14px', fontWeight: 900 }}>View Performance</div>
-                    <div style={{ fontSize: '11px', color: C.textMid }}>Track lead submissions, incentives earned, and onboarding stats</div>
+                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>Assign Team</div>
+                    <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>Set reporting hierarchy & team</div>
                   </div>
                 </button>
               </div>
 
               <div style={{ marginTop: '20px', textAlign: 'right' }}>
-                <button onClick={() => setActionModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 18px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Close</button>
+                <button onClick={() => setActionModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 18px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
               </div>
-
             </div>
           </div>
         )}

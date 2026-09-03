@@ -1803,7 +1803,7 @@ router.get('/bonus-rules/all', async (req, res, next) => {
         JOIN products p ON p.id = app.product_id
         WHERE (app.employee_id = $1 OR app.submitted_by IN (SELECT user_id FROM employees WHERE id = $1))
           AND p.bank_id = $2
-          AND app.status IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received')
+          AND app.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received')
           AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) >= $3
           AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) <= $4
       `, [rule.employee_id, rule.bank_id, rule.start_date, rule.end_date]);

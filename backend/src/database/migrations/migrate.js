@@ -100,6 +100,7 @@ const migrate = async () => {
   await addEnumValue('application_status', 'commission_released');
   await addEnumValue('application_status', 'commission_received');
   await addEnumValue('application_status', 'bank_form_submitted');
+  await addEnumValue('application_status', 'sanctioned');
   await addEnumValue('application_status', 'cancelled');
   await query(`
     DO $$ BEGIN

@@ -819,7 +819,7 @@ router.get('/my-bonus-progress', async (req, res, next) => {
         JOIN products p ON p.id = app.product_id
         WHERE (app.employee_id = $1 OR app.submitted_by = $2)
           AND p.bank_id = $3
-          AND app.status IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received')
+          AND app.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received')
           AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) >= $4
           AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) <= $5
       `, [empId, req.user.id, rule.bank_id, rule.start_date, rule.end_date]);
