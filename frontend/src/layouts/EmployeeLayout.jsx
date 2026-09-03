@@ -10,6 +10,7 @@ import {
 } from 'react-icons/fa';
 import logo from '../assets/logos/logo.png';
 import Chatbot from '../components/Chatbot/Chatbot';
+import api from '../services/api';
 
 import EmployeeForcePasswordModal from '../modules/employee/components/EmployeeForcePasswordModal';
 
@@ -28,6 +29,8 @@ export default function EmployeeLayout() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [inviteType, setInviteType] = useState('EMPLOYEE'); // 'EMPLOYEE' or 'PARTNER'
   const [copiedMsg, setCopiedMsg] = useState('');
+
+  const [fetchedPhoto, setFetchedPhoto] = useState(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -48,6 +51,32 @@ export default function EmployeeLayout() {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadProfilePhoto = async () => {
+      try {
+        const res = await api.get('/employee/profile');
+        if (res.data?.success && res.data?.data) {
+          const empData = res.data.data;
+          const photoUrl = empData.employee?.profile_photo_url || 
+                           empData.joining_details?.profile_photo_url || 
+                           empData.kyc?.profile_photo_url || 
+                           empData.employee?.photo_url || 
+                           empData.employee?.avatar_url;
+          if (photoUrl && isMounted) {
+            setFetchedPhoto(photoUrl);
+            localStorage.setItem('employee_profile_photo', photoUrl);
+            localStorage.setItem('emp_photo_url', photoUrl);
+          }
+        }
+      } catch (err) {
+        // Fallback silently if unauthenticated or error
+      }
+    };
+    loadProfilePhoto();
+    return () => { isMounted = false; };
   }, []);
 
   const isManagerOrTL = user?.designation === 'Manager' || user?.designation === 'Team Leader' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
@@ -216,7 +245,13 @@ export default function EmployeeLayout() {
 
             {/* Top Right Profile Photo Button (Click opens features dropdown) */}
             {(() => {
-              const savedPhoto = localStorage.getItem('employee_profile_photo') || user?.profile_photo_url || user?.avatar_url || user?.profile_photo;
+              const savedPhoto = fetchedPhoto || 
+                                 localStorage.getItem('employee_profile_photo') || 
+                                 localStorage.getItem('emp_photo_url') || 
+                                 user?.profile_photo_url || 
+                                 user?.avatar_url || 
+                                 user?.profile_photo || 
+                                 user?.photo_url;
               const renderAvatar = (size = 36) => {
                 if (savedPhoto && !imgError) {
                   return (
@@ -284,7 +319,13 @@ export default function EmployeeLayout() {
                 {/* Dropdown Header Card with Employee Profile Photo */}
                 <div style={{ padding: '12px', borderBottom: `1px solid ${C.border}`, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                   {(() => {
-                    const savedPhoto = localStorage.getItem('employee_profile_photo') || user?.profile_photo_url || user?.avatar_url || user?.profile_photo;
+                    const savedPhoto = fetchedPhoto || 
+                                       localStorage.getItem('employee_profile_photo') || 
+                                       localStorage.getItem('emp_photo_url') || 
+                                       user?.profile_photo_url || 
+                                       user?.avatar_url || 
+                                       user?.profile_photo || 
+                                       user?.photo_url;
                     if (savedPhoto && !imgError) {
                       return (
                         <img 
