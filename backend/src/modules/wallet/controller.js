@@ -926,7 +926,7 @@ const getSelfWallet = async (req, res, next) => getWallet(req, res, next);
 const getSelfTransactions = async (req, res, next) => getTransactions(req, res, next);
 const requestSelfWithdrawal = async (req, res, next) => requestWithdrawal(req, res, next);
 
-// ── Wallet Statement PDF Export (Top-Left Logo & Rich Details) ───────
+// ── GET /wallet/statement/pdf - Generate & Export PDF Statement with Top-Left Logo ──
 const exportStatementPDF = async (req, res, next) => {
   try {
     let partnerId = req.partner?.id;
@@ -969,156 +969,122 @@ const exportStatementPDF = async (req, res, next) => {
       LIMIT 200
     `, [partnerId, userId]);
 
-    // Read Logo for Top Left Header
-    const fs = require('fs');
-    const path = require('path');
-    let logoBase64 = '';
-    try {
-      const p1 = path.join(process.cwd(), 'logo.jpeg');
-      const p2 = path.join(process.cwd(), 'frontend/src/assets/logos/logo.png');
-      const logoPath = fs.existsSync(p1) ? p1 : (fs.existsSync(p2) ? p2 : null);
-      if (logoPath) {
-        const fileData = fs.readFileSync(logoPath);
-        const mimeType = logoPath.endsWith('.png') ? 'image/png' : 'image/jpeg';
-        logoBase64 = `data:${mimeType};base64,${fileData.toString('base64')}`;
-      }
-    } catch (logoErr) {
-      console.error('Logo read error for statement PDF:', logoErr);
-    }
-
     const availBal = parseFloat(wallet?.available_balance || 0);
     const holdBal = parseFloat(wallet?.hold_balance || 0);
     const totalEarned = parseFloat(wallet?.total_earned || 0);
     const totalWithdrawn = parseFloat(wallet?.total_withdrawn || 0);
     const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
-    const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8"/>
-      <title>GharKaPaisa Wallet Statement</title>
-      <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1E293B; margin: 0; padding: 30px; background: #FFF; font-size: 12px; }
-        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; border-bottom: 2px solid #0052FF; padding-bottom: 15px; }
-        .header-table td { vertical-align: top; }
-        .logo-img { height: 50px; width: auto; max-width: 200px; object-fit: contain; }
-        .company-title { font-size: 20px; font-weight: 900; color: #0052FF; margin: 0; }
-        .company-sub { font-size: 11px; color: #64748B; margin-top: 2px; }
-        .stmt-badge { text-align: right; }
-        .stmt-title { font-size: 18px; font-weight: 800; color: #090D16; margin: 0; text-transform: uppercase; }
-        .meta-text { font-size: 11px; color: #64748B; margin-top: 3px; }
-        
-        .summary-box { display: flex; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 15px; margin-bottom: 25px; justify-content: space-between; }
-        .sum-card { width: 23%; text-align: center; }
-        .sum-card .label { font-size: 10px; color: #64748B; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px; }
-        .sum-card .val { font-size: 16px; font-weight: 900; color: #0F172A; }
+    const PDFDocument = require('pdfkit');
+    const fs = require('fs');
+    const path = require('path');
 
-        .partner-box { width: 100%; margin-bottom: 20px; font-size: 11px; }
-        .partner-box td { padding: 4px 8px; }
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Wallet_Statement_${Date.now()}.pdf`);
 
-        .txn-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
-        .txn-table th { background: #0052FF; color: #FFF; padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; }
-        .txn-table td { padding: 9px 10px; border-bottom: 1px solid #E2E8F0; }
-        .txn-table tr:nth-child(even) { background: #F8FAFC; }
-        .credit { color: #10B981; font-weight: 800; }
-        .debit { color: #EF4444; font-weight: 800; }
-        .footer { margin-top: 40px; border-top: 1px solid #CBD5E1; padding-top: 15px; font-size: 10px; color: #94A3B8; text-align: center; }
-      </style>
-    </head>
-    <body>
-      <table class="header-table">
-        <tr>
-          <td>
-            ${logoBase64 ? `<img src="${logoBase64}" alt="GharKaPaisa Logo" class="logo-img" />` : `<h1 class="company-title">GharKaPaisa</h1>`}
-            <div class="company-sub">Official Partner Financial Account Statement</div>
-          </td>
-          <td class="stmt-badge">
-            <h2 class="stmt-title">ACCOUNT STATEMENT</h2>
-            <div class="meta-text">Generated On: <strong>${dateStr}</strong></div>
-            <div class="meta-text">Statement Ref: <strong>STMT-${Date.now().toString().slice(-6)}</strong></div>
-          </td>
-        </tr>
-      </table>
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    doc.pipe(res);
 
-      <table class="partner-box">
-        <tr>
-          <td width="50%"><strong>Partner Name:</strong> ${partner?.first_name || partner?.full_name || 'Valued Partner'} ${partner?.last_name || ''}</td>
-          <td width="50%"><strong>Partner Code:</strong> ${partner?.partner_code || 'GKP-PARTNER'}</td>
-        </tr>
-        <tr>
-          <td><strong>Registered Email:</strong> ${partner?.email || 'N/A'}</td>
-          <td><strong>Mobile:</strong> ${partner?.mobile || 'N/A'}</td>
-        </tr>
-      </table>
+    // Header Logo & Branding
+    let logoPath = null;
+    try {
+      const p1 = path.join(process.cwd(), 'logo.jpeg');
+      const p2 = path.join(process.cwd(), 'frontend/src/assets/logos/logo.png');
+      if (fs.existsSync(p1)) logoPath = p1;
+      else if (fs.existsSync(p2)) logoPath = p2;
+    } catch (e) {}
 
-      <div class="summary-box">
-        <div class="sum-card">
-          <span class="label">Available Balance</span>
-          <span class="val" style="color:#10B981;">₹${availBal.toLocaleString('en-IN')}</span>
-        </div>
-        <div class="sum-card">
-          <span class="label">Pending Hold</span>
-          <span class="val" style="color:#F97316;">₹${holdBal.toLocaleString('en-IN')}</span>
-        </div>
-        <div class="sum-card">
-          <span class="label">Lifetime Gross</span>
-          <span class="val" style="color:#0052FF;">₹${totalEarned.toLocaleString('en-IN')}</span>
-        </div>
-        <div class="sum-card">
-          <span class="label">Total Settled</span>
-          <span class="val" style="color:#64748B;">₹${totalWithdrawn.toLocaleString('en-IN')}</span>
-        </div>
-      </div>
+    if (logoPath) {
+      doc.image(logoPath, 40, 35, { width: 130 });
+    } else {
+      doc.fontSize(20).fillColor('#0052FF').text('GharKaPaisa', 40, 35, { bold: true });
+    }
 
-      <h3 style="font-size:13px; font-weight:800; margin-bottom:8px; color:#0F172A;">Transaction & Payout Ledger History</h3>
-      <table class="txn-table">
-        <thead>
-          <tr>
-            <th>Date & Time</th>
-            <th>Reference #</th>
-            <th>Details / Customer</th>
-            <th>Type</th>
-            <th style="text-align:right;">Amount (₹)</th>
-            <th style="text-align:center;">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${txns.map(t => {
-            const isDebit = parseFloat(t.debit || 0) > 0 || String(t.transaction_type || '').toUpperCase().includes('WITHDRAWAL');
-            const amt = isDebit ? parseFloat(t.debit || 0) : parseFloat(t.credit || 0);
-            return `
-              <tr>
-                <td>${new Date(t.created_at).toLocaleString()}</td>
-                <td style="font-family:monospace; font-weight:700;">${t.app_number || t.reference_number || t.id}</td>
-                <td>
-                  <strong>${t.customer_name || t.description}</strong><br/>
-                  <small style="color:#64748B;">${t.product_name || ''}</small>
-                </td>
-                <td style="font-weight:700; text-transform:uppercase; font-size:9.5px;">${t.transaction_type || (isDebit ? 'DEBIT' : 'CREDIT')}</td>
-                <td style="text-align:right;" class="${isDebit ? 'debit' : 'credit'}">
-                  ${isDebit ? '-' : '+'} ₹${amt.toLocaleString('en-IN')}
-                </td>
-                <td style="text-align:center; font-weight:700;">${t.status || 'Completed'}</td>
-              </tr>
-            `;
-          }).join('')}
-        </tbody>
-      </table>
+    doc.fontSize(15).fillColor('#0F172A').text('ACCOUNT STATEMENT', 300, 35, { align: 'right' });
+    doc.fontSize(8.5).fillColor('#64748B').text(`Generated: ${dateStr}`, 300, 54, { align: 'right' });
+    doc.text(`Ref: STMT-${Date.now().toString().slice(-6)}`, 300, 66, { align: 'right' });
 
-      <div class="footer">
-        <p>This statement is computer generated by GharKaPaisa Financial System and does not require a physical signature.</p>
-        <p>GharKaPaisa Private Limited • Support: support@gharkapaisa.in • www.gharkapaisa.in</p>
-      </div>
-      <script>
-        window.onload = function() { window.print(); }
-      </script>
-    </body>
-    </html>
-    `;
+    doc.moveTo(40, 88).lineTo(555, 88).strokeColor('#0052FF').lineWidth(1.5).stroke();
 
-    res.setHeader('Content-Type', 'text/html');
-    return res.send(htmlContent);
+    // Partner Profile Box
+    doc.fontSize(9.5).fillColor('#1E293B');
+    doc.text(`Partner Name: ${partner?.first_name || partner?.full_name || 'Valued Partner'} ${partner?.last_name || ''}`, 40, 98);
+    doc.text(`Partner Code: ${partner?.partner_code || 'GKP-PARTNER'}`, 320, 98, { align: 'right' });
+    doc.text(`Email: ${partner?.email || 'N/A'}`, 40, 112);
+    doc.text(`Mobile: ${partner?.mobile || 'N/A'}`, 320, 112, { align: 'right' });
+
+    // Financial Metrics Box
+    const boxY = 130;
+    doc.rect(40, boxY, 515, 42).fill('#F8FAFC').stroke('#CBD5E1');
+
+    doc.fontSize(7.5).fillColor('#64748B').text('AVAILABLE BALANCE', 50, boxY + 6);
+    doc.fontSize(11).fillColor('#10B981').text(`Rs. ${availBal.toLocaleString('en-IN')}`, 50, boxY + 19);
+
+    doc.fontSize(7.5).fillColor('#64748B').text('PENDING HOLD', 180, boxY + 6);
+    doc.fontSize(11).fillColor('#F97316').text(`Rs. ${holdBal.toLocaleString('en-IN')}`, 180, boxY + 19);
+
+    doc.fontSize(7.5).fillColor('#64748B').text('LIFETIME GROSS', 310, boxY + 6);
+    doc.fontSize(11).fillColor('#0052FF').text(`Rs. ${totalEarned.toLocaleString('en-IN')}`, 310, boxY + 19);
+
+    doc.fontSize(7.5).fillColor('#64748B').text('TOTAL SETTLED', 440, boxY + 6);
+    doc.fontSize(11).fillColor('#475569').text(`Rs. ${totalWithdrawn.toLocaleString('en-IN')}`, 440, boxY + 19);
+
+    let y = boxY + 54;
+    doc.fontSize(10).fillColor('#0F172A').text('Transaction & Payout Ledger History', 40, y);
+    y += 15;
+
+    const drawTableHeader = (posY) => {
+      doc.rect(40, posY, 515, 16).fill('#0052FF');
+      doc.fontSize(7.5).fillColor('#FFFFFF');
+      doc.text('Date', 45, posY + 4, { width: 75 });
+      doc.text('Reference #', 125, posY + 4, { width: 90 });
+      doc.text('Customer / Details', 220, posY + 4, { width: 145 });
+      doc.text('Type', 370, posY + 4, { width: 50 });
+      doc.text('Amount (Rs)', 425, posY + 4, { width: 70, align: 'right' });
+      doc.text('Status', 500, posY + 4, { width: 50, align: 'center' });
+    };
+
+    drawTableHeader(y);
+    y += 16;
+
+    for (let i = 0; i < txns.length; i++) {
+      const t = txns[i];
+      if (y > 760) {
+        doc.addPage();
+        y = 40;
+        drawTableHeader(y);
+        y += 16;
+      }
+
+      const isDebit = parseFloat(t.debit || 0) > 0 || String(t.transaction_type || '').toUpperCase().includes('WITHDRAWAL');
+      const amt = isDebit ? parseFloat(t.debit || 0) : parseFloat(t.credit || 0);
+
+      doc.rect(40, y, 515, 16).fill(i % 2 === 0 ? '#F8FAFC' : '#FFFFFF');
+      doc.fontSize(7.5).fillColor('#334155');
+      doc.text(new Date(t.created_at).toLocaleDateString('en-IN'), 45, y + 4, { width: 75 });
+      doc.text((t.app_number || t.reference_number || String(t.id)).slice(0, 16), 125, y + 4, { width: 90 });
+      doc.text((t.customer_name || t.description || 'Transaction').slice(0, 28), 220, y + 4, { width: 145 });
+      doc.text((t.transaction_type || (isDebit ? 'DEBIT' : 'CREDIT')).slice(0, 10), 370, y + 4, { width: 50 });
+
+      if (isDebit) {
+        doc.fillColor('#EF4444').text(`-${amt.toLocaleString('en-IN')}`, 425, y + 4, { width: 70, align: 'right' });
+      } else {
+        doc.fillColor('#10B981').text(`+${amt.toLocaleString('en-IN')}`, 425, y + 4, { width: 70, align: 'right' });
+      }
+
+      doc.fillColor('#334155').text(t.status || 'Completed', 500, y + 4, { width: 50, align: 'center' });
+      y += 16;
+    }
+
+    y += 15;
+    if (y > 760) {
+      doc.addPage();
+      y = 40;
+    }
+    doc.moveTo(40, y).lineTo(555, y).strokeColor('#CBD5E1').lineWidth(0.5).stroke();
+    doc.fontSize(7.5).fillColor('#94A3B8').text('Computer-generated statement by GharKaPaisa Financial System. Signature not required.', 40, y + 6, { align: 'center' });
+
+    doc.end();
   } catch (err) {
     next(err);
   }
