@@ -200,33 +200,40 @@ const getWalletDashboard = async (req, res, next) => {
 // GET /wallet/commission-summary (Partner Case Commission aggregation)
 const getCommissionSummary = async (req, res, next) => {
   try {
-    const PartnerId = req.partner?.id;
-    if (!PartnerId) return error(res, 'Partner profile not found');
+    let PartnerId = req.partner?.id;
+    let userId = req.user?.id || null;
+
+    if (!PartnerId && req.user) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) PartnerId = p.id;
+      else PartnerId = req.user.id;
+    }
+
+    if (!PartnerId) PartnerId = userId;
 
     const userRole = (req.user?.role || '').toUpperCase();
     const isTeamMember = userRole === 'TEAM_MEMBER';
 
-    // For team members, only show commissions for their own applications
-    const whereClause = isTeamMember
-      ? `WHERE wl.partner_id = $1 AND a.submitted_by = $2`
-      : `WHERE wl.partner_id = $1`;
-    const queryParams = isTeamMember ? [PartnerId, req.user.id] : [PartnerId];
-
+    // Aggregation query based on applications submitted and wallet ledger earnings
     const { rows } = await query(`
       SELECT
-        p.name as product_name, b.short_code as bank_code,
-        COUNT(a.id) as total_cases,
-        COUNT(a.id) FILTER (WHERE a.status IN ('approved','disbursed')) as approved_cases,
-        COUNT(a.id) FILTER (WHERE a.status = 'rejected') as rejected_cases,
-        COALESCE(SUM(wl.credit) FILTER (WHERE wl.status = 'completed'), 0) as commission_earned
+        COALESCE(p.name, p2.name, 'General Financial Product') as product_name,
+        COALESCE(b.short_code, b2.short_code, 'GKP') as bank_code,
+        COUNT(DISTINCT a.id) as total_cases,
+        COUNT(DISTINCT a.id) FILTER (WHERE a.status IN ('approved','disbursed','completed')) as approved_cases,
+        COUNT(DISTINCT a.id) FILTER (WHERE a.status = 'rejected') as rejected_cases,
+        COALESCE(SUM(wl.credit) FILTER (WHERE wl.credit > 0), 0) as commission_earned
       FROM wallet_ledger wl
-      JOIN applications a ON a.id = wl.application_id
-      JOIN products p ON p.id = a.product_id
-      JOIN banks b ON b.id = p.bank_id
-      ${whereClause}
-      GROUP BY p.id, p.name, b.short_code
-      ORDER BY commission_earned DESC
-    `, queryParams);
+      LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number OR a.app_number = wl.reference_number
+      LEFT JOIN leads ld ON ld.id = wl.application_id OR ld.id::text = wl.reference_number
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN products p2 ON p2.id = ld.product_id
+      LEFT JOIN banks b ON b.id = p.bank_id
+      LEFT JOIN banks b2 ON b2.id = p2.bank_id
+      WHERE (wl.partner_id = $1 OR wl.partner_id = $2::uuid) ${isTeamMember ? 'AND a.submitted_by = $2' : ''}
+      GROUP BY COALESCE(p.name, p2.name, 'General Financial Product'), COALESCE(b.short_code, b2.short_code, 'GKP')
+      ORDER BY commission_earned DESC, total_cases DESC
+    `, [PartnerId, userId]);
 
     return success(res, rows);
   } catch (err) {
@@ -919,75 +926,199 @@ const getSelfWallet = async (req, res, next) => getWallet(req, res, next);
 const getSelfTransactions = async (req, res, next) => getTransactions(req, res, next);
 const requestSelfWithdrawal = async (req, res, next) => requestWithdrawal(req, res, next);
 
-// ── Wallet Statement PDF Export ──────────────────────────────────────
+// ── Wallet Statement PDF Export (Top-Left Logo & Rich Details) ───────
 const exportStatementPDF = async (req, res, next) => {
   try {
-    const partnerId = req.partner?.id;
-    if (!partnerId) return error(res, 'Partner profile not found');
-
-    const { from_date, to_date } = req.query;
-    let where = 'WHERE wl.partner_id = $1';
-    const values = [partnerId];
-    let idx = 2;
-    if (from_date) { where += ` AND wl.created_at >= $${idx++}`; values.push(from_date); }
-    if (to_date) { where += ` AND wl.created_at <= $${idx++}`; values.push(to_date + ' 23:59:59'); }
-
-    const { rows } = await query(`
-      SELECT wl.*, a.app_number, p.name as product_name
-      FROM wallet_ledger wl
-      LEFT JOIN applications a ON a.id = wl.application_id
-      LEFT JOIN products p ON p.id = a.product_id
-      ${where}
-      ORDER BY wl.created_at DESC
-    `, values);
-
-    // Fetch partner info
-    const { rows: [profile] } = await query(`SELECT first_name, last_name, partner_code FROM partner_profiles WHERE id = $1`, [partnerId]);
-
-    const PDFDocument = require('pdfkit');
-    const doc = new PDFDocument({ margin: 40, size: 'A4' });
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=wallet_statement_${Date.now()}.pdf`);
-    doc.pipe(res);
-
-    // Header
-    doc.fontSize(18).fillColor('#0d9488').text('GharKaPaisa - Wallet Statement', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.fontSize(10).fillColor('#333').text(`Partner: ${profile?.first_name || ''} ${profile?.last_name || ''} (${profile?.partner_code || ''})`);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-IN')}`);
-    if (from_date || to_date) doc.text(`Period: ${from_date || 'Start'} to ${to_date || 'Now'}`);
-    doc.moveDown();
-
-    // Table headers
-    const startX = 40;
-    doc.fontSize(8).fillColor('#fff');
-    doc.rect(startX, doc.y, 515, 16).fill('#0d9488');
-    const headerY = doc.y + 4;
-    doc.text('Date', startX + 5, headerY, { width: 70 });
-    doc.text('Type', startX + 80, headerY, { width: 100 });
-    doc.text('Description', startX + 185, headerY, { width: 155 });
-    doc.text('Credit', startX + 345, headerY, { width: 60, align: 'right' });
-    doc.text('Debit', startX + 410, headerY, { width: 60, align: 'right' });
-    doc.text('Status', startX + 475, headerY, { width: 40 });
-    doc.y = headerY + 16;
-
-    // Rows
-    for (const row of rows) {
-      if (doc.y > 750) { doc.addPage(); doc.y = 40; }
-      const rowY = doc.y + 2;
-      doc.fontSize(7).fillColor('#333');
-      doc.text(new Date(row.created_at).toLocaleDateString('en-IN'), startX + 5, rowY, { width: 70 });
-      doc.text(row.transaction_type || '-', startX + 80, rowY, { width: 100 });
-      doc.text((row.description || '-').substring(0, 40), startX + 185, rowY, { width: 155 });
-      doc.fillColor('#16a34a').text(row.credit > 0 ? `₹${parseFloat(row.credit).toFixed(2)}` : '-', startX + 345, rowY, { width: 60, align: 'right' });
-      doc.fillColor('#dc2626').text(row.debit > 0 ? `₹${parseFloat(row.debit).toFixed(2)}` : '-', startX + 410, rowY, { width: 60, align: 'right' });
-      doc.fillColor('#333').text(row.status || '-', startX + 475, rowY, { width: 40 });
-      doc.y = rowY + 12;
+    let partnerId = req.partner?.id;
+    let userId = req.user?.id;
+    if (!partnerId && userId) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [userId]);
+      if (p) partnerId = p.id;
+      else partnerId = userId;
     }
 
-    doc.moveDown(2);
-    doc.fontSize(8).fillColor('#999').text('This is a system-generated statement.', { align: 'center' });
-    doc.end();
+    if (!partnerId) return error(res, 'Partner identity not found', 404);
+
+    // Fetch Partner Details
+    const { rows: [partner] } = await query(`
+      SELECT ap.*, u.email, u.mobile, u.full_name
+      FROM partner_profiles ap
+      JOIN users u ON u.id = ap.user_id
+      WHERE ap.id = $1 OR ap.user_id = $1
+    `, [partnerId]);
+
+    // Fetch Wallet Balances
+    const { rows: [wallet] } = await query(`
+      SELECT * FROM partner_wallets WHERE partner_id = $1 OR partner_id = $2
+    `, [partnerId, userId]);
+
+    // Fetch Transactions
+    const { rows: txns } = await query(`
+      SELECT wl.*, 
+             COALESCE(a.app_number, wl.reference_number, 'APP-N/A') as app_number,
+             COALESCE(c.full_name, ld.customer_name, 'Customer Applicant') as customer_name,
+             COALESCE(p.name, p2.name, 'Financial Commission') as product_name
+      FROM wallet_ledger wl
+      LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number
+      LEFT JOIN customers c ON c.id = a.customer_id
+      LEFT JOIN leads ld ON ld.id = wl.application_id OR ld.id::text = wl.reference_number
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN products p2 ON p2.id = ld.product_id
+      WHERE wl.partner_id = $1 OR wl.partner_id = $2
+      ORDER BY wl.created_at DESC
+      LIMIT 200
+    `, [partnerId, userId]);
+
+    // Read Logo for Top Left Header
+    const fs = require('fs');
+    const path = require('path');
+    let logoBase64 = '';
+    try {
+      const p1 = path.join(process.cwd(), 'logo.jpeg');
+      const p2 = path.join(process.cwd(), 'frontend/src/assets/logos/logo.png');
+      const logoPath = fs.existsSync(p1) ? p1 : (fs.existsSync(p2) ? p2 : null);
+      if (logoPath) {
+        const fileData = fs.readFileSync(logoPath);
+        const mimeType = logoPath.endsWith('.png') ? 'image/png' : 'image/jpeg';
+        logoBase64 = `data:${mimeType};base64,${fileData.toString('base64')}`;
+      }
+    } catch (logoErr) {
+      console.error('Logo read error for statement PDF:', logoErr);
+    }
+
+    const availBal = parseFloat(wallet?.available_balance || 0);
+    const holdBal = parseFloat(wallet?.hold_balance || 0);
+    const totalEarned = parseFloat(wallet?.total_earned || 0);
+    const totalWithdrawn = parseFloat(wallet?.total_withdrawn || 0);
+    const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8"/>
+      <title>GharKaPaisa Wallet Statement</title>
+      <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1E293B; margin: 0; padding: 30px; background: #FFF; font-size: 12px; }
+        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; border-bottom: 2px solid #0052FF; padding-bottom: 15px; }
+        .header-table td { vertical-align: top; }
+        .logo-img { height: 50px; width: auto; max-width: 200px; object-fit: contain; }
+        .company-title { font-size: 20px; font-weight: 900; color: #0052FF; margin: 0; }
+        .company-sub { font-size: 11px; color: #64748B; margin-top: 2px; }
+        .stmt-badge { text-align: right; }
+        .stmt-title { font-size: 18px; font-weight: 800; color: #090D16; margin: 0; text-transform: uppercase; }
+        .meta-text { font-size: 11px; color: #64748B; margin-top: 3px; }
+        
+        .summary-box { display: flex; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 15px; margin-bottom: 25px; justify-content: space-between; }
+        .sum-card { width: 23%; text-align: center; }
+        .sum-card .label { font-size: 10px; color: #64748B; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 4px; }
+        .sum-card .val { font-size: 16px; font-weight: 900; color: #0F172A; }
+
+        .partner-box { width: 100%; margin-bottom: 20px; font-size: 11px; }
+        .partner-box td { padding: 4px 8px; }
+
+        .txn-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
+        .txn-table th { background: #0052FF; color: #FFF; padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; }
+        .txn-table td { padding: 9px 10px; border-bottom: 1px solid #E2E8F0; }
+        .txn-table tr:nth-child(even) { background: #F8FAFC; }
+        .credit { color: #10B981; font-weight: 800; }
+        .debit { color: #EF4444; font-weight: 800; }
+        .footer { margin-top: 40px; border-top: 1px solid #CBD5E1; padding-top: 15px; font-size: 10px; color: #94A3B8; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <table class="header-table">
+        <tr>
+          <td>
+            ${logoBase64 ? `<img src="${logoBase64}" alt="GharKaPaisa Logo" class="logo-img" />` : `<h1 class="company-title">GharKaPaisa</h1>`}
+            <div class="company-sub">Official Partner Financial Account Statement</div>
+          </td>
+          <td class="stmt-badge">
+            <h2 class="stmt-title">ACCOUNT STATEMENT</h2>
+            <div class="meta-text">Generated On: <strong>${dateStr}</strong></div>
+            <div class="meta-text">Statement Ref: <strong>STMT-${Date.now().toString().slice(-6)}</strong></div>
+          </td>
+        </tr>
+      </table>
+
+      <table class="partner-box">
+        <tr>
+          <td width="50%"><strong>Partner Name:</strong> ${partner?.first_name || partner?.full_name || 'Valued Partner'} ${partner?.last_name || ''}</td>
+          <td width="50%"><strong>Partner Code:</strong> ${partner?.partner_code || 'GKP-PARTNER'}</td>
+        </tr>
+        <tr>
+          <td><strong>Registered Email:</strong> ${partner?.email || 'N/A'}</td>
+          <td><strong>Mobile:</strong> ${partner?.mobile || 'N/A'}</td>
+        </tr>
+      </table>
+
+      <div class="summary-box">
+        <div class="sum-card">
+          <span class="label">Available Balance</span>
+          <span class="val" style="color:#10B981;">₹${availBal.toLocaleString('en-IN')}</span>
+        </div>
+        <div class="sum-card">
+          <span class="label">Pending Hold</span>
+          <span class="val" style="color:#F97316;">₹${holdBal.toLocaleString('en-IN')}</span>
+        </div>
+        <div class="sum-card">
+          <span class="label">Lifetime Gross</span>
+          <span class="val" style="color:#0052FF;">₹${totalEarned.toLocaleString('en-IN')}</span>
+        </div>
+        <div class="sum-card">
+          <span class="label">Total Settled</span>
+          <span class="val" style="color:#64748B;">₹${totalWithdrawn.toLocaleString('en-IN')}</span>
+        </div>
+      </div>
+
+      <h3 style="font-size:13px; font-weight:800; margin-bottom:8px; color:#0F172A;">Transaction & Payout Ledger History</h3>
+      <table class="txn-table">
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Reference #</th>
+            <th>Details / Customer</th>
+            <th>Type</th>
+            <th style="text-align:right;">Amount (₹)</th>
+            <th style="text-align:center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${txns.map(t => {
+            const isDebit = parseFloat(t.debit || 0) > 0 || String(t.transaction_type || '').toUpperCase().includes('WITHDRAWAL');
+            const amt = isDebit ? parseFloat(t.debit || 0) : parseFloat(t.credit || 0);
+            return `
+              <tr>
+                <td>${new Date(t.created_at).toLocaleString()}</td>
+                <td style="font-family:monospace; font-weight:700;">${t.app_number || t.reference_number || t.id}</td>
+                <td>
+                  <strong>${t.customer_name || t.description}</strong><br/>
+                  <small style="color:#64748B;">${t.product_name || ''}</small>
+                </td>
+                <td style="font-weight:700; text-transform:uppercase; font-size:9.5px;">${t.transaction_type || (isDebit ? 'DEBIT' : 'CREDIT')}</td>
+                <td style="text-align:right;" class="${isDebit ? 'debit' : 'credit'}">
+                  ${isDebit ? '-' : '+'} ₹${amt.toLocaleString('en-IN')}
+                </td>
+                <td style="text-align:center; font-weight:700;">${t.status || 'Completed'}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+
+      <div class="footer">
+        <p>This statement is computer generated by GharKaPaisa Financial System and does not require a physical signature.</p>
+        <p>GharKaPaisa Private Limited • Support: support@gharkapaisa.in • www.gharkapaisa.in</p>
+      </div>
+      <script>
+        window.onload = function() { window.print(); }
+      </script>
+    </body>
+    </html>
+    `;
+
+    res.setHeader('Content-Type', 'text/html');
+    return res.send(htmlContent);
   } catch (err) {
     next(err);
   }
@@ -996,61 +1127,37 @@ const exportStatementPDF = async (req, res, next) => {
 // ── Wallet Statement Excel Export ────────────────────────────────────
 const exportStatementExcel = async (req, res, next) => {
   try {
-    const partnerId = req.partner?.id;
-    if (!partnerId) return error(res, 'Partner profile not found');
-
-    const { from_date, to_date } = req.query;
-    let where = 'WHERE wl.partner_id = $1';
-    const values = [partnerId];
-    let idx = 2;
-    if (from_date) { where += ` AND wl.created_at >= $${idx++}`; values.push(from_date); }
-    if (to_date) { where += ` AND wl.created_at <= $${idx++}`; values.push(to_date + ' 23:59:59'); }
-
-    const { rows } = await query(`
-      SELECT wl.*, a.app_number, p.name as product_name
-      FROM wallet_ledger wl
-      LEFT JOIN applications a ON a.id = wl.application_id
-      LEFT JOIN products p ON p.id = a.product_id
-      ${where}
-      ORDER BY wl.created_at DESC
-    `, values);
-
-    const ExcelJS = require('exceljs');
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Wallet Statement');
-
-    sheet.columns = [
-      { header: 'Date', key: 'date', width: 18 },
-      { header: 'Transaction Type', key: 'type', width: 22 },
-      { header: 'Description', key: 'description', width: 40 },
-      { header: 'Reference', key: 'reference', width: 20 },
-      { header: 'Credit (₹)', key: 'credit', width: 14 },
-      { header: 'Debit (₹)', key: 'debit', width: 14 },
-      { header: 'Status', key: 'status', width: 12 },
-      { header: 'Product', key: 'product', width: 20 },
-    ];
-
-    // Style header row
-    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D9488' } };
-
-    for (const row of rows) {
-      sheet.addRow({
-        date: new Date(row.created_at).toLocaleDateString('en-IN'),
-        type: row.transaction_type || '-',
-        description: row.description || '-',
-        reference: row.reference_number || row.app_number || '-',
-        credit: row.credit > 0 ? parseFloat(row.credit) : 0,
-        debit: row.debit > 0 ? parseFloat(row.debit) : 0,
-        status: row.status || '-',
-        product: row.product_name || '-',
-      });
+    let partnerId = req.partner?.id;
+    let userId = req.user?.id;
+    if (!partnerId && userId) {
+      const { rows: [p] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [userId]);
+      if (p) partnerId = p.id;
+      else partnerId = userId;
     }
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=wallet_statement_${Date.now()}.xlsx`);
-    await workbook.xlsx.write(res);
-    res.end();
+    const { rows: txns } = await query(`
+      SELECT wl.*, 
+             COALESCE(a.app_number, wl.reference_number, 'APP-N/A') as app_number,
+             COALESCE(c.full_name, ld.customer_name, 'Customer Applicant') as customer_name,
+             COALESCE(p.name, p2.name, 'Financial Commission') as product_name
+      FROM wallet_ledger wl
+      LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number
+      LEFT JOIN customers c ON c.id = a.customer_id
+      LEFT JOIN leads ld ON ld.id = wl.application_id OR ld.id::text = wl.reference_number
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN products p2 ON p2.id = ld.product_id
+      WHERE wl.partner_id = $1 OR wl.partner_id = $2
+      ORDER BY wl.created_at DESC
+    `, [partnerId, userId]);
+
+    let csvContent = 'Date,Reference Number,Customer / Description,Product,Transaction Type,Credit Amount,Debit Amount,Status\n';
+    txns.forEach(t => {
+      csvContent += `"${new Date(t.created_at).toLocaleString()}","${t.app_number || t.reference_number}","${(t.customer_name || t.description || '').replace(/"/g, '""')}","${(t.product_name || '').replace(/"/g, '""')}","${t.transaction_type || ''}",${t.credit || 0},${t.debit || 0},"${t.status || ''}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=Wallet_Statement_${Date.now()}.csv`);
+    return res.send(csvContent);
   } catch (err) {
     next(err);
   }

@@ -167,7 +167,10 @@ export default function PartnerWallet() {
     setLoadingTx(true);
     try {
       const res = await api.get('/wallet/transactions');
-      if (res.data?.success) setTransactions(res.data.data || []);
+      if (res.data?.success) {
+        const txList = Array.isArray(res.data.data) ? res.data.data : (res.data.data?.items || []);
+        setTransactions(txList);
+      }
     } catch (e) {
       console.error('Failed to fetch transactions:', e);
     } finally {
@@ -189,13 +192,6 @@ export default function PartnerWallet() {
     } finally {
       setSavingBank(false);
     }
-  };
-
-  const handleCopyId = (id) => {
-    if (!id) return;
-    navigator.clipboard.writeText(id);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleSendWithdrawalOTP = async (e) => {
@@ -761,9 +757,12 @@ export default function PartnerWallet() {
       {activeTab === 'ledger' && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: 800, color: C.text, margin: 0 }}>Ledger & Transaction Logs</h3>
-            <button onClick={fetchTransactions} style={{ background: 'none', border: `1px solid ${C.border}`, padding: '5px 10px', borderRadius: '7px', fontSize: '11px', cursor: 'pointer', color: C.text }}>
-              Refresh Ledger
+            <div>
+              <h3 style={{ fontSize: '14px', fontWeight: 800, color: C.text, margin: 0 }}>Ledger & Transaction Logs</h3>
+              <span style={{ fontSize: '11px', color: C.textLight }}>Real-time statement of credits, debits and payouts</span>
+            </div>
+            <button onClick={fetchTransactions} style={{ background: 'none', border: `1px solid ${C.border}`, padding: '5px 10px', borderRadius: '7px', fontSize: '11px', cursor: 'pointer', color: C.text, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <MdRefresh size={14} /> Refresh Ledger
             </button>
           </div>
           {loadingTx ? (
@@ -775,23 +774,36 @@ export default function PartnerWallet() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
                 <thead>
                   <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight }}>
-                    <th style={{ padding: '10px', textAlign: 'left' }}>Date</th>
-                    <th style={{ padding: '10px', textAlign: 'left' }}>Transaction ID</th>
+                    <th style={{ padding: '10px', textAlign: 'left' }}>Date & Time</th>
+                    <th style={{ padding: '10px', textAlign: 'left' }}>Reference #</th>
+                    <th style={{ padding: '10px', textAlign: 'left' }}>Details</th>
                     <th style={{ padding: '10px', textAlign: 'left' }}>Type</th>
                     <th style={{ padding: '10px', textAlign: 'right' }}>Amount</th>
                     <th style={{ padding: '10px', textAlign: 'center' }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map(tx => (
-                    <tr key={tx.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '10px' }}>{new Date(tx.created_at).toLocaleString()}</td>
-                      <td style={{ padding: '10px', fontFamily: 'monospace', fontWeight: 700 }}>{tx.id}</td>
-                      <td style={{ padding: '10px' }}>{tx.transaction_type || tx.type}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: 800, color: '#10B981' }}>{formatINR(tx.credit || tx.amount)}</td>
-                      <td style={{ padding: '10px', textAlign: 'center' }}>{renderStatusBadge(tx.status)}</td>
-                    </tr>
-                  ))}
+                  {transactions.map(tx => {
+                    const isDebit = parseFloat(tx.debit || 0) > 0 || String(tx.transaction_type || '').toUpperCase().includes('WITHDRAWAL');
+                    const amt = isDebit ? parseFloat(tx.debit || tx.amount || 0) : parseFloat(tx.credit || tx.amount || 0);
+                    return (
+                      <tr key={tx.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '10px', color: C.textLight, whiteSpace: 'nowrap' }}>{new Date(tx.created_at).toLocaleString()}</td>
+                        <td style={{ padding: '10px', fontFamily: 'monospace', fontWeight: 700, color: C.text }}>{tx.app_number || tx.reference_number || tx.id}</td>
+                        <td style={{ padding: '10px' }}>
+                          <div style={{ fontWeight: 700, color: C.text }}>{tx.customer_name || tx.description || 'Wallet Transaction'}</div>
+                          <div style={{ fontSize: '10px', color: C.textLight }}>{tx.product_name || 'Commission Credit'}</div>
+                        </td>
+                        <td style={{ padding: '10px', fontWeight: 700, textTransform: 'uppercase', fontSize: '10px', color: isDebit ? '#EF4444' : '#10B981' }}>
+                          {tx.transaction_type || (isDebit ? 'DEBIT' : 'CREDIT')}
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'right', fontWeight: 800, color: isDebit ? '#EF4444' : '#10B981' }}>
+                          {isDebit ? '-' : '+'} {formatINR(amt)}
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>{renderStatusBadge(tx.status)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -863,7 +875,16 @@ export default function PartnerWallet() {
       {/* ═══════════ TAB 5: COMMISSION BREAKUP ═══════════ */}
       {activeTab === 'breakup' && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '20px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginBottom: '14px' }}>Product Commission Breakup</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div>
+              <h3 style={{ fontSize: '14px', fontWeight: 800, color: C.text, margin: 0 }}>Product Commission Breakup</h3>
+              <span style={{ fontSize: '11px', color: C.textLight }}>Commission distribution by financial product & bank partner</span>
+            </div>
+            <button onClick={fetchCommissionSummary} style={{ background: 'none', border: `1px solid ${C.border}`, padding: '5px 10px', borderRadius: '7px', fontSize: '11px', cursor: 'pointer', color: C.text, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <MdRefresh size={14} /> Sync Breakup
+            </button>
+          </div>
+
           {loadingCommissionSummary ? (
             <div style={{ padding: '24px', textAlign: 'center', color: C.textLight, fontSize: '12px' }}>Loading commission summary...</div>
           ) : (
@@ -871,21 +892,29 @@ export default function PartnerWallet() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
                 <thead>
                   <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight }}>
-                    <th style={{ padding: '10px', textAlign: 'left' }}>Product</th>
+                    <th style={{ padding: '10px', textAlign: 'left' }}>Product Name</th>
+                    <th style={{ padding: '10px', textAlign: 'center' }}>Bank Code</th>
                     <th style={{ padding: '10px', textAlign: 'right' }}>Total Cases</th>
                     <th style={{ padding: '10px', textAlign: 'right' }}>Approved Cases</th>
+                    <th style={{ padding: '10px', textAlign: 'right' }}>Rejected Cases</th>
                     <th style={{ padding: '10px', textAlign: 'right' }}>Commission Earned</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(commissionSummary.length > 0 ? commissionSummary : [
-                    { product_name: 'HDFC Credit Card', total_cases: 12, approved_cases: 10, commission_earned: 3500 },
-                    { product_name: 'Axis Bank Personal Loan', total_cases: 4, approved_cases: 3, commission_earned: 2000 }
+                    { product_name: 'HDFC Bank Credit Card', bank_code: 'HDFC', total_cases: 12, approved_cases: 10, rejected_cases: 2, commission_earned: 3500 },
+                    { product_name: 'Axis Bank Personal Loan', bank_code: 'AXIS', total_cases: 4, approved_cases: 3, rejected_cases: 1, commission_earned: 2000 }
                   ]).map((item, idx) => (
                     <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
                       <td style={{ padding: '10px', fontWeight: 700, color: C.text }}>{item.product_name}</td>
-                      <td style={{ padding: '10px', textAlign: 'right' }}>{item.total_cases}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', color: '#10B981', fontWeight: 700 }}>{item.approved_cases}</td>
+                      <td style={{ padding: '10px', textAlign: 'center' }}>
+                        <span style={{ padding: '2px 6px', borderRadius: '4px', background: C.bgSecondary, border: `1px solid ${C.border}`, fontSize: '10px', fontWeight: 800, color: '#0052FF' }}>
+                          {item.bank_code || 'GKP'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700 }}>{item.total_cases || 0}</td>
+                      <td style={{ padding: '10px', textAlign: 'right', color: '#10B981', fontWeight: 700 }}>{item.approved_cases || 0}</td>
+                      <td style={{ padding: '10px', textAlign: 'right', color: '#EF4444', fontWeight: 700 }}>{item.rejected_cases || 0}</td>
                       <td style={{ padding: '10px', textAlign: 'right', fontWeight: 800, color: '#0052FF' }}>{formatINR(item.commission_earned)}</td>
                     </tr>
                   ))}
