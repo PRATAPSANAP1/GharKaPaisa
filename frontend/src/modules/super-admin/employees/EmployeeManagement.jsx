@@ -1133,201 +1133,208 @@ export default function EmployeeManagement() {
                         )}
                       </div>
 
-                      {/* Stem Line Connecting Manager to TL Level */}
-                      {(managerTLs.length > 0 || directTCs.length > 0) ? (
-                        <>
-                          <div style={{ width: '2px', height: '28px', background: '#818CF8', margin: '0 auto' }}></div>
+                      {/* Sub-Tree Branches starting from Root Node */}
+                      {(() => {
+                        const hasMembers = (subSrMgrs?.length > 0) || (subManagers?.length > 0) || (managerTLs?.length > 0) || (allManagerTCs?.length > 0);
+                        if (!hasMembers) {
+                          return (
+                            <div style={{ marginTop: '20px', padding: '20px', textAlign: 'center', color: C.textMid, fontSize: '13px' }}>
+                              No sub-employees or team members assigned under <strong>{currentMgr.full_name}</strong> yet.<br/>
+                              <span style={{ fontSize: '12px', color: C.teal, fontWeight: 700 }}>Go to the Directory tab and click "Assign Team" on an employee to link them to this {roleBadgeLabel.toLowerCase()}.</span>
+                            </div>
+                          );
+                        }
 
-                          {/* Level 2 horizontal connector branch bar if multiple nodes */}
-                          <div style={{ width: '100%', overflowX: 'auto', padding: '0 10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', alignItems: 'flex-start', minWidth: 'max-content', margin: '0 auto' }}>
-                              
-                              {/* TEAM LEADERS BRANCHES */}
-                              {managerTLs.map(tl => {
-                                const tlTCs = tlTcMapping[tl.id] || [];
-                                return (
-                                  <div key={tl.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    
-                                    {/* Stem line to TL node */}
-                                    <div style={{ width: '2px', height: '20px', background: '#3B82F6' }}></div>
+                        const renderPopover = (emp) => {
+                          if (popoverEmpId !== emp.id) return null;
+                          return (
+                            <div 
+                              style={{ position: 'absolute', top: '44px', right: '10px', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 12px 30px rgba(0,0,0,0.15)', zIndex: 100, minWidth: '170px', padding: '6px 0', textAlign: 'left' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div onClick={() => { setPopoverEmpId(null); handleOpen360View(emp); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FaEye style={{ fontSize: '13px', color: '#64748B' }} /> View Profile
+                              </div>
+                              <div onClick={() => { setPopoverEmpId(null); openHierarchyModal(emp); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FaEdit style={{ fontSize: '13px', color: '#64748B' }} /> Edit Details
+                              </div>
+                              <div onClick={() => { setPopoverEmpId(null); handleUnassignHierarchy(emp.id, emp.full_name, emp.employee_id); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FaUnlink style={{ fontSize: '13px', color: '#EF4444' }} /> Disassign Employee
+                              </div>
+                              <div onClick={() => { setPopoverEmpId(null); setPerfModalEmp(emp); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FaChartLine style={{ fontSize: '13px', color: '#64748B' }} /> View Performance
+                              </div>
+                            </div>
+                          );
+                        };
 
-                                    {/* LEVEL 2: TEAM LEADER NODE */}
-                                    <div style={{ background: '#FFFFFF', border: `2px solid #60A5FA`, borderRadius: '16px', padding: '14px 18px', minWidth: '280px', maxWidth: '320px', boxShadow: '0 8px 20px rgba(59, 130, 246, 0.08)', position: 'relative', zIndex: 9 }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px' }}>
-                                            {tl.full_name?.charAt(0) || 'TL'}
-                                          </div>
-                                          <div>
-                                            <div style={{ fontSize: '14px', fontWeight: 900, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                              {tl.full_name}
-                                              <span style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', fontSize: '9.5px', fontWeight: 900, padding: '2px 6px', borderRadius: '10px' }}>
-                                                TEAM LEADER
-                                              </span>
-                                            </div>
-                                            <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{tl.employee_id}</div>
-                                          </div>
-                                        </div>
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); setPopoverEmpId(popoverEmpId === tl.id ? null : tl.id); }}
-                                          style={{ background: 'transparent', border: 'none', color: '#64748B', padding: '4px 8px', fontSize: '13px', cursor: 'pointer' }}
-                                        >
-                                          <FaEllipsisV />
-                                        </button>
-                                      </div>
+                        const renderSubTree = (parentEmp, parentRole) => {
+                          let childRole = null;
+                          let childrenList = [];
 
-                                      <div style={{ fontSize: '11.5px', color: '#64748B', display: 'flex', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #F1F5F9' }}>
-                                        <span>📞 {tl.mobile_number || 'N/A'}</span>
-                                        <span style={{ fontWeight: 800, color: '#2563EB' }}>👤 Team Members: {tlTCs.length}</span>
-                                      </div>
+                          if (parentRole === 'BRANCH_HEAD') {
+                            const srs = seniorManagersList.filter(sm => sm.branch_head_id === parentEmp.id || sm.branch_head_name === parentEmp.full_name);
+                            if (srs.length > 0) {
+                              childRole = 'SENIOR_MANAGER';
+                              childrenList = srs;
+                            } else {
+                              const mgrs = managersList.filter(m => m.branch_head_id === parentEmp.id || m.branch_head_name === parentEmp.full_name);
+                              childRole = 'MANAGER';
+                              childrenList = mgrs;
+                            }
+                          } else if (parentRole === 'SENIOR_MANAGER') {
+                            const mgrs = managersList.filter(m => m.senior_manager_id === parentEmp.id || m.senior_manager_name === parentEmp.full_name);
+                            childRole = 'MANAGER';
+                            childrenList = mgrs;
+                          } else if (parentRole === 'MANAGER') {
+                            const tls = tlsList.filter(tl => tl.manager_id === parentEmp.id || tl.manager_name === parentEmp.full_name);
+                            childRole = 'TEAM_LEADER';
+                            childrenList = tls;
+                          } else if (parentRole === 'TEAM_LEADER') {
+                            const tcs = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.team_leader_id === parentEmp.id || tc.team_leader_name === parentEmp.full_name));
+                            childRole = 'TC';
+                            childrenList = tcs;
+                          }
 
-                                      {/* Popover Dropdown for TL */}
-                                      {popoverEmpId === tl.id && (
+                          const directTCsForMgr = (parentRole === 'MANAGER') ? employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === parentEmp.id || tc.manager_name === parentEmp.full_name) && !tc.team_leader_id && !tc.team_leader_name) : [];
+
+                          if (childrenList.length === 0 && directTCsForMgr.length === 0) return null;
+
+                          const stemColor = parentRole === 'BRANCH_HEAD' ? '#D97706' : parentRole === 'SENIOR_MANAGER' ? '#4F46E5' : parentRole === 'MANAGER' ? '#7C3AED' : '#2563EB';
+
+                          return (
+                            <>
+                              <div style={{ width: '2px', height: '26px', background: stemColor, margin: '0 auto' }}></div>
+                              <div style={{ width: '100%', overflowX: 'auto', padding: '0 10px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '28px', alignItems: 'flex-start', minWidth: 'max-content', margin: '0 auto' }}>
+                                  
+                                  {childrenList.map(child => {
+                                    const childBadge = childRole === 'SENIOR_MANAGER' ? { label: 'SR MANAGER', bg: '#EEF2FF', color: '#4F46E5', border: '#C7D2FE' } :
+                                                       childRole === 'MANAGER' ? { label: 'MANAGER', bg: '#F3E8FF', color: '#7C3AED', border: '#DDD6FE' } :
+                                                       childRole === 'TEAM_LEADER' ? { label: 'TEAM LEADER', bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' } :
+                                                       { label: 'TELECALLER', bg: '#ECFDF5', color: '#059669', border: '#A7F3D0' };
+
+                                    if (childRole === 'TC') {
+                                      return (
                                         <div 
-                                          style={{ position: 'absolute', top: '44px', right: '10px', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 12px 30px rgba(0,0,0,0.15)', zIndex: 100, minWidth: '170px', padding: '6px 0' }}
-                                          onClick={(e) => e.stopPropagation()}
+                                          key={child.id} 
+                                          style={{ background: '#FFFFFF', border: `1px solid ${childBadge.border}`, borderRadius: '16px', padding: '14px 12px', width: '135px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative' }}
                                         >
-                                          <div onClick={() => { setPopoverEmpId(null); handleOpen360View(tl); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <FaEye style={{ fontSize: '13px', color: '#64748B' }} /> View Profile
-                                          </div>
-                                          <div onClick={() => { setPopoverEmpId(null); openHierarchyModal(tl); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <FaEdit style={{ fontSize: '13px', color: '#64748B' }} /> Edit Details
-                                          </div>
-                                          <div onClick={() => { setPopoverEmpId(null); handleUnassignHierarchy(tl.id, tl.full_name, tl.employee_id); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <FaUnlink style={{ fontSize: '13px', color: '#EF4444' }} /> Disassign Employee
-                                          </div>
-                                          <div onClick={() => { setPopoverEmpId(null); setPerfModalEmp(tl); }} style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <FaChartLine style={{ fontSize: '13px', color: '#64748B' }} /> View Performance
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {/* Stem line to Level 3 TCs */}
-                                    {tlTCs.length > 0 && <div style={{ width: '2px', height: '24px', background: '#93C5FD' }}></div>}
-
-                                    {/* LEVEL 3: TELECALLERS VERTICAL CARDS IN HORIZONTAL ROW */}
-                                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                      {tlTCs.map(tc => (
-                                        <div 
-                                          key={tc.id} 
-                                          style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '14px 12px', width: '135px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative' }}
-                                        >
-                                          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px', marginBottom: '8px' }}>
-                                            {tc.full_name?.charAt(0) || 'T'}
+                                          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: childBadge.bg, color: childBadge.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px', marginBottom: '8px' }}>
+                                            {child.full_name?.charAt(0) || 'T'}
                                           </div>
                                           <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B', marginBottom: '4px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '120px' }}>
-                                            {tc.full_name}
+                                            {child.full_name}
                                           </div>
-                                          <span style={{ background: '#D1FAE5', color: '#047857', fontSize: '9px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px', textTransform: 'uppercase', marginBottom: '6px' }}>
-                                            TELECALLER
+                                          <span style={{ background: childBadge.bg, color: childBadge.color, border: `1px solid ${childBadge.border}`, fontSize: '9px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                            {childBadge.label}
                                           </span>
-                                          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{tc.employee_id}</div>
-                                          <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>{tc.mobile_number || 'N/A'}</div>
+                                          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{child.employee_id}</div>
+                                          <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>{child.mobile_number || 'N/A'}</div>
 
                                           <button
-                                            onClick={(e) => { e.stopPropagation(); setPopoverEmpId(popoverEmpId === tc.id ? null : tc.id); }}
+                                            onClick={(e) => { e.stopPropagation(); setPopoverEmpId(popoverEmpId === child.id ? null : child.id); }}
                                             style={{ background: 'transparent', border: 'none', color: '#94A3B8', padding: '4px', fontSize: '12px', cursor: 'pointer', marginTop: '6px' }}
                                           >
                                             <FaEllipsisV />
                                           </button>
+                                          {renderPopover(child)}
+                                        </div>
+                                      );
+                                    }
 
-                                          {/* Popover Dropdown for TC */}
-                                          {popoverEmpId === tc.id && (
-                                            <div 
-                                              style={{ position: 'absolute', bottom: '36px', left: '50%', transform: 'translateX(-50%)', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 12px 30px rgba(0,0,0,0.15)', zIndex: 100, minWidth: '160px', padding: '6px 0', textAlign: 'left' }}
-                                              onClick={(e) => e.stopPropagation()}
+                                    return (
+                                      <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        
+                                        {/* Stem line down to node */}
+                                        <div style={{ width: '2px', height: '18px', background: childBadge.color }}></div>
+
+                                        {/* Node Card */}
+                                        <div style={{ background: '#FFFFFF', border: `2px solid ${childBadge.border}`, borderRadius: '16px', padding: '14px 18px', minWidth: '250px', maxWidth: '290px', boxShadow: `0 8px 20px ${childBadge.color}15`, position: 'relative', zIndex: 9 }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: childBadge.bg, color: childBadge.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px' }}>
+                                                {child.full_name?.charAt(0) || 'E'}
+                                              </div>
+                                              <div>
+                                                <div style={{ fontSize: '14px', fontWeight: 900, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                  {child.full_name}
+                                                  <span style={{ background: childBadge.bg, color: childBadge.color, border: `1px solid ${childBadge.border}`, fontSize: '9.5px', fontWeight: 900, padding: '2px 6px', borderRadius: '10px' }}>
+                                                    {childBadge.label}
+                                                  </span>
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{child.employee_id}</div>
+                                              </div>
+                                            </div>
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setPopoverEmpId(popoverEmpId === child.id ? null : child.id); }}
+                                              style={{ background: 'transparent', border: 'none', color: '#64748B', padding: '4px 8px', fontSize: '13px', cursor: 'pointer' }}
                                             >
-                                              <div onClick={() => { setPopoverEmpId(null); handleOpen360View(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <FaEye style={{ fontSize: '12px', color: '#64748B' }} /> View Profile
-                                              </div>
-                                              <div onClick={() => { setPopoverEmpId(null); openHierarchyModal(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <FaEdit style={{ fontSize: '12px', color: '#64748B' }} /> Edit Details
-                                              </div>
-                                              <div onClick={() => { setPopoverEmpId(null); handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <FaUnlink style={{ fontSize: '12px', color: '#EF4444' }} /> Disassign Employee
-                                              </div>
-                                              <div onClick={() => { setPopoverEmpId(null); setPerfModalEmp(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <FaChartLine style={{ fontSize: '12px', color: '#64748B' }} /> View Performance
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-
-                              {/* DIRECT TELECALLERS BRANCH (NO TL) */}
-                              {directTCs.length > 0 && (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                  <div style={{ width: '2px', height: '20px', background: '#F59E0B' }}></div>
-
-                                  <div style={{ background: '#FFFBEB', border: `1px solid #FCD34D`, borderRadius: '16px', padding: '12px 16px', marginBottom: '12px', textAlign: 'center' }}>
-                                    <span style={{ background: '#F59E0B', color: '#FFF', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px' }}>
-                                      DIRECT MEMBERS ({directTCs.length})
-                                    </span>
-                                  </div>
-
-                                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                    {directTCs.map(tc => (
-                                      <div 
-                                        key={tc.id} 
-                                        style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '14px 12px', width: '135px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative' }}
-                                      >
-                                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px', marginBottom: '8px' }}>
-                                          {tc.full_name?.charAt(0) || 'T'}
-                                        </div>
-                                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B', marginBottom: '4px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '120px' }}>
-                                          {tc.full_name}
-                                        </div>
-                                        <span style={{ background: '#D1FAE5', color: '#047857', fontSize: '9px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px', textTransform: 'uppercase', marginBottom: '6px' }}>
-                                          TELECALLER
-                                        </span>
-                                        <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{tc.employee_id}</div>
-                                        <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>{tc.mobile_number || 'N/A'}</div>
-
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); setPopoverEmpId(popoverEmpId === tc.id ? null : tc.id); }}
-                                          style={{ background: 'transparent', border: 'none', color: '#94A3B8', padding: '4px', fontSize: '12px', cursor: 'pointer', marginTop: '6px' }}
-                                        >
-                                          <FaEllipsisV />
-                                        </button>
-
-                                        {popoverEmpId === tc.id && (
-                                          <div 
-                                            style={{ position: 'absolute', bottom: '36px', left: '50%', transform: 'translateX(-50%)', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 12px 30px rgba(0,0,0,0.15)', zIndex: 100, minWidth: '160px', padding: '6px 0', textAlign: 'left' }}
-                                            onClick={(e) => e.stopPropagation()}
-                                          >
-                                            <div onClick={() => { setPopoverEmpId(null); handleOpen360View(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                              <FaEye style={{ fontSize: '12px', color: '#64748B' }} /> View Profile
-                                            </div>
-                                            <div onClick={() => { setPopoverEmpId(null); setHierarchyModalEmp(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                              <FaEdit style={{ fontSize: '12px', color: '#64748B' }} /> Edit Details
-                                            </div>
-                                            <div onClick={() => { setPopoverEmpId(null); handleUnassignHierarchy(tc.id, tc.full_name, tc.employee_id); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                              <FaUnlink style={{ fontSize: '12px', color: '#EF4444' }} /> Disassign Employee
-                                            </div>
-                                            <div onClick={() => { setPopoverEmpId(null); setPerfModalEmp(tc); }} style={{ padding: '8px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                              <FaChartLine style={{ fontSize: '12px', color: '#64748B' }} /> View Performance
-                                            </div>
+                                              <FaEllipsisV />
+                                            </button>
                                           </div>
-                                        )}
+
+                                          <div style={{ fontSize: '11.5px', color: '#64748B', display: 'flex', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #F1F5F9' }}>
+                                            <span>📞 {child.mobile_number || 'N/A'}</span>
+                                          </div>
+                                          {renderPopover(child)}
+                                        </div>
+
+                                        {/* Recursive Sub-tree */}
+                                        {renderSubTree(child, childRole)}
+
                                       </div>
-                                    ))}
-                                  </div>
+                                    );
+                                  })}
+
+                                  {/* Direct TCs under Manager if any */}
+                                  {directTCsForMgr.length > 0 && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                      <div style={{ width: '2px', height: '18px', background: '#F59E0B' }}></div>
+                                      <div style={{ background: '#FFFBEB', border: `1px solid #FCD34D`, borderRadius: '16px', padding: '10px 14px', marginBottom: '12px', textAlign: 'center' }}>
+                                        <span style={{ background: '#F59E0B', color: '#FFF', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px' }}>
+                                          DIRECT MEMBERS ({directTCsForMgr.length})
+                                        </span>
+                                      </div>
+                                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                        {directTCsForMgr.map(tc => (
+                                          <div 
+                                            key={tc.id} 
+                                            style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '14px 12px', width: '135px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative' }}
+                                          >
+                                            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px', marginBottom: '8px' }}>
+                                              {tc.full_name?.charAt(0) || 'T'}
+                                            </div>
+                                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B', marginBottom: '4px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '120px' }}>
+                                              {tc.full_name}
+                                            </div>
+                                            <span style={{ background: '#D1FAE5', color: '#047857', fontSize: '9px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px', textTransform: 'uppercase', marginBottom: '6px' }}>
+                                              TELECALLER
+                                            </span>
+                                            <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{tc.employee_id}</div>
+                                            <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>{tc.mobile_number || 'N/A'}</div>
+
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setPopoverEmpId(popoverEmpId === tc.id ? null : tc.id); }}
+                                              style={{ background: 'transparent', border: 'none', color: '#94A3B8', padding: '4px', fontSize: '12px', cursor: 'pointer', marginTop: '6px' }}
+                                            >
+                                              <FaEllipsisV />
+                                            </button>
+                                            {renderPopover(tc)}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
                                 </div>
-                              )}
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div style={{ marginTop: '20px', padding: '20px', textAlign: 'center', color: C.textMid, fontSize: '13px' }}>
-                          No Team Leaders or Telecallers assigned under <strong>{currentMgr.full_name}</strong> yet.<br/>
-                          <span style={{ fontSize: '12px', color: C.teal, fontWeight: 700 }}>Go to the Directory tab and click "Assign Team" on an employee to link them to this Manager.</span>
-                        </div>
-                      )}
+                              </div>
+                            </>
+                          );
+                        };
+
+                        return renderSubTree(currentMgr, selectedTreeRole);
+                      })()}
 
                       {/* Bottom Stats Summary Bar & Legend */}
                       <div style={{ width: '100%', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
