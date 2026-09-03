@@ -37,6 +37,15 @@ export default function ManageBanners() {
   const [imageFile, setImageFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Image Cropper Modal States
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropRawImg, setCropRawImg] = useState(null);
+  const [cropRatio, setCropRatio] = useState('3:1');
+  const [cropZoom, setCropZoom] = useState(1.0);
+  const [cropOffsetX, setCropOffsetX] = useState(0);
+  const [cropOffsetY, setCropOffsetY] = useState(0);
+  const [croppedPreview, setCroppedPreview] = useState(null);
+
   // ─── API SIDE EFFECTS & HANDLERS ──────────────────────────────────────────
   
   // Fetch all banners from database (including disabled slides)
@@ -478,28 +487,59 @@ export default function ManageBanners() {
                 </div>
               </div>
 
-              {/* Image Picker Configuration */}
+              {/* Image Picker Configuration with Interactive Crop Option */}
               <div>
-                <label style={S.label}>Image Configuration</label>
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px", background: C.bgSecondary, padding: "10px", borderRadius: "8px", border: `1px solid ${C.border}` }}>
+                <label style={S.label}>Image Configuration & Ratio Cropper</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: C.bgSecondary, padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}` }}>
                   <div>
-                    <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, display: "block", marginBottom: "4px" }}>Option A: Upload File (Requires S3 config)</label>
+                    <label style={{ fontSize: "11px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "4px" }}>
+                      Option A: Upload & Crop Image (Re-ratio for perfect fit)
+                    </label>
                     <input
                       type="file"
                       accept="image/*"
                       onChange={(e) => {
-                        setImageFile(e.target.files[0]);
-                        setForm({ ...form, image_url: "" });
+                        const file = e.target.files[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            setCropRawImg(reader.result);
+                            setCropModalOpen(true);
+                          };
+                          reader.readAsDataURL(file);
+                        }
                       }}
                       style={{ fontSize: "12px", color: C.text }}
                     />
                   </div>
-                  <div style={{ textAlign: "center", fontSize: "11px", color: C.textLight }}>- OR -</div>
+
+                  {/* Cropped Image Status / Preview Thumbnail */}
+                  {croppedPreview && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", background: C.card, padding: "8px", borderRadius: "8px", border: `1px dashed ${C.teal}` }}>
+                      <img src={croppedPreview} alt="Cropped preview" style={{ width: "80px", height: "40px", objectFit: "cover", borderRadius: "4px" }} />
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: "11px", fontWeight: 800, color: C.teal, display: "block" }}>Cropped Image Ready</span>
+                        <span style={{ fontSize: "10px", color: C.textLight }}>Ratio: {cropRatio}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCropModalOpen(true)}
+                        style={{ background: C.teal, color: "#fff", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
+                      >
+                        Recrop
+                      </button>
+                    </div>
+                  )}
+
+                  <div style={{ textAlign: "center", fontSize: "11px", color: C.textLight, fontWeight: 700 }}>- OR -</div>
+
                   <div>
-                    <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, display: "block", marginBottom: "4px" }}>Option B: Asset Filename / URL String</label>
+                    <label style={{ fontSize: "11px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "4px" }}>
+                      Option B: Asset Filename / External URL
+                    </label>
                     <input
                       style={{ ...S.input, padding: "6px 10px", fontSize: "12.5px" }}
-                      placeholder="e.g. offerbanner.png, loan.png, or public link"
+                      placeholder="e.g. offerbanner.png, team.png, or https://..."
                       value={form.image_url}
                       disabled={!!imageFile}
                       onChange={(e) => setForm({ ...form, image_url: e.target.value })}
@@ -592,6 +632,229 @@ export default function ManageBanners() {
           </div>
         </div>
       )}
+
+      {/* ─── INTERACTIVE IMAGE CROPPER MODAL ─── */}
+      {cropModalOpen && cropRawImg && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.75)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "16px"
+        }}>
+          <div style={{
+            ...S.card,
+            maxWidth: "600px",
+            width: "100%",
+            background: isDark ? "#18181B" : "#FFF",
+            padding: "20px",
+            borderRadius: "16px",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: C.text }}>Crop & Adjust Banner Ratio</h3>
+                <span style={{ fontSize: "12px", color: C.textLight }}>Select aspect ratio and position your image to fit banner frames perfectly</span>
+              </div>
+              <button onClick={() => setCropModalOpen(false)} style={{ background: "none", border: "none", fontSize: "18px", color: C.textLight, cursor: "pointer" }}>✕</button>
+            </div>
+
+            {/* Aspect Ratio Selector Pills */}
+            <div>
+              <label style={{ fontSize: "11px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "6px" }}>ASPECT RATIO PRESET</label>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {[
+                  { label: "3:1 Hero Banner", ratio: "3:1", w: 1200, h: 400 },
+                  { label: "16:9 Wide Banner", ratio: "16:9", w: 1200, h: 675 },
+                  { label: "4:3 Card Banner", ratio: "4:3", w: 800, h: 600 },
+                  { label: "1:1 Square", ratio: "1:1", w: 600, h: 600 }
+                ].map(item => (
+                  <button
+                    key={item.ratio}
+                    type="button"
+                    onClick={() => setCropRatio(item.ratio)}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      border: `1px solid ${cropRatio === item.ratio ? C.teal : C.border}`,
+                      background: cropRatio === item.ratio ? `${C.teal}20` : C.card,
+                      color: cropRatio === item.ratio ? C.teal : C.text
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Interactive Canvas Preview */}
+            <div style={{
+              width: "100%",
+              height: "220px",
+              background: "#000000",
+              borderRadius: "12px",
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "relative",
+              border: `2px dashed ${C.teal}`
+            }}>
+              <CanvasCropper
+                imgSrc={cropRawImg}
+                ratio={cropRatio}
+                zoom={cropZoom}
+                offsetX={cropOffsetX}
+                offsetY={cropOffsetY}
+                onCropDone={(blob, previewUrl) => {
+                  const file = new File([blob], `banner_cropped_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                  setImageFile(file);
+                  setCroppedPreview(previewUrl);
+                  setForm(prev => ({ ...prev, image_url: "" }));
+                  setCropModalOpen(false);
+                }}
+              />
+            </div>
+
+            {/* Zoom & Positioning Controls */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "4px" }}>ZOOM ({cropZoom.toFixed(1)}x)</label>
+                <input
+                  type="range"
+                  min="1"
+                  max="3"
+                  step="0.1"
+                  value={cropZoom}
+                  onChange={(e) => setCropZoom(parseFloat(e.target.value))}
+                  style={{ width: "100%", accentColor: C.teal }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "4px" }}>POSITION X</label>
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  value={cropOffsetX}
+                  onChange={(e) => setCropOffsetX(parseInt(e.target.value))}
+                  style={{ width: "100%", accentColor: C.teal }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: "11px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "4px" }}>POSITION Y</label>
+                <input
+                  type="range"
+                  min="-100"
+                  max="100"
+                  value={cropOffsetY}
+                  onChange={(e) => setCropOffsetY(parseInt(e.target.value))}
+                  style={{ width: "100%", accentColor: C.teal }}
+                />
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", borderTop: `1px solid ${C.border}`, paddingTop: "12px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCropZoom(1.0);
+                  setCropOffsetX(0);
+                  setCropOffsetY(0);
+                }}
+                style={{ ...S.btn("outline"), padding: "6px 12px", fontSize: "12px" }}
+              >
+                Reset Position
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Trigger Canvas Cropper export button programmatically via event
+                  const cropBtn = document.getElementById('apply_canvas_crop_btn');
+                  if (cropBtn) cropBtn.click();
+                }}
+                style={{ ...S.btn("primary"), background: C.teal, padding: "8px 18px", fontSize: "12.5px" }}
+              >
+                Apply Crop & Attach
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
+  );
+}
+
+// ── CANVAS CROPPER HELPER COMPONENT ──
+function CanvasCropper({ imgSrc, ratio, zoom, offsetX, offsetY, onCropDone }) {
+  const canvasRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!imgSrc || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      // Determine canvas width and height based on ratio preset
+      let targetW = 1200;
+      let targetH = 400;
+      if (ratio === '16:9') { targetW = 1200; targetH = 675; }
+      else if (ratio === '4:3') { targetW = 800; targetH = 600; }
+      else if (ratio === '1:1') { targetW = 600; targetH = 600; }
+
+      canvas.width = targetW;
+      canvas.height = targetH;
+
+      ctx.clearRect(0, 0, targetW, targetH);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, targetW, targetH);
+
+      const drawW = targetW * zoom;
+      const drawH = (img.height / img.width) * drawW;
+
+      const posX = (targetW - drawW) / 2 + (offsetX * (targetW / 200));
+      const posY = (targetH - drawH) / 2 + (offsetY * (targetH / 200));
+
+      ctx.drawImage(img, posX, posY, drawW, drawH);
+    };
+
+    img.src = imgSrc;
+  }, [imgSrc, ratio, zoom, offsetX, offsetY]);
+
+  const handleExport = () => {
+    if (!canvasRef.current) return;
+    canvasRef.current.toBlob((blob) => {
+      if (blob) {
+        const previewUrl = URL.createObjectURL(blob);
+        onCropDone(blob, previewUrl);
+      }
+    }, 'image/jpeg', 0.92);
+  };
+
+  return (
+    <>
+      <canvas ref={canvasRef} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+      <button
+        id="apply_canvas_crop_btn"
+        onClick={handleExport}
+        style={{ display: 'none' }}
+      />
+    </>
   );
 }

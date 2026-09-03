@@ -294,8 +294,8 @@ export default function ManageWallet() {
         </div>
       )}
 
-      {/* ── TOP 6 KPI CARDS ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px' }}>
+      {/* ── TOP 6 KPI CARDS (4 IN ONE LINE ON DESKTOP) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '14px' }}>
         
         {/* Card 1: Total Wallet Balance */}
         <div onClick={() => setActiveTab('reconciliation')} style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer' }}>
@@ -370,13 +370,18 @@ export default function ManageWallet() {
         </div>
 
       </div>
+
+      {/* ── 6 SECTION BUTTONS IN ONE HORIZONTAL ROW ── */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))',
-        gap: '10px',
+        display: 'flex',
+        flexDirection: 'row',
+        flexWrap: 'nowrap',
+        overflowX: 'auto',
+        gap: '12px',
         width: '100%',
-        maxWidth: '100%',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        paddingBottom: '8px',
+        scrollbarWidth: 'thin'
       }}>
         {[
           { id: 'withdrawals', label: '1. Withdrawal Settlements', icon: <MdAccountBalanceWallet size={18} /> },
@@ -396,21 +401,22 @@ export default function ManageWallet() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                padding: '12px 10px',
+                padding: '12px 16px',
                 borderRadius: '12px',
                 border: isActive ? `2px solid ${C.teal}` : `1px solid ${C.border}`,
                 background: isActive ? (isDark ? '#1E293B' : '#EFF6FF') : (isDark ? '#18181B' : '#FFF'),
                 color: isActive ? C.teal : C.text,
                 fontWeight: isActive ? 900 : 700,
-                fontSize: '12px',
+                fontSize: '12.5px',
                 cursor: 'pointer',
-                textAlign: 'center',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 boxShadow: isActive ? '0 4px 14px rgba(0, 82, 255, 0.16)' : '0 1px 3px rgba(0,0,0,0.03)',
                 transition: 'all 0.2s ease-in-out'
               }}
             >
               <span style={{ color: isActive ? C.teal : C.textLight, display: 'flex', alignItems: 'center' }}>{tab.icon}</span>
-              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tab.label}</span>
+              <span>{tab.label}</span>
             </button>
           );
         })}
