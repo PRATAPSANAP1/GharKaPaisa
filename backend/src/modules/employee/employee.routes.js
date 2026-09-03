@@ -884,7 +884,7 @@ router.get('/team', async (req, res, next) => {
 });
 
 // GET /api/v1/employee/incentives — My Incentive Transactions
-router.get('/incentives', async (req, res, next) => {
+router.get('/incentives', resolveEmployee, async (req, res, next) => {
   try {
     const empId = req.employee.id;
     const { rows } = await query(`
