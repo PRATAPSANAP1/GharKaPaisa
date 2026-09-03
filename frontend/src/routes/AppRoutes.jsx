@@ -92,7 +92,7 @@ import SuperAdminManageApplications from '../modules/super-admin/crm/ManageAppli
 import NotificationCenter from '../modules/notifications/NotificationCenter';
 import ManageAnnouncements from '../modules/super-admin/notifications/ManageAnnouncements';
 import AdminProfilePage from '../modules/super-admin/profile/AdminProfilePage';
-import ManageEmployeeIncentives from '../modules/super-admin/incentives/ManageEmployeeIncentives';
+
 
 // Partner Pages
 import PartnerDashboard from '../modules/partner/dashboard/PartnerDashboard';
@@ -373,8 +373,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/direct-leads" element={<ManageDirectLeads />} />
             <Route path="/super-admin/commissions" element={<SuperAdminCommission />} />
             <Route path="/super-admin/commission-rules" element={<Navigate to="/super-admin/commissions" replace />} />
-            <Route path="/super-admin/employee-incentives" element={<ManageEmployeeIncentives />} />
-            <Route path="/super-admin/incentives" element={<ManageEmployeeIncentives />} />
+
             <Route path="/super-admin/wallet" element={<ManageWallet />} />
             <Route path="/super-admin/wallet-settlement" element={<ManageWallet />} />
             <Route path="/super-admin/notifications" element={<NotificationCenter />} />

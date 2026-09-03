@@ -204,7 +204,6 @@ const SuperAdminLayout = () => {
       title: "FINANCE",
       items: [
         { path: '/super-admin/wallet', label: 'Wallet & Settlements', icon: <Icons.wallet size={16} /> },
-        { path: '/super-admin/employee-incentives', label: 'Employee Incentives', icon: <Icons.gift size={16} /> },
         { path: '/super-admin/commissions', label: 'Commission Manager', icon: <Icons.gift size={16} /> }
       ]
     },
