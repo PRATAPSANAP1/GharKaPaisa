@@ -240,6 +240,7 @@ export default function PartnerDashboardComponent({ partner }) {
   const [allLeads, setAllLeads] = useState([]);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   const [selectedCustomer360, setSelectedCustomer360] = useState(null);
+  const [employeeBonusData, setEmployeeBonusData] = useState(null);
 
   const partnerId = partner?.Partner_id || partner?.partner_id || partner?.id;
   const kycStatus = partner?.kyc_status || 'pending';
@@ -252,13 +253,14 @@ export default function PartnerDashboardComponent({ partner }) {
     const fetchAllDashboardData = async () => {
       setLoading(true);
       try {
-        const [dashRes, wallRes, teamRes, bannerRes, notifRes, leadsRes] = await Promise.all([
+        const [dashRes, wallRes, teamRes, bannerRes, notifRes, leadsRes, bonusRes] = await Promise.all([
           api.get(`/Partners/${partnerId}/dashboard`).catch(() => null),
           api.get('/wallet').catch(() => null),
           api.get('team/dashboard').catch(() => null),
           api.get('/banners', { params: { page: 'offer' } }).catch(() => null),
           api.get('/notifications', { params: { limit: 10 } }).catch(() => null),
-          api.get('/leads', { params: { limit: 100 } }).catch(() => null)
+          api.get('/leads', { params: { limit: 100 } }).catch(() => null),
+          isEmployee ? api.get('/employee/my-bonus-progress').catch(() => null) : Promise.resolve(null)
         ]);
 
         if (dashRes?.data?.success) setDashboardData(dashRes.data.data);
@@ -266,6 +268,7 @@ export default function PartnerDashboardComponent({ partner }) {
         if (teamRes?.data?.success) setTeamDashboard(teamRes.data.data);
         if (bannerRes?.data?.success) setBanners(bannerRes.data.data || []);
         if (leadsRes?.data?.success) setAllLeads(leadsRes.data.data || []);
+        if (bonusRes?.data?.success) setEmployeeBonusData(bonusRes.data);
 
         if (notifRes?.data?.success) {
           setNotifications(notifRes.data.data.notifications || []);
@@ -279,7 +282,7 @@ export default function PartnerDashboardComponent({ partner }) {
     };
 
     fetchAllDashboardData();
-  }, [partnerId]);
+  }, [partnerId, isEmployee]);
 
   // Auto-rotate banners with default fallback list if API is empty
   const defaultOfferBanners = [
@@ -415,6 +418,48 @@ export default function PartnerDashboardComponent({ partner }) {
           allLeads={allLeads}
           onSelectCustomer={(cust) => setSelectedCustomer360(cust)}
         />
+
+        {/* ── EMPLOYEE BONUS & DEPARTMENT TARGETS WIDGET ── */}
+        {isEmployee && employeeBonusData && employeeBonusData.bonus_rules?.length > 0 && (
+          <div style={{ marginTop: '16px', background: isDark ? C.card : '#FFFFFF', border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`, borderRadius: '20px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#F59E0B20', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                  <FaGift />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 900, margin: 0, color: isDark ? C.text : '#111827' }}>My Active Bonus & Department Targets</h3>
+                  <p style={{ fontSize: '12px', color: isDark ? C.textLight : '#6B7280', margin: 0 }}>Real-time incentive progress per approved department card</p>
+                </div>
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 900, color: '#10B981', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 14px', borderRadius: '10px' }}>
+                Total Earned Bonus: ₹{Number(employeeBonusData.total_earned_bonus || 0).toLocaleString('en-IN')}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+              {employeeBonusData.bonus_rules.map((rule) => (
+                <div key={rule.id} style={{ background: isDark ? C.bg : '#F8FAFC', border: `1px solid ${isDark ? C.border : '#E2E8F0'}`, borderRadius: '16px', padding: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 900, color: isDark ? C.text : '#1E293B' }}>{rule.bank_name}</span>
+                    <span style={{ fontSize: '11px', fontWeight: 900, padding: '3px 9px', borderRadius: '8px', background: rule.target_achieved ? '#D1FAE5' : '#FEF3C7', color: rule.target_achieved ? '#065F46' : '#92400E' }}>
+                      {rule.target_achieved ? 'Target Achieved ✓' : `${rule.approved_count} / ${rule.target_count} Cards`}
+                    </span>
+                  </div>
+
+                  <div style={{ width: '100%', background: isDark ? C.card : '#E2E8F0', height: '10px', borderRadius: '5px', overflow: 'hidden', marginBottom: '10px' }}>
+                    <div style={{ width: `${rule.progress_percentage}%`, background: rule.target_achieved ? '#10B981' : '#6E3FD6', height: '100%', transition: 'width 0.4s ease' }} />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px', color: isDark ? C.textLight : '#64748B' }}>
+                    <span>Bonus: <strong style={{ color: '#10B981', fontWeight: 800 }}>₹{Number(rule.earned_bonus || 0).toLocaleString('en-IN')}</strong> (₹{rule.bonus_per_card}/card)</span>
+                    <span>Ends: <strong>{new Date(rule.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</strong></span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {kycStatus !== 'approved' && (
           <div

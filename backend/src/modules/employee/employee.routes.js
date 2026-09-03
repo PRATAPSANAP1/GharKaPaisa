@@ -725,10 +725,27 @@ router.get('/credit-cards', async (req, res, next) => {
   try {
     const empId = req.employee.id;
     
+    // Fetch assigned bank IDs for this employee
+    const assignedBanksRes = await query(`SELECT bank_id FROM employee_bank_assignments WHERE employee_id = $1`, [empId]);
+    const assignedBankIds = new Set(assignedBanksRes.rows.map(r => r.bank_id));
+
+    // Fetch active bonus rules for current date
+    const activeRulesRes = await query(`
+      SELECT bank_id, bonus_per_card, start_date, end_date, target_count
+      FROM employee_bonus_rules
+      WHERE employee_id = $1
+        AND status = 'ACTIVE'
+        AND CURRENT_DATE >= start_date
+        AND CURRENT_DATE <= end_date
+    `, [empId]);
+    const activeRulesMap = new Map();
+    activeRulesRes.rows.forEach(r => activeRulesMap.set(r.bank_id, r));
+
     // Fetch employee assigned links or default system products
     const { rows } = await query(`
       SELECT 
         p.id as product_id,
+        p.bank_id,
         p.name as product_name,
         p.category,
         p.image_url,
@@ -737,7 +754,8 @@ router.get('/credit-cards', async (req, res, next) => {
         p.features,
         p.eligibility_criteria,
         b.name as bank_name,
-        COALESCE(pl.incentive_amount, p.commission_amount, 500) as employee_incentive,
+        b.logo_url as bank_logo,
+        COALESCE(pl.incentive_amount, p.commission_amount, 500) as base_incentive,
         COALESCE(pl.employee_referral_url, CONCAT($2::text, '/apply/', p.id, '?emp=', $3::text)) as referral_url,
         COALESCE(pl.status, 'ACTIVE') as link_status
       FROM products p
@@ -747,7 +765,93 @@ router.get('/credit-cards', async (req, res, next) => {
       ORDER BY p.display_order ASC, p.created_at DESC
     `, [empId, process.env.FRONTEND_URL || 'https://gharkapaisa.in', req.employee.employee_id]);
 
-    res.json({ success: true, data: rows });
+    const enrichedProducts = rows.map(p => {
+      let isBankAssigned = true;
+      if (assignedBankIds.size > 0 && p.bank_id) {
+        isBankAssigned = assignedBankIds.has(p.bank_id);
+      }
+
+      let bonusAmount = 0;
+      if (isBankAssigned) {
+        if (p.bank_id && activeRulesMap.has(p.bank_id)) {
+          bonusAmount = parseFloat(activeRulesMap.get(p.bank_id).bonus_per_card || 0);
+        } else {
+          bonusAmount = parseFloat(p.base_incentive || 500);
+        }
+      } else {
+        bonusAmount = 0; // If not assigned to bank -> Bonus = 0
+      }
+
+      return {
+        ...p,
+        is_bank_assigned: isBankAssigned,
+        employee_incentive: bonusAmount
+      };
+    });
+
+    res.json({ success: true, data: enrichedProducts });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/v1/employee/my-bonus-progress — Get active target & bonus progress for employee dashboard
+router.get('/my-bonus-progress', async (req, res, next) => {
+  try {
+    const empId = req.employee.id;
+
+    // Fetch active bonus rules for this employee
+    const rulesRes = await query(`
+      SELECT 
+        br.*,
+        b.name as bank_name,
+        b.logo_url as bank_logo
+      FROM employee_bonus_rules br
+      JOIN banks b ON b.id = br.bank_id
+      WHERE br.employee_id = $1 AND br.status = 'ACTIVE'
+      ORDER BY br.start_date DESC
+    `, [empId]);
+
+    const progressList = await Promise.all(rulesRes.rows.map(async (rule) => {
+      const appCountRes = await query(`
+        SELECT COUNT(*) as approved_count
+        FROM applications app
+        JOIN products p ON p.id = app.product_id
+        WHERE (app.employee_id = $1 OR app.submitted_by = $2)
+          AND p.bank_id = $3
+          AND app.status IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received')
+          AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) >= $4
+          AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) <= $5
+      `, [empId, req.user.id, rule.bank_id, rule.start_date, rule.end_date]);
+
+      const approvedCount = parseInt(appCountRes.rows[0]?.approved_count || 0);
+      const targetCount = parseInt(rule.target_count || 0);
+      const bonusPerCard = parseFloat(rule.bonus_per_card || 0);
+      const totalEarnedBonus = approvedCount * bonusPerCard;
+      const targetAchieved = targetCount > 0 && approvedCount >= targetCount;
+      const remainingCount = Math.max(0, targetCount - approvedCount);
+      const remainingBonus = remainingCount * bonusPerCard;
+      const percentage = targetCount > 0 ? Math.min(100, Math.round((approvedCount / targetCount) * 100)) : 0;
+
+      return {
+        id: rule.id,
+        bank_id: rule.bank_id,
+        bank_name: rule.bank_name,
+        bank_logo: rule.bank_logo,
+        start_date: rule.start_date,
+        end_date: rule.end_date,
+        target_count: targetCount,
+        approved_count: approvedCount,
+        bonus_per_card: bonusPerCard,
+        earned_bonus: totalEarnedBonus,
+        remaining_count: remainingCount,
+        remaining_bonus: remainingBonus,
+        target_achieved: targetAchieved,
+        progress_percentage: percentage
+      };
+    }));
+
+    res.json({ success: true, data: progressList });
   } catch (err) {
     next(err);
   }

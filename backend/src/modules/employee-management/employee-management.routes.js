@@ -42,6 +42,50 @@ async function syncAndSeedEmployees() {
     await query(`ALTER TABLE employee_hierarchy ADD COLUMN IF NOT EXISTS senior_manager_id UUID REFERENCES employees(id)`).catch(() => {});
     await query(`ALTER TABLE employee_hierarchy ADD COLUMN IF NOT EXISTS branch_head_id UUID REFERENCES employees(id)`).catch(() => {});
 
+    // Ensure Employee Bank Assignment & Bonus Rules tables exist
+    await query(`
+      CREATE TABLE IF NOT EXISTS employee_bank_assignments (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+        assigned_by UUID REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(employee_id, bank_id)
+      )
+    `).catch(() => {});
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS employee_bonus_rules (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        target_count INTEGER NOT NULL DEFAULT 0,
+        bonus_per_card DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+        status VARCHAR(20) DEFAULT 'ACTIVE',
+        created_by UUID REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `).catch(() => {});
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS employee_bonus_transactions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+        application_id UUID REFERENCES applications(id) ON DELETE SET NULL,
+        bonus_rule_id UUID REFERENCES employee_bonus_rules(id) ON DELETE CASCADE,
+        bonus_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+        status VARCHAR(20) DEFAULT 'EARNED',
+        earned_at TIMESTAMPTZ DEFAULT NOW(),
+        paid_at TIMESTAMPTZ,
+        UNIQUE(application_id, bonus_rule_id)
+      )
+    `).catch(() => {});
+
     // 1. Sync candidates from employee_candidates into users table
     await query(`
       INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
@@ -1622,6 +1666,240 @@ router.post('/incentives/:id/update-status', async (req, res, next) => {
       message: `Incentive transaction updated to ${uppercaseStatus}`,
       data: rows[0]
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── 1. GET /api/v1/employees/:id/departments — List assigned departments/banks for Employee ──
+router.get('/:id/departments', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Verify employee
+    const empRes = await query(`SELECT id, employee_id, full_name FROM employees WHERE id = $1`, [id]);
+    if (empRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+    const employee = empRes.rows[0];
+
+    // Fetch all active banks and check assignment status
+    const { rows } = await query(`
+      SELECT 
+        b.id as bank_id,
+        b.name as bank_name,
+        b.logo_url as bank_logo,
+        CASE WHEN eba.id IS NOT NULL THEN true ELSE false END as is_assigned,
+        eba.created_at as assigned_at
+      FROM banks b
+      LEFT JOIN employee_bank_assignments eba ON eba.bank_id = b.id AND eba.employee_id = $1
+      WHERE b.is_active = true
+      ORDER BY b.name ASC
+    `, [id]);
+
+    res.json({
+      success: true,
+      employee,
+      assigned_banks: rows.filter(r => r.is_assigned),
+      all_banks: rows
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── 2. POST /api/v1/employees/:id/departments — Assign Departments/Banks to Employee ──
+router.post('/:id/departments', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { bank_ids } = req.body;
+
+    if (!Array.isArray(bank_ids)) {
+      return res.status(400).json({ success: false, message: 'bank_ids must be an array of bank UUIDs' });
+    }
+
+    // Verify employee
+    const empRes = await query(`SELECT id, employee_id, full_name FROM employees WHERE id = $1`, [id]);
+    if (empRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+
+    // Transaction to update bank assignments
+    await query('BEGIN');
+    await query(`DELETE FROM employee_bank_assignments WHERE employee_id = $1`, [id]);
+
+    const assigned = [];
+    for (const bId of bank_ids) {
+      const insRes = await query(
+        `INSERT INTO employee_bank_assignments (employee_id, bank_id, assigned_by)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (employee_id, bank_id) DO UPDATE SET updated_at = NOW()
+         RETURNING *`,
+        [id, bId, req.user.id]
+      );
+      if (insRes.rows[0]) assigned.push(insRes.rows[0]);
+    }
+    await query('COMMIT');
+
+    res.json({
+      success: true,
+      message: `Successfully assigned ${assigned.length} department(s)/bank(s) to ${empRes.rows[0].full_name}`,
+      count: assigned.length,
+      data: assigned
+    });
+  } catch (err) {
+    await query('ROLLBACK').catch(() => {});
+    next(err);
+  }
+});
+
+// ── 3. GET /api/v1/employees/bonus-rules — List & Filter Employee Bonus Rules ──
+router.get('/bonus-rules/all', async (req, res, next) => {
+  try {
+    const { employee_id, bank_id, status } = req.query;
+
+    let whereConds = [];
+    let params = [];
+
+    if (employee_id) {
+      params.push(employee_id);
+      whereConds.push(`br.employee_id = $${params.length}`);
+    }
+
+    if (bank_id) {
+      params.push(bank_id);
+      whereConds.push(`br.bank_id = $${params.length}`);
+    }
+
+    if (status) {
+      params.push(status);
+      whereConds.push(`br.status = $${params.length}`);
+    }
+
+    const whereClause = whereConds.length > 0 ? `WHERE ${whereConds.join(' AND ')}` : '';
+
+    const { rows } = await query(`
+      SELECT 
+        br.*,
+        e.full_name as employee_name,
+        e.employee_id as emp_code,
+        e.designation as employee_designation,
+        b.name as bank_name,
+        b.logo_url as bank_logo,
+        u.full_name as created_by_name
+      FROM employee_bonus_rules br
+      JOIN employees e ON e.id = br.employee_id
+      JOIN banks b ON b.id = br.bank_id
+      LEFT JOIN users u ON u.id = br.created_by
+      ${whereClause}
+      ORDER BY br.created_at DESC
+    `, params);
+
+    // Calculate real-time approved cards & bonus progress for each rule
+    const enrichedRules = await Promise.all(rows.map(async (rule) => {
+      const appCountRes = await query(`
+        SELECT COUNT(*) as approved_count
+        FROM applications app
+        JOIN products p ON p.id = app.product_id
+        WHERE (app.employee_id = $1 OR app.submitted_by IN (SELECT user_id FROM employees WHERE id = $1))
+          AND p.bank_id = $2
+          AND app.status IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received')
+          AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) >= $3
+          AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) <= $4
+      `, [rule.employee_id, rule.bank_id, rule.start_date, rule.end_date]);
+
+      const approvedCount = parseInt(appCountRes.rows[0]?.approved_count || 0);
+      const targetCount = parseInt(rule.target_count || 0);
+      const bonusPerCard = parseFloat(rule.bonus_per_card || 0);
+      const earnedBonus = approvedCount * bonusPerCard;
+      const targetAchieved = targetCount > 0 && approvedCount >= targetCount;
+      const progressPercentage = targetCount > 0 ? Math.min(100, Math.round((approvedCount / targetCount) * 100)) : 0;
+
+      return {
+        ...rule,
+        approved_count: approvedCount,
+        earned_bonus: earnedBonus,
+        target_achieved: targetAchieved,
+        progress_percentage: progressPercentage,
+        remaining_count: Math.max(0, targetCount - approvedCount),
+        remaining_bonus: Math.max(0, (targetCount - approvedCount) * bonusPerCard)
+      };
+    }));
+
+    res.json({
+      success: true,
+      count: enrichedRules.length,
+      data: enrichedRules
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── 4. POST /api/v1/employees/bonus-rules — Create/Assign New Bonus Rule ──
+router.post('/bonus-rules', async (req, res, next) => {
+  try {
+    const { employee_id, bank_id, start_date, end_date, target_count, bonus_per_card } = req.body;
+
+    if (!employee_id || !bank_id || !start_date || !end_date || target_count === undefined || bonus_per_card === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Employee ID, Bank ID, Start Date, End Date, Target Count, and Bonus Per Card are required'
+      });
+    }
+
+    // Verify employee & bank assignment
+    const empRes = await query(`SELECT id, full_name, employee_id FROM employees WHERE id = $1`, [employee_id]);
+    if (empRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Employee not found' });
+    }
+
+    const bankRes = await query(`SELECT id, name FROM banks WHERE id = $1`, [bank_id]);
+    if (bankRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Bank not found' });
+    }
+
+    // Verify if bank is assigned to employee
+    const assignCheck = await query(
+      `SELECT id FROM employee_bank_assignments WHERE employee_id = $1 AND bank_id = $2`,
+      [employee_id, bank_id]
+    );
+
+    // Auto-assign bank if not assigned yet
+    if (assignCheck.rows.length === 0) {
+      await query(
+        `INSERT INTO employee_bank_assignments (employee_id, bank_id, assigned_by) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+        [employee_id, bank_id, req.user.id]
+      ).catch(() => {});
+    }
+
+    const { rows } = await query(
+      `INSERT INTO employee_bonus_rules (
+        employee_id, bank_id, start_date, end_date, target_count, bonus_per_card, status, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVE', $7)
+      RETURNING *`,
+      [employee_id, bank_id, start_date, end_date, parseInt(target_count), parseFloat(bonus_per_card), req.user.id]
+    );
+
+    res.json({
+      success: true,
+      message: `Bonus rule created for ${empRes.rows[0].full_name} (${bankRes.rows[0].name})`,
+      data: rows[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── 5. DELETE /api/v1/employees/bonus-rules/:id — Delete/Deactivate Bonus Rule ──
+router.delete('/bonus-rules/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await query(`DELETE FROM employee_bonus_rules WHERE id = $1 RETURNING *`, [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Bonus rule not found' });
+    }
+    res.json({ success: true, message: 'Bonus rule deleted successfully' });
   } catch (err) {
     next(err);
   }

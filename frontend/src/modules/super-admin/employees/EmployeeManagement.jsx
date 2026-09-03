@@ -4,14 +4,15 @@ import {
   FaUsers, FaUserCheck, FaSitemap, FaLink, FaSearch, 
   FaPlus, FaCheckCircle, FaTimesCircle, FaEye, FaEdit, FaCheck, FaLock,
   FaFileAlt, FaVideo, FaUniversity, FaBuilding, FaBriefcase, FaIdCard, FaPhone, FaEnvelope, FaClock, FaUserCircle,
-  FaUserTimes, FaUnlink, FaChartLine, FaTrophy, FaEllipsisV, FaDownload, FaRedo, FaInfoCircle, FaChevronRight
+  FaUserTimes, FaUnlink, FaChartLine, FaTrophy, FaEllipsisV, FaDownload, FaRedo, FaInfoCircle, FaChevronRight,
+  FaCoins, FaBullseye, FaTrash, FaCalendarAlt
 } from 'react-icons/fa';
 import api from '../../../services/api';
 
 export default function EmployeeManagement() {
   const { C } = useTheme();
 
-  const [activeTab, setActiveTab] = useState('all'); // 'all', 'hierarchy', 'links'
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'hierarchy', 'bonus'
   const [employees, setEmployees] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
@@ -32,6 +33,29 @@ export default function EmployeeManagement() {
   const [actionModalEmp, setActionModalEmp] = useState(null);
   const [perfModalEmp, setPerfModalEmp] = useState(null);
   const [createEmpModalOpen, setCreateEmpModalOpen] = useState(false);
+
+  // Manage Departments Modal State
+  const [deptModalEmp, setDeptModalEmp] = useState(null);
+  const [deptBanksList, setDeptBanksList] = useState([]);
+  const [selectedBankIds, setSelectedBankIds] = useState([]);
+  const [loadingDepts, setLoadingDepts] = useState(false);
+  const [savingDepts, setSavingDepts] = useState(false);
+
+  // Manage Bonus Modal & Rules State
+  const [bonusModalOpen, setBonusModalOpen] = useState(false);
+  const [bonusModalEmp, setBonusModalEmp] = useState(null);
+  const [employeeAssignedBanks, setEmployeeAssignedBanks] = useState([]);
+  const [bonusRulesList, setBonusRulesList] = useState([]);
+  const [loadingRules, setLoadingRules] = useState(false);
+  const [savingRule, setSavingRule] = useState(false);
+  const [bonusForm, setBonusForm] = useState({
+    employee_id: '',
+    bank_id: '',
+    start_date: '',
+    end_date: '',
+    target_count: '10',
+    bonus_per_card: '500'
+  });
 
   // Create Employee Form
   const [createForm, setCreateForm] = useState({
@@ -279,6 +303,124 @@ export default function EmployeeManagement() {
     }
   };
 
+  // ── Manage Departments Handlers ──
+  const openDeptModal = async (emp) => {
+    setDeptModalEmp(emp);
+    setLoadingDepts(true);
+    try {
+      const res = await api.get(`/employees/${emp.id}/departments`);
+      if (res.data?.success) {
+        setDeptBanksList(res.data.all_banks || []);
+        setSelectedBankIds((res.data.assigned_banks || []).map(b => b.bank_id));
+      }
+    } catch (err) {
+      console.error('Failed to load employee department assignments:', err);
+      alert('Failed to load bank assignments');
+    } finally {
+      setLoadingDepts(false);
+    }
+  };
+
+  const handleSaveDeptAssignments = async () => {
+    if (!deptModalEmp) return;
+    setSavingDepts(true);
+    try {
+      const res = await api.post(`/employees/${deptModalEmp.id}/departments`, { bank_ids: selectedBankIds });
+      if (res.data?.success) {
+        alert(res.data.message || 'Department/Bank assignments updated successfully');
+        setDeptModalEmp(null);
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update department assignments');
+    } finally {
+      setSavingDepts(false);
+    }
+  };
+
+  // ── Manage Bonus Rules Handlers ──
+  const openBonusModal = async (emp = null) => {
+    setBonusModalEmp(emp);
+    const targetEmpId = emp ? emp.id : (employees[0]?.id || '');
+    setBonusForm({
+      employee_id: targetEmpId,
+      bank_id: '',
+      start_date: new Date().toISOString().split('T')[0],
+      end_date: new Date(new Date().setDate(new Date().getDate() + 30)).toISOString().split('T')[0],
+      target_count: '10',
+      bonus_per_card: '500'
+    });
+    setBonusModalOpen(true);
+    fetchBonusRules();
+    if (targetEmpId) {
+      fetchEmployeeAssignedBanks(targetEmpId);
+    }
+  };
+
+  const fetchEmployeeAssignedBanks = async (empId) => {
+    if (!empId) return;
+    try {
+      const res = await api.get(`/employees/${empId}/departments`);
+      if (res.data?.success) {
+        const assigned = res.data.assigned_banks || [];
+        setEmployeeAssignedBanks(assigned);
+        if (assigned.length > 0) {
+          setBonusForm(prev => ({ ...prev, bank_id: assigned[0].bank_id }));
+        } else {
+          setBonusForm(prev => ({ ...prev, bank_id: '' }));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch assigned banks for bonus form:', err);
+    }
+  };
+
+  const fetchBonusRules = async () => {
+    setLoadingRules(true);
+    try {
+      const res = await api.get('/employees/bonus-rules/all');
+      if (res.data?.success) {
+        setBonusRulesList(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch bonus rules:', err);
+    } finally {
+      setLoadingRules(false);
+    }
+  };
+
+  const handleSaveBonusRule = async (e) => {
+    e.preventDefault();
+    if (!bonusForm.employee_id || !bonusForm.bank_id || !bonusForm.start_date || !bonusForm.end_date) {
+      alert('Please fill out all required fields');
+      return;
+    }
+    setSavingRule(true);
+    try {
+      const res = await api.post('/employees/bonus-rules', bonusForm);
+      if (res.data?.success) {
+        alert(res.data.message || 'Bonus target rule assigned successfully!');
+        fetchBonusRules();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save bonus rule');
+    } finally {
+      setSavingRule(false);
+    }
+  };
+
+  const handleDeleteBonusRule = async (ruleId) => {
+    if (!window.confirm('Are you sure you want to delete this bonus target rule?')) return;
+    try {
+      const res = await api.delete(`/employees/bonus-rules/${ruleId}`);
+      if (res.data?.success) {
+        fetchBonusRules();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete bonus rule');
+    }
+  };
+
   // Link Form
   const [productsList, setProductsList] = useState([]);
   const [linkForm, setLinkForm] = useState({
@@ -521,7 +663,8 @@ export default function EmployeeManagement() {
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {[
             { id: 'all', label: 'All Employees Directory', icon: <FaUsers /> },
-            { id: 'hierarchy', label: 'Team Hierarchy Tree', icon: <FaSitemap /> }
+            { id: 'hierarchy', label: 'Team Hierarchy Tree', icon: <FaSitemap /> },
+            { id: 'bonus', label: 'Manage Bonus & Targets', icon: <FaCoins /> }
           ].map(tab => (
             <button 
               key={tab.id}
@@ -645,7 +788,13 @@ export default function EmployeeManagement() {
                         </div>
                       </td>
                       <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                          <button onClick={() => openDeptModal(emp)} style={{ background: `${C.teal}15`, border: `1px solid ${C.teal}40`, color: C.teal, padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <FaBuilding /> Manage Depts
+                          </button>
+                          <button onClick={() => openBonusModal(emp)} style={{ background: '#F59E0B15', border: '1px solid #F59E0B40', color: '#B45309', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <FaCoins /> Manage Bonus
+                          </button>
                           <button onClick={() => handleOpen360View(emp)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <FaEye /> 360 View
                           </button>
@@ -1068,6 +1217,84 @@ export default function EmployeeManagement() {
             </div>
           );
         })()}
+
+        {/* Manage Bonus & Targets Tab View */}
+        {activeTab === 'bonus' && (
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '450px', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <FaCoins style={{ color: '#D97706' }} /> Employee Bonus & Department Target Manager
+                </h2>
+                <div style={{ fontSize: '12.5px', color: C.textMid, marginTop: '4px' }}>
+                  Assign period targets (e.g., 10 cards) & card bonus amounts for each employee and department
+                </div>
+              </div>
+              <button 
+                onClick={() => openBonusModal()} 
+                style={{ 
+                  background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', 
+                  borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                  boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)' 
+                }}
+              >
+                <FaPlus /> + Create Bonus Target
+              </button>
+            </div>
+
+            {/* Configured Bonus Rules List */}
+            <div style={{ marginTop: '16px' }}>
+              {loadingRules ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading bonus rules...</div>
+              ) : bonusRulesList.length === 0 ? (
+                <div style={{ padding: '40px', textAlign: 'center', color: C.textMid, background: C.bgSecondary, borderRadius: '16px' }}>
+                  No bonus targets configured yet. Click "+ Create Bonus Target" to configure your first target & bonus rule.
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
+                  {bonusRulesList.map(rule => (
+                    <div key={rule.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '18px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <div style={{ fontSize: '15px', fontWeight: 900, color: C.text }}>{rule.employee_name}</div>
+                          <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>ID: {rule.emp_code} | {rule.employee_designation || 'TC'}</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ padding: '4px 10px', borderRadius: '10px', background: `${C.teal}15`, color: C.teal, fontSize: '12px', fontWeight: 900 }}>
+                            {rule.bank_name}
+                          </span>
+                          <button onClick={() => handleDeleteBonusRule(rule.id)} style={{ background: '#EF444415', border: 'none', color: '#EF4444', padding: '6px', borderRadius: '8px', cursor: 'pointer' }} title="Delete Rule">
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '13px', fontWeight: 800 }}>
+                          <span>Target Progress: <strong style={{ color: C.teal }}>{rule.approved_count} / {rule.target_count} Approved Cards</strong></span>
+                          <span style={{ color: '#10B981', fontWeight: 900 }}>₹{Number(rule.earned_bonus || 0).toLocaleString('en-IN')} Earned</span>
+                        </div>
+
+                        <div style={{ width: '100%', background: C.bgSecondary, height: '12px', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px' }}>
+                          <div style={{ width: `${rule.progress_percentage}%`, background: rule.target_achieved ? '#10B981' : C.teal, height: '100%', transition: 'width 0.4s ease' }} />
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: C.textMid, fontWeight: 700 }}>
+                          <span>{rule.target_achieved ? <strong style={{ color: '#10B981' }}>Target Achieved ✓</strong> : `Remaining: ${rule.remaining_count} Cards`}</span>
+                          <span>Bonus Rate: <strong>₹{rule.bonus_per_card} / Card</strong></span>
+                        </div>
+                      </div>
+
+                      <div style={{ fontSize: '12px', color: C.textMid, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FaCalendarAlt style={{ color: C.teal }} /> Active Period: <strong>{new Date(rule.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} – {new Date(rule.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Product Links Tab View */}
         {activeTab === 'links' && (
@@ -1945,6 +2172,275 @@ export default function EmployeeManagement() {
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                 <button onClick={() => { setPerfModalEmp(null); handleOpen360View(perfModalEmp); }} style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>View Full Profile</button>
                 <button onClick={() => setPerfModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '10px 18px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Close</button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ── MODAL: Manage Departments / Banks Assignment ── */}
+        {deptModalEmp && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', width: '100%', maxWidth: '520px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }}>
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: `${C.teal}20`, color: C.teal, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                    <FaBuilding />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '17px', fontWeight: 900, margin: 0, color: C.text }}>Manage Departments / Banks</h3>
+                    <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>
+                      Employee: <span style={{ color: C.teal, fontWeight: 900 }}>{deptModalEmp.full_name}</span> ({deptModalEmp.employee_id})
+                    </div>
+                  </div>
+                </div>
+                <button onClick={() => setDeptModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: C.textMid, fontWeight: 900 }}>✕</button>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '8px' }}>
+                  Assigned Departments / Banks
+                </label>
+                
+                {loadingDepts ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: C.textMid }}>Loading bank departments...</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {deptBanksList.map(bank => {
+                      const isChecked = selectedBankIds.includes(bank.bank_id);
+                      return (
+                        <label 
+                          key={bank.bank_id} 
+                          style={{ 
+                            display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', 
+                            borderRadius: '12px', border: `1px solid ${isChecked ? C.teal : C.border}`,
+                            background: isChecked ? `${C.teal}08` : C.bgSecondary, cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedBankIds(prev => [...prev, bank.bank_id]);
+                              } else {
+                                setSelectedBankIds(prev => prev.filter(id => id !== bank.bank_id));
+                              }
+                            }}
+                            style={{ width: '16px', height: '16px', accentColor: C.teal, cursor: 'pointer' }}
+                          />
+                          <div style={{ fontSize: '13.5px', fontWeight: 800, color: isChecked ? C.teal : C.text }}>
+                            {bank.bank_name}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>
+                <button 
+                  onClick={handleSaveDeptAssignments} 
+                  disabled={savingDepts}
+                  style={{ 
+                    background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', 
+                    borderRadius: '10px', fontWeight: 800, cursor: savingDepts ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)' 
+                  }}
+                >
+                  {savingDepts ? 'Saving...' : 'Save Assignments'}
+                </button>
+                <button onClick={() => setDeptModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '10px 20px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* ── MODAL: Manage Bonus & Targets ── */}
+        {bonusModalOpen && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', width: '100%', maxWidth: '850px', padding: '24px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.25)' }}>
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#F59E0B20', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                    <FaCoins />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 900, margin: 0, color: C.text }}>Manage Employee Bonus & Targets</h3>
+                    <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>
+                      Configure card targets, date period, and bonus per card per department
+                    </div>
+                  </div>
+                </div>
+                <button onClick={() => setBonusModalOpen(false)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: C.textMid, fontWeight: 900 }}>✕</button>
+              </div>
+
+              {/* Form Section */}
+              <form onSubmit={handleSaveBonusRule} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 900, color: C.text, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FaBullseye style={{ color: C.teal }} /> Create Target & Bonus Rule
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+                  
+                  {/* Employee */}
+                  <div>
+                    <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '6px' }}>Select Employee *</label>
+                    <select 
+                      value={bonusForm.employee_id} 
+                      onChange={(e) => {
+                        const empId = e.target.value;
+                        setBonusForm({ ...bonusForm, employee_id: empId });
+                        fetchEmployeeAssignedBanks(empId);
+                      }}
+                      style={{ width: '100%', padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                      required
+                    >
+                      <option value="">Select Employee</option>
+                      {employees.map(e => (
+                        <option key={e.id} value={e.id}>{e.full_name} ({e.employee_id || 'N/A'})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Department / Bank */}
+                  <div>
+                    <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '6px' }}>Department / Bank *</label>
+                    <select 
+                      value={bonusForm.bank_id} 
+                      onChange={(e) => setBonusForm({ ...bonusForm, bank_id: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                      required
+                    >
+                      <option value="">Select Bank</option>
+                      {employeeAssignedBanks.map(b => (
+                        <option key={b.bank_id} value={b.bank_id}>{b.bank_name}</option>
+                      ))}
+                    </select>
+                    {employeeAssignedBanks.length === 0 && bonusForm.employee_id && (
+                      <div style={{ fontSize: '11px', color: '#D97706', marginTop: '4px' }}>No assigned bank yet. Will auto-assign on submit.</div>
+                    )}
+                  </div>
+
+                  {/* From Date */}
+                  <div>
+                    <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '6px' }}>From Date *</label>
+                    <input 
+                      type="date" 
+                      value={bonusForm.start_date}
+                      onChange={(e) => setBonusForm({ ...bonusForm, start_date: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px' }}
+                      required
+                    />
+                  </div>
+
+                  {/* To Date */}
+                  <div>
+                    <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '6px' }}>To Date *</label>
+                    <input 
+                      type="date" 
+                      value={bonusForm.end_date}
+                      onChange={(e) => setBonusForm({ ...bonusForm, end_date: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px' }}
+                      required
+                    />
+                  </div>
+
+                  {/* Target Count */}
+                  <div>
+                    <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '6px' }}>Target (Cards) *</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      value={bonusForm.target_count}
+                      onChange={(e) => setBonusForm({ ...bonusForm, target_count: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                      required
+                    />
+                  </div>
+
+                  {/* Bonus Per Card */}
+                  <div>
+                    <label style={{ fontSize: '11.5px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '6px' }}>Bonus Per Card (₹) *</label>
+                    <input 
+                      type="number" 
+                      min="0"
+                      value={bonusForm.bonus_per_card}
+                      onChange={(e) => setBonusForm({ ...bonusForm, bonus_per_card: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13px', fontWeight: 700 }}
+                      required
+                    />
+                  </div>
+
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <button 
+                    type="submit" 
+                    disabled={savingRule}
+                    style={{ 
+                      background: C.teal, color: '#fff', border: 'none', padding: '10px 24px', 
+                      borderRadius: '10px', fontWeight: 800, cursor: savingRule ? 'not-allowed' : 'pointer',
+                      boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)' 
+                    }}
+                  >
+                    {savingRule ? 'Saving Rule...' : 'Assign Bonus Rule'}
+                  </button>
+                </div>
+              </form>
+
+              {/* Rules Progress & History List */}
+              <div>
+                <h4 style={{ fontSize: '15px', fontWeight: 900, color: C.text, marginBottom: '12px' }}>Configured Bonus Targets & Progress</h4>
+                
+                {loadingRules ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: C.textMid }}>Loading bonus rules...</div>
+                ) : bonusRulesList.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: C.textMid, background: C.bgSecondary, borderRadius: '12px' }}>No active or past bonus rules created yet.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {bonusRulesList.map(rule => (
+                      <div key={rule.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                          <div>
+                            <span style={{ fontSize: '14px', fontWeight: 900, color: C.text }}>{rule.employee_name} ({rule.emp_code})</span>
+                            <span style={{ marginLeft: '10px', padding: '2px 8px', borderRadius: '8px', background: `${C.teal}15`, color: C.teal, fontSize: '12px', fontWeight: 800 }}>{rule.bank_name}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '12px', color: C.textMid }}>
+                              Period: <strong>{new Date(rule.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} – {new Date(rule.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
+                            </span>
+                            <button onClick={() => handleDeleteBonusRule(rule.id)} style={{ background: '#EF444415', border: 'none', color: '#EF4444', padding: '6px', borderRadius: '6px', cursor: 'pointer' }} title="Delete Rule">
+                              <FaTrash />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar & Calculation */}
+                        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12.5px', fontWeight: 800 }}>
+                            <span>{rule.bank_name} Target: <strong style={{ color: C.teal }}>{rule.approved_count} / {rule.target_count} Cards</strong> ({rule.progress_percentage}%)</span>
+                            <span>Bonus: <strong style={{ color: '#10B981' }}>₹{Number(rule.earned_bonus || 0).toLocaleString('en-IN')} Earned</strong> (₹{rule.bonus_per_card}/card)</span>
+                          </div>
+
+                          <div style={{ width: '100%', background: C.bgSecondary, height: '10px', borderRadius: '5px', overflow: 'hidden' }}>
+                            <div style={{ width: `${rule.progress_percentage}%`, background: rule.target_achieved ? '#10B981' : C.teal, height: '100%', transition: 'width 0.4s ease' }} />
+                          </div>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '11px', color: C.textMid }}>
+                            <span>{rule.target_achieved ? <strong style={{ color: '#10B981' }}>Target Achieved ✓</strong> : `Remaining: ${rule.remaining_count} Cards`}</span>
+                            <span>{rule.remaining_bonus > 0 ? `₹${rule.remaining_bonus.toLocaleString('en-IN')} Bonus Remaining` : ''}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
             </div>
