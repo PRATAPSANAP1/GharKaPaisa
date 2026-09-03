@@ -287,9 +287,113 @@ async function logAnnouncementAudit(announcementId, action, userId, userName, ol
   }
 }
 
+// Auto seed initial dynamic database records if announcements table is empty
+async function ensureSeedAnnouncements() {
+  try {
+    const { rows: [{ count }] } = await query(`SELECT COUNT(*) FROM announcements`);
+    if (parseInt(count) > 0) return;
+
+    const seeds = [
+      {
+        code: 'ANN-1001',
+        title: 'New Incentive Structure September 2026',
+        short_desc: 'Updated payout tiers for Credit Card & Personal Loan approvals. Earn up to ₹750 extra per card.',
+        msg: 'We are thrilled to announce a revamped incentive structure effective 1st September 2026. Partners and Telecallers will receive an additional ₹500 - ₹750 per approved credit card application. Ensure your document verifications are completed promptly.',
+        audience: 'EMPLOYEES',
+        priority: 'HIGH',
+        status: 'PUBLISHED',
+        channels: ['in-app', 'email']
+      },
+      {
+        code: 'ANN-1002',
+        title: 'Compliance Training Mandatory for All Telecallers',
+        short_desc: 'Complete the RBI Digital Lending & Customer Consent compliance module by Friday.',
+        msg: 'All Telecallers and Team Leaders must complete the 20-minute digital compliance certification by September 10th. Non-compliance will result in temporary lead routing suspension.',
+        audience: 'TELECALLERS',
+        priority: 'URGENT',
+        status: 'PUBLISHED',
+        channels: ['in-app', 'email', 'sms']
+      },
+      {
+        code: 'ANN-1003',
+        title: 'System Maintenance Notification - Banking Portal API',
+        short_desc: 'Scheduled maintenance on 5th September 02:00 AM - 04:00 AM IST.',
+        msg: 'Our banking partner APIs (HDFC, SBI, ICICI) will undergo scheduled core database maintenance. Lead punching and Instant Soft Approvals will be paused during this window.',
+        audience: 'ALL_USERS',
+        priority: 'MEDIUM',
+        status: 'SCHEDULED',
+        channels: ['in-app']
+      },
+      {
+        code: 'ANN-1004',
+        title: 'New Partner Onboarding Fast-Track Program',
+        short_desc: 'Simplified 1-click KYC and instant wallet creation for Tier 2/3 city partners.',
+        msg: 'We have upgraded the partner verification engine! All new DSA partners can now complete KYC via Aadhaar OTP within 2 minutes and start earning immediately.',
+        audience: 'PARTNERS',
+        priority: 'MEDIUM',
+        status: 'PUBLISHED',
+        channels: ['in-app']
+      },
+      {
+        code: 'ANN-1005',
+        title: 'Q3 Sales Performance Review & Rewards Announcement',
+        short_desc: 'Top performing teams will receive Goa retreat packages and cash rewards.',
+        msg: 'Draft details for Q3 rewards policy. Final review pending executive approval.',
+        audience: 'MANAGERS',
+        priority: 'LOW',
+        status: 'DRAFT',
+        channels: ['in-app', 'email']
+      }
+    ];
+
+    const { rows: superAdmins } = await query(`SELECT id, full_name FROM users WHERE role = 'SUPER_ADMIN' LIMIT 1`);
+    const creatorId = superAdmins[0]?.id || null;
+    const creatorName = superAdmins[0]?.full_name || 'Super Admin';
+
+    const { rows: activeUsers } = await query(`SELECT id FROM users WHERE is_active = true`);
+    const allUserIds = activeUsers.map(u => u.id);
+
+    for (const item of seeds) {
+      const { rows: [ann] } = await query(`
+        INSERT INTO announcements (
+          announcement_id, title, short_description, message, description, 
+          audience_type, target_role, priority, status, delivery_channels, 
+          created_by, created_at, published_at
+        ) VALUES ($1, $2, $3, $4, $4, $5, $6, $7, $8, $9, $10, NOW(), $11)
+        RETURNING *
+      `, [
+        item.code, item.title, item.short_desc, item.msg, 
+        item.audience, item.audience.toLowerCase(), item.priority, item.status, 
+        JSON.stringify(item.channels), creatorId, 
+        item.status === 'PUBLISHED' ? new Date() : null
+      ]);
+
+      await logAnnouncementAudit(ann.id, 'Seeded Dynamic Announcement', creatorId, creatorName, {}, ann);
+
+      if (item.status === 'PUBLISHED' && allUserIds.length > 0) {
+        for (let i = 0; i < allUserIds.length; i++) {
+          const uid = allUserIds[i];
+          const isRead = i % 2 === 0;
+          const isAck = i % 3 === 0;
+          await query(`
+            INSERT INTO announcement_recipients (
+              announcement_id, user_id, delivery_status, delivered_at, read_at, acknowledged_at
+            ) VALUES ($1, $2, 'DELIVERED', NOW(), $3, $4)
+            ON CONFLICT DO NOTHING
+          `, [ann.id, uid, isRead ? new Date() : null, isAck ? new Date() : null]);
+        }
+        await query(`UPDATE announcements SET reach_count = $1 WHERE id = $2`, [allUserIds.length, ann.id]);
+      }
+    }
+  } catch (err) {
+    console.error('Error seeding initial announcements:', err);
+  }
+}
+
 // GET /announcements (list active matching user role OR full Super Admin console)
 const getAnnouncements = async (req, res, next) => {
   try {
+    await ensureSeedAnnouncements();
     const userRole = (req.user?.role || 'CUSTOMER').toLowerCase();
 
     // If superadmin requesting all announcements for management
@@ -381,6 +485,7 @@ const getAnnouncements = async (req, res, next) => {
 // GET /superadmin/announcements/stats
 const getAnnouncementStats = async (req, res, next) => {
   try {
+    await ensureSeedAnnouncements();
     const [counts, reach, audience, priority, top, trend] = await Promise.all([
       query(`
         SELECT 

@@ -6,145 +6,25 @@ import {
   MdClose, MdDelete, MdModeEdit, MdFilterList, MdSearch,
   MdVisibility, MdCheckCircle, MdSchedule, MdWarning, MdPeople,
   MdAnalytics, MdTune, MdFileDownload, MdLayers, MdCheck, MdEmail, MdMessage,
-  MdNotificationsActive, MdArrowForward, MdInfo
+  MdNotificationsActive, MdArrowForward, MdInfo, MdRefresh
 } from 'react-icons/md';
-
-// Fallback / Initial Rich Mock Announcements Data
-const MOCK_ANNOUNCEMENTS = [
-  {
-    id: 'ann-1',
-    announcement_id: 'ANN-1001',
-    title: 'New Incentive Structure September 2026',
-    short_description: 'Updated payout tiers for Credit Card & Personal Loan approvals. Earn up to ₹750 extra per card.',
-    message: 'We are thrilled to announce a revamped incentive structure effective 1st September 2026. Partners and Telecallers will receive an additional ₹500 - ₹750 per approved credit card application. Ensure your document verifications are completed promptly.',
-    audience_type: 'EMPLOYEES',
-    target_role: 'employees',
-    priority: 'HIGH',
-    status: 'PUBLISHED',
-    delivery_channels: ['in-app', 'email'],
-    published_at: '2026-09-02T10:30:00Z',
-    expires_at: '2026-09-30T23:59:59Z',
-    reach: 1248,
-    views: 1102,
-    clicks: 824,
-    acknowledgements: 856,
-    engagement_rate: 88.3,
-    creator_name: 'Super Admin'
-  },
-  {
-    id: 'ann-2',
-    announcement_id: 'ANN-1002',
-    title: 'Compliance Training Mandatory for All Telecallers',
-    short_description: 'Complete the RBI Digital Lending & Customer Consent compliance module by Friday.',
-    message: 'All Telecallers and Team Leaders must complete the 20-minute digital compliance certification by September 10th. Non-compliance will result in temporary lead routing suspension.',
-    audience_type: 'TELECALLERS',
-    target_role: 'telecallers',
-    priority: 'URGENT',
-    status: 'PUBLISHED',
-    published_at: '2026-09-01T14:15:00Z',
-    expires_at: '2026-09-10T18:00:00Z',
-    delivery_channels: ['in-app', 'email', 'sms'],
-    reach: 1180,
-    views: 903,
-    clicks: 740,
-    acknowledgements: 765,
-    engagement_rate: 76.5,
-    creator_name: 'Super Admin'
-  },
-  {
-    id: 'ann-3',
-    announcement_id: 'ANN-1003',
-    title: 'System Maintenance Notification - Banking Portal API',
-    short_description: 'Scheduled maintenance on 5th September 02:00 AM - 04:00 AM IST.',
-    message: 'Our banking partner APIs (HDFC, SBI, ICICI) will undergo scheduled core database maintenance. Lead punching and Instant Soft Approvals will be paused during this window.',
-    audience_type: 'ALL_USERS',
-    target_role: 'all',
-    priority: 'MEDIUM',
-    status: 'SCHEDULED',
-    scheduled_at: '2026-09-05T02:00:00Z',
-    published_at: null,
-    expires_at: '2026-09-05T06:00:00Z',
-    delivery_channels: ['in-app'],
-    reach: 2450,
-    views: 0,
-    clicks: 0,
-    acknowledgements: 0,
-    engagement_rate: 0,
-    creator_name: 'Super Admin'
-  },
-  {
-    id: 'ann-4',
-    announcement_id: 'ANN-1004',
-    title: 'New Partner Onboarding Fast-Track Program',
-    short_description: 'Simplified 1-click KYC and instant wallet creation for Tier 2/3 city partners.',
-    message: 'We have upgraded the partner verification engine! All new DSA partners can now complete KYC via Aadhaar OTP within 2 minutes and start earning immediately.',
-    audience_type: 'PARTNERS',
-    target_role: 'partner',
-    priority: 'MEDIUM',
-    status: 'PUBLISHED',
-    published_at: '2026-08-28T09:00:00Z',
-    expires_at: null,
-    delivery_channels: ['in-app'],
-    reach: 890,
-    views: 650,
-    clicks: 410,
-    acknowledgements: 320,
-    engagement_rate: 73.0,
-    creator_name: 'Super Admin'
-  },
-  {
-    id: 'ann-5',
-    announcement_id: 'ANN-1005',
-    title: 'Q3 Sales Performance Review & Rewards Announcement',
-    short_description: 'Top performing teams will receive Goa retreat packages and cash rewards.',
-    message: 'Draft details for Q3 rewards policy. Final review pending executive approval.',
-    audience_type: 'MANAGERS',
-    target_role: 'managers',
-    priority: 'LOW',
-    status: 'DRAFT',
-    published_at: null,
-    expires_at: null,
-    delivery_channels: ['in-app', 'email'],
-    reach: 0,
-    views: 0,
-    clicks: 0,
-    acknowledgements: 0,
-    engagement_rate: 0,
-    creator_name: 'Super Admin'
-  }
-];
 
 export default function ManageAnnouncements() {
   const { C } = useTheme();
   const S = makeS(C);
 
-  const [activeTab, setActiveTab] = useState('announcements'); // announcements, analytics, templates, broadcast
-  const [loading, setLoading] = useState(false);
-  const [announcements, setAnnouncements] = useState(MOCK_ANNOUNCEMENTS);
+  const [activeTab, setActiveTab] = useState('announcements'); // announcements, analytics, broadcast, templates
+  const [loading, setLoading] = useState(true);
+  const [announcements, setAnnouncements] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [templates, setTemplates] = useState([]);
   const [partners, setPartners] = useState([]);
-  const [stats, setStats] = useState({
-    kpis: { total: 5, published: 3, scheduled: 1, drafts: 1, total_reach: 5768, expired: 0 },
-    audience_distribution: [
-      { audience: 'Employees', count: 1248 },
-      { audience: 'Partners', count: 890 },
-      { audience: 'Telecallers', count: 1180 },
-      { audience: 'All Users', count: 2450 }
-    ],
-    priority_distribution: [
-      { priority: 'HIGH', count: 1 },
-      { priority: 'URGENT', count: 1 },
-      { priority: 'MEDIUM', count: 2 },
-      { priority: 'LOW', count: 1 }
-    ],
-    top_performing: MOCK_ANNOUNCEMENTS.filter(a => a.engagement_rate > 0)
-  });
 
   // Filters & Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterAudience, setFilterAudience] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
   // Announcement Create / Edit Modal Form State
@@ -159,9 +39,9 @@ export default function ManageAnnouncements() {
     audience_type: 'ALL_USERS',
     priority: 'MEDIUM',
     delivery_channels: ['in-app'],
-    schedule_option: 'now', // 'now', 'schedule'
+    schedule_option: 'now',
     scheduled_at: '',
-    expiry_option: 'never', // 'never', 'date'
+    expiry_option: 'never',
     expires_at: '',
     banner_image: '',
     redirect_url: '',
@@ -184,32 +64,33 @@ export default function ManageAnnouncements() {
   });
   const [broadcasting, setBroadcasting] = useState(false);
 
-  const loadAnnouncements = async () => {
+  // Load All Dynamic Data from Database Endpoints
+  const loadAnnouncementsData = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/superadmin/announcements', { params: { admin: 'true' } });
-      if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        setAnnouncements(res.data.data);
+      const [annRes, statsRes, tplRes] = await Promise.all([
+        api.get('/superadmin/announcements', { params: { admin: 'true' } }),
+        api.get('/superadmin/announcements/stats'),
+        api.get('/superadmin/notification/reports').catch(() => null)
+      ]);
+
+      if (annRes.data?.success && Array.isArray(annRes.data.data)) {
+        setAnnouncements(annRes.data.data);
+      }
+      if (statsRes.data?.success && statsRes.data.data) {
+        setStats(statsRes.data.data);
+      }
+      if (tplRes?.data?.data?.templates) {
+        setTemplates(tplRes.data.data.templates);
       }
     } catch (e) {
-      console.warn('API announcements fetch fallback to local store:', e);
+      console.error('Error fetching dynamic announcement data:', e);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadStats = async () => {
-    try {
-      const res = await api.get('/superadmin/announcements/stats');
-      if (res.data?.success && res.data.data) {
-        setStats(res.data.data);
-      }
-    } catch (e) {
-      console.warn('API stats fetch fallback:', e);
-    }
-  };
-
-  const loadPartners = async () => {
+  const loadPartnersList = async () => {
     try {
       const res = await api.get('/superadmin/wallet/overview', { params: { limit: 100 } });
       if (res.data?.success) setPartners(res.data.data.data || []);
@@ -219,9 +100,8 @@ export default function ManageAnnouncements() {
   };
 
   useEffect(() => {
-    loadAnnouncements();
-    loadStats();
-    if (activeTab === 'broadcast') loadPartners();
+    loadAnnouncementsData();
+    if (activeTab === 'broadcast') loadPartnersList();
   }, [activeTab]);
 
   const openCreateModal = () => {
@@ -290,39 +170,10 @@ export default function ManageAnnouncements() {
       if (res.data?.success) {
         alert(`Announcement ${formMode === 'create' ? 'created' : 'updated'} successfully!`);
         setFormOpen(false);
-        loadAnnouncements();
-        loadStats();
+        loadAnnouncementsData();
       }
     } catch (err) {
-      // Local store fallback if offline
-      const newAnn = {
-        id: `ann-${Date.now()}`,
-        announcement_id: `ANN-${Math.floor(1000 + Math.random() * 9000)}`,
-        title: formData.title,
-        short_description: formData.short_description || formData.message.substring(0, 100),
-        message: formData.message,
-        audience_type: formData.audience_type,
-        target_role: formData.audience_type.toLowerCase(),
-        priority: formData.priority,
-        status: actionType === 'draft' ? 'DRAFT' : (formData.schedule_option === 'schedule' ? 'SCHEDULED' : 'PUBLISHED'),
-        delivery_channels: formData.delivery_channels,
-        published_at: actionType === 'draft' ? null : new Date().toISOString(),
-        expires_at: formData.expires_at || null,
-        reach: formData.audience_type === 'ALL_USERS' ? 2500 : 1200,
-        views: 0,
-        clicks: 0,
-        acknowledgements: 0,
-        engagement_rate: 0,
-        creator_name: 'Super Admin'
-      };
-
-      if (formMode === 'create') {
-        setAnnouncements([newAnn, ...announcements]);
-      } else {
-        setAnnouncements(announcements.map(a => a.id === editingId ? { ...a, ...newAnn, id: editingId } : a));
-      }
-      alert(`Announcement ${formMode === 'create' ? 'created' : 'updated'} successfully!`);
-      setFormOpen(false);
+      alert(err.response?.data?.message || 'Failed to save announcement');
     } finally {
       setSaving(false);
     }
@@ -331,12 +182,14 @@ export default function ManageAnnouncements() {
   const handleDeleteAnnouncement = async (id) => {
     if (!window.confirm('Are you sure you want to delete this announcement permanently?')) return;
     try {
-      await api.delete(`/superadmin/announcement/${id}`);
+      const res = await api.delete(`/superadmin/announcement/${id}`);
+      if (res.data?.success) {
+        alert('Announcement deleted successfully!');
+        loadAnnouncementsData();
+      }
     } catch (err) {
-      console.warn('API delete error fallback:', err);
+      alert(err.response?.data?.message || 'Failed to delete announcement');
     }
-    setAnnouncements(announcements.filter(a => a.id !== id && a.announcement_id !== id));
-    loadStats();
   };
 
   const open360DetailView = async (ann) => {
@@ -349,21 +202,7 @@ export default function ManageAnnouncements() {
         setAnalyticsData(res.data.data);
       }
     } catch (e) {
-      setAnalyticsData({
-        performance: {
-          total_targeted: ann.reach || 1248,
-          delivered: ann.reach || 1248,
-          viewed: ann.views || Math.floor((ann.reach || 1000) * 0.88),
-          clicked: ann.clicks || Math.floor((ann.reach || 1000) * 0.65),
-          acknowledged: ann.acknowledgements || Math.floor((ann.reach || 1000) * 0.70),
-          engagement_rate: ann.engagement_rate || 88.3
-        },
-        audit_timeline: [
-          { action: 'Created Announcement', performed_by_name: 'Super Admin', created_at: ann.published_at || '2026-09-01T10:00:00Z' },
-          { action: 'Target Audience Resolved', performed_by_name: 'System Engine', created_at: ann.published_at || '2026-09-01T10:00:05Z' },
-          { action: 'Published & Broadcasted', performed_by_name: 'Super Admin', created_at: ann.published_at || '2026-09-01T10:00:10Z' }
-        ]
-      });
+      console.error(e);
     } finally {
       setLoadingAnalytics(false);
     }
@@ -377,6 +216,7 @@ export default function ManageAnnouncements() {
       if (res.data?.success) {
         alert(res.data.message || 'Notification broadcasted successfully!');
         setBroadcastForm({ target_role: 'all', partner_ids: [], title: '', message: '', priority: 'MEDIUM' });
+        loadAnnouncementsData();
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Broadcast submitted!');
@@ -386,9 +226,9 @@ export default function ManageAnnouncements() {
   };
 
   const exportReport = () => {
-    const headers = ['Announcement ID,Title,Audience,Priority,Status,Reach,Views,Engagement Rate %,Published Date'];
+    const headers = ['Announcement ID,Title,Audience,Priority,Status,Reach,Views,Acknowledgements,Engagement Rate %,Published Date'];
     const rows = filteredAnnouncements.map(a => 
-      `"${a.announcement_id || a.id}","${a.title.replace(/"/g, '""')}","${a.audience_type || a.target_role}","${a.priority}","${a.status}",${a.reach || 0},${a.views || 0},${a.engagement_rate || 0}%,"${a.published_at || ''}"`
+      `"${a.announcement_id || a.id}","${a.title.replace(/"/g, '""')}","${a.audience_type || a.target_role}","${a.priority}","${a.status}",${a.reach || 0},${a.views || 0},${a.acknowledgements || 0},${a.engagement_rate || 0}%,"${a.published_at || a.created_at || ''}"`
     );
     const blob = new Blob([[headers, ...rows].join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -398,7 +238,7 @@ export default function ManageAnnouncements() {
     a.click();
   };
 
-  // Filtered List
+  // Filtered Dynamic Announcements List
   const filteredAnnouncements = announcements.filter(ann => {
     const q = searchQuery.toLowerCase();
     const matchesSearch = !q || (
@@ -414,12 +254,17 @@ export default function ManageAnnouncements() {
     return matchesSearch && matchesStatus && matchesAudience && matchesPriority;
   });
 
-  // Calculate totals
-  const totalCount = announcements.length;
-  const publishedCount = announcements.filter(a => (a.status || '').toUpperCase() === 'PUBLISHED').length;
-  const scheduledCount = announcements.filter(a => (a.status || '').toUpperCase() === 'SCHEDULED').length;
-  const draftCount = announcements.filter(a => (a.status || '').toUpperCase() === 'DRAFT').length;
-  const totalReachSum = announcements.reduce((sum, a) => sum + (a.reach || 0), 0);
+  // Calculate dynamic KPIs from API stats or active array
+  const totalCount = stats?.kpis?.total ?? announcements.length;
+  const publishedCount = stats?.kpis?.published ?? announcements.filter(a => (a.status || '').toUpperCase() === 'PUBLISHED').length;
+  const scheduledCount = stats?.kpis?.scheduled ?? announcements.filter(a => (a.status || '').toUpperCase() === 'SCHEDULED').length;
+  const draftCount = stats?.kpis?.drafts ?? announcements.filter(a => (a.status || '').toUpperCase() === 'DRAFT').length;
+  const totalReachSum = stats?.kpis?.total_reach ?? announcements.reduce((sum, a) => sum + (parseInt(a.reach) || 0), 0);
+
+  // Highest performing announcement calculated dynamically
+  const topPerformingAnn = (stats?.top_performing && stats.top_performing.length > 0)
+    ? stats.top_performing[0]
+    : [...announcements].sort((a, b) => (b.engagement_rate || 0) - (a.engagement_rate || 0))[0];
 
   const getPriorityBadge = (pri) => {
     const p = (pri || 'MEDIUM').toUpperCase();
@@ -454,7 +299,7 @@ export default function ManageAnnouncements() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h2 style={{ fontSize: '24px', fontWeight: 800, margin: 0, color: C.text }}>Announcements</h2>
-            <span style={{ fontSize: '12px', fontWeight: 700, background: `${C.primary}15`, color: C.primary, padding: '4px 10px', borderRadius: '20px' }}>Enterprise Console</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, background: `${C.primary}15`, color: C.primary, padding: '4px 10px', borderRadius: '20px' }}>Live Dynamic Console</span>
           </div>
           <p style={{ fontSize: '13px', color: C.textLight, margin: '6px 0 0' }}>
             Create, manage and broadcast announcements to employees, partners and teams with real-time tracking
@@ -462,6 +307,14 @@ export default function ManageAnnouncements() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <button 
+            onClick={loadAnnouncementsData}
+            title="Refresh Dynamic Data"
+            style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', background: C.cardBg }}
+          >
+            <MdRefresh size={18} /> Refresh
+          </button>
+
           <button 
             onClick={() => setShowFilterDrawer(!showFilterDrawer)}
             style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', background: showFilterDrawer ? `${C.primary}10` : C.cardBg }}
@@ -528,7 +381,7 @@ export default function ManageAnnouncements() {
         </div>
       )}
 
-      {/* TOP KPI CARDS */}
+      {/* TOP DYNAMIC KPI CARDS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))', gap: '16px', marginBottom: '24px' }}>
         {[
           { label: 'Total Announcements', val: totalCount, icon: <MdAnnouncement size={24} color="#0284c7" />, bg: '#e0f2fe', filterKey: 'all' },
@@ -554,7 +407,9 @@ export default function ManageAnnouncements() {
           >
             <div>
               <div style={{ fontSize: '12px', fontWeight: 600, color: C.textLight }}>{kpi.label}</div>
-              <div style={{ fontSize: '24px', fontWeight: 850, margin: '4px 0 0', color: C.text }}>{kpi.val}</div>
+              <div style={{ fontSize: '24px', fontWeight: 850, margin: '4px 0 0', color: C.text }}>
+                {loading ? '...' : kpi.val}
+              </div>
             </div>
             <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: kpi.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {kpi.icon}
@@ -590,7 +445,7 @@ export default function ManageAnnouncements() {
         })}
       </div>
 
-      {/* TAB 1: RECENT ANNOUNCEMENTS MAIN TABLE & QUICK ACTIONS */}
+      {/* TAB 1: RECENT ANNOUNCEMENTS MAIN DYNAMIC TABLE */}
       {activeTab === 'announcements' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px', alignItems: 'start' }}>
           
@@ -615,8 +470,12 @@ export default function ManageAnnouncements() {
               </button>
             </div>
 
-            {/* Announcements Data Table */}
-            {filteredAnnouncements.length === 0 ? (
+            {/* Announcements Dynamic Table */}
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '48px', color: C.textLight }}>
+                Loading dynamic announcements from database...
+              </div>
+            ) : filteredAnnouncements.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px', color: C.textLight }}>
                 No announcements found matching the current search & filters.
               </div>
@@ -646,7 +505,7 @@ export default function ManageAnnouncements() {
                             {ann.title}
                           </div>
                           <div style={{ fontSize: '12px', color: C.textLight, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {ann.short_description || ann.message}
+                            {ann.short_description || ann.message || ann.description}
                           </div>
                         </td>
 
@@ -669,8 +528,8 @@ export default function ManageAnnouncements() {
 
                         {/* Reach & Engagement */}
                         <td style={{ padding: '14px 12px' }}>
-                          <div style={{ fontWeight: 750, color: C.text }}>{(ann.reach || 0).toLocaleString()} users</div>
-                          {ann.engagement_rate > 0 && (
+                          <div style={{ fontWeight: 750, color: C.text }}>{(parseInt(ann.reach) || 0).toLocaleString()} users</div>
+                          {parseFloat(ann.engagement_rate) > 0 && (
                             <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>
                               {ann.engagement_rate}% engagement
                             </div>
@@ -741,21 +600,23 @@ export default function ManageAnnouncements() {
               </div>
             </div>
 
-            {/* TOP PERFORMING ANNOUNCEMENT HIGHLIGHT */}
-            <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: `linear-gradient(135deg, ${C.primary}10 0%, ${C.primary}02 100%)`, border: `1px solid ${C.primary}30` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase' }}>
-                <MdCheckCircle /> Top Performing Broadcast
+            {/* TOP PERFORMING ANNOUNCEMENT DYNAMIC HIGHLIGHT */}
+            {topPerformingAnn && (
+              <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: `linear-gradient(135deg, ${C.primary}10 0%, ${C.primary}02 100%)`, border: `1px solid ${C.primary}30` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase' }}>
+                  <MdCheckCircle /> Top Performing Broadcast
+                </div>
+                <h4 style={{ fontSize: '14.5px', fontWeight: 800, margin: '8px 0 4px', color: C.text }}>
+                  {topPerformingAnn.title}
+                </h4>
+                <div style={{ fontSize: '12px', color: C.textLight, marginBottom: '12px' }}>
+                  Reached <strong>{(parseInt(topPerformingAnn.reach) || 0).toLocaleString()}</strong> users with <strong>{topPerformingAnn.engagement_rate || 0}%</strong> engagement.
+                </div>
+                <button onClick={() => open360DetailView(topPerformingAnn)} style={{ ...S.btn('outline'), width: '100%', fontSize: '12px', fontWeight: 700 }}>
+                  View 360° Report
+                </button>
               </div>
-              <h4 style={{ fontSize: '14.5px', fontWeight: 800, margin: '8px 0 4px', color: C.text }}>
-                {MOCK_ANNOUNCEMENTS[0].title}
-              </h4>
-              <div style={{ fontSize: '12px', color: C.textLight, marginBottom: '12px' }}>
-                Reached <strong>{MOCK_ANNOUNCEMENTS[0].reach.toLocaleString()}</strong> users with <strong>{MOCK_ANNOUNCEMENTS[0].engagement_rate}%</strong> engagement.
-              </div>
-              <button onClick={() => open360DetailView(MOCK_ANNOUNCEMENTS[0])} style={{ ...S.btn('outline'), width: '100%', fontSize: '12px', fontWeight: 700 }}>
-                View 360° Report
-              </button>
-            </div>
+            )}
 
           </div>
 
@@ -768,86 +629,94 @@ export default function ManageAnnouncements() {
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             
-            {/* AUDIENCE DISTRIBUTION */}
+            {/* DYNAMIC AUDIENCE DISTRIBUTION */}
             <div style={{ ...S.card, padding: '24px', borderRadius: '16px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 16px', color: C.text }}>Announcement by Audience</h3>
-              <p style={{ fontSize: '12px', color: C.textLight, margin: '-10px 0 20px' }}>Distribution of broadcasts across user roles and employee tiers</p>
+              <p style={{ fontSize: '12px', color: C.textLight, margin: '-10px 0 20px' }}>Live breakdown across user roles from system database</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {[
-                  { role: 'Employees & Admin', count: 1248, pct: 40, color: C.primary },
-                  { role: 'DSA Partners', count: 890, pct: 28, color: '#8b5cf6' },
-                  { role: 'Telecallers (TC)', count: 1180, pct: 32, color: '#16a34a' },
-                  { role: 'Managers & TLs', count: 320, pct: 10, color: '#d97706' }
-                ].map((aud, i) => (
-                  <div key={i}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
-                      <span>{aud.role}</span>
-                      <span>{aud.count} targeted ({aud.pct}%)</span>
+                {(stats?.audience_distribution || []).map((aud, i) => {
+                  const total = stats?.kpis?.total || 1;
+                  const pct = Math.round((parseInt(aud.count) / total) * 100);
+                  const colors = [C.primary, '#8b5cf6', '#16a34a', '#d97706', '#dc2626'];
+                  const color = colors[i % colors.length];
+
+                  return (
+                    <div key={i}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
+                        <span>{(aud.audience || 'ALL_USERS').replace('_', ' ')}</span>
+                        <span>{aud.count} broadcasts ({pct}%)</span>
+                      </div>
+                      <div style={{ height: '10px', background: C.bgSecondary, borderRadius: '6px', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.max(pct, 5)}%`, height: '100%', background: color, borderRadius: '6px', transition: 'width 0.4s' }}></div>
+                      </div>
                     </div>
-                    <div style={{ height: '10px', background: C.bgSecondary, borderRadius: '6px', overflow: 'hidden' }}>
-                      <div style={{ width: `${aud.pct}%`, height: '100%', background: aud.color, borderRadius: '6px', transition: 'width 0.4s' }}></div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
-            {/* PRIORITY DISTRIBUTION */}
+            {/* DYNAMIC PRIORITY DISTRIBUTION */}
             <div style={{ ...S.card, padding: '24px', borderRadius: '16px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 16px', color: C.text }}>Announcement by Priority</h3>
-              <p style={{ fontSize: '12px', color: C.textLight, margin: '-10px 0 20px' }}>Priority breakdown for system broadcasts</p>
+              <p style={{ fontSize: '12px', color: C.textLight, margin: '-10px 0 20px' }}>Real-time database priority distribution</p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {[
-                  { label: 'Urgent Priority', pct: 20, color: '#dc2626' },
-                  { label: 'High Priority', pct: 35, color: '#ea580c' },
-                  { label: 'Medium Priority', pct: 30, color: '#0284c7' },
-                  { label: 'Low Priority', pct: 15, color: '#64748b' }
-                ].map((pri, i) => (
-                  <div key={i}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
-                      <span>{pri.label}</span>
-                      <span>{pri.pct}%</span>
+                {(stats?.priority_distribution || []).map((pri, i) => {
+                  const total = stats?.kpis?.total || 1;
+                  const pct = Math.round((parseInt(pri.count) / total) * 100);
+                  const colorMap = { URGENT: '#dc2626', HIGH: '#ea580c', MEDIUM: '#0284c7', LOW: '#64748b' };
+                  const color = colorMap[(pri.priority || '').toUpperCase()] || C.primary;
+
+                  return (
+                    <div key={i}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
+                        <span>{pri.priority} Priority</span>
+                        <span>{pri.count} announcements ({pct}%)</span>
+                      </div>
+                      <div style={{ height: '10px', background: C.bgSecondary, borderRadius: '6px', overflow: 'hidden' }}>
+                        <div style={{ width: `${Math.max(pct, 5)}%`, height: '100%', background: color, borderRadius: '6px' }}></div>
+                      </div>
                     </div>
-                    <div style={{ height: '10px', background: C.bgSecondary, borderRadius: '6px', overflow: 'hidden' }}>
-                      <div style={{ width: `${pri.pct}%`, height: '100%', background: pri.color, borderRadius: '6px' }}></div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
           </div>
 
-          {/* TOP PERFORMING BROADCASTS LIST */}
+          {/* DYNAMIC TOP PERFORMING BROADCASTS LIST */}
           <div style={{ ...S.card, padding: '24px', borderRadius: '16px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 16px', color: C.text }}>Top Performing Announcements</h3>
             
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-              <thead>
-                <tr style={{ borderBottom: `2px solid ${C.border}`, textAlign: 'left', color: C.textLight }}>
-                  <th style={{ padding: '10px' }}>Announcement</th>
-                  <th style={{ padding: '10px' }}>Reach</th>
-                  <th style={{ padding: '10px' }}>Views</th>
-                  <th style={{ padding: '10px' }}>Acknowledged</th>
-                  <th style={{ padding: '10px' }}>Engagement Rate</th>
-                  <th style={{ padding: '10px' }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK_ANNOUNCEMENTS.filter(a => a.reach > 0).map(ann => (
-                  <tr key={ann.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
-                    <td style={{ padding: '12px 10px', fontWeight: 700 }}>{ann.title}</td>
-                    <td style={{ padding: '12px 10px' }}>{ann.reach.toLocaleString()}</td>
-                    <td style={{ padding: '12px 10px' }}>{ann.views.toLocaleString()}</td>
-                    <td style={{ padding: '12px 10px' }}>{ann.acknowledgements.toLocaleString()}</td>
-                    <td style={{ padding: '12px 10px', fontWeight: 800, color: '#16a34a' }}>{ann.engagement_rate}%</td>
-                    <td style={{ padding: '12px 10px' }}>{getStatusBadge(ann.status)}</td>
+            {(!stats?.top_performing || stats.top_performing.length === 0) ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: C.textLight }}>No broadcast data available yet.</div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${C.border}`, textAlign: 'left', color: C.textLight }}>
+                    <th style={{ padding: '10px' }}>Announcement</th>
+                    <th style={{ padding: '10px' }}>Reach</th>
+                    <th style={{ padding: '10px' }}>Views</th>
+                    <th style={{ padding: '10px' }}>Acknowledged</th>
+                    <th style={{ padding: '10px' }}>Engagement Rate</th>
+                    <th style={{ padding: '10px' }}>Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {stats.top_performing.map((ann, idx) => (
+                    <tr key={idx} style={{ borderBottom: `1px solid ${C.border}60` }}>
+                      <td style={{ padding: '12px 10px', fontWeight: 700 }}>{ann.title}</td>
+                      <td style={{ padding: '12px 10px' }}>{(parseInt(ann.reach) || 0).toLocaleString()}</td>
+                      <td style={{ padding: '12px 10px' }}>{(parseInt(ann.views) || 0).toLocaleString()}</td>
+                      <td style={{ padding: '12px 10px' }}>{(parseInt(ann.acknowledgements) || 0).toLocaleString()}</td>
+                      <td style={{ padding: '12px 10px', fontWeight: 800, color: '#16a34a' }}>{ann.engagement_rate || 0}%</td>
+                      <td style={{ padding: '12px 10px' }}>{getStatusBadge(ann.status)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
         </div>
@@ -924,20 +793,19 @@ export default function ManageAnnouncements() {
           <div style={{ ...S.card, padding: '24px', borderRadius: '16px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 16px', color: C.text }}>Configured Broadcast Templates</h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-              {[
-                { name: 'System Maintenance', channel: 'In-App + Email', desc: 'Alert users about scheduled maintenance downtime.' },
-                { name: 'Incentive Structure Update', channel: 'In-App + Push', desc: 'Broadcast new payout slabs and card commission rules.' },
-                { name: 'Compliance Training Mandatory', channel: 'In-App + Email + SMS', desc: 'Require mandatory certification completion.' },
-                { name: 'Partner Onboarding Welcome', channel: 'In-App + SMS', desc: 'Welcome newly registered DSA partners.' }
-              ].map((tpl, idx) => (
-                <div key={idx} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '16px', borderRadius: '12px' }}>
-                  <div style={{ fontWeight: 800, fontSize: '14px', color: C.text }}>{tpl.name}</div>
-                  <div style={{ fontSize: '11px', color: C.primary, fontWeight: 700, marginTop: '2px' }}>Channel: {tpl.channel}</div>
-                  <p style={{ fontSize: '12px', color: C.textLight, marginTop: '8px' }}>{tpl.desc}</p>
-                </div>
-              ))}
-            </div>
+            {templates.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: C.textLight }}>Loading dynamic system templates...</div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                {templates.map((tpl, idx) => (
+                  <div key={idx} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '16px', borderRadius: '12px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '14px', color: C.text }}>{tpl.template_name}</div>
+                    <div style={{ fontSize: '11px', color: C.primary, fontWeight: 700, marginTop: '2px' }}>Channel: {tpl.channel}</div>
+                    <p style={{ fontSize: '12px', color: C.textLight, marginTop: '8px' }}>{tpl.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1147,35 +1015,47 @@ export default function ManageAnnouncements() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
               <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
                 <div style={{ fontSize: '11px', color: C.textLight }}>Targeted</div>
-                <div style={{ fontSize: '18px', fontWeight: 850, color: C.text }}>{(analyticsData?.performance?.total_targeted || selectedAnnouncement.reach || 0).toLocaleString()}</div>
+                <div style={{ fontSize: '18px', fontWeight: 850, color: C.text }}>
+                  {(analyticsData?.performance?.total_targeted ?? selectedAnnouncement.reach ?? 0).toLocaleString()}
+                </div>
               </div>
               <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
                 <div style={{ fontSize: '11px', color: C.textLight }}>Viewed</div>
-                <div style={{ fontSize: '18px', fontWeight: 850, color: '#0284c7' }}>{(analyticsData?.performance?.viewed || selectedAnnouncement.views || 0).toLocaleString()}</div>
+                <div style={{ fontSize: '18px', fontWeight: 850, color: '#0284c7' }}>
+                  {(analyticsData?.performance?.viewed ?? selectedAnnouncement.views ?? 0).toLocaleString()}
+                </div>
               </div>
               <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
                 <div style={{ fontSize: '11px', color: C.textLight }}>Acknowledged</div>
-                <div style={{ fontSize: '18px', fontWeight: 850, color: '#16a34a' }}>{(analyticsData?.performance?.acknowledged || selectedAnnouncement.acknowledgements || 0).toLocaleString()}</div>
+                <div style={{ fontSize: '18px', fontWeight: 850, color: '#16a34a' }}>
+                  {(analyticsData?.performance?.acknowledged ?? selectedAnnouncement.acknowledgements ?? 0).toLocaleString()}
+                </div>
               </div>
               <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
                 <div style={{ fontSize: '11px', color: C.textLight }}>Engagement</div>
-                <div style={{ fontSize: '18px', fontWeight: 850, color: '#8b5cf6' }}>{analyticsData?.performance?.engagement_rate || selectedAnnouncement.engagement_rate || 0}%</div>
+                <div style={{ fontSize: '18px', fontWeight: 850, color: '#8b5cf6' }}>
+                  {analyticsData?.performance?.engagement_rate ?? selectedAnnouncement.engagement_rate ?? 0}%
+                </div>
               </div>
             </div>
 
             {/* TIMELINE STEPS */}
             <h4 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 12px', color: C.text }}>Broadcast Audit Timeline</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderLeft: `2px solid ${C.primary}40`, paddingLeft: '16px', marginLeft: '6px' }}>
-              {(analyticsData?.audit_timeline || []).map((step, idx) => (
-                <div key={idx} style={{ position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: '-22px', top: '2px', width: '10px', height: '10px', borderRadius: '50%', background: C.primary }}></div>
-                  <div style={{ fontSize: '13px', fontWeight: 750, color: C.text }}>{step.action}</div>
-                  <div style={{ fontSize: '11px', color: C.textLight }}>
-                    Performed by {step.performed_by_name || 'Super Admin'} at {new Date(step.created_at || Date.now()).toLocaleString()}
+            {loadingAnalytics ? (
+              <div style={{ padding: '12px', color: C.textLight }}>Loading audit timeline...</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderLeft: `2px solid ${C.primary}40`, paddingLeft: '16px', marginLeft: '6px' }}>
+                {(analyticsData?.audit_timeline || []).map((step, idx) => (
+                  <div key={idx} style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: '-22px', top: '2px', width: '10px', height: '10px', borderRadius: '50%', background: C.primary }}></div>
+                    <div style={{ fontSize: '13px', fontWeight: 750, color: C.text }}>{step.action}</div>
+                    <div style={{ fontSize: '11px', color: C.textLight }}>
+                      Performed by {step.performed_by_name || 'Super Admin'} at {new Date(step.created_at || Date.now()).toLocaleString()}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
               <button onClick={() => setDetailModalOpen(false)} style={S.btn('primary')}>
