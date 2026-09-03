@@ -198,7 +198,7 @@ export default function ManageWallet() {
   };
 
   return (
-    <div style={isMobile ? { width: '100%', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px', boxSizing: 'border-box' } : { transform: 'scale(0.93)', transformOrigin: 'top left', width: '107.5%', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '50px' }}>
+    <div style={{ width: '100%', maxWidth: '100%', overflowX: 'hidden', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '20px', padding: isMobile ? '8px' : '0 0 50px 0', boxSizing: 'border-box' }}>
       
       {/* ── HEADER BANNER ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -372,9 +372,11 @@ export default function ManageWallet() {
       </div>
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(150px, 1fr))' : 'repeat(6, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))',
         gap: '10px',
-        width: '100%'
+        width: '100%',
+        maxWidth: '100%',
+        boxSizing: 'border-box'
       }}>
         {[
           { id: 'withdrawals', label: '1. Withdrawal Settlements', icon: <MdAccountBalanceWallet size={18} /> },
