@@ -320,13 +320,16 @@ export default function PartnerWallet() {
       ];
 
   const renderStatusBadge = (status) => {
-    const s = String(status || '').toLowerCase();
-    if (s === 'approved' || s === 'paid' || s === 'completed' || s === 'transferred' || s === 'processed') {
-      return <span style={{ padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, background: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0' }}>Approved</span>;
-    } else if (s === 'pending') {
+    const s = String(status || '').toLowerCase().trim();
+    if (!s || ['approved', 'paid', 'completed', 'transferred', 'processed', 'success', 'credited', 'debited', 'released', 'earned', 'active'].includes(s)) {
+      const label = s === 'credited' ? 'Credited' : s === 'debited' ? 'Debited' : s === 'released' ? 'Released' : 'Completed';
+      return <span style={{ padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, background: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0' }}>{label}</span>;
+    } else if (['pending', 'on_hold', 'held', 'processing', 'pending approval'].includes(s)) {
       return <span style={{ padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, background: '#FFEDD5', color: '#C2410C', border: '1px solid #FED7AA' }}>Pending</span>;
-    } else {
+    } else if (['rejected', 'failed', 'cancelled'].includes(s)) {
       return <span style={{ padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, background: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5' }}>Rejected</span>;
+    } else {
+      return <span style={{ padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', textTransform: 'capitalize' }}>{status}</span>;
     }
   };
 
