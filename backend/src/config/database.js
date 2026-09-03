@@ -24,15 +24,15 @@ const poolOptions = process.env.DATABASE_URL
     };
 
 // Enhanced Connection Pool Settings for High Availability and Connection Resiliency
-poolOptions.max = parseInt(process.env.DB_POOL_MAX) || 40;
-poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || 20000;
-poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || 8000; // 8s fail-fast instead of 30s queue backup
+poolOptions.max = parseInt(process.env.DB_POOL_MAX) || 50;
+poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || 30000;
+poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || 20000; // 20s allowance for connection acquisition during traffic spikes
 poolOptions.keepAlive = true;
-poolOptions.keepAliveInitialDelayMillis = 10000;
+poolOptions.keepAliveInitialDelayMillis = 5000;
 
-// Set 15s statement timeout to prevent indefinite lock holds
+// Set 25s statement timeout to prevent indefinite lock holds
 if (!poolOptions.options) {
-  poolOptions.options = '-c statement_timeout=15000';
+  poolOptions.options = '-c statement_timeout=25000';
 }
 
 const pool = new Pool(poolOptions);
@@ -47,8 +47,8 @@ pool.on('error', (err) => {
   logger.error('Unexpected DB client error in pool', { error: err.message });
 });
 
-// Helper: run a query with single transient connection failure retry logic
-const query = async (text, params, retries = 1) => {
+// Helper: run a query with transient connection failure retry logic
+const query = async (text, params, retries = 2) => {
   const start = Date.now();
   try {
     const res = await pool.query(text, params);
@@ -60,12 +60,14 @@ const query = async (text, params, retries = 1) => {
       err.message.includes('timeout exceeded when trying to connect') ||
       err.message.includes('Connection terminated') ||
       err.message.includes('ECONNRESET') ||
-      err.message.includes('ECONNREFUSED')
+      err.message.includes('ECONNREFUSED') ||
+      err.message.includes('remaining connection slots are reserved')
     );
 
     if (isConnErr && retries > 0) {
-      logger.warn(`Transient DB connection error. Retrying query (${retries} left)...`, { error: err.message });
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      const delay = (3 - retries) * 500;
+      logger.warn(`Transient DB connection error. Retrying query in ${delay}ms (${retries} left)...`, { error: err.message });
+      await new Promise((resolve) => setTimeout(resolve, delay));
       return query(text, params, retries - 1);
     }
 
