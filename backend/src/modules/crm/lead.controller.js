@@ -314,7 +314,7 @@ const createLead = async (req, res, next) => {
       partner = newP;
     }
 
-    // 2. Validate Product
+    // 2. Validate Product & SBI Pincode Eligibility
     const { rows: [product] } = await query(`
       SELECT
         p.id, p.name, p.is_active, p.bank_id,
@@ -326,6 +326,13 @@ const createLead = async (req, res, next) => {
     `, [targetProductId]);
     if (!product || !product.is_active) {
       return error(res, 'Selected product is inactive or unavailable', 400);
+    }
+
+    const { isSbiPincodeValid, isSbiProductOrBank } = require('../../utils/sbiPincodeChecker');
+    if (isSbiProductOrBank(product.bank_name, product.name, product.bank_code)) {
+      if (!pincode || !isSbiPincodeValid(pincode)) {
+        return error(res, "You can't add lead for this pincode", 400);
+      }
     }
 
     // 3. 30-Day Duplicate Check (Applications & Confirmed Leads)

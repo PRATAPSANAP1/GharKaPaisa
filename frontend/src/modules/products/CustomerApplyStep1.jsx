@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { FaExclamationTriangle, FaShieldAlt, FaInfoCircle, FaPaperPlane, FaClipboardList } from 'react-icons/fa';
 import { getApiV1Url } from '../../config/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import PincodeAutoComplete, { isSbiPincodeValid } from '../../components/PincodeAutoComplete';
 
 export default function CustomerApplyStep1() {
   const params = useParams();
@@ -118,6 +119,16 @@ export default function CustomerApplyStep1() {
       }
     }
 
+    const cleanPincode = pincode.trim();
+    if (isSbiProduct || cleanPincode) {
+      if (!cleanPincode || !/^\d{6}$/.test(cleanPincode)) {
+        return alert('Please enter a valid 6-digit Pincode.');
+      }
+      if (isSbiProduct && !isSbiPincodeValid(cleanPincode)) {
+        return alert("You can't add lead for this pincode");
+      }
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch(`${getApiV1Url()}/public/apply/${activeToken}`, {
@@ -130,6 +141,7 @@ export default function CustomerApplyStep1() {
           customer_mobile: cleanMobile,
           pan: cleanPan || null,
           pan_number: cleanPan || null,
+          pincode: cleanPincode || null,
           process_type: 'linked_share',
           process_by: 'partner',
           source: 'linked_share'
@@ -426,6 +438,24 @@ export default function CustomerApplyStep1() {
                     )}
                   </div>
                 )}
+
+                {/* Pincode Field (Mandatory for SBI products) */}
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>
+                    Pincode {isSbiProduct ? '*' : '(Optional)'}
+                  </label>
+                  <PincodeAutoComplete
+                    value={pincode}
+                    onChange={(val) => setPincode(val)}
+                    onSelect={({ pincode: pin, city: cName }) => {
+                      setPincode(pin);
+                      if (cName) setCity(cName);
+                    }}
+                    isSbiOnly={isSbiProduct}
+                    placeholder="Enter 6-digit Pincode"
+                    C={C}
+                  />
+                </div>
 
                 {/* Submit Button */}
                 <button

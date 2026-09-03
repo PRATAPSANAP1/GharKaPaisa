@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import api from '../../../services/api';
 import { getBankApplyLink } from '../../home/components/CreditCards/cardLinkHelper';
 import { MdArrowBack, MdSend, MdContentCopy, MdShare, MdOpenInNew, MdCheckCircle, MdAssignment, MdLink, MdAccountBalance, MdVerifiedUser, MdRefresh } from 'react-icons/md';
+import { isSbiProductOrBank } from '../../../utils/sbiPincodeChecker';
+import PincodeAutoComplete, { isSbiPincodeValid } from '../../../components/PincodeAutoComplete';
 
 const PROCESS_OPTIONS = [
   {
@@ -132,7 +134,17 @@ export default function PartnerAddLead() {
   const handlePincodeChange = async (val) => {
     const clean = val.replace(/\D/g, '').slice(0, 6);
     setPincode(clean);
+
+    const selectedProd = products.find(p => p.id === selectedProductId);
+    const isSbiSelected = isSbiProductOrBank(selectedProd?.bank_name, selectedProd?.name, selectedProd?.bank_code);
+
     if (clean.length === 6) {
+      if (isSbiSelected && !isSbiPincodeValid(clean)) {
+        setErrors(prev => ({ ...prev, pincode: "You can't add lead for this pincode" }));
+      } else {
+        setErrors(prev => ({ ...prev, pincode: null }));
+      }
+
       try {
         setPincodeLoading(true);
         const res = await api.get(`/location/pincode/${clean}`);
@@ -145,6 +157,8 @@ export default function PartnerAddLead() {
       } finally {
         setPincodeLoading(false);
       }
+    } else {
+      setErrors(prev => ({ ...prev, pincode: null }));
     }
   };
 
@@ -153,11 +167,14 @@ export default function PartnerAddLead() {
     e.preventDefault();
     const newErrors = {};
 
+    const selectedProd = products.find(p => p.id === selectedProductId);
+    const isSbiSelected = isSbiProductOrBank(selectedProd?.bank_name, selectedProd?.name, selectedProd?.bank_code);
+
     if (!selectedProductId) {
       newErrors.selectedProductId = 'Please select a product/card.';
     }
 
-    if (processType === 'lead_punching' || processType === 'physical_process') {
+    if (processType === 'lead_punching' || processType === 'physical_process' || isSbiSelected) {
       if (!customerName.trim() || customerName.trim().length < 2) {
         newErrors.customerName = 'Full name must be at least 2 characters.';
       }
@@ -166,12 +183,17 @@ export default function PartnerAddLead() {
       }
     }
     
-    if (processType === 'lead_punching') {
-      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (processType === 'lead_punching' || isSbiSelected) {
+      if (!email.trim() && processType === 'lead_punching') {
+        newErrors.email = 'Please enter a valid email address.';
+      } else if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
         newErrors.email = 'Please enter a valid email address.';
       }
+
       if (!pincode.trim() || !/^\d{6}$/.test(pincode.trim())) {
         newErrors.pincode = 'Please enter a valid 6-digit postal pincode.';
+      } else if (isSbiSelected && !isSbiPincodeValid(pincode.trim())) {
+        newErrors.pincode = "You can't add lead for this pincode";
       }
     }
 
@@ -185,7 +207,6 @@ export default function PartnerAddLead() {
     }
 
     // Direct bank url resolution for linked_share and direct_bank
-    const selectedProd = products.find(p => p.id === selectedProductId);
     const directBankUrl = getBankApplyLink(selectedProd?.name, selectedProd?.bank_code || selectedProd?.bank_name, selectedProd) || selectedProd?.partner_url || selectedProd?.application_url || selectedProd?.public_url || selectedProd?.apply_url || selectedProd?.redirect_url || selectedProd?.bank_link || 'https://gharkapaisa.in';
 
     if (processType === 'linked_share' && (!customerName.trim() || !mobile.trim())) {
@@ -859,19 +880,40 @@ export default function PartnerAddLead() {
                 <div>
                   <label style={S.label}>
                     Pincode *
-                    {pincodeLoading && <span style={{ fontSize: '11px', color: C.primary, marginLeft: '6px' }}>Searching...</span>}
+                    {pincodeLoading && <span style={{ fontSize: '11px', color: C.primary, marginLeft: '6px' }}>Searching location...</span>}
                   </label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    placeholder="6-digit Pincode"
+                  <PincodeAutoComplete
                     value={pincode}
-                    onChange={(e) => handlePincodeChange(e.target.value)}
-                    style={{ ...S.input, height: '42px', fontSize: '13px', borderColor: errors.pincode ? C.red : C.border }}
+                    onChange={(val) => handlePincodeChange(val)}
+                    onSelect={({ pincode: pin, city: cName }) => {
+                      handlePincodeChange(pin);
+                      if (cName) setCity(cName);
+                    }}
+                    isSbiOnly={isSbiSelected}
+                    error={errors.pincode}
+                    C={C}
                   />
-                  {errors.pincode && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{errors.pincode}</span>}
                 </div>
               </div>
+
+              {processType !== 'lead_punching' && isSbiSelected && (
+                <div style={{ marginTop: '12px' }}>
+                  <label style={S.label}>
+                    Pincode * (SBI Listed Location Verification)
+                  </label>
+                  <PincodeAutoComplete
+                    value={pincode}
+                    onChange={(val) => handlePincodeChange(val)}
+                    onSelect={({ pincode: pin, city: cName }) => {
+                      handlePincodeChange(pin);
+                      if (cName) setCity(cName);
+                    }}
+                    isSbiOnly={true}
+                    error={errors.pincode}
+                    C={C}
+                  />
+                </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>

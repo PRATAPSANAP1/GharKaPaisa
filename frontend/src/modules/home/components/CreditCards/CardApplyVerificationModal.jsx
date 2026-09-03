@@ -1,21 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaTimes, FaLock, FaCheckCircle, FaUser, FaPhoneAlt } from "react-icons/fa";
+import { FaTimes, FaLock, FaCheckCircle, FaUser, FaPhoneAlt, FaIdCard, FaMapMarkerAlt } from "react-icons/fa";
 
 import { getBankApplyLink } from "./cardLinkHelper";
 import { getApiV1Url } from "../../../../config/api";
 import { useMsg91OTP } from "../../../../hooks/useMsg91OTP";
+import { isSbiProductOrBank } from "../../../../utils/sbiPincodeChecker";
+import PincodeAutoComplete, { isSbiPincodeValid } from "../../../../components/PincodeAutoComplete";
 
 export default function CardApplyVerificationModal({ card, onClose, C }) {
   const [step, setStep] = useState(1); // 1: Details, 2: OTP
 
   const [customerName, setCustomerName] = useState("");
   const [mobile, setMobile] = useState("");
+  const [panNumber, setPanNumber] = useState("");
+  const [pincode, setPincode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   // ── MSG91 OTP SDK readiness ────────────────────────────────────────────────
   const { sdkReady } = useMsg91OTP();
+
+  const isSbi = isSbiProductOrBank(card?.bankName, card?.cardName, card?.bankId);
   
   // 6-box OTP state
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
@@ -35,10 +41,28 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
     setErrorMsg("");
 
     if (!customerName.trim()) {
-      return setErrorMsg("Please enter your name.");
+      return setErrorMsg("Please enter your full name.");
     }
     if (!mobile.trim() || !/^[6-9]\d{9}$/.test(mobile.trim())) {
       return setErrorMsg("Please enter a valid 10-digit mobile number.");
+    }
+
+    const cleanPan = panNumber.trim().toUpperCase();
+    if (isSbi) {
+      if (!cleanPan || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+        return setErrorMsg("Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).");
+      }
+    } else if (cleanPan && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(cleanPan)) {
+      return setErrorMsg("Please enter a valid 10-character PAN Card number.");
+    }
+
+    const cleanPincode = pincode.trim();
+    if (!cleanPincode || !/^\d{6}$/.test(cleanPincode)) {
+      return setErrorMsg("Please enter a valid 6-digit Pincode.");
+    }
+
+    if (isSbi && !isSbiPincodeValid(cleanPincode)) {
+      return setErrorMsg("You can't add lead for this pincode");
     }
 
     setLoading(true);
@@ -175,6 +199,9 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
           const payload = {
             customerName: customerName.trim(),
             mobile: mobile.trim(),
+            pan: panNumber.trim().toUpperCase(),
+            pan_number: panNumber.trim().toUpperCase(),
+            pincode: pincode.trim(),
             bankName: card.bankName || "Unknown Bank",
             cardName: card.cardName || "Credit Card"
           };
@@ -407,7 +434,7 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
         {step === 1 && (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: C.textLight || "#64748b" }}>Full Name</label>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: C.textLight || "#64748b" }}>Full Name *</label>
               <div style={{ position: "relative" }}>
                 <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight || "#64748b" }}><FaUser size={13} /></span>
                 <input
@@ -431,12 +458,12 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <label style={{ fontSize: "12px", fontWeight: 700, color: C.textLight || "#64748b" }}>Mobile Number</label>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: C.textLight || "#64748b" }}>Mobile Number *</label>
               <div style={{ position: "relative" }}>
                 <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight || "#64748b" }}><FaPhoneAlt size={13} /></span>
                 <input
                   type="tel"
-                  placeholder="Enter 10-digit number"
+                  placeholder="Enter 10-digit mobile number"
                   maxLength={10}
                   value={mobile}
                   onChange={(e) => {
@@ -456,6 +483,64 @@ export default function CardApplyVerificationModal({ card, onClose, C }) {
                   }}
                 />
               </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: C.textLight || "#64748b" }}>
+                PAN Card Number {isSbi ? "*" : "(Optional)"}
+              </label>
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: C.textLight || "#64748b" }}><FaIdCard size={13} /></span>
+                <input
+                  type="text"
+                  maxLength={10}
+                  placeholder="ABCDE1234F"
+                  value={panNumber}
+                  onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
+                  style={{
+                    width: "100%",
+                    padding: "12px 14px 12px 38px",
+                    borderRadius: "10px",
+                    border: `1px solid ${C.border || '#e2e8f0'}`,
+                    background: C.bgSecondary || "#f8fafc",
+                    color: C.text || "#1e293b",
+                    fontSize: "13.5px",
+                    fontFamily: "monospace",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    outline: "none",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              <label style={{ fontSize: "12px", fontWeight: 700, color: C.textLight || "#64748b" }}>
+                Enter Pincode *
+              </label>
+              <PincodeAutoComplete
+                value={pincode}
+                onChange={(val) => {
+                  setPincode(val);
+                  if (isSbi && val.length === 6 && !isSbiPincodeValid(val)) {
+                    setErrorMsg("You can't add lead for this pincode");
+                  } else if (errorMsg === "You can't add lead for this pincode") {
+                    setErrorMsg("");
+                  }
+                }}
+                onSelect={({ pincode: pin }) => {
+                  setPincode(pin);
+                  if (isSbi && !isSbiPincodeValid(pin)) {
+                    setErrorMsg("You can't add lead for this pincode");
+                  } else {
+                    setErrorMsg("");
+                  }
+                }}
+                isSbiOnly={isSbi}
+                error={isSbi && pincode.length === 6 && !isSbiPincodeValid(pincode) ? "You can't add lead for this pincode" : ''}
+                C={C}
+              />
             </div>
 
             <button
