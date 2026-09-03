@@ -256,6 +256,8 @@ router.get('/', async (req, res, next) => {
     await query(`
       UPDATE employees e
       SET designation = CASE 
+        WHEN h.hierarchy_level = 'BRANCH_HEAD' THEN 'Branch Head'
+        WHEN h.hierarchy_level = 'SENIOR_MANAGER' THEN 'Senior Manager'
         WHEN h.hierarchy_level = 'MANAGER' THEN 'Manager'
         WHEN h.hierarchy_level = 'TEAM_LEADER' THEN 'Team Leader'
         WHEN h.hierarchy_level = 'TC' THEN 'TC'
@@ -267,11 +269,15 @@ router.get('/', async (req, res, next) => {
 
     if (designation) {
       if (designation === 'TC' || designation === 'Telecaller (TC)' || designation === 'Telecaller') {
-        queryStr += ` AND (e.designation = 'TC' OR e.designation ILIKE '%Telecaller%' OR (e.designation NOT ILIKE '%Manager%' AND e.designation NOT ILIKE '%Team Leader%' AND e.designation != 'TL'))`;
-      } else if (designation === 'Manager') {
-        queryStr += ` AND (e.designation ILIKE '%Manager%' OR h.hierarchy_level = 'MANAGER')`;
-      } else if (designation === 'Team Leader') {
+        queryStr += ` AND (e.designation = 'TC' OR e.designation ILIKE '%Telecaller%' OR h.hierarchy_level = 'TC')`;
+      } else if (designation === 'TL' || designation === 'Team Leader') {
         queryStr += ` AND (e.designation ILIKE '%Team Leader%' OR e.designation = 'TL' OR h.hierarchy_level = 'TEAM_LEADER')`;
+      } else if (designation === 'Manager' || designation === 'MANAGER') {
+        queryStr += ` AND (e.designation = 'Manager' OR e.designation = 'MANAGER' OR h.hierarchy_level = 'MANAGER')`;
+      } else if (designation === 'Senior Manager' || designation === 'SENIOR_MANAGER' || designation === 'SENIOR MANAGER') {
+        queryStr += ` AND (e.designation ILIKE '%Senior Manager%' OR e.designation = 'SENIOR MANAGER' OR h.hierarchy_level = 'SENIOR_MANAGER')`;
+      } else if (designation === 'Branch Head' || designation === 'BRANCH_HEAD' || designation === 'BRANCH HEAD') {
+        queryStr += ` AND (e.designation ILIKE '%Branch Head%' OR e.designation = 'BRANCH HEAD' OR h.hierarchy_level = 'BRANCH_HEAD')`;
       } else {
         params.push(designation);
         queryStr += ` AND e.designation = $${params.length}`;
@@ -936,7 +942,7 @@ router.post('/:id/hierarchy', async (req, res, next) => {
     const cleanMgrId = (manager_id && manager_id !== 'null' && manager_id !== 'undefined' && String(manager_id).trim() !== '') ? String(manager_id).trim() : null;
 
     // Sync employee designation in employees table
-    const mapDesg = { 'MANAGER': 'Manager', 'TEAM_LEADER': 'Team Leader', 'TC': 'TC' };
+    const mapDesg = { 'BRANCH_HEAD': 'Branch Head', 'SENIOR_MANAGER': 'Senior Manager', 'MANAGER': 'Manager', 'TEAM_LEADER': 'Team Leader', 'TL': 'Team Leader', 'TC': 'TC' };
     const desg = mapDesg[hierarchy_level.toUpperCase()] || hierarchy_level;
     await query(`UPDATE employees SET designation = $1, updated_at = NOW() WHERE id = $2`, [desg, id]);
 
@@ -971,7 +977,7 @@ router.post('/bulk-hierarchy', async (req, res, next) => {
     const errors = [];
 
     // Sync designation mapping
-    const mapDesg = { 'MANAGER': 'Manager', 'TEAM_LEADER': 'Team Leader', 'TC': 'TC' };
+    const mapDesg = { 'BRANCH_HEAD': 'Branch Head', 'SENIOR_MANAGER': 'Senior Manager', 'MANAGER': 'Manager', 'TEAM_LEADER': 'Team Leader', 'TL': 'Team Leader', 'TC': 'TC' };
 
     for (const assignment of assignments) {
       try {

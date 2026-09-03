@@ -492,9 +492,11 @@ export default function EmployeeManagement() {
               <div style={{ display: 'flex', gap: '12px' }}>
                 <select value={designationFilter} onChange={(e) => setDesignationFilter(e.target.value)} style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}>
                   <option value="">All Designations</option>
-                  <option value="Manager">Manager</option>
-                  <option value="Team Leader">Team Leader</option>
-                  <option value="TC">Telecaller (TC)</option>
+                  <option value="TC">TC (Telecaller)</option>
+                  <option value="TL">TL (Team Leader)</option>
+                  <option value="Manager">MANAGER</option>
+                  <option value="Senior Manager">SENIOR MANAGER</option>
+                  <option value="Branch Head">BRANCH HEAD</option>
                 </select>
 
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}>
@@ -533,7 +535,7 @@ export default function EmployeeManagement() {
                         <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 400 }}>{emp.mobile_number}</div>
                       </td>
                       <td style={{ padding: '14px 20px', fontWeight: 800 }}>
-                        {String(emp.designation || '').toLowerCase().includes('manager') ? 'Manager' : String(emp.designation || '').toLowerCase().includes('team leader') || String(emp.designation || '').toUpperCase() === 'TL' ? 'Team Leader' : 'Telecaller (TC)'}
+                        {emp.designation || (emp.hierarchy_level === 'BRANCH_HEAD' ? 'BRANCH HEAD' : emp.hierarchy_level === 'SENIOR_MANAGER' ? 'SENIOR MANAGER' : emp.hierarchy_level === 'MANAGER' ? 'MANAGER' : emp.hierarchy_level === 'TEAM_LEADER' ? 'TL' : 'TC')}
                       </td>
                       <td style={{ padding: '14px 20px', color: C.textMid }}>
                         <div>{emp.manager_name ? `Mgr: ${emp.manager_name}` : 'Direct'}</div>
@@ -1471,9 +1473,11 @@ export default function EmployeeManagement() {
                     }} 
                     style={{ width: '100%', padding: '11px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px', fontWeight: 700 }}
                   >
-                    <option value="MANAGER">Manager</option>
-                    <option value="TEAM_LEADER">Team Leader (TL)</option>
-                    <option value="TC">Telecaller (TC)</option>
+                    <option value="BRANCH_HEAD">BRANCH HEAD</option>
+                    <option value="SENIOR_MANAGER">SENIOR MANAGER</option>
+                    <option value="MANAGER">MANAGER</option>
+                    <option value="TEAM_LEADER">TL (Team Leader)</option>
+                    <option value="TC">TC (Telecaller)</option>
                   </select>
                 </div>
 
