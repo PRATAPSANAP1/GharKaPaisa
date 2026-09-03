@@ -64,10 +64,15 @@ router.post('/application/reject', appCtrl.rejectApplication);
 router.post('/application/reassign', appCtrl.reassignApplication);
 router.post('/application/manual-commission', appCtrl.manualCommission);
 
-// Announcements & Broadcast Notifications (Task 10)
+// Announcements & Broadcast Notifications
 router.get('/announcements', notifCtrl.getAnnouncements);
+router.get('/announcements/stats', notifCtrl.getAnnouncementStats);
+router.get('/announcement/:id/analytics', notifCtrl.getAnnouncementAnalytics);
 router.post('/announcement', notifCtrl.createAnnouncement);
 router.put('/announcement/:id', notifCtrl.updateAnnouncement);
+router.post('/announcement/:id/publish', notifCtrl.publishAnnouncement);
+router.post('/announcement/:id/schedule', notifCtrl.scheduleAnnouncement);
+router.post('/announcement/:id/cancel', notifCtrl.cancelAnnouncement);
 router.delete('/announcement/:id', notifCtrl.deleteAnnouncement);
 router.post('/notification/broadcast', notifCtrl.broadcastNotification);
 router.get('/notification/reports', notifCtrl.getNotificationReports);

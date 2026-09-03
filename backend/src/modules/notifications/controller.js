@@ -237,41 +237,285 @@ const saveSettings = async (req, res, next) => {
   }
 };
 
-// GET /announcements (list active matching user role)
+// Helper to resolve user IDs based on audience selection
+async function resolveAnnouncementTargetUsers(audienceType, targetRole, targetUserIds = []) {
+  try {
+    if (Array.isArray(targetUserIds) && targetUserIds.length > 0) {
+      const { rows } = await query(`SELECT id FROM users WHERE id = ANY($1::uuid[])`, [targetUserIds]);
+      return rows.map(r => r.id);
+    }
+
+    const type = (audienceType || targetRole || 'ALL_USERS').toUpperCase();
+    
+    if (type === 'ALL_USERS' || type === 'ALL') {
+      const { rows } = await query(`SELECT id FROM users WHERE is_active = true`);
+      return rows.map(r => r.id);
+    } else if (type === 'PARTNERS' || type === 'PARTNER') {
+      const { rows } = await query(`SELECT id FROM users WHERE role = 'PARTNER' AND is_active = true`);
+      return rows.map(r => r.id);
+    } else if (type === 'EMPLOYEES' || type === 'EMPLOYEE') {
+      const { rows } = await query(`SELECT id FROM users WHERE role IN ('EMPLOYEE','ADMIN','HR','SUPER_ADMIN') AND is_active = true`);
+      return rows.map(r => r.id);
+    } else if (type === 'MANAGERS' || type === 'MANAGER') {
+      const { rows } = await query(`SELECT id FROM users WHERE (designation ILIKE '%manager%' OR role = 'ADMIN') AND is_active = true`);
+      return rows.map(r => r.id);
+    } else if (type === 'TEAM_LEADERS' || type === 'TL' || type === 'TEAM_LEADER') {
+      const { rows } = await query(`SELECT id FROM users WHERE (designation ILIKE '%leader%' OR designation ILIKE '%tl%') AND is_active = true`);
+      return rows.map(r => r.id);
+    } else if (type === 'TELECALLERS' || type === 'TC' || type === 'TELECALLER') {
+      const { rows } = await query(`SELECT id FROM users WHERE (designation ILIKE '%telecaller%' OR designation ILIKE '%tc%') AND is_active = true`);
+      return rows.map(r => r.id);
+    } else {
+      const { rows } = await query(`SELECT id FROM users WHERE is_active = true`);
+      return rows.map(r => r.id);
+    }
+  } catch (err) {
+    console.error('Error resolving announcement target users:', err);
+    return [];
+  }
+}
+
+// Helper to log announcement audit events
+async function logAnnouncementAudit(announcementId, action, userId, userName, oldVal = {}, newVal = {}) {
+  try {
+    await query(`
+      INSERT INTO announcement_audit_logs (announcement_id, action, performed_by, performed_by_name, old_value, new_value)
+      VALUES ($1, $2, $3, $4, $5, $6)
+    `, [announcementId, action, userId || null, userName || 'Super Admin', JSON.stringify(oldVal), JSON.stringify(newVal)]);
+  } catch (err) {
+    console.error('Failed to log announcement audit:', err);
+  }
+}
+
+// GET /announcements (list active matching user role OR full Super Admin console)
 const getAnnouncements = async (req, res, next) => {
   try {
     const userRole = (req.user?.role || 'CUSTOMER').toLowerCase();
 
     // If superadmin requesting all announcements for management
     if (['super_admin', 'admin'].includes(userRole) && (req.query.admin === 'true' || req.originalUrl?.includes('/superadmin'))) {
+      const { search, status, audience, priority, date_from, date_to } = req.query;
+      let where = `WHERE 1=1`;
+      const values = [];
+      let idx = 1;
+
+      if (search) {
+        where += ` AND (a.title ILIKE $${idx} OR a.announcement_id ILIKE $${idx} OR a.short_description ILIKE $${idx})`;
+        values.push(`%${search}%`);
+        idx++;
+      }
+      if (status && status !== 'all') {
+        where += ` AND LOWER(a.status) = LOWER($${idx})`;
+        values.push(status);
+        idx++;
+      }
+      if (audience && audience !== 'all') {
+        where += ` AND (LOWER(a.audience_type) = LOWER($${idx}) OR LOWER(a.target_role) = LOWER($${idx}))`;
+        values.push(audience);
+        idx++;
+      }
+      if (priority && priority !== 'all') {
+        where += ` AND LOWER(a.priority) = LOWER($${idx})`;
+        values.push(priority);
+        idx++;
+      }
+      if (date_from) {
+        where += ` AND a.created_at >= $${idx}`;
+        values.push(date_from);
+        idx++;
+      }
+      if (date_to) {
+        where += ` AND a.created_at <= $${idx}`;
+        values.push(date_to);
+        idx++;
+      }
+
       const { rows } = await query(`
-        SELECT a.*, u.full_name as creator_name
+        SELECT 
+          a.*,
+          COALESCE(u.full_name, 'Super Admin') as creator_name,
+          COALESCE(r.recipient_count, 0) as reach,
+          COALESCE(r.read_count, 0) as views,
+          COALESCE(r.ack_count, 0) as acknowledgements,
+          CASE 
+            WHEN COALESCE(r.recipient_count, 0) > 0 
+            THEN ROUND((COALESCE(r.read_count, 0)::numeric / COALESCE(r.recipient_count, 1)::numeric) * 100, 1)
+            ELSE 0 
+          END as engagement_rate
         FROM announcements a
         LEFT JOIN users u ON u.id = a.created_by
+        LEFT JOIN (
+          SELECT 
+            announcement_id,
+            COUNT(*) as recipient_count,
+            COUNT(read_at) as read_count,
+            COUNT(acknowledged_at) as ack_count
+          FROM announcement_recipients
+          GROUP BY announcement_id
+        ) r ON r.announcement_id = a.id
+        ${where}
         ORDER BY a.created_at DESC
-      `);
+      `, values);
+
       return success(res, rows);
     }
 
-    let roleConditions = `(target_role = 'all' OR LOWER(target_role) = 'all')`;
-    if (userRole === 'partner') {
-      roleConditions = `(target_role = 'all' OR LOWER(target_role) IN ('all', 'partner', 'partners', 'all_partners'))`;
-    } else if (userRole === 'team_member' || userRole === 'team') {
-      roleConditions = `(target_role = 'all' OR LOWER(target_role) IN ('all', 'team', 'team_member', 'all_team', 'partner', 'partners'))`;
-    } else if (['admin', 'super_admin'].includes(userRole)) {
-      roleConditions = `(target_role = 'all' OR LOWER(target_role) IN ('all', 'admin', 'super_admin'))`;
-    }
-
+    // User-facing announcements feed
     const { rows } = await query(`
-      SELECT * FROM announcements 
-      WHERE status = 'publish' 
-        AND ${roleConditions}
-        AND (start_date IS NULL OR start_date <= CURRENT_DATE)
-        AND (end_date IS NULL OR end_date >= CURRENT_DATE)
-      ORDER BY created_at DESC
-    `);
+      SELECT a.*, 
+        (ar.read_at IS NOT NULL) as is_read,
+        (ar.acknowledged_at IS NOT NULL) as is_acknowledged
+      FROM announcements a
+      LEFT JOIN announcement_recipients ar ON ar.announcement_id = a.id AND ar.user_id = $1
+      WHERE (LOWER(a.status) IN ('publish', 'published'))
+        AND (a.expires_at IS NULL OR a.expires_at >= NOW())
+      ORDER BY a.created_at DESC
+    `, [req.user.id]);
 
     return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /superadmin/announcements/stats
+const getAnnouncementStats = async (req, res, next) => {
+  try {
+    const [counts, reach, audience, priority, top, trend] = await Promise.all([
+      query(`
+        SELECT 
+          COUNT(*) as total,
+          COUNT(*) FILTER (WHERE LOWER(status) IN ('publish','published')) as published,
+          COUNT(*) FILTER (WHERE LOWER(status) IN ('schedule','scheduled')) as scheduled,
+          COUNT(*) FILTER (WHERE LOWER(status) IN ('draft')) as drafts,
+          COUNT(*) FILTER (WHERE LOWER(status) IN ('expired') OR (expires_at IS NOT NULL AND expires_at < NOW())) as expired
+        FROM announcements
+      `),
+      query(`SELECT COUNT(DISTINCT user_id) as total_reach FROM announcement_recipients`),
+      query(`
+        SELECT 
+          COALESCE(NULLIF(audience_type, ''), target_role, 'ALL_USERS') as audience,
+          COUNT(*) as count
+        FROM announcements
+        GROUP BY 1
+      `),
+      query(`
+        SELECT 
+          UPPER(priority) as priority,
+          COUNT(*) as count
+        FROM announcements
+        GROUP BY 1
+      `),
+      query(`
+        SELECT 
+          a.id, a.announcement_id, a.title, a.status, a.priority, a.created_at,
+          COALESCE(r.recipient_count, 0) as reach,
+          COALESCE(r.read_count, 0) as views,
+          COALESCE(r.ack_count, 0) as acknowledgements,
+          CASE 
+            WHEN COALESCE(r.recipient_count, 0) > 0 
+            THEN ROUND((COALESCE(r.read_count, 0)::numeric / COALESCE(r.recipient_count, 1)::numeric) * 100, 1)
+            ELSE 0 
+          END as engagement_rate
+        FROM announcements a
+        LEFT JOIN (
+          SELECT 
+            announcement_id,
+            COUNT(*) as recipient_count,
+            COUNT(read_at) as read_count,
+            COUNT(acknowledged_at) as ack_count
+          FROM announcement_recipients
+          GROUP BY announcement_id
+        ) r ON r.announcement_id = a.id
+        ORDER BY engagement_rate DESC, reach DESC
+        LIMIT 5
+      `),
+      query(`
+        SELECT 
+          TO_CHAR(created_at, 'YYYY-MM-DD') as date,
+          COUNT(*) FILTER (WHERE LOWER(status) IN ('publish','published')) as published,
+          COUNT(*) FILTER (WHERE LOWER(status) IN ('schedule','scheduled')) as scheduled,
+          COUNT(*) FILTER (WHERE LOWER(status) IN ('draft')) as drafts
+        FROM announcements
+        WHERE created_at >= NOW() - INTERVAL '30 days'
+        GROUP BY 1
+        ORDER BY 1 ASC
+      `)
+    ]);
+
+    return success(res, {
+      kpis: {
+        total: parseInt(counts.rows[0]?.total || 0),
+        published: parseInt(counts.rows[0]?.published || 0),
+        scheduled: parseInt(counts.rows[0]?.scheduled || 0),
+        drafts: parseInt(counts.rows[0]?.drafts || 0),
+        expired: parseInt(counts.rows[0]?.expired || 0),
+        total_reach: parseInt(reach.rows[0]?.total_reach || 0),
+      },
+      audience_distribution: audience.rows,
+      priority_distribution: priority.rows,
+      top_performing: top.rows,
+      trend_statistics: trend.rows
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /superadmin/announcement/:id/analytics
+const getAnnouncementAnalytics = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows: [ann] } = await query(`
+      SELECT a.*, u.full_name as creator_name, u.email as creator_email
+      FROM announcements a
+      LEFT JOIN users u ON u.id = a.created_by
+      WHERE a.id = $1 OR a.announcement_id = $1
+    `, [id]);
+
+    if (!ann) return notFound(res, 'Announcement not found');
+
+    const [recipients, auditLogs] = await Promise.all([
+      query(`
+        SELECT 
+          ar.*, 
+          u.full_name, u.email, u.role, u.designation,
+          pp.partner_code
+        FROM announcement_recipients ar
+        JOIN users u ON u.id = ar.user_id
+        LEFT JOIN partner_profiles pp ON pp.user_id = u.id
+        WHERE ar.announcement_id = $1
+        ORDER BY ar.created_at DESC
+        LIMIT 200
+      `, [ann.id]),
+      query(`
+        SELECT * FROM announcement_audit_logs
+        WHERE announcement_id = $1
+        ORDER BY created_at ASC
+      `, [ann.id])
+    ]);
+
+    const totalTargeted = recipients.rows.length;
+    const delivered = recipients.rows.filter(r => r.delivery_status === 'DELIVERED').length;
+    const viewed = recipients.rows.filter(r => r.read_at).length;
+    const clicked = recipients.rows.filter(r => r.clicked_at).length;
+    const acknowledged = recipients.rows.filter(r => r.acknowledged_at).length;
+
+    const engagementRate = totalTargeted > 0 ? ((viewed / totalTargeted) * 100).toFixed(1) : 0;
+
+    return success(res, {
+      announcement: ann,
+      performance: {
+        total_targeted: totalTargeted,
+        delivered,
+        viewed,
+        clicked,
+        acknowledged,
+        engagement_rate: parseFloat(engagementRate)
+      },
+      recipients: recipients.rows,
+      audit_timeline: auditLogs.rows
+    });
   } catch (err) {
     next(err);
   }
@@ -280,16 +524,68 @@ const getAnnouncements = async (req, res, next) => {
 // SUPER ADMIN announcement methods
 const createAnnouncement = async (req, res, next) => {
   try {
-    const { title, description, banner_image, target_role, priority, start_date, end_date, redirect_url, status } = req.body;
-    if (!title || !description) return error(res, 'Title and description are required', 400);
+    const { 
+      title, short_description, message, description, banner_image, 
+      audience_type, target_role, priority, delivery_channels, 
+      target_user_ids, target_team_ids, scheduled_at, published_at, 
+      expires_at, start_date, end_date, redirect_url, status 
+    } = req.body;
+
+    if (!title || (!message && !description)) {
+      return error(res, 'Title and message/description are required', 400);
+    }
+
+    const nextSeqRes = await query(`SELECT nextval('announcement_seq') as seq`);
+    const annCode = `ANN-${nextSeqRes.rows[0].seq}`;
+
+    const finalMessage = message || description;
+    const finalShortDesc = short_description || (finalMessage ? finalMessage.substring(0, 150) : '');
+    const finalStatus = (status || 'PUBLISHED').toUpperCase();
+    const finalAudience = (audience_type || target_role || 'ALL_USERS').toUpperCase();
+    const finalPriority = (priority || 'MEDIUM').toUpperCase();
+    const finalChannels = JSON.stringify(delivery_channels || ['in-app']);
 
     const { rows: [item] } = await query(`
-      INSERT INTO announcements (title, description, banner_image, target_role, priority, start_date, end_date, redirect_url, status, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *
-    `, [title, description, banner_image || null, target_role || 'all', priority || 'normal', start_date || null, end_date || null, redirect_url || null, status || 'draft', req.user.id]);
+      INSERT INTO announcements (
+        announcement_id, title, short_description, message, description, banner_image, 
+        audience_type, target_role, priority, status, delivery_channels, target_user_ids, 
+        target_team_ids, scheduled_at, published_at, expires_at, start_date, end_date, redirect_url, created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) 
+      RETURNING *
+    `, [
+      annCode, title, finalShortDesc, finalMessage, finalMessage, banner_image || null, 
+      finalAudience, finalAudience.toLowerCase(), finalPriority, finalStatus, finalChannels, 
+      JSON.stringify(target_user_ids || []), JSON.stringify(target_team_ids || []), 
+      scheduled_at || null, published_at || new Date(), expires_at || null, 
+      start_date || null, end_date || null, redirect_url || null, req.user.id
+    ]);
 
-    // Live broadcast update to connected users if published immediately
-    if (status === 'publish') {
+    // Audit Log
+    await logAnnouncementAudit(item.id, 'Created Announcement', req.user.id, req.user.full_name || 'Super Admin', {}, item);
+
+    // If published, resolve recipients and dispatch notifications
+    if (finalStatus === 'PUBLISHED' || finalStatus === 'PUBLISH') {
+      const targetUsers = await resolveAnnouncementTargetUsers(finalAudience, target_role, target_user_ids);
+      if (targetUsers.length > 0) {
+        for (const uid of targetUsers) {
+          await query(`
+            INSERT INTO announcement_recipients (announcement_id, user_id, delivery_status, delivered_at)
+            VALUES ($1, $2, 'DELIVERED', NOW())
+            ON CONFLICT (announcement_id, user_id) DO NOTHING
+          `, [item.id, uid]).catch(() => {});
+        }
+
+        await bulkNotify(targetUsers, title, finalShortDesc, 'info', { 
+          category: 'announcement', 
+          priority: finalPriority, 
+          announcement_id: item.id 
+        });
+
+        await query(`UPDATE announcements SET reach_count = $1 WHERE id = $2`, [targetUsers.length, item.id]);
+      }
+
+      await logAnnouncementAudit(item.id, 'Published Announcement', req.user.id, req.user.full_name || 'Super Admin', {}, { reach: targetUsers.length });
       broadcastLiveUpdate({ type: 'announcement', data: item });
     }
 
@@ -302,55 +598,96 @@ const createAnnouncement = async (req, res, next) => {
 const updateAnnouncement = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, description, banner_image, target_role, priority, start_date, end_date, redirect_url, status } = req.body;
+    const { 
+      title, short_description, message, description, banner_image, 
+      audience_type, target_role, priority, delivery_channels, 
+      target_user_ids, target_team_ids, scheduled_at, published_at, 
+      expires_at, start_date, end_date, redirect_url, status 
+    } = req.body;
 
-    const { rows: [existing] } = await query(`SELECT * FROM announcements WHERE id = $1`, [id]);
-    if (!existing) return notFound(res);
+    const { rows: [existing] } = await query(`SELECT * FROM announcements WHERE id = $1 OR announcement_id = $1`, [id]);
+    if (!existing) return notFound(res, 'Announcement not found');
 
-    let item;
-    try {
-      const { rows } = await query(`
-        UPDATE announcements SET
-          title = COALESCE($1, title),
-          description = COALESCE($2, description),
-          banner_image = COALESCE($3, banner_image),
-          target_role = COALESCE($4, target_role),
-          priority = COALESCE($5, priority),
-          start_date = COALESCE($6, start_date),
-          end_date = COALESCE($7, end_date),
-          redirect_url = COALESCE($8, redirect_url),
-          status = COALESCE($9, status),
-          updated_at = NOW()
-        WHERE id = $10 RETURNING *
-      `, [title, description, banner_image, target_role, priority, start_date, end_date, redirect_url, status, id]);
-      item = rows[0];
-    } catch (updateErr) {
-      if (updateErr.code === '42703') { // column updated_at does not exist
-        await query(`ALTER TABLE announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`).catch(() => {});
-        const { rows } = await query(`
-          UPDATE announcements SET
-            title = COALESCE($1, title),
-            description = COALESCE($2, description),
-            banner_image = COALESCE($3, banner_image),
-            target_role = COALESCE($4, target_role),
-            priority = COALESCE($5, priority),
-            start_date = COALESCE($6, start_date),
-            end_date = COALESCE($7, end_date),
-            redirect_url = COALESCE($8, redirect_url),
-            status = COALESCE($9, status)
-          WHERE id = $10 RETURNING *
-        `, [title, description, banner_image, target_role, priority, start_date, end_date, redirect_url, status, id]);
-        item = rows[0];
-      } else {
-        throw updateErr;
+    const finalStatus = status ? status.toUpperCase() : existing.status;
+    const finalAudience = audience_type || target_role || existing.audience_type;
+
+    const { rows: [updated] } = await query(`
+      UPDATE announcements SET
+        title = COALESCE($1, title),
+        short_description = COALESCE($2, short_description),
+        message = COALESCE($3, message),
+        description = COALESCE($3, description),
+        banner_image = COALESCE($4, banner_image),
+        audience_type = COALESCE($5, audience_type),
+        target_role = COALESCE($6, target_role),
+        priority = COALESCE($7, priority),
+        status = COALESCE($8, status),
+        delivery_channels = COALESCE($9, delivery_channels),
+        scheduled_at = COALESCE($10, scheduled_at),
+        expires_at = COALESCE($11, expires_at),
+        redirect_url = COALESCE($12, redirect_url),
+        updated_at = NOW()
+      WHERE id = $13 RETURNING *
+    `, [
+      title, short_description, message || description, banner_image, 
+      finalAudience, finalAudience.toLowerCase(), priority ? priority.toUpperCase() : null, 
+      finalStatus, delivery_channels ? JSON.stringify(delivery_channels) : null,
+      scheduled_at, expires_at, redirect_url, existing.id
+    ]);
+
+    await logAnnouncementAudit(existing.id, 'Updated Announcement', req.user.id, req.user.full_name || 'Super Admin', existing, updated);
+
+    // If transitioned to PUBLISHED, resolve recipients
+    if (finalStatus === 'PUBLISHED' && existing.status !== 'PUBLISHED') {
+      const targetUsers = await resolveAnnouncementTargetUsers(updated.audience_type, updated.target_role, target_user_ids);
+      if (targetUsers.length > 0) {
+        for (const uid of targetUsers) {
+          await query(`
+            INSERT INTO announcement_recipients (announcement_id, user_id, delivery_status, delivered_at)
+            VALUES ($1, $2, 'DELIVERED', NOW())
+            ON CONFLICT (announcement_id, user_id) DO NOTHING
+          `, [existing.id, uid]).catch(() => {});
+        }
+        await bulkNotify(targetUsers, updated.title, updated.short_description || updated.message, 'info', { 
+          category: 'announcement', 
+          priority: updated.priority, 
+          announcement_id: existing.id 
+        });
+        await query(`UPDATE announcements SET reach_count = $1 WHERE id = $2`, [targetUsers.length, existing.id]);
       }
+      await logAnnouncementAudit(existing.id, 'Published Announcement', req.user.id, req.user.full_name || 'Super Admin', {}, { reach: targetUsers.length });
+      broadcastLiveUpdate({ type: 'announcement', data: updated });
     }
 
-    if (status === 'publish') {
-      broadcastLiveUpdate({ type: 'announcement', data: item });
-    }
+    return success(res, updated, 'Announcement updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
 
-    return success(res, item, 'Announcement updated successfully');
+const publishAnnouncement = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    return updateAnnouncement({ ...req, params: { id }, body: { status: 'PUBLISHED' } }, res, next);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const scheduleAnnouncement = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { scheduled_at } = req.body;
+    return updateAnnouncement({ ...req, params: { id }, body: { status: 'SCHEDULED', scheduled_at } }, res, next);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const cancelAnnouncement = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    return updateAnnouncement({ ...req, params: { id }, body: { status: 'CANCELLED' } }, res, next);
   } catch (err) {
     next(err);
   }
@@ -358,9 +695,64 @@ const updateAnnouncement = async (req, res, next) => {
 
 const deleteAnnouncement = async (req, res, next) => {
   try {
-    const result = await query(`DELETE FROM announcements WHERE id = $1`, [req.params.id]);
-    if (result.rowCount === 0) return notFound(res);
+    const { id } = req.params;
+    const { rows: [existing] } = await query(`SELECT * FROM announcements WHERE id = $1 OR announcement_id = $1`, [id]);
+    if (!existing) return notFound(res, 'Announcement not found');
+
+    await logAnnouncementAudit(existing.id, 'Deleted Announcement', req.user.id, req.user.full_name || 'Super Admin', existing, {});
+    await query(`DELETE FROM announcements WHERE id = $1`, [existing.id]);
     return success(res, {}, 'Announcement deleted successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const recordAnnouncementRead = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    await query(`
+      INSERT INTO announcement_recipients (announcement_id, user_id, read_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (announcement_id, user_id) 
+      DO UPDATE SET read_at = COALESCE(announcement_recipients.read_at, NOW())
+    `, [id, userId]);
+
+    await query(`
+      INSERT INTO announcement_reads (announcement_id, user_id, read_at)
+      VALUES ($1, $2, NOW())
+      ON CONFLICT (announcement_id, user_id) DO NOTHING
+    `, [id, userId]);
+
+    await query(`UPDATE announcements SET views_count = views_count + 1 WHERE id = $1`, [id]);
+
+    return success(res, {}, 'Announcement read recorded');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const recordAnnouncementAck = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    await query(`
+      UPDATE announcement_recipients 
+      SET acknowledged_at = NOW(), read_at = COALESCE(read_at, NOW()) 
+      WHERE announcement_id = $1 AND user_id = $2
+    `, [id, userId]);
+
+    await query(`
+      UPDATE announcement_reads 
+      SET acknowledged_at = NOW() 
+      WHERE announcement_id = $1 AND user_id = $2
+    `, [id, userId]);
+
+    await query(`UPDATE announcements SET acknowledgements_count = acknowledgements_count + 1 WHERE id = $1`, [id]);
+
+    return success(res, {}, 'Announcement acknowledged successfully');
   } catch (err) {
     next(err);
   }
@@ -459,9 +851,16 @@ module.exports = {
   getSettings,
   saveSettings,
   getAnnouncements,
+  getAnnouncementStats,
+  getAnnouncementAnalytics,
   createAnnouncement,
   updateAnnouncement,
+  publishAnnouncement,
+  scheduleAnnouncement,
+  cancelAnnouncement,
   deleteAnnouncement,
+  recordAnnouncementRead,
+  recordAnnouncementAck,
   broadcastNotification,
   getNotificationReports,
   getActivityLogsController,

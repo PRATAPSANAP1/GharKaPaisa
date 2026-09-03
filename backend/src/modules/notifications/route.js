@@ -36,6 +36,8 @@ router.get('/audit', authorize('ADMIN', 'SUPER_ADMIN'), notifCtrl.getAuditLogsCo
 
 // Announcements & Broadcasts
 router.get('/announcements', notifCtrl.getAnnouncements);
+router.post('/announcements/:id/read', notifCtrl.recordAnnouncementRead);
+router.post('/announcements/:id/acknowledge', notifCtrl.recordAnnouncementAck);
 router.get('/broadcast', notifCtrl.getAnnouncements);
 router.post('/broadcast', authorize('SUPER_ADMIN'), notifCtrl.broadcastNotification);
 

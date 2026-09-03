@@ -1829,23 +1829,93 @@ const migrate = async () => {
       )
     `);
 
-    // 3. Announcements
+    // 3. Announcements & Complete Enterprise Communication Infrastructure
     await query(`
       CREATE TABLE IF NOT EXISTS announcements (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        announcement_id VARCHAR(50) UNIQUE,
         title VARCHAR(255) NOT NULL,
-        description TEXT NOT NULL,
+        short_description TEXT,
+        message TEXT,
+        description TEXT,
         banner_image VARCHAR(500) NULL,
+        audience_type VARCHAR(50) DEFAULT 'ALL_USERS',
         target_role VARCHAR(50) DEFAULT 'all',
-        priority VARCHAR(20) DEFAULT 'normal',
+        priority VARCHAR(20) DEFAULT 'MEDIUM',
+        status VARCHAR(20) DEFAULT 'PUBLISHED',
+        delivery_channels JSONB DEFAULT '["in-app"]',
+        target_user_ids JSONB DEFAULT '[]',
+        target_team_ids JSONB DEFAULT '[]',
+        scheduled_at TIMESTAMPTZ NULL,
+        published_at TIMESTAMPTZ DEFAULT NOW(),
+        expires_at TIMESTAMPTZ NULL,
         start_date DATE NULL,
         end_date DATE NULL,
         redirect_url VARCHAR(500) NULL,
+        views_count INT DEFAULT 0,
+        reach_count INT DEFAULT 0,
+        clicks_count INT DEFAULT 0,
+        acknowledgements_count INT DEFAULT 0,
         created_by UUID REFERENCES users(id) ON DELETE SET NULL,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS announcement_id VARCHAR(50);
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS short_description TEXT;
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS message TEXT;
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS audience_type VARCHAR(50) DEFAULT 'ALL_USERS';
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS delivery_channels JSONB DEFAULT '["in-app"]';
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS target_user_ids JSONB DEFAULT '[]';
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS target_team_ids JSONB DEFAULT '[]';
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ NULL;
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ DEFAULT NOW();
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ NULL;
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS views_count INT DEFAULT 0;
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS reach_count INT DEFAULT 0;
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS clicks_count INT DEFAULT 0;
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS acknowledgements_count INT DEFAULT 0;
       ALTER TABLE announcements ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+      -- Create announcement sequence
+      CREATE SEQUENCE IF NOT EXISTS announcement_seq START 1001;
+
+      -- Announcement Recipients Table
+      CREATE TABLE IF NOT EXISTS announcement_recipients (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        announcement_id UUID NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        delivery_status VARCHAR(50) DEFAULT 'DELIVERED',
+        delivered_at TIMESTAMPTZ DEFAULT NOW(),
+        read_at TIMESTAMPTZ NULL,
+        clicked_at TIMESTAMPTZ NULL,
+        acknowledged_at TIMESTAMPTZ NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(announcement_id, user_id)
+      );
+
+      -- Announcement Reads / Engagement Table
+      CREATE TABLE IF NOT EXISTS announcement_reads (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        announcement_id UUID NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        read_at TIMESTAMPTZ DEFAULT NOW(),
+        clicked_at TIMESTAMPTZ NULL,
+        acknowledged_at TIMESTAMPTZ NULL,
+        UNIQUE(announcement_id, user_id)
+      );
+
+      -- Announcement Audit Logs Table
+      CREATE TABLE IF NOT EXISTS announcement_audit_logs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        announcement_id UUID NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+        action VARCHAR(100) NOT NULL,
+        performed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        performed_by_name VARCHAR(255),
+        old_value JSONB DEFAULT '{}',
+        new_value JSONB DEFAULT '{}',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
 
     // 4. Templates
