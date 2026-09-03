@@ -220,8 +220,8 @@ const getCommissionSummary = async (req, res, next) => {
         COALESCE(p.name, p2.name, 'General Financial Product') as product_name,
         COALESCE(b.short_code, b2.short_code, 'GKP') as bank_code,
         COUNT(DISTINCT a.id) as total_cases,
-        COUNT(DISTINCT a.id) FILTER (WHERE a.status IN ('approved','disbursed','completed')) as approved_cases,
-        COUNT(DISTINCT a.id) FILTER (WHERE a.status = 'rejected') as rejected_cases,
+        COUNT(DISTINCT a.id) FILTER (WHERE a.status::text IN ('approved','disbursed','completed')) as approved_cases,
+        COUNT(DISTINCT a.id) FILTER (WHERE a.status::text = 'rejected') as rejected_cases,
         COALESCE(SUM(wl.credit) FILTER (WHERE wl.credit > 0), 0) as commission_earned
       FROM wallet_ledger wl
       LEFT JOIN applications a ON a.id = wl.application_id OR a.id::text = wl.reference_number OR a.app_number = wl.reference_number
