@@ -356,7 +356,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/employees" element={<EmployeeManagement />} />
             <Route path="/super-admin/hr" element={<HRDashboard />} />
             <Route path="/super-admin/partners" element={<ManagePartners />} />
-            <Route path="/super-admin/leads" element={<ManageLeads />} />
+            <Route path="/super-admin/leads" element={<Navigate to="/super-admin/overview" replace />} />
             <Route path="/super-admin/applications" element={<SuperAdminManageApplications />} />
             <Route path="/super-admin/crm" element={<SuperAdminManageApplications />} />
             <Route path="/super-admin/reports" element={<SuperAdminReports />} />
