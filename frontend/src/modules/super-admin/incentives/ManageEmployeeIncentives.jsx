@@ -81,6 +81,31 @@ export default function ManageEmployeeIncentives() {
     }
   };
 
+  // Dynamic Options for Filters
+  const [productsList, setProductsList] = useState([]);
+  const [banksList, setBanksList] = useState([]);
+
+  useEffect(() => {
+    // Fetch Products & Banks for Filter Dropdowns
+    const fetchOptions = async () => {
+      try {
+        const [prodRes, bankRes] = await Promise.allSettled([
+          api.get('/products'),
+          api.get('/banks/active')
+        ]);
+        if (prodRes.status === 'fulfilled' && prodRes.value.data?.data) {
+          setProductsList(prodRes.value.data.data);
+        }
+        if (bankRes.status === 'fulfilled' && bankRes.value.data?.data) {
+          setBanksList(bankRes.value.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to load filter options:', err);
+      }
+    };
+    fetchOptions();
+  }, []);
+
   useEffect(() => {
     fetchData();
   }, [datePreset, startDate, endDate, roleFilter, productFilter, bankFilter, statusFilter, managerFilter, tlFilter, page, search]);
@@ -279,6 +304,36 @@ export default function ManageEmployeeIncentives() {
               <option value="MANAGER">Manager</option>
               <option value="SENIOR MANAGER">Senior Manager</option>
               <option value="BRANCH HEAD">Branch Head</option>
+            </select>
+          </div>
+
+          {/* Product Filter */}
+          <div>
+            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>PRODUCT</label>
+            <select
+              value={productFilter}
+              onChange={(e) => { setProductFilter(e.target.value); setPage(1); }}
+              style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+            >
+              <option value="">All Products</option>
+              {productsList.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Bank Filter */}
+          <div>
+            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>BANK</label>
+            <select
+              value={bankFilter}
+              onChange={(e) => { setBankFilter(e.target.value); setPage(1); }}
+              style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+            >
+              <option value="">All Banks</option>
+              {banksList.map(b => (
+                <option key={b.id} value={b.id}>{b.name || b.bank_name}</option>
+              ))}
             </select>
           </div>
 
