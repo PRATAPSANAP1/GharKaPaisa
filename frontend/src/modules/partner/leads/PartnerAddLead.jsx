@@ -64,6 +64,7 @@ export default function PartnerAddLead() {
   const [customerName, setCustomerName] = useState('');
   const [countryCode, setCountryCode] = useState('+91');
   const [mobile, setMobile] = useState('');
+  const [pan, setPan] = useState('');
   const [email, setEmail] = useState('');
   const [monthlySalary, setMonthlySalary] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -183,6 +184,15 @@ export default function PartnerAddLead() {
       }
     }
     
+    if (isSbiSelected || pan.trim()) {
+      const panClean = pan.trim().toUpperCase();
+      if (isSbiSelected && (!panClean || !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panClean))) {
+        newErrors.pan = 'Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).';
+      } else if (panClean && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panClean)) {
+        newErrors.pan = 'Please enter a valid 10-character PAN Card number.';
+      }
+    }
+
     if (processType === 'lead_punching' || isSbiSelected) {
       if (!email.trim() && processType === 'lead_punching') {
         newErrors.email = 'Please enter a valid email address.';
@@ -244,6 +254,8 @@ export default function PartnerAddLead() {
         customer_name: customerName.trim() || 'Customer',
         mobile: mobile.trim() || '0000000000',
         email: email.trim(),
+        pan: pan.trim().toUpperCase(),
+        pan_number: pan.trim().toUpperCase(),
         monthly_salary: monthlySalary ? parseFloat(monthlySalary) : 0,
         company_name: companyName.trim(),
         pincode: pincode.trim(),
@@ -797,13 +809,13 @@ export default function PartnerAddLead() {
             </select>
           </div>
 
-          {/* DEMOGRAPHICS */}
+          {/* DEMOGRAPHICS & CRITICAL FIELDS */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
               <label style={S.label}>Customer Full Name *</label>
               <input
                 type="text"
-                placeholder="e.g. Rahul Sharma"
+                placeholder="Enter customer full name"
                 value={customerName}
                 onChange={(e) => { setCustomerName(e.target.value); setErrors(prev => ({ ...prev, customerName: null })); }}
                 style={{ ...S.input, height: '42px', fontSize: '13px', borderColor: errors.customerName ? C.red : C.border }}
@@ -817,22 +829,61 @@ export default function PartnerAddLead() {
                 <select
                   value={countryCode}
                   onChange={(e) => setCountryCode(e.target.value)}
-                  style={{ ...S.input, width: '80px', height: '42px', fontSize: '12px', fontWeight: 700 }}
+                  style={{ ...S.input, width: '90px', height: '42px', fontSize: '12px', fontWeight: 700 }}
                 >
-                  <option value="+91">+91</option>
+                  <option value="+91">🇮🇳 +91</option>
                   <option value="+1">+1</option>
                   <option value="+44">+44</option>
                 </select>
                 <input
                   type="tel"
                   maxLength={10}
-                  placeholder="10-digit mobile number"
+                  placeholder="Enter 10-digit mobile number"
                   value={mobile}
                   onChange={(e) => { setMobile(e.target.value.replace(/\D/g, '')); setErrors(prev => ({ ...prev, mobile: null })); }}
                   style={{ ...S.input, flex: 1, height: '42px', fontSize: '13px', borderColor: errors.mobile ? C.red : C.border }}
                 />
               </div>
               {errors.mobile && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{errors.mobile}</span>}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label style={S.label}>
+                PAN Card Number {isSbiSelected ? '*' : '(Optional)'}
+              </label>
+              <input
+                type="text"
+                maxLength={10}
+                placeholder="Enter 10-digit PAN (e.g. ABCDE1234F)"
+                value={pan}
+                onChange={(e) => {
+                  setPan(e.target.value.toUpperCase());
+                  setErrors(prev => ({ ...prev, pan: null }));
+                }}
+                style={{ ...S.input, height: '42px', fontSize: '13px', fontFamily: 'monospace', fontWeight: 700, textTransform: 'uppercase', borderColor: errors.pan ? C.red : C.border }}
+              />
+              {errors.pan && <span style={{ fontSize: '11px', color: C.red, marginTop: '2px', display: 'block' }}>{errors.pan}</span>}
+            </div>
+
+            <div>
+              <label style={S.label}>
+                Enter Pincode *
+                {pincodeLoading && <span style={{ fontSize: '11px', color: C.primary, marginLeft: '6px' }}>Searching location...</span>}
+              </label>
+              <PincodeAutoComplete
+                value={pincode}
+                onChange={(val) => handlePincodeChange(val)}
+                onSelect={({ pincode: pin, city: cName }) => {
+                  handlePincodeChange(pin);
+                  if (cName) setCity(cName);
+                }}
+                isSbiOnly={isSbiSelected}
+                placeholder="Enter 6-digit Pincode"
+                error={errors.pincode}
+                C={C}
+              />
             </div>
           </div>
 
@@ -878,45 +929,6 @@ export default function PartnerAddLead() {
                 </div>
 
                 <div>
-                  <label style={S.label}>
-                    Pincode *
-                    {pincodeLoading && <span style={{ fontSize: '11px', color: C.primary, marginLeft: '6px' }}>Searching location...</span>}
-                  </label>
-                  <PincodeAutoComplete
-                    value={pincode}
-                    onChange={(val) => handlePincodeChange(val)}
-                    onSelect={({ pincode: pin, city: cName }) => {
-                      handlePincodeChange(pin);
-                      if (cName) setCity(cName);
-                    }}
-                    isSbiOnly={isSbiSelected}
-                    error={errors.pincode}
-                    C={C}
-                  />
-                </div>
-              </div>
-
-              {processType !== 'lead_punching' && isSbiSelected && (
-                <div style={{ marginTop: '12px' }}>
-                  <label style={S.label}>
-                    Pincode * (SBI Listed Location Verification)
-                  </label>
-                  <PincodeAutoComplete
-                    value={pincode}
-                    onChange={(val) => handlePincodeChange(val)}
-                    onSelect={({ pincode: pin, city: cName }) => {
-                      handlePincodeChange(pin);
-                      if (cName) setCity(cName);
-                    }}
-                    isSbiOnly={true}
-                    error={errors.pincode}
-                    C={C}
-                  />
-                </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
                   <label style={S.label}>City</label>
                   <input
                     type="text"
@@ -926,7 +938,9 @@ export default function PartnerAddLead() {
                     style={{ ...S.input, height: '42px', fontSize: '13px', background: C.bgSecondary }}
                   />
                 </div>
+              </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
                   <label style={S.label}>State</label>
                   <input
@@ -937,21 +951,21 @@ export default function PartnerAddLead() {
                     style={{ ...S.input, height: '42px', fontSize: '13px', background: C.bgSecondary }}
                   />
                 </div>
-              </div>
 
-              <div>
-                <label style={S.label}>Business / Enterprise Type</label>
-                <select
-                  value={businessType}
-                  onChange={(e) => setBusinessType(e.target.value)}
-                  style={{ ...S.input, height: '42px', fontSize: '13px' }}
-                >
-                  <option value="Micro-Enterprise">Micro-Enterprise</option>
-                  <option value="Small Business">Small Business</option>
-                  <option value="Mid-Size Enterprise">Mid-Size Enterprise</option>
-                  <option value="Large Corporation">Large Corporation</option>
-                  <option value="Startup">Startup</option>
-                </select>
+                <div>
+                  <label style={S.label}>Business / Enterprise Type</label>
+                  <select
+                    value={businessType}
+                    onChange={(e) => setBusinessType(e.target.value)}
+                    style={{ ...S.input, height: '42px', fontSize: '13px' }}
+                  >
+                    <option value="Micro-Enterprise">Micro-Enterprise</option>
+                    <option value="Small Business">Small Business</option>
+                    <option value="Mid-Size Enterprise">Mid-Size Enterprise</option>
+                    <option value="Large Corporation">Large Corporation</option>
+                    <option value="Startup">Startup</option>
+                  </select>
+                </div>
               </div>
             </>
           )}
