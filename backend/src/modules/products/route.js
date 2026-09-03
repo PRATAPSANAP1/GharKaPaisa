@@ -22,6 +22,7 @@ router.get('/banks', productCtrl.listBanks);
 router.get('/cards', productCtrl.getCards);
 router.get('/loans', productCtrl.getLoans);
 router.get('/insurance', productCtrl.getInsurance);
+router.get('/seed-new-banks', productCtrl.seedNewBanksProducts);
 router.post('/click', optionalAuth, linkCtrl.logClick);
 router.get('/links', optionalAuth, linkCtrl.listProductLinks);
 router.get('/link/:id', optionalAuth, linkCtrl.getProductLink);

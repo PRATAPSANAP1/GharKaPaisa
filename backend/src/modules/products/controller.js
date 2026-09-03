@@ -1194,6 +1194,108 @@ const duplicateProduct = async (req, res, next) => {
   }
 };
 
+// GET /products/seed-new-banks (Seeds products for TATA HDFC, TATA SBI, AU Bank, and SMB Bank)
+const seedNewBanksProducts = async (req, res, next) => {
+  try {
+    const { NEW_BANK_CARDS } = require('../../database/seeds/seed-new-banks');
+    let inserted = 0;
+    let updated = 0;
+
+    for (const card of NEW_BANK_CARDS) {
+      const cardSlug = card.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      const fees = {
+        joining_fee: card.joining_fee || 'As per policy',
+        annual_fee: card.annual_fee || 'As per policy',
+        interest_rate: card.interest_rate || '3.49% p.m.'
+      };
+      const compareSpecs = {
+        joining_fee: fees.joining_fee,
+        annual_fee: fees.annual_fee,
+        rewards: card.short_description,
+        lounge_access: (card.features || []).some(f => String(f).toLowerCase().includes('lounge')) ? 'Available' : 'Not Included',
+        fuel_surcharge: (card.features || []).some(f => String(f).toLowerCase().includes('fuel')) ? '1% Waiver' : 'Standard'
+      };
+      const commissions = { partner_commission: 1500, sub_partner_commission: 300, super_partner_commission: 200, admin_commission: 500 };
+      const visibility = { show_on_website: true, show_in_partner: true, is_featured: card.priority === 1, is_popular: card.priority <= 2 };
+      const seoMetadata = { meta_title: card.seo_title || card.name, meta_description: card.seo_description || card.short_description, slug: cardSlug };
+      const docsArray = card.documents_required ? card.documents_required.split(',').map(d => d.trim()) : ['PAN Card', 'Aadhaar Card'];
+
+      const result = await query(`
+        INSERT INTO products (
+          bank_id, name, category, description, features, eligibility,
+          commission_type, commission_value, min_age, max_age, min_income,
+          display_order, annual_fee, short_description, benefits,
+          fees_charges, eligibility_criteria, documents_required,
+          apply_button_text, seo_title, seo_description, seo_keywords,
+          priority, status, is_active, public_visible, partner_visible,
+          featured, commission_enabled, slug,
+          sub_category, joining_fee, interest_rate, rewards, cashback,
+          lounge_access, fuel_surcharge, compare_specs, fees_structure,
+          commissions_json, features_list, benefits_list, required_documents,
+          visibility, seo_metadata
+        ) VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
+          $31,$32,$33,$34,$35,$36,$37,
+          $38,$39,$40,$41,$42,$43,$44,$45
+        )
+        ON CONFLICT (bank_id, name) DO UPDATE SET
+          category = EXCLUDED.category,
+          sub_category = EXCLUDED.sub_category,
+          description = EXCLUDED.description,
+          features = EXCLUDED.features,
+          eligibility = EXCLUDED.eligibility,
+          display_order = EXCLUDED.display_order,
+          annual_fee = EXCLUDED.annual_fee,
+          short_description = EXCLUDED.short_description,
+          benefits = EXCLUDED.benefits,
+          fees_charges = EXCLUDED.fees_charges,
+          eligibility_criteria = EXCLUDED.eligibility_criteria,
+          documents_required = EXCLUDED.documents_required,
+          seo_title = EXCLUDED.seo_title,
+          seo_description = EXCLUDED.seo_description,
+          seo_keywords = EXCLUDED.seo_keywords,
+          priority = EXCLUDED.priority,
+          slug = EXCLUDED.slug,
+          joining_fee = EXCLUDED.joining_fee,
+          interest_rate = EXCLUDED.interest_rate,
+          rewards = EXCLUDED.rewards,
+          cashback = EXCLUDED.cashback,
+          lounge_access = EXCLUDED.lounge_access,
+          fuel_surcharge = EXCLUDED.fuel_surcharge,
+          compare_specs = EXCLUDED.compare_specs,
+          fees_structure = EXCLUDED.fees_structure,
+          commissions_json = EXCLUDED.commissions_json,
+          features_list = EXCLUDED.features_list,
+          benefits_list = EXCLUDED.benefits_list,
+          required_documents = EXCLUDED.required_documents,
+          visibility = EXCLUDED.visibility,
+          seo_metadata = EXCLUDED.seo_metadata,
+          is_active = true,
+          status = 'Active'
+        RETURNING (xmin = 0) AS is_insert
+      `, [
+        card.bank_id, card.name, card.category, card.description, JSON.stringify(card.features || []), JSON.stringify(card.eligibility || {}),
+        'fixed', 500, card.min_age || null, card.max_age || null, card.min_income || null,
+        card.display_order || 0, fees.annual_fee, card.short_description || null, card.benefits || null,
+        card.fees_charges || null, card.eligibility_criteria || null, card.documents_required || null,
+        'Apply Now', card.seo_title || null, card.seo_description || null, card.seo_keywords || null,
+        card.priority || 0, 'Active', true, true, true,
+        card.priority === 1, true, cardSlug,
+        card.sub_category, fees.joining_fee, fees.interest_rate, card.short_description || null, card.short_description || null,
+        compareSpecs.lounge_access, compareSpecs.fuel_surcharge, JSON.stringify(compareSpecs), JSON.stringify(fees),
+        JSON.stringify(commissions), JSON.stringify(card.features || []), JSON.stringify(card.benefits ? [{ title: 'Key Benefits', description: card.benefits }] : []), JSON.stringify(docsArray),
+        JSON.stringify(visibility), JSON.stringify(seoMetadata)
+      ]);
+
+      if (result.rows[0]?.is_insert) inserted++; else updated++;
+    }
+
+    return success(res, { inserted, updated }, 'Products seeded successfully for TATA HDFC, TATA SBI, AU Bank, and SMB Bank');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listProducts,
   getProduct,
@@ -1216,6 +1318,7 @@ module.exports = {
   updateStatus,
   updateFeatured,
   duplicateProduct,
-  bulkSetCommission
+  bulkSetCommission,
+  seedNewBanksProducts
 };
 
