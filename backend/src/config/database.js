@@ -23,9 +23,17 @@ const poolOptions = process.env.DATABASE_URL
       ssl: sslConfig,
     };
 
-poolOptions.max = 20;
-poolOptions.idleTimeoutMillis = 30000;
-poolOptions.connectionTimeoutMillis = 30000;
+// Enhanced Connection Pool Settings for High Availability and Connection Resiliency
+poolOptions.max = parseInt(process.env.DB_POOL_MAX) || 40;
+poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || 20000;
+poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || 8000; // 8s fail-fast instead of 30s queue backup
+poolOptions.keepAlive = true;
+poolOptions.keepAliveInitialDelayMillis = 10000;
+
+// Set 15s statement timeout to prevent indefinite lock holds
+if (!poolOptions.options) {
+  poolOptions.options = '-c statement_timeout=15000';
+}
 
 const pool = new Pool(poolOptions);
 
@@ -34,19 +42,33 @@ pool.on('connect', () => {
     logger.debug(`New DB client connected. Pool size: ${pool.totalCount}/${pool.options.max}`);
   }
 });
-pool.on('error', (err) => logger.error('Unexpected DB client error', err));
 
-// Helper: run a query
-const query = async (text, params) => {
+pool.on('error', (err) => {
+  logger.error('Unexpected DB client error in pool', { error: err.message });
+});
+
+// Helper: run a query with single transient connection failure retry logic
+const query = async (text, params, retries = 1) => {
   const start = Date.now();
   try {
     const res = await pool.query(text, params);
     const duration = Date.now() - start;
-    logger.debug(`Query executed in ${duration}ms`, {
-      query: text
-    });
+    logger.debug(`Query executed in ${duration}ms`, { query: text });
     return res;
   } catch (err) {
+    const isConnErr = err.message && (
+      err.message.includes('timeout exceeded when trying to connect') ||
+      err.message.includes('Connection terminated') ||
+      err.message.includes('ECONNRESET') ||
+      err.message.includes('ECONNREFUSED')
+    );
+
+    if (isConnErr && retries > 0) {
+      logger.warn(`Transient DB connection error. Retrying query (${retries} left)...`, { error: err.message });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return query(text, params, retries - 1);
+    }
+
     if (process.env.NODE_ENV !== 'production') {
       console.error("\n================ SQL ERROR ================");
       console.error("SQL:", text);
