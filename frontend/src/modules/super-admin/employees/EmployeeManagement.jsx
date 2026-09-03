@@ -31,10 +31,57 @@ export default function EmployeeManagement() {
   const [hierarchyModalEmp, setHierarchyModalEmp] = useState(null);
   const [actionModalEmp, setActionModalEmp] = useState(null);
   const [perfModalEmp, setPerfModalEmp] = useState(null);
+  const [createEmpModalOpen, setCreateEmpModalOpen] = useState(false);
+
+  // Create Employee Form
+  const [createForm, setCreateForm] = useState({
+    full_name: '',
+    mobile_number: '',
+    email_id: '',
+    designation: 'TC',
+    hierarchy_level: 'TC',
+    offered_salary: '25000',
+    work_location: 'Head Office',
+    department: 'Sales & Distribution',
+    branch_head_id: '',
+    senior_manager_id: '',
+    manager_id: '',
+    team_leader_id: ''
+  });
+
+  const handleCreateEmployeeSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await api.post('/employees/create', createForm);
+      if (res.data.success) {
+        alert(res.data.message || 'Employee created successfully!');
+        setCreateEmpModalOpen(false);
+        setCreateForm({
+          full_name: '',
+          mobile_number: '',
+          email_id: '',
+          designation: 'TC',
+          hierarchy_level: 'TC',
+          offered_salary: '25000',
+          work_location: 'Head Office',
+          department: 'Sales & Distribution',
+          branch_head_id: '',
+          senior_manager_id: '',
+          manager_id: '',
+          team_leader_id: ''
+        });
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Employee creation failed');
+    }
+  };
 
   // Hierarchy Form
   const [hierarchyForm, setHierarchyForm] = useState({
     hierarchy_level: 'TC',
+    branch_head_id: '',
+    senior_manager_id: '',
     manager_id: '',
     team_leader_id: '',
     selected_tl_ids: [],
@@ -44,7 +91,8 @@ export default function EmployeeManagement() {
 
   const openHierarchyModal = (emp) => {
     setHierarchyModalEmp(emp);
-    const currentRole = (emp.hierarchy_level || (emp.designation === 'Manager' ? 'MANAGER' : emp.designation === 'Team Leader' ? 'TEAM_LEADER' : 'TC')).toUpperCase();
+    const desgUpper = String(emp.designation || '').toUpperCase();
+    const currentRole = (emp.hierarchy_level || (desgUpper.includes('BRANCH') ? 'BRANCH_HEAD' : desgUpper.includes('SENIOR') ? 'SENIOR_MANAGER' : desgUpper.includes('MANAGER') ? 'MANAGER' : desgUpper.includes('TEAM') || desgUpper === 'TL' ? 'TEAM_LEADER' : 'TC')).toUpperCase();
     
     // Find current TLs reporting to this manager (if manager)
     const currentTLs = employees
@@ -73,6 +121,8 @@ export default function EmployeeManagement() {
 
     setHierarchyForm({
       hierarchy_level: currentRole,
+      branch_head_id: emp.branch_head_id || '',
+      senior_manager_id: emp.senior_manager_id || '',
       manager_id: emp.manager_id || '',
       team_leader_id: emp.team_leader_id || '',
       selected_tl_ids: currentTLs,
@@ -90,7 +140,9 @@ export default function EmployeeManagement() {
       // 1. Update target employee's own hierarchy
       const payload = {
         hierarchy_level: role,
-        manager_id: (role === 'MANAGER') ? null : (hierarchyForm.manager_id || null),
+        branch_head_id: (role === 'BRANCH_HEAD') ? null : (hierarchyForm.branch_head_id || null),
+        senior_manager_id: (role === 'BRANCH_HEAD' || role === 'SENIOR_MANAGER') ? null : (hierarchyForm.senior_manager_id || null),
+        manager_id: (role === 'BRANCH_HEAD' || role === 'SENIOR_MANAGER' || role === 'MANAGER') ? null : (hierarchyForm.manager_id || null),
         team_leader_id: (role === 'TC') ? (hierarchyForm.team_leader_id || null) : null
       };
       await api.post(`/employees/${hierarchyModalEmp.id}/hierarchy`, payload);
@@ -408,8 +460,14 @@ export default function EmployeeManagement() {
     document.body.removeChild(link);
   };
 
-  const managersList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('manager') || e.hierarchy_level === 'MANAGER'));
+  const branchHeadsList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('branch head') || e.hierarchy_level === 'BRANCH_HEAD'));
+  const seniorManagersList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('senior manager') || e.hierarchy_level === 'SENIOR_MANAGER'));
+  const managersList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('manager') && !String(e.designation || '').toLowerCase().includes('senior') || e.hierarchy_level === 'MANAGER'));
   const tlsList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('team leader') || String(e.designation || '').toUpperCase() === 'TL' || e.hierarchy_level === 'TEAM_LEADER'));
+  const tcsList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('tc') || String(e.designation || '').toLowerCase().includes('telecaller') || e.hierarchy_level === 'TC'));
+
+  const selectBranchHeadsOptions = branchHeadsList.length > 0 ? branchHeadsList : employees.filter(e => e.id !== hierarchyModalEmp?.id);
+  const selectSeniorManagersOptions = seniorManagersList.length > 0 ? seniorManagersList : employees.filter(e => e.id !== hierarchyModalEmp?.id);
   const selectManagersOptions = managersList.length > 0 ? managersList : employees.filter(e => e.id !== hierarchyModalEmp?.id);
   const selectTlsOptions = tlsList.length > 0 ? tlsList : employees.filter(e => e.id !== hierarchyModalEmp?.id);
 
@@ -425,17 +483,27 @@ export default function EmployeeManagement() {
             </span>
             <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Management Center</h1>
           </div>
+          <button
+            onClick={() => setCreateEmpModalOpen(true)}
+            style={{
+              background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px',
+              fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px',
+              boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)'
+            }}
+          >
+            <FaPlus /> + Add New Employee
+          </button>
         </div>
 
-        {/* Global Stats Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', marginBottom: '12px' }}>
+        {/* Global Stats Cards — 5-Level Hierarchy Structure */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '12px' }}>
           {[
-            { label: 'Total Employees', count: stats.total_employees || 0, icon: <FaUsers />, color: C.teal },
-            { label: 'Active Employees', count: stats.active_employees || 0, icon: <FaUserCheck />, color: '#10B981' },
-            { label: 'Onboarding Pending', count: stats.onboarding_employees || 0, icon: <FaClock />, color: '#F59E0B' },
-            { label: 'Managers', count: stats.total_managers || 0, icon: <FaSitemap />, color: '#8B5CF6' },
-            { label: 'Team Leaders', count: stats.total_tls || 0, icon: <FaSitemap />, color: '#3B82F6' },
-            { label: 'Telecallers (TC)', count: stats.total_tcs || 0, icon: <FaUsers />, color: '#EC4899' }
+            { label: 'Total Employees', count: stats.total_employees || employees.length, icon: <FaUsers />, color: C.teal },
+            { label: 'L1: Branch Heads', count: stats.total_branch_heads || branchHeadsList.length, icon: <FaBuilding />, color: '#D97706' },
+            { label: 'L2: Senior Managers', count: stats.total_senior_managers || seniorManagersList.length, icon: <FaBriefcase />, color: '#6366F1' },
+            { label: 'L3: Managers', count: stats.total_managers || managersList.length, icon: <FaSitemap />, color: '#8B5CF6' },
+            { label: 'L4: Team Leaders', count: stats.total_tls || tlsList.length, icon: <FaSitemap />, color: '#3B82F6' },
+            { label: 'L5: Telecallers (TC)', count: stats.total_tcs || tcsList.length, icon: <FaUsers />, color: '#EC4899' }
           ].map((st, i) => (
             <div key={i} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: `${st.color}15`, color: st.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
@@ -1441,11 +1509,128 @@ export default function EmployeeManagement() {
           </div>
         )}
 
-        {/* ── MODAL: Assign Hierarchy / Team ── */}
+        {/* ── MODAL: Super Admin Create New Employee ── */}
+        {createEmpModalOpen && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
+            <div style={{ background: C.card, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '580px', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}`, boxShadow: '0 20px 50px rgba(0,0,0,0.3)' }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: C.teal, textTransform: 'uppercase' }}>Super Admin Action</span>
+                  <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0 }}>Create New Employee & Assign Hierarchy</h2>
+                </div>
+                <button onClick={() => setCreateEmpModalOpen(false)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
+              </div>
+
+              <form onSubmit={handleCreateEmployeeSubmit}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 800, marginBottom: '6px', color: C.text }}>Full Name *</label>
+                    <input type="text" required value={createForm.full_name} onChange={(e) => setCreateForm({ ...createForm, full_name: e.target.value })} placeholder="e.g. Ramesh Kumar" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 800, marginBottom: '6px', color: C.text }}>Mobile Number *</label>
+                    <input type="tel" required value={createForm.mobile_number} onChange={(e) => setCreateForm({ ...createForm, mobile_number: e.target.value })} placeholder="10-digit mobile" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 800, marginBottom: '6px', color: C.text }}>Email Address (Optional)</label>
+                    <input type="email" value={createForm.email_id} onChange={(e) => setCreateForm({ ...createForm, email_id: e.target.value })} placeholder="auto-generated if empty" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 800, marginBottom: '6px', color: C.text }}>Monthly Salary (₹)</label>
+                    <input type="number" value={createForm.offered_salary} onChange={(e) => setCreateForm({ ...createForm, offered_salary: e.target.value })} placeholder="25000" style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }} />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 800, marginBottom: '6px', color: C.text }}>Hierarchy Level / Role *</label>
+                  <select 
+                    value={createForm.hierarchy_level} 
+                    onChange={(e) => {
+                      const level = e.target.value;
+                      const mapD = { 'BRANCH_HEAD': 'Branch Head', 'SENIOR_MANAGER': 'Senior Manager', 'MANAGER': 'Manager', 'TEAM_LEADER': 'Team Leader', 'TC': 'TC' };
+                      setCreateForm({ ...createForm, hierarchy_level: level, designation: mapD[level] || level });
+                    }} 
+                    style={{ width: '100%', padding: '10px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px', fontWeight: 800 }}
+                  >
+                    <option value="BRANCH_HEAD">Level 1: Branch Head</option>
+                    <option value="SENIOR_MANAGER">Level 2: Senior Manager</option>
+                    <option value="MANAGER">Level 3: Manager</option>
+                    <option value="TEAM_LEADER">Level 4: Team Leader (TL)</option>
+                    <option value="TC">Level 5: Telecaller (TC)</option>
+                  </select>
+                </div>
+
+                {/* Reporting Supervisors Fields */}
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px', marginBottom: '20px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal, display: 'block', marginBottom: '10px' }}>Reporting Chain Setup</span>
+
+                  {createForm.hierarchy_level !== 'BRANCH_HEAD' && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, marginBottom: '4px' }}>Assign Branch Head (Level 1)</label>
+                      <select value={createForm.branch_head_id} onChange={(e) => setCreateForm({ ...createForm, branch_head_id: e.target.value })} style={{ width: '100%', padding: '8px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '12.5px' }}>
+                        <option value="">Direct / No Branch Head</option>
+                        {selectBranchHeadsOptions.map(bh => (
+                          <option key={bh.id} value={bh.id}>{bh.full_name} ({bh.employee_id})</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {(createForm.hierarchy_level === 'MANAGER' || createForm.hierarchy_level === 'TEAM_LEADER' || createForm.hierarchy_level === 'TC') && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, marginBottom: '4px' }}>Assign Senior Manager (Level 2)</label>
+                      <select value={createForm.senior_manager_id} onChange={(e) => setCreateForm({ ...createForm, senior_manager_id: e.target.value })} style={{ width: '100%', padding: '8px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '12.5px' }}>
+                        <option value="">No Senior Manager</option>
+                        {selectSeniorManagersOptions.map(sm => (
+                          <option key={sm.id} value={sm.id}>{sm.full_name} ({sm.employee_id})</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {(createForm.hierarchy_level === 'TEAM_LEADER' || createForm.hierarchy_level === 'TC') && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, marginBottom: '4px' }}>Assign Reporting Manager (Level 3)</label>
+                      <select value={createForm.manager_id} onChange={(e) => setCreateForm({ ...createForm, manager_id: e.target.value })} style={{ width: '100%', padding: '8px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '12.5px' }}>
+                        <option value="">No Manager</option>
+                        {selectManagersOptions.map(m => (
+                          <option key={m.id} value={m.id}>{m.full_name} ({m.employee_id})</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {createForm.hierarchy_level === 'TC' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, marginBottom: '4px' }}>Assign Team Leader (Level 4)</label>
+                      <select value={createForm.team_leader_id} onChange={(e) => setCreateForm({ ...createForm, team_leader_id: e.target.value })} style={{ width: '100%', padding: '8px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '12.5px' }}>
+                        <option value="">No Team Leader</option>
+                        {selectTlsOptions.map(tl => (
+                          <option key={tl.id} value={tl.id}>{tl.full_name} ({tl.employee_id})</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={() => setCreateEmpModalOpen(false)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '10px 20px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                  <button type="submit" style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}>Create Employee</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ── MODAL: Assign Hierarchy / Team (5-Level) ── */}
         {hierarchyModalEmp && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
-            <div style={{ background: C.card, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}` }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: '0 0 4px 0' }}>Assign Team & Employee Role</h2>
+            <div style={{ background: C.card, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '540px', maxHeight: '90vh', overflowY: 'auto', border: `1px solid ${C.border}` }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: '0 0 4px 0' }}>Assign Team & Employee Hierarchy</h2>
               <p style={{ fontSize: '13.5px', color: C.textMid, marginBottom: '20px' }}>
                 Employee: <strong>{hierarchyModalEmp.full_name} ({hierarchyModalEmp.employee_id})</strong>
               </p>
@@ -1454,248 +1639,160 @@ export default function EmployeeManagement() {
                 {/* 1. Employee Role Selection */}
                 <div style={{ marginBottom: '18px' }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, marginBottom: '6px', color: C.text }}>
-                    Employee Role *
+                    Employee Hierarchy Level / Role *
                   </label>
                   <select 
                     value={hierarchyForm.hierarchy_level} 
                     onChange={(e) => {
                       const newRole = e.target.value;
-                      // Reset form fields when role changes
                       setHierarchyForm({
                         ...hierarchyForm,
                         hierarchy_level: newRole,
                         selected_tl_ids: [],
                         selected_tc_ids: [],
                         tl_tc_mapping: {},
+                        branch_head_id: '',
+                        senior_manager_id: '',
                         manager_id: '',
                         team_leader_id: ''
                       });
                     }} 
-                    style={{ width: '100%', padding: '11px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px', fontWeight: 700 }}
+                    style={{ width: '100%', padding: '11px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px', fontWeight: 800 }}
                   >
-                    <option value="BRANCH_HEAD">BRANCH HEAD</option>
-                    <option value="SENIOR_MANAGER">SENIOR MANAGER</option>
-                    <option value="MANAGER">MANAGER</option>
-                    <option value="TEAM_LEADER">TL (Team Leader)</option>
-                    <option value="TC">TC (Telecaller)</option>
+                    <option value="BRANCH_HEAD">Level 1: BRANCH HEAD</option>
+                    <option value="SENIOR_MANAGER">Level 2: SENIOR MANAGER</option>
+                    <option value="MANAGER">Level 3: MANAGER</option>
+                    <option value="TEAM_LEADER">Level 4: TL (Team Leader)</option>
+                    <option value="TC">Level 5: TC (Telecaller)</option>
                   </select>
                 </div>
 
-                {/* 2. DYNAMIC FIELDS BASED ON SELECTED EMPLOYEE ROLE */}
+                {/* 2. DYNAMIC REPORTING SUPERVISOR FIELDS */}
+                {hierarchyForm.hierarchy_level !== 'BRANCH_HEAD' && (
+                  <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', marginBottom: '18px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal, display: 'block', marginBottom: '10px' }}>Reporting Supervisors</span>
 
-                {/* CASE A: MANAGER */}
-                {hierarchyForm.hierarchy_level === 'MANAGER' && (
-                  <>
-                    {/* Select Team Leader(s) for Manager */}
-                    <div style={{ marginBottom: '18px' }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, marginBottom: '2px', color: C.text }}>
-                        Select Team Leader(s)
-                      </label>
-                      <span style={{ fontSize: '11.5px', color: C.teal, display: 'block', marginBottom: '8px', fontWeight: 700 }}>
-                        Initially None (Select one or more Team Leaders)
-                      </span>
-                      <div style={{ maxHeight: '150px', overflowY: 'auto', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '8px' }}>
-                        {employees.filter(e => e.id !== hierarchyModalEmp.id && (e.designation === 'Team Leader' || e.hierarchy_level === 'TEAM_LEADER')).length === 0 ? (
-                          <div style={{ fontSize: '12px', color: C.textMid, padding: '8px', textAlign: 'center' }}>No Team Leaders available</div>
-                        ) : (
-                          employees
-                            .filter(e => e.id !== hierarchyModalEmp.id && (e.designation === 'Team Leader' || e.hierarchy_level === 'TEAM_LEADER'))
-                            .map(tl => {
-                              const checked = (hierarchyForm.selected_tl_ids || []).includes(tl.id);
-                              return (
-                                <label key={tl.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', fontSize: '13px', color: C.text, cursor: 'pointer', borderRadius: '8px', background: checked ? '#EFF6FF' : 'transparent', marginBottom: '4px' }}>
-                                  <input 
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={(e) => {
-                                      const currentList = hierarchyForm.selected_tl_ids || [];
-                                      const newIds = e.target.checked
-                                        ? [...currentList, tl.id]
-                                        : currentList.filter(id => id !== tl.id);
-                                      // Also clear TC mapping for unselected TL
-                                      const newMapping = { ...hierarchyForm.tl_tc_mapping };
-                                      if (!e.target.checked) {
-                                        delete newMapping[tl.id];
-                                      }
-                                      setHierarchyForm({ ...hierarchyForm, selected_tl_ids: newIds, tl_tc_mapping: newMapping });
-                                    }}
-                                  />
-                                  <span style={{ fontWeight: checked ? 800 : 600 }}>{tl.full_name} ({tl.employee_id})</span>
-                                </label>
-                              );
-                            })
-                        )}
-                      </div>
+                    {/* Branch Head (Level 1) */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Assign Branch Head (Level 1)</label>
+                      <select value={hierarchyForm.branch_head_id} onChange={(e) => setHierarchyForm({ ...hierarchyForm, branch_head_id: e.target.value })} style={{ width: '100%', padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px' }}>
+                        <option value="">Direct / No Branch Head</option>
+                        {selectBranchHeadsOptions.map(bh => (
+                          <option key={bh.id} value={bh.id}>{bh.full_name} ({bh.employee_id})</option>
+                        ))}
+                      </select>
                     </div>
 
-                    {/* Contextual TC selection for each selected TL */}
-                    {(hierarchyForm.selected_tl_ids || []).length > 0 && (
-                      <div style={{ marginBottom: '20px' }}>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, marginBottom: '2px', color: C.text }}>
-                          Assign Telecallers to Team Leaders
-                        </label>
-                        <span style={{ fontSize: '11.5px', color: C.teal, display: 'block', marginBottom: '8px', fontWeight: 700 }}>
-                          Select TCs for each Team Leader (Initially None)
-                        </span>
-                        
-                        {(hierarchyForm.selected_tl_ids || []).map(tlId => {
-                          const tl = employees.find(e => e.id === tlId);
-                          if (!tl) return null;
-                          
-                          const assignedTCs = hierarchyForm.tl_tc_mapping?.[tlId] || [];
-                          const availableTCs = employees.filter(e => 
-                            e.id !== hierarchyModalEmp.id && 
-                            (e.designation === 'TC' || e.hierarchy_level === 'TC')
-                          );
-                          
-                          return (
-                            <div key={tlId} style={{ marginBottom: '16px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px' }}>
-                              <div style={{ fontSize: '12px', fontWeight: 800, color: '#3B82F6', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ background: '#3B82F6', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '10px' }}>TL</span>
-                                {tl.full_name} ({tl.employee_id})
-                              </div>
-                              
-                              <div style={{ maxHeight: '120px', overflowY: 'auto', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '6px' }}>
-                                {availableTCs.length === 0 ? (
-                                  <div style={{ fontSize: '11px', color: C.textMid, padding: '6px', textAlign: 'center' }}>No Telecallers available</div>
-                                ) : (
-                                  availableTCs.map(tc => {
-                                    const checked = assignedTCs.includes(tc.id);
-                                    return (
-                                      <label key={tc.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', fontSize: '12px', color: C.text, cursor: 'pointer', borderRadius: '6px', background: checked ? '#ECFDF5' : 'transparent', marginBottom: '2px' }}>
-                                        <input 
-                                          type="checkbox"
-                                          checked={checked}
-                                          onChange={(e) => {
-                                            const currentMapping = hierarchyForm.tl_tc_mapping || {};
-                                            const currentTCs = currentMapping[tlId] || [];
-                                            const newTCs = e.target.checked
-                                              ? [...currentTCs, tc.id]
-                                              : currentTCs.filter(id => id !== tc.id);
-                                            
-                                            setHierarchyForm({
-                                              ...hierarchyForm,
-                                              tl_tc_mapping: {
-                                                ...currentMapping,
-                                                [tlId]: newTCs
-                                              }
-                                            });
-                                          }}
-                                        />
-                                        <span style={{ fontWeight: checked ? 700 : 500 }}>{tc.full_name} ({tc.employee_id})</span>
-                                      </label>
-                                    );
-                                  })
-                                )}
-                              </div>
-                              
-                              <div style={{ marginTop: '6px', fontSize: '11px', color: C.textMid }}>
-                                {assignedTCs.length > 0 ? `${assignedTCs.length} TC(s) assigned` : 'No TCs assigned'}
-                              </div>
-                            </div>
-                          );
-                        })}
+                    {/* Senior Manager (Level 2) */}
+                    {(hierarchyForm.hierarchy_level === 'MANAGER' || hierarchyForm.hierarchy_level === 'TEAM_LEADER' || hierarchyForm.hierarchy_level === 'TC') && (
+                      <div style={{ marginBottom: '10px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Assign Senior Manager (Level 2)</label>
+                        <select value={hierarchyForm.senior_manager_id} onChange={(e) => setHierarchyForm({ ...hierarchyForm, senior_manager_id: e.target.value })} style={{ width: '100%', padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px' }}>
+                          <option value="">No Senior Manager</option>
+                          {selectSeniorManagersOptions.map(sm => (
+                            <option key={sm.id} value={sm.id}>{sm.full_name} ({sm.employee_id})</option>
+                          ))}
+                        </select>
                       </div>
                     )}
-                  </>
-                )}
 
-                {/* CASE B: TEAM LEADER */}
-                {hierarchyForm.hierarchy_level === 'TEAM_LEADER' && (
-                  <>
-                    {/* Assign Reporting Manager */}
-                    <div style={{ marginBottom: '18px' }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, marginBottom: '6px', color: C.text }}>
-                        Assign Reporting Manager
-                      </label>
-                      <select 
-                        value={hierarchyForm.manager_id} 
-                        onChange={(e) => setHierarchyForm({ ...hierarchyForm, manager_id: e.target.value })} 
-                        style={{ width: '100%', padding: '11px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}
-                      >
-                        <option value="">Direct / No Manager</option>
-                        {selectManagersOptions.map(m => (
-                          <option key={m.id} value={m.id}>{m.full_name} ({m.employee_id})</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Select Telecaller(s) for TL */}
-                    <div style={{ marginBottom: '20px' }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, marginBottom: '2px', color: C.text }}>
-                        Select Telecaller(s)
-                      </label>
-                      <span style={{ fontSize: '11.5px', color: C.teal, display: 'block', marginBottom: '8px', fontWeight: 700 }}>
-                        Initially None (Select one or more Telecallers)
-                      </span>
-                      <div style={{ maxHeight: '150px', overflowY: 'auto', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '8px' }}>
-                        {employees.filter(e => e.id !== hierarchyModalEmp.id && (e.designation === 'TC' || e.hierarchy_level === 'TC')).length === 0 ? (
-                          <div style={{ fontSize: '12px', color: C.textMid, padding: '8px', textAlign: 'center' }}>No Telecallers available</div>
-                        ) : (
-                          employees
-                            .filter(e => e.id !== hierarchyModalEmp.id && (e.designation === 'TC' || e.hierarchy_level === 'TC'))
-                            .map(tc => {
-                              const checked = (hierarchyForm.selected_tc_ids || []).includes(tc.id);
-                              return (
-                                <label key={tc.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', fontSize: '13px', color: C.text, cursor: 'pointer', borderRadius: '8px', background: checked ? '#ECFDF5' : 'transparent', marginBottom: '4px' }}>
-                                  <input 
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={(e) => {
-                                      const currentList = hierarchyForm.selected_tc_ids || [];
-                                      const newIds = e.target.checked
-                                        ? [...currentList, tc.id]
-                                        : currentList.filter(id => id !== tc.id);
-                                      setHierarchyForm({ ...hierarchyForm, selected_tc_ids: newIds });
-                                    }}
-                                  />
-                                  <span style={{ fontWeight: checked ? 800 : 600 }}>{tc.full_name} ({tc.employee_id})</span>
-                                </label>
-                              );
-                            })
-                        )}
+                    {/* Manager (Level 3) */}
+                    {(hierarchyForm.hierarchy_level === 'TEAM_LEADER' || hierarchyForm.hierarchy_level === 'TC') && (
+                      <div style={{ marginBottom: '10px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Assign Manager (Level 3)</label>
+                        <select value={hierarchyForm.manager_id} onChange={(e) => setHierarchyForm({ ...hierarchyForm, manager_id: e.target.value })} style={{ width: '100%', padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px' }}>
+                          <option value="">No Manager</option>
+                          {selectManagersOptions.map(m => (
+                            <option key={m.id} value={m.id}>{m.full_name} ({m.employee_id})</option>
+                          ))}
+                        </select>
                       </div>
-                    </div>
-                  </>
+                    )}
+
+                    {/* Team Leader (Level 4) */}
+                    {hierarchyForm.hierarchy_level === 'TC' && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Assign Team Leader (Level 4)</label>
+                        <select value={hierarchyForm.team_leader_id} onChange={(e) => setHierarchyForm({ ...hierarchyForm, team_leader_id: e.target.value })} style={{ width: '100%', padding: '9px 12px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', color: C.text, fontSize: '13px' }}>
+                          <option value="">No Team Leader</option>
+                          {selectTlsOptions.map(tl => (
+                            <option key={tl.id} value={tl.id}>{tl.full_name} ({tl.employee_id})</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 )}
 
-                {/* CASE C: TELECALLER */}
-                {hierarchyForm.hierarchy_level === 'TC' && (
-                  <>
-                    {/* Assign Reporting Manager */}
-                    <div style={{ marginBottom: '18px' }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, marginBottom: '6px', color: C.text }}>
-                        Assign Reporting Manager
-                      </label>
-                      <select 
-                        value={hierarchyForm.manager_id} 
-                        onChange={(e) => setHierarchyForm({ ...hierarchyForm, manager_id: e.target.value })} 
-                        style={{ width: '100%', padding: '11px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}
-                      >
-                        <option value="">Direct / No Manager</option>
-                        {selectManagersOptions.map(m => (
-                          <option key={m.id} value={m.id}>{m.full_name} ({m.employee_id})</option>
-                        ))}
-                      </select>
+                {/* 3. DOWNSTREAM TEAM SELECTION FOR MANAGERS & TLS */}
+                {hierarchyForm.hierarchy_level === 'MANAGER' && (
+                  <div style={{ marginBottom: '18px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, marginBottom: '2px', color: C.text }}>
+                      Select Team Leader(s) under this Manager
+                    </label>
+                    <div style={{ maxHeight: '150px', overflowY: 'auto', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '8px' }}>
+                      {employees.filter(e => e.id !== hierarchyModalEmp.id && (e.designation === 'Team Leader' || e.hierarchy_level === 'TEAM_LEADER')).length === 0 ? (
+                        <div style={{ fontSize: '12px', color: C.textMid, padding: '8px', textAlign: 'center' }}>No Team Leaders available</div>
+                      ) : (
+                        employees
+                          .filter(e => e.id !== hierarchyModalEmp.id && (e.designation === 'Team Leader' || e.hierarchy_level === 'TEAM_LEADER'))
+                          .map(tl => {
+                            const checked = (hierarchyForm.selected_tl_ids || []).includes(tl.id);
+                            return (
+                              <label key={tl.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', fontSize: '13px', color: C.text, cursor: 'pointer', borderRadius: '8px', background: checked ? '#EFF6FF' : 'transparent', marginBottom: '4px' }}>
+                                <input 
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const currentList = hierarchyForm.selected_tl_ids || [];
+                                    const newIds = e.target.checked
+                                      ? [...currentList, tl.id]
+                                      : currentList.filter(id => id !== tl.id);
+                                    setHierarchyForm({ ...hierarchyForm, selected_tl_ids: newIds });
+                                  }}
+                                />
+                                <span style={{ fontWeight: checked ? 800 : 600 }}>{tl.full_name} ({tl.employee_id})</span>
+                              </label>
+                            );
+                          })
+                      )}
                     </div>
+                  </div>
+                )}
 
-                    {/* Assign Team Leader */}
-                    <div style={{ marginBottom: '24px' }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, marginBottom: '6px', color: C.text }}>
-                        Assign Team Leader
-                      </label>
-                      <select 
-                        value={hierarchyForm.team_leader_id} 
-                        onChange={(e) => setHierarchyForm({ ...hierarchyForm, team_leader_id: e.target.value })} 
-                        style={{ width: '100%', padding: '11px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}
-                      >
-                        <option value="">No Team Leader</option>
-                        {selectTlsOptions.map(tl => (
-                          <option key={tl.id} value={tl.id}>{tl.full_name} ({tl.employee_id})</option>
-                        ))}
-                      </select>
+                {hierarchyForm.hierarchy_level === 'TEAM_LEADER' && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, marginBottom: '2px', color: C.text }}>
+                      Select Telecaller(s) under this Team Leader
+                    </label>
+                    <div style={{ maxHeight: '150px', overflowY: 'auto', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '8px' }}>
+                      {employees.filter(e => e.id !== hierarchyModalEmp.id && (e.designation === 'TC' || e.hierarchy_level === 'TC')).length === 0 ? (
+                        <div style={{ fontSize: '12px', color: C.textMid, padding: '8px', textAlign: 'center' }}>No Telecallers available</div>
+                      ) : (
+                        employees
+                          .filter(e => e.id !== hierarchyModalEmp.id && (e.designation === 'TC' || e.hierarchy_level === 'TC'))
+                          .map(tc => {
+                            const checked = (hierarchyForm.selected_tc_ids || []).includes(tc.id);
+                            return (
+                              <label key={tc.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', fontSize: '13px', color: C.text, cursor: 'pointer', borderRadius: '8px', background: checked ? '#ECFDF5' : 'transparent', marginBottom: '4px' }}>
+                                <input 
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const currentList = hierarchyForm.selected_tc_ids || [];
+                                    const newIds = e.target.checked
+                                      ? [...currentList, tc.id]
+                                      : currentList.filter(id => id !== tc.id);
+                                    setHierarchyForm({ ...hierarchyForm, selected_tc_ids: newIds });
+                                  }}
+                                />
+                                <span style={{ fontWeight: checked ? 800 : 600 }}>{tc.full_name} ({tc.employee_id})</span>
+                              </label>
+                            );
+                          })
+                      )}
                     </div>
-                  </>
+                  </div>
                 )}
 
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '20px' }}>

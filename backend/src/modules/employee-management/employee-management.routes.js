@@ -38,6 +38,10 @@ router.use(roleCheck('SUPER_ADMIN', 'ADMIN'));
 // Helper function to sync registered candidates and ensure initial demo employees exist
 async function syncAndSeedEmployees() {
   try {
+    // Ensure 5-level hierarchy columns exist on employee_hierarchy table
+    await query(`ALTER TABLE employee_hierarchy ADD COLUMN IF NOT EXISTS senior_manager_id UUID REFERENCES employees(id)`).catch(() => {});
+    await query(`ALTER TABLE employee_hierarchy ADD COLUMN IF NOT EXISTS branch_head_id UUID REFERENCES employees(id)`).catch(() => {});
+
     // 1. Sync candidates from employee_candidates into users table
     await query(`
       INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
@@ -205,7 +209,7 @@ async function syncAndSeedEmployees() {
   }
 }
 
-// GET /api/v1/employees — List all employees with rich search and filtering
+// GET /api/v1/employees — List all employees with rich search and filtering across 5 hierarchy levels
 router.get('/', async (req, res, next) => {
   try {
     await syncAndSeedEmployees();
@@ -215,9 +219,11 @@ router.get('/', async (req, res, next) => {
       SELECT 
         e.*,
         c.overall_progress, c.current_stage, c.kyc_verified, c.terms_completed,
-        h.team_leader_id, h.manager_id, h.hierarchy_level,
+        h.team_leader_id, h.manager_id, h.senior_manager_id, h.branch_head_id, h.hierarchy_level,
         tl.full_name as team_leader_name,
         mgr.full_name as manager_name,
+        sm.full_name as senior_manager_name,
+        bh.full_name as branch_head_name,
         (SELECT COUNT(*) FROM employee_product_links pl WHERE pl.employee_id = e.id AND pl.status = 'ACTIVE') as active_links_count,
         (SELECT COUNT(*) FROM applications app WHERE app.employee_id = e.id) as total_applications,
         (SELECT COALESCE(SUM(amount), 0) FROM employee_incentive_transactions it WHERE it.employee_id = e.id AND it.status = 'COMPLETED') as total_incentives_earned
@@ -227,6 +233,8 @@ router.get('/', async (req, res, next) => {
       LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
       LEFT JOIN employees tl ON tl.id = h.team_leader_id
       LEFT JOIN employees mgr ON mgr.id = h.manager_id
+      LEFT JOIN employees sm ON sm.id = h.senior_manager_id
+      LEFT JOIN employees bh ON bh.id = h.branch_head_id
       WHERE (u.role IS NULL OR u.role = 'EMPLOYEE')
         AND (e.designation NOT ILIKE '%HR%' AND e.designation NOT ILIKE '%Human Resource%')
     `;
@@ -242,17 +250,7 @@ router.get('/', async (req, res, next) => {
       queryStr += ` AND e.activation_status = $${params.length}`;
     }
 
-    // Standardize any legacy designations in DB
-    await query(`
-      UPDATE employees 
-      SET designation = CASE 
-        WHEN designation ILIKE '%Manager%' THEN 'Manager'
-        WHEN designation ILIKE '%Team Leader%' OR designation = 'TL' THEN 'Team Leader'
-        ELSE 'TC'
-      END
-      WHERE designation NOT IN ('Manager', 'Team Leader', 'TC') OR designation IS NULL
-    `).catch(() => {});
-
+    // Standardize designations in DB
     await query(`
       UPDATE employees e
       SET designation = CASE 
@@ -311,7 +309,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// GET /api/v1/employees/stats — Global employee metrics for dashboard
+// GET /api/v1/employees/stats — Global employee metrics across 5 hierarchy levels
 router.get('/stats', async (req, res, next) => {
   try {
     await syncAndSeedEmployees();
@@ -322,11 +320,14 @@ router.get('/stats', async (req, res, next) => {
         COUNT(*) FILTER (WHERE e.employee_status = 'ACTIVE') as active_employees,
         COUNT(*) FILTER (WHERE e.employee_status = 'ONBOARDING') as onboarding_employees,
         COUNT(*) FILTER (WHERE e.activation_status = 'PENDING') as pending_activation,
-        COUNT(*) FILTER (WHERE e.designation = 'Manager') as total_managers,
-        COUNT(*) FILTER (WHERE e.designation = 'Team Leader') as total_tls,
-        COUNT(*) FILTER (WHERE e.designation = 'TC') as total_tcs
+        COUNT(*) FILTER (WHERE e.designation = 'Branch Head' OR h.hierarchy_level = 'BRANCH_HEAD') as total_branch_heads,
+        COUNT(*) FILTER (WHERE e.designation = 'Senior Manager' OR h.hierarchy_level = 'SENIOR_MANAGER') as total_senior_managers,
+        COUNT(*) FILTER (WHERE e.designation = 'Manager' OR h.hierarchy_level = 'MANAGER') as total_managers,
+        COUNT(*) FILTER (WHERE e.designation = 'Team Leader' OR h.hierarchy_level = 'TEAM_LEADER') as total_tls,
+        COUNT(*) FILTER (WHERE e.designation = 'TC' OR h.hierarchy_level = 'TC') as total_tcs
       FROM employees e
       LEFT JOIN users u ON u.id = e.user_id
+      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
       WHERE (u.role IS NULL OR u.role = 'EMPLOYEE')
         AND (e.designation NOT ILIKE '%HR%' AND e.designation NOT ILIKE '%Human Resource%')
     `);
@@ -928,22 +929,111 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
   }
 });
 
-// POST /api/v1/employees/:id/hierarchy — Assign Manager & Team Leader
+// POST /api/v1/employees/create — Super Admin Create new employee directly with 5-level hierarchy
+router.post('/create', async (req, res, next) => {
+  try {
+    const {
+      full_name, mobile_number, email_id, designation, department = 'Sales & Distribution',
+      offered_salary = 25000, work_location = 'Head Office', hierarchy_level = 'TC',
+      branch_head_id, senior_manager_id, manager_id, team_leader_id
+    } = req.body;
+
+    if (!full_name || !mobile_number) {
+      return res.status(400).json({ success: false, message: 'Full Name and Mobile Number are required' });
+    }
+
+    const cleanMobile = String(mobile_number).trim();
+    const cleanEmail = email_id ? String(email_id).trim().toLowerCase() : `${cleanMobile}@gharkapaisa.in`;
+
+    // 1. Check existing user/employee
+    const existing = await query(`SELECT id FROM employees WHERE mobile_number = $1 OR email_id = $2`, [cleanMobile, cleanEmail]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ success: false, message: 'Employee with this mobile number or email already exists' });
+    }
+
+    // 2. Generate Employee Code based on hierarchy level
+    const levelUpper = (hierarchy_level || designation || 'TC').toUpperCase();
+    let prefix = 'TC';
+    if (levelUpper.includes('BRANCH') || levelUpper === 'BRANCH_HEAD') prefix = 'BH';
+    else if (levelUpper.includes('SENIOR') || levelUpper === 'SENIOR_MANAGER') prefix = 'SM';
+    else if (levelUpper.includes('MANAGER') || levelUpper === 'MANAGER') prefix = 'MGR';
+    else if (levelUpper.includes('TEAM') || levelUpper.includes('TL') || levelUpper === 'TEAM_LEADER') prefix = 'TL';
+
+    const seqRes = await query(`SELECT nextval('employee_id_seq') as seq`).catch(() => ({ rows: [{ seq: Math.floor(1000 + Math.random() * 9000) }] }));
+    const empCode = `YOH-${prefix}${seqRes.rows[0]?.seq || Math.floor(1000 + Math.random() * 9000)}`;
+
+    // 3. Create User record
+    const bcrypt = require('bcryptjs');
+    const defaultHash = await bcrypt.hash('Gkp@123456', 10);
+    const userRes = await query(
+      `INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
+       VALUES ($1, $2, $3, 'EMPLOYEE', 'active', $4, $5, $6, $7) RETURNING id`,
+      [full_name, cleanMobile, cleanEmail, empCode, designation || prefix, department, defaultHash]
+    );
+    const userId = userRes.rows[0].id;
+
+    // 4. Create Employee record
+    const mapDesg = { 'BRANCH_HEAD': 'Branch Head', 'SENIOR_MANAGER': 'Senior Manager', 'MANAGER': 'Manager', 'TEAM_LEADER': 'Team Leader', 'TL': 'Team Leader', 'TC': 'TC' };
+    const finalDesg = mapDesg[levelUpper] || designation || 'TC';
+
+    const empRes = await query(
+      `INSERT INTO employees (
+        employee_id, user_id, full_name, mobile_number, email_id, designation, department,
+        joining_date, work_location, employment_type, offered_salary, employee_status, activation_status, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, $8, 'Full-time', $9, 'ACTIVE', 'APPROVED', $10) RETURNING *`,
+      [empCode, userId, full_name, cleanMobile, cleanEmail, finalDesg, department, work_location, parseFloat(offered_salary) || 25000, req.user?.id || null]
+    );
+    const employee = empRes.rows[0];
+
+    // 5. Create Checklist record
+    await query(
+      `INSERT INTO employee_onboarding_checklist (employee_id, interview_completed, employee_created, joining_form_completed, kyc_submitted, kyc_verified, terms_completed, activated, overall_progress, current_stage)
+       VALUES ($1, true, true, true, true, true, true, true, 100, 'ACTIVE') ON CONFLICT (employee_id) DO NOTHING`,
+      [employee.id]
+    );
+
+    // 6. Assign Hierarchy
+    const cleanBhId = (branch_head_id && branch_head_id !== 'null' && String(branch_head_id).trim()) ? String(branch_head_id).trim() : null;
+    const cleanSmId = (senior_manager_id && senior_manager_id !== 'null' && String(senior_manager_id).trim()) ? String(senior_manager_id).trim() : null;
+    const cleanMgrId = (manager_id && manager_id !== 'null' && String(manager_id).trim()) ? String(manager_id).trim() : null;
+    const cleanTlId = (team_leader_id && team_leader_id !== 'null' && String(team_leader_id).trim()) ? String(team_leader_id).trim() : null;
+
+    await query(
+      `INSERT INTO employee_hierarchy (employee_id, branch_head_id, senior_manager_id, manager_id, team_leader_id, hierarchy_level, assigned_by, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, true)`,
+      [employee.id, cleanBhId, cleanSmId, cleanMgrId, cleanTlId, levelUpper, req.user?.id || null]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: `Employee ${full_name} (${empCode}) created successfully!`,
+      data: employee
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/employees/:id/hierarchy — Assign Hierarchy Level & Reporting Structure (Branch Head, Senior Manager, Manager, TL)
 router.post('/:id/hierarchy', async (req, res, next) => {
   try {
     const { id } = req.params;
-    let { team_leader_id, manager_id, hierarchy_level } = req.body;
+    let { branch_head_id, senior_manager_id, manager_id, team_leader_id, hierarchy_level } = req.body;
 
     if (!hierarchy_level) {
-      return res.status(400).json({ success: false, message: 'Hierarchy level is required (MANAGER, TEAM_LEADER, TC)' });
+      return res.status(400).json({ success: false, message: 'Hierarchy level is required (BRANCH_HEAD, SENIOR_MANAGER, MANAGER, TEAM_LEADER, TC)' });
     }
 
-    const cleanTlId = (team_leader_id && team_leader_id !== 'null' && team_leader_id !== 'undefined' && String(team_leader_id).trim() !== '') ? String(team_leader_id).trim() : null;
+    const cleanBhId = (branch_head_id && branch_head_id !== 'null' && branch_head_id !== 'undefined' && String(branch_head_id).trim() !== '') ? String(branch_head_id).trim() : null;
+    const cleanSmId = (senior_manager_id && senior_manager_id !== 'null' && senior_manager_id !== 'undefined' && String(senior_manager_id).trim() !== '') ? String(senior_manager_id).trim() : null;
     const cleanMgrId = (manager_id && manager_id !== 'null' && manager_id !== 'undefined' && String(manager_id).trim() !== '') ? String(manager_id).trim() : null;
+    const cleanTlId = (team_leader_id && team_leader_id !== 'null' && team_leader_id !== 'undefined' && String(team_leader_id).trim() !== '') ? String(team_leader_id).trim() : null;
+
+    const levelUpper = hierarchy_level.toUpperCase();
 
     // Sync employee designation in employees table
     const mapDesg = { 'BRANCH_HEAD': 'Branch Head', 'SENIOR_MANAGER': 'Senior Manager', 'MANAGER': 'Manager', 'TEAM_LEADER': 'Team Leader', 'TL': 'Team Leader', 'TC': 'TC' };
-    const desg = mapDesg[hierarchy_level.toUpperCase()] || hierarchy_level;
+    const desg = mapDesg[levelUpper] || hierarchy_level;
     await query(`UPDATE employees SET designation = $1, updated_at = NOW() WHERE id = $2`, [desg, id]);
 
     // Deactivate previous active hierarchy
@@ -952,9 +1042,9 @@ router.post('/:id/hierarchy', async (req, res, next) => {
     const assignedBy = req.user?.id || req.user?.userId || null;
 
     const { rows } = await query(
-      `INSERT INTO employee_hierarchy (employee_id, team_leader_id, manager_id, hierarchy_level, assigned_by, is_active)
-       VALUES ($1, $2, $3, $4, $5, true) RETURNING *`,
-      [id, cleanTlId, cleanMgrId, hierarchy_level.toUpperCase(), assignedBy]
+      `INSERT INTO employee_hierarchy (employee_id, branch_head_id, senior_manager_id, manager_id, team_leader_id, hierarchy_level, assigned_by, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING *`,
+      [id, cleanBhId, cleanSmId, cleanMgrId, cleanTlId, levelUpper, assignedBy]
     );
 
     res.json({ success: true, message: 'Employee hierarchy assigned successfully', data: rows[0] });
@@ -966,7 +1056,7 @@ router.post('/:id/hierarchy', async (req, res, next) => {
 // POST /api/v1/employees/bulk-hierarchy — Bulk assign hierarchy for multiple employees
 router.post('/bulk-hierarchy', async (req, res, next) => {
   try {
-    const { assignments } = req.body; // Array of { employee_id, manager_id, team_leader_id, hierarchy_level }
+    const { assignments } = req.body; // Array of { employee_id, branch_head_id, senior_manager_id, manager_id, team_leader_id, hierarchy_level }
     
     if (!Array.isArray(assignments) || assignments.length === 0) {
       return res.status(400).json({ success: false, message: 'Assignments array is required' });
@@ -981,18 +1071,22 @@ router.post('/bulk-hierarchy', async (req, res, next) => {
 
     for (const assignment of assignments) {
       try {
-        const { employee_id, manager_id, team_leader_id, hierarchy_level } = assignment;
+        const { employee_id, branch_head_id, senior_manager_id, manager_id, team_leader_id, hierarchy_level } = assignment;
         
         if (!employee_id || !hierarchy_level) {
           errors.push({ employee_id, error: 'Missing required fields' });
           continue;
         }
 
-        const cleanTlId = (team_leader_id && team_leader_id !== 'null' && team_leader_id !== 'undefined' && String(team_leader_id).trim() !== '') ? String(team_leader_id).trim() : null;
+        const cleanBhId = (branch_head_id && branch_head_id !== 'null' && branch_head_id !== 'undefined' && String(branch_head_id).trim() !== '') ? String(branch_head_id).trim() : null;
+        const cleanSmId = (senior_manager_id && senior_manager_id !== 'null' && senior_manager_id !== 'undefined' && String(senior_manager_id).trim() !== '') ? String(senior_manager_id).trim() : null;
         const cleanMgrId = (manager_id && manager_id !== 'null' && manager_id !== 'undefined' && String(manager_id).trim() !== '') ? String(manager_id).trim() : null;
+        const cleanTlId = (team_leader_id && team_leader_id !== 'null' && team_leader_id !== 'undefined' && String(team_leader_id).trim() !== '') ? String(team_leader_id).trim() : null;
+
+        const levelUpper = hierarchy_level.toUpperCase();
 
         // Sync employee designation
-        const desg = mapDesg[hierarchy_level.toUpperCase()] || hierarchy_level;
+        const desg = mapDesg[levelUpper] || hierarchy_level;
         await query(`UPDATE employees SET designation = $1, updated_at = NOW() WHERE id = $2`, [desg, employee_id]);
 
         // Deactivate previous active hierarchy
@@ -1000,9 +1094,9 @@ router.post('/bulk-hierarchy', async (req, res, next) => {
 
         // Insert new hierarchy
         const { rows } = await query(
-          `INSERT INTO employee_hierarchy (employee_id, team_leader_id, manager_id, hierarchy_level, assigned_by, is_active)
-           VALUES ($1, $2, $3, $4, $5, true) RETURNING *`,
-          [employee_id, cleanTlId, cleanMgrId, hierarchy_level.toUpperCase(), assignedBy]
+          `INSERT INTO employee_hierarchy (employee_id, branch_head_id, senior_manager_id, manager_id, team_leader_id, hierarchy_level, assigned_by, is_active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING *`,
+          [employee_id, cleanBhId, cleanSmId, cleanMgrId, cleanTlId, levelUpper, assignedBy]
         );
 
         results.push({ employee_id, success: true, data: rows[0] });
@@ -1030,9 +1124,11 @@ router.post('/:id/unassign-hierarchy', async (req, res, next) => {
     // Deactivate active hierarchy for this employee
     await query(`UPDATE employee_hierarchy SET is_active = false WHERE employee_id = $1`, [id]);
 
-    // Clear hierarchy assignment in active records where this employee was assigned as Manager or TL
-    await query(`UPDATE employee_hierarchy SET team_leader_id = NULL WHERE team_leader_id = $1 AND is_active = true`, [id]);
+    // Clear hierarchy assignment in active records where this employee was assigned as supervisor
+    await query(`UPDATE employee_hierarchy SET branch_head_id = NULL WHERE branch_head_id = $1 AND is_active = true`, [id]);
+    await query(`UPDATE employee_hierarchy SET senior_manager_id = NULL WHERE senior_manager_id = $1 AND is_active = true`, [id]);
     await query(`UPDATE employee_hierarchy SET manager_id = NULL WHERE manager_id = $1 AND is_active = true`, [id]);
+    await query(`UPDATE employee_hierarchy SET team_leader_id = NULL WHERE team_leader_id = $1 AND is_active = true`, [id]);
 
     res.json({ success: true, message: 'Employee unassigned from team hierarchy successfully' });
   } catch (err) {
