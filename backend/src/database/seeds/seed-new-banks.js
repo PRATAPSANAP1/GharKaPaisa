@@ -64,6 +64,62 @@ const NEW_BANK_CARDS = [
     seo_keywords: 'tata neu plus hdfc credit card, tata co-brand hdfc credit card, apply hdfc credit card',
     min_age: 21, max_age: 65, min_income: 25000, display_order: 2, priority: 2
   },
+  {
+    bank_id: '1eacfa67-1187-48c7-adde-8a6edcfe9969',
+    bank_name: 'TATA CO-BRAND HDFC BANK',
+    name: 'Tata Neu Business Infinity HDFC Bank Credit Card',
+    category: 'co_branded_card',
+    sub_category: 'Co-Branded Cards',
+    short_description: '5% NeuCoins on business & Tata brand spends, RuPay UPI payments, and international lounge access.',
+    description: 'Tata Neu Business Infinity HDFC Bank Credit Card is designed for business owners & self-employed individuals. Get 5% NeuCoins on business purchases across Tata brands & Tata Neu app, plus 1.5% NeuCoins on non-Tata spends.',
+    annual_fee: '₹1,499 (Waived on ₹3,00,000 annual spend)',
+    joining_fee: '₹1,499',
+    interest_rate: '3.6% p.m.',
+    features: [
+      '5% NeuCoins on business spends at Tata Neu App & Tata partner brands',
+      '1.5% NeuCoins on RuPay UPI merchant transactions & utility business payments',
+      '8 domestic airport lounge access visits per year',
+      '4 international lounge access visits annually via Priority Pass',
+      '51 days interest-free credit period'
+    ],
+    benefits: '5% NeuCoins on business spends, 12 complimentary lounge visits per year, and extended credit cycle.',
+    eligibility: { min_age: 21, max_age: 65, min_income: 35000 },
+    eligibility_criteria: 'Self-Employed / Business Owners with ITR ₹5 Lakhs+ or active business proof.',
+    documents_required: 'PAN Card, Aadhaar Card, ITR V / Business Proof',
+    fees_charges: 'Joining Fee: ₹1,499 | Annual Fee: ₹1,499 (Waived on ₹3,00,000 annual spend) | Interest Rate: 3.6% p.m.',
+    seo_title: 'Tata Neu Business Infinity HDFC Credit Card – Apply Online | GharKaPaisa',
+    seo_description: 'Apply for Tata Neu Business Infinity HDFC Credit Card. Earn 5% NeuCoins on business & Tata brand spends.',
+    seo_keywords: 'tata neu business infinity hdfc credit card, tata co-brand hdfc business card',
+    min_age: 21, max_age: 65, min_income: 35000, display_order: 3, priority: 3
+  },
+  {
+    bank_id: '1eacfa67-1187-48c7-adde-8a6edcfe9969',
+    bank_name: 'TATA CO-BRAND HDFC BANK',
+    name: 'Tata Neu Business Plus HDFC Bank Credit Card',
+    category: 'co_branded_card',
+    sub_category: 'Co-Branded Cards',
+    short_description: '2% NeuCoins on business & Tata Neu app purchases + 1% on RuPay UPI business spends.',
+    description: 'Tata Neu Business Plus HDFC Bank Credit Card provides 2% NeuCoins on Tata brand business purchases, 1% NeuCoins on RuPay UPI merchant spends, and 4 domestic airport lounge visits annually.',
+    annual_fee: '₹499 (Waived on ₹1,00,000 annual spend)',
+    joining_fee: '₹499',
+    interest_rate: '3.6% p.m.',
+    features: [
+      '2% NeuCoins on Tata brand purchases & Tata Neu App business orders',
+      '1% NeuCoins on RuPay UPI merchant transactions',
+      '4 complimentary domestic airport lounge access visits per year',
+      '1% fuel surcharge waiver',
+      'Simplified expense management for business users'
+    ],
+    benefits: '2% NeuCoins on business purchases, 4 domestic lounge visits per year, and 1% fuel surcharge waiver.',
+    eligibility: { min_age: 21, max_age: 65, min_income: 25000 },
+    eligibility_criteria: 'Self-Employed / Business Owners with monthly income ₹25,000+ or ITR proof.',
+    documents_required: 'PAN Card, Aadhaar Card, ITR V / Bank Statement',
+    fees_charges: 'Joining Fee: ₹499 | Annual Fee: ₹499 (Waived on ₹1,00,000 annual spend) | Interest Rate: 3.6% p.m.',
+    seo_title: 'Tata Neu Business Plus HDFC Credit Card – Apply Online | GharKaPaisa',
+    seo_description: 'Apply for Tata Neu Business Plus HDFC Credit Card. Earn 2% NeuCoins on Tata business spends.',
+    seo_keywords: 'tata neu business plus hdfc credit card, tata co-brand hdfc card',
+    min_age: 21, max_age: 65, min_income: 25000, display_order: 4, priority: 4
+  },
 
   // ─── 2. TATA CO-BRAND SBI BANK (ad9a965f-63c9-4a67-92be-058b45eea1f5) ────────
   {
