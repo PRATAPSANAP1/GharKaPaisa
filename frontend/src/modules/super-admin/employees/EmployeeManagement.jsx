@@ -874,9 +874,43 @@ export default function EmployeeManagement() {
           const currentMgr = currentPerson;
           const activePersonId = currentPerson?.id;
 
-          const managerTLs = activePersonId ? tlsList.filter(tl => tl.manager_id === activePersonId || tl.manager_name === currentPerson?.full_name) : [];
-          const allManagerTCs = activePersonId ? employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === activePersonId || tc.manager_name === currentPerson?.full_name)) : [];
-          const directTCs = allManagerTCs.filter(tc => !tc.team_leader_id && !tc.team_leader_name);
+          const subSrMgrs = selectedTreeRole === 'BRANCH_HEAD' && activePersonId
+            ? seniorManagersList.filter(sm => sm.branch_head_id === activePersonId || sm.branch_head_name === currentPerson?.full_name)
+            : [];
+
+          const subManagers = selectedTreeRole === 'BRANCH_HEAD' && activePersonId
+            ? managersList.filter(m => m.branch_head_id === activePersonId || m.branch_head_name === currentPerson?.full_name || subSrMgrs.some(sm => sm.id === m.senior_manager_id))
+            : selectedTreeRole === 'SENIOR_MANAGER' && activePersonId
+            ? managersList.filter(m => m.senior_manager_id === activePersonId || m.senior_manager_name === currentPerson?.full_name)
+            : [];
+
+          const managerTLs = selectedTreeRole === 'TEAM_LEADER'
+            ? []
+            : activePersonId
+            ? tlsList.filter(tl => tl.manager_id === activePersonId || tl.manager_name === currentPerson?.full_name || subManagers.some(m => m.id === tl.manager_id))
+            : [];
+
+          const allManagerTCs = activePersonId
+            ? (selectedTreeRole === 'TEAM_LEADER'
+                ? employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.team_leader_id === activePersonId || tc.team_leader_name === currentPerson?.full_name))
+                : employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (
+                    tc.manager_id === activePersonId || tc.manager_name === currentPerson?.full_name ||
+                    managerTLs.some(tl => tl.id === tc.team_leader_id)
+                  ))
+              )
+            : [];
+
+          const directTCs = selectedTreeRole === 'TEAM_LEADER' ? allManagerTCs : allManagerTCs.filter(tc => !tc.team_leader_id && !tc.team_leader_name);
+
+          const roleBadgeLabel = selectedTreeRole === 'BRANCH_HEAD' ? 'BRANCH HEAD' :
+                                 selectedTreeRole === 'SENIOR_MANAGER' ? 'SENIOR MANAGER' :
+                                 selectedTreeRole === 'TEAM_LEADER' ? 'TEAM LEADER' :
+                                 'MANAGER';
+
+          const roleBadgeColor = roleBadgeLabel === 'BRANCH HEAD' ? { bg: '#FEF3C7', color: '#D97706', border: '#FCD34D' } :
+                                 roleBadgeLabel === 'SENIOR MANAGER' ? { bg: '#EEF2FF', color: '#4F46E5', border: '#C7D2FE' } :
+                                 roleBadgeLabel === 'TEAM LEADER' ? { bg: '#EFF6FF', color: '#2563EB', border: '#BFDBFE' } :
+                                 { bg: '#EDE9FE', color: '#7C3AED', border: '#DDD6FE' };
 
           // Build TL to TC mapping for tree visualization
           const tlTcMapping = {};
@@ -1046,18 +1080,18 @@ export default function EmployeeManagement() {
                   {currentMgr && (
                     <div onClick={() => setPopoverEmpId(null)} style={{ background: '#F8FAFC', border: `1px solid ${C.border}`, borderRadius: '20px', padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
                       
-                      {/* LEVEL 1: MANAGER NODE */}
-                      <div style={{ background: '#FFFFFF', border: `2px solid #818CF8`, borderRadius: '16px', padding: '16px 20px', minWidth: '320px', maxWidth: '380px', boxShadow: '0 10px 25px rgba(99, 102, 241, 0.08)', position: 'relative', zIndex: 10 }}>
+                      {/* LEVEL 1: ROOT NODE */}
+                      <div style={{ background: '#FFFFFF', border: `2px solid ${roleBadgeColor.border}`, borderRadius: '16px', padding: '16px 20px', minWidth: '320px', maxWidth: '380px', boxShadow: `0 10px 25px ${roleBadgeColor.color}18`, position: 'relative', zIndex: 10 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#E0E7FF', color: '#4338CA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '16px' }}>
-                              {currentMgr.full_name?.charAt(0) || 'M'}
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: roleBadgeColor.bg, color: roleBadgeColor.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '16px' }}>
+                              {currentMgr.full_name?.charAt(0) || 'P'}
                             </div>
                             <div>
                               <div style={{ fontSize: '15px', fontWeight: 900, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 {currentMgr.full_name}
-                                <span style={{ background: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE', fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '12px', textTransform: 'uppercase' }}>
-                                  MANAGER
+                                <span style={{ background: roleBadgeColor.bg, color: roleBadgeColor.color, border: `1px solid ${roleBadgeColor.border}`, fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '12px', textTransform: 'uppercase' }}>
+                                  {roleBadgeLabel}
                                 </span>
                               </div>
                               <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 700 }}>{currentMgr.employee_id}</div>
@@ -1074,7 +1108,7 @@ export default function EmployeeManagement() {
 
                         <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #F1F5F9' }}>
                           <span>📞 {currentMgr.mobile_number || 'N/A'}</span>
-                          <span style={{ fontWeight: 800, color: '#4F46E5' }}>👤 Total Members: {managerTLs.length + allManagerTCs.length}</span>
+                          <span style={{ fontWeight: 800, color: roleBadgeColor.color }}>👤 Total Members: {(subSrMgrs?.length || 0) + (subManagers?.length || 0) + managerTLs.length + allManagerTCs.length}</span>
                         </div>
 
                         {/* Floating Context Popover Dropdown */}
@@ -1298,27 +1332,41 @@ export default function EmployeeManagement() {
                       {/* Bottom Stats Summary Bar & Legend */}
                       <div style={{ width: '100%', marginTop: '32px', paddingTop: '20px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                          <div style={{ background: '#EEF2FF', border: '1px solid #C7D2FE', borderRadius: '12px', padding: '8px 14px', fontSize: '13px', fontWeight: 900, color: '#4F46E5', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#4F46E5', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>1</div>
-                            Managers
-                          </div>
-                          <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '8px 14px', fontSize: '13px', fontWeight: 900, color: '#2563EB', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#2563EB', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>{managerTLs.length}</div>
-                            Team Leaders
-                          </div>
+                          {selectedTreeRole === 'BRANCH_HEAD' && (
+                            <div style={{ background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: '12px', padding: '8px 14px', fontSize: '13px', fontWeight: 900, color: '#D97706', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#D97706', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>{subSrMgrs.length}</div>
+                              Sr. Managers
+                            </div>
+                          )}
+                          {(selectedTreeRole === 'BRANCH_HEAD' || selectedTreeRole === 'SENIOR_MANAGER') && (
+                            <div style={{ background: '#EDE9FE', border: '1px solid #DDD6FE', borderRadius: '12px', padding: '8px 14px', fontSize: '13px', fontWeight: 900, color: '#7C3AED', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#7C3AED', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>{subManagers.length}</div>
+                              Managers
+                            </div>
+                          )}
+                          {selectedTreeRole !== 'TEAM_LEADER' && (
+                            <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '8px 14px', fontSize: '13px', fontWeight: 900, color: '#2563EB', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#2563EB', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>{managerTLs.length}</div>
+                              Team Leaders
+                            </div>
+                          )}
                           <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '12px', padding: '8px 14px', fontSize: '13px', fontWeight: 900, color: '#059669', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#059669', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>{allManagerTCs.length}</div>
                             Telecallers
                           </div>
                           <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '12px', padding: '8px 14px', fontSize: '13px', fontWeight: 900, color: '#D97706', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#D97706', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>{1 + managerTLs.length + allManagerTCs.length}</div>
+                            <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: '#D97706', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px' }}>
+                              {1 + (subSrMgrs?.length || 0) + (subManagers?.length || 0) + managerTLs.length + allManagerTCs.length}
+                            </div>
                             Total Employees
                           </div>
                         </div>
 
                         {/* Legend */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12.5px', fontWeight: 700, color: '#64748B' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4F46E5' }}></span> Manager</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D97706' }}></span> Branch Head</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4F46E5' }}></span> Sr Manager</span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#7C3AED' }}></span> Manager</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2563EB' }}></span> Team Leader</span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#059669' }}></span> Telecaller</span>
                         </div>
