@@ -4321,13 +4321,13 @@ const get360ApplicationTrace = async (req, res, next) => {
         
         c.id AS customer_id,
         COALESCE(NULLIF(a.customer_name, ''), NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') AS customer_name,
-        COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) AS customer_mobile,
+        COALESCE(NULLIF(a.customer_mobile, ''), NULLIF(l.mobile, ''), c.mobile) AS customer_mobile,
         COALESCE(NULLIF(a.customer_email, ''), NULLIF(c.email, ''), NULLIF(l.email, '')) AS customer_email,
         
         l.id AS lead_id,
         l.status AS lead_status,
         l.process_type AS lead_process_type,
-        l.share_token,
+        NULL::text AS share_token,
         
         p.id AS partner_id,
         p.partner_code,
