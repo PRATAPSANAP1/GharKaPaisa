@@ -20,7 +20,9 @@ export default function EmployeeManagement() {
   const [statusFilter, setStatusFilter] = useState('');
   const [designationFilter, setDesignationFilter] = useState('');
 
-  // Hierarchy Tree selected Manager & Popovers
+  // Hierarchy Tree selected Role, Person & Popovers
+  const [selectedTreeRole, setSelectedTreeRole] = useState('MANAGER'); // 'BRANCH_HEAD', 'SENIOR_MANAGER', 'MANAGER', 'TEAM_LEADER'
+  const [selectedTreePersonId, setSelectedTreePersonId] = useState(null);
   const [selectedManagerId, setSelectedManagerId] = useState(null);
   const [popoverEmpId, setPopoverEmpId] = useState(null);
 
@@ -576,27 +578,72 @@ export default function EmployeeManagement() {
   };
 
   const handleExportTree = () => {
-    const currentMgr = managersList.find(m => m.id === selectedManagerId) || managersList[0];
-    if (!currentMgr) return alert('No manager tree available to export.');
-    
-    const managerTLs = tlsList.filter(tl => tl.manager_id === currentMgr.id || tl.manager_name === currentMgr.full_name);
+    const activeRoleList = selectedTreeRole === 'BRANCH_HEAD' ? branchHeadsList :
+                           selectedTreeRole === 'SENIOR_MANAGER' ? seniorManagersList :
+                           selectedTreeRole === 'TEAM_LEADER' ? tlsList :
+                           managersList;
+    const currentPerson = activeRoleList.find(p => p.id === selectedTreePersonId) || activeRoleList[0];
+    if (!currentPerson) return alert('No employee tree available to export.');
     
     let csv = 'Level,Role,Employee Name,Employee ID,Mobile Number,Reporting To\n';
-    csv += `Level 1,Manager,"${currentMgr.full_name}","${currentMgr.employee_id}","${currentMgr.mobile_number || ''}","Direct"\n`;
-    
-    managerTLs.forEach(tl => {
-      csv += `Level 2,Team Leader,"${tl.full_name}","${tl.employee_id}","${tl.mobile_number || ''}","${currentMgr.full_name}"\n`;
-      const tlTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
-      tlTCs.forEach(tc => {
-        csv += `Level 3,Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${tl.full_name}"\n`;
+    const roleTitle = selectedTreeRole.replace('_', ' ');
+    csv += `Level 1,${roleTitle},"${currentPerson.full_name}","${currentPerson.employee_id}","${currentPerson.mobile_number || ''}","Top Level"\n`;
+
+    if (selectedTreeRole === 'BRANCH_HEAD') {
+      const subSrMgrs = seniorManagersList.filter(sm => sm.branch_head_id === currentPerson.id || sm.branch_head_name === currentPerson.full_name);
+      subSrMgrs.forEach(sm => {
+        csv += `Level 2,Senior Manager,"${sm.full_name}","${sm.employee_id}","${sm.mobile_number || ''}","${currentPerson.full_name}"\n`;
+        const subMgrs = managersList.filter(m => m.senior_manager_id === sm.id || m.senior_manager_name === sm.full_name);
+        subMgrs.forEach(m => {
+          csv += `Level 3,Manager,"${m.full_name}","${m.employee_id}","${m.mobile_number || ''}","${sm.full_name}"\n`;
+          const subTLs = tlsList.filter(tl => tl.manager_id === m.id || tl.manager_name === m.full_name);
+          subTLs.forEach(tl => {
+            csv += `Level 4,Team Leader,"${tl.full_name}","${tl.employee_id}","${tl.mobile_number || ''}","${m.full_name}"\n`;
+            const subTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
+            subTCs.forEach(tc => {
+              csv += `Level 5,Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${tl.full_name}"\n`;
+            });
+          });
+        });
       });
-    });
+    } else if (selectedTreeRole === 'SENIOR_MANAGER') {
+      const subMgrs = managersList.filter(m => m.senior_manager_id === currentPerson.id || m.senior_manager_name === currentPerson.full_name);
+      subMgrs.forEach(m => {
+        csv += `Level 2,Manager,"${m.full_name}","${m.employee_id}","${m.mobile_number || ''}","${currentPerson.full_name}"\n`;
+        const subTLs = tlsList.filter(tl => tl.manager_id === m.id || tl.manager_name === m.full_name);
+        subTLs.forEach(tl => {
+          csv += `Level 3,Team Leader,"${tl.full_name}","${tl.employee_id}","${tl.mobile_number || ''}","${m.full_name}"\n`;
+          const subTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
+          subTCs.forEach(tc => {
+            csv += `Level 4,Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${tl.full_name}"\n`;
+          });
+        });
+      });
+    } else if (selectedTreeRole === 'MANAGER') {
+      const subTLs = tlsList.filter(tl => tl.manager_id === currentPerson.id || tl.manager_name === currentPerson.full_name);
+      subTLs.forEach(tl => {
+        csv += `Level 2,Team Leader,"${tl.full_name}","${tl.employee_id}","${tl.mobile_number || ''}","${currentPerson.full_name}"\n`;
+        const subTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
+        subTCs.forEach(tc => {
+          csv += `Level 3,Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${tl.full_name}"\n`;
+        });
+      });
+      const directTCs = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === currentPerson.id || tc.manager_name === currentPerson.full_name) && !tc.team_leader_id);
+      directTCs.forEach(tc => {
+        csv += `Level 2,Direct Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${currentPerson.full_name}"\n`;
+      });
+    } else if (selectedTreeRole === 'TEAM_LEADER') {
+      const subTCs = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.team_leader_id === currentPerson.id || tc.team_leader_name === currentPerson.full_name));
+      subTCs.forEach(tc => {
+        csv += `Level 2,Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${currentPerson.full_name}"\n`;
+      });
+    }
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `Hierarchy_Tree_${currentMgr.full_name.replace(/\s+/g, '_')}.csv`);
+    link.setAttribute('download', `Hierarchy_Tree_${currentPerson.full_name.replace(/\s+/g, '_')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -819,11 +866,16 @@ export default function EmployeeManagement() {
 
         {/* Hierarchy Tab View */}
         {activeTab === 'hierarchy' && (() => {
-          const currentMgr = managersList.find(m => m.id === selectedManagerId) || managersList[0];
-          const activeMgrId = currentMgr?.id;
+          const activeRoleList = selectedTreeRole === 'BRANCH_HEAD' ? branchHeadsList :
+                                 selectedTreeRole === 'SENIOR_MANAGER' ? seniorManagersList :
+                                 selectedTreeRole === 'TEAM_LEADER' ? tlsList :
+                                 managersList;
+          const currentPerson = activeRoleList.find(p => p.id === selectedTreePersonId) || activeRoleList[0];
+          const currentMgr = currentPerson;
+          const activePersonId = currentPerson?.id;
 
-          const managerTLs = activeMgrId ? tlsList.filter(tl => tl.manager_id === activeMgrId || tl.manager_name === currentMgr?.full_name) : [];
-          const allManagerTCs = activeMgrId ? employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === activeMgrId || tc.manager_name === currentMgr?.full_name)) : [];
+          const managerTLs = activePersonId ? tlsList.filter(tl => tl.manager_id === activePersonId || tl.manager_name === currentPerson?.full_name) : [];
+          const allManagerTCs = activePersonId ? employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === activePersonId || tc.manager_name === currentPerson?.full_name)) : [];
           const directTCs = allManagerTCs.filter(tc => !tc.team_leader_id && !tc.team_leader_name);
 
           // Build TL to TC mapping for tree visualization
@@ -845,7 +897,7 @@ export default function EmployeeManagement() {
                     Team Hierarchy Tree <FaInfoCircle style={{ fontSize: '15px', color: C.textMid, cursor: 'pointer' }} title="Visualize and manage reporting structure" />
                   </h2>
                   <p style={{ fontSize: '13px', color: C.textMid, margin: '4px 0 0' }}>
-                    Visualize and manage your organization structure
+                    Select a role level and an employee to inspect their organizational hierarchy structure
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -864,33 +916,86 @@ export default function EmployeeManagement() {
                 </div>
               </div>
 
-              {managersList.length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', background: C.bgSecondary, borderRadius: '16px', border: `1px dashed ${C.border}` }}>
-                  <FaUserTimes style={{ fontSize: '32px', color: C.textMid, marginBottom: '12px' }} />
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: C.text }}>No Manager Roles Configured</div>
-                  <div style={{ fontSize: '13px', color: C.textMid, marginTop: '4px' }}>
-                    Click "Assign Team" on any employee in the Directory tab and set their hierarchy level to "Manager".
+              {/* Selection Bar: Step 1 Role Selection & Step 2 Employee Selection */}
+              <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
+                
+                {/* Step 1: Select Role */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Step 1: Select Hierarchy Role Level
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {[
+                      { id: 'BRANCH_HEAD', label: 'Branch Heads', count: branchHeadsList.length, color: '#D97706' },
+                      { id: 'SENIOR_MANAGER', label: 'Senior Managers', count: seniorManagersList.length, color: '#4F46E5' },
+                      { id: 'MANAGER', label: 'Managers', count: managersList.length, color: '#8B5CF6' },
+                      { id: 'TEAM_LEADER', label: 'Team Leaders (TL)', count: tlsList.length, color: '#2563EB' }
+                    ].map(roleItem => {
+                      const isSelectedRole = selectedTreeRole === roleItem.id;
+                      return (
+                        <button
+                          key={roleItem.id}
+                          onClick={() => {
+                            setSelectedTreeRole(roleItem.id);
+                            setSelectedTreePersonId(null);
+                          }}
+                          style={{
+                            padding: '10px 18px',
+                            borderRadius: '12px',
+                            border: isSelectedRole ? `2px solid ${roleItem.color}` : `1px solid ${C.border}`,
+                            background: isSelectedRole ? `${roleItem.color}15` : C.card,
+                            color: isSelectedRole ? roleItem.color : C.text,
+                            fontWeight: 800,
+                            fontSize: '13px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            boxShadow: isSelectedRole ? `0 4px 12px ${roleItem.color}25` : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <FaSitemap style={{ fontSize: '14px' }} />
+                          {roleItem.label}
+                          <span style={{ 
+                            background: isSelectedRole ? roleItem.color : C.bgSecondary, 
+                            color: isSelectedRole ? '#FFFFFF' : C.textMid,
+                            fontSize: '11px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px'
+                          }}>
+                            {roleItem.count}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              ) : (
-                <>
-                  {/* Top Row: Manager Selection Cards / Tabs */}
-                  <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px', marginBottom: '24px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 800, color: C.textMid, marginBottom: '12px' }}>
-                      Select Manager
+
+                {/* Step 2: Select Person */}
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Step 2: Select {selectedTreeRole === 'BRANCH_HEAD' ? 'Branch Head' : selectedTreeRole === 'SENIOR_MANAGER' ? 'Senior Manager' : selectedTreeRole === 'TEAM_LEADER' ? 'Team Leader' : 'Manager'}
+                  </div>
+
+                  {activeRoleList.length === 0 ? (
+                    <div style={{ padding: '16px', borderRadius: '12px', background: C.card, border: `1px dashed ${C.border}`, color: C.textMid, fontSize: '13px' }}>
+                      No employees assigned as <strong>{selectedTreeRole.replace('_', ' ')}</strong> yet. Go to Directory tab and click "Assign Team" to set hierarchy levels.
                     </div>
+                  ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div id="mgrCarousel" style={{ display: 'flex', gap: '12px', overflowX: 'auto', flexGrow: 1, paddingBottom: '4px', scrollBehavior: 'smooth' }}>
-                        {managersList.map(mgr => {
-                          const isSelected = (mgr.id === activeMgrId);
-                          const tlsUnderMgr = tlsList.filter(tl => tl.manager_id === mgr.id || tl.manager_name === mgr.full_name);
-                          const tcsUnderMgr = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === mgr.id || tc.manager_name === mgr.full_name));
-                          const totalMembers = tlsUnderMgr.length + tcsUnderMgr.length;
+                        {activeRoleList.map(person => {
+                          const isSelected = (person.id === activePersonId);
+                          const memberCount = (
+                            selectedTreeRole === 'BRANCH_HEAD' ? (seniorManagersList.filter(sm => sm.branch_head_id === person.id).length + managersList.filter(m => m.branch_head_id === person.id).length) :
+                            selectedTreeRole === 'SENIOR_MANAGER' ? managersList.filter(m => m.senior_manager_id === person.id).length :
+                            selectedTreeRole === 'TEAM_LEADER' ? employees.filter(tc => tc.team_leader_id === person.id).length :
+                            (tlsList.filter(tl => tl.manager_id === person.id).length + employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && tc.manager_id === person.id).length)
+                          );
 
                           return (
                             <div
-                              key={mgr.id}
-                              onClick={() => setSelectedManagerId(mgr.id)}
+                              key={person.id}
+                              onClick={() => setSelectedTreePersonId(person.id)}
                               style={{
                                 flexShrink: 0,
                                 minWidth: '210px',
@@ -908,13 +1013,13 @@ export default function EmployeeManagement() {
                               }}
                             >
                               <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: isSelected ? 'rgba(255,255,255,0.2)' : '#E0E7FF', color: isSelected ? '#FFF' : '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px', flexShrink: 0 }}>
-                                {mgr.full_name?.charAt(0) || 'M'}
+                                {person.full_name?.charAt(0) || 'P'}
                               </div>
                               <div style={{ overflow: 'hidden' }}>
-                                <div style={{ fontSize: '14px', fontWeight: 900, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{mgr.full_name}</div>
-                                <div style={{ fontSize: '11px', opacity: isSelected ? 0.9 : 0.7, fontWeight: 700 }}>{mgr.employee_id}</div>
+                                <div style={{ fontSize: '14px', fontWeight: 900, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{person.full_name}</div>
+                                <div style={{ fontSize: '11px', opacity: isSelected ? 0.9 : 0.7, fontWeight: 700 }}>{person.employee_id}</div>
                                 <div style={{ fontSize: '11px', fontWeight: 800, marginTop: '2px', opacity: isSelected ? 0.95 : 0.8 }}>
-                                  {totalMembers} Members
+                                  {memberCount} Direct Members
                                 </div>
                               </div>
                             </div>
@@ -932,7 +1037,10 @@ export default function EmployeeManagement() {
                         <FaChevronRight style={{ fontSize: '12px' }} />
                       </button>
                     </div>
-                  </div>
+                  )}
+                </div>
+
+              </div>
 
                   {/* Visual Tree Diagram for Selected Manager */}
                   {currentMgr && (
@@ -1218,8 +1326,6 @@ export default function EmployeeManagement() {
 
                     </div>
                   )}
-                </>
-              )}
             </div>
           );
         })()}
