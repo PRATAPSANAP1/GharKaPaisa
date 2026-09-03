@@ -787,47 +787,7 @@ export default function ManageWallet() {
 
       </div>
 
-      {/* ── QUICK ACTIONS TOOLBAR (BOTTOM) ── */}
-      <div style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <h4 style={{ fontSize: '13.5px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <MdFlashOn style={{ color: '#F59E0B' }} size={18} /> Quick Actions & Financial Operations
-        </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px' }}>
-          {[
-            { label: 'Manual Wallet Adjustment', icon: <MdBuild size={22} style={{ color: C.teal }} />, action: () => setManualAdjModal(true) },
-            { label: 'Add Funds to Wallet', icon: <MdAddCard size={22} style={{ color: '#EA580C' }} />, action: () => setAddFundsModal(true) },
-            { label: 'Approve Settlement', icon: <MdCheckCircle size={22} style={{ color: '#10B981' }} />, action: () => alert('Opening Bulk Settlement Approval Drawer...') },
-            { label: 'Bulk Settlement Upload', icon: <MdCloudUpload size={22} style={{ color: '#3B82F6' }} />, action: () => setBulkUploadModal(true) },
-            { label: 'Wallet Statement Report', icon: <MdDescription size={22} style={{ color: '#8B5CF6' }} />, action: () => alert('Generating Wallet Statement Report PDF...') },
-            { label: 'Settlement Report', icon: <MdBarChart size={22} style={{ color: '#EC4899' }} />, action: () => alert('Downloading Settlement Summary Excel...') },
-            { label: 'Partner Statement', icon: <MdAssignment size={22} style={{ color: '#14B8A6' }} />, action: () => alert('Generating Partner Statement Report...') },
-            { label: 'Download Ledger', icon: <MdFileDownload size={22} style={{ color: '#6366F1' }} />, action: () => alert('Downloading Ledger Audit Trail CSV...') },
-            { label: 'Reconciliation Report', icon: <MdScale size={22} style={{ color: '#F59E0B' }} />, action: () => alert('Generating Wallet Reconciliation Audit Report...') },
-          ].map((act, idx) => (
-            <button
-              key={idx}
-              onClick={act.action}
-              style={{
-                background: isDark ? '#27272A' : '#F8FAFC',
-                border: `1px solid ${C.border}`,
-                borderRadius: '12px',
-                padding: '12px 8px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                textAlign: 'center',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <span style={{ fontSize: '20px' }}>{act.icon}</span>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{act.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* ── MODAL 1: MANUAL WALLET ADJUSTMENT ── */}
       {manualAdjModal && (
