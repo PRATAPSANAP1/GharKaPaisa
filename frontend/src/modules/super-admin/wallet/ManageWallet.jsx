@@ -58,6 +58,7 @@ export default function ManageWallet() {
   const { C, isDark } = useTheme();
   const S = makeS(C);
   const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'withdrawals');
 
   // Filters State
   const [filters, setFilters] = useState({
@@ -297,7 +298,7 @@ export default function ManageWallet() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '14px' }}>
         
         {/* Card 1: Total Wallet Balance */}
-        <div style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div onClick={() => setActiveTab('reconciliation')} style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>Total Wallet Balance</span>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdAccountBalanceWallet size={20} /></div>
@@ -309,7 +310,7 @@ export default function ManageWallet() {
         </div>
 
         {/* Card 2: Total Withdrawal Settlements */}
-        <div style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div onClick={() => setActiveTab('withdrawals')} style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>Total Withdrawals</span>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdTrendingUp size={20} /></div>
@@ -321,7 +322,7 @@ export default function ManageWallet() {
         </div>
 
         {/* Card 3: Total Add Funds Approved */}
-        <div style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div onClick={() => setActiveTab('add_funds')} style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>Total Add Funds</span>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdAttachMoney size={20} /></div>
@@ -333,7 +334,7 @@ export default function ManageWallet() {
         </div>
 
         {/* Card 4: Pending Commission Approvals */}
-        <div style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div onClick={() => setActiveTab('commissions')} style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>Pending Commission</span>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F3E8FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdLayers size={20} /></div>
@@ -345,7 +346,7 @@ export default function ManageWallet() {
         </div>
 
         {/* Card 5: Total Active Partners */}
-        <div style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div onClick={() => setActiveTab('partners')} style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>Total Partners</span>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F0F9FF', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdPeople size={20} /></div>
@@ -357,7 +358,7 @@ export default function ManageWallet() {
         </div>
 
         {/* Card 6: Pending Settlements Count */}
-        <div style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div onClick={() => setActiveTab('withdrawals')} style={{ ...S.card, padding: '16px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>Pending Settlements</span>
             <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FFE4E6', color: '#E11D48', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdReceipt size={20} /></div>
@@ -369,348 +370,420 @@ export default function ManageWallet() {
         </div>
 
       </div>
-
-      {/* ── ROW 1: 3 MAIN TABLES (SECTIONS 1, 2, 3) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '16px' }}>
-        
-        {/* SECTION 1: Withdrawal Settlements */}
-        <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <MdAccountBalanceWallet style={{ color: C.teal }} size={18} /> 1. Withdrawal Settlements
-              </h3>
-              <span style={{ fontSize: '11px', color: C.textLight }}>Track and manage withdrawal requests</span>
-            </div>
-            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('withdrawals'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
-                  <th style={{ padding: '8px 6px' }}>Request ID</th>
-                  <th style={{ padding: '8px 6px' }}>User</th>
-                  <th style={{ padding: '8px 6px' }}>Role</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'right' }}>Amount</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'center' }}>Status</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'center' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {withdrawals.length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '20px', color: C.textLight, fontWeight: 600 }}>No withdrawal requests found</td></tr>
-                ) : withdrawals.map(w => {
-                  const badge = getStatusBadge(w.status);
-                  const userName = w.user_name || (w.first_name ? `${w.first_name} ${w.last_name || ''}` : w.partner_code || 'Partner');
-                  const roleName = w.role || 'Partner';
-                  const amt = parseFloat(w.amount || 0);
-                  return (
-                    <tr key={w.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '10px 6px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{w.id}</td>
-                      <td style={{ padding: '10px 6px', fontWeight: 700 }}>{userName}</td>
-                      <td style={{ padding: '10px 6px', color: C.textLight }}>{roleName}</td>
-                      <td style={{ padding: '10px 6px', textAlign: 'right', fontWeight: 900, color: C.text }}>₹{amt.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '10px 6px', textAlign: 'center' }}>
-                        <span style={{ background: badge.bg, color: badge.color, padding: '3px 8px', borderRadius: '10px', fontWeight: 800, fontSize: '10px' }}>{badge.label}</span>
-                      </td>
-                      <td style={{ padding: '10px 6px', textAlign: 'center' }}>
-                        <button onClick={() => setSelectedItem(w)} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: '6px', padding: '3px 8px', fontSize: '10.5px', fontWeight: 800, color: C.teal, cursor: 'pointer' }}>View</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* SECTION 2: Add Funds Requests */}
-        <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <MdAddCard style={{ color: '#EA580C' }} size={18} /> 2. Add Funds Requests
-              </h3>
-              <span style={{ fontSize: '11px', color: C.textLight }}>Manage employee/partner add funds</span>
-            </div>
-            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('add_funds'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
-                  <th style={{ padding: '8px 6px' }}>Request ID</th>
-                  <th style={{ padding: '8px 6px' }}>User</th>
-                  <th style={{ padding: '8px 6px' }}>Role</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'right' }}>Amount</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'center' }}>Status</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'center' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {addFundsReqs.length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: 'center', padding: '20px', color: C.textLight, fontWeight: 600 }}>No add funds requests found</td></tr>
-                ) : addFundsReqs.map(f => {
-                  const badge = getStatusBadge(f.status);
-                  const userName = f.user_name || f.requested_by_name || f.requested_by_email || 'Super Admin';
-                  const roleName = f.role || 'Admin';
-                  const amt = parseFloat(f.amount || 0);
-                  return (
-                    <tr key={f.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '10px 6px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{f.id}</td>
-                      <td style={{ padding: '10px 6px', fontWeight: 700 }}>{userName}</td>
-                      <td style={{ padding: '10px 6px', color: C.textLight }}>{roleName}</td>
-                      <td style={{ padding: '10px 6px', textAlign: 'right', fontWeight: 900, color: C.green }}>₹{amt.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '10px 6px', textAlign: 'center' }}>
-                        <span style={{ background: badge.bg, color: badge.color, padding: '3px 8px', borderRadius: '10px', fontWeight: 800, fontSize: '10px' }}>{badge.label}</span>
-                      </td>
-                      <td style={{ padding: '10px 6px', textAlign: 'center' }}>
-                        <button onClick={() => alert(`Reviewing Add Funds Request ${f.id}`)} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: '6px', padding: '3px 8px', fontSize: '10.5px', fontWeight: 800, color: C.teal, cursor: 'pointer' }}>Review</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* SECTION 3: Pending Commission Approvals */}
-        <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <MdLayers style={{ color: '#9333EA' }} size={18} /> 3. Pending Commission Approvals
-              </h3>
-              <span style={{ fontSize: '11px', color: C.textLight }}>Review and approve pending commissions</span>
-            </div>
-            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('commissions'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
-                  <th style={{ padding: '8px 6px' }}>Request ID</th>
-                  <th style={{ padding: '8px 6px' }}>User</th>
-                  <th style={{ padding: '8px 6px' }}>Role</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'right' }}>Amount</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'center' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingCommissions.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: C.textLight, fontWeight: 600 }}>No pending commissions</td></tr>
-                ) : pendingCommissions.map(c => {
-                  const userName = c.user_name || (c.first_name ? `${c.first_name} ${c.last_name || ''}` : c.partner_code || 'Partner');
-                  const roleName = c.role || 'Partner';
-                  const amt = parseFloat(c.credit || c.amount || 0);
-                  return (
-                    <tr key={c.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '10px 6px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{c.id}</td>
-                      <td style={{ padding: '10px 6px', fontWeight: 700 }}>{userName}</td>
-                      <td style={{ padding: '10px 6px', color: C.textLight }}>{roleName}</td>
-                      <td style={{ padding: '10px 6px', textAlign: 'right', fontWeight: 900, color: C.green }}>₹{amt.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '10px 6px', textAlign: 'center' }}>
-                        <button onClick={async () => { alert(`Commission ${c.id} Approved & Released!`); fetchAllDashboardData(); }} style={{ background: C.green, border: 'none', color: '#FFF', borderRadius: '6px', padding: '4px 10px', fontSize: '10.5px', fontWeight: 800, cursor: 'pointer' }}>Approve</button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(auto-fit, minmax(150px, 1fr))' : 'repeat(6, 1fr)',
+        gap: '10px',
+        width: '100%'
+      }}>
+        {[
+          { id: 'withdrawals', label: '1. Withdrawal Settlements', icon: <MdAccountBalanceWallet size={18} /> },
+          { id: 'add_funds', label: '2. Add Funds Requests', icon: <MdAddCard size={18} /> },
+          { id: 'commissions', label: '3. Pending Commission Approvals', icon: <MdLayers size={18} /> },
+          { id: 'partners', label: '4. Partner Balances Overview', icon: <MdPieChart size={18} /> },
+          { id: 'ledger', label: '5. Ledger Audit Trail', icon: <MdReceipt size={18} /> },
+          { id: 'reconciliation', label: '6. Wallet Reconciliation', icon: <MdScale size={18} /> }
+        ].map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                padding: '12px 10px',
+                borderRadius: '12px',
+                border: isActive ? `2px solid ${C.teal}` : `1px solid ${C.border}`,
+                background: isActive ? (isDark ? '#1E293B' : '#EFF6FF') : (isDark ? '#18181B' : '#FFF'),
+                color: isActive ? C.teal : C.text,
+                fontWeight: isActive ? 900 : 700,
+                fontSize: '12px',
+                cursor: 'pointer',
+                textAlign: 'center',
+                boxShadow: isActive ? '0 4px 14px rgba(0, 82, 255, 0.16)' : '0 1px 3px rgba(0,0,0,0.03)',
+                transition: 'all 0.2s ease-in-out'
+              }}
+            >
+              <span style={{ color: isActive ? C.teal : C.textLight, display: 'flex', alignItems: 'center' }}>{tab.icon}</span>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* ── ROW 2: 3 SECTIONS (SECTIONS 4, 5, 6) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(310px, 1fr))', gap: '16px' }}>
-        
-        {/* SECTION 4: Partner Balances Overview */}
-        <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <MdPieChart style={{ color: '#3B82F6' }} size={18} /> 4. Partner Balances Overview
-              </h3>
-              <span style={{ fontSize: '11px', color: C.textLight }}>Overview of partner wallet balances</span>
-            </div>
-            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('partners'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
-          </div>
+      {/* ── ACTIVE TAB CONTENT (OPENED DIRECTLY BELOW THE BUTTON ROW) ── */}
+      <div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {/* SVG Donut Chart */}
-            <div style={{ position: 'relative', width: '130px', height: '130px', flexShrink: 0 }}>
-              <svg width="130" height="130" viewBox="0 0 42 42">
-                <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke={isDark ? '#27272A' : '#E5E7EB'} strokeWidth="6" />
-                {(() => {
-                  const totalBal = partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0) || 1;
-                  const fallbackColors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
-                  let currentAccumulated = 0;
-
-                  return partnersOverview.map((p, idx) => {
-                    const val = parseFloat(p.balance || 0);
-                    const pct = (val / totalBal) * 100;
-                    if (pct <= 0) return null;
-                    const strokeDasharray = `${pct.toFixed(2)} ${(100 - pct).toFixed(2)}`;
-                    const strokeDashoffset = (25 - currentAccumulated).toFixed(2);
-                    currentAccumulated += pct;
-                    const strokeColor = p.color || fallbackColors[idx % fallbackColors.length];
-
-                    return (
-                      <circle
-                        key={idx}
-                        cx="21"
-                        cy="21"
-                        r="15.91549430918954"
-                        fill="transparent"
-                        stroke={strokeColor}
-                        strokeWidth="6"
-                        strokeDasharray={strokeDasharray}
-                        strokeDashoffset={strokeDashoffset}
-                      />
-                    );
-                  });
-                })()}
-              </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                <span style={{ fontSize: '9px', color: C.textLight, fontWeight: 700 }}>Total Balance</span>
-                <strong style={{ fontSize: '11px', fontWeight: 900, color: C.text }}>
-                  ₹{(partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0)).toLocaleString('en-IN')}
-                </strong>
-              </div>
-            </div>
-
-            {/* Top Partner Breakdown */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px' }}>
-              {partnersOverview.length === 0 ? (
-                <span style={{ fontSize: '11px', color: C.textLight, fontStyle: 'italic' }}>No partner balance records</span>
-              ) : partnersOverview.map((p, i) => {
-                const fallbackColors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
-                const itemColor = p.color || fallbackColors[i % fallbackColors.length];
-                return (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: itemColor }} />
-                      <span style={{ fontWeight: 700, color: C.text }}>{p.name}</span>
-                    </div>
-                    <strong style={{ color: C.text }}>₹{parseFloat(p.balance || 0).toLocaleString('en-IN')}</strong>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION 5: Ledger Audit Trail */}
-        <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <MdReceipt style={{ color: C.teal }} size={18} /> 5. Ledger Audit Trail
-              </h3>
-              <span style={{ fontSize: '11px', color: C.textLight }}>Track all wallet transactions and financial logs</span>
-            </div>
-            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('ledger'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px' }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
-                  <th style={{ padding: '8px 6px' }}>Txn ID</th>
-                  <th style={{ padding: '8px 6px' }}>User</th>
-                  <th style={{ padding: '8px 6px' }}>Type</th>
-                  <th style={{ padding: '8px 6px', textAlign: 'right' }}>Amount</th>
-                  <th style={{ padding: '8px 6px' }}>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ledgerEntries.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: C.textLight, fontWeight: 600 }}>No ledger entries found</td></tr>
-                ) : ledgerEntries.map(l => {
-                  const isCredit = l.type === 'Credited' || parseFloat(l.credit || 0) > 0;
-                  const userName = l.user_name || (l.first_name ? `${l.first_name} ${l.last_name || ''}` : l.partner_code || 'User');
-                  const amt = parseFloat(l.credit || l.debit || l.amount || 0);
-                  return (
-                    <tr key={l.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '10px 6px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{l.id}</td>
-                      <td style={{ padding: '10px 6px', fontWeight: 700 }}>{userName}</td>
-                      <td style={{ padding: '10px 6px' }}>
-                        <span style={{ background: isCredit ? '#DCFCE7' : '#FEE2E2', color: isCredit ? '#15803D' : '#B91C1C', padding: '2px 6px', borderRadius: '6px', fontWeight: 800, fontSize: '10px' }}>
-                          {isCredit ? 'Credited' : 'Debited'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 6px', textAlign: 'right', fontWeight: 900, color: isCredit ? C.green : C.red }}>
-                        {isCredit ? '+' : '-'}₹{amt.toLocaleString('en-IN')}
-                      </td>
-                      <td style={{ padding: '10px 6px', color: C.textLight, fontSize: '10.5px' }}>{l.description || 'Ledger Entry'}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* SECTION 6: Wallet Reconciliation */}
-        <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <MdScale style={{ color: C.teal }} size={18} /> 6. Wallet Reconciliation
-              </h3>
-              <span style={{ fontSize: '11px', color: C.textLight }}>Reconcile wallet balances and verify transactions</span>
-            </div>
-            <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('reconciliation'); }} style={{ background: 'none', border: 'none', color: C.teal, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All</button>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '14px', alignItems: 'center' }}>
-            {/* Reconciliation Breakdown */}
-            <div style={{ flex: 1, background: isDark ? '#27272A' : '#F8FAFC', padding: '12px', borderRadius: '12px', border: `1px solid ${C.border}`, fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ fontSize: '11.5px', fontWeight: 800, color: C.text, marginBottom: '2px' }}>Reconciliation Summary</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: C.textLight }}>Opening Balance:</span>
-                <strong style={{ color: C.text }}>₹{(reconciliation?.opening_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: C.textLight }}>Total Credits:</span>
-                <strong style={{ color: C.green }}>+₹{(reconciliation?.total_credits || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: C.textLight }}>Total Debits:</span>
-                <strong style={{ color: C.red }}>-₹{(reconciliation?.total_debits || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: '4px' }}>
-                <span style={{ color: C.textLight }}>Closing Balance (System):</span>
-                <strong style={{ color: C.text }}>₹{(reconciliation?.system_closing || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: C.textLight }}>Difference:</span>
-                <strong style={{ color: (reconciliation?.difference || 0) === 0 ? C.green : C.red }}>₹{(reconciliation?.difference || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-              </div>
-            </div>
-
-            {/* Reconciliation Match Badge & Action */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', textAlign: 'center' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: (reconciliation?.difference || 0) === 0 ? '#DCFCE7' : '#FEE2E2', color: (reconciliation?.difference || 0) === 0 ? '#15803D' : '#B91C1C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <MdCheck size={28} />
-              </div>
+        {/* TAB 1: Withdrawal Settlements */}
+        {activeTab === 'withdrawals' && (
+          <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <div>
-                <strong style={{ fontSize: '12px', color: (reconciliation?.difference || 0) === 0 ? '#15803D' : '#B91C1C', display: 'block' }}>
-                  {reconciliation?.status === 'MATCHED' || (reconciliation?.difference || 0) === 0 ? 'Reconciliation Matched' : 'Discrepancy Found'}
-                </strong>
-                <span style={{ fontSize: '10px', color: C.textLight }}>Last Reconciled On {reconciliation?.last_reconciled || 'Just now'}</span>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MdAccountBalanceWallet style={{ color: C.teal }} size={20} /> 1. Withdrawal Settlements
+                </h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>Track and manage user withdrawal requests and payout settlements</span>
               </div>
-              <button onClick={() => alert('Performing Instant Wallet Reconciliation Check... Audit matched with 0 discrepancy drift.')} style={{ ...S.btn('primary'), background: C.teal, padding: '6px 14px', fontSize: '11px', borderRadius: '8px' }}>
-                Reconcile Now
-              </button>
+              <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('withdrawals'); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All Details</button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                    <th style={{ padding: '10px 8px' }}>Request ID</th>
+                    <th style={{ padding: '10px 8px' }}>User</th>
+                    <th style={{ padding: '10px 8px' }}>Role</th>
+                    <th style={{ padding: '10px 8px' }}>Bank Account & IFSC</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Amount</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Status</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {withdrawals.length === 0 ? (
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No withdrawal requests found</td></tr>
+                  ) : withdrawals.map(w => {
+                    const badge = getStatusBadge(w.status);
+                    const userName = w.user_name || (w.first_name ? `${w.first_name} ${w.last_name || ''}` : w.partner_code || 'Partner');
+                    const roleName = w.role || 'Partner';
+                    const amt = parseFloat(w.amount || 0);
+                    return (
+                      <tr key={w.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{w.id}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: 700 }}>{userName}</td>
+                        <td style={{ padding: '12px 8px', color: C.textLight }}>{roleName}</td>
+                        <td style={{ padding: '12px 8px', fontSize: '11.5px' }}>{w.bank_name ? `${w.bank_name} (${w.account_number || ''})` : 'N/A'}</td>
+                        <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.text, fontSize: '13.5px' }}>₹{amt.toLocaleString('en-IN')}</td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                          <span style={{ background: badge.bg, color: badge.color, padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>{badge.label}</span>
+                        </td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                          <button onClick={() => setSelectedItem(w)} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>View Details</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* TAB 2: Add Funds Requests */}
+        {activeTab === 'add_funds' && (
+          <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MdAddCard style={{ color: '#EA580C' }} size={20} /> 2. Add Funds Requests
+                </h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>Manage employee and partner wallet top-up requests</span>
+              </div>
+              <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('add_funds'); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All Details</button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                    <th style={{ padding: '10px 8px' }}>Request ID</th>
+                    <th style={{ padding: '10px 8px' }}>User</th>
+                    <th style={{ padding: '10px 8px' }}>Role</th>
+                    <th style={{ padding: '10px 8px' }}>Purpose / Notes</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Amount</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Status</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {addFundsReqs.length === 0 ? (
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No add funds requests found</td></tr>
+                  ) : addFundsReqs.map(f => {
+                    const badge = getStatusBadge(f.status);
+                    const userName = f.user_name || f.requested_by_name || f.requested_by_email || 'Super Admin';
+                    const roleName = f.role || 'Admin';
+                    const amt = parseFloat(f.amount || 0);
+                    return (
+                      <tr key={f.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{f.id}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: 700 }}>{userName}</td>
+                        <td style={{ padding: '12px 8px', color: C.textLight }}>{roleName}</td>
+                        <td style={{ padding: '12px 8px', color: C.text }}>{f.purpose || f.notes || 'Wallet Funding'}</td>
+                        <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.green, fontSize: '13.5px' }}>+₹{amt.toLocaleString('en-IN')}</td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                          <span style={{ background: badge.bg, color: badge.color, padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>{badge.label}</span>
+                        </td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                          <button onClick={() => alert(`Reviewing Add Funds Request ${f.id}`)} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Review Request</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: Pending Commission Approvals */}
+        {activeTab === 'commissions' && (
+          <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MdLayers style={{ color: '#9333EA' }} size={20} /> 3. Pending Commission Approvals
+                </h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>Review and approve pending commissions for instant payout release</span>
+              </div>
+              <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('commissions'); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All Details</button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                    <th style={{ padding: '10px 8px' }}>Request ID</th>
+                    <th style={{ padding: '10px 8px' }}>Beneficiary User</th>
+                    <th style={{ padding: '10px 8px' }}>Role</th>
+                    <th style={{ padding: '10px 8px' }}>Product / Lead Source</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Commission (₹)</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingCommissions.length === 0 ? (
+                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No pending commissions found</td></tr>
+                  ) : pendingCommissions.map(c => {
+                    const userName = c.user_name || (c.first_name ? `${c.first_name} ${c.last_name || ''}` : c.partner_code || 'Partner');
+                    const roleName = c.role || 'Partner';
+                    const amt = parseFloat(c.credit || c.amount || 0);
+                    return (
+                      <tr key={c.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{c.id}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: 700 }}>{userName}</td>
+                        <td style={{ padding: '12px 8px', color: C.textLight }}>{roleName}</td>
+                        <td style={{ padding: '12px 8px', color: C.text }}>{c.product || 'Lead Commission'}</td>
+                        <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.green, fontSize: '13.5px' }}>+₹{amt.toLocaleString('en-IN')}</td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                          <button onClick={async () => { alert(`Commission ${c.id} Approved & Released!`); fetchAllDashboardData(); }} style={{ background: C.green, border: 'none', color: '#FFF', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Approve & Release</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: Partner Balances Overview */}
+        {activeTab === 'partners' && (
+          <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MdPieChart style={{ color: '#3B82F6' }} size={20} /> 4. Partner Balances Overview
+                </h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>Comprehensive overview of active partner wallet balances</span>
+              </div>
+              <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('partners'); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All Details</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', gap: '24px' }}>
+              <div style={{ position: 'relative', width: '160px', height: '160px', flexShrink: 0 }}>
+                <svg width="160" height="160" viewBox="0 0 42 42">
+                  <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke={isDark ? '#27272A' : '#E5E7EB'} strokeWidth="6" />
+                  {(() => {
+                    const totalBal = partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0) || 1;
+                    const fallbackColors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
+                    let currentAccumulated = 0;
+
+                    return partnersOverview.map((p, idx) => {
+                      const val = parseFloat(p.balance || 0);
+                      const pct = (val / totalBal) * 100;
+                      if (pct <= 0) return null;
+                      const strokeDasharray = `${pct.toFixed(2)} ${(100 - pct).toFixed(2)}`;
+                      const strokeDashoffset = (25 - currentAccumulated).toFixed(2);
+                      currentAccumulated += pct;
+                      const strokeColor = p.color || fallbackColors[idx % fallbackColors.length];
+
+                      return (
+                        <circle
+                          key={idx}
+                          cx="21"
+                          cy="21"
+                          r="15.91549430918954"
+                          fill="transparent"
+                          stroke={strokeColor}
+                          strokeWidth="6"
+                          strokeDasharray={strokeDasharray}
+                          strokeDashoffset={strokeDashoffset}
+                        />
+                      );
+                    });
+                  })()}
+                </svg>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                  <span style={{ fontSize: '10px', color: C.textLight, fontWeight: 700 }}>Total Balance</span>
+                  <strong style={{ fontSize: '13px', fontWeight: 900, color: C.text }}>
+                    ₹{(partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0)).toLocaleString('en-IN')}
+                  </strong>
+                </div>
+              </div>
+
+              <div style={{ flex: 1, overflowX: 'auto', width: '100%' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                      <th style={{ padding: '8px 10px' }}>Partner Name</th>
+                      <th style={{ padding: '8px 10px' }}>Status</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'right' }}>Wallet Balance</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {partnersOverview.length === 0 ? (
+                      <tr><td colSpan={4} style={{ textAlign: 'center', padding: '20px', color: C.textLight, fontWeight: 600 }}>No partner records found</td></tr>
+                    ) : partnersOverview.map((p, i) => {
+                      const fallbackColors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
+                      const itemColor = p.color || fallbackColors[i % fallbackColors.length];
+                      return (
+                        <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '10px', fontWeight: 800, color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: itemColor }} />
+                            {p.name}
+                          </td>
+                          <td style={{ padding: '10px' }}>
+                            <span style={{ background: '#DCFCE7', color: '#15803D', padding: '3px 8px', borderRadius: '8px', fontWeight: 800, fontSize: '10.5px' }}>{p.status || 'Active'}</span>
+                          </td>
+                          <td style={{ padding: '10px', textAlign: 'right', fontWeight: 900, color: C.text, fontSize: '13.5px' }}>₹{parseFloat(p.balance || 0).toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '10px', textAlign: 'center' }}>
+                            <button onClick={() => { setAdjForm({ partner_id: p.name, amount: '', txn_type: 'credit', description: '' }); setManualAdjModal(true); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Adjust</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: Ledger Audit Trail */}
+        {activeTab === 'ledger' && (
+          <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MdReceipt style={{ color: C.teal }} size={20} /> 5. Ledger Audit Trail
+                </h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>Real-time immutable ledger transaction logs and financial history</span>
+              </div>
+              <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('ledger'); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All Details</button>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                    <th style={{ padding: '10px 8px' }}>Txn ID</th>
+                    <th style={{ padding: '10px 8px' }}>User</th>
+                    <th style={{ padding: '10px 8px' }}>Type</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Amount</th>
+                    <th style={{ padding: '10px 8px' }}>Description</th>
+                    <th style={{ padding: '10px 8px' }}>Date & Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ledgerEntries.length === 0 ? (
+                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No ledger entries found</td></tr>
+                  ) : ledgerEntries.map(l => {
+                    const isCredit = l.type === 'Credited' || parseFloat(l.credit || 0) > 0;
+                    const userName = l.user_name || (l.first_name ? `${l.first_name} ${l.last_name || ''}` : l.partner_code || 'User');
+                    const amt = parseFloat(l.credit || l.debit || l.amount || 0);
+                    return (
+                      <tr key={l.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{l.id}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: 700 }}>{userName}</td>
+                        <td style={{ padding: '12px 8px' }}>
+                          <span style={{ background: isCredit ? '#DCFCE7' : '#FEE2E2', color: isCredit ? '#15803D' : '#B91C1C', padding: '3px 8px', borderRadius: '6px', fontWeight: 800, fontSize: '10.5px' }}>
+                            {isCredit ? 'CREDITED' : 'DEBITED'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: isCredit ? C.green : C.red, fontSize: '13.5px' }}>
+                          {isCredit ? '+' : '-'}₹{amt.toLocaleString('en-IN')}
+                        </td>
+                        <td style={{ padding: '12px 8px', color: C.textLight }}>{l.description || 'Ledger Entry'}</td>
+                        <td style={{ padding: '12px 8px', color: C.textLight, fontSize: '11.5px' }}>{l.datetime || 'N/A'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 6: Wallet Reconciliation */}
+        {activeTab === 'reconciliation' && (
+          <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MdScale style={{ color: C.teal }} size={20} /> 6. Wallet Reconciliation
+                </h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>Verify wallet balances against total ledger credits and debits</span>
+              </div>
+              <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('reconciliation'); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All Audit Logs</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '20px', alignItems: 'center' }}>
+              <div style={{ flex: 1, background: isDark ? '#27272A' : '#F8FAFC', padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}`, fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 900, color: C.text, marginBottom: '4px' }}>System Balance Audit Summary</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: C.textLight }}>Opening Balance:</span>
+                  <strong style={{ color: C.text }}>₹{(reconciliation?.opening_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: C.textLight }}>Total Credits:</span>
+                  <strong style={{ color: C.green }}>+₹{(reconciliation?.total_credits || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: C.textLight }}>Total Debits:</span>
+                  <strong style={{ color: C.red }}>-₹{(reconciliation?.total_debits || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: '6px' }}>
+                  <span style={{ color: C.textLight }}>Closing Balance (System):</span>
+                  <strong style={{ color: C.text }}>₹{(reconciliation?.system_closing || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: C.textLight }}>Discrepancy Drift:</span>
+                  <strong style={{ color: (reconciliation?.difference || 0) === 0 ? C.green : C.red }}>₹{(reconciliation?.difference || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px', textAlign: 'center' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: (reconciliation?.difference || 0) === 0 ? '#DCFCE7' : '#FEE2E2', color: (reconciliation?.difference || 0) === 0 ? '#15803D' : '#B91C1C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MdCheck size={32} />
+                </div>
+                <div>
+                  <strong style={{ fontSize: '14px', color: (reconciliation?.difference || 0) === 0 ? '#15803D' : '#B91C1C', display: 'block' }}>
+                    {reconciliation?.status === 'MATCHED' || (reconciliation?.difference || 0) === 0 ? 'Reconciliation Matched' : 'Discrepancy Found'}
+                  </strong>
+                  <span style={{ fontSize: '11px', color: C.textLight }}>Last Reconciled On {reconciliation?.last_reconciled || 'Just now'}</span>
+                </div>
+                <button onClick={() => alert('Performing Instant Wallet Reconciliation Check... Audit matched with 0 discrepancy drift.')} style={{ ...S.btn('primary'), background: C.teal, padding: '8px 18px', fontSize: '12px', borderRadius: '10px' }}>
+                  Reconcile Now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
 
