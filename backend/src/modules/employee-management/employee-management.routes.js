@@ -86,6 +86,36 @@ async function syncAndSeedEmployees() {
       )
     `).catch(() => {});
 
+    await query(`
+      CREATE TABLE IF NOT EXISTS employee_sales_reports (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        report_date DATE NOT NULL DEFAULT CURRENT_DATE,
+        total_cards INTEGER NOT NULL DEFAULT 0,
+        remark TEXT,
+        photo_url TEXT,
+        photo_key TEXT,
+        status VARCHAR(20) DEFAULT 'Submitted',
+        submitted_at TIMESTAMPTZ DEFAULT NOW(),
+        reviewed_by UUID REFERENCES users(id),
+        reviewed_at TIMESTAMPTZ,
+        review_remark TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `).catch(() => {});
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS employee_sales_report_banks (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        report_id UUID NOT NULL REFERENCES employee_sales_reports(id) ON DELETE CASCADE,
+        bank_id UUID REFERENCES banks(id) ON DELETE SET NULL,
+        bank_name VARCHAR(100) NOT NULL,
+        cards_sold INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `).catch(() => {});
+
     // 1. Sync candidates from employee_candidates into users table
     await query(`
       INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
@@ -1915,6 +1945,143 @@ router.delete('/bonus-rules/:id', async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Bonus rule not found' });
     }
     res.json({ success: true, message: 'Bonus rule deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── 6. GET /api/v1/employees/sales-reports/super-admin — Super Admin Sales Reports Control Center ──
+router.get('/sales-reports/super-admin', async (req, res, next) => {
+  try {
+    const { status, start_date, end_date, bank_id, employee_id, search } = req.query;
+
+    let whereConds = [];
+    let params = [];
+
+    if (status) {
+      params.push(status);
+      whereConds.push(`sr.status = $${params.length}`);
+    }
+
+    if (start_date) {
+      params.push(start_date);
+      whereConds.push(`sr.report_date >= $${params.length}::date`);
+    }
+
+    if (end_date) {
+      params.push(end_date);
+      whereConds.push(`sr.report_date <= $${params.length}::date`);
+    }
+
+    if (employee_id) {
+      params.push(employee_id);
+      whereConds.push(`sr.employee_id = $${params.length}`);
+    }
+
+    if (search) {
+      params.push(`%${search}%`);
+      whereConds.push(`(e.full_name ILIKE $${params.length} OR e.employee_id ILIKE $${params.length})`);
+    }
+
+    const whereClause = whereConds.length > 0 ? `WHERE ${whereConds.join(' AND ')}` : '';
+
+    const { rows: reports } = await query(`
+      SELECT 
+        sr.*,
+        e.full_name as employee_name,
+        e.employee_id as emp_code,
+        e.designation as employee_designation,
+        u.full_name as reviewed_by_name
+      FROM employee_sales_reports sr
+      JOIN employees e ON e.id = sr.employee_id
+      LEFT JOIN users u ON u.id = sr.reviewed_by
+      ${whereClause}
+      ORDER BY sr.report_date DESC, sr.created_at DESC
+    `, params);
+
+    // Populate bank items for each report
+    const enrichedReports = await Promise.all(reports.map(async (report) => {
+      const bankRes = await query(`
+        SELECT bank_id, bank_name, cards_sold
+        FROM employee_sales_report_banks
+        WHERE report_id = $1
+        ORDER BY cards_sold DESC
+      `, [report.id]);
+
+      return {
+        ...report,
+        banks: bankRes.rows
+      };
+    }));
+
+    let finalReports = enrichedReports;
+    if (bank_id) {
+      finalReports = enrichedReports.filter(r => r.banks.some(b => b.bank_id === bank_id));
+    }
+
+    // Global KPIs
+    const totalReports = finalReports.length;
+    const totalCardsSold = finalReports.reduce((sum, r) => sum + parseInt(r.total_cards || 0), 0);
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayCardsSold = finalReports
+      .filter(r => new Date(r.report_date).toISOString().split('T')[0] === todayStr)
+      .reduce((sum, r) => sum + parseInt(r.total_cards || 0), 0);
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const thisMonthCardsSold = finalReports
+      .filter(r => {
+        const d = new Date(r.report_date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      })
+      .reduce((sum, r) => sum + parseInt(r.total_cards || 0), 0);
+
+    const pendingReviewsCount = finalReports.filter(r => r.status === 'Submitted' || r.status === 'Resubmitted').length;
+
+    // Bank-Wise Breakdown
+    const bankSummaryRes = await query(`
+      SELECT 
+        srb.bank_name,
+        SUM(srb.cards_sold)::int as total_cards_sold
+      FROM employee_sales_report_banks srb
+      JOIN employee_sales_reports sr ON sr.id = srb.report_id
+      ${whereClause}
+      GROUP BY srb.bank_name
+      ORDER BY total_cards_sold DESC
+    `, params);
+
+    // Employee-Wise Breakdown
+    const empSummaryRes = await query(`
+      SELECT 
+        e.id as employee_id,
+        e.full_name as employee_name,
+        e.employee_id as emp_code,
+        e.designation as employee_designation,
+        COUNT(sr.id)::int as total_reports,
+        COALESCE(SUM(sr.total_cards), 0)::int as total_cards_sold
+      FROM employees e
+      JOIN employee_sales_reports sr ON sr.employee_id = e.id
+      ${whereClause}
+      GROUP BY e.id, e.full_name, e.employee_id, e.designation
+      ORDER BY total_cards_sold DESC
+    `, params);
+
+    res.json({
+      success: true,
+      stats: {
+        total_reports: totalReports,
+        total_cards_sold: totalCardsSold,
+        today_cards_sold: todayCardsSold,
+        this_month_cards_sold: thisMonthCardsSold,
+        pending_reviews_count: pendingReviewsCount
+      },
+      bank_summary: bankSummaryRes.rows,
+      employee_summary: empSummaryRes.rows,
+      data: finalReports
+    });
   } catch (err) {
     next(err);
   }

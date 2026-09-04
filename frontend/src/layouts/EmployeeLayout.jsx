@@ -111,6 +111,7 @@ export default function EmployeeLayout() {
     { path: '/employee/credit-cards', label: 'Credit Cards', icon: <FaCreditCard /> },
     { path: '/employee/loans', label: 'Loans', icon: <FaCoins /> },
     { path: '/employee/insurance', label: 'Insurance', icon: <FaShieldAlt /> },
+    { path: '/employee/sales-reports', label: 'Sales Reports', icon: <FaFileAlt /> },
     { path: '/employee/applications', label: 'My Applications', icon: <FaFileAlt /> },
     { path: '/employee/incentives', label: 'My Incentives', icon: <FaGift /> },
     ...(isManagerOrTL ? [{ path: '/employee/team', label: 'My Team Architecture', icon: <FaUsers /> }] : []),

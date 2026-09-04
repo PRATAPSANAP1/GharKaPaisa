@@ -32,6 +32,7 @@ import MyTeam from '../modules/employee/team/MyTeam';
 import MyIncentives from '../modules/employee/incentives/MyIncentives';
 import EmployeeProfile from '../modules/employee/profile/EmployeeProfile';
 import EmployeeSettingsPortal from '../modules/employee/settings/EmployeeSettingsPortal';
+import EmployeeSalesReports from '../modules/employee/reports/EmployeeSalesReports';
 import PartnerLogin from '../modules/authentication/login/PartnerLogin';
 import PartnerRegister from '../modules/authentication/register/PartnerRegister';
 import VerifyEmail from '../modules/authentication/register/VerifyEmail';
@@ -288,6 +289,7 @@ const AppRoutes = () => {
             <Route path="/employee/incentives" element={<MyIncentives />} />
             <Route path="/employee/profile" element={<EmployeeProfile />} />
             <Route path="/employee/settings" element={<EmployeeSettingsPortal />} />
+            <Route path="/employee/sales-reports" element={<EmployeeSalesReports />} />
           </Route>
         </Route>
       </Route>

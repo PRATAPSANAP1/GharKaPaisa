@@ -91,6 +91,7 @@ export default function SuperAdminReports() {
     try {
       let endpoint = '/reports/applications';
       if (reportType === 'EMPLOYEE') endpoint = '/employees';
+      else if (reportType === 'SALES_REPORT') endpoint = '/employees/sales-reports/super-admin';
       else if (reportType === 'INCENTIVE') endpoint = '/reports/commission';
       else if (reportType === 'PAYOUT') endpoint = '/reports/wallet';
       else if (reportType === 'PRODUCT') endpoint = '/reports/products';
@@ -247,6 +248,7 @@ export default function SuperAdminReports() {
 
   // Detailed Reports Cards Catalog
   const detailedReportsList = [
+    { id: "sales_report", title: "Daily Sales Reports", description: "Multi-bank daily sales reports submitted by employees, proof attachments, and supervisory review states.", icon: <FaFileAlt />, type: "SALES_REPORT" },
     { id: "employee_perf", title: "Employee Performance Report", description: "Detailed performance metrics of all employees across Manager → TL → TC hierarchy.", icon: <FaUsers />, type: "EMPLOYEE" },
     { id: "app_report", title: "Application Report", description: "Complete application status, bank routing, customer details and timestamps.", icon: <FaFileAlt />, type: "APPLICATION" },
     { id: "incentive_report", title: "Incentive Report", description: "Employee & partner incentive earnings, commission percentages, and payout history.", icon: <FaCoins />, type: "INCENTIVE" },

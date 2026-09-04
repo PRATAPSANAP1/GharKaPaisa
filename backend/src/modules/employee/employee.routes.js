@@ -1078,4 +1078,255 @@ router.get('/incentives', resolveEmployee, async (req, res, next) => {
   }
 });
 
+// Helper to save sales report proof photo
+async function saveReportPhoto(file) {
+  if (!file) return { url: null, key: null };
+  try {
+    const { uploadToS3 } = require('../../services/aws/s3.service');
+    if (process.env.AWS_S3_BUCKET && process.env.AWS_ACCESS_KEY_ID) {
+      return await uploadToS3(file.buffer, file.originalname, 'sales-reports');
+    }
+  } catch (e) {
+    logger.warn(`S3 upload fallback to local storage: ${e.message}`);
+  }
+
+  const fs = require('fs');
+  const uploadsDir = path.join(__dirname, '../../../public/uploads/sales-reports');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  const ext = path.extname(file.originalname) || '.jpg';
+  const filename = `${uuidv4()}${ext}`;
+  const filePath = path.join(uploadsDir, filename);
+  fs.writeFileSync(filePath, file.buffer);
+  return { url: `/uploads/sales-reports/${filename}`, key: filename };
+}
+
+// ── 1. POST /api/v1/employee/sales-reports — Submit Daily Sales Report ──
+router.post('/sales-reports', resolveEmployee, upload.single('photo'), async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    const empId = req.employee.id;
+    const { report_date, remark } = req.body;
+    let banks = req.body.banks;
+
+    if (typeof banks === 'string') {
+      try { banks = JSON.parse(banks); } catch (e) { banks = []; }
+    }
+
+    if (!Array.isArray(banks) || banks.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one bank with cards sold must be provided.' });
+    }
+
+    const totalCards = banks.reduce((sum, b) => sum + parseInt(b.cards_sold || 0), 0);
+    const photoData = req.file ? await saveReportPhoto(req.file) : { url: null, key: null };
+
+    await client.query('BEGIN');
+
+    const reportRes = await client.query(`
+      INSERT INTO employee_sales_reports (
+        employee_id, report_date, total_cards, remark, photo_url, photo_key, status, submitted_at
+      ) VALUES ($1, COALESCE($2::date, CURRENT_DATE), $3, $4, $5, $6, 'Submitted', NOW())
+      RETURNING *
+    `, [empId, report_date || new Date().toISOString().split('T')[0], totalCards, remark || '', photoData.url, photoData.key]);
+
+    const report = reportRes.rows[0];
+
+    for (const b of banks) {
+      await client.query(`
+        INSERT INTO employee_sales_report_banks (report_id, bank_id, bank_name, cards_sold)
+        VALUES ($1, $2, $3, $4)
+      `, [report.id, b.bank_id || null, b.bank_name || 'Bank', parseInt(b.cards_sold || 0)]);
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: 'Sales report submitted successfully!',
+      data: report
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+});
+
+// ── 2. GET /api/v1/employee/sales-reports — Hierarchical Reports Dashboard ──
+router.get('/sales-reports', resolveEmployee, async (req, res, next) => {
+  try {
+    const empId = req.employee.id;
+    const { status, start_date, end_date, employee_id } = req.query;
+
+    // Get recursive downline employee IDs for hierarchical visibility
+    const downlineRes = await query(`
+      WITH RECURSIVE downline AS (
+        SELECT id FROM employees WHERE id = $1
+        UNION ALL
+        SELECT e.id FROM employees e
+        JOIN employee_hierarchy eh ON eh.employee_id = e.id AND eh.is_active = true
+        JOIN downline d ON (
+          eh.team_leader_id = d.id OR 
+          eh.manager_id = d.id OR 
+          eh.senior_manager_id = d.id OR 
+          eh.branch_head_id = d.id
+        )
+      )
+      SELECT DISTINCT id FROM downline;
+    `, [empId]);
+
+    const downlineIds = downlineRes.rows.map(r => r.id);
+
+    let whereConds = [`sr.employee_id = ANY($1::uuid[])`];
+    let params = [downlineIds];
+
+    if (employee_id && downlineIds.includes(employee_id)) {
+      params.push(employee_id);
+      whereConds.push(`sr.employee_id = $${params.length}`);
+    }
+
+    if (status) {
+      params.push(status);
+      whereConds.push(`sr.status = $${params.length}`);
+    }
+
+    if (start_date) {
+      params.push(start_date);
+      whereConds.push(`sr.report_date >= $${params.length}::date`);
+    }
+
+    if (end_date) {
+      params.push(end_date);
+      whereConds.push(`sr.report_date <= $${params.length}::date`);
+    }
+
+    const whereClause = `WHERE ${whereConds.join(' AND ')}`;
+
+    const { rows: reports } = await query(`
+      SELECT 
+        sr.*,
+        e.full_name as employee_name,
+        e.employee_id as emp_code,
+        e.designation as employee_designation,
+        u.full_name as reviewed_by_name
+      FROM employee_sales_reports sr
+      JOIN employees e ON e.id = sr.employee_id
+      LEFT JOIN users u ON u.id = sr.reviewed_by
+      ${whereClause}
+      ORDER BY sr.report_date DESC, sr.created_at DESC
+    `, params);
+
+    // Fetch bank breakdown for each report
+    const enrichedReports = await Promise.all(reports.map(async (report) => {
+      const bankRes = await query(`
+        SELECT bank_id, bank_name, cards_sold
+        FROM employee_sales_report_banks
+        WHERE report_id = $1
+        ORDER BY cards_sold DESC
+      `, [report.id]);
+
+      return {
+        ...report,
+        banks: bankRes.rows,
+        is_mine: report.employee_id === empId
+      };
+    }));
+
+    const myReports = enrichedReports.filter(r => r.is_mine);
+    const teamReports = enrichedReports.filter(r => !r.is_mine);
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const myMonthCards = myReports
+      .filter(r => {
+        const d = new Date(r.report_date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      })
+      .reduce((sum, r) => sum + parseInt(r.total_cards || 0), 0);
+
+    const teamMonthCards = teamReports
+      .filter(r => {
+        const d = new Date(r.report_date);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      })
+      .reduce((sum, r) => sum + parseInt(r.total_cards || 0), 0);
+
+    res.json({
+      success: true,
+      stats: {
+        my_total_reports: myReports.length,
+        my_total_cards: myReports.reduce((sum, r) => sum + parseInt(r.total_cards || 0), 0),
+        my_this_month_cards: myMonthCards,
+        team_total_reports: teamReports.length,
+        team_total_cards: teamReports.reduce((sum, r) => sum + parseInt(r.total_cards || 0), 0),
+        team_this_month_cards: teamMonthCards,
+        has_downline: downlineIds.length > 1
+      },
+      my_reports: myReports,
+      team_reports: teamReports,
+      data: enrichedReports
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── 3. PUT /api/v1/employee/sales-reports/:id/review — Supervisor Review Report ──
+router.put('/sales-reports/:id/review', resolveEmployee, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, review_remark } = req.body;
+    const reviewerEmpId = req.employee.id;
+
+    const reportRes = await query(`SELECT employee_id FROM employee_sales_reports WHERE id = $1`, [id]);
+    if (reportRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Sales report not found.' });
+    }
+
+    const reportOwnerId = reportRes.rows[0].employee_id;
+
+    const downlineRes = await query(`
+      WITH RECURSIVE downline AS (
+        SELECT id FROM employees WHERE id = $1
+        UNION ALL
+        SELECT e.id FROM employees e
+        JOIN employee_hierarchy eh ON eh.employee_id = e.id AND eh.is_active = true
+        JOIN downline d ON (
+          eh.team_leader_id = d.id OR eh.manager_id = d.id OR eh.senior_manager_id = d.id OR eh.branch_head_id = d.id
+        )
+      )
+      SELECT DISTINCT id FROM downline;
+    `, [reviewerEmpId]);
+
+    const downlineIds = downlineRes.rows.map(r => r.id);
+    if (!downlineIds.includes(reportOwnerId)) {
+      return res.status(403).json({ success: false, message: 'Access denied. You do not have permission to review this report.' });
+    }
+
+    const updateRes = await query(`
+      UPDATE employee_sales_reports
+      SET 
+        status = COALESCE($1, status),
+        review_remark = $2,
+        reviewed_by = (SELECT user_id FROM employees WHERE id = $3 LIMIT 1),
+        reviewed_at = NOW(),
+        updated_at = NOW()
+      WHERE id = $4
+      RETURNING *
+    `, [status || 'Reviewed', review_remark || '', reviewerEmpId, id]);
+
+    res.json({
+      success: true,
+      message: `Report status updated to ${status || 'Reviewed'}`,
+      data: updateRes.rows[0]
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
