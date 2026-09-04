@@ -1091,82 +1091,90 @@ export default function EmployeeManagement() {
               </div>
             </div>
 
-            {/* Table */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-                <thead>
-                  <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textMid, fontWeight: 700 }}>
-                    <th style={{ padding: '14px 20px' }}>EMP ID</th>
-                    <th style={{ padding: '14px 20px' }}>Employee Name</th>
-                    <th style={{ padding: '14px 20px' }}>Designation</th>
-                    <th style={{ padding: '14px 20px' }}>Manager / TL</th>
-                    <th style={{ padding: '14px 20px' }}>Onboarding</th>
-                    <th style={{ padding: '14px 20px' }}>Status</th>
-                    <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</td></tr>
-                  ) : employees.length === 0 ? (
-                    <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</td></tr>
-                  ) : employees.map(emp => (
-                    <tr key={emp.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '14px 20px', fontWeight: 900, color: C.teal }}>{emp.employee_id}</td>
-                      <td style={{ padding: '14px 20px', fontWeight: 800, color: C.text }}>
-                        {emp.full_name}
-                        <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 400 }}>{emp.mobile_number}</div>
-                      </td>
-                      <td style={{ padding: '14px 20px', fontWeight: 800 }}>
-                        {emp.designation || (emp.hierarchy_level === 'BRANCH_HEAD' ? 'BRANCH HEAD' : emp.hierarchy_level === 'SENIOR_MANAGER' ? 'SENIOR MANAGER' : emp.hierarchy_level === 'MANAGER' ? 'MANAGER' : emp.hierarchy_level === 'TEAM_LEADER' ? 'TL' : 'TC')}
-                      </td>
-                      <td style={{ padding: '14px 20px', color: C.textMid }}>
-                        <div>{emp.manager_name ? `Mgr: ${emp.manager_name}` : 'Direct'}</div>
-                        {emp.team_leader_name && <div style={{ fontSize: '12px' }}>TL: {emp.team_leader_name}</div>}
-                      </td>
-                      <td style={{ padding: '14px 20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ flex: 1, background: C.bgSecondary, height: '8px', borderRadius: '4px', overflow: 'hidden', minWidth: '60px' }}>
-                            <div style={{ width: `${emp.overall_progress || 35}%`, background: C.teal, height: '100%' }} />
+            {/* Table & Mobile Card View */}
+            {isMobile ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '12px' }}>
+                {loading ? (
+                  <div style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>Loading records...</div>
+                ) : employees.length === 0 ? (
+                  <div style={{ padding: '30px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</div>
+                ) : (
+                  employees.map(emp => (
+                    <div 
+                      key={emp.id}
+                      style={{
+                        background: C.card,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: '16px',
+                        padding: '14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '10px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                        <div>
+                          <div style={{ fontSize: '15px', fontWeight: 900, color: C.text }}>
+                            {emp.full_name}
                           </div>
-                          <span style={{ fontSize: '12px', fontWeight: 700 }}>{emp.overall_progress || 35}%</span>
+                          <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, marginTop: '2px' }}>
+                            ID: {emp.employee_id} • {emp.mobile_number}
+                          </div>
                         </div>
-                      </td>
-                      <td style={{ padding: '14px 20px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
-                          <span 
-                            style={{ 
-                              padding: '3px 10px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 800,
-                              background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
-                              color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E'
-                            }}
-                          >
-                            {emp.activation_status === 'APPROVED' ? '● Active Account' : '● Pending Activation'}
-                          </span>
+                        <span 
+                          style={{ 
+                            padding: '3px 8px', borderRadius: '8px', fontSize: '10.5px', fontWeight: 800,
+                            background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
+                            color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E',
+                            flexShrink: 0
+                          }}
+                        >
+                          {emp.activation_status === 'APPROVED' ? 'Active' : 'Pending'}
+                        </span>
+                      </div>
 
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: C.textMid, borderTop: `1px solid ${C.border}`, paddingTop: '8px' }}>
+                        <div>
+                          <strong>Role:</strong> {emp.designation || (emp.hierarchy_level === 'BRANCH_HEAD' ? 'BRANCH HEAD' : emp.hierarchy_level === 'SENIOR_MANAGER' ? 'SENIOR MANAGER' : emp.hierarchy_level === 'MANAGER' ? 'MANAGER' : emp.hierarchy_level === 'TEAM_LEADER' ? 'TL' : 'TC')}
+                        </div>
+                        <div>
+                          <strong>Manager:</strong> {emp.manager_name || 'Direct'}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>Onboarding:</span>
+                        <div style={{ flex: 1, background: C.bgSecondary, height: '6px', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${emp.overall_progress || 35}%`, background: C.teal, height: '100%' }} />
+                        </div>
+                        <span style={{ fontSize: '11px', fontWeight: 800 }}>{emp.overall_progress || 35}%</span>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
+                        <div>
                           {emp.activation_status !== 'APPROVED' && (
                             <button
                               onClick={() => handleKycVerify(emp.id, 'VERIFIED')}
                               style={{
-                                padding: '5px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800,
+                                padding: '6px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
                                 background: '#10B981', color: '#ffffff', border: 'none', cursor: 'pointer',
                                 display: 'inline-flex', alignItems: 'center', gap: '4px'
                               }}
                               title="Approve KYC and activate employee account"
                             >
-                              <FaCheckCircle /> Approve KYC & Activate
+                              <FaCheckCircle /> Approve KYC
                             </button>
                           )}
                         </div>
-                      </td>
-                      <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+
                         <button 
                           onClick={() => setActionModalEmp(emp)}
                           style={{ 
                             background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, 
                             color: '#ffffff', 
                             border: 'none', 
-                            padding: '7px 14px', 
+                            padding: '8px 14px', 
                             borderRadius: '10px', 
                             fontSize: '12.5px', 
                             fontWeight: 800, 
@@ -1175,17 +1183,112 @@ export default function EmployeeManagement() {
                             alignItems: 'center', 
                             gap: '6px',
                             boxShadow: '0 2px 8px rgba(13, 148, 136, 0.25)',
-                            transition: 'all 0.2s ease'
+                            flexShrink: 0
                           }}
                         >
                           <FaEllipsisV /> Actions
                         </button>
-                      </td>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textMid, fontWeight: 700 }}>
+                      <th style={{ padding: '14px 20px' }}>EMP ID</th>
+                      <th style={{ padding: '14px 20px' }}>Employee Name</th>
+                      <th style={{ padding: '14px 20px' }}>Designation</th>
+                      <th style={{ padding: '14px 20px' }}>Manager / TL</th>
+                      <th style={{ padding: '14px 20px' }}>Onboarding</th>
+                      <th style={{ padding: '14px 20px' }}>Status</th>
+                      <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</td></tr>
+                    ) : employees.length === 0 ? (
+                      <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</td></tr>
+                    ) : employees.map(emp => (
+                      <tr key={emp.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '14px 20px', fontWeight: 900, color: C.teal }}>{emp.employee_id}</td>
+                        <td style={{ padding: '14px 20px', fontWeight: 800, color: C.text }}>
+                          {emp.full_name}
+                          <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 400 }}>{emp.mobile_number}</div>
+                        </td>
+                        <td style={{ padding: '14px 20px', fontWeight: 800 }}>
+                          {emp.designation || (emp.hierarchy_level === 'BRANCH_HEAD' ? 'BRANCH HEAD' : emp.hierarchy_level === 'SENIOR_MANAGER' ? 'SENIOR MANAGER' : emp.hierarchy_level === 'MANAGER' ? 'MANAGER' : emp.hierarchy_level === 'TEAM_LEADER' ? 'TL' : 'TC')}
+                        </td>
+                        <td style={{ padding: '14px 20px', color: C.textMid }}>
+                          <div>{emp.manager_name ? `Mgr: ${emp.manager_name}` : 'Direct'}</div>
+                          {emp.team_leader_name && <div style={{ fontSize: '12px' }}>TL: {emp.team_leader_name}</div>}
+                        </td>
+                        <td style={{ padding: '14px 20px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ flex: 1, background: C.bgSecondary, height: '8px', borderRadius: '4px', overflow: 'hidden', minWidth: '60px' }}>
+                              <div style={{ width: `${emp.overall_progress || 35}%`, background: C.teal, height: '100%' }} />
+                            </div>
+                            <span style={{ fontSize: '12px', fontWeight: 700 }}>{emp.overall_progress || 35}%</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px 20px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                            <span 
+                              style={{ 
+                                padding: '3px 10px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 800,
+                                background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
+                                color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E'
+                              }}
+                            >
+                              {emp.activation_status === 'APPROVED' ? '● Active Account' : '● Pending Activation'}
+                            </span>
+
+                            {emp.activation_status !== 'APPROVED' && (
+                              <button
+                                onClick={() => handleKycVerify(emp.id, 'VERIFIED')}
+                                style={{
+                                  padding: '5px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800,
+                                  background: '#10B981', color: '#ffffff', border: 'none', cursor: 'pointer',
+                                  display: 'inline-flex', alignItems: 'center', gap: '4px'
+                                }}
+                                title="Approve KYC and activate employee account"
+                              >
+                                <FaCheckCircle /> Approve KYC & Activate
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                          <button 
+                            onClick={() => setActionModalEmp(emp)}
+                            style={{ 
+                              background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, 
+                              color: '#ffffff', 
+                              border: 'none', 
+                              padding: '7px 14px', 
+                              borderRadius: '10px', 
+                              fontSize: '12.5px', 
+                              fontWeight: 800, 
+                              cursor: 'pointer', 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '6px',
+                              boxShadow: '0 2px 8px rgba(13, 148, 136, 0.25)',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <FaEllipsisV /> Actions
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -2856,7 +2959,17 @@ export default function EmployeeManagement() {
             onClick={() => setActionModalEmp(null)}
           >
             <div 
-              style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', width: '100%', maxWidth: '480px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}
+              style={{ 
+                background: C.card, 
+                border: `1px solid ${C.border}`, 
+                borderRadius: '24px', 
+                width: '100%', 
+                maxWidth: '480px', 
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                padding: isMobile ? '18px 14px' : '24px', 
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' 
+              }}
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -2872,7 +2985,7 @@ export default function EmployeeManagement() {
                 <button onClick={() => setActionModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: C.textMid, fontWeight: 900 }}>✕</button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '12px' }}>
                 {/* 1. Manage Depts */}
                 <button
                   onClick={() => {
