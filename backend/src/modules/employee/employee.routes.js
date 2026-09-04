@@ -800,8 +800,7 @@ router.get('/my-bonus-progress', async (req, res, next) => {
   try {
     const empId = req.employee.id;
 
-    // Fetch active bonus rules for this employee
-    const rulesRes = await query(`
+    const deptRulesRes = await query(`
       SELECT 
         br.*,
         b.name as bank_name,
@@ -812,7 +811,13 @@ router.get('/my-bonus-progress', async (req, res, next) => {
       ORDER BY br.start_date DESC
     `, [empId]);
 
-    const progressList = await Promise.all(rulesRes.rows.map(async (rule) => {
+    const deptBankIds = deptRulesRes.rows.map(r => r.bank_id);
+
+    // 1. Calculate Department-Assigned Bank Progress (Target-based)
+    let totalDepartmentUnlockedBonus = 0;
+    let totalDepartmentPendingBonus = 0;
+
+    const departmentBonusProgress = await Promise.all(deptRulesRes.rows.map(async (rule) => {
       const appCountRes = await query(`
         SELECT COUNT(*) as approved_count
         FROM applications app
@@ -829,11 +834,16 @@ router.get('/my-bonus-progress', async (req, res, next) => {
       const bonusPerCard = parseFloat(rule.bonus_per_card || 0);
       const targetAchieved = targetCount > 0 && approvedCount >= targetCount;
       const projectedBonus = approvedCount * bonusPerCard;
-      // Bonus is unlocked & earned ONLY when approved cards >= targetCount
       const totalEarnedBonus = targetAchieved ? projectedBonus : 0;
       const remainingCount = Math.max(0, targetCount - approvedCount);
       const remainingBonus = remainingCount * bonusPerCard;
       const percentage = targetCount > 0 ? Math.min(100, Math.round((approvedCount / targetCount) * 100)) : 0;
+
+      if (targetAchieved) {
+        totalDepartmentUnlockedBonus += totalEarnedBonus;
+      } else {
+        totalDepartmentPendingBonus += projectedBonus;
+      }
 
       return {
         id: rule.id,
@@ -847,7 +857,8 @@ router.get('/my-bonus-progress', async (req, res, next) => {
         bonus_per_card: bonusPerCard,
         projected_bonus: projectedBonus,
         earned_bonus: totalEarnedBonus,
-        bonus_status: targetAchieved ? 'UNLOCKED' : 'LOCKED_TARGET_PENDING',
+        is_department_bank: true,
+        bonus_status: targetAchieved ? 'UNLOCKED' : 'HELD_TARGET_PENDING',
         remaining_count: remainingCount,
         remaining_bonus: remainingBonus,
         target_achieved: targetAchieved,
@@ -855,7 +866,47 @@ router.get('/my-bonus-progress', async (req, res, next) => {
       };
     }));
 
-    res.json({ success: true, data: progressList });
+    // 2. Calculate Non-Department Bank Incentives (Immediate - No Target Required)
+    const nonDeptRes = await query(`
+      SELECT 
+        p.bank_id,
+        COALESCE(b.name, 'Other Bank') as bank_name,
+        b.logo_url as bank_logo,
+        COUNT(app.id) as approved_count,
+        COALESCE(SUM(app.commission_amount), COUNT(app.id) * 500) as total_incentive
+      FROM applications app
+      JOIN products p ON p.id = app.product_id
+      LEFT JOIN banks b ON b.id = p.bank_id
+      WHERE (app.employee_id = $1 OR app.submitted_by = $2)
+        AND app.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received')
+        ${deptBankIds.length > 0 ? `AND (p.bank_id IS NULL OR p.bank_id NOT IN (${deptBankIds.map((_, i) => `$${i + 3}`).join(',')}))` : ''}
+      GROUP BY p.bank_id, b.name, b.logo_url
+    `, [empId, req.user.id, ...deptBankIds]);
+
+    const nonDepartmentIncentives = nonDeptRes.rows.map(row => ({
+      bank_id: row.bank_id,
+      bank_name: row.bank_name,
+      bank_logo: row.bank_logo,
+      approved_count: parseInt(row.approved_count || 0),
+      total_incentive: parseFloat(row.total_incentive || 0),
+      is_department_bank: false,
+      bonus_status: 'IMMEDIATE_RELEASED'
+    }));
+
+    const totalNonDepartmentIncentive = nonDepartmentIncentives.reduce((sum, item) => sum + item.total_incentive, 0);
+
+    res.json({
+      success: true,
+      summary: {
+        total_earned_now: totalNonDepartmentIncentive + totalDepartmentUnlockedBonus,
+        non_department_immediate_incentive: totalNonDepartmentIncentive,
+        department_unlocked_bonus: totalDepartmentUnlockedBonus,
+        department_pending_bonus: totalDepartmentPendingBonus
+      },
+      department_bonus_progress: departmentBonusProgress,
+      non_department_incentives: nonDepartmentIncentives,
+      data: departmentBonusProgress // Backward compatibility
+    });
   } catch (err) {
     next(err);
   }
