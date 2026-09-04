@@ -64,11 +64,7 @@ const generateShareLink = async (req, res, next) => {
     }
 
     if (!partnerId) {
-      const { rows: [p] } = await query(`SELECT id, partner_code FROM partner_profiles LIMIT 1`);
-      if (p) {
-        partnerId = p.id;
-        partnerCode = p.partner_code;
-      }
+      return error(res, 'Partner profile is required to generate share links', 400);
     }
 
     // Verify product exists
@@ -104,8 +100,8 @@ const generateShareLink = async (req, res, next) => {
 
     // Store in partner_share_links table
     await query(`
-      INSERT INTO partner_share_links (partner_id, product_id, tracking_token, application_id, lead_id, expires_at)
-      VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days')
+      INSERT INTO partner_share_links (partner_id, product_id, tracking_token, application_id, lead_id, expires_at, status)
+      VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '30 days', 'ACTIVE')
     `, [partnerId, productId, trackingToken, applicationId, leadId]);
 
     // Generate share link URL pointing to GharKaPaisa customer detail collection page
@@ -167,11 +163,13 @@ const resolveShareToken = async (token) => {
 
   const cleanToken = String(token).trim();
 
-  // 1. Check partner_share_links (exact match or prefix match)
+  // 1. Check partner_share_links (exact match or prefix match) with expiration & status check
   const { rows: [linkRes] } = await query(
     `SELECT product_id, partner_id, application_id, lead_id, created_at 
      FROM partner_share_links 
-     WHERE tracking_token = $1 OR tracking_token ILIKE $2
+     WHERE (tracking_token = $1 OR tracking_token ILIKE $2)
+       AND (expires_at IS NULL OR expires_at > NOW())
+       AND (status IS NULL OR status = 'ACTIVE')
      ORDER BY created_at DESC LIMIT 1`,
     [cleanToken, `${cleanToken}%`]
   );
@@ -235,7 +233,7 @@ const resolveShareToken = async (token) => {
     // Non-blocking fallback if click_tracking has different columns
   }
 
-  // 5. Check products table by ID, slug, or name
+  // 5. Check products table by ID, slug, or name (Direct product link — NO random partner fallback)
   const { rows: [prodRes] } = await query(
     `SELECT id as product_id FROM products 
      WHERE id::text = $1 OR slug ILIKE $2 OR name ILIKE $2 
@@ -243,17 +241,16 @@ const resolveShareToken = async (token) => {
     [cleanToken, `%${cleanToken.replace(/-/g, ' ')}%`]
   );
   if (prodRes) {
-    const { rows: [pProfile] } = await query(`SELECT id FROM partner_profiles LIMIT 1`);
     return {
       product_id: prodRes.product_id,
-      partner_id: pProfile?.id || null,
+      partner_id: null,
       application_id: null,
       lead_id: null,
       created_at: new Date()
     };
   }
 
-  // NOTE: Token not found -> Return null (404 Invalid or expired share link). Never fall back to latest active product!
+  // NOTE: Token not found -> Return null (404 Invalid or expired share link). Never fall back to arbitrary partners!
   return null;
 };
 

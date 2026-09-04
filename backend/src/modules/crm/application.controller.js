@@ -271,18 +271,10 @@ const submitPublicApplication = async (req, res, next) => {
       return error(res, 'Product not found or inactive', 404);
     }
 
-    let partnerId;
+    let partnerId = null;
     if (partner_code) {
       const { rows: [partner] } = await client.query(`SELECT id FROM partner_profiles WHERE partner_code = $1`, [partner_code]);
       if (partner) partnerId = partner.id;
-    }
-    if (!partnerId) {
-      const { rows: [defaultPartner] } = await client.query(`SELECT id FROM partner_profiles LIMIT 1`);
-      if (!defaultPartner) {
-        await client.query('ROLLBACK');
-        return error(res, 'System cannot route lead as no active Partner profiles exist.', 500);
-      }
-      partnerId = defaultPartner.id;
     }
 
     const { rows: [partnerProfile] } = await client.query(`

@@ -168,7 +168,7 @@ export default function PartnerRegister() {
     ...(savedDraft?.form || {})
   }));
 
-  // Auto-save form draft to localStorage on change (Max 1 hour TTL)
+  // Auto-save form draft to localStorage on change (Sanitized - PII and secrets excluded)
   useEffect(() => {
     if (success) {
       try {
@@ -177,7 +177,14 @@ export default function PartnerRegister() {
       return;
     }
     try {
-      const { panFile, chequeFile, ...formToSave } = form;
+      const { 
+        panFile, chequeFile, 
+        password, confirmPassword, 
+        pan, aadhaar, 
+        accountNumber, ifsc, accountHolderName,
+        ...formToSave 
+      } = form;
+
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
         onboardingStep,
         step,

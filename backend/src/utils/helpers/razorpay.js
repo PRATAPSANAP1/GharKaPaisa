@@ -3,11 +3,15 @@ const crypto = require('crypto');
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
-const KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_TQq4luJsMjMjXF';
-const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '50gNCr5bmZt7VWZA5POmNh9x';
+const KEY_ID = process.env.RAZORPAY_KEY_ID;
+const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 const MERCHANT_ACCOUNT = process.env.RAZORPAY_ACCOUNT_NUMBER;
 
-const isLive = !!(KEY_ID && KEY_SECRET && KEY_ID.startsWith('rzp_live_'));
+if (process.env.NODE_ENV === 'production' && (!KEY_ID || !KEY_SECRET)) {
+  logger.error('CRITICAL: Razorpay credentials (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are not configured in production environment.');
+}
+
+const isLive = !!(KEY_ID && KEY_SECRET && !KEY_ID.includes('test'));
 
 // Helper to log payout API request/responses
 const logPayoutApiCall = async (withdrawalId, request, response, httpStatus, retryCount = 0) => {
@@ -34,7 +38,10 @@ const createRazorpayContact = async (partner, withdrawalId) => {
   };
 
   if (!isLive) {
-    // Simulator
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Razorpay live credentials are required in production mode for contact creation.');
+    }
+    // Simulator (Development / Testing)
     const responseBody = {
       id: `cont_sim_${crypto.randomBytes(6).toString('hex')}`,
       entity: 'contact',
@@ -82,7 +89,10 @@ const createRazorpayFundAccount = async (contactId, bankDetails, withdrawalId) =
   };
 
   if (!isLive) {
-    // Simulator
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Razorpay live credentials are required in production mode for fund account creation.');
+    }
+    // Simulator (Development / Testing)
     const responseBody = {
       id: `fa_sim_${crypto.randomBytes(6).toString('hex')}`,
       entity: 'fund_account',
@@ -217,7 +227,10 @@ const createRazorpayPayout = async (fundAccountId, amountRupees, withdrawalId, o
   };
 
   if (!isLive) {
-    // Simulator - auto process after simulation
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Razorpay live credentials are required in production mode to initiate payouts.');
+    }
+    // Simulator - auto process after simulation (Development / Testing only)
     const responseBody = {
       id: `pout_sim_${crypto.randomBytes(6).toString('hex')}`,
       entity: 'payout',

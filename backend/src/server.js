@@ -107,25 +107,6 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// Dynamic CORS header reflection middleware to guarantee CORS headers on all responses (including 500/502 errors)
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
-  const reqHeaders = req.headers['access-control-request-headers'];
-  if (reqHeaders) {
-    res.setHeader('Access-Control-Allow-Headers', reqHeaders);
-  }
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    return res.sendStatus(204);
-  }
-  next();
-});
-
 // Global rate limiter
 app.use(globalLimiter);
 
@@ -263,9 +244,13 @@ const startServer = async () => {
     await db.query('SELECT 1');
     logger.info('Database connection verified successfully.');
 
-    // Run database migrations automatically
-    const { migrate } = require('./database/migrations/migrate.js');
-    await migrate();
+    // Database migration execution on startup (controlled via AUTO_MIGRATE flag in production)
+    if (process.env.AUTO_MIGRATE === 'true' || process.env.NODE_ENV !== 'production') {
+      const { migrate } = require('./database/migrations/migrate.js');
+      await migrate();
+    } else {
+      logger.info('Skipping automatic startup migration in production (AUTO_MIGRATE != true).');
+    }
 
     // Initialize scheduled CRON jobs
     const { initReportJobs } = require('./jobs/report.job.js');

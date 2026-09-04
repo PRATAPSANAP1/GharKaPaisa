@@ -28,6 +28,19 @@ const runWalletEngineMigrations = async () => {
       END $$;
     `);
 
+    // 1b. Enforce Non-Negative Balance Constraints on partner_wallets
+    await query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_available_balance_non_negative') THEN
+          ALTER TABLE partner_wallets ADD CONSTRAINT chk_available_balance_non_negative CHECK (available_balance >= 0);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_hold_balance_non_negative') THEN
+          ALTER TABLE partner_wallets ADD CONSTRAINT chk_hold_balance_non_negative CHECK (hold_balance >= 0);
+        END IF;
+      END $$;
+    `);
+
     // 2. Wallet Ledger Table
     await query(`
       CREATE TABLE IF NOT EXISTS wallet_ledger (

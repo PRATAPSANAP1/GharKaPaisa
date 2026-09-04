@@ -22,7 +22,6 @@ router.get('/banks', productCtrl.listBanks);
 router.get('/cards', productCtrl.getCards);
 router.get('/loans', productCtrl.getLoans);
 router.get('/insurance', productCtrl.getInsurance);
-router.get('/seed-new-banks', productCtrl.seedNewBanksProducts);
 router.post('/click', optionalAuth, linkCtrl.logClick);
 router.get('/links', optionalAuth, linkCtrl.listProductLinks);
 router.get('/link/:id', optionalAuth, linkCtrl.getProductLink);
@@ -69,6 +68,7 @@ router.put('/:id', auth, authorize('ADMIN', 'SUPER_ADMIN'), upload.single('image
 router.patch('/:id/status', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.updateStatus);
 router.post('/:id/duplicate', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.duplicateProduct);
 router.delete('/:id', auth, authorize('ADMIN', 'SUPER_ADMIN'), productCtrl.deleteProduct);
+router.post('/seed-new-banks', auth, authorize('SUPER_ADMIN'), productCtrl.seedNewBanksProducts);
 router.post('/commission', auth, authorize('SUPER_ADMIN'), commissionRules, validate, productCtrl.setCommission);
 
 // ── Admin Sub-Entity CRUD ────────────────────────────────────────

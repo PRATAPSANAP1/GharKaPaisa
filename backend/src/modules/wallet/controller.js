@@ -1911,10 +1911,10 @@ const reconcileAddFundsRequest = async (req, res, next) => {
 // ── Razorpay Webhook Handler (Payout Processed / Failed Reconciliation) ─────
 const handleRazorpayWebhook = async (req, res, next) => {
   try {
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
     const signature = req.headers['x-razorpay-signature'];
 
-    // 1. Verify Webhook Signature (Step 21)
+    // Verify Webhook Signature against Raw Body
     if (webhookSecret) {
       if (!signature) {
         logger.warn('[RAZORPAY_WEBHOOK] Missing X-Razorpay-Signature header');

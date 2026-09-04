@@ -1122,37 +1122,51 @@ const sendWithdrawalOTP = async (partnerId, amount) => {
   const otpCode = String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+  // Hash OTP prior to storage
+  const hashedOtp = crypto.createHash('sha256').update(otpCode).digest('hex');
+
   await query(`
     INSERT INTO wallet_withdrawals (partner_id, amount, status, otp_code, otp_expires_at)
     VALUES ($1, $2, 'otp_pending', $3, $4)
-  `, [partnerId, amount, otpCode, expiresAt]);
+  `, [partnerId, amount, hashedOtp, expiresAt]);
 
-  logger.info(`Withdrawal OTP for partner ${partnerId}: ${otpCode}`);
+  logger.info(`Withdrawal OTP generated and dispatched for partner ${partnerId}`);
 
-  // Auto notification
+  // Send notification to partner
   await notify.partner(
     partnerId,
     '🔐 Withdrawal Security OTP',
     `Your OTP for ₹${amount.toLocaleString()} payout request is: ${otpCode}. Valid for 10 minutes.`,
-    { type: 'WITHDRAWAL_OTP', otp: otpCode }
+    { type: 'WITHDRAWAL_OTP' }
   ).catch(() => null);
 
-  return { otp_sent: true, expires_in_seconds: 600, mock_otp: otpCode };
+  // Return standard metadata without exposing OTP or mock_otp
+  return { otp_sent: true, expires_in_seconds: 600 };
 };
 
 /**
  * Verify Withdrawal OTP
  */
 const verifyWithdrawalOTP = async (partnerId, otpCode) => {
+  const crypto = require('crypto');
+  const hashedOtp = crypto.createHash('sha256').update(String(otpCode).trim()).digest('hex');
+
   const { rows: [reqRow] } = await query(`
     SELECT * FROM wallet_withdrawals
-    WHERE partner_id = $1 AND status = 'otp_pending' AND otp_code = $2 AND otp_expires_at >= NOW()
+    WHERE partner_id = $1 AND status = 'otp_pending' AND (otp_code = $2 OR otp_code = $3) AND otp_expires_at >= NOW()
     ORDER BY created_at DESC LIMIT 1
-  `, [partnerId, otpCode]);
+  `, [partnerId, hashedOtp, String(otpCode).trim()]);
 
   if (!reqRow) {
     throw new Error('Invalid or expired OTP code');
   }
+
+  // Invalidate OTP after successful verification
+  await query(`
+    UPDATE wallet_withdrawals 
+    SET status = 'pending', otp_expires_at = NOW() 
+    WHERE id = $1
+  `, [reqRow.id]);
 
   return reqRow;
 };

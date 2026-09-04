@@ -6,14 +6,36 @@ const roleCheck = require('../../middleware/authorization/role.middleware.js');
 const { success, error } = require('../../utils/response/response');
 const { logAction } = require('../admin/audit.service.js');
 
-// Public or global check to fetch settings
+const PUBLIC_ALLOWLIST = new Set([
+  'company_name',
+  'company_phone',
+  'company_email',
+  'company_address',
+  'theme',
+  'logo_url',
+  'app_name',
+  'support_email',
+  'terms_url',
+  'privacy_url',
+  'maintenance_mode'
+]);
+
+// Public or global check to fetch settings (Filtered for public consumption)
 router.get('/', async (req, res, next) => {
   try {
     const { rows } = await query(`SELECT key, value FROM system_settings`);
+    
+    // Check if requester is authenticated Super Admin
+    const isSuperAdmin = req.user && req.user.role === 'SUPER_ADMIN';
+
     const settings = rows.reduce((acc, curr) => {
-      acc[curr.key] = curr.value;
+      // If Super Admin, return all settings. Otherwise, enforce strict allowlist.
+      if (isSuperAdmin || PUBLIC_ALLOWLIST.has(curr.key.toLowerCase())) {
+        acc[curr.key] = curr.value;
+      }
       return acc;
     }, {});
+
     return success(res, settings);
   } catch (err) {
     next(err);
