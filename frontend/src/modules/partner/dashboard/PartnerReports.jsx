@@ -18,6 +18,14 @@ export default function PartnerReports() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [activeTab, setActiveTab] = useState("dashboard"); // dashboard, applications, customers, wallet, commission, team, withdrawals, products, banks
   const [loading, setLoading] = useState(false);
   const [reportData, setReportData] = useState(null);
@@ -189,7 +197,7 @@ export default function PartnerReports() {
       {/* TAB 1: DASHBOARD OVERVIEW SUMMARY */}
       {activeTab === 'dashboard' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
               <div style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase' }}>{t('reports.totalApplications', 'Total Applications')}</div>
               <div style={{ fontSize: '28px', fontWeight: 800, color: C.text, marginTop: '4px' }}>{reportData?.applications || 0}</div>

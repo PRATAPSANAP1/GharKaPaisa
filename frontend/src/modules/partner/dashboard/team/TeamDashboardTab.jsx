@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users, UserCheck, UserPlus, TrendingUp, DollarSign,
   CheckCircle2, FileText, Activity, ArrowUpRight, Crown, ShieldAlert
@@ -25,6 +25,15 @@ function SkeletonCard({ isDark, border }) {
 
 export default function TeamDashboardTab({ data, loading, onSelectMember }) {
   const { C, isDark } = useTheme();
+
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const border = isDark ? '#1f1f1f' : C.border;
   const cardBg = isDark ? '#0f0f0f' : '#fff';
   const textPrimary = C.text;
@@ -136,7 +145,7 @@ export default function TeamDashboardTab({ data, loading, onSelectMember }) {
       `}</style>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4,minmax(0,1fr))', gap: 8, marginBottom: 16 }}>
         {kpiCards.map((k, i) => {
           const Icon = k.icon;
           return (

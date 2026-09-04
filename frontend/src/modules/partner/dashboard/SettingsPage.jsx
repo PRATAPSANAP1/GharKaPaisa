@@ -164,6 +164,14 @@ export default function SettingsPage() {
   const user = useAuthStore((state) => state.user);
   const updateUser = useAuthStore((state) => state.updateUser);
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [activeTab, setActiveTab] = useState('security');
   
   // Credentials Form states
@@ -407,16 +415,17 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '24px' }}>
         
         {/* Left navigation menu */}
-        <div style={{ width: '220px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ width: isMobile ? '100%' : '220px', flexShrink: 0, display: 'flex', flexDirection: isMobile ? 'row' : 'column', gap: '6px', overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? '6px' : '0' }}>
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                display: 'flex', alignItems: 'center', gap: '10px', width: isMobile ? 'auto' : '100%',
+                whiteSpace: isMobile ? 'nowrap' : 'normal',
                 textAlign: 'left', padding: '12px 16px', borderRadius: '12px',
                 fontWeight: 700, fontSize: '13px', border: 'none', cursor: 'pointer',
                 transition: 'all 0.15s ease',
@@ -432,7 +441,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Right content panel */}
-        <div style={{ flex: 1, minWidth: '320px' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           
           {/* ═══════════ TAB 1: CREDENTIALS & KEYS ═══════════ */}
           {activeTab === 'security' && (

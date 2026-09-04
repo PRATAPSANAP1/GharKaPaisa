@@ -574,7 +574,7 @@ export default function SuperAdminOverview() {
           </div>
 
           {/* Quick Platform Status Breakdown */}
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '16px' }}>
             <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Applications Process Breakdown</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

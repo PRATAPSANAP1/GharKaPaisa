@@ -9,6 +9,14 @@ import api from '../../../services/api';
 export default function MonthlyIncentiveReportView({ employeeId = null }) {
   const { C } = useTheme();
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState('');
@@ -151,7 +159,7 @@ export default function MonthlyIncentiveReportView({ employeeId = null }) {
       ) : (
         <>
           {/* ── Summary KPI Cards for Selected Month ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
               <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: `${C.teal}15`, color: C.teal, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
                 <FaCreditCard />

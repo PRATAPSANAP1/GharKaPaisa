@@ -14,3 +14,12 @@ export function getApiRoot() {
 export function getApiV1Url() {
   return `${getApiRoot()}/api/v1`;
 }
+
+export function getImageUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `${getApiRoot()}${cleanPath}`;
+}

@@ -11,6 +11,15 @@ const PERIODS = ['7d', '30d', '90d', '1y'];
 
 export default function TeamAnalyticsTab() {
   const { C, isDark } = useTheme();
+
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const border = isDark ? '#1f1f1f' : C.border;
   const cardBg = isDark ? '#0f0f0f' : '#fff';
   const textPrimary = C.text;
@@ -144,7 +153,7 @@ export default function TeamAnalyticsTab() {
       {/* Top Products */}
       <div style={{ padding: '18px 20px', borderRadius: 18, background: cardBg, border: `1px solid ${border}`, boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.3)' : '0 4px 20px rgba(0,0,0,0.06)', animation: 'fadeIn 0.7s ease' }}>
         <h4 style={{ fontSize: 13, fontWeight: 800, color: textPrimary, marginBottom: 16 }}>Top Products Sold by Team</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill,minmax(200px,1fr))', gap: 12 }}>
           {analytics.top_products?.length > 0 ? analytics.top_products.map((p, i) => (
             <div key={i} style={{ padding: '14px 16px', borderRadius: 14, background: isDark ? '#111' : '#f8faff', border: `1px solid ${border}`, animation: `fadeIn 0.3s ease ${i * 60}ms both` }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>

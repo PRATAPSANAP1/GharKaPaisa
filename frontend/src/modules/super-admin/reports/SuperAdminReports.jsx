@@ -430,7 +430,7 @@ export default function SuperAdminReports() {
       )}
 
       {/* 2. 📈 5 KPI SUMMARY CARDS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(190px, 1fr))', gap: '12px' }}>
         
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '18px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: `${C.teal}15`, color: C.teal, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
@@ -490,7 +490,7 @@ export default function SuperAdminReports() {
       </div>
 
       {/* 3. 📈 DYNAMIC APPLICATIONS OVERVIEW LINE CHART & DISTRIBUTION GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '16px' }}>
         
         {/* Chart Panel: Applications Overview */}
         <div style={{ gridColumn: isMobile ? 'span 1' : 'span 2', background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '20px' }}>
@@ -577,7 +577,7 @@ export default function SuperAdminReports() {
       </div>
 
       {/* 4. STATUS & CHANNEL DISTRIBUTION GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '16px' }}>
         
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '20px' }}>
           <h3 style={{ fontSize: '15px', fontWeight: 900, margin: '0 0 14px 0', color: C.text }}>Applications by Status</h3>
@@ -699,7 +699,7 @@ export default function SuperAdminReports() {
           Detailed Reports Catalog
         </h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '14px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '14px' }}>
           {detailedReportsList.map((rep) => (
             <div 
               key={rep.id} 
@@ -751,7 +751,7 @@ export default function SuperAdminReports() {
               </button>
             </div>
 
-            <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', marginBottom: '16px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '10px' }}>
+            <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px', marginBottom: '16px', display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '10px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 800, color: C.textMid, marginBottom: '3px' }}>FROM DATE</label>
                 <input type="date" value={modalFilterDates.from} onChange={(e) => setModalFilterDates(p => ({ ...p, from: e.target.value }))} style={{ width: '100%', padding: '7px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '11.5px', fontWeight: 700 }} />

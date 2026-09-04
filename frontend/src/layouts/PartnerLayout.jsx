@@ -18,7 +18,7 @@ import {
 import logo from '../assets/logos/logo.png';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
 import api, { getAccessToken } from '../services/api';
-import { getApiV1Url } from '../config/api';
+import { getApiV1Url, getImageUrl } from '../config/api';
 import { getMe } from '../services/auth.api';
 import '../components/Navbar/Navbar.css';
 import PartnerSearchBar from '../modules/partner/dashboard/PartnerSearchBar';
@@ -805,6 +805,7 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
   const location = useLocation();
   const dropdownRef = useRef(null);
   const { isDark } = useTheme();
+  const [headerImgError, setHeaderImgError] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -992,9 +993,20 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
               justifyContent: 'center',
               fontWeight: 800,
               fontSize: isMobile ? '12px' : '14px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+              boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+              overflow: 'hidden',
+              flexShrink: 0
             }}>
-              {user?.name?.[0]?.toUpperCase() || 'P'}
+              {(user?.profile_photo_url || user?.photo_url || user?.avatar) && !headerImgError ? (
+                <img 
+                  src={getImageUrl(user?.profile_photo_url || user?.photo_url || user?.avatar)} 
+                  alt="Profile" 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                  onError={() => setHeaderImgError(true)}
+                />
+              ) : (
+                user?.name?.[0]?.toUpperCase() || 'P'
+              )}
             </div>
             {!isMobile && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>

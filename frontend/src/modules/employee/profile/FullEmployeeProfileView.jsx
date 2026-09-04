@@ -609,10 +609,7 @@ Generated On  : ${new Date().toLocaleString()}
               <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Email Address</span>
               <strong style={{ display: 'block', marginTop: '2px' }}>{jDetails.email_id || emp.email_id || emp.email || 'N/A'}</strong>
             </div>
-            <div>
-              <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Emergency Contact</span>
-              <strong style={{ display: 'block', marginTop: '2px' }}>{jDetails.emergency_contact_name || 'Relative'} ({jDetails.emergency_contact_number || 'N/A'})</strong>
-            </div>
+
             <div style={{ gridColumn: '1 / -1' }}>
               <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Current Residence Address</span>
               <p style={{ margin: '4px 0 0 0', fontWeight: 600 }}>{jDetails.current_address || emp.current_address || 'Registered Residential Address'}</p>

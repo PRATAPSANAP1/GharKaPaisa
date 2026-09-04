@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { usePartnerStore } from '../../../app/store/partnerStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
+import { getImageUrl } from '../../../config/api';
 import ChangePasswordWidget from './ChangePasswordWidget';
 import CircularImageCropperModal from '../../../components/common/CircularImageCropperModal';
 import { 
@@ -28,6 +29,7 @@ export default function PartnerProfile() {
 
   const [activeTab, setActiveTab] = useState('personal');
   const [isMobile, setIsMobile] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -240,8 +242,13 @@ export default function PartnerProfile() {
             }} 
             onClick={() => document.getElementById('avatar-upload-input').click()}
           >
-            {profile.profile_photo_url ? (
-              <img src={profile.profile_photo_url} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+            {profile.profile_photo_url && !imgError ? (
+              <img 
+                src={getImageUrl(profile.profile_photo_url)} 
+                alt="Profile" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} 
+                onError={() => setImgError(true)} 
+              />
             ) : (
               <div style={{
                 width: '100%', height: '100%', borderRadius: '50%',
@@ -381,44 +388,6 @@ export default function PartnerProfile() {
                   <div>
                     <p style={fieldLabel}>{t("KYC Status")}</p>
                     <p style={{ ...fieldValue, textTransform: 'capitalize', color: kycTagColor }}>{profile.kyc_status}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Nominee details card */}
-              <div style={sectionCard}>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  👤 Nominee Details
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
-                  <div>
-                    <p style={fieldLabel}>{t("Nominee Name")}</p>
-                    <p style={fieldValue}>{profile.nominee_name || '—'}</p>
-                  </div>
-                  <div>
-                    <p style={fieldLabel}>{t("Relation")}</p>
-                    <p style={fieldValue}>{profile.nominee_relation || '—'}</p>
-                  </div>
-                  <div>
-                    <p style={fieldLabel}>{t("Date of Birth")}</p>
-                    <p style={fieldValue}>{profile.nominee_dob ? new Date(profile.nominee_dob).toLocaleDateString('en-IN') : '—'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Emergency contact card */}
-              <div style={sectionCard}>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  🚨 Emergency Contact
-                </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '24px 40px' }}>
-                  <div>
-                    <p style={fieldLabel}>{t("Contact Name")}</p>
-                    <p style={fieldValue}>{profile.emergency_contact_name || '—'}</p>
-                  </div>
-                  <div>
-                    <p style={fieldLabel}>{t("Mobile Number")}</p>
-                    <p style={fieldValue}>{profile.emergency_contact_phone || '—'}</p>
                   </div>
                 </div>
               </div>
@@ -637,45 +606,7 @@ export default function PartnerProfile() {
                       </div>
                     </div>
 
-                    {/* Nominee details form section */}
-                    <div>
-                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
-                        👤 Nominee Details
-                      </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Nominee Name")}</label>
-                          <input type="text" value={editForm.nominee_name} onChange={e => handleInputChange('nominee_name', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="Nominee Full Name" />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Relation")}</label>
-                          <input type="text" value={editForm.nominee_relation} onChange={e => handleInputChange('nominee_relation', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="e.g. Spouse, Father" />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Date of Birth")}</label>
-                          <input type="date" value={editForm.nominee_dob} onChange={e => handleInputChange('nominee_dob', e.target.value)} style={{ ...S.input, padding: '10px', borderColor: errors.nominee_dob ? C.red : C.border }} />
-                          {errors.nominee_dob && <span style={{ fontSize: '10.5px', color: C.red, fontWeight: 750, marginTop: '2px' }}>{errors.nominee_dob}</span>}
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Emergency Contact form section */}
-                    <div>
-                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 10px' }}>
-                        🚨 Emergency Contact Info
-                      </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Contact Name")}</label>
-                          <input type="text" value={editForm.emergency_contact_name} onChange={e => handleInputChange('emergency_contact_name', e.target.value)} style={{ ...S.input, padding: '10px' }} placeholder="Contact Full Name" />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>{t("Contact Phone")}</label>
-                          <input type="text" value={editForm.emergency_contact_phone} onChange={e => handleInputChange('emergency_contact_phone', e.target.value)} style={{ ...S.input, padding: '10px', borderColor: errors.emergency_contact_phone ? C.red : C.border }} placeholder="Mobile Number" />
-                          {errors.emergency_contact_phone && <span style={{ fontSize: '10.5px', color: C.red, fontWeight: 750, marginTop: '2px' }}>{errors.emergency_contact_phone}</span>}
-                        </div>
-                      </div>
-                    </div>
 
                     {/* 4. Registered Bank Details for Payouts */}
                     <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>

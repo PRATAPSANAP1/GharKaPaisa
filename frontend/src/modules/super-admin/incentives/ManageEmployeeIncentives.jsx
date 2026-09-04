@@ -12,6 +12,15 @@ import SuperAdminIncentiveHistory from '../../employee-management/SuperAdminInce
 export default function ManageEmployeeIncentives() {
   const { C } = useTheme();
 
+  // Responsive mobile state
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Tab View Switcher State
   const [activeTab, setActiveTab] = useState('history'); // 'history' or 'analytics'
 
@@ -411,7 +420,7 @@ export default function ManageEmployeeIncentives() {
       {/* ── 2. FINANCIAL KPI CARDS ── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(210px, 1fr))',
         gap: '14px'
       }}>
         {/* Total Earned */}
