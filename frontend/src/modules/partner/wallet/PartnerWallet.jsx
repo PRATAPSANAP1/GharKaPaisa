@@ -43,6 +43,15 @@ export default function PartnerWallet() {
   const S = makeS(C);
   const user = useAuthStore((state) => state.user);
 
+  // Responsive mobile state
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Active Tab State
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -337,90 +346,90 @@ export default function PartnerWallet() {
     <div style={{ maxWidth: '1180px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '14px', paddingBottom: '40px', fontFamily: "'Inter', sans-serif" }}>
       
       {/* ── Top Header Section (Scaled to 90%) ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: '10px' }}>
         <div>
-          <h1 style={{ fontSize: '21px', fontWeight: 900, color: C.text, margin: 0 }}>Partner Wallet</h1>
+          <h1 style={{ fontSize: isMobile ? '18px' : '21px', fontWeight: 900, color: C.text, margin: 0 }}>Partner Wallet</h1>
           <p style={{ fontSize: '11.5px', color: C.textLight, margin: '2px 0 0 0' }}>Manage your balance, withdrawals, earnings and payouts</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={fetchAllData} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '7px 12px', fontSize: '11.5px', fontWeight: 700, color: C.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <div style={{ display: 'flex', gap: '8px', width: isMobile ? '100%' : 'auto' }}>
+          <button onClick={fetchAllData} style={{ flex: isMobile ? 1 : 'none', background: C.card, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '7px 12px', fontSize: '11.5px', fontWeight: 700, color: C.text, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
             <MdRefresh size={14} /> Sync Data
           </button>
-          <button onClick={() => handleDownloadStatement('pdf')} style={{ background: '#0052FF', color: '#FFF', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <button onClick={() => handleDownloadStatement('pdf')} style={{ flex: isMobile ? 1 : 'none', background: '#0052FF', color: '#FFF', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
             <MdFileDownload size={14} /> Statement
           </button>
         </div>
       </div>
 
-      {/* ── 5 Dynamic KPI Metric Cards Row (Scaled 90% & Grid Optimized) ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+      {/* ── 5 Dynamic KPI Metric Cards Row (Scaled 90% & Grid Optimized: 2 per row on mobile) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: isMobile ? '8px' : '12px' }}>
         
         {/* Card 1: Available Balance */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderBottom: '3px solid #10B981', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#10B981', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', flexShrink: 0 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: isMobile ? '10px 12px' : '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderBottom: '3px solid #10B981', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '10px' }}>
+            <div style={{ width: isMobile ? '32px' : '38px', height: isMobile ? '32px' : '38px', borderRadius: '50%', background: '#10B981', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '14px' : '17px', flexShrink: 0 }}>
               <MdAccountBalanceWallet />
             </div>
             <div>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Available Balance</span>
-              <div style={{ fontSize: '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{formatINR(availableBal)}</div>
-              <span style={{ fontSize: '10px', color: C.textLight }}>Withdrawable Balance</span>
+              <span style={{ fontSize: isMobile ? '9px' : '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px', display: 'block', lineHeight: 1.1 }}>Available Balance</span>
+              <div style={{ fontSize: isMobile ? '15px' : '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{formatINR(availableBal)}</div>
+              {!isMobile && <span style={{ fontSize: '10px', color: C.textLight }}>Withdrawable Balance</span>}
             </div>
           </div>
         </div>
 
         {/* Card 2: Pending Withdrawals */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderBottom: '3px solid #F97316', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#F97316', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: isMobile ? '10px 12px' : '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderBottom: '3px solid #F97316', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '10px' }}>
+            <div style={{ width: isMobile ? '32px' : '38px', height: isMobile ? '32px' : '38px', borderRadius: '50%', background: '#F97316', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '13px' : '16px', flexShrink: 0 }}>
               <FaClock />
             </div>
             <div>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Pending Withdrawals</span>
-              <div style={{ fontSize: '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{formatINR(pendingBal)}</div>
-              <span style={{ fontSize: '10px', color: C.textLight }}>• {withdrawals.filter(w => w.status === 'pending').length || 1} Request Pending</span>
+              <span style={{ fontSize: isMobile ? '9px' : '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px', display: 'block', lineHeight: 1.1 }}>Pending Withdrawals</span>
+              <div style={{ fontSize: isMobile ? '15px' : '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{formatINR(pendingBal)}</div>
+              {!isMobile && <span style={{ fontSize: '10px', color: C.textLight }}>• {withdrawals.filter(w => w.status === 'pending').length || 1} Request Pending</span>}
             </div>
           </div>
         </div>
 
         {/* Card 3: Total Earnings */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderBottom: '3px solid #8B5CF6', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#8B5CF6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', flexShrink: 0 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: isMobile ? '10px 12px' : '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderBottom: '3px solid #8B5CF6', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '10px' }}>
+            <div style={{ width: isMobile ? '32px' : '38px', height: isMobile ? '32px' : '38px', borderRadius: '50%', background: '#8B5CF6', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '14px' : '17px', flexShrink: 0 }}>
               <MdTrendingUp />
             </div>
             <div>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Total Earnings</span>
-              <div style={{ fontSize: '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{formatINR(totalEarnings)}</div>
-              <span style={{ fontSize: '10px', color: C.textLight }}>Lifetime Gross Earnings</span>
+              <span style={{ fontSize: isMobile ? '9px' : '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px', display: 'block', lineHeight: 1.1 }}>Total Earnings</span>
+              <div style={{ fontSize: isMobile ? '15px' : '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{formatINR(totalEarnings)}</div>
+              {!isMobile && <span style={{ fontSize: '10px', color: C.textLight }}>Lifetime Gross Earnings</span>}
             </div>
           </div>
         </div>
 
         {/* Card 4: Settled Payouts */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderBottom: '3px solid #2563EB', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#2563EB', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px', flexShrink: 0 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: isMobile ? '10px 12px' : '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderBottom: '3px solid #2563EB', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '10px' }}>
+            <div style={{ width: isMobile ? '32px' : '38px', height: isMobile ? '32px' : '38px', borderRadius: '50%', background: '#2563EB', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '14px' : '17px', flexShrink: 0 }}>
               <MdPayments />
             </div>
             <div>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Settled Payouts</span>
-              <div style={{ fontSize: '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{formatINR(settledPayouts)}</div>
-              <span style={{ fontSize: '10px', color: C.textLight }}>Disbursed to Bank Account</span>
+              <span style={{ fontSize: isMobile ? '9px' : '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px', display: 'block', lineHeight: 1.1 }}>Settled Payouts</span>
+              <div style={{ fontSize: isMobile ? '15px' : '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{formatINR(settledPayouts)}</div>
+              {!isMobile && <span style={{ fontSize: '10px', color: C.textLight }}>Disbursed to Bank Account</span>}
             </div>
           </div>
         </div>
 
         {/* Card 5: Success Rate */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderBottom: '3px solid #06B6D4', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#06B6D4', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flexShrink: 0 }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: isMobile ? '10px 12px' : '14px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderBottom: '3px solid #06B6D4', boxShadow: '0 2px 6px rgba(0,0,0,0.02)', gridColumn: isMobile ? 'span 2' : 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '10px' }}>
+            <div style={{ width: isMobile ? '32px' : '38px', height: isMobile ? '32px' : '38px', borderRadius: '50%', background: '#06B6D4', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '13px' : '15px', flexShrink: 0 }}>
               <FaPercent />
             </div>
             <div>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Success Rate</span>
-              <div style={{ fontSize: '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{successRate}%</div>
-              <span style={{ fontSize: '10px', color: C.textLight }}>Payout Success Rate</span>
+              <span style={{ fontSize: isMobile ? '9px' : '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px', display: 'block', lineHeight: 1.1 }}>Success Rate</span>
+              <div style={{ fontSize: isMobile ? '15px' : '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{successRate}%</div>
+              {!isMobile && <span style={{ fontSize: '10px', color: C.textLight }}>Payout Success Rate</span>}
             </div>
           </div>
         </div>
@@ -464,7 +473,7 @@ export default function PartnerWallet() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           
           {/* ── ROW 1: Wallet Overview + Monthly Earnings Progression + Balance Breakdown ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(290px, 1fr))', gap: '14px' }}>
             
             {/* 1. Wallet Overview Card */}
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -553,7 +562,7 @@ export default function PartnerWallet() {
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <h3 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, margin: '0 0 10px 0' }}>Balance Breakdown</h3>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', flexDirection: isMobile ? 'column' : 'row', gap: '12px' }}>
                 <div style={{ position: 'relative', width: '115px', height: '115px', flexShrink: 0 }}>
                   <PieChart width={115} height={115}>
                     <Pie
@@ -593,7 +602,7 @@ export default function PartnerWallet() {
           </div>
 
           {/* ── ROW 2: Request Settlement + Recent Withdrawals + Recent Payouts ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(290px, 1fr))', gap: '14px' }}>
             
             {/* 1. Request Bank Settlement Form */}
             <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -720,7 +729,7 @@ export default function PartnerWallet() {
           {/* ── ROW 3: Quick Actions Footer Bar ── */}
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
             <span style={{ fontSize: '12px', fontWeight: 800, color: C.text }}>Quick Actions</span>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
               {[
                 { label: 'Request Settlement', icon: MdAccountBalanceWallet, action: () => handleSendWithdrawalOTP() },
                 { label: 'Add Bank Account', icon: MdBankIcon, action: () => setActiveTab('bank') },
@@ -734,6 +743,7 @@ export default function PartnerWallet() {
                   key={i}
                   onClick={act.action}
                   style={{
+                    flex: isMobile ? '1 1 calc(50% - 6px)' : 'none',
                     background: C.bgSecondary,
                     border: `1px solid ${C.border}`,
                     borderRadius: '7px',
@@ -744,6 +754,7 @@ export default function PartnerWallet() {
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '5px'
                   }}
                 >
@@ -849,7 +860,7 @@ export default function PartnerWallet() {
 
       {/* ═══════════ TAB 4: BANK SETUP ═══════════ */}
       {activeTab === 'bank' && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '20px', maxWidth: '520px' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: isMobile ? '14px' : '20px', maxWidth: '520px', width: '100%' }}>
           <h3 style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginBottom: '14px' }}>Primary Settlement Bank Setup</h3>
           <form onSubmit={handleSaveBank} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
