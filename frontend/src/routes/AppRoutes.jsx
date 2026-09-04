@@ -27,6 +27,8 @@ import JoiningForm from '../modules/employee/profile/JoiningForm';
 import TermsAcceptance from '../modules/employee/profile/TermsAcceptance';
 import KYCSubmission from '../modules/employee/profile/KYCSubmission';
 import EmployeeCreditCards from '../modules/employee/credit-cards/EmployeeCreditCards';
+import EmployeeLoanOnCreditCard from '../modules/employee/credit-cards/EmployeeLoanOnCreditCard';
+import EmployeeSmartEmi from '../modules/employee/credit-cards/EmployeeSmartEmi';
 import EmployeeApplications from '../modules/employee/applications/EmployeeApplications';
 import MyTeam from '../modules/employee/team/MyTeam';
 import MyIncentives from '../modules/employee/incentives/MyIncentives';
@@ -276,6 +278,10 @@ const AppRoutes = () => {
             <Route path="/employee/credit-cards" element={<EmployeeCreditCards defaultCategory="credit_card" />} />
             <Route path="/employee/credit-cards/:bankSlug" element={<PartnerEntityDetail />} />
             <Route path="/employee/credit-cards/:bankSlug/:tab" element={<PartnerEntityDetail />} />
+
+            <Route path="/employee/loan-on-credit-card" element={<EmployeeLoanOnCreditCard />} />
+            <Route path="/employee/smart-emi" element={<EmployeeSmartEmi />} />
+            <Route path="/employee/smart-emi-on-credit-card" element={<EmployeeSmartEmi />} />
 
             <Route path="/employee/loans" element={<EmployeeCreditCards defaultCategory="loans" />} />
             <Route path="/employee/loans/:loanTypeSlug" element={<PartnerEntityDetail />} />

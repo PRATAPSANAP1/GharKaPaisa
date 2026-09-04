@@ -109,6 +109,8 @@ export default function EmployeeLayout() {
   const navItems = isApproved ? [
     { path: '/employee/dashboard', label: 'Employee Dashboard', icon: <FaChartPie /> },
     { path: '/employee/credit-cards', label: 'Credit Cards', icon: <FaCreditCard /> },
+    { path: '/employee/loan-on-credit-card', label: 'Loan on Credit Card', icon: <FaCoins /> },
+    { path: '/employee/smart-emi', label: 'Smart EMI on Credit Card', icon: <FaCreditCard /> },
     { path: '/employee/loans', label: 'Loans', icon: <FaCoins /> },
     { path: '/employee/insurance', label: 'Insurance', icon: <FaShieldAlt /> },
     { path: '/employee/sales-reports', label: 'Sales Reports', icon: <FaFileAlt /> },

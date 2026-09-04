@@ -109,10 +109,53 @@ async function syncAndSeedEmployees() {
       CREATE TABLE IF NOT EXISTS employee_sales_report_banks (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         report_id UUID NOT NULL REFERENCES employee_sales_reports(id) ON DELETE CASCADE,
-        bank_id UUID REFERENCES banks(id) ON DELETE SET NULL,
-        bank_name VARCHAR(100) NOT NULL,
+        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
         cards_sold INTEGER NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `).catch(() => {});
+
+    // Versioned Incentive Rules Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS employee_incentive_rules (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+        department_assigned BOOLEAN DEFAULT false,
+        target_cards INTEGER DEFAULT 0,
+        incentive_per_card DECIMAL(12,2) DEFAULT 0.00,
+        bonus_per_card DECIMAL(12,2) DEFAULT 0.00,
+        effective_from DATE NOT NULL,
+        effective_to DATE NOT NULL,
+        status VARCHAR(20) DEFAULT 'ACTIVE',
+        created_by UUID REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `).catch(() => {});
+
+    // Immutable Frozen Monthly Performance Snapshots Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS employee_incentive_monthly_records (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        bank_id UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+        product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+        department_assigned BOOLEAN DEFAULT false,
+        target_cards INTEGER DEFAULT 0,
+        approved_cards INTEGER DEFAULT 0,
+        target_achieved BOOLEAN DEFAULT false,
+        incentive_per_card DECIMAL(12,2) DEFAULT 0.00,
+        bonus_per_card DECIMAL(12,2) DEFAULT 0.00,
+        total_incentive DECIMAL(12,2) DEFAULT 0.00,
+        total_bonus DECIMAL(12,2) DEFAULT 0.00,
+        status VARCHAR(30) DEFAULT 'COMPLETED',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT unique_emp_month_bank UNIQUE(employee_id, year, month, bank_id)
       )
     `).catch(() => {});
 
@@ -1655,6 +1698,168 @@ router.get('/incentives/overview', async (req, res, next) => {
       }
     });
 
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/v1/employee-management/employees/:id/monthly-incentive-report — Super Admin view of Employee Monthly Incentive & Target Breakdown
+router.get('/employees/:id/monthly-incentive-report', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { year, month } = req.query;
+    const { getMonthlyIncentiveReportData } = require('../employee/employee.routes');
+    const report = await getMonthlyIncentiveReportData(id, year, month);
+    res.json({
+      success: true,
+      ...report
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/v1/employee-management/incentive-history — Super Admin Historical Incentive & Performance Dashboard
+router.get('/incentive-history', async (req, res, next) => {
+  try {
+    const now = new Date();
+    const targetYear = parseInt(req.query.year || now.getFullYear());
+    const targetMonth = parseInt(req.query.month || (now.getMonth() + 1));
+    const { employee_id, bank_id, department_filter } = req.query;
+
+    const startDateStr = `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`;
+    const lastDay = new Date(targetYear, targetMonth, 0).getDate();
+    const endDateStr = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    let empWhere = "WHERE e.status = 'active'";
+    const empParams = [];
+    if (employee_id && employee_id !== 'all') {
+      empParams.push(employee_id);
+      empWhere += ` AND e.id = $${empParams.length}`;
+    }
+
+    const empRes = await query(`
+      SELECT e.id, e.employee_id as emp_code, e.full_name, e.designation, e.department
+      FROM employees e
+      ${empWhere}
+      ORDER BY e.full_name ASC
+    `, empParams);
+
+    const employees = empRes.rows;
+
+    let bankWhere = "";
+    const bankParams = [];
+    if (bank_id && bank_id !== 'all') {
+      bankParams.push(bank_id);
+      bankWhere = `WHERE id = $1`;
+    }
+    const banksRes = await query(`SELECT id, name, logo_url FROM banks ${bankWhere} ORDER BY name ASC`, bankParams);
+
+    const { getMonthlyIncentiveReportData } = require('../employee/employee.routes');
+
+    const records = [];
+    let grandApprovedCards = 0;
+    let grandTotalIncentive = 0;
+    let grandTargetsAchieved = 0;
+    let grandDeptBanks = 0;
+    const activeEmployeesSet = new Set();
+
+    for (const emp of employees) {
+      try {
+        const empReport = await getMonthlyIncentiveReportData(emp.id, targetYear, targetMonth);
+        if (empReport && empReport.bank_breakdown) {
+          empReport.bank_breakdown.forEach(bm => {
+            if (bank_id && bank_id !== 'all' && bm.bank_id !== bank_id) return;
+            if (department_filter === 'assigned' && !bm.is_department) return;
+            if (department_filter === 'non_assigned' && bm.is_department) return;
+
+            if (bm.approved_cards_count > 0 || bm.earned_incentive > 0 || bm.is_department) {
+              activeEmployeesSet.add(emp.id);
+              grandApprovedCards += bm.approved_cards_count;
+              grandTotalIncentive += bm.earned_incentive;
+              if (bm.is_department) {
+                grandDeptBanks += 1;
+                if (bm.target_achieved) grandTargetsAchieved += 1;
+              }
+
+              records.push({
+                employee_id: emp.id,
+                employee_name: emp.full_name,
+                emp_code: emp.emp_code,
+                designation: emp.designation,
+                bank_id: bm.bank_id,
+                bank_name: bm.bank_name,
+                bank_logo_url: bm.bank_logo_url,
+                department_assigned: bm.is_department,
+                target_cards: bm.target_count,
+                approved_cards: bm.approved_cards_count,
+                app_file_yes_cards: bm.app_file_yes_cards_count,
+                target_achieved: bm.target_achieved,
+                incentive_per_card: bm.bonus_per_card > 0 ? 0 : (bm.earned_incentive / (bm.app_file_yes_cards_count || 1)),
+                bonus_per_card: bm.bonus_per_card,
+                earned_incentive: bm.earned_incentive,
+                released_incentive: bm.released_incentive,
+                held_incentive: bm.held_incentive
+              });
+            }
+          });
+        }
+      } catch (err) {
+        logger.warn(`Failed to generate monthly report for emp ${emp.id}: ${err.message}`);
+      }
+    }
+
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const monthlyComparison = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const compDate = new Date(targetYear, targetMonth - 1 - i, 1);
+      const cYear = compDate.getFullYear();
+      const cMonth = compDate.getMonth() + 1;
+      const cStart = `${cYear}-${String(cMonth).padStart(2, '0')}-01`;
+      const cLast = new Date(cYear, cMonth, 0).getDate();
+      const cEnd = `${cYear}-${String(cMonth).padStart(2, '0')}-${String(cLast).padStart(2, '0')}`;
+
+      const aggRes = await query(`
+        SELECT 
+          COUNT(DISTINCT app.id) as approved_cards,
+          COALESCE(SUM(it.amount), 0) as total_incentive
+        FROM applications app
+        LEFT JOIN employee_incentive_transactions it ON it.application_id = app.id
+        WHERE UPPER(app.status::text) IN ('APPROVED', 'DISBURSED', 'SANCTIONED', 'SUPER_ADMIN_APPROVED', 'COMMISSION_RELEASED')
+          AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) >= $1::date
+          AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) <= $2::date
+      `, [cStart, cEnd]);
+
+      monthlyComparison.push({
+        year: cYear,
+        month: cMonth,
+        month_name: monthNames[cMonth - 1],
+        label: `${monthNames[cMonth - 1]} ${cYear}`,
+        approved_cards: parseInt(aggRes.rows[0]?.approved_cards || 0),
+        total_incentive: parseFloat(aggRes.rows[0]?.total_incentive || 0)
+      });
+    }
+
+    res.json({
+      success: true,
+      period: {
+        year: targetYear,
+        month: targetMonth,
+        month_name: monthNames[targetMonth - 1],
+        start_date: startDateStr,
+        end_date: endDateStr
+      },
+      summary: {
+        total_employees: activeEmployeesSet.size || employees.length,
+        total_approved_cards: grandApprovedCards,
+        total_incentive: grandTotalIncentive,
+        targets_achieved: grandTargetsAchieved,
+        department_banks: grandDeptBanks
+      },
+      records,
+      monthly_comparison: monthlyComparison
+    });
   } catch (err) {
     next(err);
   }

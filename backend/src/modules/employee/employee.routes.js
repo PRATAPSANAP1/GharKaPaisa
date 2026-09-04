@@ -1076,6 +1076,19 @@ router.get('/incentives', resolveEmployee, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+// GET /api/v1/employee/monthly-incentive-report — Monthly Incentive & Target Matrix
+router.get('/monthly-incentive-report', resolveEmployee, async (req, res, next) => {
+  try {
+    const empId = req.employee.id;
+    const { year, month } = req.query;
+    const report = await getMonthlyIncentiveReportData(empId, year, month);
+    res.json({
+      success: true,
+      ...report
+    });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // Helper to save sales report proof photo
@@ -1329,4 +1342,185 @@ router.put('/sales-reports/:id/review', resolveEmployee, async (req, res, next) 
   }
 });
 
+async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth) {
+  const now = new Date();
+  const year = parseInt(targetYear || now.getFullYear());
+  const month = parseInt(targetMonth || (now.getMonth() + 1));
+
+  const startDateStr = `${year}-${String(month).padStart(2, '0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const endDateStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+  const empRes = await query(`
+    SELECT e.id, e.employee_id as emp_code, e.full_name, e.designation, e.department, u.email
+    FROM employees e
+    LEFT JOIN users u ON u.id = e.user_id
+    WHERE e.id = $1
+  `, [employeeId]);
+
+  if (empRes.rows.length === 0) {
+    throw new Error('Employee not found');
+  }
+  const employee = empRes.rows[0];
+
+  const banksRes = await query(`SELECT id, name, code, logo_url FROM banks ORDER BY name ASC`);
+  const allBanks = banksRes.rows;
+
+  const deptAssignRes = await query(`
+    SELECT bank_id FROM employee_bank_assignments WHERE employee_id = $1
+  `, [employeeId]);
+  const deptBankIds = new Set(deptAssignRes.rows.map(r => r.bank_id));
+
+  const rulesRes = await query(`
+    SELECT * FROM employee_bonus_rules
+    WHERE employee_id = $1
+      AND start_date <= $2::date
+      AND end_date >= $3::date
+      AND status = 'ACTIVE'
+  `, [employeeId, endDateStr, startDateStr]);
+
+  const bankRuleMap = {};
+  rulesRes.rows.forEach(r => {
+    bankRuleMap[r.bank_id] = r;
+  });
+
+  const appsRes = await query(`
+    SELECT 
+      app.id, app.app_number, app.status, app.app_file_generated, app.approved_at, app.created_at,
+      app.customer_name, app.customer_mobile,
+      p.id as product_id, p.name as product_name, p.bank_id, p.incentive_amount as default_incentive,
+      b.name as bank_name, b.logo_url as bank_logo_url,
+      it.amount as tx_amount, it.status as tx_status
+    FROM applications app
+    JOIN products p ON p.id = app.product_id
+    JOIN banks b ON b.id = p.bank_id
+    LEFT JOIN employee_incentive_transactions it ON it.application_id = app.id AND it.employee_id = $1
+    WHERE (app.employee_id = $1 OR app.submitted_by IN (SELECT user_id FROM employees WHERE id = $1))
+      AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) >= $2::date
+      AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) <= $3::date
+    ORDER BY app.created_at DESC
+  `, [employeeId, startDateStr, endDateStr]);
+
+  const bankMetricsMap = {};
+  allBanks.forEach(b => {
+    const isDept = deptBankIds.has(b.id) || !!bankRuleMap[b.id];
+    const rule = bankRuleMap[b.id] || null;
+    bankMetricsMap[b.id] = {
+      bank_id: b.id,
+      bank_name: b.name,
+      bank_logo_url: b.logo_url,
+      is_department: isDept,
+      target_count: rule ? parseInt(rule.target_count || 0) : 0,
+      bonus_per_card: rule ? parseFloat(rule.bonus_per_card || 0) : 0,
+      total_apps: 0,
+      approved_cards_count: 0,
+      app_file_yes_cards_count: 0,
+      target_achieved: false,
+      earned_incentive: 0,
+      released_incentive: 0,
+      held_incentive: 0
+    };
+  });
+
+  appsRes.rows.forEach(app => {
+    const bId = app.bank_id;
+    if (!bankMetricsMap[bId]) {
+      bankMetricsMap[bId] = {
+        bank_id: bId,
+        bank_name: app.bank_name,
+        bank_logo_url: app.bank_logo_url,
+        is_department: deptBankIds.has(bId) || !!bankRuleMap[bId],
+        target_count: bankRuleMap[bId] ? parseInt(bankRuleMap[bId].target_count || 0) : 0,
+        bonus_per_card: bankRuleMap[bId] ? parseFloat(bankRuleMap[bId].bonus_per_card || 0) : parseFloat(app.default_incentive || 0),
+        total_apps: 0,
+        approved_cards_count: 0,
+        app_file_yes_cards_count: 0,
+        target_achieved: false,
+        earned_incentive: 0,
+        released_incentive: 0,
+        held_incentive: 0
+      };
+    }
+
+    const bm = bankMetricsMap[bId];
+    bm.total_apps += 1;
+
+    const isApproved = ['approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received'].includes(String(app.status || '').toLowerCase());
+    const isAppFileYes = String(app.app_file_generated || '').trim().toLowerCase() === 'yes';
+
+    if (isApproved) {
+      bm.approved_cards_count += 1;
+    }
+    if (isApproved && isAppFileYes) {
+      bm.app_file_yes_cards_count += 1;
+    }
+
+    const txAmt = app.tx_amount ? parseFloat(app.tx_amount) : (isApproved && isAppFileYes ? (bm.bonus_per_card || parseFloat(app.default_incentive || 0)) : 0);
+    bm.earned_incentive += txAmt;
+
+    if (app.tx_status === 'COMPLETED') {
+      bm.released_incentive += txAmt;
+    } else if (app.tx_status && (app.tx_status.startsWith('HELD') || app.tx_status === 'PENDING')) {
+      bm.held_incentive += txAmt;
+    }
+  });
+
+  let totalApprovedCards = 0;
+  let totalIncentiveEarned = 0;
+  let totalIncentiveReleased = 0;
+  let totalIncentiveHeld = 0;
+
+  const bankBreakdown = Object.values(bankMetricsMap).map(bm => {
+    if (bm.is_department) {
+      bm.target_achieved = bm.app_file_yes_cards_count >= bm.target_count;
+    } else {
+      bm.target_achieved = true;
+    }
+
+    totalApprovedCards += bm.approved_cards_count;
+    totalIncentiveEarned += bm.earned_incentive;
+    totalIncentiveReleased += bm.released_incentive;
+    totalIncentiveHeld += bm.held_incentive;
+
+    return bm;
+  }).filter(bm => bm.total_apps > 0 || bm.is_department || bm.target_count > 0);
+
+  const availableMonths = [];
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const mNum = d.getMonth() + 1;
+    const yNum = d.getFullYear();
+    availableMonths.push({
+      year: yNum,
+      month: mNum,
+      label: `${monthNames[mNum - 1]} ${yNum}`,
+      is_current: yNum === now.getFullYear() && mNum === (now.getMonth() + 1)
+    });
+  }
+
+  return {
+    employee,
+    period: {
+      year,
+      month,
+      month_name: monthNames[month - 1],
+      start_date: startDateStr,
+      end_date: endDateStr
+    },
+    summary: {
+      total_approved_cards: totalApprovedCards,
+      total_incentive_earned: totalIncentiveEarned,
+      total_incentive_released: totalIncentiveReleased,
+      total_incentive_held: totalIncentiveHeld,
+      department_banks_count: bankBreakdown.filter(b => b.is_department).length,
+      targets_achieved_count: bankBreakdown.filter(b => b.is_department && b.target_achieved).length
+    },
+    bank_breakdown: bankBreakdown,
+    applications: appsRes.rows,
+    available_months: availableMonths
+  };
+}
+
 module.exports = router;
+module.exports.getMonthlyIncentiveReportData = getMonthlyIncentiveReportData;

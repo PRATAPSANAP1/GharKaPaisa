@@ -7,9 +7,13 @@ import {
   FaCreditCard, FaSitemap, FaRedo, FaInfoCircle, FaRegCheckCircle, FaEdit
 } from 'react-icons/fa';
 import api from '../../../services/api';
+import SuperAdminIncentiveHistory from '../../employee-management/SuperAdminIncentiveHistory';
 
 export default function ManageEmployeeIncentives() {
   const { C } = useTheme();
+
+  // Tab View Switcher State
+  const [activeTab, setActiveTab] = useState('history'); // 'history' or 'analytics'
 
   // State Management
   const [loading, setLoading] = useState(true);
@@ -234,15 +238,49 @@ export default function ManageEmployeeIncentives() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FaCoins color={C.teal} size={24} /> Employee Incentives
+              <FaCoins color={C.teal} size={24} /> Employee Incentives & Historical Audit
             </h1>
             <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
-              Manage and track employee incentives, earnings, performance bonuses, and payouts
+              Manage and audit employee historical incentives, department targets, performance bonuses, and payouts
             </p>
           </div>
 
-          {/* Export Actions */}
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {/* View Switcher Tabs */}
+          <div style={{ display: 'flex', gap: '6px', background: C.bgSecondary, padding: '4px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+            <button
+              onClick={() => setActiveTab('history')}
+              style={{
+                padding: '8px 16px', borderRadius: '9px', border: 'none',
+                background: activeTab === 'history' ? C.teal : 'transparent',
+                color: activeTab === 'history' ? '#FFF' : C.textMid,
+                fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              🗓️ Historical Incentive Audit
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              style={{
+                padding: '8px 16px', borderRadius: '9px', border: 'none',
+                background: activeTab === 'analytics' ? C.teal : 'transparent',
+                color: activeTab === 'analytics' ? '#FFF' : C.textMid,
+                fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              📊 Live Analytics & Ledger
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {activeTab === 'history' ? (
+        <SuperAdminIncentiveHistory />
+      ) : (
+        <>
+          {/* Controls Bar */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
             <button
               onClick={fetchData}
               style={{
@@ -264,9 +302,8 @@ export default function ManageEmployeeIncentives() {
               <FaFileDownload size={14} /> Export CSV
             </button>
           </div>
-        </div>
 
-        {/* Filters Bar */}
+          {/* Filters Bar */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
@@ -874,6 +911,8 @@ export default function ManageEmployeeIncentives() {
             </form>
           </div>
         </div>
+      )}
+        </>
       )}
 
     </div>

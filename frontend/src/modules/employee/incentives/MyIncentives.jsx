@@ -4,10 +4,13 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { FaArrowLeft, FaCoins, FaClock, FaCheckCircle, FaMoneyBillWave, FaShieldAlt } from 'react-icons/fa';
 import api from '../../../services/api';
 
+import MonthlyIncentiveReportView from './MonthlyIncentiveReportView';
+
 export default function MyIncentives() {
   const { C } = useTheme();
   const navigate = useNavigate();
 
+  const [activeView, setActiveView] = useState('monthly'); // 'monthly' or 'all'
   const [transactions, setTransactions] = useState([]);
   const [stats, setStats] = useState({ total_paid: 0, pending_incentive: 0, total_leads_converted: 0 });
   const [loading, setLoading] = useState(true);
@@ -62,22 +65,57 @@ export default function MyIncentives() {
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-          <button 
-            onClick={() => navigate('/employee/dashboard')} 
-            style={{ 
-              background: C.card, border: `1px solid ${C.border}`, borderRadius: '50%', 
-              width: '38px', height: '38px', display: 'flex', alignItems: 'center', 
-              justifyContent: 'center', cursor: 'pointer', color: C.textMid, flexShrink: 0 
-            }}
-          >
-            <FaArrowLeft />
-          </button>
-          <div>
-            <span style={{ fontSize: '11px', fontWeight: 800, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Financial Ledger</span>
-            <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, color: C.text, margin: 0 }}>My Incentives & Earnings</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button 
+              onClick={() => navigate('/employee/dashboard')} 
+              style={{ 
+                background: C.card, border: `1px solid ${C.border}`, borderRadius: '50%', 
+                width: '38px', height: '38px', display: 'flex', alignItems: 'center', 
+                justifyContent: 'center', cursor: 'pointer', color: C.textMid, flexShrink: 0 
+              }}
+            >
+              <FaArrowLeft />
+            </button>
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: C.teal, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Financial Ledger</span>
+              <h1 style={{ fontSize: isMobile ? '20px' : '26px', fontWeight: 900, color: C.text, margin: 0 }}>My Incentives & Earnings</h1>
+            </div>
+          </div>
+
+          {/* View Switcher */}
+          <div style={{ display: 'flex', gap: '6px', background: C.card, padding: '4px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+            <button
+              onClick={() => setActiveView('monthly')}
+              style={{
+                padding: '8px 16px', borderRadius: '9px', border: 'none',
+                background: activeView === 'monthly' ? C.teal : 'transparent',
+                color: activeView === 'monthly' ? '#FFF' : C.textMid,
+                fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              🗓️ Monthly Audit & Structure
+            </button>
+            <button
+              onClick={() => setActiveView('all')}
+              style={{
+                padding: '8px 16px', borderRadius: '9px', border: 'none',
+                background: activeView === 'all' ? C.teal : 'transparent',
+                color: activeView === 'all' ? '#FFF' : C.textMid,
+                fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              📜 All Transactions Ledger
+            </button>
           </div>
         </div>
+
+        {activeView === 'monthly' ? (
+          <MonthlyIncentiveReportView />
+        ) : (
+          <>
 
         {/* Stats Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '32px' }}>
@@ -161,7 +199,8 @@ export default function MyIncentives() {
             </div>
           )}
         </div>
-
+        </>
+        )}
       </div>
     </div>
   );
