@@ -1061,7 +1061,7 @@ router.get('/incentives', resolveEmployee, async (req, res, next) => {
     const stats = await query(`
       SELECT 
         COALESCE(SUM(amount) FILTER (WHERE status = 'COMPLETED'), 0) as total_paid,
-        COALESCE(SUM(amount) FILTER (WHERE status = 'PENDING'), 0) as pending_incentive,
+        COALESCE(SUM(amount) FILTER (WHERE status IN ('PENDING', 'HELD', 'HELD_TARGET_PENDING', 'HELD_APP_FILE_PENDING')), 0) as pending_incentive,
         COUNT(*) as total_leads_converted
       FROM employee_incentive_transactions
       WHERE employee_id = $1

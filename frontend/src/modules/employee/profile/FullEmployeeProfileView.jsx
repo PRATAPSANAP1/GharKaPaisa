@@ -785,7 +785,7 @@ Generated On  : ${new Date().toLocaleString()}
             <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
               <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Total Incentives</span>
               <strong style={{ display: 'block', fontSize: '22px', fontWeight: 900, color: '#059669', marginTop: '2px' }}>₹{Number(totalIncentives).toLocaleString('en-IN')}</strong>
-              <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700 }}>Commissions & Payouts</span>
+              <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700 }}>Incentives</span>
             </div>
             <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
               <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Leads Generated</span>
@@ -812,7 +812,7 @@ Generated On  : ${new Date().toLocaleString()}
       {/* TAB 8: INCENTIVES */}
       {activeTab === 'incentives' && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '28px' }}>
-          <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.teal, margin: '0 0 16px 0' }}>Incentives & Payout Earnings</h3>
+          <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.teal, margin: '0 0 16px 0' }}>Incentives & Earnings</h3>
           <p style={{ fontSize: '13px', color: C.textMid }}>Detailed log of referral link commissions earned and credited.</p>
         </div>
       )}

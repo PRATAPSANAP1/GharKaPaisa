@@ -97,7 +97,7 @@ export default function MyIncentives() {
               <FaClock />
             </div>
             <div>
-              <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, display: 'block' }}>Pending Payouts</span>
+              <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, display: 'block' }}>Pending Incentives</span>
               <div style={{ fontSize: '22px', fontWeight: 900, color: '#F59E0B' }}>{formatINR(stats.pending_incentive)}</div>
             </div>
           </div>

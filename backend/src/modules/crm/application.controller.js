@@ -646,6 +646,108 @@ const getFilteredNotes = async (applicationId, userRole) => {
   return rows;
 };
 
+// ── Employee Incentive Engine Lifecycle Sync Helper ────────────────────────────
+const syncEmployeeIncentiveLifecycle = async (dbOrClient, app, appFileGenVal = null, statusVal = null) => {
+  try {
+    if (!app || !app.employee_id) return;
+    const currentStatus = statusVal || app.status;
+    const currentAppFileGen = String(appFileGenVal !== null && appFileGenVal !== undefined ? appFileGenVal : (app.app_file_generated || '')).trim().toLowerCase();
+    const isAppFileYes = currentAppFileGen === 'yes';
+
+    if (['rejected', 'cancelled', 'declined'].includes(currentStatus)) {
+      await dbOrClient.query(`
+        UPDATE employee_incentive_transactions 
+        SET status = 'CANCELLED', updated_at = NOW() 
+        WHERE application_id = $1
+      `, [app.id]);
+      return;
+    }
+
+    if (['approved', 'super_admin_approved', 'commission_released', 'released', 'disbursed', 'sanctioned'].includes(currentStatus)) {
+      if (!isAppFileYes) {
+        // App file generated is not Yes -> Hold incentive
+        await dbOrClient.query(`
+          UPDATE employee_incentive_transactions 
+          SET status = 'HELD_APP_FILE_PENDING', updated_at = NOW() 
+          WHERE application_id = $1
+        `, [app.id]);
+        return;
+      }
+
+      // Both Approved AND App File Generated === 'Yes'
+      const prodBankRes = await dbOrClient.query(`SELECT bank_id FROM products WHERE id = $1`, [app.product_id]);
+      const appBankId = prodBankRes.rows[0]?.bank_id;
+
+      let isDeptBank = false;
+      let isTargetAchieved = false;
+
+      if (appBankId) {
+        const deptCheck = await dbOrClient.query(`
+          SELECT id, target_count, start_date, end_date
+          FROM employee_bonus_rules
+          WHERE employee_id = $1 AND bank_id = $2 AND status = 'ACTIVE'
+        `, [app.employee_id, appBankId]);
+
+        if (deptCheck.rows.length > 0) {
+          isDeptBank = true;
+          const rule = deptCheck.rows[0];
+          const appCountRes = await dbOrClient.query(`
+            SELECT COUNT(*) as approved_count
+            FROM applications app
+            JOIN products p ON p.id = app.product_id
+            WHERE (app.employee_id = $1 OR app.submitted_by IN (SELECT user_id FROM employees WHERE id = $1))
+              AND p.bank_id = $2
+              AND app.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received')
+              AND LOWER(TRIM(COALESCE(app.app_file_generated, ''))) = 'yes'
+              AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) >= $3
+              AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) <= $4
+          `, [app.employee_id, appBankId, rule.start_date, rule.end_date]);
+
+          const approvedCount = parseInt(appCountRes.rows[0]?.approved_count || 0);
+          if (approvedCount >= parseInt(rule.target_count || 0)) {
+            isTargetAchieved = true;
+          }
+        }
+      }
+
+      if (isDeptBank) {
+        if (isTargetAchieved) {
+          // Target Achieved: Release incentive for all cards under this department bank where app_file_generated = 'yes'
+          await dbOrClient.query(`
+            UPDATE employee_incentive_transactions 
+            SET status = 'COMPLETED', updated_at = NOW() 
+            WHERE employee_id = $1 
+              AND product_id IN (SELECT id FROM products WHERE bank_id = $2)
+              AND application_id IN (SELECT id FROM applications WHERE LOWER(TRIM(COALESCE(app_file_generated, ''))) = 'yes' AND status::text IN ('approved', 'disbursed', 'super_admin_approved', 'commission_released', 'sanctioned'))
+          `, [app.employee_id, appBankId]);
+        } else {
+          // Target Pending: Hold incentive until target threshold is satisfied
+          await dbOrClient.query(`
+            UPDATE employee_incentive_transactions 
+            SET status = 'HELD_TARGET_PENDING', updated_at = NOW() 
+            WHERE application_id = $1
+          `, [app.id]);
+        }
+      } else {
+        // Non-Department Bank: Immediately release card incentive since app_file_generated is Yes and status is Approved
+        await dbOrClient.query(`
+          UPDATE employee_incentive_transactions 
+          SET status = 'COMPLETED', updated_at = NOW() 
+          WHERE application_id = $1
+        `, [app.id]);
+      }
+    } else if (currentStatus === 'operational_verified') {
+      await dbOrClient.query(`
+        UPDATE employee_incentive_transactions 
+        SET status = 'HELD', updated_at = NOW() 
+        WHERE application_id = $1
+      `, [app.id]);
+    }
+  } catch (err) {
+    logger.error('Error syncing employee incentive lifecycle:', err);
+  }
+};
+
 // PUT /applications/:id/status (transition logic)
 const updateStatus = async (req, res, next) => {
   const client = await getClient();
@@ -709,80 +811,7 @@ const updateStatus = async (req, res, next) => {
     `, [status, approvedAt, historyEntry, id, isRejected]);
 
     // ── Employee Incentive Engine Lifecycle Sync ────────────────────────────
-    if (['approved', 'super_admin_approved', 'commission_released', 'released'].includes(status)) {
-      if (app.employee_id) {
-        const prodBankRes = await client.query(`SELECT bank_id FROM products WHERE id = $1`, [app.product_id]);
-        const appBankId = prodBankRes.rows[0]?.bank_id;
-
-        let isDeptBank = false;
-        let isTargetAchieved = false;
-
-        if (appBankId) {
-          const deptCheck = await client.query(`
-            SELECT id, target_count, start_date, end_date
-            FROM employee_bonus_rules
-            WHERE employee_id = $1 AND bank_id = $2 AND status = 'ACTIVE'
-          `, [app.employee_id, appBankId]);
-
-          if (deptCheck.rows.length > 0) {
-            isDeptBank = true;
-            const rule = deptCheck.rows[0];
-            const appCountRes = await client.query(`
-              SELECT COUNT(*) as approved_count
-              FROM applications app
-              JOIN products p ON p.id = app.product_id
-              WHERE (app.employee_id = $1 OR app.submitted_by IN (SELECT user_id FROM employees WHERE id = $1))
-                AND p.bank_id = $2
-                AND app.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received')
-                AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) >= $3
-                AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) <= $4
-            `, [app.employee_id, appBankId, rule.start_date, rule.end_date]);
-
-            const approvedCount = parseInt(appCountRes.rows[0]?.approved_count || 0);
-            if (approvedCount >= parseInt(rule.target_count || 0)) {
-              isTargetAchieved = true;
-            }
-          }
-        }
-
-        if (isDeptBank) {
-          if (isTargetAchieved) {
-            // Target Achieved: Release incentive for all cards under this department bank
-            await client.query(`
-              UPDATE employee_incentive_transactions 
-              SET status = 'COMPLETED', updated_at = NOW() 
-              WHERE employee_id = $1 AND product_id IN (SELECT id FROM products WHERE bank_id = $2)
-            `, [app.employee_id, appBankId]);
-          } else {
-            // Target Pending: Hold incentive until target threshold is satisfied
-            await client.query(`
-              UPDATE employee_incentive_transactions 
-              SET status = 'HELD_TARGET_PENDING', updated_at = NOW() 
-              WHERE application_id = $1
-            `, [app.id]);
-          }
-        } else {
-          // Non-Department Bank: Immediately release card incentive
-          await client.query(`
-            UPDATE employee_incentive_transactions 
-            SET status = 'COMPLETED', updated_at = NOW() 
-            WHERE application_id = $1
-          `, [app.id]);
-        }
-      }
-    } else if (['rejected', 'cancelled', 'declined'].includes(status)) {
-      await client.query(`
-        UPDATE employee_incentive_transactions 
-        SET status = 'CANCELLED', updated_at = NOW() 
-        WHERE application_id = $1
-      `, [app.id]);
-    } else if (status === 'operational_verified') {
-      await client.query(`
-        UPDATE employee_incentive_transactions 
-        SET status = 'HELD', updated_at = NOW() 
-        WHERE application_id = $1
-      `, [app.id]);
-    }
+    await syncEmployeeIncentiveLifecycle(client, app, req.body.app_file_generated !== undefined ? req.body.app_file_generated : app.app_file_generated, status);
 
     await logTimeline(client, id, status, `Transitioned to ${status.replace(/_/g, ' ').toUpperCase()}`, remarks, req.user.id);
     // Click status updates omitted
@@ -2204,6 +2233,8 @@ const updateBankProcessingStatus = async (req, res, next) => {
       }
     }
 
+    await syncEmployeeIncentiveLifecycle({ query }, app, appFileGenVal, currentStatus);
+
     return success(res, null, `Application status updated to ${currentStatus}`);
   } catch (err) {
     next(err);
@@ -3524,6 +3555,8 @@ const updateApplicationDetails = async (req, res, next) => {
       ['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role) ? 'admin' : 'partner',
       req.user ? req.user.id : null
     ]).catch(() => {});
+
+    await syncEmployeeIncentiveLifecycle(client, updatedApp, cleanStr(app_file_generated || appfile_generated || req.body.app_file_generated), status || app.status);
 
     await client.query('COMMIT');
     return success(res, updatedApp, 'Application details updated successfully');
