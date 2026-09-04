@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { query } = require('../../config/database');
+const { query, getClient } = require('../../config/database');
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 const roleCheck = require('../../middleware/authorization/role.middleware');
 const logger = require('../../config/logger');
@@ -1710,27 +1710,27 @@ router.get('/:id/departments', async (req, res, next) => {
 
 // ── 2. POST /api/v1/employees/:id/departments — Assign Departments/Banks to Employee ──
 router.post('/:id/departments', async (req, res, next) => {
+  const { id } = req.params;
+  const { bank_ids } = req.body;
+
+  if (!Array.isArray(bank_ids)) {
+    return res.status(400).json({ success: false, message: 'bank_ids must be an array of bank UUIDs' });
+  }
+
+  const client = await getClient();
   try {
-    const { id } = req.params;
-    const { bank_ids } = req.body;
-
-    if (!Array.isArray(bank_ids)) {
-      return res.status(400).json({ success: false, message: 'bank_ids must be an array of bank UUIDs' });
-    }
-
     // Verify employee
-    const empRes = await query(`SELECT id, employee_id, full_name FROM employees WHERE id = $1`, [id]);
+    const empRes = await client.query(`SELECT id, employee_id, full_name FROM employees WHERE id = $1`, [id]);
     if (empRes.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Employee not found' });
     }
 
-    // Transaction to update bank assignments
-    await query('BEGIN');
-    await query(`DELETE FROM employee_bank_assignments WHERE employee_id = $1`, [id]);
+    await client.query('BEGIN');
+    await client.query(`DELETE FROM employee_bank_assignments WHERE employee_id = $1`, [id]);
 
     const assigned = [];
     for (const bId of bank_ids) {
-      const insRes = await query(
+      const insRes = await client.query(
         `INSERT INTO employee_bank_assignments (employee_id, bank_id, assigned_by)
          VALUES ($1, $2, $3)
          ON CONFLICT (employee_id, bank_id) DO UPDATE SET updated_at = NOW()
@@ -1739,7 +1739,7 @@ router.post('/:id/departments', async (req, res, next) => {
       );
       if (insRes.rows[0]) assigned.push(insRes.rows[0]);
     }
-    await query('COMMIT');
+    await client.query('COMMIT');
 
     res.json({
       success: true,
@@ -1748,8 +1748,10 @@ router.post('/:id/departments', async (req, res, next) => {
       data: assigned
     });
   } catch (err) {
-    await query('ROLLBACK').catch(() => {});
+    await client.query('ROLLBACK').catch(() => {});
     next(err);
+  } finally {
+    client.release();
   }
 });
 

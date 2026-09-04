@@ -81,14 +81,20 @@ const submitApplication = async (req, res, next) => {
       }
     }
 
-    if (!PartnerId) return error(res, 'Partner ID is required', 400);
+    if (!PartnerId) {
+      await client.query('ROLLBACK');
+      return error(res, 'Partner ID is required', 400);
+    }
 
     // Validate product
     const { rows: [product] } = await client.query(
       `SELECT p.*, b.name as bank_name FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.id = $1 AND p.is_active = true`,
       [product_id]
     );
-    if (!product) return error(res, 'Product not found or inactive', 404);
+    if (!product) {
+      await client.query('ROLLBACK');
+      return error(res, 'Product not found or inactive', 404);
+    }
 
     // Fetch Partner Parent ID
     const { rows: [partnerProfile] } = await client.query(`
@@ -260,7 +266,10 @@ const submitPublicApplication = async (req, res, next) => {
       `SELECT p.*, b.name as bank_name FROM products p JOIN banks b ON b.id = p.bank_id WHERE p.id = $1 AND p.is_active = true`,
       [product_id]
     );
-    if (!product) return error(res, 'Product not found or inactive', 404);
+    if (!product) {
+      await client.query('ROLLBACK');
+      return error(res, 'Product not found or inactive', 404);
+    }
 
     let partnerId;
     if (partner_code) {
@@ -270,6 +279,7 @@ const submitPublicApplication = async (req, res, next) => {
     if (!partnerId) {
       const { rows: [defaultPartner] } = await client.query(`SELECT id FROM partner_profiles LIMIT 1`);
       if (!defaultPartner) {
+        await client.query('ROLLBACK');
         return error(res, 'System cannot route lead as no active Partner profiles exist.', 500);
       }
       partnerId = defaultPartner.id;

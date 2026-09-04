@@ -24,9 +24,10 @@ const poolOptions = process.env.DATABASE_URL
     };
 
 // Enhanced Connection Pool Settings for High Availability and Connection Resiliency
-poolOptions.max = parseInt(process.env.DB_POOL_MAX) || 50;
+poolOptions.max = parseInt(process.env.DB_POOL_MAX) || 10;
+poolOptions.min = parseInt(process.env.DB_POOL_MIN) || 1;
 poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || 30000;
-poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || 20000; // 20s allowance for connection acquisition during traffic spikes
+poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || 5000;
 poolOptions.keepAlive = true;
 poolOptions.keepAliveInitialDelayMillis = 5000;
 
@@ -44,11 +45,11 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  logger.error('Unexpected DB client error in pool', { error: err.message });
+  logger.error('Unexpected DB client error in pool', { error: err.message, total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount });
 });
 
 // Helper: run a query with transient connection failure retry logic
-const query = async (text, params, retries = 2) => {
+const query = async (text, params, retries = 1) => {
   const start = Date.now();
   try {
     const res = await pool.query(text, params);
@@ -64,11 +65,14 @@ const query = async (text, params, retries = 2) => {
       err.message.includes('remaining connection slots are reserved')
     );
 
-    if (isConnErr && retries > 0) {
-      const delay = (3 - retries) * 500;
-      logger.warn(`Transient DB connection error. Retrying query in ${delay}ms (${retries} left)...`, { error: err.message });
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return query(text, params, retries - 1);
+    if (isConnErr) {
+      logger.warn(`DB Connection status on error: Total=${pool.totalCount}, Idle=${pool.idleCount}, Waiting=${pool.waitingCount}`, { error: err.message });
+      if (retries > 0) {
+        const delay = 400;
+        logger.warn(`Transient DB connection error. Retrying query in ${delay}ms (${retries} left)...`, { error: err.message });
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return query(text, params, retries - 1);
+      }
     }
 
     if (process.env.NODE_ENV !== 'production') {
@@ -94,3 +98,4 @@ const query = async (text, params, retries = 2) => {
 const getClient = () => pool.connect();
 
 module.exports = { query, getClient, pool };
+

@@ -12,36 +12,36 @@ const logSbiTimeline = async (client, applicationId, stage, activity, note, perf
 
 // 1. Create Application (Step 1)
 const createApplication = async (req, res, next) => {
+  const {
+    credit_card_category,
+    customer_name,
+    customer_mobile,
+    pan_number,
+    resident_pincode,
+    process_by,
+    pan_check_comments,
+    qd_executive_name,
+    resident_pin_comments,
+    next_qd_date
+  } = req.body;
+
+  if (!customer_name || !customer_mobile || !pan_number) {
+    return error(res, 'Customer Name, Customer Mobile, and PAN Number are required', 400);
+  }
+
+  // Basic mobile validation
+  if (!/^[6-9]\d{9}$/.test(customer_mobile.trim())) {
+    return error(res, 'Please provide a valid 10-digit mobile number', 400);
+  }
+
+  // Basic PAN validation
+  if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan_number.trim().toUpperCase())) {
+    return error(res, 'Please provide a valid PAN number format (e.g. ABCDE1234F)', 400);
+  }
+
   const client = await getClient();
   try {
     await client.query('BEGIN');
-
-    const {
-      credit_card_category,
-      customer_name,
-      customer_mobile,
-      pan_number,
-      resident_pincode,
-      process_by,
-      pan_check_comments,
-      qd_executive_name,
-      resident_pin_comments,
-      next_qd_date
-    } = req.body;
-
-    if (!customer_name || !customer_mobile || !pan_number) {
-      return error(res, 'Customer Name, Customer Mobile, and PAN Number are required', 400);
-    }
-
-    // Basic mobile validation
-    if (!/^[6-9]\d{9}$/.test(customer_mobile.trim())) {
-      return error(res, 'Please provide a valid 10-digit mobile number', 400);
-    }
-
-    // Basic PAN validation
-    if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan_number.trim().toUpperCase())) {
-      return error(res, 'Please provide a valid PAN number format (e.g. ABCDE1234F)', 400);
-    }
 
     // Upsert Customer
     let customerId = null;
@@ -120,6 +120,7 @@ const updateApplication = async (req, res, next) => {
       `SELECT * FROM sbi_credit_card_applications WHERE id = $1`, [id]
     );
     if (!existing) {
+      await client.query('ROLLBACK');
       return error(res, 'SBI Application not found', 404);
     }
 
@@ -486,6 +487,7 @@ const addTimelineEvent = async (req, res, next) => {
     // Verify application exists
     const { rows: [app] } = await client.query(`SELECT id FROM sbi_credit_card_applications WHERE id = $1`, [id]);
     if (!app) {
+      await client.query('ROLLBACK');
       return error(res, 'Application not found', 404);
     }
 
