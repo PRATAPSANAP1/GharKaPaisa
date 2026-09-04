@@ -1374,7 +1374,7 @@ const listApplications = async (req, res, next) => {
           a.updated_at,
           COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, '')) as bank_application_number,
           a.bank_ref_number,
-          NULL::text as appcode_status,
+          a.appcode_status,
           a.soft_approval_status,
           a.iqa_stage,
           COALESCE(a.vkyc_stage, a.vkyc_status) as vkyc_stage,
@@ -1385,7 +1385,7 @@ const listApplications = async (req, res, next) => {
           COALESCE(a.user_remark, a.notes) as user_remark,
           COALESCE(a.user_remark, a.notes) as notes,
           a.final_status,
-          NULL::text as app_file_generated,
+          a.app_file_generated,
           a.decline_reason,
           a.eligible_reqd,
           a.submitted_at,
@@ -2050,12 +2050,14 @@ const updateBankProcessingStatus = async (req, res, next) => {
       status, bank_ref_number, rejection_reason, approved_amount,
       appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
       bank_remark, user_remark, user_notes, notes, final_status, decline_reason, eligible_reqd,
+      app_file_generated, appfile_generated,
       // Form 1 Customer Application Details
       customer_mobile, customer_name, dob, customer_email, pan_number,
       company_name, designation, address, company_address, mother_name, vkyc_url
     } = req.body;
 
     const userRemarkVal = user_remark || user_notes || notes || null;
+    const appFileGenVal = app_file_generated || appfile_generated || null;
 
     const validStatuses = ['under_review', 'approved', 'rejected', 'disbursed', 'in_process', 'app_file_generated', 'decline', 'technical_error'];
     const currentStatus = (status && validStatuses.includes(status)) ? status : 'under_review';
@@ -2109,15 +2111,16 @@ const updateBankProcessingStatus = async (req, res, next) => {
               vkyc_url = COALESCE($24, vkyc_url),
               user_remark = COALESCE($25, user_remark),
               notes = COALESCE($25, notes),
+              app_file_generated = COALESCE($26, app_file_generated),
               updated_at = NOW()
-          WHERE id = $26
+          WHERE id = $27
         `, [
           currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount,
           appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
           dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
           eligible_reqd || null, customer_mobile || null, customer_name || null, dob || null,
           customer_email || null, pan_number || null, company_name || null, designation || null,
-          address || null, company_address || null, mother_name || null, vkyc_url || null, userRemarkVal, id
+          address || null, company_address || null, mother_name || null, vkyc_url || null, userRemarkVal, appFileGenVal, id
         ]);
 
         await query(`
@@ -2154,14 +2157,15 @@ const updateBankProcessingStatus = async (req, res, next) => {
           vkyc_url = COALESCE($18, vkyc_url),
           user_remark = COALESCE($19, user_remark),
           notes = COALESCE($19, notes),
+          app_file_generated = COALESCE($20, app_file_generated),
           updated_at = NOW()
-      WHERE id = $20
+      WHERE id = $21
     `, [
       currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount,
       appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
       dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
       eligible_reqd || null, dob || null, designation || null, company_address || null,
-      mother_name || null, vkyc_url || null, userRemarkVal, id
+      mother_name || null, vkyc_url || null, userRemarkVal, appFileGenVal, id
     ]);
 
     const titleMap = {
@@ -2822,14 +2826,14 @@ const exportApplicationsCSV = async (req, res, next) => {
           a.commission_amount,
           COALESCE(a.source, 'partner_punch') as process_by,
           COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, '')) as bank_application_number,
-          NULL::text as appcode_status,
+          a.appcode_status,
           a.soft_approval_status,
           a.iqa_stage,
           COALESCE(a.vkyc_stage, a.vkyc_status) as vkyc_stage,
           a.vkyc_url,
           a.dispatch_status,
           a.final_status,
-          NULL::text as app_file_generated,
+          a.app_file_generated,
           a.bank_remark,
           a.decline_reason,
           a.eligible_reqd,
@@ -3042,6 +3046,8 @@ const updateApplicationDetails = async (req, res, next) => {
       notes,
       user_notes,
       final_status,
+      app_file_generated,
+      appfile_generated,
       decline_reason,
       eligible_reqd,
       approved_amount
@@ -3074,6 +3080,7 @@ const updateApplicationDetails = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50),
         ADD COLUMN IF NOT EXISTS bank_remark TEXT,
         ADD COLUMN IF NOT EXISTS final_status VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
         ADD COLUMN IF NOT EXISTS decline_reason TEXT,
         ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50),
         ADD COLUMN IF NOT EXISTS approved_amount DECIMAL(15,2)
@@ -3117,6 +3124,7 @@ const updateApplicationDetails = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50),
         ADD COLUMN IF NOT EXISTS bank_remark TEXT,
         ADD COLUMN IF NOT EXISTS final_status VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
         ADD COLUMN IF NOT EXISTS decline_reason TEXT,
         ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)
       `);
@@ -3294,6 +3302,7 @@ const updateApplicationDetails = async (req, res, next) => {
         appcode_status = COALESCE(NULLIF($35, ''), appcode_status),
         user_remark = COALESCE(NULLIF($36, ''), user_remark),
         notes = COALESCE(NULLIF($36, ''), notes),
+        app_file_generated = COALESCE(NULLIF($37, ''), app_file_generated),
         updated_at = NOW()
       WHERE id = $34
       RETURNING *
@@ -3333,7 +3342,8 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(address),
       app.id,
       cleanStr(appcode_status || req.body.appcode_status),
-      cleanStr(user_remark || req.body.user_remark || req.body.user_notes || req.body.notes || notes || user_notes)
+      cleanStr(user_remark || req.body.user_remark || req.body.user_notes || req.body.notes || notes || user_notes),
+      cleanStr(app_file_generated || appfile_generated || req.body.app_file_generated || req.body.appfile_generated)
     ]);
 
     // 2. Update customer details if customer_id exists
@@ -3468,6 +3478,7 @@ const updateApplicationDetails = async (req, res, next) => {
           dispatch_status = COALESCE(NULLIF(EXCLUDED.dispatch_status, ''), physical_application_details.dispatch_status),
           bank_remark = COALESCE(NULLIF(EXCLUDED.bank_remark, ''), physical_application_details.bank_remark),
           final_status = COALESCE(NULLIF(EXCLUDED.final_status, ''), physical_application_details.final_status),
+          app_file_generated = COALESCE(NULLIF(EXCLUDED.app_file_generated, ''), physical_application_details.app_file_generated),
           decline_reason = COALESCE(NULLIF(EXCLUDED.decline_reason, ''), physical_application_details.decline_reason),
           eligible_reqd = COALESCE(NULLIF(EXCLUDED.eligible_reqd, ''), physical_application_details.eligible_reqd),
           updated_at = NOW()

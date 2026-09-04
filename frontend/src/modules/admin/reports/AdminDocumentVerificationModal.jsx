@@ -249,6 +249,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         const realIqa = sanitizeVal(app.iqa_stage) || sanitizeVal(pd.iqa_stage);
         const realDispatch = sanitizeVal(app.dispatch_status) || sanitizeVal(pd.dispatch_status);
         const realFinal = sanitizeVal(app.final_status) || sanitizeVal(pd.final_status) || sanitizeVal(app.status) || 'In Process';
+        const realAppFileGenerated = sanitizeVal(app.app_file_generated) || sanitizeVal(app.appfile_generated) || sanitizeVal(pd.app_file_generated) || sanitizeVal(pd.appfile_generated);
         const realRemark = sanitizeVal(app.bank_remark) || sanitizeVal(pd.bank_remark);
         const realUserRemark = sanitizeVal(app.user_remark) || sanitizeVal(app.notes) || '';
 
@@ -259,6 +260,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           iqaStage: realIqa,
           dispatchStatus: realDispatch,
           finalStatus: realFinal,
+          appFileGenerated: realAppFileGenerated,
           bankRemark: realRemark,
           userRemark: realUserRemark
         });
@@ -271,6 +273,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         setBankRemark(realRemark);
         setUserRemark(realUserRemark);
         setFinalStatus(realFinal);
+        if (realAppFileGenerated) setAppFileGenerated(realAppFileGenerated);
         if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
         if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
         if (app.approved_amount || pd.approved_amount) setApprovedAmount(app.approved_amount || pd.approved_amount);
