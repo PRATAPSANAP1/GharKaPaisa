@@ -9,10 +9,13 @@
 .login-page {
   min-height: 100vh;
   min-height: 100dvh;
+  height: 100%;
   background: #f5f9ff;
   color: #14213d;
   position: relative;
   overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   font-family: "Inter", "Poppins", system-ui, -apple-system, sans-serif;
   display: flex;
   flex-direction: column;
@@ -836,6 +839,11 @@
 }
 
 @media (max-width: 768px) {
+  .login-page {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .header-container {
     padding: 14px 18px;
   }
@@ -854,8 +862,9 @@
   }
 
   .login-main {
-    padding: 20px 16px 32px;
+    padding: 20px 16px 80px;
     gap: 24px;
+    overflow-y: visible;
   }
 
   .login-card-content {
@@ -938,7 +947,7 @@
 
 @media (max-width: 480px) {
   .login-main {
-    padding: 12px 10px 24px;
+    padding: 12px 10px 90px;
     gap: 18px;
   }
 
