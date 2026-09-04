@@ -4,7 +4,8 @@ import {
   FaCoins, FaMoneyBillWave, FaClock, FaUsers, FaCalculator, FaFileDownload, 
   FaFilter, FaSearch, FaChevronDown, FaChevronRight, FaEye, FaCheckCircle, 
   FaTimesCircle, FaHourglassHalf, FaPauseCircle, FaTrophy, FaBuilding, 
-  FaCreditCard, FaSitemap, FaRedo, FaInfoCircle, FaRegCheckCircle, FaEdit
+  FaCreditCard, FaSitemap, FaRedo, FaInfoCircle, FaRegCheckCircle, FaEdit,
+  FaCalendarAlt, FaChartLine, FaUserTie, FaUserShield, FaPhoneAlt, FaClipboardList
 } from 'react-icons/fa';
 import api from '../../../services/api';
 import SuperAdminIncentiveHistory from '../../employee-management/SuperAdminIncentiveHistory';
@@ -263,10 +264,11 @@ export default function ManageEmployeeIncentives() {
                 background: activeTab === 'history' ? C.teal : 'transparent',
                 color: activeTab === 'history' ? '#FFF' : C.textMid,
                 fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                display: 'inline-flex', alignItems: 'center', gap: '6px'
               }}
             >
-              🗓️ Historical Incentive Audit
+              <FaCalendarAlt /> Historical Incentive Audit
             </button>
             <button
               onClick={() => setActiveTab('analytics')}
@@ -275,10 +277,11 @@ export default function ManageEmployeeIncentives() {
                 background: activeTab === 'analytics' ? C.teal : 'transparent',
                 color: activeTab === 'analytics' ? '#FFF' : C.textMid,
                 fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                transition: 'all 0.2s ease'
+                transition: 'all 0.2s ease',
+                display: 'inline-flex', alignItems: 'center', gap: '6px'
               }}
             >
-              📊 Live Analytics & Ledger
+              <FaChartLine /> Live Analytics & Ledger
             </button>
           </div>
         </div>
@@ -411,11 +414,9 @@ export default function ManageEmployeeIncentives() {
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 600 }}
-              />
             </div>
           </div>
         </div>
-      </div>
 
       {/* ── 2. FINANCIAL KPI CARDS ── */}
       <div style={{
@@ -490,7 +491,9 @@ export default function ManageEmployeeIncentives() {
         {/* Incentive Trend Overview */}
         <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0 }}>📈 Incentive Trend Overview</h3>
+            <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FaChartLine color={C.teal} /> Incentive Trend Overview
+            </h3>
             <div style={{ display: 'flex', gap: '4px', background: C.bgSecondary, padding: '3px', borderRadius: '8px' }}>
               {['Daily', 'Weekly', 'Monthly'].map(f => (
                 <button
@@ -536,7 +539,9 @@ export default function ManageEmployeeIncentives() {
 
         {/* Incentives by Role */}
         <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0 }}>👥 Incentives by Role</h3>
+          <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FaUsers color={C.teal} /> Incentives by Role
+          </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {(data.by_role || []).map((r, idx) => (
               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: C.bgSecondary, borderRadius: '10px' }}>
@@ -555,7 +560,9 @@ export default function ManageEmployeeIncentives() {
 
         {/* Incentives by Status */}
         <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0 }}>📊 Incentives by Status</h3>
+          <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FaFilter color={C.teal} /> Incentives by Status
+          </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {(data.by_status || []).map((s, idx) => (
               <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: `1px solid ${C.border}` }}>
@@ -659,8 +666,10 @@ export default function ManageEmployeeIncentives() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {expandedManagers[mgr.id] ? <FaChevronDown size={12} color={C.teal} /> : <FaChevronRight size={12} color={C.textLight} />}
                   <div>
-                    <span style={{ fontSize: '14px', fontWeight: 800, color: C.text, display: 'block' }}>👔 MANAGER: {mgr.name} ({mgr.code})</span>
-                    <span style={{ fontSize: '11px', color: C.textLight }}>{mgr.team_leaders?.length || 0} Team Leaders • {mgr.total_apps} Apps</span>
+                    <span style={{ fontSize: '14px', fontWeight: 800, color: C.text, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <FaUserTie color={C.teal} /> MANAGER: {mgr.name} ({mgr.code})
+                    </span>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>{mgr.team_leaders?.length || 0} Team Leaders • {mgr.total_apps} Apps</span>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -679,7 +688,9 @@ export default function ManageEmployeeIncentives() {
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {expandedTLs[tl.id] ? <FaChevronDown size={11} color={C.teal} /> : <FaChevronRight size={11} color={C.textLight} />}
-                          <span style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>🧢 TL: {tl.name} ({tl.code})</span>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: C.text, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <FaUserShield color={C.teal} /> TL: {tl.name} ({tl.code})
+                          </span>
                         </div>
                         <span style={{ fontSize: '13px', fontWeight: 800, color: C.teal }}>{formatINR(tl.total_incentives)}</span>
                       </div>
@@ -688,7 +699,9 @@ export default function ManageEmployeeIncentives() {
                         <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px', paddingLeft: '18px' }}>
                           {(tl.telecallers || []).map(tc => (
                             <div key={tc.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 8px', background: C.bgSecondary, borderRadius: '6px' }}>
-                              <span>📞 {tc.name} ({tc.code}) - {tc.designation}</span>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                <FaPhoneAlt style={{ fontSize: '10px', color: C.teal }} /> {tc.name} ({tc.code}) - {tc.designation}
+                              </span>
                               <span style={{ fontWeight: 800, color: C.teal }}>{formatINR(tc.total_incentives)}</span>
                             </div>
                           ))}
@@ -706,8 +719,8 @@ export default function ManageEmployeeIncentives() {
       {/* ── 6. MAIN INCENTIVES DETAILS TABLE ── */}
       <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>
-            📋 Incentive Details — Master Audit Table
+          <h3 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FaClipboardList color={C.teal} /> Incentive Details — Master Audit Table
           </h3>
           <span style={{ fontSize: '12px', color: C.textLight, fontWeight: 700 }}>
             Showing {data.table?.data?.length || 0} of {data.table?.pagination?.total || 0} records

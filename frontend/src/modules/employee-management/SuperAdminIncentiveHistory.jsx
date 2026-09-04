@@ -362,12 +362,12 @@ export default function SuperAdminIncentiveHistory() {
                               Immediate
                             </span>
                           ) : rec.target_achieved ? (
-                            <span style={{ padding: '3px 9px', borderRadius: '10px', fontSize: '11px', fontWeight: 800, background: '#10B98115', color: '#10B981', border: '1px solid #10B98130' }}>
-                              ✅ Achieved
+                            <span style={{ padding: '3px 9px', borderRadius: '10px', fontSize: '11px', fontWeight: 800, background: '#10B98115', color: '#10B981', border: '1px solid #10B98130', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <FaCheckCircle style={{ fontSize: '10px' }} /> Achieved
                             </span>
                           ) : (
-                            <span style={{ padding: '3px 9px', borderRadius: '10px', fontSize: '11px', fontWeight: 800, background: '#F59E0B15', color: '#F59E0B', border: '1px solid #F59E0B30' }}>
-                              ⏳ Pending
+                            <span style={{ padding: '3px 9px', borderRadius: '10px', fontSize: '11px', fontWeight: 800, background: '#F59E0B15', color: '#F59E0B', border: '1px solid #F59E0B30', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <FaHourglassHalf style={{ fontSize: '10px' }} /> Pending
                             </span>
                           )}
                         </td>
