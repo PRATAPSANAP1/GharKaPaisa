@@ -32,6 +32,13 @@ export default function ManageProductLinks() {
   const { C } = useTheme();
   const S = makeS(C);
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [activeTab, setActiveTab] = useState('global'); // 'global' | 'employee_links'
   const [assignModalOpen, setAssignModalOpen] = useState(false);
 
@@ -616,7 +623,7 @@ export default function ManageProductLinks() {
           {/* Filters Area */}
           <div style={{ ...S.card, padding: '16px', marginBottom: '24px' }}>
             <form onSubmit={handleSearchSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end' }}>
-              <div style={{ flex: 1, minWidth: '200px' }}>
+              <div style={{ flex: 1, minWidth: isMobile ? '100%' : '200px', width: '100%' }}>
                 <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Search Products</label>
                 <div style={{ position: 'relative' }}>
                   <input 
@@ -628,23 +635,23 @@ export default function ManageProductLinks() {
                   <MdSearch style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} />
                 </div>
               </div>
-              <div style={{ width: '180px' }}>
+              <div style={{ width: isMobile ? '100%' : '180px' }}>
                 <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Category</label>
                 <select style={S.input} value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setPage(1); }}>
                   <option value="">All Categories</option>
                   {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                 </select>
               </div>
-              <div style={{ width: '180px' }}>
+              <div style={{ width: isMobile ? '100%' : '180px' }}>
                 <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Bank Partner</label>
                 <select style={S.input} value={bankFilter} onChange={e => { setBankFilter(e.target.value); setPage(1); }}>
                   <option value="">All Banks</option>
                   {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button type="submit" style={S.btn('primary')}>Search</button>
-                <button type="button" onClick={() => { setSearch(''); setCategoryFilter(''); setBankFilter(''); setPage(1); setTimeout(fetchData, 0); }} style={S.btn('outline')}>Reset</button>
+              <div style={{ display: 'flex', gap: '8px', width: isMobile ? '100%' : 'auto' }}>
+                <button type="submit" style={{ ...S.btn('primary'), flex: isMobile ? 1 : 'none' }}>Search</button>
+                <button type="button" onClick={() => { setSearch(''); setCategoryFilter(''); setBankFilter(''); setPage(1); setTimeout(fetchData, 0); }} style={{ ...S.btn('outline'), flex: isMobile ? 1 : 'none' }}>Reset</button>
               </div>
             </form>
           </div>

@@ -7,6 +7,13 @@ export default function AuditLogs() {
   const { C } = useTheme();
   const S = makeS(C);
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [logs, setLogs] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -72,7 +79,7 @@ export default function AuditLogs() {
       {/* Filter panel */}
       <div style={{ ...S.card, padding: "16px", marginBottom: "24px" }}>
         <form onSubmit={handleFilterSubmit} style={{ display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "flex-end" }}>
-          <div style={{ flex: 1, minWidth: "180px" }}>
+          <div style={{ flex: 1, minWidth: isMobile ? "100%" : "180px", width: "100%" }}>
             <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, display: "block", marginBottom: "4px" }}>Admin Username / ID</label>
             <input
               style={S.input}
@@ -81,7 +88,7 @@ export default function AuditLogs() {
               onChange={(e) => setAdminUser(e.target.value)}
             />
           </div>
-          <div style={{ width: "200px" }}>
+          <div style={{ width: isMobile ? "100%" : "200px" }}>
             <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, display: "block", marginBottom: "4px" }}>System Action</label>
             <select
               style={S.input}
@@ -101,7 +108,7 @@ export default function AuditLogs() {
               <option value="SET_COMMISSION_RULE">Set Commission</option>
             </select>
           </div>
-          <div style={{ width: "150px" }}>
+          <div style={{ width: isMobile ? "calc(50% - 6px)" : "150px" }}>
             <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, display: "block", marginBottom: "4px" }}>Start Date</label>
             <input
               type="date"
@@ -110,7 +117,7 @@ export default function AuditLogs() {
               onChange={(e) => setStartDate(e.target.value)}
             />
           </div>
-          <div style={{ width: "150px" }}>
+          <div style={{ width: isMobile ? "calc(50% - 6px)" : "150px" }}>
             <label style={{ fontSize: "11px", fontWeight: 700, color: C.textLight, display: "block", marginBottom: "4px" }}>End Date</label>
             <input
               type="date"
@@ -119,11 +126,11 @@ export default function AuditLogs() {
               onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button type="submit" style={{ ...S.btn("primary"), padding: "10px 20px" }}>
+          <div style={{ display: "flex", gap: "8px", width: isMobile ? "100%" : "auto" }}>
+            <button type="submit" style={{ ...S.btn("primary"), padding: "10px 20px", flex: isMobile ? 1 : "none" }}>
               Filter
             </button>
-            <button type="button" onClick={handleResetFilters} style={{ ...S.btn("outline"), padding: "10px 16px", border: "none", color: C.textLight }}>
+            <button type="button" onClick={handleResetFilters} style={{ ...S.btn("outline"), padding: "10px 16px", border: "none", color: C.textLight, flex: isMobile ? 1 : "none" }}>
               Reset
             </button>
           </div>
@@ -146,8 +153,8 @@ export default function AuditLogs() {
         ) : logs.length === 0 ? (
           <div style={{ textAlign: "center", padding: "48px", color: C.textLight }}>No audit logs recorded matching criteria.</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", minWidth: "1200px", borderCollapse: "collapse", textAlign: "left" }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+            <table style={{ width: "100%", minWidth: "900px", borderCollapse: "collapse", textAlign: "left" }}>
               <thead>
                 <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: "12px", textTransform: "uppercase" }}>
                   <th style={{ padding: "14px 16px" }}>Timestamp</th>
@@ -159,7 +166,7 @@ export default function AuditLogs() {
               </thead>
               <tbody style={{ fontSize: "13.5px", color: C.text }}>
                 {logs.map((log) => (
-                  <tr key={log.id} style={{ borderBottom: `1px solid ${C.border}60` }} className="hover:bg-gray-50/10">
+                  <tr key={log.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
                     <td style={{ padding: "14px 16px", color: C.textLight }}>
                       {new Date(log.created_at).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                     </td>
@@ -176,8 +183,8 @@ export default function AuditLogs() {
                       <div style={{ fontWeight: 600 }}>{log.admin_email || "System"}</div>
                       <div style={{ fontSize: "11px", color: C.textLight, textTransform: "capitalize" }}>{log.admin_role || "automated"}</div>
                     </td>
-                    <td style={{ padding: "14px 16px", fontMono: true }}>{log.target_id}</td>
-                    <td style={{ padding: "14px 16px", minWidth: "300px" }}>
+                    <td style={{ padding: "14px 16px", fontFamily: "monospace" }}>{log.target_id}</td>
+                    <td style={{ padding: "14px 16px", minWidth: "260px" }}>
                       <pre style={{
                         margin: 0,
                         fontFamily: "monospace",

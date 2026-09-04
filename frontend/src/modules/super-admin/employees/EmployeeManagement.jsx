@@ -12,6 +12,13 @@ import api from '../../../services/api';
 export default function EmployeeManagement() {
   const { C } = useTheme();
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'hierarchy', 'bonus'
   const [employees, setEmployees] = useState([]);
   const [stats, setStats] = useState({});
@@ -1003,7 +1010,7 @@ export default function EmployeeManagement() {
         </div>
 
         {/* Global Stats Cards — 5-Level Hierarchy Structure */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '12px' }}>
           {[
             { label: 'Total Employees', count: stats.total_employees || employees.length, icon: <FaUsers />, color: C.teal },
             { label: 'L1: Branch Heads', count: stats.total_branch_heads || branchHeadsList.length, icon: <FaBuilding />, color: '#D97706' },
@@ -1242,26 +1249,26 @@ export default function EmployeeManagement() {
           });
 
           return (
-            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '500px', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '500px', padding: isMobile ? '12px' : '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: '12px', marginBottom: '20px' }}>
                 <div>
-                  <h2 style={{ fontSize: '22px', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: C.text }}>
+                  <h2 style={{ fontSize: isMobile ? '18px' : '22px', fontWeight: 900, margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: C.text }}>
                     Team Hierarchy Tree <FaInfoCircle style={{ fontSize: '15px', color: C.textMid, cursor: 'pointer' }} title="Visualize and manage reporting structure" />
                   </h2>
-                  <p style={{ fontSize: '13px', color: C.textMid, margin: '4px 0 0' }}>
+                  <p style={{ fontSize: isMobile ? '12px' : '13px', color: C.textMid, margin: '4px 0 0' }}>
                     Select a role level and an employee to inspect their organizational hierarchy structure
                   </p>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', width: isMobile ? '100%' : 'auto' }}>
                   <button 
                     onClick={fetchData} 
-                    style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    style={{ flex: isMobile ? 1 : 'none', background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                   >
                     <FaRedo style={{ fontSize: '12px', color: C.teal }} /> Refresh
                   </button>
                   <button 
                     onClick={handleExportTree} 
-                    style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    style={{ flex: isMobile ? 1 : 'none', background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                   >
                     <FaDownload style={{ fontSize: '12px', color: C.teal }} /> Export Tree
                   </button>
@@ -1269,14 +1276,14 @@ export default function EmployeeManagement() {
               </div>
 
               {/* Selection Bar: Step 1 Role Selection & Step 2 Employee Selection */}
-              <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
+              <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: isMobile ? '14px' : '20px', marginBottom: '24px' }}>
                 
                 {/* Step 1: Select Role */}
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Step 1: Select Hierarchy Role Level
                   </div>
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
                     {[
                       { id: 'BRANCH_HEAD', label: 'Branch Heads', count: branchHeadsList.length, color: '#D97706' },
                       { id: 'SENIOR_MANAGER', label: 'Senior Managers', count: seniorManagersList.length, color: '#4F46E5' },
@@ -1292,27 +1299,30 @@ export default function EmployeeManagement() {
                             setSelectedTreePersonId(null);
                           }}
                           style={{
-                            padding: '10px 18px',
+                            padding: isMobile ? '8px 10px' : '10px 18px',
                             borderRadius: '12px',
                             border: isSelectedRole ? `2px solid ${roleItem.color}` : `1px solid ${C.border}`,
                             background: isSelectedRole ? `${roleItem.color}15` : C.card,
                             color: isSelectedRole ? roleItem.color : C.text,
                             fontWeight: 800,
-                            fontSize: '13px',
+                            fontSize: isMobile ? '11.5px' : '13px',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
+                            justifyContent: 'space-between',
+                            gap: '6px',
                             boxShadow: isSelectedRole ? `0 4px 12px ${roleItem.color}25` : 'none',
                             transition: 'all 0.2s ease'
                           }}
                         >
-                          <FaSitemap style={{ fontSize: '14px' }} />
-                          {roleItem.label}
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <FaSitemap style={{ fontSize: '13px', flexShrink: 0 }} />
+                            {roleItem.label}
+                          </span>
                           <span style={{ 
                             background: isSelectedRole ? roleItem.color : C.bgSecondary, 
                             color: isSelectedRole ? '#FFFFFF' : C.textMid,
-                            fontSize: '11px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px'
+                            fontSize: '10.5px', fontWeight: 900, padding: '2px 6px', borderRadius: '10px', flexShrink: 0
                           }}>
                             {roleItem.count}
                           </span>
@@ -1334,7 +1344,7 @@ export default function EmployeeManagement() {
                     </div>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div id="mgrCarousel" style={{ display: 'flex', gap: '12px', overflowX: 'auto', flexGrow: 1, paddingBottom: '4px', scrollBehavior: 'smooth' }}>
+                      <div id="mgrCarousel" style={{ display: 'flex', gap: '12px', overflowX: 'auto', flexGrow: 1, paddingBottom: '4px', scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}>
                         {activeRoleList.map(person => {
                           const isSelected = (person.id === activePersonId);
                           const memberCount = (
@@ -1350,8 +1360,8 @@ export default function EmployeeManagement() {
                               onClick={() => setSelectedTreePersonId(person.id)}
                               style={{
                                 flexShrink: 0,
-                                minWidth: '210px',
-                                padding: '12px 16px',
+                                minWidth: isMobile ? '180px' : '210px',
+                                padding: '12px 14px',
                                 borderRadius: '14px',
                                 cursor: 'pointer',
                                 background: isSelected ? 'linear-gradient(135deg, #4F46E5 0%, #3730A3 100%)' : C.card,
@@ -1361,16 +1371,16 @@ export default function EmployeeManagement() {
                                 transition: 'all 0.2s ease',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '12px'
+                                gap: '10px'
                               }}
                             >
-                              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: isSelected ? 'rgba(255,255,255,0.2)' : '#E0E7FF', color: isSelected ? '#FFF' : '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px', flexShrink: 0 }}>
+                              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: isSelected ? 'rgba(255,255,255,0.2)' : '#E0E7FF', color: isSelected ? '#FFF' : '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px', flexShrink: 0 }}>
                                 {person.full_name?.charAt(0) || 'P'}
                               </div>
                               <div style={{ overflow: 'hidden' }}>
-                                <div style={{ fontSize: '14px', fontWeight: 900, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{person.full_name}</div>
-                                <div style={{ fontSize: '11px', opacity: isSelected ? 0.9 : 0.7, fontWeight: 700 }}>{person.employee_id}</div>
-                                <div style={{ fontSize: '11px', fontWeight: 800, marginTop: '2px', opacity: isSelected ? 0.95 : 0.8 }}>
+                                <div style={{ fontSize: '13px', fontWeight: 900, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{person.full_name}</div>
+                                <div style={{ fontSize: '10.5px', opacity: isSelected ? 0.9 : 0.7, fontWeight: 700 }}>{person.employee_id}</div>
+                                <div style={{ fontSize: '10.5px', fontWeight: 800, marginTop: '2px', opacity: isSelected ? 0.95 : 0.8 }}>
                                   {memberCount} Direct Members
                                 </div>
                               </div>
@@ -1384,7 +1394,7 @@ export default function EmployeeManagement() {
                           const el = document.getElementById('mgrCarousel');
                           if (el) el.scrollBy({ left: 200, behavior: 'smooth' });
                         }}
-                        style={{ width: '36px', height: '36px', borderRadius: '50%', background: C.card, border: `1px solid ${C.border}`, color: C.textMid, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                        style={{ width: '34px', height: '34px', borderRadius: '50%', background: C.card, border: `1px solid ${C.border}`, color: C.textMid, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
                       >
                         <FaChevronRight style={{ fontSize: '12px' }} />
                       </button>
@@ -1396,29 +1406,29 @@ export default function EmployeeManagement() {
 
                   {/* Visual Tree Diagram for Selected Manager */}
                   {currentMgr && (
-                    <div onClick={() => setPopoverEmpId(null)} style={{ background: '#F8FAFC', border: `1px solid ${C.border}`, borderRadius: '20px', padding: '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+                    <div onClick={() => setPopoverEmpId(null)} style={{ background: '#F8FAFC', border: `1px solid ${C.border}`, borderRadius: '20px', padding: isMobile ? '16px 8px' : '32px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', boxSizing: 'border-box', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
                       
                       {/* LEVEL 1: ROOT NODE */}
-                      <div style={{ background: '#FFFFFF', border: `2px solid ${roleBadgeColor.border}`, borderRadius: '16px', padding: '16px 20px', minWidth: '320px', maxWidth: '380px', boxShadow: `0 10px 25px ${roleBadgeColor.color}18`, position: 'relative', zIndex: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: roleBadgeColor.bg, color: roleBadgeColor.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '16px' }}>
+                      <div style={{ background: '#FFFFFF', border: `2px solid ${roleBadgeColor.border}`, borderRadius: '16px', padding: isMobile ? '12px 14px' : '16px 20px', minWidth: isMobile ? '250px' : '320px', maxWidth: '380px', width: '100%', boxSizing: 'border-box', boxShadow: `0 10px 25px ${roleBadgeColor.color}18`, position: 'relative', zIndex: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: roleBadgeColor.bg, color: roleBadgeColor.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '15px', flexShrink: 0 }}>
                               {currentMgr.full_name?.charAt(0) || 'P'}
                             </div>
-                            <div>
-                              <div style={{ fontSize: '15px', fontWeight: 900, color: '#1E293B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                {currentMgr.full_name}
-                                <span style={{ background: roleBadgeColor.bg, color: roleBadgeColor.color, border: `1px solid ${roleBadgeColor.border}`, fontSize: '10px', fontWeight: 900, padding: '2px 8px', borderRadius: '12px', textTransform: 'uppercase' }}>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: isMobile ? '13.5px' : '15px', fontWeight: 900, color: '#1E293B', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                                <span>{currentMgr.full_name}</span>
+                                <span style={{ background: roleBadgeColor.bg, color: roleBadgeColor.color, border: `1px solid ${roleBadgeColor.border}`, fontSize: '9.5px', fontWeight: 900, padding: '2px 6px', borderRadius: '12px', textTransform: 'uppercase' }}>
                                   {roleBadgeLabel}
                                 </span>
                               </div>
-                              <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 700 }}>{currentMgr.employee_id}</div>
+                              <div style={{ fontSize: '11.5px', color: '#64748B', fontWeight: 700 }}>{currentMgr.employee_id}</div>
                             </div>
                           </div>
                           <button
                             onClick={(e) => { e.stopPropagation(); setPopoverEmpId(popoverEmpId === currentMgr.id ? null : currentMgr.id); }}
                             title="Employee Actions"
-                            style={{ background: 'transparent', border: 'none', color: '#64748B', padding: '6px 10px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}
+                            style={{ background: 'transparent', border: 'none', color: '#64748B', padding: '6px 8px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer', flexShrink: 0 }}
                           >
                             <FaEllipsisV />
                           </button>
@@ -1568,7 +1578,7 @@ export default function EmployeeManagement() {
                                         <div style={{ width: '2px', height: '18px', background: childBadge.color }}></div>
 
                                         {/* Node Card */}
-                                        <div style={{ background: '#FFFFFF', border: `2px solid ${childBadge.border}`, borderRadius: '16px', padding: '14px 18px', minWidth: '250px', maxWidth: '290px', boxShadow: `0 8px 20px ${childBadge.color}15`, position: 'relative', zIndex: 9 }}>
+                                        <div style={{ background: '#FFFFFF', border: `2px solid ${childBadge.border}`, borderRadius: '16px', padding: isMobile ? '12px 14px' : '14px 18px', minWidth: isMobile ? '200px' : '250px', maxWidth: '290px', boxShadow: `0 8px 20px ${childBadge.color}15`, position: 'relative', zIndex: 9 }}>
                                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: childBadge.bg, color: childBadge.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '14px' }}>

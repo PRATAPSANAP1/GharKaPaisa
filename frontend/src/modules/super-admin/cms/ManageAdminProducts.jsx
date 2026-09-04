@@ -40,6 +40,13 @@ export default function ManageAdminProducts() {
   const { C, isDark } = useTheme();
   const S = makeS(C);
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const activeCategory = categorySlug || "credit_card";
   const categoryTitle = CATEGORY_MAP[activeCategory] || "Products";
 
@@ -627,17 +634,17 @@ export default function ManageAdminProducts() {
 
         {/* MULTI-FILTER DROPDOWNS */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', paddingTop: '10px', borderTop: `1px solid ${C.border}` }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: isMobile ? '1 1 calc(50% - 6px)' : 'none' }}>
             <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Bank</span>
-            <select value={bankFilter} onChange={(e) => setBankFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: '150px', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
+            <select value={bankFilter} onChange={(e) => setBankFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: isMobile ? '100%' : '150px', width: '100%', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
               <option value="All">All Banks</option>
               {banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: isMobile ? '1 1 calc(50% - 6px)' : 'none' }}>
             <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Card Type</span>
-            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: '150px', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
+            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: isMobile ? '100%' : '150px', width: '100%', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
               <option value="All">All Card Types</option>
               <option value="Core Cards">Core Cards</option>
               <option value="Co-Branded Cards">Co-Branded Cards</option>
@@ -645,18 +652,18 @@ export default function ManageAdminProducts() {
             </select>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: isMobile ? '1 1 calc(50% - 6px)' : 'none' }}>
             <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Status</span>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: '140px', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: isMobile ? '100%' : '140px', width: '100%', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
               <option value="All">All Statuses</option>
               <option value="Active">Active Only</option>
               <option value="Inactive">Inactive Only</option>
             </select>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: isMobile ? '1 1 calc(50% - 6px)' : 'none' }}>
             <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Annual Fee</span>
-            <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: '160px', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
+            <select value={feeFilter} onChange={(e) => setFeeFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: isMobile ? '100%' : '160px', width: '100%', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
               <option value="All">All Fee Options</option>
               <option value="ltf">Lifetime Free Only</option>
               <option value="paid">Paid Annual Fee</option>

@@ -13,6 +13,13 @@ export default function ManageAnnouncements() {
   const { C } = useTheme();
   const S = makeS(C);
 
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [activeTab, setActiveTab] = useState('announcements'); // announcements, analytics, broadcast, templates
   const [loading, setLoading] = useState(true);
   const [announcements, setAnnouncements] = useState([]);
@@ -435,7 +442,7 @@ export default function ManageAnnouncements() {
 
       {/* TAB 1: RECENT ANNOUNCEMENTS MAIN DYNAMIC TABLE */}
       {activeTab === 'announcements' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 300px', gap: '24px', alignItems: 'start' }}>
           
           {/* MAIN TABLE */}
           <div style={{ ...S.card, padding: '20px', borderRadius: '16px' }}>
@@ -615,7 +622,7 @@ export default function ManageAnnouncements() {
       {activeTab === 'analytics' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
             
             {/* DYNAMIC AUDIENCE DISTRIBUTION */}
             <div style={{ ...S.card, padding: '24px', borderRadius: '16px' }}>
@@ -720,7 +727,7 @@ export default function ManageAnnouncements() {
 
           <form onSubmit={handleBroadcastSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
               <div>
                 <label style={S.label}>Target Role</label>
                 <select style={S.input} value={broadcastForm.target_role} onChange={e => setBroadcastForm({ ...broadcastForm, target_role: e.target.value })}>
