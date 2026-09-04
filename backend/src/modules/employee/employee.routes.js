@@ -916,10 +916,19 @@ router.get('/my-bonus-progress', async (req, res, next) => {
 router.post('/leads', async (req, res, next) => {
   try {
     const empId = req.employee.id;
-    const { full_name, mobile, email, product_id, city, state, pincode, monthly_income, employment_type } = req.body;
+    let { full_name, mobile, email, product_id, city, state, pincode, monthly_income, employment_type, card_bank, product_type } = req.body;
 
-    if (!full_name || !mobile || !product_id) {
-      return res.status(400).json({ success: false, message: 'Customer name, mobile number, and product ID are required' });
+    if (!full_name || !mobile) {
+      return res.status(400).json({ success: false, message: 'Customer name and mobile number are required' });
+    }
+
+    if (!product_id) {
+      const defaultProd = await query(`SELECT id FROM products WHERE is_active = true ORDER BY display_order ASC LIMIT 1`);
+      if (defaultProd.rows.length > 0) {
+        product_id = defaultProd.rows[0].id;
+      } else {
+        return res.status(400).json({ success: false, message: 'No active product found for lead mapping' });
+      }
     }
 
     // 1. Create or get customer

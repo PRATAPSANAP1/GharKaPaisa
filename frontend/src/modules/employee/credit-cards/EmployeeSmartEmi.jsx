@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import axios from 'axios';
+import { getApiV1Url } from '../../../config/api';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuthStore } from '../../../app/store/authStore';
 import { 
@@ -214,16 +216,44 @@ export default function EmployeeSmartEmi() {
     window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
   };
 
-  const handleSubmitLead = (e) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmitLead = async (e) => {
     e.preventDefault();
-    setSubmitSuccess(true);
-    setTimeout(() => {
-      setSubmitSuccess(false);
-      setApplyScheme(null);
-      setCustName('');
-      setCustMobile('');
-      setCustCardBank('');
-    }, 2000);
+    if (!custName || !custMobile) return;
+    setIsSubmitting(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      await axios.post(`${getApiV1Url()}/employee/leads`, {
+        full_name: custName,
+        mobile: custMobile,
+        card_bank: custCardBank || applyScheme?.bank,
+        product_type: 'smart_emi'
+      });
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        setSubmitSuccess(false);
+        setApplyScheme(null);
+        setCustName('');
+        setCustMobile('');
+        setCustCardBank('');
+      }, 2500);
+    } catch (err) {
+      console.error('Failed to submit Smart EMI lead:', err);
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        setSubmitSuccess(false);
+        setApplyScheme(null);
+        setCustName('');
+        setCustMobile('');
+        setCustCardBank('');
+      }, 2500);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

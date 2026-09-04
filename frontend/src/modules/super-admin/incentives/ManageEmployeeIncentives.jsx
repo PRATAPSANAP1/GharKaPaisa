@@ -414,6 +414,7 @@ export default function ManageEmployeeIncentives() {
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                 style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 600 }}
+              />
             </div>
           </div>
         </div>
@@ -936,7 +937,6 @@ export default function ManageEmployeeIncentives() {
       )}
         </>
       )}
-
     </div>
   );
 }
