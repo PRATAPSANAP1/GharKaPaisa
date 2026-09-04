@@ -1757,15 +1757,29 @@ export default function EmployeeManagement() {
                       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '13px', fontWeight: 800 }}>
                           <span>Target Progress: <strong style={{ color: C.teal }}>{rule.approved_count} / {rule.target_count} Approved Cards</strong></span>
-                          <span style={{ color: '#10B981', fontWeight: 900 }}>₹{Number(rule.earned_bonus || 0).toLocaleString('en-IN')} Earned</span>
+                          {rule.target_achieved ? (
+                            <span style={{ padding: '3px 8px', borderRadius: '8px', background: '#10B98118', color: '#10B981', fontWeight: 900, fontSize: '12px' }}>
+                              ✓ Unlocked: ₹{Number(rule.earned_bonus || 0).toLocaleString('en-IN')}
+                            </span>
+                          ) : (
+                            <span style={{ padding: '3px 8px', borderRadius: '8px', background: '#F59E0B18', color: '#D97706', fontWeight: 800, fontSize: '12px' }}>
+                              🔒 Bonus Locked
+                            </span>
+                          )}
                         </div>
 
                         <div style={{ width: '100%', background: C.bgSecondary, height: '12px', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px' }}>
-                          <div style={{ width: `${rule.progress_percentage}%`, background: rule.target_achieved ? '#10B981' : C.teal, height: '100%', transition: 'width 0.4s ease' }} />
+                          <div style={{ width: `${rule.progress_percentage}%`, background: rule.target_achieved ? '#10B981' : '#F59E0B', height: '100%', transition: 'width 0.4s ease' }} />
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: C.textMid, fontWeight: 700 }}>
-                          <span>{rule.target_achieved ? <strong style={{ color: '#10B981' }}>Target Achieved ✓</strong> : `Remaining: ${rule.remaining_count} Cards`}</span>
+                          <span>
+                            {rule.target_achieved ? (
+                              <strong style={{ color: '#10B981' }}>Target Achieved (Unlocked for {rule.employee_name})</strong>
+                            ) : (
+                              <span style={{ color: '#D97706' }}>Needs {rule.remaining_count} more cards to unlock bonus</span>
+                            )}
+                          </span>
                           <span>Bonus Rate: <strong>₹{rule.bonus_per_card} / Card</strong></span>
                         </div>
                       </div>
@@ -3241,16 +3255,20 @@ export default function EmployeeManagement() {
                         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '12.5px', fontWeight: 800 }}>
                             <span>{rule.bank_name} Target: <strong style={{ color: C.teal }}>{rule.approved_count} / {rule.target_count} Cards</strong> ({rule.progress_percentage}%)</span>
-                            <span>Bonus: <strong style={{ color: '#10B981' }}>₹{Number(rule.earned_bonus || 0).toLocaleString('en-IN')} Earned</strong> (₹{rule.bonus_per_card}/card)</span>
+                            {rule.target_achieved ? (
+                              <span style={{ color: '#10B981', fontWeight: 900 }}>✓ ₹{Number(rule.earned_bonus || 0).toLocaleString('en-IN')} Unlocked</span>
+                            ) : (
+                              <span style={{ color: '#D97706', fontWeight: 800 }}>🔒 Bonus Locked</span>
+                            )}
                           </div>
 
                           <div style={{ width: '100%', background: C.bgSecondary, height: '10px', borderRadius: '5px', overflow: 'hidden' }}>
-                            <div style={{ width: `${rule.progress_percentage}%`, background: rule.target_achieved ? '#10B981' : C.teal, height: '100%', transition: 'width 0.4s ease' }} />
+                            <div style={{ width: `${rule.progress_percentage}%`, background: rule.target_achieved ? '#10B981' : '#F59E0B', height: '100%', transition: 'width 0.4s ease' }} />
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '11px', color: C.textMid }}>
-                            <span>{rule.target_achieved ? <strong style={{ color: '#10B981' }}>Target Achieved ✓</strong> : `Remaining: ${rule.remaining_count} Cards`}</span>
-                            <span>{rule.remaining_bonus > 0 ? `₹${rule.remaining_bonus.toLocaleString('en-IN')} Bonus Remaining` : ''}</span>
+                            <span>{rule.target_achieved ? <strong style={{ color: '#10B981' }}>Target Achieved (Awarded to {rule.employee_name})</strong> : <span style={{ color: '#D97706' }}>Needs {rule.remaining_count} more cards to unlock</span>}</span>
+                            <span>Rate: ₹{rule.bonus_per_card}/card</span>
                           </div>
                         </div>
                       </div>

@@ -827,8 +827,10 @@ router.get('/my-bonus-progress', async (req, res, next) => {
       const approvedCount = parseInt(appCountRes.rows[0]?.approved_count || 0);
       const targetCount = parseInt(rule.target_count || 0);
       const bonusPerCard = parseFloat(rule.bonus_per_card || 0);
-      const totalEarnedBonus = approvedCount * bonusPerCard;
       const targetAchieved = targetCount > 0 && approvedCount >= targetCount;
+      const projectedBonus = approvedCount * bonusPerCard;
+      // Bonus is unlocked & earned ONLY when approved cards >= targetCount
+      const totalEarnedBonus = targetAchieved ? projectedBonus : 0;
       const remainingCount = Math.max(0, targetCount - approvedCount);
       const remainingBonus = remainingCount * bonusPerCard;
       const percentage = targetCount > 0 ? Math.min(100, Math.round((approvedCount / targetCount) * 100)) : 0;
@@ -843,7 +845,9 @@ router.get('/my-bonus-progress', async (req, res, next) => {
         target_count: targetCount,
         approved_count: approvedCount,
         bonus_per_card: bonusPerCard,
+        projected_bonus: projectedBonus,
         earned_bonus: totalEarnedBonus,
+        bonus_status: targetAchieved ? 'UNLOCKED' : 'LOCKED_TARGET_PENDING',
         remaining_count: remainingCount,
         remaining_bonus: remainingBonus,
         target_achieved: targetAchieved,

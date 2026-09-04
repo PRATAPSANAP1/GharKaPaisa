@@ -1813,14 +1813,27 @@ router.get('/bonus-rules/all', async (req, res, next) => {
       const approvedCount = parseInt(appCountRes.rows[0]?.approved_count || 0);
       const targetCount = parseInt(rule.target_count || 0);
       const bonusPerCard = parseFloat(rule.bonus_per_card || 0);
-      const earnedBonus = approvedCount * bonusPerCard;
       const targetAchieved = targetCount > 0 && approvedCount >= targetCount;
+      const projectedBonus = approvedCount * bonusPerCard;
+      // Bonus is unlocked & earned ONLY when approved cards >= targetCount
+      const earnedBonus = targetAchieved ? projectedBonus : 0;
       const progressPercentage = targetCount > 0 ? Math.min(100, Math.round((approvedCount / targetCount) * 100)) : 0;
+
+      // Auto-sync bonus transaction for this specific employee when target is achieved
+      if (targetAchieved && earnedBonus > 0) {
+        await query(`
+          INSERT INTO employee_bonus_transactions (employee_id, bank_id, bonus_rule_id, bonus_amount, status)
+          VALUES ($1, $2, $3, $4, 'EARNED')
+          ON CONFLICT (application_id, bonus_rule_id) DO UPDATE SET bonus_amount = EXCLUDED.bonus_amount
+        `, [rule.employee_id, rule.bank_id, rule.id, earnedBonus]).catch(() => {});
+      }
 
       return {
         ...rule,
         approved_count: approvedCount,
+        projected_bonus: projectedBonus,
         earned_bonus: earnedBonus,
+        bonus_status: targetAchieved ? 'UNLOCKED' : 'LOCKED_TARGET_PENDING',
         target_achieved: targetAchieved,
         progress_percentage: progressPercentage,
         remaining_count: Math.max(0, targetCount - approvedCount),
