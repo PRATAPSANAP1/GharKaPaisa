@@ -13,6 +13,7 @@ import {
   lookupUser,
 } from "../../../services/auth.api.js";
 import LanguageSwitcher from "../../../components/LanguageSwitcher/LanguageSwitcher";
+import Chatbot from "../../../components/Chatbot/Chatbot";
 import logoImg from "../../../assets/logos/logo.png";
 import "./Login.css";
 
@@ -1132,19 +1133,8 @@ export default function PartnerLogin() {
         </button>
       </main>
 
-      {/* ================= CHATBOT BUTTON ================= */}
-      <div className="chatbot">
-        <button
-          type="button"
-          className="chatbot-button"
-          onClick={() => navigate("/")}
-        >
-          <span className="chatbot-status"></span>
-          <span className="chatbot-inner">
-            <Bot size={30} />
-          </span>
-        </button>
-      </div>
+      {/* ================= CHATBOT OPTION ================= */}
+      <Chatbot />
 
       {/* FORGOT PASSWORD MODAL */}
       {showForgotPasswordModal && (
