@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { FaShieldAlt, FaPaperPlane, FaCheckCircle, FaUniversity, FaEdit, FaLock, FaBolt, FaClipboardList } from 'react-icons/fa';
+import { 
+  FaShieldAlt, FaPaperPlane, FaCheckCircle, FaUniversity, FaEdit, 
+  FaLock, FaBolt, FaClipboardList, FaStar, FaFileAlt, FaArrowRight, 
+  FaExternalLinkAlt, FaExclamationTriangle, FaSearch 
+} from 'react-icons/fa';
 import { getApiV1Url } from '../../config/api';
 import { getCleanImageUrl } from '../../utils/urlHelper';
 import { useFormPersistence } from '../../hooks/useFormPersistence';
@@ -139,7 +143,9 @@ export default function ProductApplyLanding() {
   if (error || !product) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: bgPrimary, color: textPrimary, fontFamily: 'Inter, system-ui, sans-serif', padding: '24px', textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
+        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#EF444420', color: '#EF4444', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', marginBottom: '16px' }}>
+          <FaExclamationTriangle />
+        </div>
         <h2 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 8px' }}>{error || 'Product Not Found'}</h2>
         <p style={{ fontSize: '14px', color: textSecondary, marginBottom: '24px' }}>The product you are looking for may have been removed or the link is invalid.</p>
         <a href="https://gharkapaisa.in" style={{ padding: '10px 24px', background: themeColor, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, textDecoration: 'none', fontSize: '14px' }}>
@@ -376,23 +382,28 @@ export default function ProductApplyLanding() {
             {/* Tabs */}
             <div style={{ display: 'flex', gap: '6px', borderBottom: `1px solid ${borderColor}`, paddingBottom: '12px', marginBottom: '20px', overflowX: 'auto' }}>
               {[
-                { id: 'features', label: '✨ Features' },
-                { id: 'eligibility', label: '📋 Eligibility' },
-                { id: 'documents', label: '📄 Documents' }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    padding: '8px 16px', borderRadius: '10px', border: 'none',
-                    background: activeTab === tab.id ? themeColor : 'transparent',
-                    color: activeTab === tab.id ? '#fff' : textSecondary,
-                    fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s'
-                  }}
-                >
-                  {tab.label}
-                </button>
-              ))}
+                { id: 'features', label: 'Features', icon: FaStar },
+                { id: 'eligibility', label: 'Eligibility', icon: FaCheckCircle },
+                { id: 'documents', label: 'Documents', icon: FaFileAlt }
+              ].map(tab => {
+                const TabIcon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    style={{
+                      padding: '8px 16px', borderRadius: '10px', border: 'none',
+                      background: activeTab === tab.id ? themeColor : 'transparent',
+                      color: activeTab === tab.id ? '#fff' : textSecondary,
+                      fontWeight: 700, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s',
+                      display: 'inline-flex', alignItems: 'center', gap: '6px'
+                    }}
+                  >
+                    <TabIcon style={{ fontSize: '13px' }} />
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Tab Content */}
@@ -558,7 +569,11 @@ export default function ProductApplyLanding() {
                   transition: 'all 0.2s', marginTop: '4px'
                 }}
               >
-                {submitting ? 'Processing...' : `Apply Now →`}
+                {submitting ? 'Processing...' : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                    Apply Now <FaArrowRight />
+                  </span>
+                )}
               </button>
 
               <p style={{ fontSize: '11px', color: textSecondary, textAlign: 'center', margin: '4px 0 0', lineHeight: 1.5 }}>

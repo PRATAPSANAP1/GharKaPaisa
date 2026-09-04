@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { FaExclamationTriangle, FaShieldAlt, FaInfoCircle, FaPaperPlane, FaClipboardList } from 'react-icons/fa';
+import { FaExclamationTriangle, FaShieldAlt, FaInfoCircle, FaPaperPlane, FaClipboardList, FaArrowRight } from 'react-icons/fa';
 import { getApiV1Url } from '../../config/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import PincodeAutoComplete, { isSbiPincodeValid } from '../../components/PincodeAutoComplete';
@@ -346,10 +346,14 @@ export default function CustomerApplyStep1() {
               fontWeight: 900,
               cursor: 'pointer',
               boxShadow: '0 6px 20px rgba(37,99,235,0.35)',
-              marginTop: '8px'
+              marginTop: '8px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
             }}
           >
-            PROCEED TO APPLICATION FORM ➔
+            PROCEED TO APPLICATION FORM <FaArrowRight />
           </button>
         </div>
       )}
@@ -472,10 +476,18 @@ export default function CustomerApplyStep1() {
                     fontWeight: 900,
                     cursor: submitting ? 'not-allowed' : 'pointer',
                     boxShadow: '0 6px 20px rgba(37,99,235,0.35)',
-                    marginTop: '8px'
+                    marginTop: '8px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
                   }}
                 >
-                  {submitting ? 'Saving Application Details...' : 'SUBMIT DETAILS & PROCEED TO BANK ➔'}
+                  {submitting ? 'Saving Application Details...' : (
+                    <>
+                      SUBMIT DETAILS & PROCEED TO BANK <FaArrowRight />
+                    </>
+                  )}
                 </button>
 
               </form>
