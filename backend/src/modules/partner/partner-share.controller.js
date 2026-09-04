@@ -1042,6 +1042,7 @@ const getPostApplyDetails = async (req, res, next) => {
         a.company_name, a.designation, a.address, a.mother_name,
         a.soft_approval_status, a.vkyc_stage, a.iqa_stage, a.dispatch_status,
         a.bank_application_number, a.vkyc_url, a.final_status, a.decline_reason, a.eligible_reqd,
+        COALESCE(a.process_type, l.process_type, 'punch_only') as process_type,
         l.status
       FROM (SELECT $1::text as tok) t
       LEFT JOIN partner_share_links psl ON (psl.tracking_token = t.tok)
@@ -1055,7 +1056,8 @@ const getPostApplyDetails = async (req, res, next) => {
     if (!shareData || !shareData.product_id) return error(res, 'Invalid application token', 404);
 
     const { rows: [product] } = await query(`
-      SELECT p.id, p.name, p.category, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
+      SELECT p.id, p.name, p.category, p.partner_url, p.application_url, p.public_url, p.apply_url, p.redirect_url,
+             b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
       FROM products p
       LEFT JOIN banks b ON b.id = p.bank_id
       WHERE p.id = $1
@@ -1073,16 +1075,18 @@ const getPostApplyDetails = async (req, res, next) => {
     const bankCode = (product?.bank_code || '').toUpperCase();
     const bankName = (product?.bank_name || '').toUpperCase();
     const isSbiBank = bankCode === 'SBI' || bankName.includes('SBI') || bankName.includes('STATE BANK');
+    const partnerUrl = getBankApplyLinkBackend(product?.name, product?.bank_name || product?.bank_code, product) || product?.partner_url || product?.application_url || product?.public_url || product?.apply_url || product?.redirect_url || '';
 
     return success(res, {
       token,
       lead_id: shareData.lead_id || null,
       application_id: shareData.application_id || null,
-      process_type: shareData.process_type || 'lead_punching',
+      process_type: shareData.process_type || 'punch_only',
       product_id: product?.id,
       product_name: product?.name || 'Credit Card / Loan',
       bank_name: product?.bank_name || 'Bank',
       bank_logo: product?.bank_logo || null,
+      partner_url: partnerUrl,
       is_sbi_bank: isSbiBank,
       customer: {
         full_name: custRecord?.full_name || shareData.customer_name || 'Customer',

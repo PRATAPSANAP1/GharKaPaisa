@@ -273,6 +273,10 @@ export default function CustomerPostApplyStep2() {
     gap: '10px'
   };
 
+  const processType = String(bankInfo?.process_type || bankInfo?.process_by || '').toLowerCase();
+  const isPunchOnly = !processType || processType.includes('punch') || processType === 'punch_only' || processType === 'lead_punching' || processType === 'digital_punching';
+  const partnerUrl = bankInfo?.partner_url || bankInfo?.redirect_url || bankInfo?.product?.partner_url || '';
+
   return (
     <div style={{ minHeight: '100vh', background: bg, color: C.text, fontFamily: 'Inter, sans-serif', padding: '24px 16px' }}>
       
@@ -284,6 +288,60 @@ export default function CustomerPostApplyStep2() {
         <h1 style={{ fontSize: '24px', fontWeight: 900, margin: '0 0 4px' }}>{bankInfo?.product_name}</h1>
         <p style={{ fontSize: '13px', color: C.textLight, margin: 0 }}>{bankInfo?.bank_name} • Partner Lead Punching Quick Details</p>
       </div>
+
+      {/* Complete Digital Journey Top Action Bar for Punch Only processes */}
+      {(isPunchOnly || partnerUrl) && (
+        <div style={{
+          maxWidth: '720px',
+          margin: '0 auto 24px',
+          background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
+          borderRadius: '16px',
+          padding: '18px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '16px',
+          boxShadow: '0 10px 25px rgba(37, 99, 235, 0.25)',
+          color: '#ffffff'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px' }}>
+              ⚡
+            </div>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: '16px', color: '#ffffff' }}>Punch Only Application</div>
+              <div style={{ fontSize: '12.5px', color: 'rgba(255, 255, 255, 0.9)', marginTop: '2px' }}>
+                Complete application directly on bank portal
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const url = partnerUrl || 'https://gharkapaisa.in';
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#ffffff',
+              color: '#1e40af',
+              border: 'none',
+              padding: '12px 22px',
+              borderRadius: '12px',
+              fontWeight: 900,
+              fontSize: '14px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.15)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Complete Digital Journey →
+          </button>
+        </div>
+      )}
 
       {/* Main Unified Form Container */}
       <div style={{ maxWidth: '720px', margin: '0 auto', background: cardBg, borderRadius: '20px', border: `1px solid ${border}`, padding: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
