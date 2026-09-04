@@ -898,12 +898,18 @@
   }
 
   .login-tabs {
-    flex-direction: column;
+    flex-direction: row;
+    padding: 4px;
+    border-radius: 16px;
+    gap: 4px;
   }
 
   .login-tab {
-    height: 48px;
-    font-size: 14px;
+    height: 46px;
+    font-size: 13px;
+    gap: 6px;
+    padding: 0 8px;
+    white-space: nowrap;
   }
 
   .form-input {
@@ -957,6 +963,18 @@
 
   .login-card-content {
     padding: 20px 14px 18px;
+  }
+
+  .login-tab {
+    height: 44px;
+    font-size: 11.5px;
+    gap: 4px;
+    padding: 0 4px;
+  }
+
+  .login-tab svg {
+    width: 16px;
+    height: 16px;
   }
 
   .login-title {
