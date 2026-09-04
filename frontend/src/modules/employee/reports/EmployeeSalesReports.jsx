@@ -13,6 +13,14 @@ export default function EmployeeSalesReports() {
   const { C, isDark } = useTheme();
   const navigate = useNavigate();
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('my'); // 'my' | 'team'
   const [reportsData, setReportsData] = useState(null);
@@ -149,8 +157,9 @@ export default function EmployeeSalesReports() {
 
     setSubmitting(true);
     try {
+      const finalDate = reportDate || new Date().toISOString().split('T')[0];
       const formData = new FormData();
-      formData.append('report_date', reportDate);
+      formData.append('report_date', finalDate);
       formData.append('remark', remark);
       formData.append('banks', JSON.stringify(validBanks));
 
@@ -574,58 +583,91 @@ export default function EmployeeSalesReports() {
               {/* Report Date */}
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: C.text, marginBottom: '6px' }}>
-                  Report Date *
+                  Report Date <span style={{ color: C.textMid, fontWeight: 500, fontSize: '12px' }}>(Optional)</span>
                 </label>
                 <input 
                   type="date"
                   value={reportDate}
                   onChange={(e) => setReportDate(e.target.value)}
-                  required
                   style={{ width: '100%', padding: '12px', borderRadius: '12px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '14px', outline: 'none' }}
                 />
               </div>
 
               {/* Bank-Wise Sold Counter */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                  <label style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
                     Bank-wise Card Sales *
                   </label>
-                  <span style={{ fontSize: '13px', fontWeight: 900, color: C.teal }}>
+                  <span style={{ fontSize: '13px', fontWeight: 900, color: C.teal, background: `${C.teal}15`, padding: '4px 12px', borderRadius: '20px' }}>
                     Total Cards: {totalCardsCalculated}
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {bankRows.map((row, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <select
-                        value={row.bank_id}
-                        onChange={(e) => handleBankRowChange(idx, 'bank_id', e.target.value)}
-                        required
-                        style={{ flex: 2, padding: '11px', borderRadius: '12px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 700, outline: 'none' }}
-                      >
-                        <option value="">Select Bank...</option>
-                        {banksList.map(b => (
-                          <option key={b.id} value={b.id}>{b.name}</option>
-                        ))}
-                      </select>
+                    <div 
+                      key={idx} 
+                      style={{ 
+                        display: 'flex', 
+                        flexDirection: isMobile ? 'column' : 'row',
+                        gap: '10px', 
+                        alignItems: isMobile ? 'stretch' : 'center',
+                        background: C.bgSecondary,
+                        border: `1px solid ${C.border}`,
+                        padding: isMobile ? '12px' : '8px 12px',
+                        borderRadius: '16px'
+                      }}
+                    >
+                      <div style={{ flex: isMobile ? '1' : '2', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 900, color: C.textMid, background: C.card, padding: '4px 8px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
+                          #{idx + 1}
+                        </span>
+                        <select
+                          value={row.bank_id}
+                          onChange={(e) => handleBankRowChange(idx, 'bank_id', e.target.value)}
+                          required
+                          style={{ flex: 1, padding: '11px', borderRadius: '12px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '13px', fontWeight: 700, outline: 'none' }}
+                        >
+                          <option value="">Select Bank...</option>
+                          {banksList.map(b => (
+                            <option key={b.id} value={b.id}>{b.name}</option>
+                          ))}
+                        </select>
+                      </div>
 
-                      <input 
-                        type="number"
-                        placeholder="Cards Sold"
-                        min="1"
-                        value={row.cards_sold}
-                        onChange={(e) => handleBankRowChange(idx, 'cards_sold', e.target.value)}
-                        required
-                        style={{ flex: 1, padding: '11px', borderRadius: '12px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 700, outline: 'none' }}
-                      />
+                      <div style={{ flex: 1, display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <input 
+                          type="number"
+                          placeholder="Cards Sold"
+                          min="1"
+                          value={row.cards_sold}
+                          onChange={(e) => handleBankRowChange(idx, 'cards_sold', e.target.value)}
+                          required
+                          style={{ flex: 1, padding: '11px', borderRadius: '12px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '13px', fontWeight: 700, outline: 'none' }}
+                        />
 
-                      {bankRows.length > 1 && (
-                        <button type="button" onClick={() => removeBankRow(idx)} style={{ background: '#EF444415', border: 'none', color: '#EF4444', padding: '11px', borderRadius: '12px', cursor: 'pointer' }}>
-                          <FaTrash />
-                        </button>
-                      )}
+                        {bankRows.length > 1 && (
+                          <button 
+                            type="button" 
+                            onClick={() => removeBankRow(idx)} 
+                            style={{ 
+                              background: '#EF444415', 
+                              border: 'none', 
+                              color: '#EF4444', 
+                              padding: '11px 14px', 
+                              borderRadius: '12px', 
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title="Remove Bank Row"
+                          >
+                            <FaTrash />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -634,18 +676,20 @@ export default function EmployeeSalesReports() {
                   type="button"
                   onClick={addBankRow}
                   style={{
-                    marginTop: '10px',
+                    marginTop: '12px',
                     background: `${C.teal}15`,
                     color: C.teal,
-                    border: 'none',
-                    padding: '8px 16px',
-                    borderRadius: '10px',
+                    border: `1px dashed ${C.teal}50`,
+                    padding: '10px 18px',
+                    borderRadius: '12px',
                     fontWeight: 800,
-                    fontSize: '12px',
+                    fontSize: '13px',
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '8px',
+                    width: isMobile ? '100%' : 'auto',
+                    justifyContent: 'center'
                   }}
                 >
                   <FaPlus /> + Add Another Bank
