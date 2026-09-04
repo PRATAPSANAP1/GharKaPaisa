@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { FaUser, FaPhone, FaLock, FaIdCard, FaArrowLeft, FaCheckCircle } from 'react-icons/fa';
@@ -8,6 +8,14 @@ import { getApiV1Url } from '../../config/api';
 export default function EmployeeLogin() {
   const { C } = useTheme();
   const navigate = useNavigate();
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const [loginMethod, setLoginMethod] = useState('employee_id'); // 'employee_id' | 'mobile' | 'reference_code'
   const [employeeId, setEmployeeId] = useState('');
@@ -45,8 +53,8 @@ export default function EmployeeLogin() {
   };
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', fontFamily: "'Inter', sans-serif" }}>
-      <div style={{ width: '100%', maxWidth: '440px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '36px', boxShadow: '0 12px 40px rgba(0,0,0,0.06)' }}>
+    <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '16px 12px' : '24px', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ width: '100%', maxWidth: '440px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: isMobile ? '24px 18px' : '36px', boxShadow: '0 12px 40px rgba(0,0,0,0.06)' }}>
         
         <button 
           onClick={() => navigate('/')}

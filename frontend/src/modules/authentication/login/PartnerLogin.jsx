@@ -904,9 +904,10 @@ export default function PartnerLogin() {
                   <div
                     style={{
                       display: "flex",
-                      gap: "10px",
+                      gap: "6px",
                       justifyContent: "center",
                       marginBottom: "16px",
+                      flexWrap: "nowrap",
                     }}
                     onPaste={handleOtpPaste}
                   >
@@ -921,17 +922,19 @@ export default function PartnerLogin() {
                         onChange={(e) => handleOtpDigitChange(e.target.value, index)}
                         onKeyDown={(e) => handleOtpKeyDown(e, index)}
                         style={{
-                          width: "48px",
-                          height: "56px",
-                          borderRadius: "14px",
+                          width: "100%",
+                          maxWidth: "44px",
+                          height: "50px",
+                          borderRadius: "12px",
                           border: "2px solid #CBD5E1",
                           textAlign: "center",
-                          fontSize: "20px",
+                          fontSize: "18px",
                           fontWeight: "800",
                           color: "#0F172A",
                           outline: "none",
                           transition: "all 0.2s ease",
                           background: "#FFFFFF",
+                          padding: 0,
                         }}
                         onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
                         onBlur={(e) => (e.target.style.borderColor = "#CBD5E1")}
