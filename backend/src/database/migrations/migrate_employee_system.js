@@ -43,7 +43,7 @@ const migrateEmployeeSystem = async () => {
         highest_qualification VARCHAR(100) NOT NULL,
         passing_year INTEGER,
         experience_type VARCHAR(20) NOT NULL, -- 'Fresher' or 'Experienced'
-        total_experience_years DECIMAL(4,1),
+        total_experience_years DECIMAL(10,2),
         current_company VARCHAR(100),
         current_designation VARCHAR(100),
         last_salary_ctc DECIMAL(12,2),
@@ -164,7 +164,7 @@ const migrateEmployeeSystem = async () => {
         experience_type VARCHAR(20) NOT NULL,
         previous_company VARCHAR(100),
         previous_designation VARCHAR(100),
-        total_experience_years DECIMAL(4,1),
+        total_experience_years DECIMAL(10,2),
         offered_salary DECIMAL(12,2) NOT NULL,
         incentive_structure TEXT,
         target_applicable TEXT,

@@ -31,8 +31,8 @@ async function ensurePublicTablesExist() {
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS target_role VARCHAR(100)`);
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS referred_by_employee_id UUID`);
     await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS referred_by_employee_id UUID`);
-    await query(`ALTER TABLE employee_candidates ALTER COLUMN total_experience_years TYPE DECIMAL(10,2)`).catch(() => {});
-    await query(`ALTER TABLE employee_joining_details ALTER COLUMN total_experience_years TYPE DECIMAL(10,2)`).catch(() => {});
+    await query(`ALTER TABLE employee_candidates ALTER COLUMN total_experience_years TYPE NUMERIC(10,2) USING total_experience_years::NUMERIC(10,2)`).catch(e => logger.warn('ALTER employee_candidates total_experience_years:', e.message));
+    await query(`ALTER TABLE employee_joining_details ALTER COLUMN total_experience_years TYPE NUMERIC(10,2) USING total_experience_years::NUMERIC(10,2)`).catch(e => logger.warn('ALTER employee_joining_details total_experience_years:', e.message));
   } catch (err) {
     logger.warn('Failed to ensure public tables exist:', err.message);
   }
