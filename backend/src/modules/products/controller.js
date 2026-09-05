@@ -95,21 +95,20 @@ const listProducts = async (req, res, next) => {
     if (sort_by === 'newest') orderBy = 'ORDER BY p.created_at DESC';
     if (sort_by === 'popular') orderBy = 'ORDER BY COALESCE(p.approval_rate, 85) DESC, COALESCE(p.commission_value, 0) DESC';
 
-    const [count, data] = await Promise.all([
-      query(`SELECT COUNT(*) FROM products p LEFT JOIN banks b ON b.id = p.bank_id ${where}`, values),
-      query(`
-        SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo
-        FROM products p LEFT JOIN banks b ON b.id = p.bank_id
-        ${where}
-        ${orderBy}
-        LIMIT $${idx} OFFSET $${idx + 1}
-      `, [...values, limit, offset]),
-    ]);
+    const data = await query(`
+      SELECT p.*, b.name as bank_name, b.short_code as bank_code, b.logo_url as bank_logo,
+             COUNT(*) OVER() as full_count
+      FROM products p LEFT JOIN banks b ON b.id = p.bank_id
+      ${where}
+      ${orderBy}
+      LIMIT $${idx} OFFSET $${idx + 1}
+    `, [...values, limit, offset]);
 
+    const totalCount = data.rows.length > 0 ? parseInt(data.rows[0].full_count) : 0;
     const isPartnerOrAdmin = req.user && ['PARTNER', 'ADMIN', 'SUPER_ADMIN'].includes(req.user.role);
 
     const sanitizedRows = data.rows.map(prod => {
-      const prodData = { ...prod };
+      const { full_count, ...prodData } = prod;
       
       // Default metadata
       prodData.hold_days = prodData.hold_days || 7;
@@ -130,7 +129,7 @@ const listProducts = async (req, res, next) => {
 
     const resolvedRows = await resolvePartnerCommissions(sanitizedRows, req);
 
-    return paginate(res, resolvedRows, parseInt(count.rows[0].count), page, limit);
+    return paginate(res, resolvedRows, totalCount, page, limit);
   } catch (err) {
     logger.error('listProducts error:', err);
     next(err);
