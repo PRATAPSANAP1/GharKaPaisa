@@ -13,7 +13,7 @@ const BASE_URL = getApiV1Url();
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 35000,
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 });
@@ -177,9 +177,8 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         isRefreshing = false;
-        // Clear session on authentication/refresh failures (401, 500, 403) to prevent stale token retries
-        const status = refreshError?.response?.status;
-        if (!status || status === 401 || status === 500 || status === 403) {
+        // Only clear session when server explicitly returns 401 Unauthorized
+        if (refreshError?.response?.status === 401) {
           clearSession();
         }
         return Promise.reject(refreshError);
