@@ -11,7 +11,7 @@ import { Icons } from "../../../components/Icon/PartnerIcons";
 
 export default function ManageBanners() {
   // ─── THEMING & STYLE TOKENS ────────────────────────────────────────────────
-  const { C } = useTheme();
+  const { C, isDark } = useTheme();
   const S = makeS(C);
 
   // ─── APPLICATION STATE ─────────────────────────────────────────────────────
