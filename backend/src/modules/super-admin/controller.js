@@ -521,11 +521,11 @@ const getCommissionRules = async (req, res, next) => {
 };
 
 const approveKYC = async (req, res, next) => {
+  const { partnerId } = req.body;
+  if (!partnerId) return error(res, 'partnerId is required', 400);
+
   const client = await getClient();
   try {
-    const { partnerId } = req.body;
-    if (!partnerId) return error(res, 'partnerId is required', 400);
-
     const { rows: [partner] } = await client.query(`SELECT user_id, first_name, last_name FROM partner_profiles WHERE id = $1`, [partnerId]);
     if (!partner) return notFound(res, 'Partner profile not found');
 
@@ -594,12 +594,12 @@ const approveKYC = async (req, res, next) => {
 };
 
 const rejectKYC = async (req, res, next) => {
+  const { partnerId, rejection_reason } = req.body;
+  if (!partnerId) return error(res, 'partnerId is required', 400);
+  if (!rejection_reason) return error(res, 'rejection_reason is required', 400);
+
   const client = await getClient();
   try {
-    const { partnerId, rejection_reason } = req.body;
-    if (!partnerId) return error(res, 'partnerId is required', 400);
-    if (!rejection_reason) return error(res, 'rejection_reason is required', 400);
-
     const { rows: [partner] } = await client.query(`SELECT user_id, first_name, last_name FROM partner_profiles WHERE id = $1`, [partnerId]);
     if (!partner) return notFound(res, 'Partner profile not found');
 
@@ -661,15 +661,15 @@ const rejectKYC = async (req, res, next) => {
 };
 
 const requestChangesKYC = async (req, res, next) => {
+  const { partnerId, rejection_reason, rejected_documents } = req.body;
+  if (!partnerId) return error(res, 'partnerId is required', 400);
+  if (!rejection_reason) return error(res, 'rejection_reason is required', 400);
+  if (!Array.isArray(rejected_documents) || rejected_documents.length === 0) {
+    return error(res, 'rejected_documents list is required and must contain document types', 400);
+  }
+
   const client = await getClient();
   try {
-    const { partnerId, rejection_reason, rejected_documents } = req.body;
-    if (!partnerId) return error(res, 'partnerId is required', 400);
-    if (!rejection_reason) return error(res, 'rejection_reason is required', 400);
-    if (!Array.isArray(rejected_documents) || rejected_documents.length === 0) {
-      return error(res, 'rejected_documents list is required and must contain document types', 400);
-    }
-
     const { rows: [partner] } = await client.query(`SELECT user_id, first_name, last_name FROM partner_profiles WHERE id = $1`, [partnerId]);
     if (!partner) return notFound(res, 'Partner profile not found');
 
@@ -753,17 +753,18 @@ const requestChangesKYC = async (req, res, next) => {
 };
 
 const verifyDocument = async (req, res, next) => {
+  const { partnerId, docType, status, rejectionReason } = req.body;
+  if (!partnerId) return error(res, 'partnerId is required', 400);
+  if (!docType) return error(res, 'docType is required', 400);
+  if (!status || !['approved', 'rejected'].includes(status)) {
+    return error(res, 'status must be approved or rejected', 400);
+  }
+  if (status === 'rejected' && !rejectionReason) {
+    return error(res, 'rejectionReason is required when status is rejected', 400);
+  }
+
   const client = await getClient();
   try {
-    const { partnerId, docType, status, rejectionReason } = req.body;
-    if (!partnerId) return error(res, 'partnerId is required', 400);
-    if (!docType) return error(res, 'docType is required', 400);
-    if (!status || !['approved', 'rejected'].includes(status)) {
-      return error(res, 'status must be approved or rejected', 400);
-    }
-    if (status === 'rejected' && !rejectionReason) {
-      return error(res, 'rejectionReason is required when status is rejected', 400);
-    }
 
     await client.query('BEGIN');
 

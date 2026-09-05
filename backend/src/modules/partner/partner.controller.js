@@ -565,6 +565,15 @@ const approvePartnerKYC = async (req, res, next) => {
 
 // POST /partner/:PartnerId/team (Create child partner)
 const addTeamMember = async (req, res, next) => {
+  const { first_name, last_name, name, fullName, full_name, email, mobile, password } = req.body;
+  const inputName = fullName || full_name || name || '';
+  const memberFirstName = first_name || (inputName ? inputName.trim().split(' ')[0] : '');
+  const memberLastName = last_name || (inputName ? inputName.trim().split(' ').slice(1).join(' ') : '');
+
+  if (!memberFirstName || !email || !mobile) {
+    return error(res, 'Name, email, and mobile are required', 400);
+  }
+
   const client = await getClient();
   try {
     let partnerId = req.params.PartnerId;
@@ -573,15 +582,6 @@ const addTeamMember = async (req, res, next) => {
       partnerId = p.rows[0]?.id;
     }
     if (!partnerId) return error(res, 'Partner profile not found', 404);
-
-    const { first_name, last_name, name, fullName, full_name, email, mobile, password } = req.body;
-    const inputName = fullName || full_name || name || '';
-    const memberFirstName = first_name || (inputName ? inputName.trim().split(' ')[0] : '');
-    const memberLastName = last_name || (inputName ? inputName.trim().split(' ').slice(1).join(' ') : '');
-
-    if (!memberFirstName || !email || !mobile) {
-      return error(res, 'Name, email, and mobile are required', 400);
-    }
 
     // Check if parent exists and allows team creation
     const { rows: [parentPartner] } = await client.query(`
@@ -1936,22 +1936,26 @@ const createReferralCampaign = async (req, res, next) => {
 };
 
 const completeTeamOnboarding = async (req, res, next) => {
+  const {
+    newPassword,
+    first_name, last_name, mobile, email,
+    company_name, company_type, current_address, pincode, business_location, gst_number,
+    bank_name, account_number, ifsc_code, account_holder_name,
+    pan_number
+  } = req.body;
+
+  if (newPassword && newPassword.length < 8) {
+    return error(res, 'Password must be at least 8 characters long', 400);
+  }
+
   const client = await getClient();
   try {
     const userId = req.user.id;
-    const {
-      newPassword,
-      first_name, last_name, mobile, email,
-      company_name, company_type, current_address, pincode, business_location, gst_number,
-      bank_name, account_number, ifsc_code, account_holder_name,
-      pan_number
-    } = req.body;
 
     await client.query('BEGIN');
 
     // 1. Update password if newPassword provided
     if (newPassword) {
-      if (newPassword.length < 8) return error(res, 'Password must be at least 8 characters long', 400);
       const bcrypt = require('bcryptjs');
       const salt = await bcrypt.genSalt(10);
       const passwordHash = await bcrypt.hash(newPassword, salt);

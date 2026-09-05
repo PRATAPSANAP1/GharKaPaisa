@@ -1061,11 +1061,12 @@ const getAnalytics = async (req, res, next) => {
 
 // Super Admin custom methods
 const approveApplication = async (req, res, next) => {
+  const { id, approved_amount } = req.body;
+  if (!id) return error(res, 'ID is required', 400);
+
   const client = await getClient();
   try {
     await client.query('BEGIN');
-    const { id, approved_amount } = req.body;
-    if (!id) return error(res, 'ID is required', 400);
 
     let { rows: [app] } = await client.query(
       `SELECT * FROM applications 
@@ -1121,11 +1122,12 @@ const approveApplication = async (req, res, next) => {
 };
 
 const rejectApplication = async (req, res, next) => {
+  const { id, reason } = req.body;
+  if (!id) return error(res, 'ID is required', 400);
+
   const client = await getClient();
   try {
     await client.query('BEGIN');
-    const { id, reason } = req.body;
-    if (!id) return error(res, 'ID is required', 400);
 
     let { rows: [app] } = await client.query(
       `SELECT * FROM applications 
@@ -1157,12 +1159,13 @@ const rejectApplication = async (req, res, next) => {
 };
 
 const reassignApplication = async (req, res, next) => {
+  const id = req.params.id || req.body.id || req.body.application_id;
+  let partner_id = req.body.partner_id || req.body.partnerId;
+  if (!id || !partner_id) return error(res, 'Application ID and Partner ID are required', 400);
+
   const client = await getClient();
   try {
     await client.query('BEGIN');
-    const id = req.params.id || req.body.id || req.body.application_id;
-    let partner_id = req.body.partner_id || req.body.partnerId;
-    if (!id || !partner_id) return error(res, 'Application ID and Partner ID are required', 400);
 
     let targetPartnerId = partner_id;
 
@@ -1196,13 +1199,17 @@ const reassignApplication = async (req, res, next) => {
         if (found) {
           targetPartnerId = found.id;
         } else {
+          await client.query('ROLLBACK');
           return error(res, `Target Partner '${partner_id}' not found. Please select a valid partner.`, 400);
         }
       }
     }
 
     const { rows: [partner] } = await client.query(`SELECT id, first_name, last_name, partner_code FROM partner_profiles WHERE id = $1`, [targetPartnerId]);
-    if (!partner) return error(res, 'Target Partner not found', 404);
+    if (!partner) {
+      await client.query('ROLLBACK');
+      return error(res, 'Target Partner not found', 404);
+    }
 
     await client.query(`
       UPDATE applications SET partner_id = $1, updated_at = NOW() WHERE id = $2
@@ -1227,6 +1234,9 @@ const reassignApplication = async (req, res, next) => {
 };
 
 const manualCommission = async (req, res, next) => {
+  const { id, amount, remarks } = req.body;
+  if (!id || !amount) return error(res, 'ID and amount are required', 400);
+
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -2711,14 +2721,14 @@ const bulkUpdateStatus = async (req, res, next) => {
   if (['PARTNER', 'TEAM_MEMBER'].includes(userRole)) {
     return error(res, 'Application status changes are reserved for Super Admin and Admin.', 403);
   }
+  const { ids, status, remarks } = req.body;
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return error(res, 'Application IDs array is required', 400);
+  }
+  if (!status) return error(res, 'Status is required', 400);
+
   const client = await getClient();
   try {
-    const { ids, status, remarks } = req.body;
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return error(res, 'Application IDs array is required', 400);
-    }
-    if (!status) return error(res, 'Status is required', 400);
-
     await client.query('BEGIN');
 
     const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
@@ -2740,28 +2750,30 @@ const bulkUpdateStatus = async (req, res, next) => {
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
+  } finally {
+    client.release();
   }
 };
 
 // ── POST /applications/import — CSV bulk import ────────────────────
 const importApplications = async (req, res, next) => {
+  if (!req.file) return error(res, 'CSV file is required', 400);
+
+  const csvData = req.file.buffer.toString('utf-8');
+  const lines = csvData.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return error(res, 'CSV must have a header row and at least one data row', 400);
+
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const nameIdx = headers.indexOf('customer_name');
+  const mobileIdx = headers.indexOf('mobile');
+  const productIdx = headers.indexOf('product_name');
+
+  if (nameIdx === -1 || mobileIdx === -1) {
+    return error(res, 'CSV must include columns: customer_name, mobile', 400);
+  }
+
   const client = await getClient();
   try {
-    if (!req.file) return error(res, 'CSV file is required', 400);
-
-    const csvData = req.file.buffer.toString('utf-8');
-    const lines = csvData.split('\n').filter(l => l.trim());
-    if (lines.length < 2) return error(res, 'CSV must have a header row and at least one data row', 400);
-
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const nameIdx = headers.indexOf('customer_name');
-    const mobileIdx = headers.indexOf('mobile');
-    const productIdx = headers.indexOf('product_name');
-
-    if (nameIdx === -1 || mobileIdx === -1) {
-      return error(res, 'CSV must include columns: customer_name, mobile', 400);
-    }
-
     const PartnerId = req.partner?.id;
     let imported = 0;
 
@@ -2778,7 +2790,7 @@ const importApplications = async (req, res, next) => {
       const appNumber = generateAppNumber();
       await client.query(
         `INSERT INTO applications (app_number, partner_id, customer_name, customer_mobile, product_name, status, source, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, 'submitted', 'csv_import', NOW(), NOW())`,
+         VALUES ($1, $2, $3, $4, $5, 'details_submitted', 'csv_import', NOW(), NOW())`,
         [appNumber, PartnerId, customerName, mobile, productName]
       );
       imported++;
@@ -2791,6 +2803,8 @@ const importApplications = async (req, res, next) => {
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
+  } finally {
+    client.release();
   }
 };
 
@@ -3596,22 +3610,22 @@ const logApplicationAudit = async (req, applicationId, leadId, action, oldValue,
 
 // PATCH /applications/:id/process-type
 const updateProcessType = async (req, res, next) => {
+  const { id } = req.params;
+  const { process_type, reason } = req.body;
+
+  if (!process_type || !reason) {
+    return error(res, 'New process_type and a valid reason for change are required', 400);
+  }
+
+  if (!['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Only authorized administrators can request a change of process type.'
+    });
+  }
+
   const client = await getClient();
   try {
-    const { id } = req.params;
-    const { process_type, reason } = req.body;
-
-    if (!process_type || !reason) {
-      return error(res, 'New process_type and a valid reason for change are required', 400);
-    }
-
-    if (!['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Only authorized administrators can request a change of process type.'
-      });
-    }
-
     await client.query('BEGIN');
 
     let { rows: [app] } = await client.query(
@@ -3810,11 +3824,16 @@ const submitPublicApplyToken = (req, res, next) => partnerShareCtrl.updateApplyT
 const generateShareLink = (req, res, next) => partnerShareCtrl.generateShareLink(req, res, next);
 
 const deleteApplication = async (req, res, next) => {
+  const { id } = req.params;
+  if (!id) return error(res, 'Application ID is required', 400);
+
+  const userRole = req.user?.role;
+  if (userRole !== 'SUPER_ADMIN' && userRole !== 'ADMIN') {
+    return error(res, 'Access denied: Only Super Admin is authorized to delete application records', 403);
+  }
+
   const client = await getClient();
   try {
-    const { id } = req.params;
-    if (!id) return error(res, 'Application ID is required', 400);
-
     let { rows: [app] } = await client.query(
       `SELECT id, partner_id, customer_id, lead_id, app_number, status FROM applications WHERE id = $1 OR lead_id = $1 LIMIT 1`, 
       [id]
@@ -3844,12 +3863,6 @@ const deleteApplication = async (req, res, next) => {
 
     if (!app) {
       return error(res, 'Application or Lead record not found', 404);
-    }
-
-    // Check authorization: ONLY SUPER_ADMIN and ADMIN are authorized to delete application records
-    const userRole = req.user?.role;
-    if (userRole !== 'SUPER_ADMIN' && userRole !== 'ADMIN') {
-      return error(res, 'Access denied: Only Super Admin is authorized to delete application records', 403);
     }
 
     await client.query('BEGIN');
