@@ -2701,6 +2701,7 @@ const migrate = async () => {
       ALTER TABLE partner_share_links ADD COLUMN IF NOT EXISTS application_id UUID;
       ALTER TABLE partner_share_links ADD COLUMN IF NOT EXISTS lead_id UUID;
       ALTER TABLE partner_share_links ADD COLUMN IF NOT EXISTS created_by UUID;
+      ALTER TABLE partner_share_links ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE';
     `);
 
     // 2. Lead Documents

@@ -98,6 +98,11 @@ const generateShareLink = async (req, res, next) => {
     // Generate tracking token
     const trackingToken = generateTrackingToken();
 
+    // Ensure status column exists
+    try {
+      await query(`ALTER TABLE partner_share_links ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ACTIVE'`);
+    } catch (_) {}
+
     // Store in partner_share_links table
     await query(`
       INSERT INTO partner_share_links (partner_id, product_id, tracking_token, application_id, lead_id, expires_at, status)
