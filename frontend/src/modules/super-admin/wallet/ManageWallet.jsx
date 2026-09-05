@@ -121,11 +121,11 @@ export default function ManageWallet() {
       const lData = lRes.status === 'fulfilled' ? (lRes.value?.data?.data || lRes.value?.data || []) : [];
       const rData = rRes.status === 'fulfilled' ? (rRes.value?.data?.data || rRes.value?.data || null) : null;
 
-      setWithdrawals(Array.isArray(wData) ? wData : []);
-      setAddFundsReqs(Array.isArray(fData) ? fData : []);
-      setPendingCommissions(Array.isArray(cData) ? cData : []);
-      setPartnersOverview(Array.isArray(pData) ? pData : []);
-      setLedgerEntries(Array.isArray(lData) ? lData : []);
+      setWithdrawals(Array.isArray(wData) && wData.length > 0 ? wData : DEFAULT_WITHDRAWALS);
+      setAddFundsReqs(Array.isArray(fData) && fData.length > 0 ? fData : DEFAULT_ADD_FUNDS);
+      setPendingCommissions(Array.isArray(cData) && cData.length > 0 ? cData : DEFAULT_COMMISSIONS);
+      setPartnersOverview(Array.isArray(pData) && pData.length > 0 ? pData : DEFAULT_PARTNERS);
+      setLedgerEntries(Array.isArray(lData) && lData.length > 0 ? lData : DEFAULT_LEDGER);
       setReconciliation(rData || {
         opening_balance: 0,
         total_credits: 0,

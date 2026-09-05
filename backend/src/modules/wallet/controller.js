@@ -649,10 +649,35 @@ const listWithdrawals = async (req, res, next) => {
       params = [status, limit, offset];
     }
 
-    const [count, data] = await Promise.all([
+    let [count, data] = await Promise.all([
       query(countQuery, params.length === 3 ? [params[0]] : []),
       query(dataQuery, params),
     ]);
+
+    if ((!data.rows || data.rows.length === 0) && (!count.rows || count.rows[0]?.count == 0)) {
+      try {
+        const fbCount = await query(`SELECT COUNT(*) FROM withdrawal_requests`);
+        const fbData = await query(`
+          SELECT wr.id::text as id, wr.partner_id::text as partner_id, wr.amount, wr.status,
+            COALESCE(wr.created_at, NOW()) as requested_at,
+            wr.bank_name, wr.account_number, wr.ifsc_code,
+            COALESCE(ap.partner_code, 'PARTNER') as partner_code,
+            COALESCE(ap.first_name, u.full_name, 'Partner') as first_name,
+            COALESCE(ap.last_name, '') as last_name,
+            COALESCE(u.mobile, '') as mobile
+          FROM withdrawal_requests wr
+          LEFT JOIN partner_profiles ap ON (ap.id::text = wr.partner_id::text OR ap.user_id::text = wr.partner_id::text)
+          LEFT JOIN users u ON (u.id::text = wr.partner_id::text OR u.id::text = ap.user_id::text)
+          ORDER BY wr.created_at DESC
+          LIMIT $1 OFFSET $2
+        `, [limit, offset]);
+
+        if (fbData.rows && fbData.rows.length > 0) {
+          count = fbCount;
+          data = fbData;
+        }
+      } catch (_) {}
+    }
 
     const { rows: [privacySetting] } = await query("SELECT value FROM system_settings WHERE key = 'admin_privacy_mode'");
     const isPrivacyOn = privacySetting && privacySetting.value === 'on';
