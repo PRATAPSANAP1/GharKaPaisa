@@ -59,6 +59,11 @@ export default function CustomerPostApplyStep2() {
   const [dispatchStatus, setDispatchStatus] = useState('None');
   const [operationalRemarks, setOperationalRemarks] = useState('');
 
+  // TATA Co-brand HDFC Specific Stages
+  const [ipaStage, setIpaStage] = useState('None');
+  const [kycStage, setKycStage] = useState('None');
+  const [cardApprovalStage, setCardApprovalStage] = useState('None');
+
   // Section 3: Bank Reference & Final Application Stage (Disabled for Partner, Editable by Admin/SuperAdmin)
   const [appNumber, setAppNumber] = useState('');
   const [vkycUrl, setVkycUrl] = useState('');
@@ -107,6 +112,10 @@ export default function CustomerPostApplyStep2() {
           setIqaStage(details.iqa_stage || 'None');
           setDispatchStatus(details.dispatch_status || 'None');
           setOperationalRemarks(details.operational_remarks || details.remarks || details.notes || '');
+
+          setIpaStage(details.ipa_stage || 'None');
+          setKycStage(details.kyc_stage || 'None');
+          setCardApprovalStage(details.card_approval_stage || details.card_approval_status || 'None');
 
           setAppNumber(details.bank_application_number || '');
           setVkycUrl(details.vkyc_url || '');
@@ -164,6 +173,9 @@ export default function CustomerPostApplyStep2() {
         operational_remarks: operationalRemarks.trim(),
         remarks: operationalRemarks.trim(),
         notes: operationalRemarks.trim(),
+        ipa_stage: ipaStage,
+        kyc_stage: kycStage,
+        card_approval_stage: cardApprovalStage,
         bank_application_number: appNumber.trim(),
         vkyc_url: vkycUrl.trim()
       };
@@ -526,138 +538,231 @@ export default function CustomerPostApplyStep2() {
           <div>
             <div style={sectionHeaderStyle}>
               <FiSliders size={18} style={{ color: C.primary }} />
-              <span>Operational Remarks & Processing Stages</span>
+              <span>{isTataHdfc ? 'Operational Remarks & Processing Stages (TATA Co-Brand HDFC Bank)' : 'Operational Remarks & Processing Stages'}</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
-              {/* Order 1: Appcode Status */}
-              <div>
-                <label style={labelStyle}>Appcode Status</label>
-                <select
-                  value={appcodeStatus}
-                  onChange={(e) => setAppcodeStatus(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="None">None</option>
-                  <option value="appcode send">appcode send</option>
-                  <option value="appcode pending">appcode pending</option>
-                  <option value="appcode complete">appcode complete</option>
-                  <option value="digital">digital</option>
-                </select>
-              </div>
+            {isTataHdfc ? (
+              /* TATA Co-Brand HDFC Specific 6 Fields */
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                {/* 1. IPA stage */}
+                <div>
+                  <label style={labelStyle}>1. IPA Stage</label>
+                  <select
+                    value={ipaStage}
+                    onChange={(e) => setIpaStage(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="None">None</option>
+                    <option value="Approve">Approve</option>
+                    <option value="Decline">Decline</option>
+                    <option value="Error">Error</option>
+                    <option value="IPA Failed">IPA Failed</option>
+                  </select>
+                </div>
 
-              {/* Order 2: Soft Approval Status */}
-              <div>
-                <label style={labelStyle}>Soft Approval Status</label>
-                <select
-                  value={softApprovalStatus}
-                  onChange={(e) => setSoftApprovalStatus(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="None">None</option>
-                  <option value="approved">approved</option>
-                  <option value="decline">decline</option>
-                  <option value="ETQ">ETQ</option>
-                  <option value="technical error">technical error</option>
-                </select>
-              </div>
+                {/* 2. KYC stage */}
+                <div>
+                  <label style={labelStyle}>2. KYC Stage</label>
+                  <select
+                    value={kycStage}
+                    onChange={(e) => setKycStage(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="None">None</option>
+                    <option value="success">success</option>
+                    <option value="failed">failed</option>
+                    <option value="pending">pending</option>
+                    <option value="BIO pending">BIO pending</option>
+                    <option value="BIO success">BIO success</option>
+                  </select>
+                </div>
 
-              {/* Order 3: IQA Stage */}
-              <div>
-                <label style={labelStyle}>IQA Stage</label>
-                <select
-                  value={iqaStage}
-                  onChange={(e) => setIqaStage(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="None">None</option>
-                  <option value="IQA SENT">IQA SENT</option>
-                  <option value="IQA COMPLETE">IQA COMPLETE</option>
-                  <option value="IQA PENDING">IQA PENDING</option>
-                  <option value="BLAZE CONTINUE">BLAZE CONTINUE</option>
-                  <option value="BLAZE DECLINE">BLAZE DECLINE</option>
-                </select>
-              </div>
+                {/* 3. Bank Application Number */}
+                <div>
+                  <label style={labelStyle}>3. Bank Application / Reference Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. HDFC-APP-1002"
+                    value={appNumber}
+                    onChange={(e) => setAppNumber(e.target.value)}
+                    style={{ ...inputStyle, fontFamily: 'monospace' }}
+                  />
+                </div>
 
-              {/* Order 4: Bank Application Number */}
-              <div>
-                <label style={labelStyle}>Bank Application / Reference Number</label>
-                <input
-                  type="text"
-                  placeholder="e.g. SBI9842157 / HDFC-APP-1002"
-                  value={appNumber}
-                  onChange={(e) => setAppNumber(e.target.value)}
-                  style={{ ...inputStyle, fontFamily: 'monospace' }}
-                />
-              </div>
+                {/* 4. VKYC Link */}
+                <div>
+                  <label style={labelStyle}>4. VKYC Link (Optional)</label>
+                  <input
+                    type="url"
+                    placeholder="https://vkyc..."
+                    value={vkycUrl}
+                    onChange={(e) => setVkycUrl(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
 
-              {/* Order 5: VKYC Stage / Status */}
-              <div>
-                <label style={labelStyle}>VKYC Status</label>
-                <select
-                  value={vkycStage}
-                  onChange={(e) => setVkycStage(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="None">None</option>
-                  <option value="VKYC Pending">VKYC Pending</option>
-                  <option value="VKYC Complete">VKYC Complete</option>
-                  <option value="VKYC Failed">VKYC Failed</option>
-                </select>
-              </div>
+                {/* 5. Card approval stage */}
+                <div>
+                  <label style={labelStyle}>5. Card Approval Stage</label>
+                  <select
+                    value={cardApprovalStage}
+                    onChange={(e) => setCardApprovalStage(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="None">None</option>
+                    <option value="instant approved">instant approved</option>
+                    <option value="in process">in process</option>
+                    <option value="decline">decline</option>
+                  </select>
+                </div>
 
-              {/* Order 6: VKYC Link */}
-              <div>
-                <label style={labelStyle}>VKYC Link (Optional)</label>
-                <input
-                  type="url"
-                  placeholder="https://vkyc..."
-                  value={vkycUrl}
-                  onChange={(e) => setVkycUrl(e.target.value)}
-                  style={inputStyle}
-                />
+                {/* 6. User Remark */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>6. User Remark</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Enter user remark / application notes..."
+                    value={operationalRemarks}
+                    onChange={(e) => setOperationalRemarks(e.target.value)}
+                    style={{
+                      ...inputStyle,
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      minHeight: '74px'
+                    }}
+                  />
+                </div>
               </div>
+            ) : (
+              /* Default Generic Bank Fields */
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
+                {/* Order 1: Appcode Status */}
+                <div>
+                  <label style={labelStyle}>Appcode Status</label>
+                  <select
+                    value={appcodeStatus}
+                    onChange={(e) => setAppcodeStatus(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="None">None</option>
+                    <option value="appcode send">appcode send</option>
+                    <option value="appcode pending">appcode pending</option>
+                    <option value="appcode complete">appcode complete</option>
+                    <option value="digital">digital</option>
+                  </select>
+                </div>
 
-              {/* Order 7: Dispatch Status */}
-              <div>
-                <label style={labelStyle}>Dispatch Status</label>
-                <select
-                  value={dispatchStatus}
-                  onChange={(e) => setDispatchStatus(e.target.value)}
-                  style={inputStyle}
-                >
-                  <option value="None">None</option>
-                  <option value="dispatch pending">dispatch pending</option>
-                  <option value="complete">complete</option>
-                  <option value="e-sign pending">e-sign pending</option>
-                  <option value="e-sign done">e-sign done</option>
-                  <option value="RTB(Error)">RTB(Error)</option>
-                </select>
-              </div>
+                {/* Order 2: Soft Approval Status */}
+                <div>
+                  <label style={labelStyle}>Soft Approval Status</label>
+                  <select
+                    value={softApprovalStatus}
+                    onChange={(e) => setSoftApprovalStatus(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="None">None</option>
+                    <option value="approved">approved</option>
+                    <option value="decline">decline</option>
+                    <option value="ETQ">ETQ</option>
+                    <option value="technical error">technical error</option>
+                  </select>
+                </div>
 
-              {/* Order 8: Operational Remarks / TATA Co-Brand Remarks */}
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>{String(bankInfo?.bank_name || bankInfo?.product_name || '').toUpperCase().includes('TATA') ? '🏷️ TATA Co-Brand HDFC Bank Remarks & Notes' : '📝 Operational Remarks / Notes'}</span>
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder={
-                    String(bankInfo?.bank_name || bankInfo?.product_name || '').toUpperCase().includes('TATA')
-                      ? 'Enter TATA Co-Brand NeuCoins details, application notes, or specific remarks...'
-                      : 'Enter operational remarks, process notes, or bank updates...'
-                  }
-                  value={operationalRemarks}
-                  onChange={(e) => setOperationalRemarks(e.target.value)}
-                  style={{
-                    ...inputStyle,
-                    fontFamily: 'inherit',
-                    resize: 'vertical',
-                    minHeight: '74px'
-                  }}
-                />
+                {/* Order 3: IQA Stage */}
+                <div>
+                  <label style={labelStyle}>IQA Stage</label>
+                  <select
+                    value={iqaStage}
+                    onChange={(e) => setIqaStage(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="None">None</option>
+                    <option value="IQA SENT">IQA SENT</option>
+                    <option value="IQA COMPLETE">IQA COMPLETE</option>
+                    <option value="IQA PENDING">IQA PENDING</option>
+                    <option value="BLAZE CONTINUE">BLAZE CONTINUE</option>
+                    <option value="BLAZE DECLINE">BLAZE DECLINE</option>
+                  </select>
+                </div>
+
+                {/* Order 4: Bank Application Number */}
+                <div>
+                  <label style={labelStyle}>Bank Application / Reference Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. SBI9842157 / HDFC-APP-1002"
+                    value={appNumber}
+                    onChange={(e) => setAppNumber(e.target.value)}
+                    style={{ ...inputStyle, fontFamily: 'monospace' }}
+                  />
+                </div>
+
+                {/* Order 5: VKYC Stage / Status */}
+                <div>
+                  <label style={labelStyle}>VKYC Status</label>
+                  <select
+                    value={vkycStage}
+                    onChange={(e) => setVkycStage(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="None">None</option>
+                    <option value="VKYC Pending">VKYC Pending</option>
+                    <option value="VKYC Complete">VKYC Complete</option>
+                    <option value="VKYC Failed">VKYC Failed</option>
+                  </select>
+                </div>
+
+                {/* Order 6: VKYC Link */}
+                <div>
+                  <label style={labelStyle}>VKYC Link (Optional)</label>
+                  <input
+                    type="url"
+                    placeholder="https://vkyc..."
+                    value={vkycUrl}
+                    onChange={(e) => setVkycUrl(e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+
+                {/* Order 7: Dispatch Status */}
+                <div>
+                  <label style={labelStyle}>Dispatch Status</label>
+                  <select
+                    value={dispatchStatus}
+                    onChange={(e) => setDispatchStatus(e.target.value)}
+                    style={inputStyle}
+                  >
+                    <option value="None">None</option>
+                    <option value="dispatch pending">dispatch pending</option>
+                    <option value="complete">complete</option>
+                    <option value="e-sign pending">e-sign pending</option>
+                    <option value="e-sign done">e-sign done</option>
+                    <option value="RTB(Error)">RTB(Error)</option>
+                  </select>
+                </div>
+
+                {/* Order 8: Operational Remarks */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>📝 Operational Remarks / Notes</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Enter operational remarks, process notes, or bank updates..."
+                    value={operationalRemarks}
+                    onChange={(e) => setOperationalRemarks(e.target.value)}
+                    style={{
+                      ...inputStyle,
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      minHeight: '74px'
+                    }}
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <button

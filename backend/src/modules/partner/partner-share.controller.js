@@ -1048,6 +1048,9 @@ const getPostApplyDetails = async (req, res, next) => {
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100)`);
     } catch (_) {}
 
     const { rows: [shareData] } = await query(`
@@ -1064,6 +1067,7 @@ const getPostApplyDetails = async (req, res, next) => {
         a.soft_approval_status, a.vkyc_stage, a.iqa_stage, a.dispatch_status,
         a.bank_application_number, a.vkyc_url, a.final_status, a.decline_reason, a.eligible_reqd,
         COALESCE(a.operational_remarks, a.notes) as operational_remarks,
+        a.ipa_stage, a.kyc_stage, a.card_approval_stage,
         COALESCE(a.process_type, l.process_type, 'punch_only') as process_type,
         l.status
       FROM (SELECT $1::text as tok) t
@@ -1135,7 +1139,10 @@ const getPostApplyDetails = async (req, res, next) => {
         final_status: shareData?.final_status || 'In Process',
         decline_reason: shareData?.decline_reason || '',
         eligible_reqd: shareData?.eligible_reqd || 'No',
-        operational_remarks: shareData?.operational_remarks || ''
+        operational_remarks: shareData?.operational_remarks || '',
+        ipa_stage: shareData?.ipa_stage || 'None',
+        kyc_stage: shareData?.kyc_stage || 'None',
+        card_approval_stage: shareData?.card_approval_stage || 'None'
       }
     });
   } catch (err) {
@@ -1171,7 +1178,8 @@ const updatePostApplyDetails = async (req, res, next) => {
       final_status, status,
       decline_reason,
       eligible_reqd,
-      operational_remarks, remarks, notes
+      operational_remarks, remarks, notes,
+      ipa_stage, kyc_stage, card_approval_stage, card_approval_status
     } = req.body;
 
     if (!token) return error(res, 'Token is required', 400);
@@ -1233,6 +1241,9 @@ const updatePostApplyDetails = async (req, res, next) => {
     const cleanDeclineReason = (decline_reason || '').toString().trim();
     const cleanEligibleReqd = (eligible_reqd || '').toString().trim();
     const cleanOperationalRemarks = (operational_remarks || remarks || notes || '').toString().trim();
+    const cleanIpaStage = (ipa_stage || '').toString().trim();
+    const cleanKycStage = (kyc_stage || '').toString().trim();
+    const cleanCardApprovalStage = (card_approval_stage || card_approval_status || '').toString().trim();
 
     // Safely map cleanFinalStatus to Postgres application_status enum
     let mappedAppEnumStatus = null;
@@ -1277,6 +1288,9 @@ const updatePostApplyDetails = async (req, res, next) => {
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100)`);
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100)`);
     } catch (_) {}
 
     let targetCustId = shareData.customer_id || shareData.lead_cust_id;
@@ -1383,6 +1397,9 @@ const updatePostApplyDetails = async (req, res, next) => {
             landmark = COALESCE(NULLIF($28, ''), landmark),
             operational_remarks = COALESCE(NULLIF($29, ''), operational_remarks),
             notes = COALESCE(NULLIF($29, ''), notes),
+            ipa_stage = COALESCE(NULLIF($30, ''), ipa_stage),
+            kyc_stage = COALESCE(NULLIF($31, ''), kyc_stage),
+            card_approval_stage = COALESCE(NULLIF($32, ''), card_approval_stage),
             status = COALESCE($20::application_status, status),
             updated_at = NOW()
         WHERE id = $24 OR (lead_id IS NOT NULL AND lead_id = $25)
@@ -1394,7 +1411,8 @@ const updatePostApplyDetails = async (req, res, next) => {
         cleanAppNum, cleanVkyc, cleanFinalStatus, cleanDeclineReason, cleanEligibleReqd,
         mappedAppEnumStatus, cleanCity, cleanState, cleanPincode,
         shareData.application_id || null, shareData.lead_id || null,
-        cleanAddress1, cleanAddress2, cleanLandmark, cleanOperationalRemarks
+        cleanAddress1, cleanAddress2, cleanLandmark, cleanOperationalRemarks,
+        cleanIpaStage, cleanKycStage, cleanCardApprovalStage
       ]);
     }
 
