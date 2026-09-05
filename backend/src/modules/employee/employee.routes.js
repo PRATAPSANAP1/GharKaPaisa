@@ -1373,7 +1373,7 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
   }
   const employee = empRes.rows[0];
 
-  const banksRes = await query(`SELECT id, name, code, logo_url FROM banks ORDER BY name ASC`);
+  const banksRes = await query(`SELECT id, name, COALESCE(short_code, '') as code, logo_url FROM banks ORDER BY name ASC`);
   const allBanks = banksRes.rows;
 
   const deptAssignRes = await query(`
