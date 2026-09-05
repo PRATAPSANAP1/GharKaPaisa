@@ -1040,97 +1040,76 @@ export default function PartnerLogin() {
           </div>
         </section>
 
-        {/* ================= PARTNER SECTION ================= */}
-        <section className="partner-section">
-          <div className="partner-heading">
-            <h2>New to GharKaPaisa?</h2>
-            <p>Join thousands of financial partners earning zero-investment commissions</p>
-          </div>
+        {/* ================= RIGHT PANEL (RIGHT SIDE ON LAPTOP) ================= */}
+        <div className="login-right-panel">
+          {/* ================= PARTNER SECTION ================= */}
+          <section className="partner-section">
+            <div className="partner-heading">
+              <h2>New to GharKaPaisa?</h2>
+              <p>Join thousands of financial partners earning zero-investment commissions</p>
+            </div>
 
+            <button
+              type="button"
+              className="partner-card"
+              onClick={() => navigate("/register")}
+            >
+              <div className="partner-icon">
+                <Gift size={30} />
+              </div>
+
+              <div className="partner-content">
+                <h3>Become a Partner</h3>
+                <p>
+                  Grow your referral business and earn attractive direct payouts with instant wallet withdrawals
+                </p>
+              </div>
+
+              <ArrowRight className="partner-arrow" size={24} />
+            </button>
+          </section>
+
+          {/* ================= FEATURES SECTION ================= */}
+          <section className="features">
+            <FeatureCard
+              icon={<ShieldCheck size={24} />}
+              iconType="green"
+              title="Secure & Safe"
+              description={<>Bank-grade encryption</>}
+            />
+
+            <FeatureCard
+              icon={<Zap size={24} />}
+              iconType="blue"
+              title="Fast & Easy"
+              description={<>Instant dashboard access</>}
+            />
+
+            <FeatureCard
+              icon={<Headphones size={24} />}
+              iconType="orange"
+              title="24/7 Support"
+              description={<>Dedicated help desk</>}
+            />
+
+            <FeatureCard
+              icon={<BadgeCheck size={24} />}
+              iconType="green"
+              title="Trusted Platform"
+              description={<>100K+ partners</>}
+            />
+          </section>
+
+          {/* ================= BACK HOME ================= */}
           <button
             type="button"
-            className="partner-card"
-            onClick={() => navigate("/register")}
+            className="back-home"
+            onClick={() => navigate("/")}
           >
-            <div className="partner-icon">
-              <Gift size={34} />
-            </div>
-
-            <div className="partner-content">
-              <h3>Become a Partner</h3>
-              <p>
-                Grow your referral business and earn attractive direct payouts with instant wallet withdrawals
-              </p>
-            </div>
-
-            <ArrowRight className="partner-arrow" size={28} />
+            <Home size={18} />
+            <span>Back to Home</span>
           </button>
-        </section>
-
-        {/* ================= FEATURES SECTION ================= */}
-        <section className="features">
-          <FeatureCard
-            icon={<ShieldCheck size={27} />}
-            iconType="green"
-            title="Secure & Safe"
-            description={
-              <>
-                Bank-grade
-                <br />
-                encryption
-              </>
-            }
-          />
-
-          <FeatureCard
-            icon={<Zap size={27} />}
-            iconType="blue"
-            title="Fast & Easy"
-            description={
-              <>
-                Instant access to
-                <br />
-                your dashboard
-              </>
-            }
-          />
-
-          <FeatureCard
-            icon={<Headphones size={27} />}
-            iconType="orange"
-            title="24/7 Support"
-            description={
-              <>
-                Dedicated help
-                <br />
-                desk assistant
-              </>
-            }
-          />
-
-          <FeatureCard
-            icon={<BadgeCheck size={27} />}
-            iconType="green"
-            title="Trusted Platform"
-            description={
-              <>
-                Trusted by
-                <br />
-                100K+ partners
-              </>
-            }
-          />
-        </section>
-
-        {/* ================= BACK HOME ================= */}
-        <button
-          type="button"
-          className="back-home"
-          onClick={() => navigate("/")}
-        >
-          <Home size={20} />
-          <span>Back to Home</span>
-        </button>
+        </div>
       </main>
 
       {/* ================= CHATBOT OPTION ================= */}
