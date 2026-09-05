@@ -185,12 +185,19 @@ const getProduct = async (req, res, next) => {
       query(`SELECT id, title, description, icon, display_order FROM product_features WHERE product_id = $1 ORDER BY display_order`, [product.id])
     ]);
 
+    // Normalize CloudFront URLs for product images
+    if (product.image_url) product.image_url = getCloudFrontUrl(product.image_url);
+    if (product.banner_url) product.banner_url = getCloudFrontUrl(product.banner_url);
+    if (product.logo) product.logo = getCloudFrontUrl(product.logo);
+    if (product.banner) product.banner = getCloudFrontUrl(product.banner);
+    if (product.bank_logo) product.bank_logo = getCloudFrontUrl(product.bank_logo);
+
     // Structure normalized sub-keys matching API spec
     product.bank = {
       id: product.bank_id,
       name: product.bank_name,
       short_code: product.bank_code,
-      logo_url: product.bank_logo
+      logo_url: getCloudFrontUrl(product.bank_logo)
     };
 
     product.fees = product.fees_structure || {};
@@ -204,9 +211,9 @@ const getProduct = async (req, res, next) => {
     product.compare = product.compare_specs || {};
     product.faqs = faqsRes.rows;
     product.gallery = [
-      ...(product.banner_url ? [{ id: 'banner', image_url: product.banner_url, image_type: 'Banner' }] : []),
-      ...(product.image_url ? [{ id: 'card', image_url: product.image_url, image_type: 'Card' }] : []),
-      ...offersRes.rows.map(o => ({ id: o.id, image_url: o.banner_url, image_type: 'Offer', title: o.title }))
+      ...(product.banner_url ? [{ id: 'banner', image_url: getCloudFrontUrl(product.banner_url), image_type: 'Banner' }] : []),
+      ...(product.image_url ? [{ id: 'card', image_url: getCloudFrontUrl(product.image_url), image_type: 'Card' }] : []),
+      ...offersRes.rows.map(o => ({ id: o.id, image_url: getCloudFrontUrl(o.banner_url), image_type: 'Offer', title: o.title }))
     ];
 
     product.videos = videosRes.rows;

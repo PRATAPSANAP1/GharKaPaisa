@@ -88,6 +88,13 @@ const uploadVideo = multer({
   limits: { fileSize: MAX_VIDEO_SIZE },
 });
 
+const DEFAULT_CLOUDFRONT_DOMAIN = 'd18qh1l6j6vziz.cloudfront.net';
+
+const getCloudFrontDomain = () => {
+  const cf = process.env.AWS_CLOUDFRONT_DOMAIN || process.env.CLOUDFRONT_DOMAIN || process.env.CLOUDFRONT_URL;
+  return cf ? cf.replace(/^https?:\/\//, '').replace(/\/$/, '') : DEFAULT_CLOUDFRONT_DOMAIN;
+};
+
 // Upload a buffer to S3
 const uploadToS3 = async (buffer, originalName, folder = 'kyc') => {
   let ext = path.extname(originalName).toLowerCase();
@@ -104,12 +111,10 @@ const uploadToS3 = async (buffer, originalName, folder = 'kyc') => {
     ServerSideEncryption: 'AES256',
   }));
 
-  const region = process.env.AWS_REGION || 'ap-south-1';
-  const url = region === 'us-east-1'
-    ? `https://${BUCKET}.s3.amazonaws.com/${key}`
-    : `https://${BUCKET}.s3.${region}.amazonaws.com/${key}`;
+  const cfDomain = getCloudFrontDomain();
+  const url = `https://${cfDomain}/${key}`;
 
-  logger.info(`Uploaded to S3: ${key}`);
+  logger.info(`Uploaded to S3 and mapped to CloudFront: ${key} -> ${url}`);
   return { url, key };
 };
 
@@ -122,16 +127,25 @@ const getSignedDownloadUrl = async (key, expiresInSeconds = 3600) => {
 // Get CloudFront / Public S3 URL for images & media
 const getCloudFrontUrl = (urlOrKey) => {
   if (!urlOrKey) return null;
-  const cfDomain = process.env.AWS_CLOUDFRONT_DOMAIN || process.env.CLOUDFRONT_DOMAIN;
-  if (cfDomain) {
-    const key = urlOrKey.startsWith('http') ? urlOrKey.split('.com/')[1] : urlOrKey;
-    if (key) return `https://${cfDomain.replace(/^https?:\/\//, '')}/${key}`;
+  const cfDomain = getCloudFrontDomain();
+
+  let key = urlOrKey;
+  if (typeof urlOrKey === 'string' && (urlOrKey.startsWith('http://') || urlOrKey.startsWith('https://'))) {
+    if (urlOrKey.includes('.amazonaws.com/')) {
+      key = urlOrKey.split('.amazonaws.com/')[1];
+    } else if (urlOrKey.includes('.cloudfront.net/')) {
+      key = urlOrKey.split('.cloudfront.net/')[1];
+    } else if (urlOrKey.includes('gharkapaisa')) {
+      key = urlOrKey.replace(/^https?:\/\/[^\/]+\//, '');
+    } else {
+      return urlOrKey;
+    }
   }
-  if (urlOrKey.startsWith('http://') || urlOrKey.startsWith('https://')) {
-    return urlOrKey;
+
+  if (key) {
+    return `https://${cfDomain}/${key.replace(/^\//, '')}`;
   }
-  const region = process.env.AWS_REGION || 'ap-south-1';
-  return BUCKET ? `https://${BUCKET}.s3.${region}.amazonaws.com/${urlOrKey}` : urlOrKey;
+  return urlOrKey;
 };
 
 // Delete from S3

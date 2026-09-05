@@ -1,5 +1,5 @@
 const { query } = require('../../config/database');
-const { uploadToS3, deleteFromS3 } = require('../../services/aws/s3.service.js');
+const { uploadToS3, deleteFromS3, getCloudFrontUrl } = require('../../services/aws/s3.service.js');
 const { success, created, error, notFound } = require('../../utils/response/response');
 const logger = require('../../config/logger');
 
@@ -25,7 +25,11 @@ const listBanners = async (req, res, next) => {
 
     sql += ` ORDER BY display_order ASC, created_at DESC`;
     const { rows } = await query(sql, params);
-    return success(res, rows);
+    const sanitizedRows = rows.map(b => ({
+      ...b,
+      image_url: getCloudFrontUrl(b.image_url)
+    }));
+    return success(res, sanitizedRows);
   } catch (err) {
     next(err);
   }
@@ -53,7 +57,11 @@ const listAllBanners = async (req, res, next) => {
 
     sql += ` ORDER BY display_order ASC, created_at DESC`;
     const { rows } = await query(sql, params);
-    return success(res, rows);
+    const sanitizedRows = rows.map(b => ({
+      ...b,
+      image_url: getCloudFrontUrl(b.image_url)
+    }));
+    return success(res, sanitizedRows);
   } catch (err) {
     next(err);
   }
