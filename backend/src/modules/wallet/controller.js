@@ -920,14 +920,18 @@ const getWalletLedger = async (req, res, next) => {
       query(`
         SELECT COUNT(*) 
         FROM wallet_ledger wl
-        JOIN partner_profiles ap ON ap.id = wl.partner_id
+        LEFT JOIN partner_profiles ap ON (ap.id = wl.partner_id OR ap.user_id = wl.partner_id)
         ${where}
       `, values),
       query(`
-        SELECT wl.*, ap.partner_code, ap.first_name, ap.last_name,
+        SELECT wl.*, 
+               COALESCE(ap.partner_code, 'PARTNER') as partner_code, 
+               COALESCE(ap.first_name, u.full_name, 'Partner') as first_name, 
+               COALESCE(ap.last_name, '') as last_name,
                a.app_number, p.name as product_name
         FROM wallet_ledger wl
-        JOIN partner_profiles ap ON ap.id = wl.partner_id
+        LEFT JOIN partner_profiles ap ON (ap.id = wl.partner_id OR ap.user_id = wl.partner_id)
+        LEFT JOIN users u ON (u.id = wl.partner_id OR u.id = ap.user_id)
         LEFT JOIN applications a ON a.id = wl.application_id
         LEFT JOIN products p ON p.id = a.product_id
         ${where}
