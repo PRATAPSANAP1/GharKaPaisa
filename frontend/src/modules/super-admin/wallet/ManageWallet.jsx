@@ -263,6 +263,22 @@ export default function ManageWallet() {
     }
   };
 
+  const handleReconcileNow = async () => {
+    setActionLoading(true);
+    try {
+      const res = await api.get('/wallet/reconciliation');
+      const data = res.data?.data || res.data || null;
+      if (data) {
+        setReconciliation(data);
+      }
+      alert(`Instant Wallet Reconciliation Complete!\n\nStatus: ${data?.status || 'MATCHED'}\nOpening Balance: ₹${(data?.opening_balance || 0).toLocaleString('en-IN')}\nTotal Credits: ₹${(data?.total_credits || 0).toLocaleString('en-IN')}\nTotal Debits: ₹${(data?.total_debits || 0).toLocaleString('en-IN')}\nClosing Balance: ₹${(data?.system_closing || 0).toLocaleString('en-IN')}\nDiscrepancy Drift: ₹${(data?.difference || 0).toLocaleString('en-IN')}`);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to execute instant reconciliation audit.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const exportCSVReport = (datasetName = activeTab) => {
     let dataToExport = [];
     let filename = `wallet_${datasetName}_${new Date().toISOString().split('T')[0]}.csv`;
@@ -908,8 +924,8 @@ export default function ManageWallet() {
                   </strong>
                   <span style={{ fontSize: '11px', color: C.textLight }}>Last Reconciled On {reconciliation?.last_reconciled || 'Just now'}</span>
                 </div>
-                <button onClick={() => alert('Performing Instant Wallet Reconciliation Check... Audit matched with 0 discrepancy drift.')} style={{ ...S.btn('primary'), background: C.teal, padding: '8px 18px', fontSize: '12px', borderRadius: '10px' }}>
-                  Reconcile Now
+                <button onClick={handleReconcileNow} disabled={actionLoading} style={{ ...S.btn('primary'), background: C.teal, padding: '8px 18px', fontSize: '12px', borderRadius: '10px', opacity: actionLoading ? 0.7 : 1 }}>
+                  {actionLoading ? 'Reconciling...' : 'Reconcile Now'}
                 </button>
               </div>
             </div>

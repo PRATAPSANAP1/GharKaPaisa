@@ -1518,7 +1518,7 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
       start_date: startDateStr,
       end_date: endDateStr
     },
-    summary: {
+    summary: {    
       total_approved_cards: totalApprovedCards,
       total_incentive_earned: totalIncentiveEarned,
       total_incentive_released: totalIncentiveReleased,

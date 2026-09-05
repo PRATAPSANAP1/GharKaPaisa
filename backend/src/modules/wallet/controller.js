@@ -1691,8 +1691,8 @@ const getWalletReconciliationController = async (req, res, next) => {
   try {
     const [wTotal, creditTotal, debitTotal] = await Promise.all([
       query(`SELECT COALESCE(SUM(available_balance + COALESCE(hold_balance, 0)), 0) as total FROM partner_wallets`),
-      query(`SELECT COALESCE(SUM(credit), 0) as total FROM wallet_ledger WHERE LOWER(COALESCE(status::text, '')) IN ('completed', 'success', 'confirmed', 'released')`),
-      query(`SELECT COALESCE(SUM(debit), 0) as total FROM wallet_ledger WHERE LOWER(COALESCE(status::text, '')) IN ('completed', 'success', 'confirmed', 'transferred')`)
+      query(`SELECT COALESCE(SUM(credit), 0) as total FROM wallet_ledger WHERE LOWER(COALESCE(status::text, '')) IN ('completed', 'success', 'confirmed', 'released', 'approved')`),
+      query(`SELECT COALESCE(SUM(debit), 0) as total FROM wallet_ledger WHERE LOWER(COALESCE(status::text, '')) IN ('completed', 'success', 'confirmed', 'transferred', 'processed', 'approved')`)
     ]);
 
     const sysBalance = parseFloat(wTotal.rows[0].total || 0);
