@@ -3095,7 +3095,11 @@ const updateApplicationDetails = async (req, res, next) => {
       appfile_generated,
       decline_reason,
       eligible_reqd,
-      approved_amount
+      approved_amount,
+      ipa_stage,
+      kyc_stage,
+      card_approval_stage,
+      digital_card_issued
     } = req.body;
 
     // Ensure verification & tracking columns exist on applications, leads, customers, physical_application_details tables
@@ -3128,7 +3132,11 @@ const updateApplicationDetails = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
         ADD COLUMN IF NOT EXISTS decline_reason TEXT,
         ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS approved_amount DECIMAL(15,2)
+        ADD COLUMN IF NOT EXISTS approved_amount DECIMAL(15,2),
+        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(50)
       `);
       await client.query(`
         ALTER TABLE leads 
@@ -3348,6 +3356,10 @@ const updateApplicationDetails = async (req, res, next) => {
         user_remark = COALESCE(NULLIF($36, ''), user_remark),
         notes = COALESCE(NULLIF($36, ''), notes),
         app_file_generated = COALESCE(NULLIF($37, ''), app_file_generated),
+        ipa_stage = COALESCE(NULLIF($38, ''), ipa_stage),
+        kyc_stage = COALESCE(NULLIF($39, ''), kyc_stage),
+        card_approval_stage = COALESCE(NULLIF($40, ''), card_approval_stage),
+        digital_card_issued = COALESCE(NULLIF($41, ''), digital_card_issued),
         updated_at = NOW()
       WHERE id = $34
       RETURNING *
@@ -3388,7 +3400,11 @@ const updateApplicationDetails = async (req, res, next) => {
       app.id,
       cleanStr(appcode_status || req.body.appcode_status),
       cleanStr(user_remark || req.body.user_remark || req.body.user_notes || req.body.notes || notes || user_notes),
-      cleanStr(app_file_generated || appfile_generated || req.body.app_file_generated || req.body.appfile_generated)
+      cleanStr(app_file_generated || appfile_generated || req.body.app_file_generated || req.body.appfile_generated),
+      cleanStr(ipa_stage || req.body.ipa_stage),
+      cleanStr(kyc_stage || req.body.kyc_stage),
+      cleanStr(card_approval_stage || req.body.card_approval_stage),
+      cleanStr(digital_card_issued || req.body.digital_card_issued)
     ]);
 
     // 2. Update customer details if customer_id exists

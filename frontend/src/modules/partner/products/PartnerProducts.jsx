@@ -266,6 +266,12 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                        String(selectedProduct?.bank_name || '').toLowerCase().includes('sbi') ||
                        String(selectedProduct?.bank_slug || '').toLowerCase() === 'sbi';
 
+  const isTataCobrandHdfcProduct = selectedProduct?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
+    String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA CO-BRAND HDFC') ||
+    String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA CO BRAND HDFC') ||
+    (String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA') &&
+     String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('HDFC'));
+
   const handleSubmitLead = async (e) => {
     if (e) e.preventDefault();
 
@@ -1668,9 +1674,33 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
               <h3 style={{ fontSize: '20px', fontWeight: 800, color: C.text, margin: '6px 0 2px' }}>
                 Apply for {selectedProduct.name}
               </h3>
-              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
-                {isEmployee ? "Incentive: " : "Payout: "}<strong style={{ color: C.green }}>₹{parseFloat(selectedProduct.commission_value || 0).toLocaleString('en-IN')}</strong>
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '4px' }}>
+                <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
+                  {isEmployee ? "Incentive: " : "Payout: "}<strong style={{ color: C.green }}>₹{parseFloat(selectedProduct.commission_value || 0).toLocaleString('en-IN')}</strong>
+                </p>
+                {isTataCobrandHdfcProduct && (
+                  <a
+                    href="https://acrobat.adobe.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: '8px',
+                      background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
+                      color: '#FFFFFF',
+                      fontWeight: 800,
+                      fontSize: '12px',
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      boxShadow: '0 2px 8px rgba(255,0,0,0.3)'
+                    }}
+                  >
+                    📄 Adobe Support
+                  </a>
+                )}
+              </div>
             </div>
 
             {/* Modal Form */}
@@ -1826,30 +1856,32 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                       </div>
                     </label>
 
-                    {/* Mode 4: Physical process */}
-                    <label style={{
-                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
-                      border: `2px solid ${processType === 'physical_process' ? C.primary : C.border}`,
-                      background: processType === 'physical_process' ? `${C.primary}0D` : C.card,
-                      cursor: 'pointer', transition: 'all 0.2s'
-                    }}>
-                      <input
-                        type="radio"
-                        name="processType"
-                        value="physical_process"
-                        checked={processType === 'physical_process'}
-                        onChange={(e) => setProcessType(e.target.value)}
-                        style={{ marginTop: '2px', accentColor: C.primary }}
-                      />
-                      <div>
-                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
-                          4. Physical process
+                    {/* Mode 4: Physical process (Disabled for TATA CO-BRAND HDFC BANK) */}
+                    {!isTataCobrandHdfcProduct && (
+                      <label style={{
+                        display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                        border: `2px solid ${processType === 'physical_process' ? C.primary : C.border}`,
+                        background: processType === 'physical_process' ? `${C.primary}0D` : C.card,
+                        cursor: 'pointer', transition: 'all 0.2s'
+                      }}>
+                        <input
+                          type="radio"
+                          name="processType"
+                          value="physical_process"
+                          checked={processType === 'physical_process'}
+                          onChange={(e) => setProcessType(e.target.value)}
+                          style={{ marginTop: '2px', accentColor: C.primary }}
+                        />
+                        <div>
+                          <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                            4. Physical process
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                            Generates SBI or Physical Process Detail Sheet template for physical offline customer verification.
+                          </div>
                         </div>
-                        <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
-                          Generates SBI or Physical Process Detail Sheet template for physical offline customer verification.
-                        </div>
-                      </div>
-                    </label>
+                      </label>
+                    )}
 
                   </div>
                 </div>

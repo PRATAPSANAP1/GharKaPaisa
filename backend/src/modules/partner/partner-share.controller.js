@@ -940,12 +940,27 @@ const updateApplyTokenDetails = async (req, res, next) => {
             customer_id = COALESCE($1, customer_id),
             pan_number = COALESCE(NULLIF($2, ''), pan_number),
             monthly_salary = COALESCE($3, monthly_salary),
+            company_name = COALESCE(NULLIF($5, ''), company_name),
+            designation = COALESCE(NULLIF($6, ''), designation),
+            company_address = COALESCE(NULLIF($7, ''), company_address),
+            mother_name = COALESCE(NULLIF($8, ''), mother_name),
+            address = COALESCE(NULLIF($9, ''), address),
             process_type = 'linked_share',
             process_by = 'partner',
             source = 'linked_share',
             updated_at = NOW()
         WHERE id = $4
-      `, [targetCustomerId, cleanPan, numIncome, targetAppId]);
+      `, [
+        targetCustomerId,
+        cleanPan,
+        numIncome,
+        targetAppId,
+        cleanEmployer || null,
+        (req.body.designation || '').toString().trim() || null,
+        (req.body.company_address || '').toString().trim() || null,
+        (req.body.mother_name || '').toString().trim() || null,
+        (address || '').toString().trim() || null
+      ]);
     } else if (targetLeadId) {
       const date = new Date();
       const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;

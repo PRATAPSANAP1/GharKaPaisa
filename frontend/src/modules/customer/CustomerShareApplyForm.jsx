@@ -17,6 +17,10 @@ export default function CustomerShareApplyForm() {
   const [income, setIncome] = useState('');
   const [address, setAddress] = useState('');
   const [employment, setEmployment] = useState('Salaried');
+  const [companyName, setCompanyName] = useState('');
+  const [companyDesignation, setCompanyDesignation] = useState('');
+  const [companyAddress, setCompanyAddress] = useState('');
+  const [motherName, setMotherName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState('');
@@ -52,11 +56,17 @@ export default function CustomerShareApplyForm() {
   const isSbiProduct = data?.product?.bank_id === 'e7c2c604-139d-4fcf-a87c-695633535a02' ||
                        String(data?.product?.bank_code || data?.product?.bank_name || '').toLowerCase().includes('sbi');
 
+  const isTataCobrandHdfc = data?.product?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
+    String(data?.product?.bank_name || data?.product?.bank_code || data?.product?.name || '').toUpperCase().includes('TATA CO-BRAND HDFC') ||
+    String(data?.product?.bank_name || data?.product?.bank_code || data?.product?.name || '').toUpperCase().includes('TATA CO BRAND HDFC') ||
+    (String(data?.product?.bank_name || data?.product?.bank_code || data?.product?.name || '').toUpperCase().includes('TATA') &&
+     String(data?.product?.bank_name || data?.product?.bank_code || data?.product?.name || '').toUpperCase().includes('HDFC'));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!customerName.trim() || customerName.trim().length < 2) return alert('Please enter your Full Name.');
     if (!customerMobile.trim() || customerMobile.trim().length < 10) return alert('Please enter a valid 10-digit mobile number.');
-    if (isSbiProduct && (!pan || pan.trim().length !== 10)) return alert('Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).');
+    if ((isSbiProduct || isTataCobrandHdfc) && (!pan || pan.trim().length !== 10)) return alert('Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).');
 
     setSubmitting(true);
     try {
@@ -67,7 +77,11 @@ export default function CustomerShareApplyForm() {
         pan: pan.trim().toUpperCase(),
         income: income ? parseFloat(income) : undefined,
         address,
-        employment
+        employment,
+        company_name: companyName.trim(),
+        designation: companyDesignation.trim(),
+        company_address: companyAddress.trim(),
+        mother_name: motherName.trim()
       });
 
       if (res.data?.success) {
@@ -173,7 +187,7 @@ export default function CustomerShareApplyForm() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f8fafc', fontFamily: "'Inter', sans-serif", padding: '24px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 520, background: '#1e293b', border: '1px solid #334155', borderRadius: 24, padding: 28, boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
+      <div style={{ width: '100%', maxWidth: 540, background: '#1e293b', border: '1px solid #334155', borderRadius: 24, padding: 28, boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
         
         {/* Header Branding */}
         <div style={{ textTransform: 'uppercase', fontSize: 11, fontWeight: 800, color: '#60a5fa', letterSpacing: '0.05em', marginBottom: 6 }}>
@@ -206,7 +220,7 @@ export default function CustomerShareApplyForm() {
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>Full Name *</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>1. Full Name *</label>
             <input
               type="text"
               required
@@ -218,7 +232,7 @@ export default function CustomerShareApplyForm() {
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>Mobile Number *</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>2. Mobile Number *</label>
             <input
               type="tel"
               required
@@ -232,12 +246,12 @@ export default function CustomerShareApplyForm() {
 
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>
-              PAN Card Number {isSbiProduct ? '*' : '(Optional)'}
+              3. PAN Card Number {(isSbiProduct || isTataCobrandHdfc) ? '*' : '(Optional)'}
             </label>
             <input
               type="text"
               maxLength={10}
-              required={isSbiProduct}
+              required={isSbiProduct || isTataCobrandHdfc}
               placeholder="ABCDE1234F"
               value={pan}
               onChange={e => setPan(e.target.value.toUpperCase())}
@@ -245,54 +259,91 @@ export default function CustomerShareApplyForm() {
             />
           </div>
 
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>4. Current Address *</label>
+            <input
+              type="text"
+              required
+              placeholder="House/Flat No, Building, Street, City & Pincode"
+              value={address}
+              onChange={e => setAddress(e.target.value)}
+              style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 12, padding: '12px 14px', color: '#fff', fontSize: 13, fontWeight: 600 }}
+            />
+          </div>
+
+          {/* TATA CO-BRAND HDFC BANK & General Expanded QD Fields */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>DOB (as per PAN) *</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>5. Company Name *</label>
               <input
-                type="date"
-                required
-                value={dob}
-                onChange={e => setDob(e.target.value)}
+                type="text"
+                required={isTataCobrandHdfc}
+                placeholder="Enter Company Name"
+                value={companyName}
+                onChange={e => setCompanyName(e.target.value)}
                 style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 12, padding: '11px 12px', color: '#fff', fontSize: 13 }}
               />
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>Monthly Income (₹) *</label>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>6. Company Designation *</label>
               <input
-                type="number"
-                required
-                placeholder="e.g. 50000"
-                value={income}
-                onChange={e => setIncome(e.target.value)}
+                type="text"
+                required={isTataCobrandHdfc}
+                placeholder="e.g. Software Engineer / Manager"
+                value={companyDesignation}
+                onChange={e => setCompanyDesignation(e.target.value)}
                 style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 12, padding: '11px 12px', color: '#fff', fontSize: 13 }}
               />
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>Employment Type</label>
-              <select
-                value={employment}
-                onChange={e => setEmployment(e.target.value)}
-                style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 12, padding: '11px 12px', color: '#fff', fontSize: 13 }}
-              >
-                <option value="Salaried">Salaried</option>
-                <option value="Self-Employed">Self-Employed</option>
-                <option value="Business">Business Owner</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>Current Pincode / City</label>
-              <input
-                type="text"
-                placeholder="Pincode or City"
-                value={address}
-                onChange={e => setAddress(e.target.value)}
-                style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 12, padding: '11px 12px', color: '#fff', fontSize: 13 }}
-              />
-            </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>7. Company Address *</label>
+            <input
+              type="text"
+              required={isTataCobrandHdfc}
+              placeholder="Enter Company Full Address & City"
+              value={companyAddress}
+              onChange={e => setCompanyAddress(e.target.value)}
+              style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 12, padding: '12px 14px', color: '#fff', fontSize: 13, fontWeight: 600 }}
+            />
           </div>
+
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>8. Mother's Name *</label>
+            <input
+              type="text"
+              required={isTataCobrandHdfc}
+              placeholder="Enter Mother's Full Name"
+              value={motherName}
+              onChange={e => setMotherName(e.target.value)}
+              style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 12, padding: '12px 14px', color: '#fff', fontSize: 13, fontWeight: 600 }}
+            />
+          </div>
+
+          {!isTataCobrandHdfc && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>DOB (as per PAN)</label>
+                <input
+                  type="date"
+                  value={dob}
+                  onChange={e => setDob(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 12, padding: '11px 12px', color: '#fff', fontSize: 13 }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#cbd5e1', display: 'block', marginBottom: 6 }}>Monthly Income (₹)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 50000"
+                  value={income}
+                  onChange={e => setIncome(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', background: '#0f172a', border: '1px solid #334155', borderRadius: 12, padding: '11px 12px', color: '#fff', fontSize: 13 }}
+                />
+              </div>
+            </div>
+          )}
 
           <button
             type="submit"
