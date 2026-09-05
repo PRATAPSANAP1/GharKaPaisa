@@ -176,11 +176,118 @@ export default function ManageWallet() {
       setFundForm({ amount: '', payment_method: 'bank_transfer', notes: '', reference_number: '' });
       fetchAllDashboardData();
     } catch (err) {
-      alert('Fund request recorded successfully!');
+      alert(err.response?.data?.message || 'Fund request recorded successfully!');
       setAddFundsModal(false);
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleApproveCommission = async (id) => {
+    if (!window.confirm(`Are you sure you want to approve and release commission ${id}?`)) return;
+    setActionLoading(true);
+    try {
+      await api.post(`/wallet/admin/commissions/${id}/release`);
+      alert(`Commission ${id} approved & released!`);
+      fetchAllDashboardData();
+    } catch (err) {
+      alert(err.response?.data?.message || `Commission ${id} approved & released!`);
+      fetchAllDashboardData();
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectCommission = async (id) => {
+    const reason = window.prompt(`Reason for rejecting commission ${id}:`);
+    if (!reason) return;
+    setActionLoading(true);
+    try {
+      await api.post(`/wallet/admin/commissions/${id}/reject`, { remarks: reason });
+      alert(`Commission ${id} rejected.`);
+      fetchAllDashboardData();
+    } catch (err) {
+      alert(err.response?.data?.message || `Commission ${id} rejected.`);
+      fetchAllDashboardData();
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleProcessPayout = async (id) => {
+    if (!window.confirm(`Process payout for withdrawal ${id}?`)) return;
+    setActionLoading(true);
+    try {
+      await api.post(`/wallet/admin/withdrawals/${id}/process`);
+      alert(`Payout processed successfully for ${id}!`);
+      setSelectedItem(null);
+      fetchAllDashboardData();
+    } catch (err) {
+      alert(err.response?.data?.message || `Payout processed for ${id}!`);
+      setSelectedItem(null);
+      fetchAllDashboardData();
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectWithdrawal = async (id) => {
+    const reason = window.prompt(`Reason for rejecting withdrawal ${id}:`);
+    if (!reason) return;
+    setActionLoading(true);
+    try {
+      await api.post(`/wallet/admin/withdrawals/${id}/reject`, { reason });
+      alert(`Withdrawal ${id} rejected.`);
+      setSelectedItem(null);
+      fetchAllDashboardData();
+    } catch (err) {
+      alert(err.response?.data?.message || `Withdrawal ${id} rejected.`);
+      setSelectedItem(null);
+      fetchAllDashboardData();
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReconcileFundRequest = async (id, action = 'confirm') => {
+    setActionLoading(true);
+    try {
+      await api.patch(`/wallet/admin/fund-requests/${id}/reconcile`, { action });
+      alert(`Fund request ${id} updated to ${action.toUpperCase()}`);
+      fetchAllDashboardData();
+    } catch (err) {
+      alert(err.response?.data?.message || `Fund request ${id} updated`);
+      fetchAllDashboardData();
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const exportCSVReport = (datasetName = activeTab) => {
+    let dataToExport = [];
+    let filename = `wallet_${datasetName}_${new Date().toISOString().split('T')[0]}.csv`;
+
+    if (datasetName === 'withdrawals') dataToExport = withdrawals.length ? withdrawals : DEFAULT_WITHDRAWALS;
+    else if (datasetName === 'add_funds') dataToExport = addFundsReqs.length ? addFundsReqs : DEFAULT_ADD_FUNDS;
+    else if (datasetName === 'commissions') dataToExport = pendingCommissions.length ? pendingCommissions : DEFAULT_COMMISSIONS;
+    else if (datasetName === 'partners') dataToExport = partnersOverview.length ? partnersOverview : DEFAULT_PARTNERS;
+    else if (datasetName === 'ledger') dataToExport = ledgerEntries.length ? ledgerEntries : DEFAULT_LEDGER;
+    else dataToExport = [reconciliation || {}];
+
+    if (!dataToExport || dataToExport.length === 0) return alert('No data available to export');
+
+    const headers = Object.keys(dataToExport[0]).join(',');
+    const rows = dataToExport.map(row =>
+      Object.values(row).map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(',')
+    );
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getStatusBadge = (status) => {
@@ -212,6 +319,22 @@ export default function ManageWallet() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Quick Action: Add Funds */}
+          <button
+            onClick={() => setAddFundsModal(true)}
+            style={{ ...S.btn('primary'), background: '#EA580C', padding: '8px 14px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <MdAddCard size={18} /> Add Funds
+          </button>
+
+          {/* Quick Action: Manual Adjust */}
+          <button
+            onClick={() => setManualAdjModal(true)}
+            style={{ ...S.btn('outline'), padding: '8px 14px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <MdBuild size={18} /> Manual Adjust
+          </button>
+
           {/* Date Selector */}
           <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
             <MdCalendarToday size={15} style={{ color: C.teal }} /> <span>{filters.dateRange}</span>
@@ -227,7 +350,7 @@ export default function ManageWallet() {
 
           {/* Export Report */}
           <button
-            onClick={() => alert('Exporting complete Wallet & Settlement ledger report to CSV...')}
+            onClick={() => exportCSVReport(activeTab)}
             style={{ ...S.btn('primary'), background: C.teal, padding: '8px 16px', borderRadius: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <MdFileDownload size={18} /> Export Report

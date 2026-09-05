@@ -66,16 +66,9 @@ const getOverview = async (req, res, next) => {
       isPartner ? Promise.resolve({rows:[{}]}) : query(`
         SELECT
           COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, 'pending')) IN ('pending', 'processing', 'submitted')) as pending_withdrawals,
-          COALESCE(SUM(amount) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('processed', 'completed', 'released', 'approved')), 0) as total_commission_paid
-        FROM withdrawal_requests
-      `).catch(async () => {
-        return await query(`
-          SELECT
-            COUNT(*) FILTER (WHERE LOWER(COALESCE(status::text, 'pending')) IN ('pending', 'processing', 'submitted')) as pending_withdrawals,
-            COALESCE(SUM(amount) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('processed', 'transferred', 'completed', 'released', 'approved')), 0) as total_commission_paid
-          FROM wallet_withdrawals
-        `);
-      }),
+          COALESCE(SUM(amount) FILTER (WHERE LOWER(COALESCE(status::text, '')) IN ('processed', 'transferred', 'completed', 'released', 'approved')), 0) as total_commission_paid
+        FROM wallet_withdrawals
+      `),
       query(`SELECT COUNT(*) as total_banks FROM banks`),
       query(`SELECT COUNT(*) as total_products FROM products`),
       isPartner ? Promise.resolve({rows:[]}) : query(`
@@ -115,7 +108,8 @@ const getOverview = async (req, res, next) => {
     const approvedLeads = (parseInt(leadsData.approved_leads || 0, 10) > 0) ? parseInt(leadsData.approved_leads, 10) : parseInt(appsData.approved || 0, 10);
     const rejectedLeads = (parseInt(leadsData.rejected_leads || 0, 10) > 0) ? parseInt(leadsData.rejected_leads, 10) : parseInt(appsData.rejected || 0, 10);
     const pendingLeads = parseInt(appsData.pending_leads || 0, 10) || parseInt(leadsData.pending_leads || 0, 10);
-    const totalCommPaid = parseFloat(withdrawalData.total_commission_paid || 0) || parseFloat(appsData.total_commission || 0);
+    const walletData = wallet.rows[0] || {};
+    const totalCommPaid = parseFloat(walletData.total_withdrawn || 0) || parseFloat(withdrawalData.total_commission_paid || 0);
 
     return success(res, {
       applications: { ...appsData, conversion_rate },
