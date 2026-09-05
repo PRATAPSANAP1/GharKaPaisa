@@ -1379,11 +1379,15 @@ const getReferralInfo = async (req, res, next) => {
 };
 
 const changeParentPartner = async (req, res, next) => {
+  const { PartnerId } = req.params;
+  const { new_parent_id } = req.body;
+
+  if (new_parent_id && new_parent_id === PartnerId) {
+    return error(res, 'Cannot set a partner as their own parent', 400);
+  }
+
   const client = await getClient();
   try {
-    const { PartnerId } = req.params;
-    const { new_parent_id } = req.body;
-
     await client.query('BEGIN');
 
     const { rows: [partner] } = await client.query(`
@@ -1393,11 +1397,6 @@ const changeParentPartner = async (req, res, next) => {
     if (!partner) {
       await client.query('ROLLBACK');
       return notFound(res, 'Partner not found');
-    }
-
-    if (new_parent_id && new_parent_id === PartnerId) {
-      await client.query('ROLLBACK');
-      return error(res, 'Cannot set a partner as their own parent', 400);
     }
 
     if (new_parent_id) {
