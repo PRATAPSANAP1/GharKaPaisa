@@ -281,7 +281,7 @@ export default function SuperAdminOverview() {
     admins: parseInt(overviewData?.admins?.total_admins ?? adminsList.length ?? 0, 10),
     activeAdmins: parseInt(overviewData?.admins?.active_admins ?? adminsList.filter(a => a.status === 'active' || a.isActive).length ?? 0, 10),
 
-    totalCommissionPaid: (financialsWithdrawals.reduce((sum, w) => sum + parseFloat(w.amount || 0), 0)) || parseFloat(overviewData?.withdrawal?.total_commission_paid ?? 0),
+    totalWithdrawalAmount: (financialsWithdrawals.reduce((sum, w) => sum + parseFloat(w.amount || 0), 0)) || parseFloat(overviewData?.withdrawal?.total_withdrawals || overviewData?.withdrawal?.total_commission_paid || 0),
     pendingWithdrawals: financialsWithdrawals.filter(w => (w.status || '').toLowerCase().includes('pending') || (w.status || '').toLowerCase().includes('review')).length,
 
     banks: parseInt(overviewData?.banks?.total_banks ?? 0, 10),
@@ -517,7 +517,7 @@ export default function SuperAdminOverview() {
               { label: 'Pending Leads', value: stats.pendingApps, color: '#EAB308', bg: 'rgba(234, 179, 8, 0.12)', border: 'rgba(234, 179, 8, 0.3)', icon: <Clock size={22} color="#EAB308" />, action: () => navigate('/super-admin/leads?status=pending') },
               { label: 'Approved Leads', value: stats.approvedApps, color: '#059669', bg: 'rgba(5, 150, 105, 0.12)', border: 'rgba(5, 150, 105, 0.3)', icon: <CheckCircle size={22} color="#059669" />, action: () => navigate('/super-admin/leads?status=approved') },
               { label: 'Rejected Leads', value: stats.rejectedApps, color: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.3)', icon: <XCircle size={22} color="#EF4444" />, action: () => navigate('/super-admin/leads?status=rejected') },
-              { label: 'Commission Paid', value: `₹${parseFloat(stats.totalCommissionPaid).toLocaleString('en-IN')}`, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.3)', icon: <Coins size={22} color="#8B5CF6" />, action: () => setActiveTab('financials') },
+              { label: 'Total Withdrawals', value: `₹${parseFloat(stats.totalWithdrawalAmount).toLocaleString('en-IN')}`, color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.12)', border: 'rgba(139, 92, 246, 0.3)', icon: <Coins size={22} color="#8B5CF6" />, action: () => navigate('/super-admin/wallet?tab=withdrawals') },
               { label: 'Pending Withdrawals', value: stats.pendingWithdrawals, color: '#EC4899', bg: 'rgba(236, 72, 153, 0.12)', border: 'rgba(236, 72, 153, 0.3)', icon: <CreditCard size={22} color="#EC4899" />, action: () => navigate('/super-admin/wallet?tab=withdrawals') },
               { label: 'Total Banks', value: stats.banks, color: '#06B6D4', bg: 'rgba(6, 182, 212, 0.12)', border: 'rgba(6, 182, 212, 0.3)', icon: <Landmark size={22} color="#06B6D4" />, action: () => navigate('/super-admin/banks') },
               { label: 'Total Products', value: stats.products, color: '#6366F1', bg: 'rgba(99, 102, 241, 0.12)', border: 'rgba(99, 102, 241, 0.3)', icon: <Package size={22} color="#6366F1" />, action: () => navigate('/super-admin/products') },
@@ -667,8 +667,8 @@ export default function SuperAdminOverview() {
               <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 14px 0' }}>Financial Payouts</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
-                  <span>Commission Paid</span>
-                  <strong style={{ color: '#10B981' }}>₹{parseFloat(stats.totalCommissionPaid).toLocaleString('en-IN')}</strong>
+                  <span>Total Withdrawals</span>
+                  <strong style={{ color: '#10B981' }}>₹{parseFloat(stats.totalWithdrawalAmount).toLocaleString('en-IN')}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
                   <span>Pending Withdrawals</span>
@@ -1150,9 +1150,9 @@ export default function SuperAdminOverview() {
               </div>
             </div>
             <div style={{ background: C.card, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Total Commission Paid</span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Total Withdrawals</span>
               <div style={{ fontSize: '22px', fontWeight: 900, color: '#10B981', marginTop: '4px' }}>
-                ₹{parseFloat(stats.totalCommissionPaid).toLocaleString('en-IN')}
+                ₹{parseFloat(stats.totalWithdrawalAmount).toLocaleString('en-IN')}
               </div>
             </div>
             <div style={{ background: C.card, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
