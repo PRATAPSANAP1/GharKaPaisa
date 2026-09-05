@@ -39,16 +39,16 @@ const sendOtpLimiter = rateLimit({
   message: { success: false, message: 'Too many OTP requests. Please wait 10 minutes and try again.' }
 });
 
-// Verify OTP — 30 per 10 min, failed only
+// Verify OTP — 10 per 2 min, failed only
 const verifyOtpLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 30,
+  windowMs: 2 * 60 * 1000,
+  max: 10,
   skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
   validate: { trustProxy: false },
-  message: { success: false, message: 'Too many OTP verification attempts. Please wait 10 minutes.' }
+  message: { success: false, message: 'Too many OTP verification attempts. Please wait 2 minutes.' }
 });
 
 // Register — 5 per 30 min per IP (no identity yet at registration time)
