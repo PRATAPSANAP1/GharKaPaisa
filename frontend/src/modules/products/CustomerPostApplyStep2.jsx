@@ -294,6 +294,9 @@ export default function CustomerPostApplyStep2() {
   const isPunchOnly = !processType || processType.includes('punch') || processType === 'punch_only' || processType === 'lead_punching' || processType === 'digital_punching';
   const partnerUrl = bankInfo?.partner_url || bankInfo?.redirect_url || bankInfo?.product?.partner_url || '';
 
+  const bankNameCombined = `${bankInfo?.bank_name || ''} ${bankInfo?.product_name || ''} ${bankInfo?.product?.name || ''} ${bankInfo?.product?.bank_name || ''}`.toUpperCase();
+  const isTataHdfc = bankNameCombined.includes('TATA');
+
   return (
     <div style={{ minHeight: '100vh', width: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: bg, color: C.text, fontFamily: 'Inter, sans-serif', padding: '24px 16px', boxSizing: 'border-box' }}>
       
