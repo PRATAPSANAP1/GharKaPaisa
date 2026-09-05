@@ -24,10 +24,10 @@ const poolOptions = process.env.DATABASE_URL
     };
 
 // Enhanced Connection Pool Settings for High Availability and Connection Resiliency
-poolOptions.max = parseInt(process.env.DB_POOL_MAX) || 10;
-poolOptions.min = parseInt(process.env.DB_POOL_MIN) || 1;
+poolOptions.max = parseInt(process.env.DB_POOL_MAX) || 25;
+poolOptions.min = parseInt(process.env.DB_POOL_MIN) || 2;
 poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || 30000;
-poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || 5000;
+poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || 10000;
 poolOptions.keepAlive = true;
 poolOptions.keepAliveInitialDelayMillis = 5000;
 
@@ -49,7 +49,7 @@ pool.on('error', (err) => {
 });
 
 // Helper: run a query with transient connection failure retry logic
-const query = async (text, params, retries = 1) => {
+const query = async (text, params, retries = 2) => {
   const start = Date.now();
   try {
     const res = await pool.query(text, params);
