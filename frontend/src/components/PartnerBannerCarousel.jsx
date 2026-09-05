@@ -5,18 +5,10 @@ import api from '../services/api';
 import { MdChevronLeft, MdChevronRight } from 'react-icons/md';
 
 // Import local fallback partner banner images
-import offerBanner from '../modules/partner/banner/offer.png';
 import referenceBanner from '../modules/partner/banner/reference.png';
-import teamBanner from '../modules/partner/banner/team.png';
 import team2Banner from '../modules/partner/banner/team (2).png';
 
 const defaultBanners = [
-  {
-    id: 'team-1',
-    image: teamBanner,
-    alt: 'Add Team Member - Build Your Network',
-    link: '/partner/team-network'
-  },
   {
     id: 'team-2',
     image: team2Banner,
@@ -28,12 +20,6 @@ const defaultBanners = [
     image: referenceBanner,
     alt: 'Refer and Earn',
     link: '/partner/team-network'
-  },
-  {
-    id: 'offer',
-    image: offerBanner,
-    alt: 'Special Offers & Rewards',
-    link: '/partner/products'
   }
 ];
 
@@ -156,7 +142,7 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
               src={banner.image}
               alt={banner.alt}
               onError={(e) => {
-                e.currentTarget.src = showOnlyRefer ? referenceBanner : teamBanner;
+                e.currentTarget.src = referenceBanner;
               }}
               style={{
                 width: '100%',
