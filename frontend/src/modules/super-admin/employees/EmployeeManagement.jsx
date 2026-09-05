@@ -321,6 +321,16 @@ export default function EmployeeManagement() {
       // BRANCH HEAD: Assign Senior Managers
       // -------------------------------------------------
       if (role === 'BRANCH_HEAD') {
+        // Validate selected Senior Managers don't already have different Branch Heads
+        for (const smId of hierarchyForm.selected_sm_ids) {
+          const sm = sourceEmployees.find(e => e.id === smId);
+          if (sm && sm.branch_head_id && sm.branch_head_id !== hierarchyModalEmp.id) {
+            const currentBh = sourceEmployees.find(e => e.id === sm.branch_head_id);
+            alert(`⚠️ Validation Error: ${sm.full_name} (${sm.employee_id}) already reports to ${currentBh?.full_name || 'Unknown'} as Branch Head. Unassign current Branch Head first.`);
+            return;
+          }
+        }
+        
         // Remove previous Senior Manager assignments that are no longer selected
         const prevSeniorManagers = sourceEmployees.filter(e => 
           (e.branch_head_id === hierarchyModalEmp.id || e.branch_head_name === hierarchyModalEmp.full_name) &&
@@ -405,6 +415,16 @@ export default function EmployeeManagement() {
       // SENIOR MANAGER: Assign Managers
       // -------------------------------------------------
       else if (role === 'SENIOR_MANAGER') {
+        // Validate selected Managers don't already have different Senior Managers
+        for (const mgrId of hierarchyForm.selected_mgr_ids) {
+          const mgr = sourceEmployees.find(e => e.id === mgrId);
+          if (mgr && mgr.senior_manager_id && mgr.senior_manager_id !== hierarchyModalEmp.id) {
+            const currentSm = sourceEmployees.find(e => e.id === mgr.senior_manager_id);
+            alert(`⚠️ Validation Error: ${mgr.full_name} (${mgr.employee_id}) already reports to ${currentSm?.full_name || 'Unknown'} as Senior Manager. Unassign current Senior Manager first.`);
+            return;
+          }
+        }
+        
         // Remove previous Manager assignments that are no longer selected
         const prevManagers = sourceEmployees.filter(e => 
           (e.senior_manager_id === hierarchyModalEmp.id || e.senior_manager_name === hierarchyModalEmp.full_name) &&
@@ -473,6 +493,37 @@ export default function EmployeeManagement() {
       // MANAGER: Assign Team Leaders and TCs with TL-TC Mapping
       // -------------------------------------------------
       else if (role === 'MANAGER') {
+        // Validate selected Team Leaders don't already have different Managers
+        for (const tlId of hierarchyForm.selected_tl_ids) {
+          const tl = sourceEmployees.find(e => e.id === tlId);
+          if (tl && tl.manager_id && tl.manager_id !== hierarchyModalEmp.id) {
+            const currentMgr = sourceEmployees.find(e => e.id === tl.manager_id);
+            alert(`⚠️ Validation Error: ${tl.full_name} (${tl.employee_id}) already reports to ${currentMgr?.full_name || 'Unknown'} as Manager. Unassign current Manager first.`);
+            return;
+          }
+        }
+        
+        // Validate TCs in TL-TC mapping don't have conflicting assignments
+        for (const [tlId, tcIds] of Object.entries(hierarchyForm.tl_tc_mapping || {})) {
+          for (const tcId of tcIds) {
+            const tc = sourceEmployees.find(e => e.id === tcId);
+            if (tc) {
+              // Check if TC already has a different Team Leader
+              if (tc.team_leader_id && tc.team_leader_id !== tlId) {
+                const currentTl = sourceEmployees.find(e => e.id === tc.team_leader_id);
+                alert(`⚠️ Validation Error: ${tc.full_name} (${tc.employee_id}) already reports to ${currentTl?.full_name || 'Unknown'} as Team Leader. Unassign current Team Leader first.`);
+                return;
+              }
+              // Check if TC has a different Manager (when assigning through TL)
+              if (tc.manager_id && tc.manager_id !== hierarchyModalEmp.id) {
+                const currentMgr = sourceEmployees.find(e => e.id === tc.manager_id);
+                alert(`⚠️ Validation Error: ${tc.full_name} (${tc.employee_id}) already reports to ${currentMgr?.full_name || 'Unknown'} as Manager. Unassign current Manager first.`);
+                return;
+              }
+            }
+          }
+        }
+        
         // Remove previous TL assignments that are no longer selected
         const prevTLs = sourceEmployees.filter(e => 
           (e.manager_id === hierarchyModalEmp.id || e.manager_name === hierarchyModalEmp.full_name) &&
@@ -565,6 +616,22 @@ export default function EmployeeManagement() {
       // TEAM LEADER: Assign TCs
       // -------------------------------------------------
       else if (role === 'TEAM_LEADER') {
+        // Validate selected TCs don't already have different Team Leaders
+        for (const tcId of hierarchyForm.selected_tc_ids) {
+          const tc = sourceEmployees.find(e => e.id === tcId);
+          if (tc && tc.team_leader_id && tc.team_leader_id !== hierarchyModalEmp.id) {
+            const currentTl = sourceEmployees.find(e => e.id === tc.team_leader_id);
+            alert(`⚠️ Validation Error: ${tc.full_name} (${tc.employee_id}) already reports to ${currentTl?.full_name || 'Unknown'} as Team Leader. Unassign current Team Leader first.`);
+            return;
+          }
+          // Check if TC has a different Manager (should match the Team Leader's Manager)
+          if (tc.manager_id && tc.manager_id !== hierarchyForm.manager_id) {
+            const currentMgr = sourceEmployees.find(e => e.id === tc.manager_id);
+            alert(`⚠️ Validation Error: ${tc.full_name} (${tc.employee_id}) already reports to ${currentMgr?.full_name || 'Unknown'} as Manager. Unassign current Manager first.`);
+            return;
+          }
+        }
+        
         // Remove previous TC assignments that are no longer selected
         const prevTCs = sourceEmployees.filter(e => 
           e.team_leader_id === hierarchyModalEmp.id && 
