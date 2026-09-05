@@ -662,12 +662,13 @@ const sendLeadOtp = async (req, res, next) => {
 
 // POST /leads/:id/verify-otp — Verify OTP & Convert Lead to Application
 const verifyLeadOtp = async (req, res, next) => {
+  const { id } = req.params;
+  const { otp } = req.body;
+
+  if (!otp) return error(res, 'OTP is required for verification', 400);
+
   const client = await getClient();
   try {
-    const { id } = req.params;
-    const { otp } = req.body;
-
-    if (!otp) return error(res, 'OTP is required for verification', 400);
 
     const { rows: [lead] } = await client.query(`SELECT * FROM leads WHERE id = $1`, [id]);
     if (!lead) return notFound(res, 'Lead record not found');

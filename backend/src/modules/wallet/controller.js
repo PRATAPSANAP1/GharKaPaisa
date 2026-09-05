@@ -422,25 +422,25 @@ const getWalletReports = async (req, res, next) => {
 
 // POST /wallet/withdraw / POST /wallet/:PartnerId/withdraw
 const requestWithdrawal = async (req, res, next) => {
+  const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
+  if (!PartnerId) return error(res, 'Partner ID is required');
+
+  const { amount, remarks, bank_account_id } = req.body;
+  const parsedAmount = parseFloat(amount);
+  if (isNaN(parsedAmount) || parsedAmount < WITHDRAWAL_MIN_AMOUNT) {
+    return error(res, 'Minimum withdrawal amount is ₹100');
+  }
+  if (parsedAmount > WITHDRAWAL_MAX_AMOUNT) {
+    return error(res, 'Maximum single withdrawal limit is ₹50,000 per request');
+  }
+
+  const userRole = (req.user?.role || req.user?.user_role || '').toUpperCase();
+  if (userRole === 'PARTNER' && !req.withdrawalOtpVerified) {
+    return error(res, 'Verify the withdrawal OTP before submitting a request', 401);
+  }
+
   const client = await getClient();
   try {
-    const PartnerId = req.params.PartnerId || (req.partner ? req.partner.id : null);
-    if (!PartnerId) return error(res, 'Partner ID is required');
-    const { amount, remarks, bank_account_id } = req.body;
-
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount < WITHDRAWAL_MIN_AMOUNT) {
-      return error(res, 'Minimum withdrawal amount is ₹100');
-    }
-    if (parsedAmount > WITHDRAWAL_MAX_AMOUNT) {
-      return error(res, 'Maximum single withdrawal limit is ₹50,000 per request');
-    }
-
-    const userRole = (req.user?.role || req.user?.user_role || '').toUpperCase();
-    if (userRole === 'PARTNER' && !req.withdrawalOtpVerified) {
-      return error(res, 'Verify the withdrawal OTP before submitting a request', 401);
-    }
-
     await client.query('BEGIN');
 
     const { rows: [wallet] } = await client.query(
@@ -1285,14 +1285,14 @@ const verifyWithdrawalOTP = async (req, res, next) => {
 
 // ── Cancel Withdrawal ────────────────────────────────────────────────
 const cancelWithdrawal = async (req, res, next) => {
+  const partnerId = req.partner?.id;
+  if (!partnerId) return error(res, 'Partner profile not found');
+
+  const { id } = req.params;
+  if (!id) return error(res, 'Withdrawal ID is required');
+
   const client = await getClient();
   try {
-    const partnerId = req.partner?.id;
-    if (!partnerId) return error(res, 'Partner profile not found');
-
-    const { id } = req.params;
-    if (!id) return error(res, 'Withdrawal ID is required');
-
     await client.query('BEGIN');
 
     const { rows: [wr] } = await client.query(
@@ -1332,14 +1332,14 @@ const cancelWithdrawal = async (req, res, next) => {
 
 // ── Retry Failed Withdrawal ──────────────────────────────────────────
 const retryWithdrawal = async (req, res, next) => {
+  const partnerId = req.partner?.id;
+  if (!partnerId) return error(res, 'Partner profile not found');
+
+  const { id } = req.params;
+  if (!id) return error(res, 'Withdrawal ID is required');
+
   const client = await getClient();
   try {
-    const partnerId = req.partner?.id;
-    if (!partnerId) return error(res, 'Partner profile not found');
-
-    const { id } = req.params;
-    if (!id) return error(res, 'Withdrawal ID is required');
-
     await client.query('BEGIN');
     const { rows: [failedWr] } = await client.query(
       `SELECT * FROM wallet_withdrawals WHERE id = $1 AND partner_id = $2 FOR UPDATE`,
