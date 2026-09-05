@@ -278,7 +278,7 @@ export default function CustomerPostApplyStep2() {
   const partnerUrl = bankInfo?.partner_url || bankInfo?.redirect_url || bankInfo?.product?.partner_url || '';
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, color: C.text, fontFamily: 'Inter, sans-serif', padding: '24px 16px' }}>
+    <div style={{ minHeight: '100vh', width: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: bg, color: C.text, fontFamily: 'Inter, sans-serif', padding: '24px 16px', boxSizing: 'border-box' }}>
       
       {/* Header Banner */}
       <div style={{ maxWidth: '720px', margin: '0 auto 24px', textAlign: 'center' }}>
