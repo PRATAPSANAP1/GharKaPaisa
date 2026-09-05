@@ -83,10 +83,10 @@ export default function SuperAdminOverview() {
         api.get('/team/members'),
         api.get('/applications', { params: { limit: 100 } }),
         api.get('/superadmin/admins'),
-        api.get('/wallet/balance'),
+        api.get('/wallet/admin/razorpay/balance'),
         api.get('/employees'),
         api.get('/wallet/ledger', { params: { limit: 100 } }),
-        api.get('/wallet/admin/withdrawals', { params: { limit: 100 } })
+        api.get('/wallet/admin/withdrawals', { params: { limit: 100, status: 'all' } })
       ]);
 
       let hasErrors = false;
@@ -121,7 +121,7 @@ export default function SuperAdminOverview() {
       }
 
       if (walletBalRes.status === 'fulfilled' && walletBalRes.value.data?.success) {
-        setRazorpayBalance(walletBalRes.value.data.data?.razorpay_balance);
+        setRazorpayBalance(walletBalRes.value.data.data?.available_balance ?? 0);
       } else { hasErrors = true; }
 
       if (ledgerRes.status === 'fulfilled' && ledgerRes.value.data?.success) {
@@ -665,7 +665,7 @@ export default function SuperAdminOverview() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: C.bg, borderRadius: '8px' }}>
                   <span>Razorpay Live Balance</span>
-                  <strong style={{ color: '#3B82F6' }}>{razorpayBalance !== null ? `₹${parseFloat(razorpayBalance).toLocaleString('en-IN')}` : '₹0.00'}</strong>
+                  <strong style={{ color: '#3B82F6' }}>{razorpayBalance !== null && !isNaN(parseFloat(razorpayBalance)) ? `₹${parseFloat(razorpayBalance).toLocaleString('en-IN')}` : '₹0.00'}</strong>
                 </div>
               </div>
             </div>

@@ -576,7 +576,19 @@ const listWithdrawals = async (req, res, next) => {
     let dataQuery = '';
     let params = [];
 
-    if (status === 'pending') {
+    if (!status || status === 'all') {
+      countQuery = `SELECT COUNT(*) FROM wallet_withdrawals`;
+      dataQuery = `
+        SELECT wr.*, ap.partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id
+        FROM wallet_withdrawals wr
+        JOIN partner_profiles ap ON ap.id = wr.partner_id
+        JOIN users u ON u.id = ap.user_id
+        LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
+        ORDER BY wr.requested_at DESC
+        LIMIT $1 OFFSET $2
+      `;
+      params = [limit, offset];
+    } else if (status === 'pending') {
       countQuery = `SELECT COUNT(*) FROM wallet_withdrawals WHERE status IN ('pending', 'approved', 'processing', 'failed')`;
       dataQuery = `
         SELECT wr.*, ap.partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id

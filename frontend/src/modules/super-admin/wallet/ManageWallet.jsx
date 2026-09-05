@@ -106,11 +106,11 @@ export default function ManageWallet() {
     setLoading(true);
     try {
       const [wRes, fRes, cRes, pRes, lRes, rRes] = await Promise.allSettled([
-        api.get('/wallet/admin/withdrawals', { params: { limit: 10 } }),
-        api.get('/wallet/admin/fund-requests', { params: { limit: 10 } }),
-        api.get('/wallet/admin/commissions/pending', { params: { limit: 10 } }),
+        api.get('/wallet/admin/withdrawals', { params: { limit: 100, status: 'all' } }),
+        api.get('/wallet/admin/fund-requests', { params: { limit: 100 } }),
+        api.get('/wallet/admin/commissions/pending', { params: { limit: 100 } }),
         api.get('/wallet/admin/partners-overview'),
-        api.get('/wallet/ledger', { params: { limit: 10 } }),
+        api.get('/wallet/ledger', { params: { limit: 100 } }),
         api.get('/wallet/reconciliation')
       ]);
 
