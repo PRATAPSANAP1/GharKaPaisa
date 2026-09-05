@@ -589,7 +589,7 @@ const listWithdrawals = async (req, res, next) => {
         LEFT JOIN partner_profiles ap ON (ap.id = wr.partner_id OR ap.user_id = wr.partner_id)
         LEFT JOIN users u ON (u.id = wr.partner_id OR u.id = ap.user_id)
         LEFT JOIN partner_bank_details pbd ON (pbd.partner_id = ap.id OR pbd.partner_id = wr.partner_id)
-        ORDER BY wr.requested_at DESC
+        ORDER BY COALESCE(wr.requested_at, wr.created_at, NOW()) DESC
         LIMIT $1 OFFSET $2
       `;
       params = [limit, offset];
@@ -607,7 +607,7 @@ const listWithdrawals = async (req, res, next) => {
         LEFT JOIN users u ON (u.id = wr.partner_id OR u.id = ap.user_id)
         LEFT JOIN partner_bank_details pbd ON (pbd.partner_id = ap.id OR pbd.partner_id = wr.partner_id)
         WHERE wr.status IN ('pending', 'approved', 'processing', 'failed')
-        ORDER BY wr.requested_at ASC
+        ORDER BY COALESCE(wr.requested_at, wr.created_at, NOW()) ASC
         LIMIT $1 OFFSET $2
       `;
       params = [limit, offset];
@@ -625,7 +625,7 @@ const listWithdrawals = async (req, res, next) => {
         LEFT JOIN users u ON (u.id = wr.partner_id OR u.id = ap.user_id)
         LEFT JOIN partner_bank_details pbd ON (pbd.partner_id = ap.id OR pbd.partner_id = wr.partner_id)
         WHERE wr.status IN ('processed', 'transferred')
-        ORDER BY wr.requested_at DESC
+        ORDER BY COALESCE(wr.requested_at, wr.created_at, NOW()) DESC
         LIMIT $1 OFFSET $2
       `;
       params = [limit, offset];
@@ -643,7 +643,7 @@ const listWithdrawals = async (req, res, next) => {
         LEFT JOIN users u ON (u.id = wr.partner_id OR u.id = ap.user_id)
         LEFT JOIN partner_bank_details pbd ON (pbd.partner_id = ap.id OR pbd.partner_id = wr.partner_id)
         WHERE wr.status = $1
-        ORDER BY wr.requested_at DESC
+        ORDER BY COALESCE(wr.requested_at, wr.created_at, NOW()) DESC
         LIMIT $2 OFFSET $3
       `;
       params = [status, limit, offset];
