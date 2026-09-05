@@ -59,6 +59,14 @@ export default function ManageWallet() {
   const S = makeS(C);
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(() => searchParams.get('tab') || 'withdrawals');
+  const [withdrawalSubFilter, setWithdrawalSubFilter] = useState('all');
+
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
 
   // Filters State
   const [filters, setFilters] = useState({
@@ -574,7 +582,41 @@ export default function ManageWallet() {
                 </h3>
                 <span style={{ fontSize: '12px', color: C.textLight }}>Track and manage user withdrawal requests and payout settlements</span>
               </div>
-              <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('withdrawals'); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All Details</button>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('pending'); setActiveFullViewModal('withdrawals'); }} style={{ background: '#EA580C', color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>
+                  Pending Requests ({withdrawals.filter(w => (w.status || '').toLowerCase().includes('pending')).length})
+                </button>
+                <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('withdrawals'); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All Details</button>
+              </div>
+            </div>
+
+            {/* Sub-filter Chips */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {[
+                { id: 'all', label: `All (${withdrawals.length})` },
+                { id: 'pending', label: `Pending (${withdrawals.filter(w => (w.status || '').toLowerCase().includes('pending')).length})` },
+                { id: 'approved', label: `Approved (${withdrawals.filter(w => (w.status || '').toLowerCase().includes('approved')).length})` },
+                { id: 'processed', label: `Processed (${withdrawals.filter(w => (w.status || '').toLowerCase().includes('processed') || (w.status || '').toLowerCase().includes('completed')).length})` },
+                { id: 'rejected', label: `Rejected (${withdrawals.filter(w => (w.status || '').toLowerCase().includes('reject') || (w.status || '').toLowerCase().includes('failed')).length})` },
+              ].map(chip => (
+                <button
+                  key={chip.id}
+                  onClick={() => setWithdrawalSubFilter(chip.id)}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    border: `1px solid ${withdrawalSubFilter === chip.id ? C.teal : C.border}`,
+                    background: withdrawalSubFilter === chip.id ? (isDark ? '#1E293B' : '#EFF6FF') : 'transparent',
+                    color: withdrawalSubFilter === chip.id ? C.teal : C.textLight,
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {chip.label}
+                </button>
+              ))}
             </div>
 
             <div style={{ overflowX: 'auto' }}>
@@ -587,33 +629,59 @@ export default function ManageWallet() {
                     <th style={{ padding: '10px 8px' }}>Bank Account & IFSC</th>
                     <th style={{ padding: '10px 8px', textAlign: 'right' }}>Amount</th>
                     <th style={{ padding: '10px 8px', textAlign: 'center' }}>Status</th>
-                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Action</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {withdrawals.length === 0 ? (
-                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No withdrawal requests found</td></tr>
-                  ) : withdrawals.map(w => {
-                    const badge = getStatusBadge(w.status);
-                    const userName = w.user_name || (w.first_name ? `${w.first_name} ${w.last_name || ''}` : w.partner_code || 'Partner');
-                    const roleName = w.role || 'Partner';
-                    const amt = parseFloat(w.amount || 0);
-                    return (
-                      <tr key={w.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                        <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{w.id}</td>
-                        <td style={{ padding: '12px 8px', fontWeight: 700 }}>{userName}</td>
-                        <td style={{ padding: '12px 8px', color: C.textLight }}>{roleName}</td>
-                        <td style={{ padding: '12px 8px', fontSize: '11.5px' }}>{w.bank_name ? `${w.bank_name} (${w.account_number || ''})` : 'N/A'}</td>
-                        <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.text, fontSize: '13.5px' }}>₹{amt.toLocaleString('en-IN')}</td>
-                        <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                          <span style={{ background: badge.bg, color: badge.color, padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>{badge.label}</span>
-                        </td>
-                        <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                          <button onClick={() => setSelectedItem(w)} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>View Details</button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {(() => {
+                    const filteredList = withdrawals.filter(w => {
+                      if (withdrawalSubFilter === 'all') return true;
+                      const s = (w.status || '').toLowerCase();
+                      if (withdrawalSubFilter === 'pending') return s.includes('pending') || s.includes('review');
+                      if (withdrawalSubFilter === 'approved') return s.includes('approved');
+                      if (withdrawalSubFilter === 'processed') return s.includes('processed') || s.includes('completed') || s.includes('transferred');
+                      if (withdrawalSubFilter === 'rejected') return s.includes('reject') || s.includes('failed');
+                      return true;
+                    });
+
+                    if (filteredList.length === 0) {
+                      return (
+                        <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No withdrawal requests match filter ({withdrawalSubFilter})</td></tr>
+                      );
+                    }
+
+                    return filteredList.map(w => {
+                      const badge = getStatusBadge(w.status);
+                      const userName = w.user_name || (w.first_name ? `${w.first_name} ${w.last_name || ''}` : w.partner_code || 'Partner');
+                      const roleName = w.role || 'Partner';
+                      const amt = parseFloat(w.amount || 0);
+                      const isPending = (w.status || '').toLowerCase().includes('pending');
+
+                      return (
+                        <tr key={w.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{w.id}</td>
+                          <td style={{ padding: '12px 8px', fontWeight: 700 }}>{userName}</td>
+                          <td style={{ padding: '12px 8px', color: C.textLight }}>{roleName}</td>
+                          <td style={{ padding: '12px 8px', fontSize: '11.5px' }}>{w.bank_name ? `${w.bank_name} (${w.account_number || ''})` : 'N/A'}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.text, fontSize: '13.5px' }}>₹{amt.toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                            <span style={{ background: badge.bg, color: badge.color, padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>{badge.label}</span>
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                              {isPending && (
+                                <>
+                                  <button onClick={() => handleProcessPayout(w.id)} style={{ background: C.green, color: '#FFF', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Process Payout</button>
+                                  <button onClick={() => handleRejectWithdrawal(w.id)} style={{ background: '#EF4444', color: '#FFF', border: 'none', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Reject</button>
+                                </>
+                              )}
+                              <button onClick={() => setSelectedItem(w)} style={{ background: isDark ? '#27272A' : '#E2E8F0', color: C.text, border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Details</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -1009,21 +1077,28 @@ export default function ManageWallet() {
       {/* ── MODAL 3: ITEM DETAILS ── */}
       {selectedItem && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ ...S.card, background: isDark ? '#18181B' : C.card, maxWidth: '500px', width: '100%', padding: '24px', borderRadius: '16px' }}>
+          <div style={{ ...S.card, background: isDark ? '#18181B' : C.card, maxWidth: '520px', width: '100%', padding: '24px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800 }}>Withdrawal Request Details</h3>
               <button onClick={() => setSelectedItem(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textLight }}>✕</button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
-              <div><strong>Request ID:</strong> {selectedItem.id}</div>
-              <div><strong>User:</strong> {selectedItem.user_name} ({selectedItem.role})</div>
-              <div><strong>Amount:</strong> ₹{selectedItem.amount?.toLocaleString()}</div>
-              <div><strong>Bank Account:</strong> {selectedItem.bank_name} - {selectedItem.account_number} ({selectedItem.ifsc_code})</div>
+              <div><strong>Request ID:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 800 }}>{selectedItem.id}</span></div>
+              <div><strong>User:</strong> {selectedItem.user_name || (selectedItem.first_name ? `${selectedItem.first_name} ${selectedItem.last_name || ''}` : selectedItem.partner_code || 'Partner')} ({selectedItem.role || 'Partner'})</div>
+              <div><strong>Amount:</strong> ₹{parseFloat(selectedItem.amount || 0).toLocaleString('en-IN')}</div>
+              <div><strong>Bank Account:</strong> {selectedItem.bank_name || 'Bank'} — {selectedItem.account_number || 'N/A'} (IFSC: {selectedItem.ifsc_code || 'N/A'})</div>
+              {selectedItem.upi_id && <div><strong>UPI ID:</strong> {selectedItem.upi_id}</div>}
+              <div><strong>Requested At:</strong> {selectedItem.requested_at ? new Date(selectedItem.requested_at).toLocaleString('en-IN') : 'N/A'}</div>
               <div><strong>Status:</strong> <span style={{ fontWeight: 800, color: C.teal }}>{selectedItem.status}</span></div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
               <button onClick={() => setSelectedItem(null)} style={{ ...S.btn('outline'), padding: '8px 14px' }}>Close</button>
-              <button onClick={() => { alert(`Processing RazorpayX Payout for ${selectedItem.id}`); setSelectedItem(null); }} style={{ ...S.btn('primary'), background: C.teal, padding: '8px 16px' }}>Process Payout</button>
+              {(selectedItem.status || '').toLowerCase().includes('pending') && (
+                <>
+                  <button onClick={() => handleRejectWithdrawal(selectedItem.id)} style={{ ...S.btn('outline'), color: '#EF4444', borderColor: '#EF4444', padding: '8px 14px' }}>Reject</button>
+                  <button onClick={() => handleProcessPayout(selectedItem.id)} style={{ ...S.btn('primary'), background: C.green, padding: '8px 16px' }}>Process Payout</button>
+                </>
+              )}
             </div>
           </div>
         </div>
