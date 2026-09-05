@@ -21,6 +21,7 @@ export default function EmployeeManagement() {
 
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'hierarchy', 'bonus'
   const [employees, setEmployees] = useState([]);
+  const [allEmployees, setAllEmployees] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -128,6 +129,7 @@ export default function EmployeeManagement() {
   const openHierarchyModal = (emp) => {
     setSubordinateSearchText('');
     setHierarchyModalEmp(emp);
+    const sourceEmployees = allEmployees.length ? allEmployees : employees;
     const desgUpper = String(emp.designation || '').toUpperCase();
     const currentRole = (emp.hierarchy_level || (desgUpper.includes('BRANCH') ? 'BRANCH_HEAD' : desgUpper.includes('SENIOR') ? 'SENIOR_MANAGER' : desgUpper.includes('MANAGER') ? 'MANAGER' : desgUpper.includes('TEAM') || desgUpper === 'TL' ? 'TEAM_LEADER' : 'TC')).toUpperCase();
     
@@ -135,25 +137,25 @@ export default function EmployeeManagement() {
     let currentSubordinates = [];
     
     if (currentRole === 'BRANCH_HEAD') {
-      currentSubordinates = employees.filter(e => 
+      currentSubordinates = sourceEmployees.filter(e => 
         e.branch_head_id === emp.id && 
         (e.designation === 'Senior Manager' || e.hierarchy_level === 'SENIOR_MANAGER')
       ).map(e => e.id);
     }
     else if (currentRole === 'SENIOR_MANAGER') {
-      currentSubordinates = employees.filter(e => 
+      currentSubordinates = sourceEmployees.filter(e => 
         e.senior_manager_id === emp.id && 
         (e.designation === 'Manager' || e.hierarchy_level === 'MANAGER')
       ).map(e => e.id);
     }
     else if (currentRole === 'MANAGER') {
-      currentSubordinates = employees.filter(e => 
+      currentSubordinates = sourceEmployees.filter(e => 
         e.manager_id === emp.id && 
         (e.designation === 'Team Leader' || e.hierarchy_level === 'TEAM_LEADER')
       ).map(e => e.id);
     }
     else if (currentRole === 'TEAM_LEADER') {
-      currentSubordinates = employees.filter(e => 
+      currentSubordinates = sourceEmployees.filter(e => 
         e.team_leader_id === emp.id && 
         (e.designation === 'TC' || e.hierarchy_level === 'TC')
       ).map(e => e.id);
@@ -163,7 +165,7 @@ export default function EmployeeManagement() {
     const tlTcMapping = {};
     if (currentRole === 'MANAGER') {
       currentSubordinates.forEach(tlId => {
-        const tcIds = employees.filter(e => 
+        const tcIds = sourceEmployees.filter(e => 
           e.team_leader_id === tlId && 
           (e.designation === 'TC' || e.hierarchy_level === 'TC')
         ).map(e => e.id);
@@ -191,6 +193,8 @@ export default function EmployeeManagement() {
     e.preventDefault();
     if (!hierarchyModalEmp) return;
     
+    const sourceEmployees = allEmployees.length ? allEmployees : employees;
+
     try {
       const role = hierarchyForm.hierarchy_level || 'TC';
       const bulkAssignments = [];
@@ -203,13 +207,13 @@ export default function EmployeeManagement() {
       const validateSingleSupervisor = (employeeId, supervisorId, supervisorType, supervisorName) => {
         if (!supervisorId) return true; // No supervisor is valid
         
-        const employee = employees.find(e => e.id === employeeId);
+        const employee = sourceEmployees.find(e => e.id === employeeId);
         if (!employee) return true;
         
         // Check if employee already has a different supervisor at this level
         const currentSupervisorId = employee[`${supervisorType}_id`];
         if (currentSupervisorId && currentSupervisorId !== supervisorId) {
-          const currentSupervisor = employees.find(e => e.id === currentSupervisorId);
+          const currentSupervisor = sourceEmployees.find(e => e.id === currentSupervisorId);
           const currentSupervisorName = currentSupervisor ? currentSupervisor.full_name : 'Unknown';
           alert(`⚠️ Validation Error: ${employee.full_name} (${employee.employee_id}) already reports to ${currentSupervisorName} (${currentSupervisorId}) as ${supervisorType.replace('_', ' ').toUpperCase()}. Unassign current supervisor first or select the same supervisor.`);
           return false;
@@ -258,7 +262,7 @@ export default function EmployeeManagement() {
         if (hierarchyForm.manager_id && hierarchyForm.team_leader_id) {
           // This is valid - TC reports to Manager through Team Leader
           // But validate that the Team Leader reports to the same Manager
-          const tl = employees.find(e => e.id === hierarchyForm.team_leader_id);
+          const tl = sourceEmployees.find(e => e.id === hierarchyForm.team_leader_id);
           if (tl && tl.manager_id !== hierarchyForm.manager_id) {
             alert('⚠️ Validation Error: The selected Team Leader does not report to the selected Manager. Please select a Team Leader who reports to this Manager, or assign the TC directly to the Manager without a Team Leader.');
             return;
@@ -318,7 +322,7 @@ export default function EmployeeManagement() {
       // -------------------------------------------------
       if (role === 'BRANCH_HEAD') {
         // Remove previous Senior Manager assignments that are no longer selected
-        const prevSeniorManagers = employees.filter(e => 
+        const prevSeniorManagers = sourceEmployees.filter(e => 
           (e.branch_head_id === hierarchyModalEmp.id || e.branch_head_name === hierarchyModalEmp.full_name) &&
           (e.designation === 'Senior Manager' || e.hierarchy_level === 'SENIOR_MANAGER')
         );
@@ -335,7 +339,7 @@ export default function EmployeeManagement() {
             });
             
             // Also cascade: Remove Managers under this Senior Manager
-            const prevManagers = employees.filter(e => 
+            const prevManagers = sourceEmployees.filter(e => 
               e.senior_manager_id === prevSm.id && 
               (e.designation === 'Manager' || e.hierarchy_level === 'MANAGER')
             );
@@ -350,7 +354,7 @@ export default function EmployeeManagement() {
               });
               
               // Further cascade: Remove TLs under this Manager
-              const prevTLs = employees.filter(e => 
+              const prevTLs = sourceEmployees.filter(e => 
                 e.manager_id === mgr.id && 
                 (e.designation === 'Team Leader' || e.hierarchy_level === 'TEAM_LEADER')
               );
@@ -365,7 +369,7 @@ export default function EmployeeManagement() {
                 });
                 
                 // Further cascade: Remove TCs under this TL
-                const prevTCs = employees.filter(e => 
+                const prevTCs = sourceEmployees.filter(e => 
                   e.team_leader_id === tl.id && 
                   (e.designation === 'TC' || e.hierarchy_level === 'TC')
                 );
@@ -402,7 +406,7 @@ export default function EmployeeManagement() {
       // -------------------------------------------------
       else if (role === 'SENIOR_MANAGER') {
         // Remove previous Manager assignments that are no longer selected
-        const prevManagers = employees.filter(e => 
+        const prevManagers = sourceEmployees.filter(e => 
           (e.senior_manager_id === hierarchyModalEmp.id || e.senior_manager_name === hierarchyModalEmp.full_name) &&
           (e.designation === 'Manager' || e.hierarchy_level === 'MANAGER')
         );
@@ -419,7 +423,7 @@ export default function EmployeeManagement() {
             });
             
             // Cascade: Remove TLs under this Manager
-            const prevTLs = employees.filter(e => 
+            const prevTLs = sourceEmployees.filter(e => 
               e.manager_id === prevMgr.id && 
               (e.designation === 'Team Leader' || e.hierarchy_level === 'TEAM_LEADER')
             );
@@ -434,7 +438,7 @@ export default function EmployeeManagement() {
               });
               
               // Further cascade: Remove TCs under this TL
-              const prevTCs = employees.filter(e => 
+              const prevTCs = sourceEmployees.filter(e => 
                 e.team_leader_id === tl.id && 
                 (e.designation === 'TC' || e.hierarchy_level === 'TC')
               );
@@ -470,7 +474,7 @@ export default function EmployeeManagement() {
       // -------------------------------------------------
       else if (role === 'MANAGER') {
         // Remove previous TL assignments that are no longer selected
-        const prevTLs = employees.filter(e => 
+        const prevTLs = sourceEmployees.filter(e => 
           (e.manager_id === hierarchyModalEmp.id || e.manager_name === hierarchyModalEmp.full_name) &&
           (e.designation === 'Team Leader' || e.hierarchy_level === 'TEAM_LEADER')
         );
@@ -488,7 +492,7 @@ export default function EmployeeManagement() {
             });
             
             // Clear TC assignments for this TL
-            const prevTCs = employees.filter(e => 
+            const prevTCs = sourceEmployees.filter(e => 
               e.team_leader_id === prevTl.id && 
               (e.designation === 'TC' || e.hierarchy_level === 'TC')
             );
@@ -524,7 +528,7 @@ export default function EmployeeManagement() {
         });
         
         // Clear previous TC assignments for this manager that are no longer selected
-        const prevTCs = employees.filter(e => 
+        const prevTCs = sourceEmployees.filter(e => 
           e.manager_id === hierarchyModalEmp.id && 
           (e.designation === 'TC' || e.hierarchy_level === 'TC')
         );
@@ -562,7 +566,7 @@ export default function EmployeeManagement() {
       // -------------------------------------------------
       else if (role === 'TEAM_LEADER') {
         // Remove previous TC assignments that are no longer selected
-        const prevTCs = employees.filter(e => 
+        const prevTCs = sourceEmployees.filter(e => 
           e.team_leader_id === hierarchyModalEmp.id && 
           (e.designation === 'TC' || e.hierarchy_level === 'TC')
         );
@@ -750,6 +754,9 @@ export default function EmployeeManagement() {
       const statsRes = await api.get('/employees/stats');
       if (statsRes.data.success) setStats(statsRes.data.data);
 
+      const allEmpRes = await api.get('/employees', { params: { limit: 10000 } });
+      if (allEmpRes.data.success) setAllEmployees(allEmpRes.data.data || []);
+
       const empRes = await api.get('/employees', { 
         params: { 
           search: searchTerm,
@@ -757,7 +764,7 @@ export default function EmployeeManagement() {
           designation: designationFilter
         } 
       });
-      if (empRes.data.success) setEmployees(empRes.data.data);
+      if (empRes.data.success) setEmployees(empRes.data.data || []);
 
       const prodRes = await api.get('/products');
       if (prodRes.data.success) setProductsList(prodRes.data.data || []);
@@ -911,7 +918,7 @@ export default function EmployeeManagement() {
           const subTLs = tlsList.filter(tl => tl.manager_id === m.id || tl.manager_name === m.full_name);
           subTLs.forEach(tl => {
             csv += `Level 4,Team Leader,"${tl.full_name}","${tl.employee_id}","${tl.mobile_number || ''}","${m.full_name}"\n`;
-            const subTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
+            const subTCs = targetEmployeeList.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
             subTCs.forEach(tc => {
               csv += `Level 5,Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${tl.full_name}"\n`;
             });
@@ -925,7 +932,7 @@ export default function EmployeeManagement() {
         const subTLs = tlsList.filter(tl => tl.manager_id === m.id || tl.manager_name === m.full_name);
         subTLs.forEach(tl => {
           csv += `Level 3,Team Leader,"${tl.full_name}","${tl.employee_id}","${tl.mobile_number || ''}","${m.full_name}"\n`;
-          const subTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
+          const subTCs = targetEmployeeList.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
           subTCs.forEach(tc => {
             csv += `Level 4,Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${tl.full_name}"\n`;
           });
@@ -935,17 +942,17 @@ export default function EmployeeManagement() {
       const subTLs = tlsList.filter(tl => tl.manager_id === currentPerson.id || tl.manager_name === currentPerson.full_name);
       subTLs.forEach(tl => {
         csv += `Level 2,Team Leader,"${tl.full_name}","${tl.employee_id}","${tl.mobile_number || ''}","${currentPerson.full_name}"\n`;
-        const subTCs = employees.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
+        const subTCs = targetEmployeeList.filter(tc => tc.team_leader_id === tl.id || tc.team_leader_name === tl.full_name);
         subTCs.forEach(tc => {
           csv += `Level 3,Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${tl.full_name}"\n`;
         });
       });
-      const directTCs = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === currentPerson.id || tc.manager_name === currentPerson.full_name) && !tc.team_leader_id);
+      const directTCs = targetEmployeeList.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === currentPerson.id || tc.manager_name === currentPerson.full_name) && !tc.team_leader_id);
       directTCs.forEach(tc => {
         csv += `Level 2,Direct Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${currentPerson.full_name}"\n`;
       });
     } else if (selectedTreeRole === 'TEAM_LEADER') {
-      const subTCs = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.team_leader_id === currentPerson.id || tc.team_leader_name === currentPerson.full_name));
+      const subTCs = targetEmployeeList.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.team_leader_id === currentPerson.id || tc.team_leader_name === currentPerson.full_name));
       subTCs.forEach(tc => {
         csv += `Level 2,Telecaller,"${tc.full_name}","${tc.employee_id}","${tc.mobile_number || ''}","${currentPerson.full_name}"\n`;
       });
@@ -961,15 +968,17 @@ export default function EmployeeManagement() {
     document.body.removeChild(link);
   };
 
-  const branchHeadsList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('branch head') || e.hierarchy_level === 'BRANCH_HEAD'));
-  const seniorManagersList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('senior manager') || e.hierarchy_level === 'SENIOR_MANAGER'));
-  const managersList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('manager') && !String(e.designation || '').toLowerCase().includes('senior') || e.hierarchy_level === 'MANAGER'));
-  const tlsList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('team leader') || String(e.designation || '').toUpperCase() === 'TL' || e.hierarchy_level === 'TEAM_LEADER'));
-  const tcsList = employees.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('tc') || String(e.designation || '').toLowerCase().includes('telecaller') || e.hierarchy_level === 'TC'));
+  const targetEmployeeList = allEmployees.length ? allEmployees : employees;
+
+  const branchHeadsList = targetEmployeeList.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('branch head') || e.hierarchy_level === 'BRANCH_HEAD'));
+  const seniorManagersList = targetEmployeeList.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('senior manager') || e.hierarchy_level === 'SENIOR_MANAGER'));
+  const managersList = targetEmployeeList.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('manager') && !String(e.designation || '').toLowerCase().includes('senior') || e.hierarchy_level === 'MANAGER'));
+  const tlsList = targetEmployeeList.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('team leader') || String(e.designation || '').toUpperCase() === 'TL' || e.hierarchy_level === 'TEAM_LEADER'));
+  const tcsList = targetEmployeeList.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('tc') || String(e.designation || '').toLowerCase().includes('telecaller') || e.hierarchy_level === 'TC'));
 
   const getSortedSupervisorOptions = (roleKeyword, levelCode) => {
     const activeId = hierarchyModalEmp?.id;
-    return employees
+    return targetEmployeeList
       .filter(e => e.id !== activeId)
       .sort((a, b) => {
         const matchA = String(a.designation || '').toLowerCase().includes(roleKeyword) || a.hierarchy_level === levelCode;
@@ -1320,8 +1329,8 @@ export default function EmployeeManagement() {
 
           const allManagerTCs = activePersonId
             ? (selectedTreeRole === 'TEAM_LEADER'
-                ? employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.team_leader_id === activePersonId || tc.team_leader_name === currentPerson?.full_name))
-                : employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (
+                ? targetEmployeeList.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.team_leader_id === activePersonId || tc.team_leader_name === currentPerson?.full_name))
+                : targetEmployeeList.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (
                     tc.manager_id === activePersonId || tc.manager_name === currentPerson?.full_name ||
                     managerTLs.some(tl => tl.id === tc.team_leader_id)
                   ))
@@ -1453,8 +1462,8 @@ export default function EmployeeManagement() {
                           const memberCount = (
                             selectedTreeRole === 'BRANCH_HEAD' ? (seniorManagersList.filter(sm => sm.branch_head_id === person.id).length + managersList.filter(m => m.branch_head_id === person.id).length) :
                             selectedTreeRole === 'SENIOR_MANAGER' ? managersList.filter(m => m.senior_manager_id === person.id).length :
-                            selectedTreeRole === 'TEAM_LEADER' ? employees.filter(tc => tc.team_leader_id === person.id).length :
-                            (tlsList.filter(tl => tl.manager_id === person.id).length + employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && tc.manager_id === person.id).length)
+                            selectedTreeRole === 'TEAM_LEADER' ? targetEmployeeList.filter(tc => tc.team_leader_id === person.id).length :
+                            (tlsList.filter(tl => tl.manager_id === person.id).length + targetEmployeeList.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && tc.manager_id === person.id).length)
                           );
 
                           return (
@@ -1622,12 +1631,12 @@ export default function EmployeeManagement() {
                             childRole = 'TEAM_LEADER';
                             childrenList = tls;
                           } else if (parentRole === 'TEAM_LEADER') {
-                            const tcs = employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.team_leader_id === parentEmp.id || tc.team_leader_name === parentEmp.full_name));
+                            const tcs = targetEmployeeList.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.team_leader_id === parentEmp.id || tc.team_leader_name === parentEmp.full_name));
                             childRole = 'TC';
                             childrenList = tcs;
                           }
 
-                          const directTCsForMgr = (parentRole === 'MANAGER') ? employees.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === parentEmp.id || tc.manager_name === parentEmp.full_name) && !tc.team_leader_id && !tc.team_leader_name) : [];
+                          const directTCsForMgr = (parentRole === 'MANAGER') ? targetEmployeeList.filter(tc => (tc.designation === 'TC' || tc.hierarchy_level === 'TC') && (tc.manager_id === parentEmp.id || tc.manager_name === parentEmp.full_name) && !tc.team_leader_id && !tc.team_leader_name) : [];
 
                           if (childrenList.length === 0 && directTCsForMgr.length === 0) return null;
 
@@ -2579,7 +2588,7 @@ export default function EmployeeManagement() {
                 )}
 
                 {hierarchyForm.hierarchy_level === 'BRANCH_HEAD' && (() => {
-                  const candidateSMs = employees
+                  const candidateSMs = targetEmployeeList
                     .filter(e => e.id !== hierarchyModalEmp.id)
                     .filter(e => {
                       if (!subordinateSearchText.trim()) return true;
@@ -2605,7 +2614,7 @@ export default function EmployeeManagement() {
                         ) : (
                           candidateSMs.map(sm => {
                             const checked = (hierarchyForm.selected_sm_ids || []).includes(sm.id);
-                            const currentBh = sm.branch_head_id ? employees.find(e => e.id === sm.branch_head_id) : null;
+                            const currentBh = sm.branch_head_id ? targetEmployeeList.find(e => e.id === sm.branch_head_id) : null;
                             const currentBhName = currentBh ? currentBh.full_name : (sm.branch_head_name || null);
                             const isSelfBh = sm.branch_head_id === hierarchyModalEmp.id;
 
@@ -2644,7 +2653,7 @@ export default function EmployeeManagement() {
                 })()}
 
                 {hierarchyForm.hierarchy_level === 'SENIOR_MANAGER' && (() => {
-                  const candidateMgrs = employees
+                  const candidateMgrs = targetEmployeeList
                     .filter(e => e.id !== hierarchyModalEmp.id)
                     .filter(e => {
                       if (!subordinateSearchText.trim()) return true;
@@ -2670,7 +2679,7 @@ export default function EmployeeManagement() {
                         ) : (
                           candidateMgrs.map(mgr => {
                             const checked = (hierarchyForm.selected_mgr_ids || []).includes(mgr.id);
-                            const currentSm = mgr.senior_manager_id ? employees.find(e => e.id === mgr.senior_manager_id) : null;
+                            const currentSm = mgr.senior_manager_id ? targetEmployeeList.find(e => e.id === mgr.senior_manager_id) : null;
                             const currentSmName = currentSm ? currentSm.full_name : (mgr.senior_manager_name || null);
                             const isSelfSm = mgr.senior_manager_id === hierarchyModalEmp.id;
 
@@ -2709,7 +2718,7 @@ export default function EmployeeManagement() {
                 })()}
 
                 {hierarchyForm.hierarchy_level === 'MANAGER' && (() => {
-                  const candidateTLs = employees
+                  const candidateTLs = targetEmployeeList
                     .filter(e => e.id !== hierarchyModalEmp.id)
                     .filter(e => {
                       if (!subordinateSearchText.trim()) return true;
@@ -2735,7 +2744,7 @@ export default function EmployeeManagement() {
                         ) : (
                           candidateTLs.map(tl => {
                             const checked = (hierarchyForm.selected_tl_ids || []).includes(tl.id);
-                            const currentMgr = tl.manager_id ? employees.find(e => e.id === tl.manager_id) : null;
+                            const currentMgr = tl.manager_id ? targetEmployeeList.find(e => e.id === tl.manager_id) : null;
                             const currentMgrName = currentMgr ? currentMgr.full_name : (tl.manager_name || null);
                             const isSelfMgr = tl.manager_id === hierarchyModalEmp.id;
 
@@ -2780,10 +2789,10 @@ export default function EmployeeManagement() {
                       Assign Telecallers to Selected Team Leaders
                     </label>
                     {hierarchyForm.selected_tl_ids.map(tlId => {
-                      const tl = employees.find(e => e.id === tlId);
+                      const tl = targetEmployeeList.find(e => e.id === tlId);
                       if (!tl) return null;
                       const currentTCs = hierarchyForm.tl_tc_mapping[tlId] || [];
-                      const candidateTCs = employees
+                      const candidateTCs = targetEmployeeList
                         .filter(e => e.id !== hierarchyModalEmp.id && e.id !== tlId)
                         .filter(e => {
                           if (!subordinateSearchText.trim()) return true;
@@ -2809,7 +2818,7 @@ export default function EmployeeManagement() {
                             ) : (
                               candidateTCs.map(tc => {
                                 const checked = currentTCs.includes(tc.id);
-                                const currentTl = tc.team_leader_id ? employees.find(e => e.id === tc.team_leader_id) : null;
+                                const currentTl = tc.team_leader_id ? targetEmployeeList.find(e => e.id === tc.team_leader_id) : null;
                                 const currentTlName = currentTl ? currentTl.full_name : (tc.team_leader_name || null);
                                 const isUnderThisTl = tc.team_leader_id === tlId;
 
@@ -2857,7 +2866,7 @@ export default function EmployeeManagement() {
                 )}
 
                 {hierarchyForm.hierarchy_level === 'TEAM_LEADER' && (() => {
-                  const candidateTCs = employees
+                  const candidateTCs = targetEmployeeList
                     .filter(e => e.id !== hierarchyModalEmp.id)
                     .filter(e => {
                       if (!subordinateSearchText.trim()) return true;
@@ -2883,7 +2892,7 @@ export default function EmployeeManagement() {
                         ) : (
                           candidateTCs.map(tc => {
                             const checked = (hierarchyForm.selected_tc_ids || []).includes(tc.id);
-                            const currentTl = tc.team_leader_id ? employees.find(e => e.id === tc.team_leader_id) : null;
+                            const currentTl = tc.team_leader_id ? targetEmployeeList.find(e => e.id === tc.team_leader_id) : null;
                             const currentTlName = currentTl ? currentTl.full_name : (tc.team_leader_name || null);
                             const isSelfTl = tc.team_leader_id === hierarchyModalEmp.id;
 
@@ -2921,17 +2930,6 @@ export default function EmployeeManagement() {
                   );
                 })()}
 
-                {/* Note for TC role */}
-                {hierarchyForm.hierarchy_level === 'TC' && (
-                  <div style={{ marginBottom: '18px', background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: '12px', padding: '12px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400E', marginBottom: '4px' }}>
-                      <FaInfoCircle style={{ marginRight: '6px' }} />TC Role Note
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#92400E' }}>
-                      Telecallers can only update their reporting structure (Manager/Team Leader). They cannot assign subordinates. Each employee can have only ONE supervisor at each level.
-                    </div>
-                  </div>
-                )}
 
                 {/* Validation Note for all roles */}
                 <div style={{ marginBottom: '18px', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '12px', padding: '12px' }}>
