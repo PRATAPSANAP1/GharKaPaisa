@@ -280,6 +280,7 @@ const createProduct = async (req, res, next) => {
         image_url = url;
       }
     }
+    if (image_url) image_url = getCloudFrontUrl(image_url);
 
     // Bank existence check
     const { rows: [bank] } = await query(`SELECT id FROM banks WHERE id = $1`, [bank_id]);
@@ -383,6 +384,7 @@ const updateProduct = async (req, res, next) => {
         image_url = url;
       }
     }
+    if (image_url) image_url = getCloudFrontUrl(image_url);
 
     const isCommEnabled = commission_enabled !== undefined ? (commission_enabled === 'true' || commission_enabled === true) : undefined;
     const isFeatured = featured !== undefined ? (featured === 'true' || featured === true) : undefined;
