@@ -57,6 +57,7 @@ export default function CustomerPostApplyStep2() {
   const [vkycStage, setVkycStage] = useState('None');
   const [iqaStage, setIqaStage] = useState('None');
   const [dispatchStatus, setDispatchStatus] = useState('None');
+  const [operationalRemarks, setOperationalRemarks] = useState('');
 
   // Section 3: Bank Reference & Final Application Stage (Disabled for Partner, Editable by Admin/SuperAdmin)
   const [appNumber, setAppNumber] = useState('');
@@ -105,6 +106,7 @@ export default function CustomerPostApplyStep2() {
           setVkycStage(details.vkyc_stage || 'None');
           setIqaStage(details.iqa_stage || 'None');
           setDispatchStatus(details.dispatch_status || 'None');
+          setOperationalRemarks(details.operational_remarks || details.remarks || details.notes || '');
 
           setAppNumber(details.bank_application_number || '');
           setVkycUrl(details.vkyc_url || '');
@@ -159,6 +161,9 @@ export default function CustomerPostApplyStep2() {
         vkyc_stage: vkycStage,
         iqa_stage: iqaStage,
         dispatch_status: dispatchStatus,
+        operational_remarks: operationalRemarks.trim(),
+        remarks: operationalRemarks.trim(),
+        notes: operationalRemarks.trim(),
         bank_application_number: appNumber.trim(),
         vkyc_url: vkycUrl.trim()
       };
@@ -628,6 +633,29 @@ export default function CustomerPostApplyStep2() {
                   <option value="e-sign done">e-sign done</option>
                   <option value="RTB(Error)">RTB(Error)</option>
                 </select>
+              </div>
+
+              {/* Order 8: Operational Remarks / TATA Co-Brand Remarks */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>{String(bankInfo?.bank_name || bankInfo?.product_name || '').toUpperCase().includes('TATA') ? '🏷️ TATA Co-Brand HDFC Bank Remarks & Notes' : '📝 Operational Remarks / Notes'}</span>
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder={
+                    String(bankInfo?.bank_name || bankInfo?.product_name || '').toUpperCase().includes('TATA')
+                      ? 'Enter TATA Co-Brand NeuCoins details, application notes, or specific remarks...'
+                      : 'Enter operational remarks, process notes, or bank updates...'
+                  }
+                  value={operationalRemarks}
+                  onChange={(e) => setOperationalRemarks(e.target.value)}
+                  style={{
+                    ...inputStyle,
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                    minHeight: '74px'
+                  }}
+                />
               </div>
             </div>
           </div>
