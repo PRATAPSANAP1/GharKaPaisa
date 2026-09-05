@@ -31,6 +31,8 @@ async function ensurePublicTablesExist() {
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS target_role VARCHAR(100)`);
     await query(`ALTER TABLE employee_candidates ADD COLUMN IF NOT EXISTS referred_by_employee_id UUID`);
     await query(`ALTER TABLE partner_profiles ADD COLUMN IF NOT EXISTS referred_by_employee_id UUID`);
+    await query(`ALTER TABLE employee_candidates ALTER COLUMN total_experience_years TYPE DECIMAL(10,2)`).catch(() => {});
+    await query(`ALTER TABLE employee_joining_details ALTER COLUMN total_experience_years TYPE DECIMAL(10,2)`).catch(() => {});
   } catch (err) {
     logger.warn('Failed to ensure public tables exist:', err.message);
   }
@@ -365,12 +367,36 @@ router.post('/register', upload.single('resume'), async (req, res, next) => {
       return isNaN(n) ? null : n;
     };
 
+    const parseExpYears = (val) => {
+      const n = parseNum(val);
+      if (n === null) return 0;
+      if (n < 0) return 0;
+      if (n > 99.9) return 99.9;
+      return Math.round(n * 10) / 10;
+    };
+
+    const parseSalary = (val) => {
+      const n = parseNum(val);
+      if (n === null) return null;
+      if (n < 0) return 0;
+      if (n > 99999999) return 99999999;
+      return Math.round(n * 100) / 100;
+    };
+
     const parseIntNum = (val) => {
       if (val === null || val === undefined || val === '') return null;
       const numStr = String(val).replace(/[^0-9]/g, '');
       if (!numStr) return null;
       const n = parseInt(numStr, 10);
       return isNaN(n) ? null : n;
+    };
+
+    const parseNoticeDays = (val) => {
+      const n = parseIntNum(val);
+      if (n === null) return 0;
+      if (n < 0) return 0;
+      if (n > 365) return 365;
+      return n;
     };
 
     const parseBool = (val, defaultVal = false) => {
@@ -389,13 +415,13 @@ router.post('/register', upload.single('resume'), async (req, res, next) => {
       highest_qualification.trim(),
       parseIntNum(passing_year),
       experience_type || 'Fresher',
-      parseNum(total_experience_years) || 0,
+      parseExpYears(total_experience_years),
       cleanStr(current_company),
       cleanStr(current_designation),
-      parseNum(last_salary_ctc),
-      parseNum(expected_salary),
+      parseSalary(last_salary_ctc),
+      parseSalary(expected_salary),
       parseBool(immediate_joining, true),
-      parseIntNum(notice_period_days) || 0,
+      parseNoticeDays(notice_period_days),
       parseBool(comfortable_with_location, true),
       parseBool(relevant_experience, true),
       cleanStr(how_did_you_hear),
