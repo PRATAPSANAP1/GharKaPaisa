@@ -24,16 +24,17 @@ const poolOptions = process.env.DATABASE_URL
     };
 
 // Enhanced Connection Pool Settings for High Availability and Connection Resiliency
-poolOptions.max = parseInt(process.env.DB_POOL_MAX) || 25;
-poolOptions.min = parseInt(process.env.DB_POOL_MIN) || 2;
+poolOptions.max = parseInt(process.env.DB_POOL_MAX) || 20;
+poolOptions.min = parseInt(process.env.DB_POOL_MIN) || 4;
 poolOptions.idleTimeoutMillis = parseInt(process.env.DB_IDLE_TIMEOUT) || 30000;
-poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || 10000;
+poolOptions.connectionTimeoutMillis = parseInt(process.env.DB_CONN_TIMEOUT) || 5000;
+poolOptions.allowExitOnIdle = false;
 poolOptions.keepAlive = true;
 poolOptions.keepAliveInitialDelayMillis = 5000;
 
-// Set 25s statement timeout to prevent indefinite lock holds
+// Set 10s statement timeout to prevent indefinite lock holds
 if (!poolOptions.options) {
-  poolOptions.options = '-c statement_timeout=25000';
+  poolOptions.options = '-c statement_timeout=10000';
 }
 
 const pool = new Pool(poolOptions);
@@ -44,8 +45,9 @@ pool.on('connect', () => {
   }
 });
 
-pool.on('error', (err) => {
-  logger.error('Unexpected DB client error in pool', { error: err.message, total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount });
+// Global Error Listener for Idle Clients (catches background disconnects without crashing Node)
+pool.on('error', (err, client) => {
+  logger.error('Unexpected error on idle database client', { error: err.message, total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount });
 });
 
 // Helper: run a query with transient connection failure retry logic
