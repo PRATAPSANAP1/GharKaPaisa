@@ -579,11 +579,16 @@ const listWithdrawals = async (req, res, next) => {
     if (!status || status === 'all') {
       countQuery = `SELECT COUNT(*) FROM wallet_withdrawals`;
       dataQuery = `
-        SELECT wr.*, ap.partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id
+        SELECT wr.*, 
+          COALESCE(ap.partner_code, 'PARTNER') as partner_code, 
+          COALESCE(ap.first_name, u.full_name, 'Partner') as first_name, 
+          COALESCE(ap.last_name, '') as last_name, 
+          COALESCE(u.mobile, '') as mobile, 
+          pbd.upi_id
         FROM wallet_withdrawals wr
-        JOIN partner_profiles ap ON ap.id = wr.partner_id
-        JOIN users u ON u.id = ap.user_id
-        LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
+        LEFT JOIN partner_profiles ap ON (ap.id = wr.partner_id OR ap.user_id = wr.partner_id)
+        LEFT JOIN users u ON (u.id = wr.partner_id OR u.id = ap.user_id)
+        LEFT JOIN partner_bank_details pbd ON (pbd.partner_id = ap.id OR pbd.partner_id = wr.partner_id)
         ORDER BY wr.requested_at DESC
         LIMIT $1 OFFSET $2
       `;
@@ -591,11 +596,16 @@ const listWithdrawals = async (req, res, next) => {
     } else if (status === 'pending') {
       countQuery = `SELECT COUNT(*) FROM wallet_withdrawals WHERE status IN ('pending', 'approved', 'processing', 'failed')`;
       dataQuery = `
-        SELECT wr.*, ap.partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id
+        SELECT wr.*, 
+          COALESCE(ap.partner_code, 'PARTNER') as partner_code, 
+          COALESCE(ap.first_name, u.full_name, 'Partner') as first_name, 
+          COALESCE(ap.last_name, '') as last_name, 
+          COALESCE(u.mobile, '') as mobile, 
+          pbd.upi_id
         FROM wallet_withdrawals wr
-        JOIN partner_profiles ap ON ap.id = wr.partner_id
-        JOIN users u ON u.id = ap.user_id
-        LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
+        LEFT JOIN partner_profiles ap ON (ap.id = wr.partner_id OR ap.user_id = wr.partner_id)
+        LEFT JOIN users u ON (u.id = wr.partner_id OR u.id = ap.user_id)
+        LEFT JOIN partner_bank_details pbd ON (pbd.partner_id = ap.id OR pbd.partner_id = wr.partner_id)
         WHERE wr.status IN ('pending', 'approved', 'processing', 'failed')
         ORDER BY wr.requested_at ASC
         LIMIT $1 OFFSET $2
@@ -604,11 +614,16 @@ const listWithdrawals = async (req, res, next) => {
     } else if (status === 'processed') {
       countQuery = `SELECT COUNT(*) FROM wallet_withdrawals WHERE status IN ('processed', 'transferred')`;
       dataQuery = `
-        SELECT wr.*, ap.partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id
+        SELECT wr.*, 
+          COALESCE(ap.partner_code, 'PARTNER') as partner_code, 
+          COALESCE(ap.first_name, u.full_name, 'Partner') as first_name, 
+          COALESCE(ap.last_name, '') as last_name, 
+          COALESCE(u.mobile, '') as mobile, 
+          pbd.upi_id
         FROM wallet_withdrawals wr
-        JOIN partner_profiles ap ON ap.id = wr.partner_id
-        JOIN users u ON u.id = ap.user_id
-        LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
+        LEFT JOIN partner_profiles ap ON (ap.id = wr.partner_id OR ap.user_id = wr.partner_id)
+        LEFT JOIN users u ON (u.id = wr.partner_id OR u.id = ap.user_id)
+        LEFT JOIN partner_bank_details pbd ON (pbd.partner_id = ap.id OR pbd.partner_id = wr.partner_id)
         WHERE wr.status IN ('processed', 'transferred')
         ORDER BY wr.requested_at DESC
         LIMIT $1 OFFSET $2
@@ -617,11 +632,16 @@ const listWithdrawals = async (req, res, next) => {
     } else {
       countQuery = `SELECT COUNT(*) FROM wallet_withdrawals WHERE status = $1`;
       dataQuery = `
-        SELECT wr.*, ap.partner_code, ap.first_name, ap.last_name, u.mobile, pbd.upi_id
+        SELECT wr.*, 
+          COALESCE(ap.partner_code, 'PARTNER') as partner_code, 
+          COALESCE(ap.first_name, u.full_name, 'Partner') as first_name, 
+          COALESCE(ap.last_name, '') as last_name, 
+          COALESCE(u.mobile, '') as mobile, 
+          pbd.upi_id
         FROM wallet_withdrawals wr
-        JOIN partner_profiles ap ON ap.id = wr.partner_id
-        JOIN users u ON u.id = ap.user_id
-        LEFT JOIN partner_bank_details pbd ON pbd.partner_id = ap.id
+        LEFT JOIN partner_profiles ap ON (ap.id = wr.partner_id OR ap.user_id = wr.partner_id)
+        LEFT JOIN users u ON (u.id = wr.partner_id OR u.id = ap.user_id)
+        LEFT JOIN partner_bank_details pbd ON (pbd.partner_id = ap.id OR pbd.partner_id = wr.partner_id)
         WHERE wr.status = $1
         ORDER BY wr.requested_at DESC
         LIMIT $2 OFFSET $3
