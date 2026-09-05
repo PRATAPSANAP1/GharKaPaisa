@@ -1085,6 +1085,7 @@ router.get('/incentives', resolveEmployee, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
 // GET /api/v1/employee/monthly-incentive-report — Monthly Incentive & Target Matrix
 router.get('/monthly-incentive-report', resolveEmployee, async (req, res, next) => {
   try {
