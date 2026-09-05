@@ -277,7 +277,7 @@ const listBankCardApplications = async (req, res, next) => {
     if (userRole !== 'SUPER_ADMIN' && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
       if (abRows.length > 0) {
-        whereClause += ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid) OR combined.bank_id IN (SELECT b.id FROM banks b WHERE b.operation_head_id = $${idx}::uuid))`;
+        whereClause += ` AND (combined.bank_id IN (SELECT bank_id::text FROM admin_bank_assignments WHERE admin_id = $${idx}::uuid) OR combined.bank_id IN (SELECT b.id::text FROM banks b WHERE b.operation_head_id = $${idx}::uuid))`;
         values.push(req.user.id);
         idx++;
       }
