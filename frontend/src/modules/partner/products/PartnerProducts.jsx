@@ -27,7 +27,7 @@ const CATEGORIES = [
   { id: 'others', label: 'Others' },
 ];
 
-const BANKS = ['All Banks', 'HDFC', 'SBI', 'AXIS', 'INDUSIND', 'KOTAK', 'YES', 'BOB', 'DCB', 'EQUITAS', 'FEDERAL', 'ICICI', 'IDFC', 'RBL', 'SMB'];
+const BANKS = ['All Banks', 'AU SMALL FINANCE BANK', 'AXIS', 'BANDHAN BANK', 'BOB', 'CANARA BANK', 'CSB BANK', 'DCB', 'EQUITAS', 'FEDERAL', 'HDFC', 'HSBC', 'ICICI', 'IDFC', 'INDUSIND', 'KOTAK', 'PUNJAB NATIONAL BANK', 'RBL', 'SBM', 'SBI', 'STANDARD CHARTERED', 'TATA CO-BRAND HDFC BANK', 'UNION BANK', 'YES'];
 
 const getCategoryIcon = (cat, props = { size: 24 }) => {
   const c = cat?.toLowerCase() || '';
@@ -118,13 +118,40 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   const location = useLocation();
   const isEmployee = user?.role === 'EMPLOYEE' || (location?.pathname && location.pathname.startsWith('/employee'));
 
+  // Dynamically compute list of all available banks from API, active DB context, and loaded products
+  const bankOptions = useMemo(() => {
+    const list = new Set();
+    
+    // 1. Add active banks from database context
+    if (Array.isArray(activeBanks)) {
+      activeBanks.forEach(b => {
+        const name = b.name || b.label || b.bank_name;
+        if (name) list.add(name);
+      });
+    }
+
+    // 2. Add bank names from currently loaded products
+    if (Array.isArray(products)) {
+      products.forEach(p => {
+        const bName = p.bank_name || p.bank_code;
+        if (bName) list.add(bName);
+      });
+    }
+
+    // 3. Complete list of latest supported banks
+    BANKS.forEach(b => list.add(b));
+
+    const sorted = Array.from(list).filter(Boolean).sort((a, b) => a.localeCompare(b));
+    return ['All Banks', ...sorted];
+  }, [activeBanks, products]);
+
   // Normalize bank name string
   const getNormalizedBank = (bankStr) => {
     if (!bankStr || bankStr.toLowerCase() === 'all banks' || bankStr.toLowerCase() === 'all') return 'All Banks';
-    const foundInBanks = BANKS.find(b => b.toLowerCase() === bankStr.toLowerCase());
+    const foundInBanks = bankOptions.find(b => b.toLowerCase() === bankStr.toLowerCase());
     if (foundInBanks) return foundInBanks;
     const foundInActive = activeBanks.find(b => b.short_code?.toLowerCase() === bankStr.toLowerCase() || b.name?.toLowerCase().includes(bankStr.toLowerCase()));
-    if (foundInActive) return foundInActive.short_code || foundInActive.name;
+    if (foundInActive) return foundInActive.name || foundInActive.label || foundInActive.short_code;
     return bankStr;
   };
 
@@ -675,7 +702,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
               }}
             >
               <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 {t("All Banks")}</option>
-              {BANKS.filter(b => b !== 'All Banks').map(bank => (
+              {bankOptions.filter(b => b !== 'All Banks').map(bank => (
                 <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                   🏦 {bank}
                 </option>
@@ -1083,7 +1110,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                   }}
                 >
                   <option value="All Banks" style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>🏦 {t("Banks (All)")}</option>
-                  {BANKS.filter(b => b !== 'All Banks').map(bank => (
+                  {bankOptions.filter(b => b !== 'All Banks').map(bank => (
                     <option key={bank} value={bank} style={{ background: isDark ? '#18181B' : '#FFFFFF', color: isDark ? '#F8FAFC' : '#111827' }}>
                       🏦 {bank}
                     </option>
