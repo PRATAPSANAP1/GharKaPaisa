@@ -281,7 +281,9 @@ export default function SuperAdminOverview() {
     admins: parseInt(overviewData?.admins?.total_admins ?? adminsList.length ?? 0, 10),
     activeAdmins: parseInt(overviewData?.admins?.active_admins ?? adminsList.filter(a => a.status === 'active' || a.isActive).length ?? 0, 10),
 
-    totalWithdrawalAmount: (financialsWithdrawals.reduce((sum, w) => sum + parseFloat(w.amount || 0), 0)) || parseFloat(overviewData?.withdrawal?.total_withdrawals || overviewData?.withdrawal?.total_commission_paid || 0),
+    totalWithdrawalAmount: financialsWithdrawals
+      .filter(w => ['approved', 'completed', 'transferred', 'processed'].includes((w.status || '').toLowerCase()))
+      .reduce((sum, w) => sum + parseFloat(w.amount || 0), 0),
     pendingWithdrawals: financialsWithdrawals.filter(w => (w.status || '').toLowerCase().includes('pending') || (w.status || '').toLowerCase().includes('review')).length,
 
     banks: parseInt(overviewData?.banks?.total_banks ?? 0, 10),
