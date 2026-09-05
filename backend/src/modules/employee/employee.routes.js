@@ -1398,7 +1398,7 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
     SELECT 
       app.id, app.app_number, app.status, app.app_file_generated, app.approved_at, app.created_at,
       app.customer_name, app.customer_mobile,
-      p.id as product_id, p.name as product_name, p.bank_id, p.incentive_amount as default_incentive,
+      p.id as product_id, p.name as product_name, p.bank_id, COALESCE(p.commission_amount, p.commission_value, 0) as default_incentive,
       b.name as bank_name, b.logo_url as bank_logo_url,
       it.amount as tx_amount, it.status as tx_status
     FROM applications app
