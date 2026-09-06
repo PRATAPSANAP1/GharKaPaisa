@@ -307,14 +307,14 @@ const sendRegistrationOtp = async (req, res, next) => {
       VALUES ($1, $2, $3)
     `, [`email_${email}`, otpHashSha, expiresAt]);
 
-    console.log(`[REGISTRATION EMAIL OTP DISPATCH] Target: ${email} | OTP Code: ${otp}`);
-    logger.info(`[REGISTRATION EMAIL OTP DISPATCH] Target: ${email} | OTP Code: ${otp}`);
+    if (process.env.NODE_ENV !== 'production') {
+      logger.info(`[REGISTRATION EMAIL OTP DISPATCH] Target: ${email}`);
+    }
 
     try {
       await sendOtpEmail(email, otp);
       logger.info(`[Registration-OTP] Sent OTP to ${email}`);
     } catch (err) {
-      console.error(`[Registration-OTP Send Error] ${email}: ${err.message}`);
       logger.error(`[Registration-OTP] Failed to send OTP to ${email}: ${err.message}`);
     }
 
@@ -322,8 +322,7 @@ const sendRegistrationOtp = async (req, res, next) => {
     return res.json({
       success: true,
       message: `OTP sent to your email address.`,
-      otp: otp,
-      debug_otp: otp,
+      debug_otp: process.env.NODE_ENV !== 'production' ? otp : undefined,
       email: masked
     });
   } catch (err) {
@@ -339,7 +338,7 @@ const verifyRegistrationOtp = async (req, res, next) => {
     if (!email || !otp) return error(res, 'Email and OTP are required', 400);
 
     const cleanOtp = String(otp).trim();
-    if (cleanOtp === '123456' || cleanOtp === '1234') {
+    if (process.env.NODE_ENV !== 'production' && (cleanOtp === '123456' || cleanOtp === '1234')) {
       await query(`INSERT INTO pre_verified_emails (email, verified_at) VALUES ($1, NOW()) ON CONFLICT (email) DO UPDATE SET verified_at = NOW()`, [email]);
       return res.json({ success: true, message: 'Email verified for registration' });
     }

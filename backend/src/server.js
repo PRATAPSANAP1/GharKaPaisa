@@ -82,13 +82,11 @@ const corsOptions = {
     const normalizedOrigin = origin.trim();
     try {
       const hostname = new URL(normalizedOrigin).hostname;
+      const isDev = process.env.NODE_ENV !== 'production';
       if (
-        hostname === 'localhost' ||
-        hostname === '127.0.0.1' ||
+        (isDev && (hostname === 'localhost' || hostname === '127.0.0.1')) ||
         hostname.endsWith('.gharkapaisa.in') ||
-        hostname.endsWith('.amazonaws.com') ||
-        hostname.endsWith('.compute.amazonaws.com') ||
-        hostname.endsWith('.vercel.app')
+        hostname === 'gharkapaisa.in'
       ) {
         return callback(null, true);
       }
@@ -131,29 +129,9 @@ app.use((req, res, next) => {
     const raw = req.body;
     req.rawBody = raw;
     try {
-      // Try parsing standard JSON first to avoid corrupting valid payloads
       req.body = JSON.parse(raw);
     } catch (parseErr) {
-      let cleaned = raw.trim();
-
-      // Remove leading/trailing backslashes that wrap the JSON
-      if (cleaned.startsWith('\\{') && cleaned.endsWith('\\}')) {
-        cleaned = cleaned.slice(1, -1);
-      }
-
-      // Replace escaped quotes with actual quotes
-      cleaned = cleaned.replace(/\\"/g, '"');
-
-      // Ensure object braces
-      if (!cleaned.startsWith('{')) cleaned = `{${cleaned}`;
-      if (!cleaned.endsWith('}')) cleaned = `${cleaned}}`;
-
-      try {
-        req.body = JSON.parse(cleaned);
-      } catch (cleanErr) {
-        // If parsing still fails, leave body as empty object
-        req.body = {};
-      }
+      return res.status(400).json({ success: false, message: 'Malformed JSON payload' });
     }
   }
   next();
@@ -219,16 +197,9 @@ app.get('/r/:partnerCode/:productId', redirectCtrl.handleRedirect);
 // ── Public Unauthenticated Endpoints ───────────────────────────
 const partnerCtrl = require('./modules/partner/partner.controller.js');
 const walletCtrl = require('./modules/wallet/controller.js');
-const paymentCtrl = require('./modules/payment/payment.controller.js');
 app.post('/api/v1/partner/referral-click', partnerCtrl.invitePartnerClick);
 app.post('/api/v1/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
 app.post('/api/v1/webhooks/razorpay', walletCtrl.handleRazorpayWebhook);
-
-// Razorpay Standard Checkout Routes (Standardized on /api/v1/payment/*)
-app.post('/api/v1/payment/create-order', paymentCtrl.createOrder);
-app.post('/api/v1/payment/verify-payment', paymentCtrl.verifyPayment);
-app.post('/api/v1/create-order', paymentCtrl.createOrder);
-app.post('/api/v1/verify-payment', paymentCtrl.verifyPayment);
 
 // ── API Routes ─────────────────────────────────────────────────
 const apiRouter = require('./routes/index');

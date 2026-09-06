@@ -2158,6 +2158,9 @@ router.delete('/bonus-rules/:id', async (req, res, next) => {
 // ── 6. GET /api/v1/employees/sales-reports/super-admin — Super Admin Sales Reports Control Center ──
 router.get('/sales-reports/super-admin', async (req, res, next) => {
   try {
+    // Ensure bank_name column exists in employee_sales_report_banks table
+    await query(`ALTER TABLE employee_sales_report_banks ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100)`).catch(() => {});
+
     const { status, start_date, end_date, bank_id, employee_id, search } = req.query;
 
     let whereConds = [];
@@ -2207,10 +2210,14 @@ router.get('/sales-reports/super-admin', async (req, res, next) => {
     // Populate bank items for each report
     const enrichedReports = await Promise.all(reports.map(async (report) => {
       const bankRes = await query(`
-        SELECT bank_id, bank_name, cards_sold
-        FROM employee_sales_report_banks
-        WHERE report_id = $1
-        ORDER BY cards_sold DESC
+        SELECT 
+          srb.bank_id, 
+          COALESCE(NULLIF(srb.bank_name, ''), b.name, 'Unknown Bank') as bank_name, 
+          srb.cards_sold
+        FROM employee_sales_report_banks srb
+        LEFT JOIN banks b ON b.id = srb.bank_id
+        WHERE srb.report_id = $1
+        ORDER BY srb.cards_sold DESC
       `, [report.id]);
 
       return {
@@ -2249,12 +2256,14 @@ router.get('/sales-reports/super-admin', async (req, res, next) => {
     // Bank-Wise Breakdown
     const bankSummaryRes = await query(`
       SELECT 
-        srb.bank_name,
+        COALESCE(NULLIF(srb.bank_name, ''), b.name, 'Unknown Bank') as bank_name,
         SUM(srb.cards_sold)::int as total_cards_sold
       FROM employee_sales_report_banks srb
       JOIN employee_sales_reports sr ON sr.id = srb.report_id
+      JOIN employees e ON e.id = sr.employee_id
+      LEFT JOIN banks b ON b.id = srb.bank_id
       ${whereClause}
-      GROUP BY srb.bank_name
+      GROUP BY COALESCE(NULLIF(srb.bank_name, ''), b.name, 'Unknown Bank')
       ORDER BY total_cards_sold DESC
     `, params);
 

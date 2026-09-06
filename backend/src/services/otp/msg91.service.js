@@ -35,12 +35,6 @@ const verifyAccessToken = async ({ accessToken, expectedMobile }) => {
   }
 
   try {
-    console.log("=========== VERIFY REQUEST ===========");
-    console.log("URL:", VERIFY_ACCESS_TOKEN_URL);
-    console.log("AuthKey:", getAuthKey());
-    console.log("AccessToken:", accessToken);
-    console.log("Expected Mobile:", expectedMobile);
-
     const response = await axios.post(
       VERIFY_ACCESS_TOKEN_URL,
       {
@@ -55,10 +49,6 @@ const verifyAccessToken = async ({ accessToken, expectedMobile }) => {
         timeout: 10000,
       }
     );
-
-    console.log("=========== VERIFY SUCCESS ===========");
-    console.log(JSON.stringify(response.data, null, 2));
-    console.log("======================================");
 
     const payload = response.data || {};
 
@@ -89,12 +79,6 @@ const verifyAccessToken = async ({ accessToken, expectedMobile }) => {
 
   } catch (err) {
 
-    console.log("=========== VERIFY FAILED ===========");
-    console.log("Status :", err.response?.status);
-    console.log("Data   :", JSON.stringify(err.response?.data, null, 2));
-    console.log("Error  :", err.message);
-    console.log("=====================================");
-
     throw err;
   }
 };
@@ -112,11 +96,6 @@ const sendSmsOtp = async (mobile, otp) => {
     const url = `https://control.msg91.com/api/v5/otp?template_id=${templateId}&mobile=91${normalized}&authkey=${authKey}&otp=${otp}`;
 
     try {
-      console.log("========== MSG91 OTP API ==========");
-      console.log("URL:", url);
-      console.log("Template:", templateId);
-      console.log("Mobile:", normalized);
-
       const response = await axios.post(
         url,
         {},
@@ -128,10 +107,9 @@ const sendSmsOtp = async (mobile, otp) => {
         }
       );
 
-      console.log("MSG91 Response:", response.data);
       return response.data;
     } catch (err) {
-      console.log("MSG91 OTP API notice:", err.response?.data ? JSON.stringify(err.response.data) : err.message);
+      // Intentionally omit URL/credentials from log
     }
   }
 

@@ -140,8 +140,9 @@ router.post('/verify-email', async (req, res, next) => {
     const otpHash = hashOtp(otp);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    console.log(`[CAREER EMAIL OTP DISPATCH] Target: ${cleanEmail} | OTP Code: ${otp}`);
-    logger.info(`[CAREER EMAIL OTP DISPATCH] Target: ${cleanEmail} | OTP Code: ${otp}`);
+    if (process.env.NODE_ENV !== 'production') {
+      logger.info(`[CAREER EMAIL OTP DISPATCH] Target: ${cleanEmail}`);
+    }
 
     try {
       await query(`DELETE FROM otp_verifications WHERE identity = $1 OR identity = $2`, [`email_${cleanEmail}`, cleanEmail]);
@@ -160,15 +161,13 @@ router.post('/verify-email', async (req, res, next) => {
     try {
       await sendOtpEmail(cleanEmail, otp);
     } catch (err) {
-      console.error(`[CAREER EMAIL OTP SEND ERROR] ${cleanEmail}: ${err.message}`);
       logger.error(`[CAREER EMAIL OTP SEND ERROR] ${cleanEmail}: ${err.message}`);
     }
 
     res.json({
       success: true,
-      message: `OTP dispatched to ${cleanEmail}. (Code: ${otp})`,
-      otp: otp,
-      debug_otp: otp
+      message: `OTP dispatched to ${cleanEmail}.`,
+      debug_otp: process.env.NODE_ENV !== 'production' ? otp : undefined
     });
   } catch (err) {
     logger.error('Verify email error:', err);
@@ -187,7 +186,8 @@ router.post('/verify-otp', async (req, res, next) => {
     const eOtp = email_otp || otp;
     const cleanEmail = email_id ? String(email_id).trim().toLowerCase() : '';
 
-    if (mOtp === '123456' || eOtp === '123456' || mOtp === '1234' || eOtp === '1234' || otp === '123456') {
+    const isDev = process.env.NODE_ENV !== 'production';
+    if (isDev && (mOtp === '123456' || eOtp === '123456' || mOtp === '1234' || eOtp === '1234' || otp === '123456')) {
       verified = true;
     } else {
       try {

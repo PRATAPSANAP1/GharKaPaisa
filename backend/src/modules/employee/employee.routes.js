@@ -110,7 +110,8 @@ router.post('/verify-otp', async (req, res, next) => {
       [lookupKey, lookupKey.replace(/\D/g, ''), otpHash]
     );
 
-    if (otpRows.length === 0 && otp !== '123456') { // Allow 123456 in dev/testing
+    const isDev = process.env.NODE_ENV !== 'production';
+    if (otpRows.length === 0 && (!isDev || otp !== '123456')) {
       return res.status(400).json({ success: false, message: 'Invalid or expired OTP code' });
     }
 
@@ -134,6 +135,10 @@ router.post('/verify-otp', async (req, res, next) => {
     const employee = empRes.rows[0];
     const role = (employee.designation === 'HR' || employee.user_role === 'HR') ? 'HR' : (employee.user_role || 'EMPLOYEE');
 
+    if (!JWT_SECRET) {
+      throw new Error('JWT_SECRET configuration is missing');
+    }
+
     // 3. Issue 15-minute Access Token
     const token = jwt.sign(
       { 
@@ -143,7 +148,7 @@ router.post('/verify-otp', async (req, res, next) => {
         emp_code: employee.employee_id,
         designation: employee.designation 
       },
-      JWT_SECRET || 'gharkapaisa-secret-key-fallback',
+      JWT_SECRET,
       { expiresIn: '15m' }
     );
 
@@ -169,7 +174,6 @@ router.post('/verify-otp', async (req, res, next) => {
     res.json({
       success: true,
       token,
-      refreshToken,
       user: {
         id: employee.user_id,
         employee_id: employee.id,
@@ -1244,10 +1248,14 @@ router.get('/sales-reports', resolveEmployee, async (req, res, next) => {
     // Fetch bank breakdown for each report
     const enrichedReports = await Promise.all(reports.map(async (report) => {
       const bankRes = await query(`
-        SELECT bank_id, bank_name, cards_sold
-        FROM employee_sales_report_banks
-        WHERE report_id = $1
-        ORDER BY cards_sold DESC
+        SELECT 
+          srb.bank_id, 
+          COALESCE(NULLIF(srb.bank_name, ''), b.name, 'Unknown Bank') as bank_name, 
+          srb.cards_sold
+        FROM employee_sales_report_banks srb
+        LEFT JOIN banks b ON b.id = srb.bank_id
+        WHERE srb.report_id = $1
+        ORDER BY srb.cards_sold DESC
       `, [report.id]);
 
       return {
