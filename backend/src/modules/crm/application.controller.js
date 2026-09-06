@@ -4054,7 +4054,7 @@ const deleteApplication = async (req, res, next) => {
       }
     }
 
-    await logAction(req, isLeadOnly ? 'DELETE_LEAD' : 'DELETE_APPLICATION', id, { app_number: app.app_number, customer_id: targetCustomerId });
+    await logAction(req, isLeadOnly ? 'DELETE_LEAD' : 'DELETE_APPLICATION', id, { app_number: app.app_number, customer_id: targetCustomerId }, null, null, client);
 
     await client.query('COMMIT');
     return success(res, {}, 'Application, lead, and customer details deleted successfully from database');

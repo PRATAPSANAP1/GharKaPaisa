@@ -10,16 +10,16 @@ const logger = require('../../config/logger');
  * @param {string} [role] - User role (if not using request object)
  * @param {string} [ipAddress] - Request IP (if not using request object)
  */
-const logAction = async (userIdOrReq, action, targetId = null, details = null, role = null, ipAddress = null) => {
+const logAction = async (userIdOrReq, action, targetId = null, details = null, role = null, ipAddress = null, dbClient = null) => {
   let userId = userIdOrReq;
   let finalRole = role;
   let finalIp = ipAddress;
 
   if (userIdOrReq && typeof userIdOrReq === 'object' && userIdOrReq.user) {
     const req = userIdOrReq;
-    userId = req.user.id;
-    finalRole = req.user.role;
-    finalIp = req.ip || req.headers['x-forwarded-for'] || req.connection?.remoteAddress || req.socket?.remoteAddress;
+    userId = req.user?.id;
+    finalRole = req.user?.role;
+    finalIp = req.ip || req.headers?.['x-forwarded-for'] || req.connection?.remoteAddress || req.socket?.remoteAddress;
     
     // Normalize IP format (e.g. ::ffff:127.0.0.1 to 127.0.0.1)
     if (finalIp && finalIp.includes('::ffff:')) {
@@ -32,7 +32,11 @@ const logAction = async (userIdOrReq, action, targetId = null, details = null, r
   const finalTargetId = isUuid ? targetId : null;
 
   try {
-    await query(
+    const queryFn = (dbClient && typeof dbClient.query === 'function')
+      ? (text, params) => dbClient.query(text, params)
+      : query;
+
+    await queryFn(
       `INSERT INTO audit_logs (user_id, action, target_id, details, role, ip_address)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [userId, action, finalTargetId, details ? JSON.stringify(details) : null, finalRole, finalIp]
