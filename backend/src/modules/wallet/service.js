@@ -942,7 +942,7 @@ const releaseMaturedCommissions = async () => {
       LEFT JOIN products p ON p.id = l.product_id
       WHERE l.status = 'Pending Approval' 
         AND (l.transaction_type = 'PERSONAL_COMMISSION' OR l.transaction_type = 'TEAM_COMMISSION' OR l.transaction_type = 'OVERRIDE_COMMISSION') 
-        AND l.created_at <= NOW() - (COALESCE(p.commission_release_days, 7) || ' days')::interval
+        AND l.created_at <= NOW() - (COALESCE((to_jsonb(p)->>'commission_release_days')::int, 7) || ' days')::interval
     `);
     if (rows.length > 0) {
       logger.info(`Releasing ${rows.length} matured commission transaction(s)...`);
