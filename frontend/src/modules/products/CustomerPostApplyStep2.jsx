@@ -602,7 +602,10 @@ export default function CustomerPostApplyStep2() {
                     <option value="IDCOM Pending">IDCOM Pending</option>
                     <option value="BIO Success">BIO Success</option>
                     <option value="BIO Pending">BIO Pending</option>
-                    {kycStage && !['None', 'IDCOM Success', 'IDCOM Failed', 'IDCOM Pending', 'BIO Success', 'BIO Pending', ''].includes(kycStage) && (
+                    <option value="Vkyc Success">Vkyc Success</option>
+                    <option value="Vkyc Pending">Vkyc Pending</option>
+                    <option value="Vkyc Failed">Vkyc Failed</option>
+                    {kycStage && !['None', 'IDCOM Success', 'IDCOM Failed', 'IDCOM Pending', 'BIO Success', 'BIO Pending', 'Vkyc Success', 'Vkyc Pending', 'Vkyc Failed', 'VKYC Success', 'VKYC Pending', 'VKYC Failed', ''].includes(kycStage) && (
                       <option value={kycStage}>{kycStage}</option>
                     )}
                   </select>
@@ -613,9 +616,17 @@ export default function CustomerPostApplyStep2() {
                   <label style={labelStyle}>3. Bank Application / Reference Number</label>
                   <input
                     type="text"
-                    placeholder="e.g. HDFC-APP-1002"
+                    maxLength={isTataHdfc ? 25 : 13}
+                    placeholder={isTataHdfc ? "e.g. TATA123456789 / HDFC-APP-1002" : "Enter 13-digit Bank App Reference Number"}
                     value={appNumber}
-                    onChange={(e) => setAppNumber(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (isTataHdfc) {
+                        setAppNumber(val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25));
+                      } else {
+                        setAppNumber(val.replace(/\D/g, '').slice(0, 13));
+                      }
+                    }}
                     style={{ ...inputStyle, fontFamily: 'monospace' }}
                   />
                 </div>

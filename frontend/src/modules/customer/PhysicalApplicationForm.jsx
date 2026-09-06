@@ -203,6 +203,7 @@ export default function PhysicalApplicationForm() {
 
   const bankNameStr = String(appData?.bank_name || appData?.bank?.name || appData?.product_name || appData?.product?.name || appData?.application?.bank_name || '').toLowerCase();
   const isSbi = bankNameStr.includes('sbi');
+  const isTataCobrandHdfc = bankNameStr.includes('tata') || String(appData?.bank_id || '').includes('1eacfa67');
   const processTypeStr = String(appData?.process_type || appData?.process_by || appData?.application?.process_type || appData?.application?.process_by || '').toLowerCase();
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
   const isDigitalProcess = processTypeStr.includes('linked') || processTypeStr.includes('share') || processTypeStr.includes('direct') || processTypeStr.includes('link');
@@ -860,13 +861,20 @@ export default function PhysicalApplicationForm() {
                 </div>
 
                 <div>
-                  <label style={labelStyle}>BANK APPLICATION NUMBER (13-digit number)</label>
+                  <label style={labelStyle}>BANK APPLICATION NUMBER</label>
                   <input
                     type="text"
-                    maxLength={13}
+                    maxLength={isTataCobrandHdfc ? 25 : 13}
                     value={form.bank_ref_number}
-                    onChange={e => handleChange('bank_ref_number', e.target.value.replace(/\D/g, '').slice(0, 13))}
-                    placeholder="Enter 13-digit Bank App Reference Number"
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (isTataCobrandHdfc) {
+                        handleChange('bank_ref_number', val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25));
+                      } else {
+                        handleChange('bank_ref_number', val.replace(/\D/g, '').slice(0, 13));
+                      }
+                    }}
+                    placeholder={isTataCobrandHdfc ? "Enter Alphanumeric Bank App Ref Number (e.g. TATA123456)" : "Enter 13-digit Bank App Reference Number"}
                     style={inputStyle}
                   />
                 </div>

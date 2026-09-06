@@ -908,7 +908,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       <option value="IDCOM Pending">IDCOM Pending</option>
                       <option value="BIO Success">BIO Success</option>
                       <option value="BIO Pending">BIO Pending</option>
-                      {kycStage && !['None', 'IDCOM Success', 'IDCOM Failed', 'IDCOM Pending', 'BIO Success', 'BIO Pending', ''].includes(kycStage) && (
+                      <option value="Vkyc Success">Vkyc Success</option>
+                      <option value="Vkyc Pending">Vkyc Pending</option>
+                      <option value="Vkyc Failed">Vkyc Failed</option>
+                      {kycStage && !['None', 'IDCOM Success', 'IDCOM Failed', 'IDCOM Pending', 'BIO Success', 'BIO Pending', 'Vkyc Success', 'Vkyc Pending', 'Vkyc Failed', 'VKYC Success', 'VKYC Pending', 'VKYC Failed', ''].includes(kycStage) && (
                         <option value={kycStage}>{kycStage}</option>
                       )}
                     </select>
@@ -919,11 +922,18 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. BANK APPLICATION NUMBER</label>
                     <input
                       type="text"
-                      maxLength={13}
+                      maxLength={isTataCobrandHdfc ? 25 : 13}
                       disabled={!canEditRemark}
                       value={bankRefNumber}
-                      onChange={(e) => setBankRefNumber(e.target.value.replace(/\D/g, '').slice(0, 13))}
-                      placeholder="Enter 13-digit Bank App Reference Number"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (isTataCobrandHdfc) {
+                          setBankRefNumber(val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25));
+                        } else {
+                          setBankRefNumber(val.replace(/\D/g, '').slice(0, 13));
+                        }
+                      }}
+                      placeholder={isTataCobrandHdfc ? "Enter Alphanumeric Bank App Ref Number" : "Enter 13-digit Bank App Reference Number"}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                     />
                   </div>
