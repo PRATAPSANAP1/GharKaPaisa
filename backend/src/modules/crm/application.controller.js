@@ -3235,7 +3235,12 @@ const updateApplicationDetails = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS final_status VARCHAR(50),
         ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
         ADD COLUMN IF NOT EXISTS decline_reason TEXT,
-        ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)
+        ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
+        ADD COLUMN IF NOT EXISTS user_remark TEXT
       `);
     } catch (_) {}
 
@@ -3536,6 +3541,11 @@ const updateApplicationDetails = async (req, res, next) => {
           final_status,
           decline_reason,
           eligible_reqd,
+          ipa_stage,
+          kyc_stage,
+          card_approval_stage,
+          vkyc_url,
+          user_remark,
           created_at,
           updated_at
         ) VALUES (
@@ -3567,6 +3577,11 @@ const updateApplicationDetails = async (req, res, next) => {
           $23,
           $24,
           $25,
+          $26,
+          $27,
+          $28,
+          $29,
+          $30,
           NOW(),
           NOW()
         ) ON CONFLICT (application_id) DO UPDATE SET
@@ -3598,6 +3613,11 @@ const updateApplicationDetails = async (req, res, next) => {
           app_file_generated = COALESCE(NULLIF(EXCLUDED.app_file_generated, ''), physical_application_details.app_file_generated),
           decline_reason = COALESCE(NULLIF(EXCLUDED.decline_reason, ''), physical_application_details.decline_reason),
           eligible_reqd = COALESCE(NULLIF(EXCLUDED.eligible_reqd, ''), physical_application_details.eligible_reqd),
+          ipa_stage = COALESCE(NULLIF(EXCLUDED.ipa_stage, ''), physical_application_details.ipa_stage),
+          kyc_stage = COALESCE(NULLIF(EXCLUDED.kyc_stage, ''), physical_application_details.kyc_stage),
+          card_approval_stage = COALESCE(NULLIF(EXCLUDED.card_approval_stage, ''), physical_application_details.card_approval_stage),
+          vkyc_url = COALESCE(NULLIF(EXCLUDED.vkyc_url, ''), physical_application_details.vkyc_url),
+          user_remark = COALESCE(NULLIF(EXCLUDED.user_remark, ''), physical_application_details.user_remark),
           updated_at = NOW()
       `, [
         mobile || customer_mobile || null,
@@ -3624,7 +3644,12 @@ const updateApplicationDetails = async (req, res, next) => {
         cleanStr(bank_remark || req.body.bank_remark),
         cleanStr(final_status || req.body.final_status),
         cleanStr(decline_reason || req.body.decline_reason),
-        cleanStr(eligible_reqd || req.body.eligible_reqd)
+        cleanStr(eligible_reqd || req.body.eligible_reqd),
+        cleanStr(ipa_stage || req.body.ipa_stage),
+        cleanStr(kyc_stage || req.body.kyc_stage),
+        cleanStr(card_approval_stage || req.body.card_approval_stage),
+        cleanStr(vkyc_url || req.body.vkyc_url),
+        cleanStr(user_remark || req.body.user_remark || req.body.user_notes || req.body.notes || notes || user_notes)
       ]);
     } catch (physErr) {
       console.error('Failed to upsert physical_application_details:', physErr);

@@ -262,7 +262,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         const realFinal = sanitizeVal(app.final_status) || sanitizeVal(pd.final_status) || sanitizeVal(app.status) || 'In Process';
         const realAppFileGenerated = sanitizeVal(app.app_file_generated) || sanitizeVal(app.appfile_generated) || sanitizeVal(pd.app_file_generated) || sanitizeVal(pd.appfile_generated);
         const realRemark = sanitizeVal(app.bank_remark) || sanitizeVal(pd.bank_remark);
-        const realUserRemark = sanitizeVal(app.user_remark) || sanitizeVal(app.notes) || '';
+        const realUserRemark = sanitizeVal(app.user_remark) || sanitizeVal(app.notes) || sanitizeVal(pd.user_remark) || sanitizeVal(pd.notes) || sanitizeVal(app.remarks) || '';
 
         setRealData({
           appcodeStatus: realAppcode,
