@@ -57,6 +57,14 @@ const localBannerMap = {
   'offerbanner.png': offerBanner
 };
 
+const resolveBannerImage = (url) => {
+  if (!url) return offerBanner;
+  if (localBannerMap[url]) return localBannerMap[url];
+  const filename = (url || '').split('/').pop();
+  if (localBannerMap[filename]) return localBannerMap[filename];
+  return url;
+};
+
 /* ---------- Reference UI Pure Styling Sub-Components ---------- */
 
 const IconCircle = ({ bg, color, size = 52, children }) => (
@@ -297,7 +305,7 @@ export default function PartnerDashboardComponent({ partner }) {
     title: b.title,
     subtitle: b.subtitle,
     btnText: b.btn_text || 'Apply Now',
-    bgImage: localBannerMap[b.image_url] || b.image_url,
+    bgImage: resolveBannerImage(b.image_url),
     action: () => {
       const target = b.click_url || '/partner/products';
       if (target.startsWith('http://') || target.startsWith('https://')) {
@@ -543,20 +551,45 @@ export default function PartnerDashboardComponent({ partner }) {
                 left: 0,
                 width: '100%',
                 height: '100%',
-                background: slide.bgImage
-                  ? `url(${slide.bgImage}) center/100% 100% no-repeat`
-                  : 'linear-gradient(135deg, #6E3FD6 0%, #1E40AF 100%)',
+                background: isDark ? C.card : '#FFFFFF',
                 opacity: idx === bannerIndex ? 1 : 0,
                 pointerEvents: idx === bannerIndex ? 'auto' : 'none',
                 transition: 'opacity 0.6s ease-in-out',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                overflow: 'hidden'
               }}
             >
-              {!slide.bgImage && (
-                <>
+              {slide.bgImage ? (
+                <img
+                  src={slide.bgImage}
+                  alt={slide.title || 'Offer Banner'}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = offerBanner;
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'center',
+                    display: 'block'
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(135deg, #6E3FD6 0%, #1E40AF 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative'
+                  }}
+                >
                   {/* Floating card 1 */}
                   <div style={{
                     width: '180px',
@@ -596,7 +629,29 @@ export default function PartnerDashboardComponent({ partner }) {
                     <div style={{ fontSize: '11px', fontWeight: 700, margin: '18px 0 8px 0' }}>•••• •••• •••• 8888</div>
                     <div style={{ fontSize: '8px', opacity: 0.8 }}>SIGNATURE REWARDS</div>
                   </div>
-                </>
+                </div>
+              )}
+
+              {/* Dynamic banner text overlay if present */}
+              {slide.title && slide.bgImage && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    padding: '16px 20px',
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.25) 70%, transparent 100%)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    zIndex: 3
+                  }}
+                >
+                  <h3 style={{ margin: 0, fontSize: isMobile ? '13px' : '16px', fontWeight: 800, color: '#ffffff' }}>{slide.title}</h3>
+                  {slide.subtitle && <p style={{ margin: 0, fontSize: '11.5px', opacity: 0.9, color: 'rgba(255,255,255,0.9)' }}>{slide.subtitle}</p>}
+                </div>
               )}
             </div>
           ))}
