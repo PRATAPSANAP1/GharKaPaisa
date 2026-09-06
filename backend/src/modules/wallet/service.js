@@ -726,8 +726,9 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
         const payout = await createRazorpayPayout(fundAccountId, parseFloat(wr.amount), wr.id, payoutOptions);
 
         const payoutId = payout.id;
-        const utr = payout.utr || `UTR${Date.now()}${Math.floor(1000 + Math.random() * 9000)}`;
+        const utr = payout.utr || null;
         const bankRef = payout.bank_reference || null;
+        const internalRef = `INTERNAL-PAYOUT-${payoutId}`;
         const payoutStatus = payout.status; 
 
         let status = 'processing';
@@ -844,7 +845,7 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
             });
           }
         } else if (action === 'transfer' || utrNumber) {
-          const sentUtr = utrNumber || wr.utr || `UTR${Date.now()}`;
+          const sentUtr = utrNumber || wr.utr || `INTERNAL-PAYOUT-${wr.id}`;
           await notify.withdrawalApproved(partnerData.user_id, wr.amount);
           
           // Send SMS notification to Partner upon payment completion using DLT template
@@ -1283,8 +1284,22 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
     if (ledgerTxn.status === 'Released') throw new Error('Commission already released');
     if (ledgerTxn.status === 'Rejected') throw new Error('Commission already rejected');
 
-    amount = parseFloat(ledgerTxn.credit || 0);
+    amount = ledgerTxn.credit || 0;
     partnerUserId = ledgerTxn.user_id;
+
+    // 1b. Enforce Single Decision Gate in commission_decisions (PRIMARY KEY ON commission_ledger_id)
+    const { rows: [decisionRow] } = await client.query(`
+      INSERT INTO commission_decisions (commission_ledger_id, decision, decided_by, remarks)
+      VALUES ($1, 'RELEASED', $2, $3)
+      ON CONFLICT (commission_ledger_id) DO NOTHING
+      RETURNING *
+    `, [ledgerTxn.id, processedBy || null, remarks || null]);
+
+    if (!decisionRow) {
+      await client.query('COMMIT');
+      logger.info(`Commission transaction ${transactionId} already decided (RELEASED or REJECTED).`);
+      return { alreadyProcessed: true };
+    }
 
     // 2. Append-Only Financial Entry for Commission Release (Zero UPDATE on historical rows)
     const { rows: [wallet] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
@@ -1376,8 +1391,22 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
     if (ledgerTxn.status === 'Released') throw new Error('Commission already released');
     if (ledgerTxn.status === 'Rejected') throw new Error('Commission already rejected');
 
-    const amount = parseFloat(ledgerTxn.credit || 0);
+    const amount = ledgerTxn.credit || 0;
     partnerUserId = ledgerTxn.user_id;
+
+    // 1b. Enforce Single Decision Gate in commission_decisions (PRIMARY KEY ON commission_ledger_id)
+    const { rows: [decisionRow] } = await client.query(`
+      INSERT INTO commission_decisions (commission_ledger_id, decision, decided_by, remarks)
+      VALUES ($1, 'REJECTED', $2, $3)
+      ON CONFLICT (commission_ledger_id) DO NOTHING
+      RETURNING *
+    `, [ledgerTxn.id, processedBy || null, remarks || null]);
+
+    if (!decisionRow) {
+      await client.query('COMMIT');
+      logger.info(`Commission transaction ${transactionId} already decided (RELEASED or REJECTED).`);
+      return { alreadyProcessed: true };
+    }
 
     // 2. Append-Only Financial Entry for Commission Rejection (Zero UPDATE on historical rows)
     const { rows: [wallet] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
