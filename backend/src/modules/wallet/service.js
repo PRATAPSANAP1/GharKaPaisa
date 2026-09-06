@@ -70,93 +70,64 @@ const syncWalletBalance = async (partnerId, client) => {
   const pId = p ? p.id : partnerId;
   const uId = p ? p.user_id : partnerId;
 
-  // 1. Completed Credits (excluding debits)
-  const creditQuery = await client.query(`
-    SELECT 
-      COALESCE(SUM(credit), 0) as completed_credits,
-      COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0) as team_earn,
-      COALESCE(SUM(CASE WHEN transaction_type = 'PERSONAL_COMMISSION' THEN credit ELSE 0 END), 0) as personal_earn,
-      COALESCE(SUM(CASE WHEN transaction_type = 'REFERRAL_BONUS' THEN credit ELSE 0 END), 0) as ref_bonus,
-      COALESCE(SUM(CASE WHEN transaction_type = 'OVERRIDE_COMMISSION' THEN credit ELSE 0 END), 0) as override_earn
-    FROM wallet_ledger 
-    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status IN ('Released', 'Approved')
-  `, [pId, uId]);
-  
-  // 2. Completed Debits (e.g. withdrawal payouts settled and TDS deductions)
-  const debitQuery = await client.query(`
-    SELECT 
-      COALESCE(SUM(debit), 0) as completed_debits
-    FROM wallet_ledger 
-    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status IN ('Released', 'Approved')
-  `, [pId, uId]);
-
-  // 3. Hold Balance = Pending Credits
-  const holdQuery = await client.query(`
-    SELECT 
-      COALESCE(SUM(credit), 0) as hold_bal,
-      COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0) as team_pending
-    FROM wallet_ledger 
-    WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status = 'Pending Approval'
-  `, [pId, uId]);
-
-  // 4. Locked Balance = Pending/Approved Withdrawal Requests whose ledger status is NOT yet Released
-  const lockedQuery = await client.query(`
-    SELECT 
-      COALESCE(SUM(w.amount), 0) as locked_bal
-    FROM wallet_withdrawals w
-    LEFT JOIN wallet_ledger l ON l.reference_number = w.id::text AND l.transaction_type = 'WITHDRAWAL'
-    WHERE (w.partner_id = $1::uuid OR w.partner_id = $2::uuid) 
-      AND w.status IN ('pending', 'approved', 'processing')
-      AND (l.status IS NULL OR l.status NOT IN ('Released', 'Approved'))
-  `, [pId, uId]);
-
-  const cr = creditQuery.rows[0];
-  const db = debitQuery.rows[0];
-  const hd = holdQuery.rows[0];
-  const lk = lockedQuery.rows[0];
-
-  const completedCredits = parseFloat(cr.completed_credits);
-  const completedDebits = parseFloat(db.completed_debits);
-  const holdBalance = parseFloat(hd.hold_bal);
-  const lockedBalance = parseFloat(lk.locked_bal);
-
-  const availableBalance = completedCredits - completedDebits - lockedBalance;
-  const totalEarned = parseFloat(cr.team_earn) + parseFloat(cr.personal_earn) + parseFloat(cr.ref_bonus) + parseFloat(cr.override_earn || 0);
-  const totalWithdrawn = completedDebits;
-
-  await client.query(`
-    UPDATE partner_wallets SET
-      available_balance = $1,
-      hold_balance = $2,
-      total_earned = $3,
-      total_withdrawn = $4,
-      personal_earnings = $5,
-      team_earnings = $6,
-      referral_bonus = $7,
-      pending_team_commission = $8,
-      pending_balance = $9,
-      withdrawn_balance = $10,
-      override_balance = $11,
-      locked_balance = $12,
+  // Single SQL CTE enforcing exact PostgreSQL NUMERIC(15,2) arithmetic
+  const { rows: [updated] } = await client.query(`
+    WITH credit_stats AS (
+      SELECT 
+        COALESCE(SUM(credit), 0.00)::numeric as completed_credits,
+        COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0.00)::numeric as team_earn,
+        COALESCE(SUM(CASE WHEN transaction_type = 'PERSONAL_COMMISSION' THEN credit ELSE 0 END), 0.00)::numeric as personal_earn,
+        COALESCE(SUM(CASE WHEN transaction_type = 'REFERRAL_BONUS' THEN credit ELSE 0 END), 0.00)::numeric as ref_bonus,
+        COALESCE(SUM(CASE WHEN transaction_type = 'OVERRIDE_COMMISSION' THEN credit ELSE 0 END), 0.00)::numeric as override_earn
+      FROM wallet_ledger 
+      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status IN ('Released', 'Approved')
+    ),
+    debit_stats AS (
+      SELECT 
+        COALESCE(SUM(debit), 0.00)::numeric as completed_debits
+      FROM wallet_ledger 
+      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status IN ('Released', 'Approved')
+    ),
+    hold_stats AS (
+      SELECT 
+        COALESCE(SUM(credit), 0.00)::numeric as hold_bal,
+        COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0.00)::numeric as team_pending
+      FROM wallet_ledger 
+      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status = 'Pending Approval'
+    ),
+    locked_stats AS (
+      SELECT 
+        COALESCE(SUM(w.amount), 0.00)::numeric as locked_bal
+      FROM wallet_withdrawals w
+      LEFT JOIN wallet_ledger l ON l.reference_number = w.id::text AND l.transaction_type = 'WITHDRAWAL'
+      WHERE (w.partner_id = $1::uuid OR w.partner_id = $2::uuid) 
+        AND w.status IN ('pending', 'approved', 'processing')
+        AND (l.status IS NULL OR l.status NOT IN ('Released', 'Approved'))
+    )
+    UPDATE partner_wallets PW SET
+      available_balance = GREATEST(0.00, (CS.completed_credits - DS.completed_debits - LS.locked_bal)::numeric),
+      hold_balance = HS.hold_bal,
+      total_earned = (CS.team_earn + CS.personal_earn + CS.ref_bonus + CS.override_earn)::numeric,
+      total_withdrawn = DS.completed_debits,
+      personal_earnings = CS.personal_earn,
+      team_earnings = CS.team_earn,
+      referral_bonus = CS.ref_bonus,
+      pending_team_commission = HS.team_pending,
+      pending_balance = HS.hold_bal,
+      withdrawn_balance = DS.completed_debits,
+      override_balance = CS.override_earn,
+      locked_balance = LS.locked_bal,
       last_updated = NOW()
-    WHERE partner_id = $13
-  `, [
-    availableBalance, 
-    holdBalance, 
-    totalEarned, 
-    totalWithdrawn, 
-    parseFloat(cr.personal_earn), 
-    parseFloat(cr.team_earn), 
-    parseFloat(cr.ref_bonus), 
-    parseFloat(hd.team_pending),
-    holdBalance, 
-    totalWithdrawn, 
-    parseFloat(cr.override_earn || 0), 
-    lockedBalance,
-    partnerId
-  ]);
+    FROM credit_stats CS, debit_stats DS, hold_stats HS, locked_stats LS
+    WHERE PW.partner_id = $1::uuid
+    RETURNING available_balance, hold_balance, total_earned
+  `, [pId, uId]);
 
-  return { availableBalance, holdBalance, totalEarned };
+  return {
+    availableBalance: updated ? updated.available_balance : 0,
+    holdBalance: updated ? updated.hold_balance : 0,
+    totalEarned: updated ? updated.total_earned : 0
+  };
 };
 
 // Credit money to Hold Balance (e.g. commission credit pending verification)
@@ -491,33 +462,24 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
 
     let txnIdToReturn = meta.txn_id || null;
 
-    // 1. Update wallet_ledger status if txn_id provided (existing hold transaction)
-    if (meta.txn_id) {
-      await client.query(`
-        UPDATE wallet_ledger 
-        SET status = 'Released' 
-        WHERE id::text = $1::text
-      `, [String(meta.txn_id)]);
-    } else {
-      // Direct release without prior hold entry -> insert credit entry
-      const { rows: [txn] } = await client.query(`
-        INSERT INTO wallet_ledger (
-          wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
-        ) VALUES ($1, $2, $3, $4, 0, $5, $6, $7, $8)
-        RETURNING id
-      `, [
-        wallet.id, resolvedPartnerId, txnType, numAmount,
-        meta.description || 'Commission release to available balance',
-        meta.reference_id || null,
-        status,
-        meta.processed_by || null
-      ]);
-      txnIdToReturn = txn.id;
+    // Append-Only Financial Event (Zero UPDATE on historical rows)
+    const { rows: [txn] } = await client.query(`
+      INSERT INTO wallet_ledger (
+        wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+      ) VALUES ($1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6)
+      RETURNING id
+    `, [
+      wallet.id, resolvedPartnerId, numAmount,
+      meta.description || (meta.txn_id ? `Commission release for hold txn #${meta.txn_id}` : 'Commission release to available balance'),
+      meta.reference_id || (meta.txn_id ? String(meta.txn_id) : null),
+      status,
+      meta.processed_by || null
+    ]);
+    txnIdToReturn = txn.id;
 
-      await syncTransactionTable(client, txn.id, wallet.id, resolvedPartnerId, meta.application_id || null, txnType, numAmount, balanceBefore, balanceAfter, status, meta.description || 'Commission release to available balance', meta.reference_type || 'hold_release', meta.reference_id || null, meta.processed_by || null, {
-        remarks: meta.remarks || null
-      });
-    }
+    await syncTransactionTable(client, txn.id, wallet.id, resolvedPartnerId, meta.application_id || null, txnType, numAmount, balanceBefore, balanceAfter, status, meta.description || 'Commission release to available balance', meta.reference_type || 'hold_release', meta.reference_id || null, meta.processed_by || null, {
+      remarks: meta.remarks || null
+    });
 
     await syncWalletBalance(resolvedPartnerId, client);
 
@@ -612,30 +574,25 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
         throw new Error(`Cannot reject withdrawal in status: ${wr.status}`);
       }
 
+      // Append-Only Financial Entry for Withdrawal Rejection (Zero UPDATE on historical rows)
       await client.query(`
-        UPDATE wallet_ledger SET
-          status = 'rejected',
-          created_by = $1,
-          description = COALESCE(description, '') || ' [Rejected]'
-        WHERE transaction_type = 'WITHDRAWAL' AND (reference_number = $2 OR reference_number IS NULL) AND status = 'pending' AND partner_id = $3
-      `, [processedBy, withdrawalId.toString(), wr.partner_id]);
+        INSERT INTO wallet_ledger (
+          wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+        ) VALUES ($1, $2, 'WITHDRAWAL_CANCELLED'::ledger_transaction_type, 0, 0, $3, $4, 'Released', $5)
+      `, [
+        wr.wallet_id, wr.partner_id,
+        `Withdrawal rejected - Reason: ${rejectionReason || 'Rejected by Admin'}`,
+        withdrawalId.toString(),
+        processedBy
+      ]);
 
-      const { rows: ledgerRows } = await client.query(
-        `SELECT id, wallet_id, credit, debit FROM wallet_ledger 
-         WHERE transaction_type = 'WITHDRAWAL' AND reference_number = $1 AND partner_id = $2`,
-        [withdrawalId.toString(), wr.partner_id]
-      );
-      for (const row of ledgerRows) {
-        await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'rejected', `Withdrawal rejected - Reason: ${rejectionReason}`, null, null, processedBy);
-      }
-
-      // Release hold_balance without altering available_balance
+      // Release hold_balance without altering available_balance (Exact Decimal SQL Arithmetic)
       await client.query(`
         UPDATE partner_wallets 
-        SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+        SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1::numeric),
             updated_at = NOW() 
         WHERE partner_id = $2
-      `, [parseFloat(wr.amount), wr.partner_id]);
+      `, [wr.amount, wr.partner_id]);
 
       await client.query(`
         UPDATE wallet_withdrawals SET
@@ -657,32 +614,28 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
       if (utrNumber) {
         // Manual Transfer recording with provided UTR number
         const finalUtr = utrNumber;
+        
+        // Append-Only Financial Entry for Settlement (Zero UPDATE on historical rows)
         await client.query(`
-          UPDATE wallet_ledger SET
-            status = 'completed',
-            created_by = $1,
-            reference_number = COALESCE($2, reference_number)
-          WHERE transaction_type = 'WITHDRAWAL' AND (reference_number = $3 OR reference_number IS NULL) AND status = 'pending' AND partner_id = $4
-        `, [processedBy, finalUtr, withdrawalId.toString(), wr.partner_id]);
+          INSERT INTO wallet_ledger (
+            wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+          ) VALUES ($1, $2, 'WITHDRAWAL_SETTLED'::ledger_transaction_type, 0, $3::numeric, $4, $5, 'Released', $6)
+        `, [
+          wr.wallet_id, wr.partner_id, wr.amount,
+          `Withdrawal payout settled - UTR: ${finalUtr}`,
+          withdrawalId.toString(),
+          processedBy
+        ]);
 
-        const { rows: ledgerRows } = await client.query(
-          `SELECT id, wallet_id, credit, debit FROM wallet_ledger 
-           WHERE transaction_type = 'WITHDRAWAL' AND reference_number = $1 AND partner_id = $2`,
-          [withdrawalId.toString(), wr.partner_id]
-        );
-        for (const row of ledgerRows) {
-          await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'completed', `Withdrawal approved - UTR: ${finalUtr}`, null, null, processedBy);
-        }
-
-        // Deduct available_balance and release hold_balance upon successful payout
+        // Deduct available_balance and release hold_balance upon successful payout (Exact Decimal SQL)
         await client.query(`
           UPDATE partner_wallets 
-          SET available_balance = available_balance - $1,
-              hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
-              total_withdrawn = COALESCE(total_withdrawn, 0) + $1,
+          SET available_balance = available_balance - $1::numeric,
+              hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1::numeric),
+              total_withdrawn = COALESCE(total_withdrawn, 0) + $1::numeric,
               updated_at = NOW() 
           WHERE partner_id = $2
-        `, [parseFloat(wr.amount), wr.partner_id]);
+        `, [wr.amount, wr.partner_id]);
 
         await client.query(`
           UPDATE wallet_withdrawals SET
@@ -783,13 +736,17 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
         `, [status, contactId, fundAccountId, payoutId, utr, bankRef, processedBy, payoutStatus === 'failed' ? payout.failure_reason : null, bank.id, wr.id]);
 
         if (status === 'transferred') {
+          // Append-Only Financial Entry for Settlement (Zero UPDATE on historical rows)
           await client.query(`
-            UPDATE wallet_ledger SET
-              status = 'completed',
-              created_by = $1,
-              reference_number = COALESCE($2, reference_number)
-            WHERE transaction_type = 'WITHDRAWAL' AND (reference_number = $3 OR reference_number IS NULL) AND status = 'pending' AND partner_id = $4
-          `, [processedBy, utr || payoutId, wr.id.toString(), wr.partner_id]);
+            INSERT INTO wallet_ledger (
+              wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+            ) VALUES ($1, $2, 'WITHDRAWAL_SETTLED'::ledger_transaction_type, 0, $3::numeric, $4, $5, 'Released', $6)
+          `, [
+            wr.wallet_id, wr.partner_id, wr.amount,
+            `Withdrawal payout transferred - UTR: ${utr || payoutId}`,
+            withdrawalId.toString(),
+            processedBy
+          ]);
 
           const { rows: ledgerRows } = await client.query(
             `SELECT id, wallet_id, credit, debit FROM wallet_ledger 
@@ -1311,22 +1268,28 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
     amount = parseFloat(ledgerTxn.credit || 0);
     partnerUserId = ledgerTxn.user_id;
 
-    // 2. Update wallet_ledger
-    await client.query(`
-      UPDATE wallet_ledger 
-      SET status = 'Released', 
-          description = COALESCE(description, '') || ' [Released by Admin]'
-      WHERE id = $1
-    `, [transactionId]);
+    // 2. Append-Only Financial Entry for Commission Release (Zero UPDATE on historical rows)
+    const { rows: [wallet] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
+    const { rows: [releaseTxn] } = await client.query(`
+      INSERT INTO wallet_ledger (
+        wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+      ) VALUES ($1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6)
+      RETURNING id
+    `, [
+      wallet ? wallet.id : null, ledgerTxn.partner_id, amount,
+      ledgerTxn.description ? `${ledgerTxn.description} [Released by Admin]` : 'Commission Released by Admin',
+      transactionId.toString(),
+      processedBy
+    ]);
 
     // 3. Update wallet_transactions
     await syncTransactionTable(
       client, 
-      transactionId, 
+      releaseTxn.id, 
       null, 
       ledgerTxn.partner_id, 
       null, 
-      ledgerTxn.transaction_type, 
+      'COMMISSION_RELEASE', 
       amount, 
       null, 
       null, 
@@ -1391,26 +1354,32 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
     const amount = parseFloat(ledgerTxn.credit || 0);
     partnerUserId = ledgerTxn.user_id;
 
-    // 2. Update wallet_ledger
-    await client.query(`
-      UPDATE wallet_ledger 
-      SET status = 'Rejected', 
-          description = COALESCE(description, '') || ' [Rejected by Admin]'
-      WHERE id = $1
-    `, [transactionId]);
+    // 2. Append-Only Financial Entry for Commission Rejection (Zero UPDATE on historical rows)
+    const { rows: [wallet] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
+    const { rows: [rejectTxn] } = await client.query(`
+      INSERT INTO wallet_ledger (
+        wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+      ) VALUES ($1, $2, 'COMMISSION_REJECTED'::ledger_transaction_type, 0, 0, $3, $4, 'Released', $5)
+      RETURNING id
+    `, [
+      wallet ? wallet.id : null, ledgerTxn.partner_id,
+      ledgerTxn.description ? `${ledgerTxn.description} [Rejected by Admin]` : 'Commission Rejected by Admin',
+      transactionId.toString(),
+      processedBy
+    ]);
 
     // 3. Update wallet_transactions
     await syncTransactionTable(
       client, 
-      transactionId, 
+      rejectTxn.id, 
       null, 
       ledgerTxn.partner_id, 
       null, 
-      ledgerTxn.transaction_type, 
-      amount, 
+      'COMMISSION_REJECTED', 
+      0, 
       null, 
       null, 
-      'Rejected', 
+      'Released', 
       ledgerTxn.description || 'Commission rejected by Admin', 
       null, 
       null, 

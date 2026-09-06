@@ -126,12 +126,14 @@ const reverseCommission = async (applicationId, adminUserId, reason) => {
     for (const txn of txns) {
       if (txn.status === 'Pending Approval') {
         await client.query(`
-          UPDATE wallet_ledger SET
-            status = 'Rejected',
-            created_by = $1,
-            description = COALESCE(description, '') || ' [Reversed]'
-          WHERE id = $2
-        `, [adminUserId, txn.id]);
+          INSERT INTO wallet_ledger (
+            wallet_id, partner_id, application_id, transaction_type, credit, debit, description, status, created_by
+          ) VALUES ($1, $2, $3, 'COMMISSION_REJECTED'::ledger_transaction_type, 0, 0, $4, 'Released', $5)
+        `, [
+          wallet.id, txn.partner_id, applicationId,
+          `Pending commission rejected for App ${app.app_number}${reason ? `: ${reason}` : ''}`,
+          adminUserId
+        ]);
       } else if (txn.status === 'Released') {
         // Insert REVERSAL
         await client.query(`

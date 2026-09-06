@@ -34,6 +34,19 @@ async function migrateFinancialTables() {
     ON razorpay_webhook_events(status, received_at);
   `);
 
+  // 3. Ensure ledger_transaction_type ENUM values exist for append-only operations
+  await query(`
+    DO $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ledger_transaction_type') THEN
+        ALTER TYPE ledger_transaction_type ADD VALUE IF NOT EXISTS 'COMMISSION_REJECTED';
+        ALTER TYPE ledger_transaction_type ADD VALUE IF NOT EXISTS 'WITHDRAWAL_HOLD';
+        ALTER TYPE ledger_transaction_type ADD VALUE IF NOT EXISTS 'WITHDRAWAL_SETTLED';
+        ALTER TYPE ledger_transaction_type ADD VALUE IF NOT EXISTS 'WITHDRAWAL_CANCELLED';
+      END IF;
+    END $$;
+  `);
+
   console.log('[MIGRATION COMPLETE] Financial engine tables migrated successfully.');
 }
 
