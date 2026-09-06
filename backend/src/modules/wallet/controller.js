@@ -2045,39 +2045,81 @@ const reconcileAddFundsRequest = async (req, res, next) => {
   }
 };
 
-// ── Razorpay Webhook Handler (Payout Processed / Failed Reconciliation) ─────
+// ── Razorpay Webhook Handler (Payout Processed / Failed Reconciliation & Payment Idempotency) ─────
 const handleRazorpayWebhook = async (req, res, next) => {
   try {
-    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      logger.error('[RAZORPAY_WEBHOOK] RAZORPAY_WEBHOOK_SECRET is not configured in environment variables');
+      return res.status(500).json({ success: false, message: 'Webhook secret is not configured on server.' });
+    }
+
     const signature = req.headers['x-razorpay-signature'];
+    if (!signature) {
+      logger.warn('[RAZORPAY_WEBHOOK] Missing X-Razorpay-Signature header');
+      return res.status(400).json({ success: false, message: 'Missing X-Razorpay-Signature header.' });
+    }
 
-    // Verify Webhook Signature against Raw Body
-    if (webhookSecret) {
-      if (!signature) {
-        logger.warn('[RAZORPAY_WEBHOOK] Missing X-Razorpay-Signature header');
-        return error(res, 'Missing webhook signature', 400);
-      }
-      const crypto = require('crypto');
-      const rawPayload = req.rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
-      const expectedSignature = crypto
-        .createHmac('sha256', webhookSecret)
-        .update(rawPayload)
-        .digest('hex');
+    // 1. Timing-safe Webhook Signature Verification against Raw Body
+    const crypto = require('crypto');
+    const rawPayload = req.rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(rawPayload)
+      .digest('hex');
 
-      if (signature !== expectedSignature) {
-        logger.error('[RAZORPAY_WEBHOOK] Invalid webhook signature');
-        return error(res, 'Invalid webhook signature', 400);
-      }
+    const expectedBuf = Buffer.from(expectedSignature, 'hex');
+    const providedBuf = Buffer.from(String(signature).trim(), 'hex');
+    if (expectedBuf.length !== providedBuf.length || !crypto.timingSafeEqual(expectedBuf, providedBuf)) {
+      logger.error('[RAZORPAY_WEBHOOK] Invalid webhook signature');
+      return res.status(400).json({ success: false, message: 'Invalid webhook signature.' });
     }
 
     const payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const event = payload.event;
+
+    // 2. DB-Level Event Deduplication Guard
+    await query(`
+      CREATE TABLE IF NOT EXISTS razorpay_webhook_events (
+        event_id VARCHAR(100) PRIMARY KEY,
+        event_type VARCHAR(100) NOT NULL,
+        processed_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    const eventId = payload.event_id || payload.id || `${event}_${Date.now()}_${Math.random()}`;
+    const { rows: existingEvt } = await query(`SELECT event_id FROM razorpay_webhook_events WHERE event_id = $1`, [eventId]);
+    if (existingEvt.length > 0) {
+      logger.info(`[RAZORPAY_WEBHOOK] Event ${eventId} already processed. Exiting cleanly.`);
+      return res.status(200).json({ success: true, already_processed: true, message: 'Event already processed.' });
+    }
+
+    // Record Event ID to enforce uniqueness
+    await query(`INSERT INTO razorpay_webhook_events (event_id, event_type) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [eventId, event]);
+
+    // 3. Handle Top-up Payment Captured Event (Idempotent Wallet Credit)
+    if (['payment.captured', 'order.paid'].includes(event)) {
+      const paymentEntity = payload.payload?.payment?.entity || payload.payload?.order?.entity;
+      if (paymentEntity) {
+        const paymentId = paymentEntity.id || paymentEntity.payment_id;
+        const orderId = paymentEntity.order_id || paymentEntity.id;
+        const partnerId = paymentEntity.notes?.partner_id;
+        const amountInInr = paymentEntity.amount ? parseFloat((paymentEntity.amount / 100).toFixed(2)) : 0;
+
+        if (partnerId && paymentId) {
+          const { creditWalletFromPayment } = require('./service.js');
+          await creditWalletFromPayment(partnerId, amountInInr, paymentId, orderId);
+          return res.status(200).json({ success: true, message: 'Payment webhook processed successfully.' });
+        }
+      }
+    }
+
     const payoutEntity = payload.payload?.payout?.entity;
 
     logger.info(`[RAZORPAY_WEBHOOK] Received event: ${event}`, { payout_id: payoutEntity?.id, status: payoutEntity?.status });
 
     if (!payoutEntity || !payoutEntity.id) {
-      return success(res, { received: true, ignored: true }, 'Webhook received but missing payout entity');
+      return res.status(200).json({ success: true, received: true, ignored: true, message: 'Webhook received but missing payout entity' });
     }
 
     const payoutId = payoutEntity.id;

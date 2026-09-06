@@ -1449,6 +1449,130 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
   return true;
 };
 
+/**
+ * Atomic & Idempotent Payment Credit from Razorpay Verification / Webhook
+ * Prevents double-crediting if duplicate calls occur.
+ */
+const creditWalletFromPayment = async (partnerId, amountInInr, paymentId, orderId, processedBy = null) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    // 1. DDL Auto-Heal: Ensure idempotency tracking table exists
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS razorpay_processed_payments (
+        payment_id VARCHAR(100) PRIMARY KEY,
+        order_id VARCHAR(100) NOT NULL,
+        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        amount NUMERIC(15,2) NOT NULL,
+        status VARCHAR(50) DEFAULT 'COMPLETED',
+        processed_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // 2. Resolve canonical partner_id
+    let resolvedPartnerId = partnerId;
+    const { rows: [p] } = await client.query(
+      `SELECT id FROM partner_profiles WHERE id::text = $1::text OR user_id::text = $1::text`,
+      [String(partnerId)]
+    );
+    if (p) {
+      resolvedPartnerId = p.id;
+    }
+
+    // 3. IDEMPOTENCY CHECK: Lock and check if payment_id has already been processed
+    const { rows: existingProc } = await client.query(
+      `SELECT payment_id FROM razorpay_processed_payments WHERE payment_id = $1 FOR UPDATE`,
+      [paymentId]
+    );
+
+    if (existingProc.length > 0) {
+      await client.query('COMMIT');
+      logger.info(`[IDEMPOTENCY_GUARD] Payment ${paymentId} already processed for partner ${resolvedPartnerId}. Skipping duplicate credit.`);
+      return { alreadyProcessed: true, amount: amountInInr };
+    }
+
+    // Secondary check in wallet_ledger to guarantee no duplicate reference number
+    const { rows: existingLedger } = await client.query(
+      `SELECT id FROM wallet_ledger WHERE reference_number = $1 AND partner_id = $2 LIMIT 1`,
+      [paymentId, resolvedPartnerId]
+    );
+
+    if (existingLedger.length > 0) {
+      await client.query(
+        `INSERT INTO razorpay_processed_payments (payment_id, order_id, partner_id, amount) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+        [paymentId, orderId || 'N/A', resolvedPartnerId, amountInInr]
+      );
+      await client.query('COMMIT');
+      logger.info(`[IDEMPOTENCY_GUARD] Payment ${paymentId} found in ledger for partner ${resolvedPartnerId}. Skipping duplicate credit.`);
+      return { alreadyProcessed: true, amount: amountInInr };
+    }
+
+    // 4. Lock partner wallet row
+    let { rows: [wallet] } = await client.query(
+      `SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
+      [resolvedPartnerId]
+    );
+
+    if (!wallet) {
+      await client.query(
+        `INSERT INTO partner_wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING`,
+        [resolvedPartnerId]
+      );
+      const res = await client.query(
+        `SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
+        [resolvedPartnerId]
+      );
+      wallet = res.rows[0];
+    }
+
+    if (!wallet) {
+      throw new Error(`Partner wallet not found for partner_id: ${resolvedPartnerId}`);
+    }
+
+    const numAmount = parseFloat(amountInInr);
+    const balanceBefore = parseFloat(wallet.available_balance || 0);
+    const balanceAfter = balanceBefore + numAmount;
+    const description = `Wallet top-up via Razorpay: ${paymentId}`;
+
+    // 5. Insert into razorpay_processed_payments (Enforces DB PRIMARY KEY Uniqueness)
+    await client.query(
+      `INSERT INTO razorpay_processed_payments (payment_id, order_id, partner_id, amount) VALUES ($1, $2, $3, $4)`,
+      [paymentId, orderId || 'N/A', resolvedPartnerId, numAmount]
+    );
+
+    // 6. Insert into wallet_ledger
+    const { rows: [txn] } = await client.query(`
+      INSERT INTO wallet_ledger (
+        wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+      ) VALUES ($1, $2, 'ADJUSTMENT'::ledger_transaction_type, $3, 0, $4, $5, 'Released', $6)
+      RETURNING id
+    `, [
+      wallet.id, resolvedPartnerId, numAmount, description, paymentId, processedBy
+    ]);
+
+    // 7. Sync to wallet_transactions
+    await syncTransactionTable(
+      client, txn.id, wallet.id, resolvedPartnerId, null, 'TOPUP', numAmount,
+      balanceBefore, balanceAfter, 'success', description, 'razorpay_payout', paymentId, processedBy
+    );
+
+    // 8. Re-calculate & update wallet balance atomically
+    await syncWalletBalance(resolvedPartnerId, client);
+
+    await client.query('COMMIT');
+    logger.info(`[PAYMENT_SUCCESS] Credited ₹${numAmount} to partner ${resolvedPartnerId} (Payment: ${paymentId})`);
+
+    return { alreadyProcessed: false, amount: numAmount, transactionId: txn.id };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error(`[PAYMENT_CREDIT_ERROR] Failed to credit wallet for payment ${paymentId}: ${err.message}`);
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   ensureWallet,
   creditHold,
@@ -1466,5 +1590,7 @@ module.exports = {
   processWalletReconciliationDailyJob,
   generateWalletStatementData,
   manualReleaseCommission,
-  manualRejectCommission
+  manualRejectCommission,
+  creditWalletFromPayment
 };
+
