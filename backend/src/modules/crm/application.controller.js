@@ -2100,7 +2100,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
       status, bank_ref_number, bank_application_number, rejection_reason, approved_amount,
       appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
       bank_remark, user_remark, user_notes, notes, final_status, decline_reason, eligible_reqd,
-      app_file_generated, appfile_generated, ipa_stage, kyc_stage, card_approval_stage,
+      app_file_generated, appfile_generated, ipa_stage, kyc_stage, card_approval_stage, digital_card_issued,
       // Form 1 Customer Application Details
       customer_mobile, customer_name, dob, customer_email, pan_number,
       company_name, designation, address, company_address, mother_name, vkyc_url
@@ -2131,6 +2131,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50),
         ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50),
         ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(50),
         ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
         ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
         ADD COLUMN IF NOT EXISTS user_remark TEXT,
@@ -2142,6 +2143,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50),
         ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50),
         ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(50),
         ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
         ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
         ADD COLUMN IF NOT EXISTS user_remark TEXT,
@@ -2193,9 +2195,10 @@ const updateBankProcessingStatus = async (req, res, next) => {
               ipa_stage = COALESCE($27, ipa_stage),
               kyc_stage = COALESCE($28, kyc_stage),
               card_approval_stage = COALESCE($29, card_approval_stage),
-              bank_application_number = COALESCE($30, bank_application_number),
+              digital_card_issued = COALESCE($30, digital_card_issued),
+              bank_application_number = COALESCE($31, bank_application_number),
               updated_at = NOW()
-          WHERE id = $31
+          WHERE id = $32
         `, [
           currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount,
           appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
@@ -2203,7 +2206,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
           eligible_reqd || null, customer_mobile || null, customer_name || null, dob || null,
           customer_email || null, pan_number || null, company_name || null, designation || null,
           address || null, company_address || null, mother_name || null, vkyc_url || null, userRemarkVal, appFileGenVal,
-          ipa_stage || null, kyc_stage || null, card_approval_stage || null, bankAppNoVal, id
+          ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null, bankAppNoVal, id
         ]);
 
         await query(`
@@ -2246,22 +2249,23 @@ const updateBankProcessingStatus = async (req, res, next) => {
           ipa_stage = COALESCE($22, ipa_stage),
           kyc_stage = COALESCE($23, kyc_stage),
           card_approval_stage = COALESCE($24, card_approval_stage),
+          digital_card_issued = COALESCE($25, digital_card_issued),
           updated_at = NOW()
-      WHERE id = $25
+      WHERE id = $26
     `, [
       currentStatus, bank_ref_number || bankAppNoVal || null, bankAppNoVal || null, rejection_reason || decline_reason || null, parsedAmount,
       appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
       dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
       eligible_reqd || null, dob || null, designation || null, company_address || null,
       mother_name || null, vkyc_url || null, userRemarkVal, appFileGenVal,
-      ipa_stage || null, kyc_stage || null, card_approval_stage || null, id
+      ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null, id
     ]);
 
     try {
       await query(`
         INSERT INTO physical_application_details (
-          application_id, bank_application_number, bank_ref_number, vkyc_url, user_remark, ipa_stage, kyc_stage, card_approval_stage, created_at, updated_at
-        ) VALUES ($1, $2, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+          application_id, bank_application_number, bank_ref_number, vkyc_url, user_remark, ipa_stage, kyc_stage, card_approval_stage, digital_card_issued, created_at, updated_at
+        ) VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
         ON CONFLICT (application_id) DO UPDATE SET
           bank_application_number = COALESCE(EXCLUDED.bank_application_number, physical_application_details.bank_application_number),
           bank_ref_number = COALESCE(EXCLUDED.bank_ref_number, physical_application_details.bank_ref_number),
@@ -2270,8 +2274,9 @@ const updateBankProcessingStatus = async (req, res, next) => {
           ipa_stage = COALESCE(EXCLUDED.ipa_stage, physical_application_details.ipa_stage),
           kyc_stage = COALESCE(EXCLUDED.kyc_stage, physical_application_details.kyc_stage),
           card_approval_stage = COALESCE(EXCLUDED.card_approval_stage, physical_application_details.card_approval_stage),
+          digital_card_issued = COALESCE(EXCLUDED.digital_card_issued, physical_application_details.digital_card_issued),
           updated_at = NOW()
-      `, [id, bankAppNoVal, vkyc_url || null, userRemarkVal, ipa_stage || null, kyc_stage || null, card_approval_stage || null]);
+      `, [id, bankAppNoVal, vkyc_url || null, userRemarkVal, ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null]);
     } catch (_) {}
 
     const titleMap = {
