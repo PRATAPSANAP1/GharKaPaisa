@@ -33,9 +33,12 @@ const calculatePartnerCommission = async (productId, partnerId, loanAmount, clie
 
     if (!structure) return 0;
 
-    const value = parseFloat(structure.commission_value || 0);
+    const value = structure.commission_value || 0;
     if (structure.commission_type === 'percentage') {
-      return parseFloat(((loanAmount * value) / 100).toFixed(2));
+      const { rows: [calc] } = await queryFn(`
+        SELECT ROUND(($1::numeric * $2::numeric / 100.0), 2)::numeric(15,2) as val
+      `, [loanAmount, value]);
+      return calc ? calc.val : '0.00';
     }
     return value; // flat
   }
@@ -45,12 +48,15 @@ const calculatePartnerCommission = async (productId, partnerId, loanAmount, clie
     SELECT commission_type, commission_value FROM products WHERE id = $1
   `, [productId]);
   
-  if (!product) return 0;
+  if (!product) return '0.00';
 
-  const value = parseFloat(product.commission_value || 0);
+  const value = product.commission_value || 0;
   let totalPool = value;
   if (product.commission_type === 'percentage') {
-    totalPool = parseFloat(((loanAmount * value) / 100).toFixed(2));
+    const { rows: [calc] } = await queryFn(`
+      SELECT ROUND(($1::numeric * $2::numeric / 100.0), 2)::numeric(15,2) as val
+    `, [loanAmount, value]);
+    totalPool = calc ? calc.val : '0.00';
   }
 
   // The actual split is done during creditCommission, so calculatePartnerCommission returns the totalPool.

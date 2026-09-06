@@ -453,8 +453,14 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
       });
     }
 
-    const childAmount = parseFloat((amount * (childPct / 100)).toFixed(2));
-    const parentAmount = parseFloat((amount * (parentPct / 100)).toFixed(2));
+    const { rows: [calcSplit] } = await db.query(`
+      SELECT 
+        ROUND(($1::numeric * ($2::numeric / 100.0)), 2)::numeric(15,2) as child_amount,
+        ROUND(($1::numeric * ($3::numeric / 100.0)), 2)::numeric(15,2) as parent_amount
+    `, [amount, childPct, parentPct]);
+
+    const childAmount = calcSplit ? calcSplit.child_amount : '0.00';
+    const parentAmount = calcSplit ? calcSplit.parent_amount : '0.00';
 
     const childMeta = {
       ...meta,
