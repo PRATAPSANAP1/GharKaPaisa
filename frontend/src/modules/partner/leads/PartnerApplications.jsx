@@ -1298,6 +1298,17 @@ export default function PartnerApplications() {
                       const vkycLink = viewAppDetails?.vkyc_url || viewAppDetails?.physical_details?.vkyc_url || viewApp?.vkyc_url || viewApp?.physical_details?.vkyc_url;
                       const userRemarkVal = viewAppDetails?.user_remark || viewAppDetails?.notes || viewAppDetails?.physical_details?.user_remark || viewAppDetails?.physical_details?.notes || viewAppDetails?.operational_remarks || viewAppDetails?.remarks || viewApp?.user_remark || viewApp?.notes || viewApp?.physical_details?.user_remark || 'None';
 
+                      const finalSt = viewAppDetails?.final_status || viewAppDetails?.physical_details?.final_status || viewAppDetails?.status || viewApp?.status || 'In Process';
+                      const lowerSt = String(finalSt).toLowerCase();
+                      let statusColor = '#3b82f6';
+                      if (lowerSt.includes('approve') || lowerSt.includes('disburs')) statusColor = '#10b981';
+                      else if (lowerSt.includes('decline') || lowerSt.includes('reject')) statusColor = '#ef4444';
+                      else if (lowerSt.includes('etq') || lowerSt.includes('error') || lowerSt.includes('pending')) statusColor = '#f59e0b';
+
+                      const bankRemarkVal = viewAppDetails?.bank_remark || viewAppDetails?.physical_details?.bank_remark || '';
+                      const approvedAmtVal = viewAppDetails?.approved_amount || viewAppDetails?.credit_limit || viewApp?.approved_amount || '';
+                      const declineReasonVal = viewAppDetails?.decline_reason || viewAppDetails?.rejection_reason || '';
+
                       return (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                           <div>
@@ -1341,11 +1352,74 @@ export default function PartnerApplications() {
                             <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>5. CARD APPROVAL STAGE</div>
                             <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.card_approval_stage || viewAppDetails?.card_approval_status || viewAppDetails?.physical_details?.card_approval_stage || viewApp?.card_approval_stage || viewApp?.card_approval_status || viewApp?.physical_details?.card_approval_stage || 'None'}</div>
                           </div>
-                          <div style={{ gridColumn: 'span 2' }}>
-                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>USER REMARK (Employee / Partner Remark)</div>
-                            <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
-                              {userRemarkVal}
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
+                            <div style={{ fontWeight: 800, color: statusColor, textTransform: 'capitalize' }}>
+                              {String(finalSt).replace(/_/g, ' ')}
                             </div>
+                          </div>
+                          {approvedAmtVal && (
+                            <div>
+                              <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>APPROVED AMOUNT</div>
+                              <div style={{ fontWeight: 800, color: '#10b981' }}>₹{Number(approvedAmtVal).toLocaleString('en-IN')}</div>
+                            </div>
+                          )}
+                          {declineReasonVal && (
+                            <div style={{ gridColumn: 'span 2' }}>
+                              <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DECLINE REASON</div>
+                              <div style={{ fontWeight: 700, color: '#ef4444', background: isDark ? '#2a1215' : '#fef2f2', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                                {declineReasonVal}
+                              </div>
+                            </div>
+                          )}
+                          {userRemarkVal && (
+                            <div style={{ gridColumn: 'span 2' }}>
+                              <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>USER REMARK (Employee / Partner Remark)</div>
+                              <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                                {userRemarkVal}
+                              </div>
+                            </div>
+                          )}
+                          {bankRemarkVal && (
+                            <div style={{ gridColumn: 'span 2' }}>
+                              <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>
+                              <div style={{ fontWeight: 700, color: textPrimary, marginTop: 4 }}>{bankRemarkVal}</div>
+                            </div>
+                          )}
+                          <div style={{ gridColumn: 'span 2', display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap', borderTop: `1px solid ${border}`, paddingTop: 10 }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const shareUrl = vkycLink || (viewAppDetails?.app_number ? `https://gharkapaisa.in/track/${viewAppDetails.app_number}` : 'https://gharkapaisa.in');
+                                if (navigator.share) {
+                                  navigator.share({ title: 'VKYC Link', text: `VKYC Link for Application #${viewAppDetails?.app_number || viewApp?.app_number}:`, url: shareUrl }).catch(() => {});
+                                } else {
+                                  navigator.clipboard.writeText(shareUrl);
+                                  alert('📋 VKYC Link copied to clipboard!');
+                                }
+                              }}
+                              style={{
+                                padding: '7px 14px', borderRadius: 10, border: '1px solid #2563eb40',
+                                background: '#2563eb15', color: '#2563eb', fontSize: 11, fontWeight: 800,
+                                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
+                              }}
+                            >
+                              <Share2 size={13} /> VKYC Share Link
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                window.open('https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=PTN01&LCcode=PTN01&LC2=A089&SMcode=A31964#nbb', '_blank');
+                              }}
+                              style={{
+                                padding: '7px 14px', borderRadius: 10, border: '1px solid #ea580c40',
+                                background: '#ea580c15', color: '#ea580c', fontSize: 11, fontWeight: 800,
+                                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
+                              }}
+                            >
+                              <ArrowUpRight size={13} /> HDFC TATA Application Link
+                            </button>
                           </div>
                         </div>
                       );

@@ -78,6 +78,14 @@ export default function AssignEmployeeLinksModal({ isOpen, onClose, onSuccess, b
       const filtered = listToFilter.filter(p => {
         const pBankId = String(p.bank_id || p.bankId || p.bank_uuid || '').trim();
         const pBankName = String(p.bank_name || p.bank || '').toLowerCase().trim();
+        const pProdName = String(p.name || '').toLowerCase().trim();
+
+        // Strict separation: TATA Co-brand HDFC vs standard HDFC Bank
+        const isSelTata = selectedBankName.includes('tata');
+        const isPTata = pBankName.includes('tata') || pProdName.includes('tata');
+        if (isSelTata !== isPTata) {
+          return false;
+        }
 
         if (pBankId && pBankId === String(selectedBankId).trim()) {
           return true;

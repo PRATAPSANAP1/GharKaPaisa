@@ -1707,7 +1707,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                 </p>
                 {isTataCobrandHdfcProduct && (
                   <a
-                    href="https://acrobat.adobe.com"
+                    href="https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=PTN01&LCcode=PTN01&LC2=A089&SMcode=A31964#nbb"
                     target="_blank"
                     rel="noreferrer"
                     style={{
