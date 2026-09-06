@@ -882,7 +882,7 @@ const deleteProduct = async (req, res, next) => {
     await query(`DELETE FROM product_documents WHERE product_id = $1`, [id]).catch(() => {});
     await query(`DELETE FROM product_offers WHERE product_id = $1`, [id]).catch(() => {});
     await query(`DELETE FROM product_features WHERE product_id = $1`, [id]).catch(() => {});
-    await query(`DELETE FROM application_settings WHERE product_id = $1`, [id]).catch(() => {});
+    await query(`DELETE FROM product_application_settings WHERE product_id = $1`, [id]).catch(() => {});
 
     // Check if there are customer applications referencing this product
     const { rows: [{ appCount }] } = await query(
