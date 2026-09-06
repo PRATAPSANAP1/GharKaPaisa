@@ -134,6 +134,66 @@ const syncWalletBalance = async (partnerId, client) => {
   };
 };
 
+/**
+ * Wallet vs Ledger Reconciliation Verification Function
+ */
+const verifyWalletReconciliation = async (partnerId, clientParam = null) => {
+  const client = clientParam || await getClient();
+  const isInternal = !clientParam;
+  try {
+    const { rows: [p] } = await client.query(
+      `SELECT id FROM partner_profiles WHERE id::text = $1::text OR user_id::text = $1::text`,
+      [partnerId]
+    );
+    const pId = p ? p.id : partnerId;
+
+    const { rows: [w] } = await client.query(
+      `SELECT available_balance, hold_balance, total_withdrawn, locked_balance FROM partner_wallets WHERE partner_id = $1`,
+      [pId]
+    );
+    if (!w) return { isReconciled: true, difference: '0.00', status: 'PASS' };
+
+    const { rows: [audit] } = await client.query(`
+      WITH credits AS (
+        SELECT COALESCE(SUM(credit), 0.00)::numeric as val
+        FROM wallet_ledger WHERE partner_id = $1 AND status IN ('Released', 'Approved')
+      ),
+      debits AS (
+        SELECT COALESCE(SUM(debit), 0.00)::numeric as val
+        FROM wallet_ledger WHERE partner_id = $1 AND status IN ('Released', 'Approved')
+      ),
+      holds AS (
+        SELECT COALESCE(SUM(w.amount), 0.00)::numeric as val
+        FROM wallet_withdrawals w
+        WHERE w.partner_id = $1 AND w.status IN ('pending', 'approved', 'processing')
+          AND NOT EXISTS (
+            SELECT 1 FROM wallet_ledger wl
+            WHERE wl.reference_number = w.id::text AND wl.transaction_type = 'WITHDRAWAL_SETTLED' AND wl.status IN ('Released', 'Approved')
+          )
+      )
+      SELECT 
+        (C.val - D.val - H.val)::numeric(15,2) as expected_available
+      FROM credits C, debits D, holds H
+    `, [pId]);
+
+    const walletAvailable = parseFloat(w.available_balance || 0);
+    const expectedAvailable = parseFloat(audit ? audit.expected_available : 0);
+    const diff = Math.abs(walletAvailable - expectedAvailable);
+
+    const isPass = diff < 0.001;
+
+    return {
+      partnerId: pId,
+      walletBalance: walletAvailable,
+      ledgerBalance: expectedAvailable,
+      difference: diff.toFixed(2),
+      status: isPass ? 'PASS' : 'FAIL'
+    };
+  } finally {
+    if (isInternal) client.release();
+  }
+};
+
 // Credit money to Hold Balance (e.g. commission credit pending verification)
 const creditHold = async (partnerId, amount, meta = {}, existingClient = null) => {
   const client = existingClient || await getClient();
@@ -1562,6 +1622,7 @@ module.exports = {
   generateWalletStatementData,
   manualReleaseCommission,
   manualRejectCommission,
-  creditWalletFromPayment
+  creditWalletFromPayment,
+  verifyWalletReconciliation
 };
 

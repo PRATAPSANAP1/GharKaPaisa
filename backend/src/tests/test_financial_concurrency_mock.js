@@ -115,6 +115,30 @@ class MockDatabase {
     return { success: true };
   }
 
+  verifyReconciliationMock(partnerId) {
+    const wallet = this.wallets.get(partnerId) || { available_balance: 0, hold_balance: 0, total_withdrawn: 0 };
+    const completedCredits = this.ledger
+      .filter(l => l.partner_id === partnerId && ['Released', 'Approved'].includes(l.status))
+      .reduce((sum, l) => sum + (l.credit || 0), 0);
+    const completedDebits = this.ledger
+      .filter(l => l.partner_id === partnerId && ['Released', 'Approved'].includes(l.status))
+      .reduce((sum, l) => sum + (l.debit || 0), 0);
+    const activeHolds = Array.from(this.withdrawals.values())
+      .filter(w => w.partner_id === partnerId && ['pending', 'approved', 'processing'].includes(w.status))
+      .reduce((sum, w) => sum + (w.amount || 0), 0);
+
+    const expectedAvailable = completedCredits - completedDebits - activeHolds;
+    const diff = Math.abs(wallet.available_balance - expectedAvailable);
+
+    return {
+      partnerId,
+      walletBalance: wallet.available_balance,
+      ledgerBalance: expectedAvailable,
+      difference: diff.toFixed(2),
+      status: diff < 0.001 ? 'PASS' : 'FAIL'
+    };
+  }
+
   // Idempotent Commission Release simulating ON CONFLICT (transaction_type, reference_number)
   async releaseCommissionMock(partnerId, amountInInr, refNumber) {
     const existingRelease = this.ledger.find(
