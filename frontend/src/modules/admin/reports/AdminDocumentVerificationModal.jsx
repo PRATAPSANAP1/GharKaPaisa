@@ -895,12 +895,12 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
                       <option value="None">None</option>
-                      <option value="success">success</option>
-                      <option value="failed">failed</option>
-                      <option value="pending">pending</option>
-                      <option value="BIO pending">BIO pending</option>
-                      <option value="BIO success">BIO success</option>
-                      {kycStage && !['None', 'success', 'failed', 'pending', 'BIO pending', 'BIO success', ''].includes(kycStage) && (
+                      <option value="IDCOM Success">IDCOM Success</option>
+                      <option value="IDCOM Failed">IDCOM Failed</option>
+                      <option value="IDCOM Pending">IDCOM Pending</option>
+                      <option value="BIO Success">BIO Success</option>
+                      <option value="BIO Pending">BIO Pending</option>
+                      {kycStage && !['None', 'IDCOM Success', 'IDCOM Failed', 'IDCOM Pending', 'BIO Success', 'BIO Pending', ''].includes(kycStage) && (
                         <option value={kycStage}>{kycStage}</option>
                       )}
                     </select>

@@ -592,16 +592,19 @@ export default function CustomerPostApplyStep2() {
                 <div>
                   <label style={labelStyle}>2. KYC Stage</label>
                   <select
-                    value={kycStage}
+                    value={kycStage || 'None'}
                     onChange={(e) => setKycStage(e.target.value)}
                     style={inputStyle}
                   >
                     <option value="None">None</option>
-                    <option value="success">success</option>
-                    <option value="failed">failed</option>
-                    <option value="pending">pending</option>
-                    <option value="BIO pending">BIO pending</option>
-                    <option value="BIO success">BIO success</option>
+                    <option value="IDCOM Success">IDCOM Success</option>
+                    <option value="IDCOM Failed">IDCOM Failed</option>
+                    <option value="IDCOM Pending">IDCOM Pending</option>
+                    <option value="BIO Success">BIO Success</option>
+                    <option value="BIO Pending">BIO Pending</option>
+                    {kycStage && !['None', 'IDCOM Success', 'IDCOM Failed', 'IDCOM Pending', 'BIO Success', 'BIO Pending', ''].includes(kycStage) && (
+                      <option value={kycStage}>{kycStage}</option>
+                    )}
                   </select>
                 </div>
 
