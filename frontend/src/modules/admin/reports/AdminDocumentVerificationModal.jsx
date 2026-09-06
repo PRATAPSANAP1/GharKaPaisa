@@ -57,14 +57,15 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
   const [currentStatus, setCurrentStatus] = useState(application?.status || 'details_submitted');
 
-  const isLockedStatus = ['approved', 'super_admin_approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed', 'rejected', 'cancelled'].includes(String(currentStatus || application?.status || '').toLowerCase());
+  const isSuperAdminOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role);
+  const isLockedStatus = ['approved', 'super_admin_approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed', 'rejected', 'cancelled'].includes(String(currentStatus || application?.status || '').toLowerCase()) && !isSuperAdminOrAdmin;
 
   // Role & Status Access Rules:
-  // After approved status, all form sections are locked for everyone.
-  // Before approved status, QD, Remark, and Final forms are editable by admin/ops roles.
+  // Super Admin / Admin / Operations Head can edit all 3 forms even when application status is approved.
+  // For partners, approved applications remain locked.
   const canEditQd = !isLockedStatus;
   const canEditRemark = !isLockedStatus;
-  const canEditFinal = !isPartner && !isLockedStatus;
+  const canEditFinal = isSuperAdminOrAdmin || (!isPartner && !isLockedStatus);
 
   const sanitizeVal = (val) => {
     if (!val || val === 'null' || val === 'undefined') return '';
