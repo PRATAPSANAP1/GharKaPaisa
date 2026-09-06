@@ -2086,10 +2086,10 @@ const updateBankProcessingStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { 
-      status, bank_ref_number, rejection_reason, approved_amount,
+      status, bank_ref_number, bank_application_number, rejection_reason, approved_amount,
       appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
       bank_remark, user_remark, user_notes, notes, final_status, decline_reason, eligible_reqd,
-      app_file_generated, appfile_generated,
+      app_file_generated, appfile_generated, ipa_stage, kyc_stage, card_approval_stage,
       // Form 1 Customer Application Details
       customer_mobile, customer_name, dob, customer_email, pan_number,
       company_name, designation, address, company_address, mother_name, vkyc_url
@@ -2097,6 +2097,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
     const userRemarkVal = user_remark || user_notes || notes || null;
     const appFileGenVal = app_file_generated || appfile_generated || null;
+    const bankAppNoVal = bank_application_number || bank_ref_number || null;
 
     const validStatuses = ['under_review', 'approved', 'rejected', 'disbursed', 'in_process', 'app_file_generated', 'decline', 'technical_error'];
     const currentStatus = (status && validStatuses.includes(status)) ? status : 'under_review';
@@ -2111,6 +2112,28 @@ const updateBankProcessingStatus = async (req, res, next) => {
     if (final_status && !['OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN', 'ADMINISTRATIVE_OPERATOR'].includes(userRole)) {
       return forbidden(res, 'Access denied. Only Operation Head, Admin, Super Admin, or Administrative Operator can update Final Status.');
     }
+
+    // Ensure columns exist
+    try {
+      await query(`
+        ALTER TABLE applications 
+        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
+        ADD COLUMN IF NOT EXISTS user_remark TEXT
+      `);
+      await query(`
+        ALTER TABLE physical_application_details 
+        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
+        ADD COLUMN IF NOT EXISTS user_remark TEXT
+      `);
+    } catch (_) {}
 
     let appRes = await query(`
       SELECT a.*, p.category as product_category 
@@ -2151,15 +2174,20 @@ const updateBankProcessingStatus = async (req, res, next) => {
               user_remark = COALESCE($25, user_remark),
               notes = COALESCE($25, notes),
               app_file_generated = COALESCE($26, app_file_generated),
+              ipa_stage = COALESCE($27, ipa_stage),
+              kyc_stage = COALESCE($28, kyc_stage),
+              card_approval_stage = COALESCE($29, card_approval_stage),
+              bank_application_number = COALESCE($30, bank_application_number),
               updated_at = NOW()
-          WHERE id = $27
+          WHERE id = $31
         `, [
           currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount,
           appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
           dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
           eligible_reqd || null, customer_mobile || null, customer_name || null, dob || null,
           customer_email || null, pan_number || null, company_name || null, designation || null,
-          address || null, company_address || null, mother_name || null, vkyc_url || null, userRemarkVal, appFileGenVal, id
+          address || null, company_address || null, mother_name || null, vkyc_url || null, userRemarkVal, appFileGenVal,
+          ipa_stage || null, kyc_stage || null, card_approval_stage || null, bankAppNoVal, id
         ]);
 
         await query(`
@@ -2178,34 +2206,56 @@ const updateBankProcessingStatus = async (req, res, next) => {
       UPDATE applications 
       SET status = $1, 
           bank_ref_number = COALESCE($2, bank_ref_number), 
-          rejection_reason = COALESCE($3, rejection_reason), 
-          approved_amount = COALESCE($4, approved_amount),
-          appcode_status = COALESCE($5, appcode_status),
-          soft_approval_status = COALESCE($6, soft_approval_status),
-          vkyc_stage = COALESCE($7, vkyc_stage),
-          iqa_stage = COALESCE($8, iqa_stage),
-          dispatch_status = COALESCE($9, dispatch_status),
-          bank_remark = COALESCE($10, bank_remark),
-          final_status = COALESCE($11, final_status),
-          decline_reason = COALESCE($12, decline_reason),
-          eligible_reqd = COALESCE($13, eligible_reqd),
-          dob = COALESCE($14, dob),
-          designation = COALESCE($15, designation),
-          company_address = COALESCE($16, company_address),
-          mother_name = COALESCE($17, mother_name),
-          vkyc_url = COALESCE($18, vkyc_url),
-          user_remark = COALESCE($19, user_remark),
-          notes = COALESCE($19, notes),
-          app_file_generated = COALESCE($20, app_file_generated),
+          bank_application_number = COALESCE($3, bank_application_number, bank_ref_number),
+          rejection_reason = COALESCE($4, rejection_reason), 
+          approved_amount = COALESCE($5, approved_amount),
+          appcode_status = COALESCE($6, appcode_status),
+          soft_approval_status = COALESCE($7, soft_approval_status),
+          vkyc_stage = COALESCE($8, vkyc_stage),
+          iqa_stage = COALESCE($9, iqa_stage),
+          dispatch_status = COALESCE($10, dispatch_status),
+          bank_remark = COALESCE($11, bank_remark),
+          final_status = COALESCE($12, final_status),
+          decline_reason = COALESCE($13, decline_reason),
+          eligible_reqd = COALESCE($14, eligible_reqd),
+          dob = COALESCE($15, dob),
+          designation = COALESCE($16, designation),
+          company_address = COALESCE($17, company_address),
+          mother_name = COALESCE($18, mother_name),
+          vkyc_url = COALESCE($19, vkyc_url),
+          user_remark = COALESCE($20, user_remark),
+          notes = COALESCE($20, notes),
+          app_file_generated = COALESCE($21, app_file_generated),
+          ipa_stage = COALESCE($22, ipa_stage),
+          kyc_stage = COALESCE($23, kyc_stage),
+          card_approval_stage = COALESCE($24, card_approval_stage),
           updated_at = NOW()
-      WHERE id = $21
+      WHERE id = $25
     `, [
-      currentStatus, bank_ref_number || null, rejection_reason || decline_reason || null, parsedAmount,
+      currentStatus, bank_ref_number || bankAppNoVal || null, bankAppNoVal || null, rejection_reason || decline_reason || null, parsedAmount,
       appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
       dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
       eligible_reqd || null, dob || null, designation || null, company_address || null,
-      mother_name || null, vkyc_url || null, userRemarkVal, appFileGenVal, id
+      mother_name || null, vkyc_url || null, userRemarkVal, appFileGenVal,
+      ipa_stage || null, kyc_stage || null, card_approval_stage || null, id
     ]);
+
+    try {
+      await query(`
+        INSERT INTO physical_application_details (
+          application_id, bank_application_number, bank_ref_number, vkyc_url, user_remark, ipa_stage, kyc_stage, card_approval_stage, created_at, updated_at
+        ) VALUES ($1, $2, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        ON CONFLICT (application_id) DO UPDATE SET
+          bank_application_number = COALESCE(EXCLUDED.bank_application_number, physical_application_details.bank_application_number),
+          bank_ref_number = COALESCE(EXCLUDED.bank_ref_number, physical_application_details.bank_ref_number),
+          vkyc_url = COALESCE(EXCLUDED.vkyc_url, physical_application_details.vkyc_url),
+          user_remark = COALESCE(EXCLUDED.user_remark, physical_application_details.user_remark),
+          ipa_stage = COALESCE(EXCLUDED.ipa_stage, physical_application_details.ipa_stage),
+          kyc_stage = COALESCE(EXCLUDED.kyc_stage, physical_application_details.kyc_stage),
+          card_approval_stage = COALESCE(EXCLUDED.card_approval_stage, physical_application_details.card_approval_stage),
+          updated_at = NOW()
+      `, [id, bankAppNoVal, vkyc_url || null, userRemarkVal, ipa_stage || null, kyc_stage || null, card_approval_stage || null]);
+    } catch (_) {}
 
     const titleMap = {
       under_review: 'Bank Reviewing Application',
