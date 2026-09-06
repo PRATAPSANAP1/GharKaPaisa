@@ -2128,7 +2128,9 @@ const updateBankProcessingStatus = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
         ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
         ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
-        ADD COLUMN IF NOT EXISTS user_remark TEXT
+        ADD COLUMN IF NOT EXISTS user_remark TEXT,
+        ADD COLUMN IF NOT EXISTS notes TEXT,
+        ADD COLUMN IF NOT EXISTS operational_remarks TEXT
       `);
       await query(`
         ALTER TABLE physical_application_details 
@@ -2137,7 +2139,9 @@ const updateBankProcessingStatus = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
         ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
         ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
-        ADD COLUMN IF NOT EXISTS user_remark TEXT
+        ADD COLUMN IF NOT EXISTS user_remark TEXT,
+        ADD COLUMN IF NOT EXISTS notes TEXT,
+        ADD COLUMN IF NOT EXISTS operational_remarks TEXT
       `);
     } catch (_) {}
 
@@ -2179,6 +2183,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
               vkyc_url = COALESCE($24, vkyc_url),
               user_remark = COALESCE($25, user_remark),
               notes = COALESCE($25, notes),
+              operational_remarks = COALESCE($25, operational_remarks),
               app_file_generated = COALESCE($26, app_file_generated),
               ipa_stage = COALESCE($27, ipa_stage),
               kyc_stage = COALESCE($28, kyc_stage),
@@ -2231,6 +2236,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
           vkyc_url = COALESCE($19, vkyc_url),
           user_remark = COALESCE($20, user_remark),
           notes = COALESCE($20, notes),
+          operational_remarks = COALESCE($20, operational_remarks),
           app_file_generated = COALESCE($21, app_file_generated),
           ipa_stage = COALESCE($22, ipa_stage),
           kyc_stage = COALESCE($23, kyc_stage),
