@@ -1451,7 +1451,7 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
 
 /**
  * Atomic & Idempotent Payment Credit from Razorpay Verification / Webhook
- * Prevents double-crediting if duplicate calls occur.
+ * Prevents double-crediting if duplicate calls occur (handles 500+ concurrent requests non-blockingly).
  */
 const creditWalletFromPayment = async (partnerId, amountInInr, paymentId, orderId, processedBy = null) => {
   const client = await getClient();
@@ -1480,31 +1480,19 @@ const creditWalletFromPayment = async (partnerId, amountInInr, paymentId, orderI
       resolvedPartnerId = p.id;
     }
 
-    // 3. IDEMPOTENCY CHECK: Lock and check if payment_id has already been processed
-    const { rows: existingProc } = await client.query(
-      `SELECT payment_id FROM razorpay_processed_payments WHERE payment_id = $1 FOR UPDATE`,
-      [paymentId]
-    );
+    // 3. IDEMPOTENCY CHECK: Atomic ON CONFLICT DO NOTHING RETURNING payment_id
+    // This prevents PostgreSQL 23505 errors under high concurrency (500+ users).
+    const { rows: insertedProc } = await client.query(`
+      INSERT INTO razorpay_processed_payments (payment_id, order_id, partner_id, amount, status)
+      VALUES ($1, $2, $3, $4, 'COMPLETED')
+      ON CONFLICT (payment_id) DO NOTHING
+      RETURNING payment_id
+    `, [paymentId, orderId || 'N/A', resolvedPartnerId, amountInInr]);
 
-    if (existingProc.length > 0) {
+    if (insertedProc.length === 0) {
+      // Payment was already inserted by a prior or concurrent request
       await client.query('COMMIT');
       logger.info(`[IDEMPOTENCY_GUARD] Payment ${paymentId} already processed for partner ${resolvedPartnerId}. Skipping duplicate credit.`);
-      return { alreadyProcessed: true, amount: amountInInr };
-    }
-
-    // Secondary check in wallet_ledger to guarantee no duplicate reference number
-    const { rows: existingLedger } = await client.query(
-      `SELECT id FROM wallet_ledger WHERE reference_number = $1 AND partner_id = $2 LIMIT 1`,
-      [paymentId, resolvedPartnerId]
-    );
-
-    if (existingLedger.length > 0) {
-      await client.query(
-        `INSERT INTO razorpay_processed_payments (payment_id, order_id, partner_id, amount) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
-        [paymentId, orderId || 'N/A', resolvedPartnerId, amountInInr]
-      );
-      await client.query('COMMIT');
-      logger.info(`[IDEMPOTENCY_GUARD] Payment ${paymentId} found in ledger for partner ${resolvedPartnerId}. Skipping duplicate credit.`);
       return { alreadyProcessed: true, amount: amountInInr };
     }
 
@@ -1535,13 +1523,7 @@ const creditWalletFromPayment = async (partnerId, amountInInr, paymentId, orderI
     const balanceAfter = balanceBefore + numAmount;
     const description = `Wallet top-up via Razorpay: ${paymentId}`;
 
-    // 5. Insert into razorpay_processed_payments (Enforces DB PRIMARY KEY Uniqueness)
-    await client.query(
-      `INSERT INTO razorpay_processed_payments (payment_id, order_id, partner_id, amount) VALUES ($1, $2, $3, $4)`,
-      [paymentId, orderId || 'N/A', resolvedPartnerId, numAmount]
-    );
-
-    // 6. Insert into wallet_ledger
+    // 5. Insert into wallet_ledger
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
@@ -1551,13 +1533,13 @@ const creditWalletFromPayment = async (partnerId, amountInInr, paymentId, orderI
       wallet.id, resolvedPartnerId, numAmount, description, paymentId, processedBy
     ]);
 
-    // 7. Sync to wallet_transactions
+    // 6. Sync to wallet_transactions
     await syncTransactionTable(
       client, txn.id, wallet.id, resolvedPartnerId, null, 'TOPUP', numAmount,
       balanceBefore, balanceAfter, 'success', description, 'razorpay_payout', paymentId, processedBy
     );
 
-    // 8. Re-calculate & update wallet balance atomically
+    // 7. Re-calculate & update wallet balance atomically
     await syncWalletBalance(resolvedPartnerId, client);
 
     await client.query('COMMIT');

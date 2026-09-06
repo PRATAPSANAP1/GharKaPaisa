@@ -2078,51 +2078,183 @@ const handleRazorpayWebhook = async (req, res, next) => {
     const payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const event = payload.event;
 
-    // 2. DB-Level Event Deduplication Guard
+    // 2. DB-Level Stateful Webhook Event Deduplication Guard
     await query(`
       CREATE TABLE IF NOT EXISTS razorpay_webhook_events (
         event_id VARCHAR(100) PRIMARY KEY,
         event_type VARCHAR(100) NOT NULL,
-        processed_at TIMESTAMPTZ DEFAULT NOW()
+        status VARCHAR(50) NOT NULL DEFAULT 'RECEIVED',
+        error_message TEXT,
+        received_at TIMESTAMPTZ DEFAULT NOW(),
+        processed_at TIMESTAMPTZ
       );
     `);
 
     const eventId = payload.event_id || payload.id || `${event}_${Date.now()}_${Math.random()}`;
-    const { rows: existingEvt } = await query(`SELECT event_id FROM razorpay_webhook_events WHERE event_id = $1`, [eventId]);
-    if (existingEvt.length > 0) {
-      logger.info(`[RAZORPAY_WEBHOOK] Event ${eventId} already processed. Exiting cleanly.`);
+    const { rows: [existingEvt] } = await query(`SELECT status FROM razorpay_webhook_events WHERE event_id = $1`, [eventId]);
+
+    if (existingEvt && existingEvt.status === 'PROCESSED') {
+      logger.info(`[RAZORPAY_WEBHOOK] Event ${eventId} already PROCESSED. Exiting cleanly.`);
       return res.status(200).json({ success: true, already_processed: true, message: 'Event already processed.' });
     }
 
-    // Record Event ID to enforce uniqueness
-    await query(`INSERT INTO razorpay_webhook_events (event_id, event_type) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [eventId, event]);
+    // Record or update Event status to PROCESSING
+    await query(`
+      INSERT INTO razorpay_webhook_events (event_id, event_type, status, received_at)
+      VALUES ($1, $2, 'PROCESSING', NOW())
+      ON CONFLICT (event_id) DO UPDATE SET status = 'PROCESSING'
+    `, [eventId, event]);
 
-    // 3. Handle Top-up Payment Captured Event (Idempotent Wallet Credit)
-    if (['payment.captured', 'order.paid'].includes(event)) {
-      const paymentEntity = payload.payload?.payment?.entity || payload.payload?.order?.entity;
-      if (paymentEntity) {
-        const paymentId = paymentEntity.id || paymentEntity.payment_id;
-        const orderId = paymentEntity.order_id || paymentEntity.id;
-        const partnerId = paymentEntity.notes?.partner_id;
-        const amountInInr = paymentEntity.amount ? parseFloat((paymentEntity.amount / 100).toFixed(2)) : 0;
+    try {
+      // 3. Handle Top-up Payment Captured Event (Idempotent Wallet Credit)
+      if (['payment.captured', 'order.paid'].includes(event)) {
+        const paymentEntity = payload.payload?.payment?.entity || payload.payload?.order?.entity;
+        if (paymentEntity) {
+          const paymentId = paymentEntity.id || paymentEntity.payment_id;
+          const orderId = paymentEntity.order_id || paymentEntity.id;
+          const partnerId = paymentEntity.notes?.partner_id;
+          const amountInInr = paymentEntity.amount ? parseFloat((paymentEntity.amount / 100).toFixed(2)) : 0;
 
-        if (partnerId && paymentId) {
-          const { creditWalletFromPayment } = require('./service.js');
-          await creditWalletFromPayment(partnerId, amountInInr, paymentId, orderId);
-          return res.status(200).json({ success: true, message: 'Payment webhook processed successfully.' });
+          if (partnerId && paymentId) {
+            const { creditWalletFromPayment } = require('./service.js');
+            await creditWalletFromPayment(partnerId, amountInInr, paymentId, orderId);
+            
+            // Mark PROCESSED ONLY after creditWalletFromPayment succeeds
+            await query(`UPDATE razorpay_webhook_events SET status = 'PROCESSED', processed_at = NOW() WHERE event_id = $1`, [eventId]);
+            return res.status(200).json({ success: true, message: 'Payment webhook processed successfully.' });
+          }
         }
       }
+
+      const payoutEntity = payload.payload?.payout?.entity;
+
+      logger.info(`[RAZORPAY_WEBHOOK] Received event: ${event}`, { payout_id: payoutEntity?.id, status: payoutEntity?.status });
+
+      if (!payoutEntity || !payoutEntity.id) {
+        await query(`UPDATE razorpay_webhook_events SET status = 'PROCESSED', processed_at = NOW() WHERE event_id = $1`, [eventId]);
+        return res.status(200).json({ success: true, received: true, ignored: true, message: 'Webhook received but missing payout entity' });
+      }
+
+      const payoutId = payoutEntity.id;
+      const referenceId = payoutEntity.reference_id;
+      const utr = payoutEntity.utr || null;
+      const amountRupees = payoutEntity.amount ? payoutEntity.amount / 100 : 0;
+      const failureReason = payoutEntity.status_details?.reason || payoutEntity.failure_reason || 'Payout process failed';
+
+      const { getClient } = require('../../config/database');
+      const { syncWalletBalance } = require('./service.js');
+      const client = await getClient();
+
+      try {
+        await client.query('BEGIN');
+
+        // Find matching withdrawal record
+        let { rows: [wr] } = await client.query(
+          `SELECT wr.*, w.id as wallet_id 
+           FROM wallet_withdrawals wr
+           JOIN partner_wallets w ON w.partner_id = wr.partner_id
+           WHERE wr.razorpay_payout_id = $1 OR wr.id::text = $2 FOR UPDATE`,
+          [payoutId, referenceId || payoutId]
+        );
+
+        if (!wr) {
+          await client.query('ROLLBACK');
+          logger.warn(`[RAZORPAY_WEBHOOK] Withdrawal record not found for payout: ${payoutId}`);
+          await query(`UPDATE razorpay_webhook_events SET status = 'PROCESSED', processed_at = NOW() WHERE event_id = $1`, [eventId]);
+          return success(res, { received: true, status: 'NOT_FOUND' }, 'Withdrawal record not found');
+        }
+
+        const withdrawalId = wr.id;
+        const partnerId = wr.partner_id;
+
+        if (event === 'payout.processed') {
+          await client.query(`
+            UPDATE wallet_withdrawals SET
+              status = 'transferred',
+              utr = COALESCE($1, utr),
+              transferred_at = NOW(),
+              updated_at = NOW()
+            WHERE id = $2
+          `, [utr, withdrawalId]);
+
+          await client.query(`
+            UPDATE partner_wallets 
+            SET available_balance = available_balance - $1,
+                hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+                total_withdrawn = COALESCE(total_withdrawn, 0) + $1,
+                updated_at = NOW() 
+            WHERE partner_id = $2
+          `, [parseFloat(wr.amount), partnerId]);
+
+          await client.query(`
+            UPDATE wallet_ledger SET
+              status = 'completed',
+              reference_number = COALESCE($1, reference_number)
+            WHERE transaction_type = 'WITHDRAWAL' AND (reference_number = $2 OR reference_number IS NULL) AND partner_id = $3
+          `, [utr || payoutId, withdrawalId.toString(), partnerId]);
+
+          await client.query(`
+            INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+            VALUES ($1, 'RAZORPAY_PAYOUT_SUCCESS', $2, NULL)
+          `, [withdrawalId, `Payout confirmed processed via Razorpay Webhook (UTR: ${utr || payoutId})`]);
+
+          await client.query(`
+            INSERT INTO partner_settlements (withdrawal_id, partner_id, payment_mode, utr_number, settled_at, status)
+            VALUES ($1, $2, 'RazorpayX Payout', $3, NOW(), 'completed')
+            ON CONFLICT (withdrawal_id) DO NOTHING
+          `, [withdrawalId, partnerId, utr || payoutId]);
+
+          await syncWalletBalance(partnerId, client);
+          await client.query('COMMIT');
+
+        } else if (['payout.failed', 'payout.reversed', 'payout.rejected'].includes(event)) {
+          await client.query(`
+            UPDATE wallet_withdrawals SET
+              status = 'failed',
+              failure_reason = $1,
+              updated_at = NOW()
+            WHERE id = $2
+          `, [failureReason, withdrawalId]);
+
+          await client.query(`
+            UPDATE partner_wallets 
+            SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+                updated_at = NOW() 
+            WHERE partner_id = $2
+          `, [parseFloat(wr.amount), partnerId]);
+
+          await client.query(`
+            UPDATE wallet_ledger SET
+              status = 'failed',
+              description = COALESCE(description, '') || ' [Payout Failed]'
+            WHERE transaction_type = 'WITHDRAWAL' AND reference_number = $1 AND partner_id = $2
+          `, [withdrawalId.toString(), partnerId]);
+
+          await client.query(`
+            INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+            VALUES ($1, 'RAZORPAY_PAYOUT_FAILED', $2, NULL)
+          `, [withdrawalId, `Payout failed via Razorpay Webhook: ${failureReason}. Held balance released.`]);
+
+          await syncWalletBalance(partnerId, client);
+          await client.query('COMMIT');
+        } else {
+          await client.query('COMMIT');
+        }
+
+        // Mark event PROCESSED on successful completion of payout handling
+        await query(`UPDATE razorpay_webhook_events SET status = 'PROCESSED', processed_at = NOW() WHERE event_id = $1`, [eventId]);
+        return success(res, { received: true, event }, 'Webhook processed successfully');
+      } catch (payoutErr) {
+        await client.query('ROLLBACK');
+        throw payoutErr;
+      } finally {
+        client.release();
+      }
+    } catch (evtErr) {
+      // Mark FAILED so Razorpay retry can re-attempt
+      await query(`UPDATE razorpay_webhook_events SET status = 'FAILED', error_message = $1 WHERE event_id = $2`, [evtErr.message, eventId]);
+      throw evtErr;
     }
-
-    const payoutEntity = payload.payload?.payout?.entity;
-
-    logger.info(`[RAZORPAY_WEBHOOK] Received event: ${event}`, { payout_id: payoutEntity?.id, status: payoutEntity?.status });
-
-    if (!payoutEntity || !payoutEntity.id) {
-      return res.status(200).json({ success: true, received: true, ignored: true, message: 'Webhook received but missing payout entity' });
-    }
-
-    const payoutId = payoutEntity.id;
     const referenceId = payoutEntity.reference_id;
     const utr = payoutEntity.utr || null;
     const amountRupees = payoutEntity.amount ? payoutEntity.amount / 100 : 0;
