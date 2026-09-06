@@ -78,6 +78,13 @@ async function migrateFinancialTables() {
     WHERE transaction_type = 'REVERSAL' AND reference_number IS NOT NULL;
   `);
 
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_commission_credit_app_partner
+    ON wallet_ledger (application_id, partner_id, transaction_type)
+    WHERE transaction_type IN ('PERSONAL_COMMISSION', 'TEAM_COMMISSION', 'REFERRAL_BONUS', 'OVERRIDE_COMMISSION')
+      AND application_id IS NOT NULL;
+  `);
+
   console.log('[MIGRATION COMPLETE] Financial engine tables migrated successfully.');
 }
 

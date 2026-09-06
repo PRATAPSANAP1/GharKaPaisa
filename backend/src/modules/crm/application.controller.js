@@ -4028,8 +4028,7 @@ const deleteApplication = async (req, res, next) => {
       await safeSubDelete(`DELETE FROM application_history WHERE application_id = $1`, [aId]);
     }
 
-    // 8. Preserve financial ledger history (wallet_ledger) for compliance & accounting audit
-    await safeSubDelete(`UPDATE wallet_ledger SET application_id = NULL, lead_id = NULL, description = COALESCE(description, '') || ' [App Deleted]' WHERE application_id = $1 OR application_id = $2 OR lead_id = $1 OR lead_id = $2`, [targetAppId, targetLeadId]);
+    // 8. Financial ledger (wallet_ledger) remains 100% immutable and untouched for auditability
     await safeSubDelete(`DELETE FROM wallet_transactions WHERE application_id = $1 OR application_id = $2`, [targetAppId, targetLeadId]);
     await safeSubDelete(`DELETE FROM commission_ledger WHERE application_id = $1 OR application_id = $2 OR lead_id = $1 OR lead_id = $2`, [targetAppId, targetLeadId]);
 

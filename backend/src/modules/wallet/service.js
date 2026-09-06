@@ -222,7 +222,8 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, application_id, transaction_type, credit, debit, description, reference_number, status, created_by, product_id, bank_id
-      ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'Pending Approval', $8, $9, $10)
+      ) VALUES ($1, $2, $3, $4, $5::numeric, 0, $6, $7, 'Pending Approval', $8, $9, $10)
+      ON CONFLICT (application_id, partner_id, transaction_type) WHERE application_id IS NOT NULL DO NOTHING
       RETURNING id
     `, [
       wallet.id, resolvedPartnerId, appId, txnType, amount, 
@@ -232,6 +233,16 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
       productId,
       bankId
     ]);
+
+    if (!txn) {
+      const { rows: [existing] } = await client.query(
+        `SELECT id FROM wallet_ledger WHERE application_id = $1 AND transaction_type = $2 AND partner_id = $3 LIMIT 1`,
+        [appId, txnType, resolvedPartnerId]
+      );
+      if (isInternalTxn) await client.query('COMMIT');
+      logger.info(`creditHold: Duplicate commission credit blocked at DB level for app: ${appId}`);
+      return existing || { alreadyCredited: true };
+    }
 
     // Also sync to wallet_transactions
     let commissionType = 'personal';
@@ -271,13 +282,13 @@ const debitAvailable = async (partnerId, amount, meta = {}, existingClient = nul
   try {
     if (isInternalTxn) await client.query('BEGIN');
 
-    // Get wallet
+    // Get wallet and check balance in PostgreSQL NUMERIC
     const { rows: [wallet] } = await client.query(
-      `SELECT id, available_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
-      [partnerId]
+      `SELECT id, available_balance, (available_balance >= $2::numeric) as has_balance FROM partner_wallets WHERE partner_id = $1 FOR UPDATE`,
+      [partnerId, amount]
     );
     if (!wallet) throw new Error('Wallet not found');
-    if (parseFloat(wallet.available_balance) < amount) {
+    if (!wallet.has_balance) {
       throw new Error(`Insufficient available balance. Available: ₹${wallet.available_balance}`);
     }
 
@@ -455,10 +466,10 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
 
     const txnType = 'COMMISSION_RELEASE';
     const status = 'Released';
-    const numAmount = parseFloat(amount || 0);
+    const numAmount = amount;
     const tdsAmount = 0; // TDS is only deducted at withdrawal time (2%), not at commission release time
-    const balanceBefore = parseFloat(wallet.available_balance || 0);
-    const balanceAfter = balanceBefore + numAmount;
+    const balanceBefore = wallet.available_balance || 0;
+    const balanceAfter = wallet.available_balance || 0;
 
     let txnIdToReturn = meta.txn_id || null;
 
