@@ -100,11 +100,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
   // 2. Remark Form State (Appcode Status, Soft Approval, VKYC Stage, IQA Stage, Dispatch Status, TATA HDFC Stages)
   const isSbi = String(application?.bank_name || application?.bank_code || '').toUpperCase().includes('SBI');
-  const isTataCobrandHdfc = application?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
-    String(application?.bank_name || application?.bank_code || application?.product_name || '').toUpperCase().includes('TATA CO-BRAND HDFC') ||
-    String(application?.bank_name || application?.bank_code || application?.product_name || '').toUpperCase().includes('TATA CO BRAND HDFC') ||
-    (String(application?.bank_name || application?.bank_code || application?.product_name || '').toUpperCase().includes('TATA') &&
-     String(application?.bank_name || application?.bank_code || application?.product_name || '').toUpperCase().includes('HDFC'));
+  const bankNameCombinedStr = `${application?.bank_name || application?.bank_code || ''} ${application?.product_name || ''}`.toUpperCase();
+  const isTataCobrandHdfc = application?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || bankNameCombinedStr.includes('TATA');
 
   const [ipaStage, setIpaStage] = useState(sanitizeVal(application?.ipa_stage) || sanitizeVal(application?.physical_details?.ipa_stage));
   const [kycStage, setKycStage] = useState(sanitizeVal(application?.kyc_stage) || sanitizeVal(application?.physical_details?.kyc_stage));
