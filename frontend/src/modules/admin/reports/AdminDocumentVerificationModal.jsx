@@ -67,7 +67,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const canEditFinal = !isPartner && !isLockedStatus;
 
   const sanitizeVal = (val) => {
-    if (!val || val === 'None' || val === 'none' || val === 'null' || val === 'undefined') return '';
+    if (!val || val === 'null' || val === 'undefined') return '';
     return val;
   };
 
@@ -343,17 +343,20 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
       } else if (formType === 'remark') {
         payload = {
           ...payload,
-          ipa_stage: ipaStage,
-          kyc_stage: kycStage,
-          card_approval_stage: cardApprovalStage,
-          appcode_status: appcodeStatus,
-          soft_approval_status: softApprovalStatus,
-          iqa_stage: iqaStage,
+          ipa_stage: ipaStage || 'None',
+          kyc_stage: kycStage || 'None',
+          card_approval_stage: cardApprovalStage || 'None',
+          appcode_status: appcodeStatus || 'None',
+          soft_approval_status: softApprovalStatus || 'None',
+          iqa_stage: iqaStage || 'None',
           bank_ref_number: bankRefNumber,
           bank_application_number: bankRefNumber,
-          vkyc_stage: vkycStage,
+          vkyc_stage: vkycStage || 'None',
           vkyc_url: vkycUrl,
-          dispatch_status: dispatchStatus
+          dispatch_status: dispatchStatus || 'None',
+          user_remark: userRemark,
+          notes: userRemark,
+          operational_remarks: userRemark
         };
         if (isOpsOrAdmin && !['approved', 'rejected', 'sanctioned'].includes(String(currentStatus).toLowerCase())) {
           payload.status = 'operational_verified';

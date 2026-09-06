@@ -3105,6 +3105,72 @@ const exportApplicationsCSV = async (req, res, next) => {
 
 // PUT /applications/:id — Edit & Update Lead/Application details (Admin, Operation Head, Partner)
 const updateApplicationDetails = async (req, res, next) => {
+  // Ensure verification & tracking columns exist on applications, leads, customers, physical_application_details tables outside of transaction
+  try {
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address1 TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address2 TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS landmark TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pincode VARCHAR(20)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_name VARCHAR(150)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(20)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_email VARCHAR(150)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(200)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS designation VARCHAR(150)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_url TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS salary_slip_url TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_card_url TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_remark TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_status VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS approved_amount DECIMAL(15,2)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS user_remark TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS notes TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
+
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS token VARCHAR(255)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS address1 TEXT`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS address2 TEXT`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS landmark TEXT`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS pincode VARCHAR(20)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_ref_number VARCHAR(100)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_remark TEXT`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_status VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS decline_reason TEXT`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_url TEXT`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS user_remark TEXT`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS notes TEXT`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
+  } catch (_) {}
+
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -3163,92 +3229,6 @@ const updateApplicationDetails = async (req, res, next) => {
       card_approval_stage,
       digital_card_issued
     } = req.body;
-
-    // Ensure verification & tracking columns exist on applications, leads, customers, physical_application_details tables
-    try {
-      await client.query(`
-        ALTER TABLE applications 
-        ADD COLUMN IF NOT EXISTS address1 TEXT,
-        ADD COLUMN IF NOT EXISTS address2 TEXT,
-        ADD COLUMN IF NOT EXISTS landmark TEXT,
-        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS state VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
-        ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150),
-        ADD COLUMN IF NOT EXISTS customer_name VARCHAR(150),
-        ADD COLUMN IF NOT EXISTS customer_mobile VARCHAR(20),
-        ADD COLUMN IF NOT EXISTS customer_email VARCHAR(150),
-        ADD COLUMN IF NOT EXISTS company_name VARCHAR(200),
-        ADD COLUMN IF NOT EXISTS designation VARCHAR(150),
-        ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
-        ADD COLUMN IF NOT EXISTS salary_slip_url TEXT,
-        ADD COLUMN IF NOT EXISTS pan_card_url TEXT,
-        ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS bank_remark TEXT,
-        ADD COLUMN IF NOT EXISTS final_status VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS decline_reason TEXT,
-        ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS approved_amount DECIMAL(15,2),
-        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(50)
-      `);
-      await client.query(`
-        ALTER TABLE leads 
-        ADD COLUMN IF NOT EXISTS address1 TEXT,
-        ADD COLUMN IF NOT EXISTS address2 TEXT,
-        ADD COLUMN IF NOT EXISTS landmark TEXT,
-        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS state VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
-        ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS vkyc_url TEXT
-      `);
-      await client.query(`
-        ALTER TABLE customers
-        ADD COLUMN IF NOT EXISTS address1 TEXT,
-        ADD COLUMN IF NOT EXISTS address2 TEXT,
-        ADD COLUMN IF NOT EXISTS landmark TEXT,
-        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS state VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20)
-      `);
-      await client.query(`
-        ALTER TABLE physical_application_details
-        ADD COLUMN IF NOT EXISTS token VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS address1 TEXT,
-        ADD COLUMN IF NOT EXISTS address2 TEXT,
-        ADD COLUMN IF NOT EXISTS landmark TEXT,
-        ADD COLUMN IF NOT EXISTS city VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS state VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS pincode VARCHAR(20),
-        ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150),
-        ADD COLUMN IF NOT EXISTS bank_ref_number VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
-        ADD COLUMN IF NOT EXISTS appcode_status VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS iqa_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS dispatch_status VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS bank_remark TEXT,
-        ADD COLUMN IF NOT EXISTS final_status VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS decline_reason TEXT,
-        ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
-        ADD COLUMN IF NOT EXISTS user_remark TEXT
-      `);
-    } catch (_) {}
 
     let { rows: [app] } = await client.query(
       `SELECT * FROM applications 
@@ -3379,7 +3359,7 @@ const updateApplicationDetails = async (req, res, next) => {
     const cleanStr = (val) => {
       if (val === undefined || val === null) return null;
       const s = String(val).trim();
-      if (!s || s.toLowerCase() === 'none' || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return null;
+      if (!s || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return null;
       return s;
     };
 
