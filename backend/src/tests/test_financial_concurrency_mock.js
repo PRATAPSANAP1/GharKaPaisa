@@ -10,16 +10,17 @@ const yellow = (msg) => `\x1b[33m${msg}\x1b[0m`;
 /**
  * In-Memory Financial Engine & Database Mock to validate:
  * 1. Payment ON CONFLICT DO NOTHING RETURNING payment_id idempotency.
- * 2. Atomic PROCESSING event ownership claim for webhooks.
- * 3. State-dependent withdrawal updates (WHERE status != 'transferred' RETURNING id).
- * 4. Deterministic event ID resolution (Zero Math.random()).
+ * 2. Atomic PROCESSING event ownership claim for webhooks with 5-min recovery.
+ * 3. Dedicated payout.reversed accounting (returned funds + append-only ledger entry).
+ * 4. State-dependent withdrawal updates (WHERE status != 'transferred' RETURNING id).
+ * 5. Deterministic event ID resolution (Zero Math.random()).
  */
 class MockDatabase {
   constructor() {
     this.processedPayments = new Map(); // payment_id -> row
-    this.webhookEvents = new Map(); // event_id -> { status, type }
+    this.webhookEvents = new Map(); // event_id -> { status, type, received_at }
     this.withdrawals = new Map(); // withdrawal_id -> { status, amount, partner_id, utr }
-    this.wallets = new Map(); // partner_id -> { available_balance, hold_balance }
+    this.wallets = new Map(); // partner_id -> { available_balance, hold_balance, total_withdrawn }
     this.ledger = [];
     this.lockedPartners = new Set();
   }
@@ -42,7 +43,7 @@ class MockDatabase {
     // Atomic insert simulation
     this.processedPayments.set(paymentId, { payment_id: paymentId, order_id: orderId, partner_id: partnerId, amount: amountInInr });
 
-    let wallet = this.wallets.get(partnerId) || { available_balance: 0, hold_balance: 0 };
+    let wallet = this.wallets.get(partnerId) || { available_balance: 0, hold_balance: 0, total_withdrawn: 0 };
     const numAmount = parseFloat(amountInInr);
     wallet.available_balance += numAmount;
     this.wallets.set(partnerId, wallet);
@@ -61,7 +62,7 @@ class MockDatabase {
     return { alreadyProcessed: false, amount: numAmount, transactionId: ledgerEntry.id };
   }
 
-  // Handle Webhook with Atomic Processing Claim + State-Dependent Payout UPDATE + Deterministic Event ID
+  // Handle Webhook with Atomic Processing Claim + Stale Recovery + Dedicated Reversal Accounting
   async handleWebhookMock(req) {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'test_webhook_secret';
     const signature = req.headers['x-razorpay-signature'];
@@ -95,17 +96,20 @@ class MockDatabase {
       }
     }
 
-    // 2. Atomic PROCESSING Event Ownership Claim
+    // 2. Atomic PROCESSING Event Ownership Claim + Stale Recovery (> 5 mins)
     const existingEvt = this.webhookEvents.get(eventId);
+    const now = Date.now();
+    const isStale = existingEvt && existingEvt.status === 'PROCESSING' && (now - existingEvt.received_at > 5 * 60 * 1000);
+
     if (existingEvt && existingEvt.status === 'PROCESSED') {
       return { success: true, already_processed: true, message: 'Event already processed.' };
     }
-    if (existingEvt && existingEvt.status === 'PROCESSING') {
+    if (existingEvt && existingEvt.status === 'PROCESSING' && !isStale) {
       return { success: true, already_processed: true, message: 'Event currently locked by another worker.' };
     }
 
     // Claim lock
-    this.webhookEvents.set(eventId, { status: 'PROCESSING', type: event });
+    this.webhookEvents.set(eventId, { status: 'PROCESSING', type: event, received_at: now });
 
     try {
       if (['payment.captured', 'order.paid'].includes(event)) {
@@ -117,7 +121,7 @@ class MockDatabase {
             paymentEntity.id,
             paymentEntity.order_id
           );
-          this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event });
+          this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event, received_at: now });
           return res;
         }
       }
@@ -127,36 +131,66 @@ class MockDatabase {
         const payoutId = payoutEntity?.id;
         const utr = payoutEntity?.utr || 'UTR123456';
         
-        // Find withdrawal
         let wr = Array.from(this.withdrawals.values()).find(w => w.razorpay_payout_id === payoutId || w.id === payoutEntity?.reference_id);
         if (!wr) {
-          this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event });
+          this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event, received_at: now });
           return { success: true, status: 'NOT_FOUND' };
         }
 
-        // Defense-in-Depth: State-dependent UPDATE (WHERE status != 'transferred')
         if (wr.status === 'transferred') {
-          this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event });
+          this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event, received_at: now });
           return { success: true, already_processed: true, message: 'Withdrawal already transferred' };
         }
 
-        // Apply state change atomically
         wr.status = 'transferred';
         wr.utr = utr;
 
-        // Deduct wallet balance ONCE
         let wallet = this.wallets.get(wr.partner_id);
         wallet.available_balance -= wr.amount;
         wallet.hold_balance = Math.max(0, wallet.hold_balance - wr.amount);
+        wallet.total_withdrawn = (wallet.total_withdrawn || 0) + wr.amount;
 
-        this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event });
+        this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event, received_at: now });
         return { success: true, event };
       }
 
-      this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event });
+      if (event === 'payout.reversed') {
+        const payoutEntity = payload.payload?.payout?.entity;
+        const payoutId = payoutEntity?.id;
+
+        let wr = Array.from(this.withdrawals.values()).find(w => w.razorpay_payout_id === payoutId || w.id === payoutEntity?.reference_id);
+        if (!wr || wr.status !== 'transferred') {
+          this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event, received_at: now });
+          return { success: true, already_processed: true, message: 'Withdrawal not in transferred state' };
+        }
+
+        // Reversal State Transition
+        wr.status = 'reversed';
+
+        // Credit money BACK to available_balance & reduce total_withdrawn
+        let wallet = this.wallets.get(wr.partner_id);
+        wallet.available_balance += wr.amount;
+        wallet.total_withdrawn = Math.max(0, wallet.total_withdrawn - wr.amount);
+
+        // Append-Only Reversal Entry in Ledger
+        this.ledger.push({
+          id: this.ledger.length + 1,
+          partner_id: wr.partner_id,
+          transaction_type: 'REVERSAL',
+          credit: wr.amount,
+          debit: 0,
+          reference_number: payoutId,
+          status: 'Released'
+        });
+
+        this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event, received_at: now });
+        return { success: true, event, status: 'reversed' };
+      }
+
+      this.webhookEvents.set(eventId, { status: 'PROCESSED', type: event, received_at: now });
       return { success: true, event };
     } catch (err) {
-      this.webhookEvents.set(eventId, { status: 'FAILED', error: err.message });
+      this.webhookEvents.set(eventId, { status: 'FAILED', error: err.message, received_at: now });
       throw err;
     }
   }
@@ -177,7 +211,7 @@ async function runMockConcurrencyTests() {
   db.reset();
   process.env.RAZORPAY_WEBHOOK_SECRET = 'test_secret';
 
-  db.wallets.set(partnerA, { available_balance: 10000, hold_balance: 5000 });
+  db.wallets.set(partnerA, { available_balance: 10000, hold_balance: 5000, total_withdrawn: 0 });
   db.withdrawals.set('w1', { id: 'w1', razorpay_payout_id: 'pout_100', partner_id: partnerA, amount: 5000, status: 'pending' });
 
   const rawWebhook1 = JSON.stringify({
@@ -189,7 +223,6 @@ async function runMockConcurrencyTests() {
   const sig1 = crypto.createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET).update(rawWebhook1).digest('hex');
   const req1 = { headers: { 'x-razorpay-signature': sig1 }, rawBody: rawWebhook1 };
 
-  // Fire 2 concurrent webhooks
   const [resA, resB] = await Promise.all([
     db.handleWebhookMock(req1),
     db.handleWebhookMock(req1)
@@ -228,7 +261,7 @@ async function runMockConcurrencyTests() {
   const sig2 = crypto.createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET).update(rawWebhook2).digest('hex');
   const req2 = { headers: { 'x-razorpay-signature': sig2 }, rawBody: rawWebhook2 };
 
-  db.wallets.set(partnerA, { available_balance: 10000, hold_balance: 2000 });
+  db.wallets.set(partnerA, { available_balance: 10000, hold_balance: 2000, total_withdrawn: 0 });
   db.withdrawals.set('w2', { id: 'w2', razorpay_payout_id: 'pout_200', partner_id: partnerA, amount: 2000, status: 'pending' });
 
   await db.handleWebhookMock(req2);
@@ -248,13 +281,12 @@ async function runMockConcurrencyTests() {
   console.log(yellow('--- TEST 3: State-Dependent Withdrawal UPDATE (Already Transferred) ---'));
   db.reset();
 
-  db.wallets.set(partnerA, { available_balance: 5000, hold_balance: 0 });
-  // Withdrawal is ALREADY marked transferred
+  db.wallets.set(partnerA, { available_balance: 5000, hold_balance: 0, total_withdrawn: 5000 });
   db.withdrawals.set('w3', { id: 'w3', razorpay_payout_id: 'pout_300', partner_id: partnerA, amount: 3000, status: 'transferred' });
 
   const rawWebhook3 = JSON.stringify({
     event: 'payout.processed',
-    event_id: 'evt_payout_300_new', // Different event ID
+    event_id: 'evt_payout_300_new',
     payload: { payout: { entity: { id: 'pout_300', reference_id: 'w3', amount: 300000 } } }
   });
   const sig3 = crypto.createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET).update(rawWebhook3).digest('hex');
@@ -270,6 +302,59 @@ async function runMockConcurrencyTests() {
     console.log(green('✅ TEST 3 PASSED: State-dependent check prevented duplicate balance deduction on already-transferred withdrawal!\n'));
   } else {
     console.log(red('❌ TEST 3 FAILED!\n'));
+  }
+
+  // --------------------------------------------------------------------------
+  // TEST 4: Payout Reversal Accounting (payout.processed -> payout.reversed)
+  // --------------------------------------------------------------------------
+  console.log(yellow('--- TEST 4: Dedicated Payout Reversal Accounting ---'));
+  db.reset();
+
+  db.wallets.set(partnerA, { available_balance: 10000, hold_balance: 3000, total_withdrawn: 0 });
+  db.withdrawals.set('w4', { id: 'w4', razorpay_payout_id: 'pout_400', partner_id: partnerA, amount: 3000, status: 'pending' });
+
+  // 1. Process payout
+  const rawWebhookProcessed = JSON.stringify({
+    event: 'payout.processed',
+    event_id: 'evt_payout_400_proc',
+    payload: { payout: { entity: { id: 'pout_400', reference_id: 'w4', amount: 300000 } } }
+  });
+  const sig4a = crypto.createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET).update(rawWebhookProcessed).digest('hex');
+  await db.handleWebhookMock({ headers: { 'x-razorpay-signature': sig4a }, rawBody: rawWebhookProcessed });
+
+  const walletAfterProcessed = db.wallets.get(partnerA);
+  console.log('Available Balance after payout.processed (10,000 - 3,000 = 7,000):', walletAfterProcessed.available_balance);
+  console.log('Total Withdrawn after payout.processed (0 + 3,000 = 3,000):', walletAfterProcessed.total_withdrawn);
+
+  // 2. Reverse payout
+  const rawWebhookReversed = JSON.stringify({
+    event: 'payout.reversed',
+    event_id: 'evt_payout_400_rev',
+    payload: { payout: { entity: { id: 'pout_400', reference_id: 'w4', amount: 300000 } } }
+  });
+  const sig4b = crypto.createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET).update(rawWebhookReversed).digest('hex');
+  const res4b = await db.handleWebhookMock({ headers: { 'x-razorpay-signature': sig4b }, rawBody: rawWebhookReversed });
+
+  const walletAfterReversed = db.wallets.get(partnerA);
+  const wr4 = db.withdrawals.get('w4');
+  const reversalLedgerEntry = db.ledger.find(l => l.transaction_type === 'REVERSAL');
+
+  console.log('Reversal Webhook Res:', res4b);
+  console.log('Available Balance after payout.reversed (7,000 + 3,000 = 10,000):', walletAfterReversed.available_balance);
+  console.log('Total Withdrawn after payout.reversed (3,000 - 3,000 = 0):', walletAfterReversed.total_withdrawn);
+  console.log('Withdrawal Status:', wr4.status);
+  console.log('Reversal Ledger Entry:', reversalLedgerEntry);
+
+  if (
+    res4b.status === 'reversed' &&
+    walletAfterReversed.available_balance === 10000 &&
+    walletAfterReversed.total_withdrawn === 0 &&
+    wr4.status === 'reversed' &&
+    reversalLedgerEntry && reversalLedgerEntry.credit === 3000
+  ) {
+    console.log(green('✅ TEST 4 PASSED: Payout reversal returned ₹3,000 to wallet & inserted append-only REVERSAL ledger entry!\n'));
+  } else {
+    console.log(red('❌ TEST 4 FAILED!\n'));
   }
 
   console.log(green('============================================================='));

@@ -1458,19 +1458,7 @@ const creditWalletFromPayment = async (partnerId, amountInInr, paymentId, orderI
   try {
     await client.query('BEGIN');
 
-    // 1. DDL Auto-Heal: Ensure idempotency tracking table exists
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS razorpay_processed_payments (
-        payment_id VARCHAR(100) PRIMARY KEY,
-        order_id VARCHAR(100) NOT NULL,
-        partner_id UUID NOT NULL REFERENCES partner_profiles(id) ON DELETE CASCADE,
-        amount NUMERIC(15,2) NOT NULL,
-        status VARCHAR(50) DEFAULT 'COMPLETED',
-        processed_at TIMESTAMPTZ DEFAULT NOW()
-      );
-    `);
-
-    // 2. Resolve canonical partner_id
+    // 1. Resolve canonical partner_id
     let resolvedPartnerId = partnerId;
     const { rows: [p] } = await client.query(
       `SELECT id FROM partner_profiles WHERE id::text = $1::text OR user_id::text = $1::text`,

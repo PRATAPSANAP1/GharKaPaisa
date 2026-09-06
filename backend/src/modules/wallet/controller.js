@@ -2093,25 +2093,15 @@ const handleRazorpayWebhook = async (req, res) => {
       }
     }
 
-    // 3. DB-Level Stateful Event Ownership (Atomic PROCESSING Claim)
-    await query(`
-      CREATE TABLE IF NOT EXISTS razorpay_webhook_events (
-        event_id VARCHAR(100) PRIMARY KEY,
-        event_type VARCHAR(100) NOT NULL,
-        status VARCHAR(50) NOT NULL DEFAULT 'RECEIVED',
-        error_message TEXT,
-        received_at TIMESTAMPTZ DEFAULT NOW(),
-        processed_at TIMESTAMPTZ
-      );
-    `);
-
-    // Atomically claim event ownership ONLY if status is RECEIVED or FAILED
+    // 3. DB-Level Stateful Event Ownership (Atomic PROCESSING Claim + Stale Recovery > 5 mins)
     const { rows: [claim] } = await query(`
       INSERT INTO razorpay_webhook_events (event_id, event_type, status, received_at)
       VALUES ($1, $2, 'PROCESSING', NOW())
       ON CONFLICT (event_id) DO UPDATE 
-        SET status = 'PROCESSING'
+        SET status = 'PROCESSING',
+            received_at = NOW()
         WHERE razorpay_webhook_events.status IN ('FAILED', 'RECEIVED')
+           OR (razorpay_webhook_events.status = 'PROCESSING' AND razorpay_webhook_events.received_at < NOW() - INTERVAL '5 minutes')
       RETURNING status
     `, [eventId, event]);
 
@@ -2181,6 +2171,7 @@ const handleRazorpayWebhook = async (req, res) => {
 
         const withdrawalId = wr.id;
         const partnerId = wr.partner_id;
+        const amountInr = wr.amount;
 
         if (event === 'payout.processed') {
           // Defense-in-Depth: State-dependent UPDATE (WHERE status != 'transferred')
@@ -2202,23 +2193,17 @@ const handleRazorpayWebhook = async (req, res) => {
             return success(res, { received: true, already_processed: true }, 'Withdrawal already transferred');
           }
 
-          // Deduct wallet balance ONLY on state transition
+          // Deduct wallet balance ONLY on state transition (Exact Decimal SQL Arithmetic)
           await client.query(`
             UPDATE partner_wallets 
-            SET available_balance = available_balance - $1,
-                hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
-                total_withdrawn = COALESCE(total_withdrawn, 0) + $1,
+            SET available_balance = available_balance - $1::numeric,
+                hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1::numeric),
+                total_withdrawn = COALESCE(total_withdrawn, 0) + $1::numeric,
                 updated_at = NOW() 
             WHERE partner_id = $2
-          `, [parseFloat(wr.amount), partnerId]);
+          `, [amountInr, partnerId]);
 
-          await client.query(`
-            UPDATE wallet_ledger SET
-              status = 'completed',
-              reference_number = COALESCE($1, reference_number)
-            WHERE transaction_type = 'WITHDRAWAL' AND (reference_number = $2 OR reference_number IS NULL) AND partner_id = $3
-          `, [utr || payoutId, withdrawalId.toString(), partnerId]);
-
+          // Append-Only Settlement Record (Zero UPDATE on wallet_ledger)
           await client.query(`
             INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
             VALUES ($1, 'RAZORPAY_PAYOUT_SUCCESS', $2, NULL)
@@ -2247,13 +2232,13 @@ const handleRazorpayWebhook = async (req, res) => {
               await createNotification(
                 pUser.user_id,
                 'Withdrawal Processed',
-                `Your withdrawal of ₹${parseFloat(wr.amount).toLocaleString('en-IN')} has been successfully processed into your bank account. (UTR: ${utr || payoutId})`,
+                `Your withdrawal of ₹${parseFloat(amountInr).toLocaleString('en-IN')} has been successfully processed into your bank account. (UTR: ${utr || payoutId})`,
                 'success'
               );
               if (pUser.mobile) {
                 const { sendWithdrawalStatusSms } = require('../../services/sms/sms.service');
                 if (sendWithdrawalStatusSms) {
-                  sendWithdrawalStatusSms(pUser.mobile, pUser.first_name, parseFloat(wr.amount), 'PROCESSED', utr || payoutId).catch(() => {});
+                  sendWithdrawalStatusSms(pUser.mobile, pUser.first_name, parseFloat(amountInr), 'PROCESSED', utr || payoutId).catch(() => {});
                 }
               }
             }
@@ -2261,38 +2246,102 @@ const handleRazorpayWebhook = async (req, res) => {
             logger.warn(`Failed to send payout success notification: ${notifyErr.message}`);
           }
 
-        } else if (['payout.failed', 'payout.reversed', 'payout.rejected'].includes(event)) {
-          // Defense-in-Depth: State-dependent UPDATE (WHERE status != 'failed')
+        } else if (event === 'payout.reversed') {
+          // ── Dedicated Reversal Accounting ──────────────────────────────────────────
+          // Payout WAS ALREADY transferred and money was deducted. Bank/Razorpay later reversed it.
+          const { rows: [reversedWr] } = await client.query(`
+            UPDATE wallet_withdrawals SET
+              status = 'reversed',
+              failure_reason = $1,
+              updated_at = NOW()
+            WHERE id = $2 AND status = 'transferred'
+            RETURNING id
+          `, [`Payout reversed: ${failureReason}`, withdrawalId]);
+
+          if (!reversedWr) {
+            await client.query('COMMIT');
+            logger.info(`[RAZORPAY_WEBHOOK] Withdrawal ${withdrawalId} was not in 'transferred' status. Skipping duplicate reversal credit.`);
+            await query(`UPDATE razorpay_webhook_events SET status = 'PROCESSED', processed_at = NOW() WHERE event_id = $1`, [eventId]);
+            return success(res, { received: true, already_processed: true }, 'Withdrawal not in transferred state');
+          }
+
+          // Return money back to partner's available_balance & decrease total_withdrawn
+          await client.query(`
+            UPDATE partner_wallets 
+            SET available_balance = available_balance + $1::numeric,
+                total_withdrawn = GREATEST(0, COALESCE(total_withdrawn, 0) - $1::numeric),
+                updated_at = NOW() 
+            WHERE partner_id = $2
+          `, [amountInr, partnerId]);
+
+          // Append-Only Reversal Entry in wallet_ledger (Zero UPDATE to existing rows)
+          await client.query(`
+            INSERT INTO wallet_ledger (
+              wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status
+            ) VALUES (
+              $1, $2, 'REVERSAL'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released'
+            )
+          `, [
+            wr.wallet_id, partnerId, amountInr,
+            `Payout Reversal via Razorpay Webhook: ${payoutId} (${failureReason})`,
+            payoutId
+          ]);
+
+          await client.query(`
+            INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
+            VALUES ($1, 'RAZORPAY_PAYOUT_REVERSED', $2, NULL)
+          `, [withdrawalId, `Payout reversed by Razorpay/Bank: ${failureReason}. Funds returned to wallet balance.`]);
+
+          await syncWalletBalance(partnerId, client);
+          await client.query('COMMIT');
+
+          // Notify Partner of Reversal
+          try {
+            const { rows: [pUser] } = await query(`
+              SELECT u.mobile, ap.first_name, ap.user_id
+              FROM partner_profiles ap 
+              JOIN users u ON u.id = ap.user_id 
+              WHERE ap.id = $1
+            `, [partnerId]);
+
+            if (pUser) {
+              const { createNotification } = require('../notifications/service.js');
+              await createNotification(
+                pUser.user_id,
+                'Withdrawal Reversed',
+                `Your payout of ₹${parseFloat(amountInr).toLocaleString('en-IN')} was reversed by the bank. ₹${parseFloat(amountInr).toLocaleString('en-IN')} has been returned to your wallet balance.`,
+                'info'
+              );
+            }
+          } catch (notifyErr) {
+            logger.warn(`Failed to send payout reversal notification: ${notifyErr.message}`);
+          }
+
+        } else if (['payout.failed', 'payout.rejected'].includes(event)) {
+          // Payout failed BEFORE transfer (money was in hold_balance)
           const { rows: [failedWr] } = await client.query(`
             UPDATE wallet_withdrawals SET
               status = 'failed',
               failure_reason = $1,
               updated_at = NOW()
-            WHERE id = $2 AND status != 'failed'
+            WHERE id = $2 AND status NOT IN ('failed', 'transferred', 'reversed')
             RETURNING id
           `, [failureReason, withdrawalId]);
 
           if (!failedWr) {
             await client.query('COMMIT');
-            logger.info(`[RAZORPAY_WEBHOOK] Withdrawal ${withdrawalId} already marked failed. Skipping duplicate release.`);
+            logger.info(`[RAZORPAY_WEBHOOK] Withdrawal ${withdrawalId} already marked failed or completed. Skipping release.`);
             await query(`UPDATE razorpay_webhook_events SET status = 'PROCESSED', processed_at = NOW() WHERE event_id = $1`, [eventId]);
-            return success(res, { received: true, already_processed: true }, 'Withdrawal already marked failed');
+            return success(res, { received: true, already_processed: true }, 'Withdrawal state invalid for failure handling');
           }
 
-          // Release hold_balance back ONLY on state transition
+          // Release held balance back ONLY on state transition (Exact Decimal SQL Arithmetic)
           await client.query(`
             UPDATE partner_wallets 
-            SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
+            SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1::numeric),
                 updated_at = NOW() 
             WHERE partner_id = $2
-          `, [parseFloat(wr.amount), partnerId]);
-
-          await client.query(`
-            UPDATE wallet_ledger SET
-              status = 'failed',
-              description = COALESCE(description, '') || ' [Payout Failed]'
-            WHERE transaction_type = 'WITHDRAWAL' AND reference_number = $1 AND partner_id = $2
-          `, [withdrawalId.toString(), partnerId]);
+          `, [amountInr, partnerId]);
 
           await client.query(`
             INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
@@ -2316,13 +2365,13 @@ const handleRazorpayWebhook = async (req, res) => {
               await createNotification(
                 pUser.user_id,
                 'Withdrawal Failed',
-                `Your withdrawal of ₹${parseFloat(wr.amount).toLocaleString('en-IN')} could not be processed. The held amount has been released back to your available balance.`,
+                `Your withdrawal of ₹${parseFloat(amountInr).toLocaleString('en-IN')} could not be processed. The held amount has been released back to your available balance.`,
                 'error'
               );
               if (pUser.mobile) {
                 const { sendWithdrawalFailedSms } = require('../../services/sms/sms.service');
                 if (sendWithdrawalFailedSms) {
-                  sendWithdrawalFailedSms(pUser.mobile, pUser.first_name, parseFloat(wr.amount)).catch(() => {});
+                  sendWithdrawalFailedSms(pUser.mobile, pUser.first_name, parseFloat(amountInr)).catch(() => {});
                 }
               }
             }
