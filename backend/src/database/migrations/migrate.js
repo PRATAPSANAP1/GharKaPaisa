@@ -503,6 +503,7 @@ const migrate = async () => {
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS partner_url VARCHAR(500)`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS created_by UUID`);
   await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_by UUID`);
+  await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS commission_release_days INT DEFAULT 7`);
 
   // ── Commission Structure (overrides per Partner/product) ────────
   await query(`

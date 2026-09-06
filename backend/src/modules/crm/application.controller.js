@@ -46,7 +46,7 @@ const parseDobToIso = (raw) => {
         return `${year}-${month}-${day}`;
       }
     }
-  } catch (e) {}
+  } catch (e) { }
   return null;
 };
 
@@ -313,7 +313,7 @@ const submitPublicApplication = async (req, res, next) => {
       await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
       await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
       await client.query(`ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'bank_form_submitted'`);
-    } catch (_) {}
+    } catch (_) { }
 
     // Upsert customer
     let customerId;
@@ -559,7 +559,7 @@ const getTimeline = async (req, res, next) => {
           if (leadRec.application_id) appId = leadRec.application_id;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     const { rows } = await query(`
       SELECT DISTINCT ON (id, performed_at, title)
@@ -761,7 +761,7 @@ const updateStatus = async (req, res, next) => {
       `SELECT * FROM applications 
        WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 
           OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1 
-       FOR UPDATE`, 
+       FOR UPDATE`,
       [id]
     );
     if (!app) {
@@ -1073,7 +1073,7 @@ const approveApplication = async (req, res, next) => {
       `SELECT * FROM applications 
        WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 
           OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1 
-       FOR UPDATE`, 
+       FOR UPDATE`,
       [id]
     );
     if (!app) {
@@ -1134,7 +1134,7 @@ const rejectApplication = async (req, res, next) => {
       `SELECT * FROM applications 
        WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 
           OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1 
-       FOR UPDATE`, 
+       FOR UPDATE`,
       [id]
     );
     if (!app) {
@@ -1248,7 +1248,7 @@ const manualCommission = async (req, res, next) => {
       `SELECT * FROM applications 
        WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 
           OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1 
-       FOR UPDATE`, 
+       FOR UPDATE`,
       [id]
     );
     if (!app) {
@@ -2097,7 +2097,7 @@ const markVerificationComplete = async (req, res, next) => {
 const updateBankProcessingStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { 
+    const {
       status, bank_ref_number, bank_application_number, rejection_reason, approved_amount,
       appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
       bank_remark, user_remark, user_notes, notes, final_status, decline_reason, eligible_reqd,
@@ -2119,7 +2119,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
       : null;
 
     const userRole = (req.user?.role || '').toUpperCase();
-    
+
     // Backend RBAC enforcement: Final Status & Approval updates restricted to OPERATIONS_HEAD, ADMIN, SUPER_ADMIN, ADMINISTRATIVE_OPERATOR
     if (final_status && !['OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN', 'ADMINISTRATIVE_OPERATOR'].includes(userRole)) {
       return forbidden(res, 'Access denied. Only Operation Head, Admin, Super Admin, or Administrative Operator can update Final Status.');
@@ -2151,7 +2151,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS notes TEXT,
         ADD COLUMN IF NOT EXISTS operational_remarks TEXT
       `);
-    } catch (_) {}
+    } catch (_) { }
 
     let appRes = await query(`
       SELECT a.*, p.category as product_category 
@@ -2213,7 +2213,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
         await query(`
           INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
           VALUES ($1, $2, $3, $4, 'admin', $5)
-        `, [id, currentStatus, `Bank Processing Update (${finalStatus || currentStatus.toUpperCase()})`, `Status & Form details updated. Remark: ${bank_remark || 'N/A'}`, req.user ? req.user.id : null]).catch(() => {});
+        `, [id, currentStatus, `Bank Processing Update (${finalStatus || currentStatus.toUpperCase()})`, `Status & Form details updated. Remark: ${bank_remark || 'N/A'}`, req.user ? req.user.id : null]).catch(() => { });
 
         return success(res, null, `Application status & Form details updated successfully`);
       }
@@ -2278,7 +2278,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
           digital_card_issued = COALESCE(NULLIF(EXCLUDED.digital_card_issued, 'None'), NULLIF(EXCLUDED.digital_card_issued, ''), physical_application_details.digital_card_issued),
           updated_at = NOW()
       `, [id, bankAppNoVal, vkyc_url || null, userRemarkVal, ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null]);
-    } catch (_) {}
+    } catch (_) { }
 
     const titleMap = {
       under_review: 'Bank Reviewing Application',
@@ -2542,7 +2542,7 @@ const submitPartnerApplication = async (req, res, next) => {
         syncedLeadId = newLead?.id || null;
         await client.query('RELEASE SAVEPOINT lead_sync_sp');
       } catch (leadErr) {
-        await client.query('ROLLBACK TO SAVEPOINT lead_sync_sp').catch(() => {});
+        await client.query('ROLLBACK TO SAVEPOINT lead_sync_sp').catch(() => { });
         logger.warn('Lead table sync warning:', leadErr.message);
       }
     }
@@ -2624,7 +2624,7 @@ const submitPartnerApplication = async (req, res, next) => {
         `, [app.id, trimmedName, trimmedMobile, trimmedEmail, cleanPan]);
         await client.query('RELEASE SAVEPOINT phys_details_sp');
       } catch (physErr) {
-        await client.query('ROLLBACK TO SAVEPOINT phys_details_sp').catch(() => {});
+        await client.query('ROLLBACK TO SAVEPOINT phys_details_sp').catch(() => { });
       }
     }
 
@@ -2644,7 +2644,7 @@ const submitPartnerApplication = async (req, res, next) => {
       ]);
       await client.query('RELEASE SAVEPOINT timeline_sp');
     } catch (timelineErr) {
-      await client.query('ROLLBACK TO SAVEPOINT timeline_sp').catch(() => {});
+      await client.query('ROLLBACK TO SAVEPOINT timeline_sp').catch(() => { });
       logger.warn('Timeline insert non-fatal warn:', timelineErr.message);
     }
 
@@ -2674,7 +2674,7 @@ const submitPartnerApplication = async (req, res, next) => {
         `, [partnerId, product_id, trackingToken, app?.id || null, syncedLeadId || null]);
         await client.query('RELEASE SAVEPOINT share_link_sp');
       } catch (shareLinkErr) {
-        await client.query('ROLLBACK TO SAVEPOINT share_link_sp').catch(() => {});
+        await client.query('ROLLBACK TO SAVEPOINT share_link_sp').catch(() => { });
         logger.warn('Share link insert non-fatal warn:', shareLinkErr.message);
       }
     } else if (process_type === 'physical_process') {
@@ -2691,7 +2691,7 @@ const submitPartnerApplication = async (req, res, next) => {
         `, [partnerId, product_id, trackingToken, app?.id || null, syncedLeadId || null]);
         await client.query('RELEASE SAVEPOINT share_link_sp');
       } catch (shareLinkErr) {
-        await client.query('ROLLBACK TO SAVEPOINT share_link_sp').catch(() => {});
+        await client.query('ROLLBACK TO SAVEPOINT share_link_sp').catch(() => { });
         logger.warn('Share link insert non-fatal warn:', shareLinkErr.message);
       }
     } else if (process_type === 'direct_bank') {
@@ -2712,7 +2712,7 @@ const submitPartnerApplication = async (req, res, next) => {
             WHERE pp.id = $1 OR pp.user_id = $1
           `, [partnerId]);
           partnerMobile = pUser?.mobile || pUser?.phone || pUser?.partner_mobile;
-        } catch (e) {}
+        } catch (e) { }
       }
 
       if (partnerMobile) {
@@ -2890,7 +2890,7 @@ const exportApplicationsCSV = async (req, res, next) => {
     const userRole = (req.user?.role || req.user?.user_role || '').toUpperCase();
     const userDesignation = (req.user?.designation || '').toUpperCase();
     const userId = req.user?.id;
-    
+
     const isAdminOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
     const isEmployeeRole = userRole === 'EMPLOYEE';
     const hideCustomerMobile = isAdminOperator || isEmployeeRole;
@@ -3182,7 +3182,7 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS user_remark TEXT`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS notes TEXT`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
-  } catch (_) {}
+  } catch (_) { }
 
   const client = await getClient();
   try {
@@ -3664,7 +3664,7 @@ const updateApplicationDetails = async (req, res, next) => {
       `Application updated. App No: ${appNumToSave || 'N/A'}, VKYC: ${vkyc_status || 'N/A'}, Status: ${status || app.status}`,
       ['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role) ? 'admin' : 'partner',
       req.user ? req.user.id : null
-    ]).catch(() => {});
+    ]).catch(() => { });
 
     await syncEmployeeIncentiveLifecycle(client, updatedApp, cleanStr(app_file_generated || appfile_generated || req.body.app_file_generated), status || app.status);
 
@@ -3728,7 +3728,7 @@ const updateProcessType = async (req, res, next) => {
       `SELECT * FROM applications 
        WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 
           OR tracking_token = $1 OR bank_application_number = $1 OR bank_ref_number = $1 
-       FOR UPDATE`, 
+       FOR UPDATE`,
       [id]
     );
     if (!app) {
@@ -3931,7 +3931,7 @@ const deleteApplication = async (req, res, next) => {
   const client = await getClient();
   try {
     let { rows: [app] } = await client.query(
-      `SELECT id, partner_id, customer_id, lead_id, app_number, status FROM applications WHERE id = $1 OR lead_id = $1 LIMIT 1`, 
+      `SELECT id, partner_id, customer_id, lead_id, app_number, status FROM applications WHERE id = $1 OR lead_id = $1 LIMIT 1`,
       [id]
     );
 
@@ -3970,7 +3970,7 @@ const deleteApplication = async (req, res, next) => {
         await client.query(sql, params);
         await client.query('RELEASE SAVEPOINT del_sp');
       } catch (_) {
-        await client.query('ROLLBACK TO SAVEPOINT del_sp').catch(() => {});
+        await client.query('ROLLBACK TO SAVEPOINT del_sp').catch(() => { });
       }
     };
 
@@ -4190,7 +4190,7 @@ const getPhysicalApplicationByToken = async (req, res, next) => {
     );
 
     const isSbi = (tokenRec.bank_id === 'e7c2c604-139d-4fcf-a87c-695633535a02') ||
-                  (String(tokenRec.bank_name || tokenRec.bank_code || '').toLowerCase().includes('sbi'));
+      (String(tokenRec.bank_name || tokenRec.bank_code || '').toLowerCase().includes('sbi'));
 
     return success(res, {
       application_id: tokenRec.application_id,
@@ -4468,7 +4468,7 @@ const releaseCommission = async (req, res, next) => {
         `₹${commissionAmount} commission released and credited to partner wallet by Super Admin.`,
         req.user.id
       );
-    } catch (_) {}
+    } catch (_) { }
 
     await client.query('COMMIT');
 
@@ -4481,9 +4481,9 @@ const releaseCommission = async (req, res, next) => {
       );
       if (partnerUser?.mobile) {
         const { sendCommissionCreditedSms } = require('../../services/sms/sms.service');
-        sendCommissionCreditedSms(partnerUser.mobile, partnerUser.first_name, commissionAmount).catch(() => {});
+        sendCommissionCreditedSms(partnerUser.mobile, partnerUser.first_name, commissionAmount).catch(() => { });
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // Fetch updated balance from partner_wallets
     const { rows: [w] } = await query(
@@ -4534,7 +4534,7 @@ const holdCommission = async (req, res, next) => {
         remarks || 'Commission placed on hold by Super Admin. Status updated to Commission Released.',
         req.user ? req.user.id : null
       );
-    } catch (_) {}
+    } catch (_) { }
 
     return success(res, {
       application_id: app.id,

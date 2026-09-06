@@ -59,19 +59,34 @@ const query = async (text, params, retries = 2) => {
     logger.debug(`Query executed in ${duration}ms`, { query: text });
     return res;
   } catch (err) {
-    const isConnErr = err.message && (
-      err.message.includes('timeout exceeded when trying to connect') ||
+    const isPoolExhausted = err.message && err.message.includes('timeout exceeded when trying to connect');
+    const isTransientNetwork = err.message && (
       err.message.includes('Connection terminated') ||
       err.message.includes('ECONNRESET') ||
-      err.message.includes('ECONNREFUSED') ||
-      err.message.includes('remaining connection slots are reserved')
+      err.message.includes('ECONNREFUSED')
     );
+    const isReservedSlots = err.message && err.message.includes('remaining connection slots are reserved');
 
-    if (isConnErr) {
+    if (isPoolExhausted || isTransientNetwork || isReservedSlots) {
       logger.warn(`DB Connection status on error: Total=${pool.totalCount}, Idle=${pool.idleCount}, Waiting=${pool.waitingCount}`, { error: err.message });
+
       if (retries > 0) {
-        const delay = 400;
-        logger.warn(`Transient DB connection error. Retrying query in ${delay}ms (${retries} left)...`, { error: err.message });
+        // Jittered exponential backoff — spreads retries out instead of all
+        // firing back at the pool in lockstep at the exact same instant.
+        const baseDelay = isPoolExhausted ? 800 : 400;
+        const attempt = 2 - retries; // 0, 1
+        const backoff = baseDelay * Math.pow(2, attempt);
+        const jitter = Math.random() * 300;
+        const delay = backoff + jitter;
+
+        // If the pool is genuinely still saturated, don't retry blindly —
+        // give it real time to drain before trying again at all.
+        if (isPoolExhausted && pool.waitingCount > pool.options.max) {
+          logger.warn(`Pool severely saturated (waiting=${pool.waitingCount} > max=${pool.options.max}) — skipping retry to avoid amplifying the storm`, { error: err.message });
+          throw err;
+        }
+
+        logger.warn(`Transient DB error. Retrying in ${Math.round(delay)}ms (${retries} left)...`, { error: err.message });
         await new Promise((resolve) => setTimeout(resolve, delay));
         return query(text, params, retries - 1);
       }
