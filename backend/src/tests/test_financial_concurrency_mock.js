@@ -115,6 +115,18 @@ class MockDatabase {
     return { success: true, status: 'approved' };
   }
 
+  // Transfer State Guard Simulation
+  async transferWithdrawalMock(withdrawalId) {
+    const wr = this.withdrawals.get(withdrawalId);
+    if (!wr) return { success: false, reason: 'NOT_FOUND' };
+    if (!['approved', 'processing'].includes(wr.status)) {
+      return { success: false, reason: 'INVALID_STATE', currentStatus: wr.status };
+    }
+    wr.status = 'transferred';
+    this.withdrawals.set(withdrawalId, wr);
+    return { success: true, status: 'transferred' };
+  }
+
   // Atomic Withdrawal Debit Check
   async debitAvailableMock(partnerId, amountInInr) {
     let wallet = this.wallets.get(partnerId);
@@ -643,6 +655,32 @@ async function runMockConcurrencyTests() {
     console.log(green('✅ TEST 11 PASSED: 100 concurrent approval requests resulted in EXACTLY 1 approval state transition!\n'));
   } else {
     console.log(red('❌ TEST 11 FAILED!\n'));
+  }
+
+  // --------------------------------------------------------------------------
+  // TEST 12: Illegal Withdrawal Transfer State Transition Matrix
+  // --------------------------------------------------------------------------
+  console.log(yellow('--- TEST 12: Illegal Withdrawal Transfer State Transition Matrix ---'));
+  db.reset();
+  db.withdrawals.set('w_pending', { id: 'w_pending', status: 'pending', amount: 1000, partner_id: partnerA });
+  db.withdrawals.set('w_rejected', { id: 'w_rejected', status: 'rejected', amount: 1000, partner_id: partnerA });
+  db.withdrawals.set('w_transferred', { id: 'w_transferred', status: 'transferred', amount: 1000, partner_id: partnerA });
+  db.withdrawals.set('w_approved', { id: 'w_approved', status: 'approved', amount: 1000, partner_id: partnerA });
+
+  const resPending = await db.transferWithdrawalMock('w_pending');
+  const resRejected = await db.transferWithdrawalMock('w_rejected');
+  const resTransferred = await db.transferWithdrawalMock('w_transferred');
+  const resApproved = await db.transferWithdrawalMock('w_approved');
+
+  console.log('Pending -> Transfer (Must fail):', resPending.success === false);
+  console.log('Rejected -> Transfer (Must fail):', resRejected.success === false);
+  console.log('Transferred -> Transfer (Must fail):', resTransferred.success === false);
+  console.log('Approved -> Transfer (Must succeed):', resApproved.success === true);
+
+  if (!resPending.success && !resRejected.success && !resTransferred.success && resApproved.success) {
+    console.log(green('✅ TEST 12 PASSED: Transfer state guard blocks all illegal state transitions!\n'));
+  } else {
+    console.log(red('❌ TEST 12 FAILED!\n'));
   }
 
   console.log(green('============================================================='));

@@ -504,8 +504,21 @@ const requestWithdrawal = async (req, res, next) => {
     const tdsAmount = Math.round((parsedAmount * 0.02) * 100) / 100;
     const netAmount = Math.round((parsedAmount - tdsAmount) * 100) / 100;
 
+    // Client-provided or server-generated Idempotency-Key check
+    const clientKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'] || req.body?.idempotency_key;
+    if (clientKey) {
+      const { rows: [existingWr] } = await client.query(
+        `SELECT id, amount, status FROM wallet_withdrawals WHERE partner_id = $1 AND idempotency_key = $2`,
+        [PartnerId, String(clientKey)]
+      );
+      if (existingWr) {
+        await client.query('COMMIT');
+        return success(res, { withdrawal: existingWr, already_exists: true }, 'Duplicate withdrawal request recognized idempotently.');
+      }
+    }
+
     // Insert pending withdrawal request
-    const idempotencyKey = `gkp-withdrawal-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const idempotencyKey = clientKey ? String(clientKey) : `gkp-withdrawal-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const { rows: [wr] } = await client.query(`
       INSERT INTO wallet_withdrawals (wallet_id, partner_id, amount, tds_rate, tds_amount, net_amount, bank_name, account_number, ifsc_code, status, bank_account_id, remarks, idempotency_key)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12) RETURNING id

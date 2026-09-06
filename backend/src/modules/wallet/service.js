@@ -694,6 +694,10 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
       `, [withdrawalId, `Rejection reason: ${rejectionReason || 'Rejected by Admin'}`, processedBy]);
 
     } else if (action === 'transfer' || utrNumber) {
+      if (!['approved', 'processing'].includes(wr.status)) {
+        throw new Error(`Cannot transfer withdrawal in status: ${wr.status}`);
+      }
+
       if (utrNumber) {
         // Manual Transfer recording with provided UTR number
         const finalUtr = utrNumber;
@@ -1228,19 +1232,12 @@ const processWalletReconciliationDailyJob = async () => {
   let discrepanciesCount = 0;
 
   for (const p of partners) {
-    const { rows: [w] } = await query(`SELECT available_balance, hold_balance FROM partner_wallets WHERE partner_id = $1`, [p.id]);
-    const { rows: [l] } = await query(`
-      SELECT 
-        COALESCE(SUM(credit), 0) - COALESCE(SUM(debit), 0) as ledger_tot
-      FROM wallet_ledger 
-      WHERE partner_id = $1 AND status = 'completed'
-    `, [p.id]);
+    const rec = await verifyWalletReconciliation(p.id);
+    const isMatch = rec.status === 'PASS';
+    const walletBal = rec.walletBalance;
+    const ledgerBal = rec.ledgerBalance;
+    const diff = parseFloat(rec.difference);
 
-    const walletBal = parseFloat(w?.available_balance || 0) + parseFloat(w?.hold_balance || 0);
-    const ledgerBal = parseFloat(l?.ledger_tot || 0);
-    const diff = Math.abs(walletBal - ledgerBal);
-
-    const isMatch = diff < 0.01;
     await query(`
       INSERT INTO wallet_reconciliation (partner_id, wallet_balance, ledger_balance, discrepancy, status, notes)
       VALUES ($1, $2, $3, $4, $5, $6)
