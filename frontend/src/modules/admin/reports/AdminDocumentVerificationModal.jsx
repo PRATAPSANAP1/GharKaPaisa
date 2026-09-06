@@ -103,9 +103,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const bankNameCombinedStr = `${application?.bank_name || application?.bank_code || ''} ${application?.product_name || ''}`.toUpperCase();
   const isTataCobrandHdfc = application?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || bankNameCombinedStr.includes('TATA');
 
-  const [ipaStage, setIpaStage] = useState(sanitizeVal(application?.ipa_stage) || sanitizeVal(application?.physical_details?.ipa_stage));
-  const [kycStage, setKycStage] = useState(sanitizeVal(application?.kyc_stage) || sanitizeVal(application?.physical_details?.kyc_stage));
-  const [cardApprovalStage, setCardApprovalStage] = useState(sanitizeVal(application?.card_approval_stage) || sanitizeVal(application?.physical_details?.card_approval_stage));
+  const [ipaStage, setIpaStage] = useState(sanitizeVal(application?.ipa_stage) || sanitizeVal(application?.physical_details?.ipa_stage) || 'None');
+  const [kycStage, setKycStage] = useState(sanitizeVal(application?.kyc_stage) || sanitizeVal(application?.physical_details?.kyc_stage) || 'None');
+  const [cardApprovalStage, setCardApprovalStage] = useState(sanitizeVal(application?.card_approval_stage) || sanitizeVal(application?.physical_details?.card_approval_stage) || 'None');
   const [digitalCardIssued, setDigitalCardIssued] = useState(sanitizeVal(application?.digital_card_issued) || sanitizeVal(application?.physical_details?.digital_card_issued) || 'None');
 
   const [appcodeStatus, setAppcodeStatus] = useState(sanitizeVal(application?.appcode_status) || sanitizeVal(application?.physical_details?.appcode_status));
@@ -281,10 +281,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         setBankRemark(realRemark);
         setUserRemark(realUserRemark);
         setFinalStatus(realFinal);
-        if (app.ipa_stage || pd.ipa_stage) setIpaStage(sanitizeVal(app.ipa_stage) || sanitizeVal(pd.ipa_stage));
-        if (app.kyc_stage || pd.kyc_stage) setKycStage(sanitizeVal(app.kyc_stage) || sanitizeVal(pd.kyc_stage));
-        if (app.card_approval_stage || pd.card_approval_stage) setCardApprovalStage(sanitizeVal(app.card_approval_stage) || sanitizeVal(pd.card_approval_stage));
-        if (app.digital_card_issued || pd.digital_card_issued) setDigitalCardIssued(sanitizeVal(app.digital_card_issued) || sanitizeVal(pd.digital_card_issued));
+        setIpaStage(sanitizeVal(app.ipa_stage) || sanitizeVal(pd.ipa_stage) || 'None');
+        setKycStage(sanitizeVal(app.kyc_stage) || sanitizeVal(pd.kyc_stage) || 'None');
+        setCardApprovalStage(sanitizeVal(app.card_approval_stage) || sanitizeVal(pd.card_approval_stage) || 'None');
+        setDigitalCardIssued(sanitizeVal(app.digital_card_issued) || sanitizeVal(pd.digital_card_issued) || 'None');
         if (realAppFileGenerated) setAppFileGenerated(realAppFileGenerated);
         if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
         if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
