@@ -2247,10 +2247,10 @@ const updateBankProcessingStatus = async (req, res, next) => {
           notes = COALESCE($20, notes),
           operational_remarks = COALESCE($20, operational_remarks),
           app_file_generated = COALESCE($21, app_file_generated),
-          ipa_stage = COALESCE($22, ipa_stage),
-          kyc_stage = COALESCE($23, kyc_stage),
-          card_approval_stage = COALESCE($24, card_approval_stage),
-          digital_card_issued = COALESCE($25, digital_card_issued),
+          ipa_stage = COALESCE(NULLIF($22, 'None'), NULLIF($22, ''), ipa_stage),
+          kyc_stage = COALESCE(NULLIF($23, 'None'), NULLIF($23, ''), kyc_stage),
+          card_approval_stage = COALESCE(NULLIF($24, 'None'), NULLIF($24, ''), card_approval_stage),
+          digital_card_issued = COALESCE(NULLIF($25, 'None'), NULLIF($25, ''), digital_card_issued),
           updated_at = NOW()
       WHERE id = $26
     `, [
@@ -2272,10 +2272,10 @@ const updateBankProcessingStatus = async (req, res, next) => {
           bank_ref_number = COALESCE(EXCLUDED.bank_ref_number, physical_application_details.bank_ref_number),
           vkyc_url = COALESCE(EXCLUDED.vkyc_url, physical_application_details.vkyc_url),
           user_remark = COALESCE(EXCLUDED.user_remark, physical_application_details.user_remark),
-          ipa_stage = COALESCE(EXCLUDED.ipa_stage, physical_application_details.ipa_stage),
-          kyc_stage = COALESCE(EXCLUDED.kyc_stage, physical_application_details.kyc_stage),
-          card_approval_stage = COALESCE(EXCLUDED.card_approval_stage, physical_application_details.card_approval_stage),
-          digital_card_issued = COALESCE(EXCLUDED.digital_card_issued, physical_application_details.digital_card_issued),
+          ipa_stage = COALESCE(NULLIF(EXCLUDED.ipa_stage, 'None'), NULLIF(EXCLUDED.ipa_stage, ''), physical_application_details.ipa_stage),
+          kyc_stage = COALESCE(NULLIF(EXCLUDED.kyc_stage, 'None'), NULLIF(EXCLUDED.kyc_stage, ''), physical_application_details.kyc_stage),
+          card_approval_stage = COALESCE(NULLIF(EXCLUDED.card_approval_stage, 'None'), NULLIF(EXCLUDED.card_approval_stage, ''), physical_application_details.card_approval_stage),
+          digital_card_issued = COALESCE(NULLIF(EXCLUDED.digital_card_issued, 'None'), NULLIF(EXCLUDED.digital_card_issued, ''), physical_application_details.digital_card_issued),
           updated_at = NOW()
       `, [id, bankAppNoVal, vkyc_url || null, userRemarkVal, ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null]);
     } catch (_) {}

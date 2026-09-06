@@ -369,9 +369,15 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         }
         payload = {
           ...payload,
-          bank_remark: bankRemark,
-          final_status: finalStatus,
+          ipa_stage: ipaStage,
+          kyc_stage: kycStage,
+          card_approval_stage: cardApprovalStage,
           digital_card_issued: digitalCardIssued,
+          bank_remark: bankRemark,
+          user_remark: userRemark,
+          notes: userRemark,
+          operational_remarks: userRemark,
+          final_status: finalStatus,
           app_file_generated: appFileGenerated,
           status: targetStatus
         };
