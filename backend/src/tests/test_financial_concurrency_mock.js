@@ -22,6 +22,7 @@ class MockDatabase {
     this.withdrawals = new Map(); // withdrawal_id -> { status, amount, partner_id, utr }
     this.wallets = new Map(); // partner_id -> { available_balance, hold_balance, total_withdrawn }
     this.ledger = [];
+    this.decisions = new Map(); // commission_ledger_id -> decision (RELEASED or REJECTED)
     this.lockedPartners = new Set();
   }
 
@@ -31,6 +32,7 @@ class MockDatabase {
     this.withdrawals.clear();
     this.wallets.clear();
     this.ledger = [];
+    this.decisions.clear();
     this.lockedPartners.clear();
   }
 
@@ -60,6 +62,57 @@ class MockDatabase {
     this.ledger.push(ledgerEntry);
 
     return { alreadyProcessed: false, amount: numAmount, transactionId: ledgerEntry.id };
+  }
+
+  // Atomic Commission Decision (RELEASED vs REJECTED gate)
+  async decideCommissionMock(commissionId, decisionType, partnerId, amountInInr) {
+    if (this.decisions.has(commissionId)) {
+      return { alreadyDecided: true, existingDecision: this.decisions.get(commissionId) };
+    }
+
+    this.decisions.set(commissionId, decisionType);
+
+    if (decisionType === 'RELEASED') {
+      let wallet = this.wallets.get(partnerId) || { available_balance: 0, hold_balance: 0, total_withdrawn: 0 };
+      wallet.available_balance += amountInInr;
+      this.wallets.set(partnerId, wallet);
+
+      const ledgerEntry = {
+        id: this.ledger.length + 1,
+        partner_id: partnerId,
+        transaction_type: 'COMMISSION_RELEASE',
+        credit: amountInInr,
+        debit: 0,
+        reference_number: String(commissionId),
+        status: 'Released'
+      };
+      this.ledger.push(ledgerEntry);
+    } else if (decisionType === 'REJECTED') {
+      const ledgerEntry = {
+        id: this.ledger.length + 1,
+        partner_id: partnerId,
+        transaction_type: 'COMMISSION_REJECTED',
+        credit: 0,
+        debit: 0,
+        reference_number: String(commissionId),
+        status: 'Rejected'
+      };
+      this.ledger.push(ledgerEntry);
+    }
+
+    return { alreadyDecided: false, decision: decisionType };
+  }
+
+  // Atomic Withdrawal Debit Check
+  async debitAvailableMock(partnerId, amountInInr) {
+    let wallet = this.wallets.get(partnerId);
+    if (!wallet || wallet.available_balance < amountInInr) {
+      return { success: false, reason: 'INSUFFICIENT_FUNDS' };
+    }
+    wallet.available_balance -= amountInInr;
+    wallet.hold_balance += amountInInr;
+    this.wallets.set(partnerId, wallet);
+    return { success: true };
   }
 
   // Idempotent Commission Release simulating ON CONFLICT (transaction_type, reference_number)
@@ -418,6 +471,118 @@ async function runMockConcurrencyTests() {
     console.log(green('✅ TEST 6 PASSED: 100 concurrent release calls resulted in EXACTLY 1 wallet credit & 1 ledger entry!\n'));
   } else {
     console.log(red('❌ TEST 6 FAILED!\n'));
+  }
+
+  // --------------------------------------------------------------------------
+  // TEST 7: Concurrent Commission Release vs Reject Race Condition
+  // --------------------------------------------------------------------------
+  console.log(yellow('--- TEST 7: 20 Concurrent Release vs Reject Requests (Single Decision Gate) ---'));
+  db.reset();
+  db.wallets.set(partnerA, { available_balance: 0, hold_balance: 5000, total_withdrawn: 0 });
+
+  const commId = 'COMM_RACE_777';
+  const mixedRequests = [];
+  for (let i = 0; i < 10; i++) {
+    mixedRequests.push(db.decideCommissionMock(commId, 'RELEASED', partnerA, 5000));
+    mixedRequests.push(db.decideCommissionMock(commId, 'REJECTED', partnerA, 5000));
+  }
+
+  const mixedResults = await Promise.all(mixedRequests);
+  const acceptedDecisions = mixedResults.filter(r => !r.alreadyDecided);
+  const rejectedDecisions = mixedResults.filter(r => r.alreadyDecided);
+
+  const finalWallet7 = db.wallets.get(partnerA);
+  const decisionRecorded = db.decisions.get(commId);
+
+  console.log('Accepted Decisions (Must be 1):', acceptedDecisions.length);
+  console.log('Blocked Conflicting Decisions (Must be 19):', rejectedDecisions.length);
+  console.log('Recorded Winning Decision:', decisionRecorded);
+  console.log('Final Balance (5000 if RELEASED, 0 if REJECTED):', finalWallet7.available_balance);
+
+  if (
+    acceptedDecisions.length === 1 &&
+    rejectedDecisions.length === 19 &&
+    ['RELEASED', 'REJECTED'].includes(decisionRecorded) &&
+    (decisionRecorded === 'RELEASED' ? finalWallet7.available_balance === 5000 : finalWallet7.available_balance === 0)
+  ) {
+    console.log(green('✅ TEST 7 PASSED: Mutually exclusive single-decision gate guarantees EXACTLY 1 decision (never both)!\n'));
+  } else {
+    console.log(red('❌ TEST 7 FAILED!\n'));
+  }
+
+  // --------------------------------------------------------------------------
+  // TEST 8: 20 Concurrent Withdrawal Requests from ₹10,000 Balance
+  // --------------------------------------------------------------------------
+  console.log(yellow('--- TEST 8: 20 Concurrent ₹8,000 Withdrawal Requests (Overdraft Safeguard) ---'));
+  db.reset();
+  db.wallets.set(partnerA, { available_balance: 10000, hold_balance: 0, total_withdrawn: 0 });
+
+  const withdrawalRequests = Array.from({ length: 20 }, () =>
+    db.debitAvailableMock(partnerA, 8000)
+  );
+
+  const withdrawalResults = await Promise.all(withdrawalRequests);
+  const successfulWithdrawals = withdrawalResults.filter(r => r.success);
+  const failedWithdrawals = withdrawalResults.filter(r => !r.success);
+
+  const finalWallet8 = db.wallets.get(partnerA);
+
+  console.log('Successful Withdrawals (Must be 1):', successfulWithdrawals.length);
+  console.log('Failed Overdraft Requests (Must be 19):', failedWithdrawals.length);
+  console.log('Final Available Balance (Must be 2000):', finalWallet8.available_balance);
+  console.log('Final Hold Balance (Must be 8000):', finalWallet8.hold_balance);
+
+  if (
+    successfulWithdrawals.length === 1 &&
+    failedWithdrawals.length === 19 &&
+    finalWallet8.available_balance === 2000 &&
+    finalWallet8.hold_balance === 8000
+  ) {
+    console.log(green('✅ TEST 8 PASSED: Only 1 withdrawal consumed funds, leaving ₹2,000 without negative balance!\n'));
+  } else {
+    console.log(red('❌ TEST 8 FAILED!\n'));
+  }
+
+  // --------------------------------------------------------------------------
+  // TEST 9: 20 Concurrent Duplicate payout.reversed Webhooks
+  // --------------------------------------------------------------------------
+  console.log(yellow('--- TEST 9: 20 Concurrent Duplicate payout.reversed Webhooks ---'));
+  db.reset();
+  db.wallets.set(partnerA, { available_balance: 7000, hold_balance: 0, total_withdrawn: 3000 });
+  db.withdrawals.set('w_dup99', { id: 'w_dup99', status: 'transferred', amount: 3000, partner_id: partnerA });
+
+  const rawReversalWebhook = JSON.stringify({
+    event: 'payout.reversed',
+    event_id: 'evt_payout_dup99_rev',
+    payload: { payout: { entity: { id: 'pout_dup99', reference_id: 'w_dup99', amount: 300000 } } }
+  });
+  const sigDupRev = crypto.createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET || 'test_webhook_secret').update(rawReversalWebhook).digest('hex');
+
+  const reversalPromises = Array.from({ length: 20 }, () =>
+    db.handleWebhookMock({ headers: { 'x-razorpay-signature': sigDupRev }, rawBody: rawReversalWebhook })
+  );
+
+  const reversalResults = await Promise.all(reversalPromises);
+  const processedReversals = reversalResults.filter(r => r && r.status === 'reversed');
+  const alreadyProcessedReversals = reversalResults.filter(r => r && r.alreadyProcessed);
+
+  const finalWallet9 = db.wallets.get(partnerA);
+  const reversalEntries = db.ledger.filter(l => l.transaction_type === 'REVERSAL');
+
+  console.log('First Reversal Processed:', processedReversals.length);
+  console.log('Blocked Duplicate Reversals:', alreadyProcessedReversals.length);
+  console.log('Final Available Balance (Must be 10000):', finalWallet9.available_balance);
+  console.log('Final Total Withdrawn (Must be 0):', finalWallet9.total_withdrawn);
+  console.log('Reversal Ledger Entries (Must be 1):', reversalEntries.length);
+
+  if (
+    finalWallet9.available_balance === 10000 &&
+    finalWallet9.total_withdrawn === 0 &&
+    reversalEntries.length === 1
+  ) {
+    console.log(green('✅ TEST 9 PASSED: 20 concurrent duplicate reversal webhooks resulted in EXACTLY 1 wallet credit & 1 reversal entry!\n'));
+  } else {
+    console.log(red('❌ TEST 9 FAILED!\n'));
   }
 
   console.log(green('============================================================='));

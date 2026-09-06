@@ -467,9 +467,12 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
     const txnType = 'COMMISSION_RELEASE';
     const status = 'Released';
     const numAmount = amount;
-    const tdsAmount = 0; // TDS is only deducted at withdrawal time (2%), not at commission release time
-    const balanceBefore = wallet.available_balance || 0;
-    const balanceAfter = wallet.available_balance || 0;
+    const balanceBefore = wallet.available_balance || '0.00';
+    const { rows: [calc] } = await client.query(
+      `SELECT ($1::numeric + $2::numeric)::numeric(15,2) as balance_after`,
+      [balanceBefore, amount]
+    );
+    const balanceAfter = calc ? calc.balance_after : balanceBefore;
 
     let txnIdToReturn = meta.txn_id || null;
 

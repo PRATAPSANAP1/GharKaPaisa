@@ -88,7 +88,7 @@ async function migrateFinancialTables() {
   // 5. Commission Decisions Table (Strict Primary Key Gate for One Final Decision Per Commission)
   await query(`
     CREATE TABLE IF NOT EXISTS commission_decisions (
-      commission_ledger_id UUID PRIMARY KEY REFERENCES wallet_ledger(id) ON DELETE CASCADE,
+      commission_ledger_id UUID PRIMARY KEY REFERENCES wallet_ledger(id) ON DELETE RESTRICT,
       decision VARCHAR(30) NOT NULL CHECK (decision IN ('RELEASED', 'REJECTED')),
       decided_by UUID REFERENCES users(id) ON DELETE SET NULL,
       decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
