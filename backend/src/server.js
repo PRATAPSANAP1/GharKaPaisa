@@ -110,6 +110,17 @@ app.options('*', cors(corsOptions));
 // Global rate limiter
 app.use(globalLimiter);
 
+// Catch malformed URI requests gracefully (e.g., bot/scanner probes with invalid % encoding)
+app.use((req, res, next) => {
+  try {
+    decodeURIComponent(req.path);
+    next();
+  } catch (err) {
+    logger.warn(`Malformed URI request blocked: ${req.method} ${req.originalUrl || req.url}`, { ip: req.ip });
+    return res.status(400).json({ success: false, message: 'Invalid URL encoding in request path' });
+  }
+});
+
 // ── Body Parsing ───────────────────────────────────────────────
 // Capture raw text for JSON payloads to handle malformed inputs
 app.use(express.text({ type: 'application/json', limit: '50kb' }));

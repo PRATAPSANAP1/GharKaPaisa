@@ -9,6 +9,16 @@ const notFoundHandler = (req, res) => {
 // Global error handler
 // eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
+  // Gracefully handle malformed URL encoding from bot/scanner probes
+  if (err instanceof URIError || err.name === 'URIError' || err.message?.includes('Failed to decode param')) {
+    logger.warn(`Malformed URI probe blocked: ${err.message}`, {
+      path: req.originalUrl || req.url,
+      method: req.method,
+      ip: req.ip
+    });
+    return error(res, 'Invalid URL encoding in request', 400);
+  }
+
   logger.error(`${err.name}: ${err.message}`, {
     ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
     path: req.path,
