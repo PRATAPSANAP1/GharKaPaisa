@@ -148,10 +148,22 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   // Normalize bank name string
   const getNormalizedBank = (bankStr) => {
     if (!bankStr || bankStr.toLowerCase() === 'all banks' || bankStr.toLowerCase() === 'all') return 'All Banks';
-    const foundInBanks = bankOptions.find(b => b.toLowerCase() === bankStr.toLowerCase());
+    const cleanStr = decodeURIComponent(bankStr).toLowerCase().replace(/[-_%]/g, ' ').trim();
+    if (cleanStr.includes('tata')) return 'TATA CO-BRAND HDFC BANK';
+
+    const foundInBanks = bankOptions.find(b => {
+      const bNorm = b.toLowerCase().replace(/[-_%]/g, ' ').trim();
+      return bNorm === cleanStr || bNorm.includes(cleanStr) || cleanStr.includes(bNorm);
+    });
     if (foundInBanks) return foundInBanks;
-    const foundInActive = activeBanks.find(b => b.short_code?.toLowerCase() === bankStr.toLowerCase() || b.name?.toLowerCase().includes(bankStr.toLowerCase()));
+
+    const foundInActive = activeBanks.find(b => {
+      const nameNorm = (b.name || '').toLowerCase().replace(/[-_%]/g, ' ').trim();
+      const codeNorm = (b.short_code || '').toLowerCase().replace(/[-_%]/g, ' ').trim();
+      return nameNorm === cleanStr || codeNorm === cleanStr || nameNorm.includes(cleanStr);
+    });
     if (foundInActive) return foundInActive.name || foundInActive.label || foundInActive.short_code;
+
     return bankStr;
   };
 
@@ -504,7 +516,12 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       matchCategory = pCat === activeCategory || pCat.includes(activeCategory);
     }
     const activeBankLower = (activeBank || '').toLowerCase().trim();
+    const isTataFilter = activeBankLower.includes('tata');
+    const isTataProduct = (p.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969') ||
+      (p.bank_name || p.bank_code || p.name || '').toLowerCase().includes('tata');
+
     const matchBank = !activeBank || activeBankLower === 'all banks' || activeBankLower === 'all' ||
+      (isTataFilter && isTataProduct) ||
       (p.bank_code && p.bank_code.toLowerCase() === activeBankLower) ||
       (p.bank_name && p.bank_name.toLowerCase().includes(activeBankLower)) ||
       (p.bank_slug && p.bank_slug.toLowerCase() === activeBankLower) ||

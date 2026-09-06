@@ -7,6 +7,8 @@ import PartnerProducts from '../products/PartnerProducts';
 
 const getBankName = (slug) => {
   if (!slug) return 'Bank Workspace';
+  const cleanSlug = decodeURIComponent(slug).toLowerCase().replace(/[-_%]/g, ' ').trim();
+  if (cleanSlug.includes('tata')) return 'TATA Co-brand HDFC Bank';
   const nameMap = {
     hdfc: 'HDFC Bank',
     sbi: 'State Bank of India',
@@ -25,7 +27,7 @@ const getBankName = (slug) => {
     equitas: 'Equitas Small Finance Bank',
     sbm: 'SBM Bank'
   };
-  return nameMap[slug.toLowerCase()] || slug.toUpperCase().replace(/-/g, ' ');
+  return nameMap[cleanSlug] || cleanSlug.replace(/\b\w/g, c => c.toUpperCase());
 };
 
 export default function PartnerEntityDetail() {
