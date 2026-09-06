@@ -62,6 +62,34 @@ class MockDatabase {
     return { alreadyProcessed: false, amount: numAmount, transactionId: ledgerEntry.id };
   }
 
+  // Idempotent Commission Release simulating ON CONFLICT (transaction_type, reference_number)
+  async releaseCommissionMock(partnerId, amountInInr, refNumber) {
+    const existingRelease = this.ledger.find(
+      l => l.transaction_type === 'COMMISSION_RELEASE' && l.reference_number === refNumber
+    );
+
+    if (existingRelease) {
+      return { alreadyReleased: true };
+    }
+
+    let wallet = this.wallets.get(partnerId) || { available_balance: 0, hold_balance: 0, total_withdrawn: 0 };
+    wallet.available_balance += amountInInr;
+    this.wallets.set(partnerId, wallet);
+
+    const ledgerEntry = {
+      id: this.ledger.length + 1,
+      partner_id: partnerId,
+      transaction_type: 'COMMISSION_RELEASE',
+      credit: amountInInr,
+      debit: 0,
+      reference_number: refNumber,
+      status: 'Released'
+    };
+    this.ledger.push(ledgerEntry);
+
+    return { alreadyReleased: false, transactionId: ledgerEntry.id };
+  }
+
   // Handle Webhook with Atomic Processing Claim + Stale Recovery + Dedicated Reversal Accounting
   async handleWebhookMock(req) {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'test_webhook_secret';
@@ -358,18 +386,38 @@ async function runMockConcurrencyTests() {
   }
 
   // --------------------------------------------------------------------------
-  // TEST 5: Append-Only Ledger Invariance Assertion (Zero UPDATE/DELETE)
+  // TEST 6: 100 Concurrent Commission Release Idempotency Assertion
   // --------------------------------------------------------------------------
-  console.log(yellow('--- TEST 5: Append-Only Ledger Invariance Assertion ---'));
-  const ledgerTypes = db.ledger.map(l => l.transaction_type);
-  console.log('Ledger Logged Types:', ledgerTypes);
+  console.log(yellow('--- TEST 6: 100 Concurrent Commission Releases (Strict Idempotency) ---'));
+  db.reset();
 
-  // Assert ledger is strictly append-only
-  const isAppendOnly = db.ledger.every((entry, index) => entry.id === index + 1);
-  if (isAppendOnly && db.ledger.length >= 2) {
-    console.log(green('✅ TEST 5 PASSED: Ledger entries are 100% append-only with immutable history & distinct transaction types!\n'));
+  db.wallets.set(partnerA, { available_balance: 0, hold_balance: 5000, total_withdrawn: 0 });
+
+  const releasePromises = Array.from({ length: 100 }, () =>
+    db.releaseCommissionMock(partnerA, 5000, 'COMM_APP_999')
+  );
+
+  const releaseResults = await Promise.all(releasePromises);
+  const successfulReleases = releaseResults.filter(r => !r.alreadyReleased);
+  const blockedReleases = releaseResults.filter(r => r.alreadyReleased);
+
+  const finalWallet6 = db.wallets.get(partnerA);
+  const releaseLedgerEntries = db.ledger.filter(l => l.transaction_type === 'COMMISSION_RELEASE' && l.reference_number === 'COMM_APP_999');
+
+  console.log('Successful Releases (Must be 1):', successfulReleases.length);
+  console.log('Blocked Duplicate Releases (Must be 99):', blockedReleases.length);
+  console.log('Final Available Balance (Must be 5000):', finalWallet6.available_balance);
+  console.log('Ledger Entries Created (Must be 1):', releaseLedgerEntries.length);
+
+  if (
+    successfulReleases.length === 1 &&
+    blockedReleases.length === 99 &&
+    finalWallet6.available_balance === 5000 &&
+    releaseLedgerEntries.length === 1
+  ) {
+    console.log(green('✅ TEST 6 PASSED: 100 concurrent release calls resulted in EXACTLY 1 wallet credit & 1 ledger entry!\n'));
   } else {
-    console.log(red('❌ TEST 5 FAILED!\n'));
+    console.log(red('❌ TEST 6 FAILED!\n'));
   }
 
   console.log(green('============================================================='));

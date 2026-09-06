@@ -47,6 +47,37 @@ async function migrateFinancialTables() {
     END $$;
   `);
 
+  // 4. Unique Partial Indexes for Immutable Ledger Idempotency
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_commission_release_reference
+    ON wallet_ledger (transaction_type, reference_number)
+    WHERE transaction_type = 'COMMISSION_RELEASE' AND reference_number IS NOT NULL;
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_commission_rejected_reference
+    ON wallet_ledger (transaction_type, reference_number)
+    WHERE transaction_type = 'COMMISSION_REJECTED' AND reference_number IS NOT NULL;
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_withdrawal_settled_reference
+    ON wallet_ledger (transaction_type, reference_number)
+    WHERE transaction_type = 'WITHDRAWAL_SETTLED' AND reference_number IS NOT NULL;
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_withdrawal_cancelled_reference
+    ON wallet_ledger (transaction_type, reference_number)
+    WHERE transaction_type = 'WITHDRAWAL_CANCELLED' AND reference_number IS NOT NULL;
+  `);
+
+  await query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_reversal_reference
+    ON wallet_ledger (transaction_type, reference_number)
+    WHERE transaction_type = 'REVERSAL' AND reference_number IS NOT NULL;
+  `);
+
   console.log('[MIGRATION COMPLETE] Financial engine tables migrated successfully.');
 }
 

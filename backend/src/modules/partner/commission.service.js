@@ -70,12 +70,17 @@ const releaseCommission = async (applicationId, adminUserId) => {
     if (app.commission_status === 'processed') throw new Error('Commission already processed');
     if (!app.commission_amount || app.commission_amount <= 0) throw new Error('No commission to release');
     
-    // Release the hold from the wallet
-    await releaseHold(app.partner_id, app.commission_amount, {
+    // Release the hold from the wallet with idempotency check
+    const relRes = await releaseHold(app.partner_id, app.commission_amount, {
       reference_type: 'commission',
       reference_id: app.id,
       description: `Commission released for App ${app.app_number}`
     }, client);
+
+    if (relRes && relRes.alreadyReleased) {
+      await client.query('COMMIT');
+      return { alreadyReleased: true };
+    }
     
     // Update application status
     await client.query(`

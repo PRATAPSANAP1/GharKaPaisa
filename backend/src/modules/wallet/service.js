@@ -462,19 +462,26 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
 
     let txnIdToReturn = meta.txn_id || null;
 
-    // Append-Only Financial Event (Zero UPDATE on historical rows)
+    // Append-Only Financial Event with Idempotency Guard (Zero UPDATE on historical rows)
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
       ) VALUES ($1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6)
+      ON CONFLICT (transaction_type, reference_number) WHERE transaction_type = 'COMMISSION_RELEASE' DO NOTHING
       RETURNING id
     `, [
       wallet.id, resolvedPartnerId, numAmount,
       meta.description || (meta.txn_id ? `Commission release for hold txn #${meta.txn_id}` : 'Commission release to available balance'),
       meta.reference_id || (meta.txn_id ? String(meta.txn_id) : null),
-      status,
       meta.processed_by || null
     ]);
+
+    if (!txn) {
+      if (isInternalTxn) await client.query('COMMIT');
+      logger.info(`releaseHold: Commission already released for ref: ${meta.reference_id || meta.txn_id}`);
+      return { alreadyReleased: true, id: meta.txn_id || null, net_amount: numAmount, tds: 0 };
+    }
+
     txnIdToReturn = txn.id;
 
     await syncTransactionTable(client, txn.id, wallet.id, resolvedPartnerId, meta.application_id || null, txnType, numAmount, balanceBefore, balanceAfter, status, meta.description || 'Commission release to available balance', meta.reference_type || 'hold_release', meta.reference_id || null, meta.processed_by || null, {
@@ -1274,6 +1281,7 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
       ) VALUES ($1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6)
+      ON CONFLICT (transaction_type, reference_number) WHERE transaction_type = 'COMMISSION_RELEASE' DO NOTHING
       RETURNING id
     `, [
       wallet ? wallet.id : null, ledgerTxn.partner_id, amount,
@@ -1281,6 +1289,12 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
       transactionId.toString(),
       processedBy
     ]);
+
+    if (!releaseTxn) {
+      await client.query('COMMIT');
+      logger.info(`Commission transaction ${transactionId} already released.`);
+      return { alreadyProcessed: true };
+    }
 
     // 3. Update wallet_transactions
     await syncTransactionTable(
@@ -1360,6 +1374,7 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
       ) VALUES ($1, $2, 'COMMISSION_REJECTED'::ledger_transaction_type, 0, 0, $3, $4, 'Released', $5)
+      ON CONFLICT (transaction_type, reference_number) WHERE transaction_type = 'COMMISSION_REJECTED' DO NOTHING
       RETURNING id
     `, [
       wallet ? wallet.id : null, ledgerTxn.partner_id,
@@ -1367,6 +1382,12 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
       transactionId.toString(),
       processedBy
     ]);
+
+    if (!rejectTxn) {
+      await client.query('COMMIT');
+      logger.info(`Commission transaction ${transactionId} already rejected.`);
+      return { alreadyProcessed: true };
+    }
 
     // 3. Update wallet_transactions
     await syncTransactionTable(
