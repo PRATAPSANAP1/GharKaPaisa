@@ -517,19 +517,14 @@ const requestWithdrawal = async (req, res, next) => {
       VALUES ($1, 'WITHDRAWAL_REQUESTED', $2, $3)
     `, [wr.id, String(remarks || '').trim() || 'Withdrawal requested by partner', req.user?.id || null]);
 
-    // Lock amount into hold_balance (DO NOT deduct available_balance yet)
-    await client.query(`
-      UPDATE partner_wallets 
-      SET hold_balance = COALESCE(hold_balance, 0) + $1,
-          updated_at = NOW() 
-      WHERE partner_id = $2
-    `, [parsedAmount, PartnerId]);
-
     // Insert pending ledger entry for partner tracking
     await client.query(`
       INSERT INTO wallet_ledger (wallet_id, partner_id, transaction_type, debit, balance_after_transaction, description, reference_number, status, created_by)
       VALUES ($1, $2, 'WITHDRAWAL', $3, $4, $5, $6, 'pending', $7)
     `, [wallet.id, PartnerId, parsedAmount, wallet.available_balance, `Withdrawal requested for ₹${parsedAmount} (2% TDS: ₹${tdsAmount}, Net Payable: ₹${netAmount})`, wr.id.toString(), req.user?.id || null]);
+
+    const { syncWalletBalance } = require('./service');
+    await syncWalletBalance(PartnerId, client);
 
     await client.query('COMMIT');
     await logAction(req, 'REQUEST_WITHDRAWAL', wr.id, { partner_id: PartnerId, amount: parsedAmount, tds_rate: tdsRate, tds_amount: tdsAmount, net_amount: netAmount, remarks: String(remarks || '').trim() || null });
@@ -2341,14 +2336,6 @@ const handleRazorpayWebhook = async (req, res) => {
             await query(`UPDATE razorpay_webhook_events SET status = 'PROCESSED', processed_at = NOW() WHERE event_id = $1`, [eventId]);
             return success(res, { received: true, already_processed: true }, 'Withdrawal state invalid for failure handling');
           }
-
-          // Release held balance back ONLY on state transition (Exact Decimal SQL Arithmetic)
-          await client.query(`
-            UPDATE partner_wallets 
-            SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1::numeric),
-                updated_at = NOW() 
-            WHERE partner_id = $2
-          `, [amountInr, partnerId]);
 
           await client.query(`
             INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)

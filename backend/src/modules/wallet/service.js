@@ -99,10 +99,14 @@ const syncWalletBalance = async (partnerId, client) => {
       SELECT 
         COALESCE(SUM(w.amount), 0.00)::numeric as locked_bal
       FROM wallet_withdrawals w
-      LEFT JOIN wallet_ledger l ON l.reference_number = w.id::text AND l.transaction_type = 'WITHDRAWAL'
       WHERE (w.partner_id = $1::uuid OR w.partner_id = $2::uuid) 
         AND w.status IN ('pending', 'approved', 'processing')
-        AND (l.status IS NULL OR l.status NOT IN ('Released', 'Approved'))
+        AND NOT EXISTS (
+          SELECT 1 FROM wallet_ledger wl 
+          WHERE wl.reference_number = w.id::text 
+            AND wl.transaction_type = 'WITHDRAWAL_SETTLED'
+            AND wl.status IN ('Released', 'Approved')
+        )
     )
     UPDATE partner_wallets PW SET
       available_balance = GREATEST(0.00, (CS.completed_credits - DS.completed_debits - LS.locked_bal)::numeric),
@@ -607,14 +611,6 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
         processedBy
       ]);
 
-      // Release hold_balance without altering available_balance (Exact Decimal SQL Arithmetic)
-      await client.query(`
-        UPDATE partner_wallets 
-        SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1::numeric),
-            updated_at = NOW() 
-        WHERE partner_id = $2
-      `, [wr.amount, wr.partner_id]);
-
       await client.query(`
         UPDATE wallet_withdrawals SET
           status = 'rejected',
@@ -647,16 +643,6 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
           withdrawalId.toString(),
           processedBy
         ]);
-
-        // Deduct available_balance and release hold_balance upon successful payout (Exact Decimal SQL)
-        await client.query(`
-          UPDATE partner_wallets 
-          SET available_balance = available_balance - $1::numeric,
-              hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1::numeric),
-              total_withdrawn = COALESCE(total_withdrawn, 0) + $1::numeric,
-              updated_at = NOW() 
-          WHERE partner_id = $2
-        `, [wr.amount, wr.partner_id]);
 
         await client.query(`
           UPDATE wallet_withdrawals SET
@@ -779,16 +765,6 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
             await syncTransactionTable(client, row.id, row.wallet_id, wr.partner_id, null, null, parseFloat(row.debit), null, null, 'completed', `Withdrawal transferred - UTR: ${utr}`, null, null, processedBy);
           }
 
-          // Deduct available_balance and release hold_balance
-          await client.query(`
-            UPDATE partner_wallets 
-            SET available_balance = available_balance - $1,
-                hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
-                total_withdrawn = COALESCE(total_withdrawn, 0) + $1,
-                updated_at = NOW() 
-            WHERE partner_id = $2
-          `, [parseFloat(wr.amount), wr.partner_id]);
-
           await client.query(`
             INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
             VALUES ($1, 'RAZORPAY_PAYOUT_SUCCESS', $2, $3)
@@ -802,14 +778,6 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
           `, [withdrawalId, wr.partner_id, utr || payoutId]);
 
         } else if (status === 'failed') {
-          // Release hold_balance back to available_balance pool
-          await client.query(`
-            UPDATE partner_wallets 
-            SET hold_balance = GREATEST(0, COALESCE(hold_balance, 0) - $1),
-                updated_at = NOW() 
-            WHERE partner_id = $2
-          `, [parseFloat(wr.amount), wr.partner_id]);
-
           await client.query(`
             INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
             VALUES ($1, 'RAZORPAY_PAYOUT_FAILED', $2, $3)
