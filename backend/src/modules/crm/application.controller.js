@@ -755,6 +755,7 @@ const updateStatus = async (req, res, next) => {
     await client.query('BEGIN');
     const { id } = req.params;
     const { status, remarks = 'Status updated by administrative panel' } = req.body;
+    const isRejected = ['rejected', 'decline', 'declined', 'cancelled'].includes(String(status || '').toLowerCase());
 
     let { rows: [app] } = await client.query(
       `SELECT * FROM applications 
