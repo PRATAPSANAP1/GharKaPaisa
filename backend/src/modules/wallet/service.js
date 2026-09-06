@@ -1289,20 +1289,26 @@ const generateWalletStatementData = async (partnerId, fromDate = null, toDate = 
 };
 
 const manualReleaseCommission = async (transactionId, processedBy, remarks = null) => {
+  let partnerUserId = null;
+  let amount = 0;
   const client = await getClient();
   try {
     await client.query('BEGIN');
     
     // 1. Get the ledger transaction
     const { rows: [ledgerTxn] } = await client.query(
-      `SELECT id, partner_id, credit, transaction_type, description, status FROM wallet_ledger WHERE id = $1 FOR UPDATE`,
+      `SELECT l.id, l.partner_id, l.credit, l.transaction_type, l.description, l.status, p.user_id
+       FROM wallet_ledger l
+       LEFT JOIN partner_profiles p ON p.id = l.partner_id
+       WHERE l.id = $1 FOR UPDATE`,
       [transactionId]
     );
     if (!ledgerTxn) throw new Error('Transaction not found in ledger');
     if (ledgerTxn.status === 'Released') throw new Error('Commission already released');
     if (ledgerTxn.status === 'Rejected') throw new Error('Commission already rejected');
 
-    const amount = parseFloat(ledgerTxn.credit || 0);
+    amount = parseFloat(ledgerTxn.credit || 0);
+    partnerUserId = ledgerTxn.user_id;
 
     // 2. Update wallet_ledger
     await client.query(`
@@ -1336,25 +1342,6 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
 
     await client.query('COMMIT');
     logger.info(`Commission transaction ${transactionId} manually released by admin ${processedBy}`);
-
-    // 5. Notify Partner
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [ledgerTxn.partner_id]);
-    if (partner) {
-      try {
-        await notify.commissionCredited(partner.user_id, amount);
-        const { createNotification } = require('../notifications/service.js');
-        await createNotification(
-          partner.user_id,
-          'Commission Released',
-          `₹${amount} has been credited to your wallet.`,
-          'success',
-          '/partner/wallet'
-        );
-      } catch (notifyErr) {
-        logger.error('Release notify failed', { error: notifyErr.message });
-      }
-    }
-    return true;
   } catch (err) {
     await client.query('ROLLBACK');
     logger.error('manualReleaseCommission failed:', err.message);
@@ -1362,16 +1349,38 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
   } finally {
     client.release();
   }
+
+  // 5. Notify Partner
+  if (partnerUserId) {
+    try {
+      await notify.commissionCredited(partnerUserId, amount);
+      const { createNotification } = require('../notifications/service.js');
+      await createNotification(
+        partnerUserId,
+        'Commission Released',
+        `₹${amount} has been credited to your wallet.`,
+        'success',
+        '/partner/wallet'
+      );
+    } catch (notifyErr) {
+      logger.error('Release notify failed', { error: notifyErr.message });
+    }
+  }
+  return true;
 };
 
 const manualRejectCommission = async (transactionId, processedBy, remarks = null) => {
+  let partnerUserId = null;
   const client = await getClient();
   try {
     await client.query('BEGIN');
     
     // 1. Get the ledger transaction
     const { rows: [ledgerTxn] } = await client.query(
-      `SELECT id, partner_id, credit, transaction_type, description, status FROM wallet_ledger WHERE id = $1 FOR UPDATE`,
+      `SELECT l.id, l.partner_id, l.credit, l.transaction_type, l.description, l.status, p.user_id
+       FROM wallet_ledger l
+       LEFT JOIN partner_profiles p ON p.id = l.partner_id
+       WHERE l.id = $1 FOR UPDATE`,
       [transactionId]
     );
     if (!ledgerTxn) throw new Error('Transaction not found in ledger');
@@ -1379,6 +1388,7 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
     if (ledgerTxn.status === 'Rejected') throw new Error('Commission already rejected');
 
     const amount = parseFloat(ledgerTxn.credit || 0);
+    partnerUserId = ledgerTxn.user_id;
 
     // 2. Update wallet_ledger
     await client.query(`
@@ -1412,24 +1422,6 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
 
     await client.query('COMMIT');
     logger.info(`Commission transaction ${transactionId} manually rejected by admin ${processedBy}`);
-
-    // 5. Notify Partner
-    const { rows: [partner] } = await client.query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [ledgerTxn.partner_id]);
-    if (partner) {
-      try {
-        const { createNotification } = require('../notifications/service.js');
-        await createNotification(
-          partner.user_id,
-          'Commission Rejected',
-          `Reason: ${remarks || 'Duplicate Application'}`,
-          'danger',
-          '/partner/wallet'
-        );
-      } catch (notifyErr) {
-        logger.error('Reject notify failed', { error: notifyErr.message });
-      }
-    }
-    return true;
   } catch (err) {
     await client.query('ROLLBACK');
     logger.error('manualRejectCommission failed:', err.message);
@@ -1437,6 +1429,23 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
   } finally {
     client.release();
   }
+
+  // 5. Notify Partner
+  if (partnerUserId) {
+    try {
+      const { createNotification } = require('../notifications/service.js');
+      await createNotification(
+        partnerUserId,
+        'Commission Rejected',
+        `Reason: ${remarks || 'Duplicate Application'}`,
+        'danger',
+        '/partner/wallet'
+      );
+    } catch (notifyErr) {
+      logger.error('Reject notify failed', { error: notifyErr.message });
+    }
+  }
+  return true;
 };
 
 module.exports = {

@@ -161,7 +161,7 @@ const submitApplication = async (req, res, next) => {
     }
 
     // Calculate expected commission
-    const commission = await calculatePartnerCommission(product_id, PartnerId, loan_amount);
+    const commission = await calculatePartnerCommission(product_id, PartnerId, loan_amount, client);
 
     // Generate unique app number
     const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
@@ -364,7 +364,7 @@ const submitPublicApplication = async (req, res, next) => {
     `, [leadNum, partnerId, parentPartnerId, sysUserId, customerId, product_id, cleanName, cleanMobile, cleanCity || null, cleanPan || null, process_type || 'lead_punching']);
     const leadId = newLead.id;
 
-    const commission = await calculatePartnerCommission(product_id, partnerId, salaryVal);
+    const commission = await calculatePartnerCommission(product_id, partnerId, salaryVal, client);
 
     const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
     const date = new Date();
@@ -2575,7 +2575,7 @@ const submitPartnerApplication = async (req, res, next) => {
       product.public_url = empAssignedUrl;
     }
 
-    const commission = empAssignedIncentive !== null ? empAssignedIncentive : await calculatePartnerCommission(product_id, partnerId, monthly_salary || 0);
+    const commission = empAssignedIncentive !== null ? empAssignedIncentive : await calculatePartnerCommission(product_id, partnerId, monthly_salary || 0, client);
 
     const { rows: [{ nextval }] } = await client.query(`SELECT nextval('app_number_seq')`);
     const date = new Date();
@@ -2785,6 +2785,8 @@ const submitPartnerApplication = async (req, res, next) => {
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
+  } finally {
+    client.release();
   }
 };
 

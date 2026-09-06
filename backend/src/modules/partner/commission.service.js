@@ -2,9 +2,13 @@ const { query, getClient } = require('../../config/database');
 const { logAction } = require('../admin/audit.service.js');
 const { creditHold, releaseHold } = require('../wallet/service.js');
 
-const calculatePartnerCommission = async (productId, partnerId, loanAmount) => {
+const calculatePartnerCommission = async (productId, partnerId, loanAmount, client = null) => {
+  const queryFn = (client && typeof client.query === 'function')
+    ? (text, params) => client.query(text, params)
+    : query;
+
   // Check if there is a global commission rule for this product
-  let { rows: [rule] } = await query(`
+  let { rows: [rule] } = await queryFn(`
     SELECT id, partner_percentage, parent_percentage
     FROM commission_rules
     WHERE product_id = $1 AND status = 'active'
@@ -14,14 +18,14 @@ const calculatePartnerCommission = async (productId, partnerId, loanAmount) => {
 
   // Fallback to legacy structure if no rule found
   if (!rule) {
-    let { rows: [structure] } = await query(`
+    let { rows: [structure] } = await queryFn(`
       SELECT commission_type, commission_value 
       FROM commission_structures 
       WHERE product_id = $1 AND partner_id = $2 AND effective_to IS NULL
     `, [productId, partnerId]);
 
     if (!structure) {
-      const { rows: [product] } = await query(`
+      const { rows: [product] } = await queryFn(`
         SELECT commission_type, commission_value FROM products WHERE id = $1
       `, [productId]);
       structure = product;
@@ -29,7 +33,7 @@ const calculatePartnerCommission = async (productId, partnerId, loanAmount) => {
 
     if (!structure) return 0;
 
-    const value = parseFloat(structure.commission_value);
+    const value = parseFloat(structure.commission_value || 0);
     if (structure.commission_type === 'percentage') {
       return parseFloat(((loanAmount * value) / 100).toFixed(2));
     }
@@ -37,15 +41,13 @@ const calculatePartnerCommission = async (productId, partnerId, loanAmount) => {
   }
 
   // If using commission_rules, we calculate the TOTAL commission pool based on the product's base commission structure.
-  // Wait, the user didn't specify base commission in commission_rules, just the split!
-  // So we still need the product's base commission value!
-  const { rows: [product] } = await query(`
+  const { rows: [product] } = await queryFn(`
     SELECT commission_type, commission_value FROM products WHERE id = $1
   `, [productId]);
   
   if (!product) return 0;
 
-  const value = parseFloat(product.commission_value);
+  const value = parseFloat(product.commission_value || 0);
   let totalPool = value;
   if (product.commission_type === 'percentage') {
     totalPool = parseFloat(((loanAmount * value) / 100).toFixed(2));
@@ -80,7 +82,7 @@ const releaseCommission = async (applicationId, adminUserId) => {
       UPDATE applications SET commission_status = 'processed', updated_at = NOW() WHERE id = $1
     `, [app.id]);
     
-    await logAction(adminUserId, 'RELEASE_COMMISSION', app.id, { amount: app.commission_amount });
+    await logAction(adminUserId, 'RELEASE_COMMISSION', app.id, { amount: app.commission_amount }, null, null, client);
     
     await client.query('COMMIT');
     return true;
@@ -166,7 +168,7 @@ const reverseCommission = async (applicationId, adminUserId, reason) => {
       reason,
       amount: app.commission_amount,
       prior_status: app.commission_status,
-    });
+    }, null, null, client);
 
     await client.query('COMMIT');
     return true;
