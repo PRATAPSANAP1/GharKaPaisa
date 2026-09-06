@@ -23,6 +23,24 @@ const migrateAddFunds = async () => {
       );
     `);
 
+    // 1b. Table for Partner/Admin Fund Requests
+    await query(`
+      CREATE TABLE IF NOT EXISTS fund_requests (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        amount DECIMAL(15,2) NOT NULL,
+        payment_method VARCHAR(50) DEFAULT 'bank_transfer',
+        status VARCHAR(50) DEFAULT 'pending',
+        reference_number VARCHAR(100),
+        purpose TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        processed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        processed_at TIMESTAMPTZ,
+        remarks TEXT
+      );
+    `);
+
     // Add indexes for fund requests
     await query(`CREATE INDEX IF NOT EXISTS idx_rfr_requested_by ON razorpay_fund_requests(requested_by);`);
     await query(`CREATE INDEX IF NOT EXISTS idx_rfr_status ON razorpay_fund_requests(status);`);

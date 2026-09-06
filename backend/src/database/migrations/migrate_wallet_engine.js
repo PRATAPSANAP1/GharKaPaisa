@@ -140,6 +140,24 @@ const runWalletEngineMigrations = async () => {
       )
     `);
 
+    // 6. Fund Requests Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS fund_requests (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        partner_id UUID REFERENCES partner_profiles(id) ON DELETE CASCADE,
+        amount DECIMAL(15,2) NOT NULL,
+        payment_method VARCHAR(50) DEFAULT 'bank_transfer',
+        status VARCHAR(50) DEFAULT 'pending',
+        reference_number VARCHAR(100),
+        purpose TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        processed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        processed_at TIMESTAMPTZ,
+        remarks TEXT
+      )
+    `);
+
     logger.info('Wallet Engine database migrations completed successfully.');
   } catch (err) {
     logger.error('Error during wallet engine migrations:', err);

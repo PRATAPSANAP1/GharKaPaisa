@@ -1807,6 +1807,62 @@ const getPendingCommissions = async (req, res, next) => {
   }
 };
 
+// GET /wallet/admin/team-commissions — Team Commission Breakdown & Hierarchy Overview
+const getTeamCommissionsBreakdown = async (req, res, next) => {
+  try {
+    const { rows: teamRows } = await query(`
+      SELECT 
+        wl.id,
+        wl.credit as amount,
+        wl.transaction_type,
+        wl.status,
+        wl.description,
+        wl.created_at,
+        ap_child.partner_code as child_partner_code,
+        TRIM(CONCAT(ap_child.first_name, ' ', ap_child.last_name)) as child_partner_name,
+        ap_parent.partner_code as parent_partner_code,
+        TRIM(CONCAT(ap_parent.first_name, ' ', ap_parent.last_name)) as parent_partner_name,
+        COALESCE(a.app_number, wl.reference_number, 'N/A') as app_number,
+        COALESCE(p.name, 'Credit Product') as product_name
+      FROM wallet_ledger wl
+      JOIN partner_profiles ap_child ON ap_child.id = wl.partner_id
+      LEFT JOIN partner_profiles ap_parent ON ap_parent.id = ap_child.parent_partner_id
+      LEFT JOIN applications a ON a.id = wl.application_id
+      LEFT JOIN products p ON p.id = a.product_id
+      WHERE wl.transaction_type IN ('TEAM_COMMISSION', 'OVERRIDE_COMMISSION')
+         OR ap_child.parent_partner_id IS NOT NULL
+      ORDER BY wl.created_at DESC
+      LIMIT 100
+    `);
+
+    // Hierarchy summary
+    const { rows: [summary] } = await query(`
+      SELECT 
+        COUNT(DISTINCT ap.id) as total_team_members,
+        COUNT(DISTINCT ap.parent_partner_id) as active_parent_partners,
+        COALESCE(SUM(CASE WHEN wl.transaction_type = 'TEAM_COMMISSION' THEN wl.credit ELSE 0 END), 0) as total_team_commission,
+        COALESCE(SUM(CASE WHEN wl.transaction_type = 'OVERRIDE_COMMISSION' THEN wl.credit ELSE 0 END), 0) as total_override_commission
+      FROM partner_profiles ap
+      LEFT JOIN wallet_ledger wl ON wl.partner_id = ap.id
+      WHERE ap.parent_partner_id IS NOT NULL
+    `);
+
+    return success(res, {
+      summary: {
+        total_team_members: parseInt(summary?.total_team_members || 0),
+        active_parent_partners: parseInt(summary?.active_parent_partners || 0),
+        total_team_commission: parseFloat(summary?.total_team_commission || 0),
+        total_override_commission: parseFloat(summary?.total_override_commission || 0),
+        default_direct_share_pct: 90,
+        default_parent_override_pct: 10
+      },
+      transactions: teamRows
+    }, 'Team commission hierarchy breakdown retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /wallet/statement — CSV/Excel Statement Data
 const getWalletStatementController = async (req, res, next) => {
   try {
@@ -1829,7 +1885,7 @@ const getWalletStatementController = async (req, res, next) => {
 // ── Super Admin: Create Razorpay Add Funds Request ───────────────────────
 const createAddFundsRequest = async (req, res, next) => {
   try {
-    const { amount, payment_method = 'bank_transfer', notes } = req.body;
+    const { amount, payment_method = 'bank_transfer', notes, purpose, partner_id } = req.body;
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return error(res, 'Valid fund request amount is required');
@@ -1842,7 +1898,22 @@ const createAddFundsRequest = async (req, res, next) => {
       INSERT INTO razorpay_fund_requests (amount, requested_by, payment_method, status, notes)
       VALUES ($1, $2, $3, 'PENDING', $4)
       RETURNING *
-    `, [parsedAmount, userId, payment_method, notes || 'Super Admin Manual Add Funds']);
+    `, [parsedAmount, userId, payment_method, notes || purpose || 'Super Admin Manual Add Funds']);
+
+    // Ensure partner_id resolution
+    let resolvedPartnerId = partner_id || null;
+    if (!resolvedPartnerId && userId) {
+      const { rows: [pRec] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1 LIMIT 1`, [userId]);
+      if (pRec) resolvedPartnerId = pRec.id;
+    }
+
+    if (resolvedPartnerId) {
+      await query(`
+        INSERT INTO fund_requests (id, partner_id, amount, payment_method, status, purpose, remarks, created_at)
+        VALUES ($1, $2, $3, $4, 'pending', $5, $6, NOW())
+        ON CONFLICT (id) DO NOTHING
+      `, [fundReq.id, resolvedPartnerId, parsedAmount, payment_method, purpose || notes || 'Wallet Topup', notes || null]).catch(() => null);
+    }
 
     const merchantAccount = process.env.RAZORPAY_ACCOUNT_NUMBER || '2333300582845610';
     const businessBankDetails = {
@@ -1874,17 +1945,22 @@ const getAddFundsRequests = async (req, res, next) => {
     let where = 'WHERE 1=1';
     const params = [];
     if (status) {
-      where += ` AND rfr.status = $1`;
+      where += ` AND (LOWER(rfr.status) = LOWER($1) OR LOWER(fr.status) = LOWER($1))`;
       params.push(status);
     }
 
     const [countRes, dataRes] = await Promise.all([
-      query(`SELECT COUNT(*) FROM razorpay_fund_requests rfr ${where}`, params),
       query(`
-        SELECT rfr.*, u.full_name as requested_by_name, u.email as requested_by_email,
+        SELECT COUNT(*) FROM razorpay_fund_requests rfr ${where}
+      `, params),
+      query(`
+        SELECT rfr.*, 
+               COALESCE(u.full_name, CONCAT(ap.first_name, ' ', ap.last_name), 'Partner') as requested_by_name, 
+               u.email as requested_by_email,
                ru.full_name as reconciled_by_name
         FROM razorpay_fund_requests rfr
-        JOIN users u ON u.id = rfr.requested_by
+        LEFT JOIN users u ON u.id = rfr.requested_by
+        LEFT JOIN partner_profiles ap ON ap.user_id = rfr.requested_by
         LEFT JOIN users ru ON ru.id = rfr.reconciled_by
         ${where}
         ORDER BY rfr.created_at DESC
@@ -2232,5 +2308,6 @@ module.exports = {
   getAddFundsRequests,
   submitAddFundsUTR,
   reconcileAddFundsRequest,
-  getPartnersOverview
+  getPartnersOverview,
+  getTeamCommissionsBreakdown
 };

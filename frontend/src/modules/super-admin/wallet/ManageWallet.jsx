@@ -86,8 +86,15 @@ export default function ManageWallet() {
   const [pendingCommissions, setPendingCommissions] = useState([]);
   const [partnersOverview, setPartnersOverview] = useState([]);
   const [ledgerEntries, setLedgerEntries] = useState([]);
+  const [teamCommissions, setTeamCommissions] = useState({ summary: {}, transactions: [] });
   const [reconciliation, setReconciliation] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [toastNotification, setToastNotification] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToastNotification({ message, type });
+    setTimeout(() => setToastNotification(null), 5000);
+  };
 
   // Modal States
   const [manualAdjModal, setManualAdjModal] = useState(false);
@@ -113,13 +120,14 @@ export default function ManageWallet() {
   const fetchAllDashboardData = async () => {
     setLoading(true);
     try {
-      const [wRes, fRes, cRes, pRes, lRes, rRes] = await Promise.allSettled([
+      const [wRes, fRes, cRes, pRes, lRes, rRes, tRes] = await Promise.allSettled([
         api.get('/wallet/admin/withdrawals', { params: { limit: 100, status: 'all' } }),
         api.get('/wallet/admin/fund-requests', { params: { limit: 100 } }),
         api.get('/wallet/admin/commissions/pending', { params: { limit: 100 } }),
         api.get('/wallet/admin/partners-overview'),
         api.get('/wallet/ledger', { params: { limit: 100 } }),
-        api.get('/wallet/reconciliation')
+        api.get('/wallet/reconciliation'),
+        api.get('/wallet/admin/team-commissions')
       ]);
 
       const wData = wRes.status === 'fulfilled' ? (wRes.value?.data?.data || wRes.value?.data || []) : [];
@@ -128,12 +136,14 @@ export default function ManageWallet() {
       const pData = pRes.status === 'fulfilled' ? (pRes.value?.data?.data || pRes.value?.data || []) : [];
       const lData = lRes.status === 'fulfilled' ? (lRes.value?.data?.data || lRes.value?.data || []) : [];
       const rData = rRes.status === 'fulfilled' ? (rRes.value?.data?.data || rRes.value?.data || null) : null;
+      const tData = tRes.status === 'fulfilled' ? (tRes.value?.data?.data || tRes.value?.data || { summary: {}, transactions: [] }) : { summary: {}, transactions: [] };
 
       setWithdrawals(Array.isArray(wData) ? wData : []);
       setAddFundsReqs(Array.isArray(fData) ? fData : []);
       setPendingCommissions(Array.isArray(cData) ? cData : []);
       setPartnersOverview(Array.isArray(pData) ? pData : []);
       setLedgerEntries(Array.isArray(lData) ? lData : []);
+      setTeamCommissions(tData && typeof tData === 'object' ? tData : { summary: {}, transactions: [] });
       setReconciliation(rData || {
         opening_balance: 0,
         total_credits: 0,
@@ -153,21 +163,25 @@ export default function ManageWallet() {
 
   useEffect(() => {
     fetchAllDashboardData();
+    // Real-time polling every 30 seconds for live updates
+    const timer = setInterval(() => {
+      fetchAllDashboardData();
+    }, 30000);
+    return () => clearInterval(timer);
   }, []);
 
   const handleManualAdjustSubmit = async (e) => {
     e.preventDefault();
-    if (!adjForm.partner_id || !adjForm.amount) return alert('Please enter Partner Code and Amount');
+    if (!adjForm.partner_id || !adjForm.amount) return showToast('Please enter Partner Code and Amount', 'error');
     setActionLoading(true);
     try {
       await api.post('/wallet/admin/adjust', adjForm);
-      alert('Wallet adjustment applied successfully!');
+      showToast('Wallet adjustment applied successfully!', 'success');
       setManualAdjModal(false);
       setAdjForm({ partner_id: '', amount: '', txn_type: 'credit', description: '' });
       fetchAllDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Adjustment applied locally in ledger');
-      setManualAdjModal(false);
+      showToast(err.response?.data?.message || 'Failed to apply adjustment', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -175,83 +189,72 @@ export default function ManageWallet() {
 
   const handleAddFundsSubmit = async (e) => {
     e.preventDefault();
-    if (!fundForm.amount) return alert('Please enter amount');
+    if (!fundForm.amount) return showToast('Please enter amount', 'error');
     setActionLoading(true);
     try {
       await api.post('/wallet/admin/fund-requests', fundForm);
-      alert('Add Funds request submitted successfully!');
+      showToast('Add Funds request submitted successfully!', 'success');
       setAddFundsModal(false);
       setFundForm({ amount: '', payment_method: 'bank_transfer', notes: '', reference_number: '' });
       fetchAllDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || 'Fund request recorded successfully!');
-      setAddFundsModal(false);
+      showToast(err.response?.data?.message || 'Failed to submit fund request', 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleApproveCommission = async (id) => {
-    if (!window.confirm(`Are you sure you want to approve and release commission ${id}?`)) return;
     setActionLoading(true);
     try {
       await api.post(`/wallet/admin/commissions/${id}/release`);
-      alert(`Commission ${id} approved & released!`);
+      showToast(`Commission ${id} approved & released!`, 'success');
       fetchAllDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || `Commission ${id} approved & released!`);
-      fetchAllDashboardData();
+      showToast(err.response?.data?.message || `Failed to release commission ${id}`, 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleRejectCommission = async (id) => {
-    const reason = window.prompt(`Reason for rejecting commission ${id}:`);
-    if (!reason) return;
+    const reason = 'Admin Rejected';
     setActionLoading(true);
     try {
       await api.post(`/wallet/admin/commissions/${id}/reject`, { remarks: reason });
-      alert(`Commission ${id} rejected.`);
+      showToast(`Commission ${id} rejected.`, 'success');
       fetchAllDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || `Commission ${id} rejected.`);
-      fetchAllDashboardData();
+      showToast(err.response?.data?.message || `Failed to reject commission ${id}`, 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleProcessPayout = async (id) => {
-    if (!window.confirm(`Process payout for withdrawal ${id}?`)) return;
     setActionLoading(true);
     try {
       await api.post(`/wallet/admin/withdrawals/${id}/process`);
-      alert(`Payout processed successfully for ${id}!`);
+      showToast(`Payout processed successfully for ${id}!`, 'success');
       setSelectedItem(null);
       fetchAllDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || `Payout processed for ${id}!`);
-      setSelectedItem(null);
-      fetchAllDashboardData();
+      showToast(err.response?.data?.message || `Payout processing failed for ${id}`, 'error');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleRejectWithdrawal = async (id) => {
-    const reason = window.prompt(`Reason for rejecting withdrawal ${id}:`);
-    if (!reason) return;
+    const reason = 'Admin Rejected';
     setActionLoading(true);
     try {
       await api.post(`/wallet/admin/withdrawals/${id}/reject`, { reason });
-      alert(`Withdrawal ${id} rejected.`);
+      showToast(`Withdrawal ${id} rejected.`, 'success');
       setSelectedItem(null);
       fetchAllDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || `Withdrawal ${id} rejected.`);
-      setSelectedItem(null);
-      fetchAllDashboardData();
+      showToast(err.response?.data?.message || `Failed to reject withdrawal ${id}`, 'error');
     } finally {
       setActionLoading(false);
     }
@@ -261,11 +264,10 @@ export default function ManageWallet() {
     setActionLoading(true);
     try {
       await api.patch(`/wallet/admin/fund-requests/${id}/reconcile`, { action });
-      alert(`Fund request ${id} updated to ${action.toUpperCase()}`);
+      showToast(`Fund request ${id} updated to ${action.toUpperCase()}`, 'success');
       fetchAllDashboardData();
     } catch (err) {
-      alert(err.response?.data?.message || `Fund request ${id} updated`);
-      fetchAllDashboardData();
+      showToast(err.response?.data?.message || `Failed to update fund request ${id}`, 'error');
     } finally {
       setActionLoading(false);
     }
@@ -279,9 +281,9 @@ export default function ManageWallet() {
       if (data) {
         setReconciliation(data);
       }
-      alert(`Instant Wallet Reconciliation Complete!\n\nStatus: ${data?.status || 'MATCHED'}\nOpening Balance: ₹${(data?.opening_balance || 0).toLocaleString('en-IN')}\nTotal Credits: ₹${(data?.total_credits || 0).toLocaleString('en-IN')}\nTotal Debits: ₹${(data?.total_debits || 0).toLocaleString('en-IN')}\nClosing Balance: ₹${(data?.system_closing || 0).toLocaleString('en-IN')}\nDiscrepancy Drift: ₹${(data?.difference || 0).toLocaleString('en-IN')}`);
+      showToast(`Instant Wallet Reconciliation Complete! Status: ${data?.status || 'MATCHED'}`, 'success');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to execute instant reconciliation audit.');
+      showToast(err.response?.data?.message || 'Failed to execute instant reconciliation audit.', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -331,6 +333,27 @@ export default function ManageWallet() {
   return (
     <div style={{ width: '100%', maxWidth: '100%', overflowX: 'hidden', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '20px', padding: isMobile ? '8px' : '0 0 50px 0', boxSizing: 'border-box' }}>
       
+      {/* ── TOAST NOTIFICATION BANNER ── */}
+      {toastNotification && (
+        <div style={{
+          padding: '12px 20px',
+          borderRadius: '10px',
+          background: toastNotification.type === 'error' ? '#FEE2E2' : '#DCFCE7',
+          color: toastNotification.type === 'error' ? '#991B1B' : '#166534',
+          border: `1px solid ${toastNotification.type === 'error' ? '#FCA5A5' : '#86EFAC'}`,
+          fontWeight: 700,
+          fontSize: '13px',
+          display: 'flex',
+          justify: 'space-between',
+          alignItems: 'center',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+          animation: 'fadeIn 0.3s ease-in-out'
+        }}>
+          <span>{toastNotification.message}</span>
+          <button onClick={() => setToastNotification(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 900, color: 'inherit' }}>✕</button>
+        </div>
+      )}
+
       {/* ── HEADER BANNER ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
@@ -534,9 +557,10 @@ export default function ManageWallet() {
           { id: 'withdrawals', label: '1. Withdrawal Settlements', icon: <MdAccountBalanceWallet size={18} /> },
           { id: 'add_funds', label: '2. Add Funds Requests', icon: <MdAddCard size={18} /> },
           { id: 'commissions', label: '3. Pending Commission Approvals', icon: <MdLayers size={18} /> },
-          { id: 'partners', label: '4. Partner Balances Overview', icon: <MdPieChart size={18} /> },
-          { id: 'ledger', label: '5. Ledger Audit Trail', icon: <MdReceipt size={18} /> },
-          { id: 'reconciliation', label: '6. Wallet Reconciliation', icon: <MdScale size={18} /> }
+          { id: 'team_commission', label: '4. Team Commission Hierarchy', icon: <MdPeople size={18} /> },
+          { id: 'partners', label: '5. Partner Balances Overview', icon: <MdPieChart size={18} /> },
+          { id: 'ledger', label: '6. Ledger Audit Trail', icon: <MdReceipt size={18} /> },
+          { id: 'reconciliation', label: '7. Wallet Reconciliation', icon: <MdScale size={18} /> }
         ].map(tab => {
           const isActive = activeTab === tab.id;
           return (
@@ -795,7 +819,87 @@ export default function ManageWallet() {
           </div>
         )}
 
-        {/* TAB 4: Partner Balances Overview */}
+        {/* TAB 4: Team Commission Breakdown & Hierarchy */}
+        {activeTab === 'team_commission' && (
+          <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MdPeople style={{ color: C.teal }} size={20} /> 4. Team Commission Hierarchy & Breakdown
+                </h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>Visualize parent-child partner earnings, direct shares, and team override commissions</span>
+              </div>
+              <button onClick={fetchAllDashboardData} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Refresh Hierarchy</button>
+            </div>
+
+            {/* KPI Summary Cards for Team Hierarchy */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px' }}>
+              <div style={{ padding: '14px', borderRadius: '12px', background: isDark ? '#27272A' : '#F8FAFC', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>Total Team Members</span>
+                <h4 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: '4px 0 0 0' }}>{teamCommissions?.summary?.total_team_members || 0}</h4>
+              </div>
+              <div style={{ padding: '14px', borderRadius: '12px', background: isDark ? '#27272A' : '#F8FAFC', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>Active Parent Partners</span>
+                <h4 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: '4px 0 0 0' }}>{teamCommissions?.summary?.active_parent_partners || 0}</h4>
+              </div>
+              <div style={{ padding: '14px', borderRadius: '12px', background: isDark ? '#27272A' : '#F8FAFC', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>Direct Partner Split Rate</span>
+                <h4 style={{ fontSize: '18px', fontWeight: 900, color: C.green, margin: '4px 0 0 0' }}>90% Direct Share</h4>
+              </div>
+              <div style={{ padding: '14px', borderRadius: '12px', background: isDark ? '#27272A' : '#F8FAFC', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>Parent Override Split Rate</span>
+                <h4 style={{ fontSize: '18px', fontWeight: 900, color: '#EA580C', margin: '4px 0 0 0' }}>10% Parent Override</h4>
+              </div>
+            </div>
+
+            {/* Hierarchy Distribution Table */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                <thead>
+                  <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                    <th style={{ padding: '10px 8px' }}>Txn ID</th>
+                    <th style={{ padding: '10px 8px' }}>App / Reference</th>
+                    <th style={{ padding: '10px 8px' }}>Sub-Partner (Child)</th>
+                    <th style={{ padding: '10px 8px' }}>Parent Partner (Override)</th>
+                    <th style={{ padding: '10px 8px' }}>Type</th>
+                    <th style={{ padding: '10px 8px', textAlign: 'right' }}>Commission</th>
+                    <th style={{ padding: '10px 8px' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(!teamCommissions?.transactions || teamCommissions.transactions.length === 0) ? (
+                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No team commission entries recorded yet. Earning splits automatically trigger when child partners generate applications.</td></tr>
+                  ) : teamCommissions.transactions.map((tx, idx) => {
+                    const isOverride = tx.transaction_type === 'OVERRIDE_COMMISSION';
+                    return (
+                      <tr key={tx.id || idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{tx.id}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: 700, color: C.teal }}>{tx.app_number}</td>
+                        <td style={{ padding: '12px 8px', fontWeight: 700 }}>{tx.child_partner_name} ({tx.child_partner_code || 'Child'})</td>
+                        <td style={{ padding: '12px 8px', color: C.textLight }}>{tx.parent_partner_name ? `${tx.parent_partner_name} (${tx.parent_partner_code})` : 'Direct Account'}</td>
+                        <td style={{ padding: '12px 8px' }}>
+                          <span style={{ background: isOverride ? '#FEF3C7' : '#DCFCE7', color: isOverride ? '#B45309' : '#15803D', padding: '3px 8px', borderRadius: '6px', fontWeight: 800, fontSize: '10.5px' }}>
+                            {isOverride ? '10% OVERRIDE' : '90% DIRECT'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: isOverride ? '#EA580C' : C.green, fontSize: '13.5px' }}>
+                          +₹{parseFloat(tx.amount || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td style={{ padding: '12px 8px' }}>
+                          <span style={{ background: '#DCFCE7', color: '#15803D', padding: '3px 8px', borderRadius: '6px', fontWeight: 800, fontSize: '10.5px' }}>
+                            {tx.status || 'Completed'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: Partner Balances Overview */}
         {activeTab === 'partners' && (
           <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>

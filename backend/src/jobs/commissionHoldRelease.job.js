@@ -22,8 +22,9 @@ const processCommissionHoldReleases = async () => {
         AND l.credit > 0
         AND (a.id IS NULL OR a.status::text NOT IN ('rejected', 'cancelled'))
         AND (
-          (COALESCE(p.category::text, 'credit_card') IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') AND l.created_at <= NOW() - INTERVAL '7 days')
-          OR (COALESCE(p.category::text, 'credit_card') NOT IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') AND l.created_at <= NOW() - INTERVAL '30 days')
+          (p.commission_release_days IS NOT NULL AND l.created_at <= NOW() - (p.commission_release_days || ' days')::interval)
+          OR (p.commission_release_days IS NULL AND COALESCE(p.category::text, 'credit_card') IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') AND l.created_at <= NOW() - INTERVAL '7 days')
+          OR (p.commission_release_days IS NULL AND COALESCE(p.category::text, 'credit_card') NOT IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') AND l.created_at <= NOW() - INTERVAL '30 days')
         )
     `);
 
