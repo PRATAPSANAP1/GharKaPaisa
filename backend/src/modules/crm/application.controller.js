@@ -1281,11 +1281,26 @@ const manualCommission = async (req, res, next) => {
   }
 };
 
-// GET /applications — Filtered list
-const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
+let stageColumnsEnsured = false;
+const ensureApplicationStageColumns = async () => {
+  if (stageColumnsEnsured) return;
+  try {
+    await query(`
+      ALTER TABLE applications 
+      ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100)
+    `);
+    stageColumnsEnsured = true;
+  } catch (err) {
+    // Ignore error if schema alter is locked or non-fatal
+  }
+};
 
 const listApplications = async (req, res, next) => {
   try {
+    await ensureApplicationStageColumns();
     let { page, limit, offset } = getPaginationParams(req.query);
     limit = Math.min(Math.max(parseInt(limit) || 10, 1), 50000);
     offset = (Math.max(parseInt(page) || 1, 1) - 1) * limit;

@@ -2,6 +2,17 @@ const { query } = require('../config/database');
 const { releaseHold } = require('../modules/wallet/service');
 const logger = require('../config/logger');
 
+let commissionReleaseDaysEnsured = false;
+const ensureCommissionReleaseDaysColumn = async () => {
+  if (commissionReleaseDaysEnsured) return;
+  try {
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS commission_release_days INT DEFAULT 7`);
+    commissionReleaseDaysEnsured = true;
+  } catch (err) {
+    // Ignore error if schema alter is non-fatal
+  }
+};
+
 /**
  * Job to automatically release matured commission holds.
  * Rules:
@@ -11,6 +22,7 @@ const logger = require('../config/logger');
 const processCommissionHoldReleases = async () => {
   logger.info('Running Commission Hold Release Job...');
   try {
+    await ensureCommissionReleaseDaysColumn();
     // Find all wallet_ledger entries pending approval older than 7 days
     const { rows: pendingHolds } = await query(`
       SELECT l.id, l.partner_id, l.application_id, l.credit, l.transaction_type, l.created_at,

@@ -935,6 +935,7 @@ const getWalletSummary = async (partnerId) => {
 // Release matured commissions scheduler check (Product-based dynamic hold period)
 const releaseMaturedCommissions = async () => {
   try {
+    await query(`ALTER TABLE products ADD COLUMN IF NOT EXISTS commission_release_days INT DEFAULT 7`);
     const { rows } = await query(`
       SELECT l.id, l.wallet_id, l.credit as amount, l.partner_id
       FROM wallet_ledger l
