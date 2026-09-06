@@ -1281,6 +1281,8 @@ const manualCommission = async (req, res, next) => {
   }
 };
 
+const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
+
 let stageColumnsEnsured = false;
 const ensureApplicationStageColumns = async () => {
   if (stageColumnsEnsured) return;
