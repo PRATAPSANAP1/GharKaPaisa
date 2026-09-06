@@ -1285,7 +1285,71 @@ export default function PartnerApplications() {
                 {/* Section 4: Operational Information & Stage Tracking */}
                 <div style={{ background: isDark ? '#1a2234' : '#eff6ff', borderRadius: 14, padding: 14, border: '1px solid #3b82f640' }}>
                   <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operational & Stage Tracking Information</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
+                  {(() => {
+                    const bankNameCombined = `${viewAppDetails?.bank_name || viewApp?.bank_name || ''} ${viewAppDetails?.product_name || viewApp?.product_name || ''}`.toUpperCase();
+                    const isTataHdfc = bankNameCombined.includes('TATA');
+
+                    const rawNum = viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number || '';
+                    const sysNum = viewAppDetails?.app_number || viewApp?.app_number || '';
+                    const displayNum = (!rawNum || rawNum === sysNum || rawNum.toUpperCase() === 'NA' || rawNum.toUpperCase() === 'N/A' || rawNum === 'Pending') ? 'NA' : rawNum;
+                    const hasValidNum = displayNum !== 'NA';
+
+                    if (isTataHdfc) {
+                      return (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>1. IPA STAGE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.ipa_stage || viewAppDetails?.physical_details?.ipa_stage || viewApp?.ipa_stage || 'None'}</div>
+                          </div>
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>2. KYC STAGE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.kyc_stage || viewAppDetails?.physical_details?.kyc_stage || viewApp?.kyc_stage || 'None'}</div>
+                          </div>
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>3. BANK APPLICATION NUMBER</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                              <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>{displayNum}</div>
+                              {hasValidNum && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(displayNum);
+                                    alert(`📋 Copied Bank Application Number: ${displayNum}`);
+                                  }}
+                                  title="Copy Bank Application Number"
+                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb', padding: '2px 4px', display: 'inline-flex', alignItems: 'center' }}
+                                >
+                                  <Copy size={13} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>4. VKYC LINK</div>
+                            {viewAppDetails?.vkyc_url ? (
+                              <a href={viewAppDetails.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700, fontSize: 12, wordBreak: 'break-all' }}>
+                                {viewAppDetails.vkyc_url}
+                              </a>
+                            ) : (
+                              <div style={{ fontWeight: 700, color: textMuted }}>None</div>
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>5. CARD APPROVAL STAGE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.card_approval_stage || viewAppDetails?.card_approval_status || viewAppDetails?.physical_details?.card_approval_stage || viewApp?.card_approval_stage || 'None'}</div>
+                          </div>
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>USER REMARK (Employee / Partner Remark)</div>
+                            <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                              {viewAppDetails?.user_remark || viewAppDetails?.notes || viewAppDetails?.operational_remarks || viewAppDetails?.remarks || 'None'}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                     <div>
                       <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>APPCODE STATUS</div>
                       <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.appcode_status || viewAppDetails?.physical_details?.appcode_status || 'N/A'}</div>
@@ -1427,6 +1491,8 @@ export default function PartnerApplications() {
                       </button>
                     </div>
                   </div>
+                  );
+                  })()}
                 </div>
 
               </div>
