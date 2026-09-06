@@ -1295,15 +1295,18 @@ export default function PartnerApplications() {
                     const hasValidNum = displayNum !== 'NA';
 
                     if (isTataHdfc) {
+                      const vkycLink = viewAppDetails?.vkyc_url || viewAppDetails?.physical_details?.vkyc_url || viewApp?.vkyc_url || viewApp?.physical_details?.vkyc_url;
+                      const userRemarkVal = viewAppDetails?.user_remark || viewAppDetails?.notes || viewAppDetails?.physical_details?.user_remark || viewAppDetails?.physical_details?.notes || viewAppDetails?.operational_remarks || viewAppDetails?.remarks || viewApp?.user_remark || viewApp?.notes || viewApp?.physical_details?.user_remark || 'None';
+
                       return (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                           <div>
                             <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>1. IPA STAGE</div>
-                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.ipa_stage || viewAppDetails?.physical_details?.ipa_stage || viewApp?.ipa_stage || 'None'}</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.ipa_stage || viewAppDetails?.physical_details?.ipa_stage || viewApp?.ipa_stage || viewApp?.physical_details?.ipa_stage || 'None'}</div>
                           </div>
                           <div>
                             <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>2. KYC STAGE</div>
-                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.kyc_stage || viewAppDetails?.physical_details?.kyc_stage || viewApp?.kyc_stage || 'None'}</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.kyc_stage || viewAppDetails?.physical_details?.kyc_stage || viewApp?.kyc_stage || viewApp?.physical_details?.kyc_stage || 'None'}</div>
                           </div>
                           <div>
                             <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>3. BANK APPLICATION NUMBER</div>
@@ -1326,9 +1329,9 @@ export default function PartnerApplications() {
                           </div>
                           <div>
                             <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>4. VKYC LINK</div>
-                            {viewAppDetails?.vkyc_url ? (
-                              <a href={viewAppDetails.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700, fontSize: 12, wordBreak: 'break-all' }}>
-                                {viewAppDetails.vkyc_url}
+                            {vkycLink ? (
+                              <a href={vkycLink} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700, fontSize: 12, wordBreak: 'break-all' }}>
+                                {vkycLink}
                               </a>
                             ) : (
                               <div style={{ fontWeight: 700, color: textMuted }}>None</div>
@@ -1336,12 +1339,12 @@ export default function PartnerApplications() {
                           </div>
                           <div>
                             <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>5. CARD APPROVAL STAGE</div>
-                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.card_approval_stage || viewAppDetails?.card_approval_status || viewAppDetails?.physical_details?.card_approval_stage || viewApp?.card_approval_stage || 'None'}</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.card_approval_stage || viewAppDetails?.card_approval_status || viewAppDetails?.physical_details?.card_approval_stage || viewApp?.card_approval_stage || viewApp?.card_approval_status || viewApp?.physical_details?.card_approval_stage || 'None'}</div>
                           </div>
                           <div style={{ gridColumn: 'span 2' }}>
                             <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>USER REMARK (Employee / Partner Remark)</div>
                             <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
-                              {viewAppDetails?.user_remark || viewAppDetails?.notes || viewAppDetails?.operational_remarks || viewAppDetails?.remarks || 'None'}
+                              {userRemarkVal}
                             </div>
                           </div>
                         </div>

@@ -1845,6 +1845,12 @@ const getApplication = async (req, res, next) => {
       if (!isClean(app.iqa_stage) && pd.iqa_stage) app.iqa_stage = pd.iqa_stage;
       if (!isClean(app.dispatch_status) && pd.dispatch_status) app.dispatch_status = pd.dispatch_status;
       if (!isClean(app.final_status) && pd.final_status) app.final_status = pd.final_status;
+      if (!isClean(app.ipa_stage) && pd.ipa_stage) app.ipa_stage = pd.ipa_stage;
+      if (!isClean(app.kyc_stage) && pd.kyc_stage) app.kyc_stage = pd.kyc_stage;
+      if (!isClean(app.card_approval_stage) && pd.card_approval_stage) app.card_approval_stage = pd.card_approval_stage;
+      if (!isClean(app.vkyc_url) && pd.vkyc_url) app.vkyc_url = pd.vkyc_url;
+      if (!isClean(app.user_remark) && pd.user_remark) app.user_remark = pd.user_remark;
+      if (!isClean(app.notes) && pd.user_remark) app.notes = pd.user_remark;
       if (!app.final_status && app.status) app.final_status = app.status;
       if (!app.bank_ref_number && pd.bank_application_number) app.bank_ref_number = pd.bank_application_number;
       if (!app.bank_application_number && pd.bank_application_number) app.bank_application_number = pd.bank_application_number;
