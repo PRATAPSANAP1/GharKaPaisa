@@ -1305,9 +1305,10 @@ export default function PartnerApplications() {
                       else if (lowerSt.includes('decline') || lowerSt.includes('reject')) statusColor = '#ef4444';
                       else if (lowerSt.includes('etq') || lowerSt.includes('error') || lowerSt.includes('pending')) statusColor = '#f59e0b';
 
-                      const bankRemarkVal = viewAppDetails?.bank_remark || viewAppDetails?.physical_details?.bank_remark || '';
+                      const bankRemarkVal = viewAppDetails?.bank_remark || viewAppDetails?.physical_details?.bank_remark || 'None';
                       const approvedAmtVal = viewAppDetails?.approved_amount || viewAppDetails?.credit_limit || viewApp?.approved_amount || '';
                       const declineReasonVal = viewAppDetails?.decline_reason || viewAppDetails?.rejection_reason || '';
+                      const digitalCardVal = viewAppDetails?.digital_card_issued || viewAppDetails?.physical_details?.digital_card_issued || viewApp?.digital_card_issued || viewApp?.physical_details?.digital_card_issued || 'None';
 
                       return (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
@@ -1353,10 +1354,14 @@ export default function PartnerApplications() {
                             <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.card_approval_stage || viewAppDetails?.card_approval_status || viewAppDetails?.physical_details?.card_approval_stage || viewApp?.card_approval_stage || viewApp?.card_approval_status || viewApp?.physical_details?.card_approval_stage || 'None'}</div>
                           </div>
                           <div>
-                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>1. FINAL CARD APPROVE</div>
                             <div style={{ fontWeight: 800, color: statusColor, textTransform: 'capitalize' }}>
                               {String(finalSt).replace(/_/g, ' ')}
                             </div>
+                          </div>
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>2. DIGITAL CARD ISSUED</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{digitalCardVal}</div>
                           </div>
                           {approvedAmtVal && (
                             <div>
@@ -1372,20 +1377,16 @@ export default function PartnerApplications() {
                               </div>
                             </div>
                           )}
-                          {userRemarkVal && (
-                            <div style={{ gridColumn: 'span 2' }}>
-                              <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>USER REMARK (Employee / Partner Remark)</div>
-                              <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
-                                {userRemarkVal}
-                              </div>
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>USER REMARK (Employee / Partner Remark)</div>
+                            <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                              {userRemarkVal}
                             </div>
-                          )}
-                          {bankRemarkVal && (
-                            <div style={{ gridColumn: 'span 2' }}>
-                              <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>
-                              <div style={{ fontWeight: 700, color: textPrimary, marginTop: 4 }}>{bankRemarkVal}</div>
-                            </div>
-                          )}
+                          </div>
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>4. BANK REMARK</div>
+                            <div style={{ fontWeight: 700, color: textPrimary, marginTop: 4 }}>{bankRemarkVal}</div>
+                          </div>
                           <div style={{ gridColumn: 'span 2', display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap', borderTop: `1px solid ${border}`, paddingTop: 10 }}>
                             <button
                               type="button"

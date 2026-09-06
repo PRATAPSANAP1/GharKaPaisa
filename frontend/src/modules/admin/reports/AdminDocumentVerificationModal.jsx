@@ -343,6 +343,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           ipa_stage: ipaStage || 'None',
           kyc_stage: kycStage || 'None',
           card_approval_stage: cardApprovalStage || 'None',
+          digital_card_issued: digitalCardIssued || 'None',
           appcode_status: appcodeStatus || 'None',
           soft_approval_status: softApprovalStatus || 'None',
           iqa_stage: iqaStage || 'None',
@@ -950,6 +951,25 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       <option value="decline">decline</option>
                       {cardApprovalStage && !['None', 'instant approved', 'in process', 'decline', ''].includes(cardApprovalStage) && (
                         <option value={cardApprovalStage}>{cardApprovalStage}</option>
+                      )}
+                    </select>
+                  </div>
+
+                  {/* Digital Card Issued */}
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DIGITAL CARD ISSUED</label>
+                    <select
+                      disabled={!canEditRemark}
+                      value={digitalCardIssued || 'None'}
+                      onChange={(e) => setDigitalCardIssued(e.target.value)}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                    >
+                      <option value="None">None</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                      <option value="Pending">Pending</option>
+                      {digitalCardIssued && !['None', 'Yes', 'No', 'Pending', ''].includes(digitalCardIssued) && (
+                        <option value={digitalCardIssued}>{digitalCardIssued}</option>
                       )}
                     </select>
                   </div>

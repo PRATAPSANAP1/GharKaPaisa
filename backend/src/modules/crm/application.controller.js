@@ -1848,6 +1848,7 @@ const getApplication = async (req, res, next) => {
       if (!isClean(app.ipa_stage) && pd.ipa_stage) app.ipa_stage = pd.ipa_stage;
       if (!isClean(app.kyc_stage) && pd.kyc_stage) app.kyc_stage = pd.kyc_stage;
       if (!isClean(app.card_approval_stage) && pd.card_approval_stage) app.card_approval_stage = pd.card_approval_stage;
+      if (!isClean(app.digital_card_issued) && pd.digital_card_issued) app.digital_card_issued = pd.digital_card_issued;
       if (!isClean(app.vkyc_url) && pd.vkyc_url) app.vkyc_url = pd.vkyc_url;
       if (!isClean(app.user_remark) && pd.user_remark) app.user_remark = pd.user_remark;
       if (!isClean(app.notes) && pd.user_remark) app.notes = pd.user_remark;
