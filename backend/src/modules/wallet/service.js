@@ -66,7 +66,7 @@ const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, ap
 
 // Sync Wallet Balance Cache in partner_wallets table
 const syncWalletBalance = async (partnerId, client) => {
-  const { rows: [p] } = await client.query(`SELECT id, user_id FROM partner_profiles WHERE id = $1::uuid OR user_id = $1::uuid`, [partnerId]);
+  const { rows: [p] } = await client.query(`SELECT id, user_id FROM partner_profiles WHERE id::text = $1::text OR user_id::text = $1::text`, [partnerId]);
   const pId = p ? p.id : partnerId;
   const uId = p ? p.user_id : partnerId;
 
@@ -169,7 +169,7 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
     // Resolve partner profile ID in case user_id was passed
     let resolvedPartnerId = partnerId;
     const { rows: [p] } = await client.query(
-      `SELECT id FROM partner_profiles WHERE id = $1 OR user_id = $1`,
+      `SELECT id FROM partner_profiles WHERE id::text = $1::text OR user_id::text = $1::text`,
       [partnerId]
     );
     if (p) {
@@ -388,7 +388,7 @@ const creditCommission = async (partnerId, applicationId, amount, description, u
     
     // Check if team member has custom commission rate set by parent partner
     const { rows: [memberProfile] } = await db.query(`
-      SELECT commission_rate FROM partner_profiles WHERE id = $1 OR user_id = $1
+      SELECT commission_rate FROM partner_profiles WHERE id::text = $1::text OR user_id::text = $1::text
     `, [partnerId]);
 
     if (memberProfile && memberProfile.commission_rate !== null && memberProfile.commission_rate !== undefined) {
@@ -898,10 +898,15 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
 
 // Get full wallet summary for a Partner
 const getWalletSummary = async (partnerId) => {
-  // Resolve actual partner profile ID if user_id was passed
+  // Resolve actual partner profile ID if user_id, code, or name was passed
+  const searchStr = (partnerId || '').toString().trim();
   const { rows: [partner] } = await query(
-    `SELECT id FROM partner_profiles WHERE id = $1 OR user_id = $1`,
-    [partnerId]
+    `SELECT id FROM partner_profiles 
+     WHERE id::text = $1 
+        OR user_id::text = $1 
+        OR partner_code ILIKE $1 
+        OR TRIM(CONCAT(first_name, ' ', last_name)) ILIKE $1`,
+    [searchStr]
   );
   if (!partner) return null;
 
@@ -955,24 +960,53 @@ const adminAdjustWallet = async (partnerId, amount, txnType, description, proces
   try {
     await client.query('BEGIN');
 
-    // Resolve canonical partner_profiles.id from user_id if needed
-    let resolvedPartnerId = partnerId;
+    // Resolve canonical partner_profiles.id safely from UUID, partner_code, or full name
+    const searchStr = (partnerId || '').toString().trim();
+    let resolvedPartnerId = null;
+
     const { rows: [pRec] } = await client.query(
-      `SELECT id FROM partner_profiles WHERE id = $1 OR user_id = $1 LIMIT 1`,
-      [partnerId]
+      `SELECT id FROM partner_profiles 
+       WHERE id::text = $1 
+          OR user_id::text = $1 
+          OR partner_code ILIKE $1 
+          OR TRIM(CONCAT(first_name, ' ', last_name)) ILIKE $1 
+       LIMIT 1`,
+      [searchStr]
     );
 
     if (pRec) {
       resolvedPartnerId = pRec.id;
     } else {
-      const partnerCode = 'SYS' + String(Math.floor(10000 + Math.random() * 90000));
-      const { rows: [uRec] } = await client.query(`SELECT first_name, last_name FROM users WHERE id = $1`, [partnerId]);
-      const { rows: [newP] } = await client.query(`
-        INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
-        VALUES ($1, $2, $3, $4, 'active', 'approved')
-        RETURNING id
-      `, [partnerId, partnerCode, uRec?.first_name || 'Admin', uRec?.last_name || 'System']);
-      resolvedPartnerId = newP.id;
+      // Search users table by full name, email, mobile, or ID
+      const { rows: [uRec] } = await client.query(
+        `SELECT id, first_name, last_name FROM users 
+         WHERE id::text = $1 
+            OR TRIM(CONCAT(first_name, ' ', last_name)) ILIKE $1 
+            OR email ILIKE $1 
+            OR mobile = $1 
+         LIMIT 1`,
+        [searchStr]
+      );
+
+      if (uRec) {
+        const { rows: [existingP] } = await client.query(
+          `SELECT id FROM partner_profiles WHERE user_id = $1 LIMIT 1`,
+          [uRec.id]
+        );
+        if (existingP) {
+          resolvedPartnerId = existingP.id;
+        } else {
+          const partnerCode = 'SYS' + String(Math.floor(10000 + Math.random() * 90000));
+          const { rows: [newP] } = await client.query(`
+            INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
+            VALUES ($1, $2, $3, $4, 'active', 'approved')
+            RETURNING id
+          `, [uRec.id, partnerCode, uRec.first_name || 'Admin', uRec.last_name || 'System']);
+          resolvedPartnerId = newP.id;
+        }
+      } else {
+        throw new Error(`Partner not found for identifier: "${searchStr}"`);
+      }
     }
 
     partnerId = resolvedPartnerId;
