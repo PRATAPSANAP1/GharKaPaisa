@@ -8,7 +8,10 @@ import PartnerProducts from '../products/PartnerProducts';
 const getBankName = (slug) => {
   if (!slug) return 'Bank Workspace';
   const cleanSlug = decodeURIComponent(slug).toLowerCase().replace(/[-_%]/g, ' ').trim();
-  if (cleanSlug.includes('tata')) return 'TATA Co-brand HDFC Bank';
+  if (cleanSlug.includes('tata')) {
+    if (cleanSlug.includes('sbi')) return 'TATA Co-brand SBI Bank';
+    return 'TATA Co-brand HDFC Bank';
+  }
   const nameMap = {
     hdfc: 'HDFC Bank',
     sbi: 'State Bank of India',

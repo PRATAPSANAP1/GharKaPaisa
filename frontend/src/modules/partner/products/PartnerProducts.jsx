@@ -27,7 +27,7 @@ const CATEGORIES = [
   { id: 'others', label: 'Others' },
 ];
 
-const BANKS = ['All Banks', 'AU SMALL FINANCE BANK', 'AXIS', 'BANDHAN BANK', 'BOB', 'CANARA BANK', 'CSB BANK', 'DCB', 'EQUITAS', 'FEDERAL', 'HDFC', 'HSBC', 'ICICI', 'IDFC', 'INDUSIND', 'KOTAK', 'PUNJAB NATIONAL BANK', 'RBL', 'SBM', 'SBI', 'STANDARD CHARTERED', 'TATA CO-BRAND HDFC BANK', 'UNION BANK', 'YES'];
+const BANKS = ['All Banks', 'AU SMALL FINANCE BANK', 'AXIS', 'BANDHAN BANK', 'BOB', 'CANARA BANK', 'CSB BANK', 'DCB', 'EQUITAS', 'FEDERAL', 'HDFC', 'HSBC', 'ICICI', 'IDFC', 'INDUSIND', 'KOTAK', 'PUNJAB NATIONAL BANK', 'RBL', 'SBM', 'SBI', 'STANDARD CHARTERED', 'TATA CO-BRAND HDFC BANK', 'TATA CO-BRAND SBI BANK', 'UNION BANK', 'YES'];
 
 const getCategoryIcon = (cat, props = { size: 24 }) => {
   const c = cat?.toLowerCase() || '';
@@ -149,7 +149,10 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   const getNormalizedBank = (bankStr) => {
     if (!bankStr || bankStr.toLowerCase() === 'all banks' || bankStr.toLowerCase() === 'all') return 'All Banks';
     const cleanStr = decodeURIComponent(bankStr).toLowerCase().replace(/[-_%]/g, ' ').trim();
-    if (cleanStr.includes('tata')) return 'TATA CO-BRAND HDFC BANK';
+    if (cleanStr.includes('tata')) {
+      if (cleanStr.includes('sbi')) return 'TATA CO-BRAND SBI BANK';
+      return 'TATA CO-BRAND HDFC BANK';
+    }
 
     const foundInBanks = bankOptions.find(b => {
       const bNorm = b.toLowerCase().replace(/[-_%]/g, ' ').trim();
@@ -516,16 +519,35 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
       matchCategory = pCat === activeCategory || pCat.includes(activeCategory);
     }
     const activeBankLower = (activeBank || '').toLowerCase().trim();
-    const isTataFilter = activeBankLower.includes('tata');
-    const isTataProduct = (p.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969') ||
-      (p.bank_name || p.bank_code || p.name || '').toLowerCase().includes('tata');
+    let matchBank = false;
+    if (!activeBank || activeBankLower === 'all banks' || activeBankLower === 'all') {
+      matchBank = true;
+    } else {
+      const pBankName = (p.bank_name || '').toLowerCase();
+      const pBankCode = (p.bank_code || '').toLowerCase();
+      const pBankSlug = (p.bank_slug || '').toLowerCase();
+      const pName = (p.name || '').toLowerCase();
+      const pBankId = p.bank_id || '';
 
-    const matchBank = !activeBank || activeBankLower === 'all banks' || activeBankLower === 'all' ||
-      (isTataFilter && isTataProduct) ||
-      (p.bank_code && p.bank_code.toLowerCase() === activeBankLower) ||
-      (p.bank_name && p.bank_name.toLowerCase().includes(activeBankLower)) ||
-      (p.bank_slug && p.bank_slug.toLowerCase() === activeBankLower) ||
-      (p.name && p.name.toLowerCase().includes(activeBankLower));
+      if (activeBankLower.includes('tata')) {
+        const isTataProduct = pBankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || 
+                              pBankId === 'ad9a965f-63c9-4a67-92be-058b45eea1f5' || 
+                              pBankName.includes('tata') || pName.includes('tata');
+
+        if (activeBankLower.includes('hdfc')) {
+          matchBank = isTataProduct && (pBankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || pBankName.includes('hdfc') || pName.includes('hdfc'));
+        } else if (activeBankLower.includes('sbi')) {
+          matchBank = isTataProduct && (pBankId === 'ad9a965f-63c9-4a67-92be-058b45eea1f5' || pBankName.includes('sbi') || pName.includes('sbi'));
+        } else {
+          matchBank = isTataProduct;
+        }
+      } else {
+        matchBank = (pBankCode && pBankCode === activeBankLower) ||
+                    (pBankName && pBankName.includes(activeBankLower)) ||
+                    (pBankSlug && pBankSlug === activeBankLower) ||
+                    (pName && pName.includes(activeBankLower));
+      }
+    }
     
     // Commission Filter
     const matchCommission = parseFloat(p.commission_value || 0) >= minCommission;
