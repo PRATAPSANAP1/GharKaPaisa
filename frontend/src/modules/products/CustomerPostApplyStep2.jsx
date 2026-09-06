@@ -80,6 +80,19 @@ export default function CustomerPostApplyStep2() {
   };
 
   useEffect(() => {
+    document.body.style.overflow = 'auto';
+    document.body.style.overflowY = 'auto';
+    document.documentElement.style.overflow = 'auto';
+    document.documentElement.style.overflowY = 'auto';
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.overflowY = '';
+      document.documentElement.style.overflow = '';
+      document.documentElement.style.overflowY = '';
+    };
+  }, []);
+
+  useEffect(() => {
     const fetchPostApplyInfo = async () => {
       setLoading(true);
       try {
@@ -298,7 +311,19 @@ export default function CustomerPostApplyStep2() {
   const isTataHdfc = bankNameCombined.includes('TATA');
 
   return (
-    <div style={{ minHeight: '100vh', width: '100%', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: bg, color: C.text, fontFamily: 'Inter, sans-serif', padding: '24px 16px', boxSizing: 'border-box' }}>
+    <div style={{
+      minHeight: '100vh',
+      width: '100%',
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      WebkitOverflowScrolling: 'touch',
+      background: bg,
+      color: C.text,
+      fontFamily: 'Inter, sans-serif',
+      padding: '24px 16px 60px',
+      boxSizing: 'border-box',
+      position: 'relative'
+    }}>
       
       {/* Header Banner */}
       <div style={{ maxWidth: '720px', margin: '0 auto 24px', textAlign: 'center' }}>
