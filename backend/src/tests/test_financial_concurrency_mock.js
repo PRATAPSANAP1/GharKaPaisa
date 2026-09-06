@@ -103,6 +103,18 @@ class MockDatabase {
     return { alreadyDecided: false, decision: decisionType };
   }
 
+  // Single Approval Guard Simulation
+  async approveWithdrawalMock(withdrawalId) {
+    const wr = this.withdrawals.get(withdrawalId);
+    if (!wr) return { success: false, reason: 'NOT_FOUND' };
+    if (wr.status !== 'pending') {
+      return { success: false, reason: 'ALREADY_PROCESSED', currentStatus: wr.status };
+    }
+    wr.status = 'approved';
+    this.withdrawals.set(withdrawalId, wr);
+    return { success: true, status: 'approved' };
+  }
+
   // Atomic Withdrawal Debit Check
   async debitAvailableMock(partnerId, amountInInr) {
     let wallet = this.wallets.get(partnerId);
@@ -607,6 +619,30 @@ async function runMockConcurrencyTests() {
     console.log(green('✅ TEST 9 PASSED: 20 concurrent duplicate reversal webhooks resulted in EXACTLY 1 wallet credit & 1 reversal entry!\n'));
   } else {
     console.log(red('❌ TEST 9 FAILED!\n'));
+  }
+
+  // --------------------------------------------------------------------------
+  // TEST 11: 100 Concurrent Withdrawal Approval Requests (Single Approval Guard)
+  // --------------------------------------------------------------------------
+  console.log(yellow('--- TEST 11: 100 Concurrent Withdrawal Approval Requests ---'));
+  db.reset();
+  db.withdrawals.set('w_app_100', { id: 'w_app_100', status: 'pending', amount: 5000, partner_id: partnerA });
+
+  const approvalRequests = Array.from({ length: 100 }, () =>
+    db.approveWithdrawalMock('w_app_100')
+  );
+
+  const approvalResults = await Promise.all(approvalRequests);
+  const successfulApprovals = approvalResults.filter(r => r.success);
+  const blockedApprovals = approvalResults.filter(r => !r.success);
+
+  console.log('Successful Approvals (Must be 1):', successfulApprovals.length);
+  console.log('Blocked Duplicate Approvals (Must be 99):', blockedApprovals.length);
+
+  if (successfulApprovals.length === 1 && blockedApprovals.length === 99) {
+    console.log(green('✅ TEST 11 PASSED: 100 concurrent approval requests resulted in EXACTLY 1 approval state transition!\n'));
+  } else {
+    console.log(red('❌ TEST 11 FAILED!\n'));
   }
 
   console.log(green('============================================================='));
