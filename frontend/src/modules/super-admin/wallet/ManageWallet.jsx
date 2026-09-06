@@ -70,7 +70,8 @@ export default function ManageWallet() {
 
   // Filters State
   const [filters, setFilters] = useState({
-    dateRange: '01 Aug 2026 - 31 Aug 2026',
+    fromDate: '2026-08-01',
+    toDate: new Date().toISOString().split('T')[0],
     role: 'all',
     userSearch: '',
     status: 'all',
@@ -120,14 +121,20 @@ export default function ManageWallet() {
   const fetchAllDashboardData = async () => {
     setLoading(true);
     try {
+      const queryParams = { 
+        limit: 100, 
+        from_date: filters.fromDate, 
+        to_date: filters.toDate 
+      };
+
       const [wRes, fRes, cRes, pRes, lRes, rRes, tRes] = await Promise.allSettled([
-        api.get('/wallet/admin/withdrawals', { params: { limit: 100, status: 'all' } }),
-        api.get('/wallet/admin/fund-requests', { params: { limit: 100 } }),
-        api.get('/wallet/admin/commissions/pending', { params: { limit: 100 } }),
+        api.get('/wallet/admin/withdrawals', { params: { ...queryParams, status: 'all' } }),
+        api.get('/wallet/admin/fund-requests', { params: queryParams }),
+        api.get('/wallet/admin/commissions/pending', { params: queryParams }),
         api.get('/wallet/admin/partners-overview'),
-        api.get('/wallet/ledger', { params: { limit: 100 } }),
+        api.get('/wallet/ledger', { params: queryParams }),
         api.get('/wallet/reconciliation'),
-        api.get('/wallet/admin/team-commissions')
+        api.get('/wallet/admin/team-commissions', { params: queryParams })
       ]);
 
       const wData = wRes.status === 'fulfilled' ? (wRes.value?.data?.data || wRes.value?.data || []) : [];
@@ -138,11 +145,23 @@ export default function ManageWallet() {
       const rData = rRes.status === 'fulfilled' ? (rRes.value?.data?.data || rRes.value?.data || null) : null;
       const tData = tRes.status === 'fulfilled' ? (tRes.value?.data?.data || tRes.value?.data || { summary: {}, transactions: [] }) : { summary: {}, transactions: [] };
 
-      setWithdrawals(Array.isArray(wData) ? wData : []);
-      setAddFundsReqs(Array.isArray(fData) ? fData : []);
-      setPendingCommissions(Array.isArray(cData) ? cData : []);
+      // Client-side date filter safeguard
+      const filterByDate = (arr, dateField = 'created_at') => {
+        if (!Array.isArray(arr)) return [];
+        if (!filters.fromDate && !filters.toDate) return arr;
+        const start = filters.fromDate ? new Date(filters.fromDate).getTime() : 0;
+        const end = filters.toDate ? new Date(filters.toDate).setHours(23, 59, 59, 999) : Infinity;
+        return arr.filter(item => {
+          const itemDate = new Date(item[dateField] || item.requested_at || item.created_at || Date.now()).getTime();
+          return itemDate >= start && itemDate <= end;
+        });
+      };
+
+      setWithdrawals(filterByDate(Array.isArray(wData) ? wData : [], 'requested_at'));
+      setAddFundsReqs(filterByDate(Array.isArray(fData) ? fData : [], 'created_at'));
+      setPendingCommissions(filterByDate(Array.isArray(cData) ? cData : [], 'created_at'));
       setPartnersOverview(Array.isArray(pData) ? pData : []);
-      setLedgerEntries(Array.isArray(lData) ? lData : []);
+      setLedgerEntries(filterByDate(Array.isArray(lData) ? lData : [], 'created_at'));
       setTeamCommissions(tData && typeof tData === 'object' ? tData : { summary: {}, transactions: [] });
       setReconciliation(rData || {
         opening_balance: 0,
@@ -408,6 +427,17 @@ export default function ManageWallet() {
       {/* ── GLOBAL FILTERS BAR ── */}
       {showFilterBar && (
         <div style={{ ...S.card, padding: '16px', borderRadius: '14px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', alignItems: 'center' }}>
+          
+          <div>
+            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>FROM DATE</label>
+            <input type="date" style={{ ...S.input, padding: '6px 10px', fontSize: '12px' }} value={filters.fromDate} onChange={e => setFilters({ ...filters, fromDate: e.target.value })} />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>TO DATE</label>
+            <input type="date" style={{ ...S.input, padding: '6px 10px', fontSize: '12px' }} value={filters.toDate} onChange={e => setFilters({ ...filters, toDate: e.target.value })} />
+          </div>
+
           <div>
             <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>ROLE</label>
             <select style={{ ...S.input, padding: '6px 10px', fontSize: '12px' }} value={filters.role} onChange={e => setFilters({ ...filters, role: e.target.value })}>
@@ -458,8 +488,8 @@ export default function ManageWallet() {
           </div>
 
           <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-            <button onClick={() => setFilters({ dateRange: '01 Aug 2026 - 31 Aug 2026', role: 'all', userSearch: '', status: 'all', txnType: 'all', product: 'all', bank: 'all' })} style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '12px' }}>Clear</button>
-            <button onClick={fetchAllDashboardData} style={{ ...S.btn('primary'), background: C.teal, padding: '6px 14px', fontSize: '12px' }}>Apply</button>
+            <button onClick={() => setFilters({ fromDate: '2026-08-01', toDate: new Date().toISOString().split('T')[0], role: 'all', userSearch: '', status: 'all', txnType: 'all', product: 'all', bank: 'all' })} style={{ ...S.btn('outline'), padding: '6px 12px', fontSize: '12px' }}>Reset</button>
+            <button onClick={fetchAllDashboardData} style={{ ...S.btn('primary'), background: C.teal, padding: '6px 14px', fontSize: '12px' }}>Apply Filter</button>
           </div>
         </div>
       )}
@@ -1048,17 +1078,22 @@ export default function ManageWallet() {
           </div>
         )}
 
-        {/* TAB 6: Wallet Reconciliation */}
+        {/* TAB 7: Wallet Reconciliation */}
         {activeTab === 'reconciliation' && (
           <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
               <div>
                 <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <MdScale style={{ color: C.teal }} size={20} /> 6. Wallet Reconciliation
+                  <MdScale style={{ color: C.teal }} size={20} /> 7. Wallet Reconciliation & DB Data Source
                 </h3>
                 <span style={{ fontSize: '12px', color: C.textLight }}>Verify wallet balances against total ledger credits and debits</span>
               </div>
               <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('reconciliation'); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All Audit Logs</button>
+            </div>
+
+            {/* DB Source Badge */}
+            <div style={{ padding: '8px 14px', borderRadius: '8px', background: isDark ? '#27272A' : '#EFF6FF', border: `1px solid ${isDark ? '#3F3F46' : '#BFDBFE'}`, fontSize: '11.5px', color: isDark ? '#93C5FD' : '#1D4ED8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🗄️ <strong>Live DB Connection:</strong> Querying directly from PostgreSQL production database tables: <code>partner_wallets</code>, <code>wallet_ledger</code>, and <code>fund_requests</code>.</span>
             </div>
 
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '20px', alignItems: 'center' }}>
