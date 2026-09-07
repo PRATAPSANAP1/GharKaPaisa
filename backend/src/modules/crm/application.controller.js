@@ -4458,7 +4458,7 @@ const releaseCommission = async (req, res, next) => {
       app.partner_id,
       id,
       commissionAmount,
-      `Commission released for application ${app.app_number}`,
+      `Commission credited for application ${app.app_number}`,
       req.user.id,
       client
     );
@@ -4472,7 +4472,7 @@ const releaseCommission = async (req, res, next) => {
         application_id: id,
         reference_type: 'commission_release',
         reference_id: id,
-        description: `Commission released for application ${app.app_number}`,
+        description: `Commission released to available balance for application ${app.app_number}`,
         processed_by: req.user.id
       },
       client
