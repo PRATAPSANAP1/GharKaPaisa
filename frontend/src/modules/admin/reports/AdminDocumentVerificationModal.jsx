@@ -955,24 +955,26 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     </div>
                   )}
 
-                  {/* Card Approval Stage */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>5. CARD APPROVAL STAGE</label>
-                    <select
-                      disabled={!canEditRemark}
-                      value={cardApprovalStage || 'None'}
-                      onChange={(e) => setCardApprovalStage(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                    >
-                      <option value="None">None</option>
-                      <option value="instant approved">instant approved</option>
-                      <option value="in process">in process</option>
-                      <option value="decline">decline</option>
-                      {cardApprovalStage && !['None', 'instant approved', 'in process', 'decline', ''].includes(cardApprovalStage) && (
-                        <option value={cardApprovalStage}>{cardApprovalStage}</option>
-                      )}
-                    </select>
-                  </div>
+                  {/* Card Approval Stage (Hidden for SBI Bank products) */}
+                  {!isSbi && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>5. CARD APPROVAL STAGE</label>
+                      <select
+                        disabled={!canEditRemark}
+                        value={cardApprovalStage || 'None'}
+                        onChange={(e) => setCardApprovalStage(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                      >
+                        <option value="None">None</option>
+                        <option value="instant approved">instant approved</option>
+                        <option value="in process">in process</option>
+                        <option value="decline">decline</option>
+                        {cardApprovalStage && !['None', 'instant approved', 'in process', 'decline', ''].includes(cardApprovalStage) && (
+                          <option value={cardApprovalStage}>{cardApprovalStage}</option>
+                        )}
+                      </select>
+                    </div>
+                  )}
 
                   {/* SOFT APPROVAL STATUS & Additional Stages */}
                   {!isTataCobrandHdfc && (
