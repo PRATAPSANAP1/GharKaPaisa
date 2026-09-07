@@ -4635,6 +4635,35 @@ const migrate = async () => {
     logger.error('Failed to run Add Funds migration:', addFundsMigErr.message);
   }
 
+  // ── TASK 30: Unique Partial Indexes for Immutable Ledger Idempotency ────
+  try {
+    logger.info('Running Task 30 Migration (Unique Partial Indexes for Immutable Ledger Idempotency)...');
+    await query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_commission_release_reference
+      ON wallet_ledger (transaction_type, reference_number)
+      WHERE transaction_type = 'COMMISSION_RELEASE' AND reference_number IS NOT NULL;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_commission_rejected_reference
+      ON wallet_ledger (transaction_type, reference_number)
+      WHERE transaction_type = 'COMMISSION_REJECTED' AND reference_number IS NOT NULL;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_withdrawal_settled_reference
+      ON wallet_ledger (transaction_type, reference_number)
+      WHERE transaction_type = 'WITHDRAWAL_SETTLED' AND reference_number IS NOT NULL;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_withdrawal_cancelled_reference
+      ON wallet_ledger (transaction_type, reference_number)
+      WHERE transaction_type = 'WITHDRAWAL_CANCELLED' AND reference_number IS NOT NULL;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_reversal_reference
+      ON wallet_ledger (transaction_type, reference_number)
+      WHERE transaction_type = 'REVERSAL' AND reference_number IS NOT NULL;
+    `);
+    logger.info('Task 30 completed successfully.');
+  } catch (task30Err) {
+    logger.error('Failed to run Task 30 migration:', task30Err.message);
+  }
+
   // Cleanup orphan partner profiles for non-partner roles (EMPLOYEE, HR, ADMIN, SUPER_ADMIN)
   try {
     const { rowCount } = await query(`

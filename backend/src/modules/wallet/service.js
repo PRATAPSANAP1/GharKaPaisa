@@ -547,18 +547,53 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
     let txnIdToReturn = meta.txn_id || null;
 
     // Append-Only Financial Event with Idempotency Guard (Zero UPDATE on historical rows)
-    const { rows: [txn] } = await client.query(`
-      INSERT INTO wallet_ledger (
-        wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
-      ) VALUES ($1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6)
-      ON CONFLICT (transaction_type, reference_number) WHERE transaction_type = 'COMMISSION_RELEASE' DO NOTHING
-      RETURNING id
-    `, [
-      wallet.id, resolvedPartnerId, numAmount,
-      meta.description || (meta.txn_id ? `Commission release for hold txn #${meta.txn_id}` : 'Commission release to available balance'),
-      meta.reference_id || (meta.txn_id ? String(meta.txn_id) : null),
-      meta.processed_by || null
-    ]);
+    const refNum = meta.reference_id || (meta.txn_id ? String(meta.txn_id) : null);
+
+    if (refNum) {
+      const { rows: existing } = await client.query(
+        `SELECT id FROM wallet_ledger WHERE transaction_type = 'COMMISSION_RELEASE' AND reference_number = $1 LIMIT 1`,
+        [refNum]
+      );
+      if (existing.length > 0) {
+        if (isInternalTxn) await client.query('COMMIT');
+        logger.info(`releaseHold: Commission already released for ref: ${refNum}`);
+        return { alreadyReleased: true, id: existing[0].id, net_amount: numAmount, tds: 0 };
+      }
+    }
+
+    let txn = null;
+    try {
+      const { rows } = await client.query(`
+        INSERT INTO wallet_ledger (
+          wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+        ) VALUES ($1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6)
+        ON CONFLICT (transaction_type, reference_number) WHERE transaction_type = 'COMMISSION_RELEASE' AND reference_number IS NOT NULL DO NOTHING
+        RETURNING id
+      `, [
+        wallet.id, resolvedPartnerId, numAmount,
+        meta.description || (meta.txn_id ? `Commission release for hold txn #${meta.txn_id}` : 'Commission release to available balance'),
+        refNum,
+        meta.processed_by || null
+      ]);
+      txn = rows[0];
+    } catch (onConflictErr) {
+      if (onConflictErr.code === '42P10' || onConflictErr.message.includes('ON CONFLICT') || onConflictErr.message.includes('constraint')) {
+        const { rows: fallbackRows } = await client.query(`
+          INSERT INTO wallet_ledger (
+            wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+          ) VALUES ($1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6)
+          RETURNING id
+        `, [
+          wallet.id, resolvedPartnerId, numAmount,
+          meta.description || (meta.txn_id ? `Commission release for hold txn #${meta.txn_id}` : 'Commission release to available balance'),
+          refNum,
+          meta.processed_by || null
+        ]);
+        txn = fallbackRows[0];
+      } else {
+        throw onConflictErr;
+      }
+    }
 
     if (!txn) {
       if (isInternalTxn) await client.query('COMMIT');
@@ -1337,18 +1372,53 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
 
     // 2. Append-Only Financial Entry for Commission Release (Zero UPDATE on historical rows)
     const { rows: [wallet] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
-    const { rows: [releaseTxn] } = await client.query(`
-      INSERT INTO wallet_ledger (
-        wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
-      ) VALUES ($1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6)
-      ON CONFLICT (transaction_type, reference_number) WHERE transaction_type = 'COMMISSION_RELEASE' DO NOTHING
-      RETURNING id
-    `, [
-      wallet ? wallet.id : null, ledgerTxn.partner_id, amount,
-      ledgerTxn.description ? `${ledgerTxn.description} [Released by Admin]` : 'Commission Released by Admin',
-      transactionId.toString(),
-      processedBy
-    ]);
+    const refNum = transactionId.toString();
+
+    if (refNum) {
+      const { rows: existing } = await client.query(
+        `SELECT id FROM wallet_ledger WHERE transaction_type = 'COMMISSION_RELEASE' AND reference_number = $1 LIMIT 1`,
+        [refNum]
+      );
+      if (existing.length > 0) {
+        await client.query('COMMIT');
+        logger.info(`Commission transaction ${transactionId} already released.`);
+        return { alreadyProcessed: true };
+      }
+    }
+
+    let releaseTxn = null;
+    try {
+      const { rows } = await client.query(`
+        INSERT INTO wallet_ledger (
+          wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+        ) VALUES ($1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6)
+        ON CONFLICT (transaction_type, reference_number) WHERE transaction_type = 'COMMISSION_RELEASE' AND reference_number IS NOT NULL DO NOTHING
+        RETURNING id
+      `, [
+        wallet ? wallet.id : null, ledgerTxn.partner_id, amount,
+        ledgerTxn.description ? `${ledgerTxn.description} [Released by Admin]` : 'Commission Released by Admin',
+        refNum,
+        processedBy
+      ]);
+      releaseTxn = rows[0];
+    } catch (onConflictErr) {
+      if (onConflictErr.code === '42P10' || onConflictErr.message.includes('ON CONFLICT') || onConflictErr.message.includes('constraint')) {
+        const { rows: fallbackRows } = await client.query(`
+          INSERT INTO wallet_ledger (
+            wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+          ) VALUES ($1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6)
+          RETURNING id
+        `, [
+          wallet ? wallet.id : null, ledgerTxn.partner_id, amount,
+          ledgerTxn.description ? `${ledgerTxn.description} [Released by Admin]` : 'Commission Released by Admin',
+          refNum,
+          processedBy
+        ]);
+        releaseTxn = fallbackRows[0];
+      } else {
+        throw onConflictErr;
+      }
+    }
 
     if (!releaseTxn) {
       await client.query('COMMIT');
@@ -1444,18 +1514,53 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
 
     // 2. Append-Only Financial Entry for Commission Rejection (Zero UPDATE on historical rows)
     const { rows: [wallet] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
-    const { rows: [rejectTxn] } = await client.query(`
-      INSERT INTO wallet_ledger (
-        wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
-      ) VALUES ($1, $2, 'COMMISSION_REJECTED'::ledger_transaction_type, 0, 0, $3, $4, 'Released', $5)
-      ON CONFLICT (transaction_type, reference_number) WHERE transaction_type = 'COMMISSION_REJECTED' DO NOTHING
-      RETURNING id
-    `, [
-      wallet ? wallet.id : null, ledgerTxn.partner_id,
-      ledgerTxn.description ? `${ledgerTxn.description} [Rejected by Admin]` : 'Commission Rejected by Admin',
-      transactionId.toString(),
-      processedBy
-    ]);
+    const refNum = transactionId.toString();
+
+    if (refNum) {
+      const { rows: existing } = await client.query(
+        `SELECT id FROM wallet_ledger WHERE transaction_type = 'COMMISSION_REJECTED' AND reference_number = $1 LIMIT 1`,
+        [refNum]
+      );
+      if (existing.length > 0) {
+        await client.query('COMMIT');
+        logger.info(`Commission transaction ${transactionId} already rejected.`);
+        return { alreadyProcessed: true };
+      }
+    }
+
+    let rejectTxn = null;
+    try {
+      const { rows } = await client.query(`
+        INSERT INTO wallet_ledger (
+          wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+        ) VALUES ($1, $2, 'COMMISSION_REJECTED'::ledger_transaction_type, 0, 0, $3, $4, 'Released', $5)
+        ON CONFLICT (transaction_type, reference_number) WHERE transaction_type = 'COMMISSION_REJECTED' AND reference_number IS NOT NULL DO NOTHING
+        RETURNING id
+      `, [
+        wallet ? wallet.id : null, ledgerTxn.partner_id,
+        ledgerTxn.description ? `${ledgerTxn.description} [Rejected by Admin]` : 'Commission Rejected by Admin',
+        refNum,
+        processedBy
+      ]);
+      rejectTxn = rows[0];
+    } catch (onConflictErr) {
+      if (onConflictErr.code === '42P10' || onConflictErr.message.includes('ON CONFLICT') || onConflictErr.message.includes('constraint')) {
+        const { rows: fallbackRows } = await client.query(`
+          INSERT INTO wallet_ledger (
+            wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+          ) VALUES ($1, $2, 'COMMISSION_REJECTED'::ledger_transaction_type, 0, 0, $3, $4, 'Released', $5)
+          RETURNING id
+        `, [
+          wallet ? wallet.id : null, ledgerTxn.partner_id,
+          ledgerTxn.description ? `${ledgerTxn.description} [Rejected by Admin]` : 'Commission Rejected by Admin',
+          refNum,
+          processedBy
+        ]);
+        rejectTxn = fallbackRows[0];
+      } else {
+        throw onConflictErr;
+      }
+    }
 
     if (!rejectTxn) {
       await client.query('COMMIT');
