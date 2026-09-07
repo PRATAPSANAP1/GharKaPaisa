@@ -437,6 +437,26 @@ router.post('/joining-form', async (req, res, next) => {
       ifsc_code, pan_number, aadhaar_number, declaration_accepted
     } = req.body;
 
+    const safeParseInt = (val, defaultVal = null) => {
+      if (val === null || val === undefined || val === '') return defaultVal;
+      const str = String(val).trim().toUpperCase();
+      if (['NAN', 'NONE', 'N/A', 'UNDEFINED', 'NULL'].includes(str)) return defaultVal;
+      const parsed = parseInt(str, 10);
+      return Number.isNaN(parsed) ? defaultVal : parsed;
+    };
+
+    const safeParseFloat = (val, defaultVal = 0) => {
+      if (val === null || val === undefined || val === '') return defaultVal;
+      const str = String(val).trim().toUpperCase();
+      if (['NAN', 'NONE', 'N/A', 'UNDEFINED', 'NULL'].includes(str)) return defaultVal;
+      const parsed = parseFloat(str);
+      return Number.isNaN(parsed) ? defaultVal : parsed;
+    };
+
+    const validJoiningDate = (joining_date && joining_date !== 'CURRENT_DATE') 
+      ? joining_date 
+      : (req.employee.joining_date || new Date().toISOString().split('T')[0]);
+
     const { rows } = await query(
       `INSERT INTO employee_joining_details (
         employee_id, full_name, mobile_number, whatsapp_number, email_id, date_of_birth, gender,
@@ -470,10 +490,10 @@ router.post('/joining-form', async (req, res, next) => {
       [
         empId, full_name || req.employee.full_name, mobile_number || req.employee.mobile_number, whatsapp_number || null, email_id || req.employee.email_id, date_of_birth || req.employee.date_of_birth || '1995-01-01', gender || 'Other',
         current_address || req.employee.current_address || 'Address', permanent_address || null, emergency_contact_name || 'Emergency Contact', emergency_contact_number || req.employee.mobile_number,
-        designation || req.employee.designation, department || req.employee.department, joining_date || req.employee.joining_date || CURRENT_DATE, work_location || 'Office', reporting_manager || null,
-        employment_type || req.employee.employment_type || 'Full-time', highest_qualification || 'Graduate', passing_year ? parseInt(passing_year) : null, experience_type || 'Fresher',
-        previous_company || null, previous_designation || null, total_experience_years ? parseFloat(total_experience_years) : 0,
-        offered_salary || req.employee.offered_salary || 0, incentive_structure || null, target_applicable || null, notice_period_days ? parseInt(notice_period_days) : 0,
+        designation || req.employee.designation, department || req.employee.department, validJoiningDate, work_location || 'Office', reporting_manager || null,
+        employment_type || req.employee.employment_type || 'Full-time', highest_qualification || 'Graduate', safeParseInt(passing_year, null), experience_type || 'Fresher',
+        previous_company || null, previous_designation || null, safeParseFloat(total_experience_years, 0),
+        safeParseFloat(offered_salary, safeParseFloat(req.employee.offered_salary, 0)), incentive_structure || null, target_applicable || null, safeParseInt(notice_period_days, 0),
         referred_by || null, recruitment_source || null, bank_account_holder_name || req.employee.full_name, bank_account_number || '0000000000',
         ifsc_code || 'BANK0000000', pan_number || null, aadhaar_number || null, declaration_accepted !== false,
         req.ip

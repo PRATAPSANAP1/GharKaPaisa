@@ -100,9 +100,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [vkycUrl, setVkycUrl] = useState(application?.vkyc_url || application?.vkyc_link || '');
 
   // 2. Remark Form State (Appcode Status, Soft Approval, VKYC Stage, IQA Stage, Dispatch Status, TATA HDFC Stages)
-  const isSbi = String(application?.bank_name || application?.bank_code || '').toUpperCase().includes('SBI');
-  const bankNameCombinedStr = `${application?.bank_name || application?.bank_code || ''} ${application?.product_name || ''}`.toUpperCase();
-  const isTataCobrandHdfc = application?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || bankNameCombinedStr.includes('TATA');
+  const combinedBankText = `${application?.bank_name || application?.bank?.name || application?.bank_code || ''} ${application?.product_name || application?.product?.name || ''}`.toUpperCase();
+  const isSbi = combinedBankText.includes('SBI') || combinedBankText.includes('STATE BANK');
+  const isTataCobrandHdfc = application?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || combinedBankText.includes('TATA');
 
   const [ipaStage, setIpaStage] = useState(sanitizeVal(application?.ipa_stage) || sanitizeVal(application?.physical_details?.ipa_stage) || 'None');
   const [kycStage, setKycStage] = useState(sanitizeVal(application?.kyc_stage) || sanitizeVal(application?.physical_details?.kyc_stage) || 'None');
@@ -873,8 +873,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
                   
-                  {/* IPA Stage (Hidden for SBI Bank) */}
-                  {!isSbi && (
+                  {/* IPA Stage (Only shown for Tata HDFC, Hidden for SBI Bank & standard products) */}
+                  {!isSbi && isTataCobrandHdfc && (
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA STAGE</label>
                       <select
