@@ -287,13 +287,13 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, application_id, transaction_type, credit, debit, description, reference_number, status, created_by, product_id, bank_id
       )
-      SELECT $1, $2, $3, $4, $5::numeric, 0, $6, $7, 'Pending Approval', $8, $9, $10
+      SELECT $1::uuid, $2::uuid, $3::uuid, $4::ledger_transaction_type, $5::numeric, 0, $6::text, $7::text, 'Pending Approval', $8::uuid, $9::uuid, $10::uuid
       WHERE NOT EXISTS (
         SELECT 1 FROM wallet_ledger
-        WHERE application_id = $3
-          AND transaction_type = $4
-          AND partner_id = $2
-          AND $3 IS NOT NULL
+        WHERE application_id = $3::uuid
+          AND transaction_type = $4::ledger_transaction_type
+          AND partner_id = $2::uuid
+          AND $3::uuid IS NOT NULL
       )
       RETURNING id
     `, [
@@ -560,12 +560,12 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
       )
-      SELECT $1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6
+      SELECT $1::uuid, $2::uuid, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4::text, $5::text, 'Released', $6::uuid
       WHERE NOT EXISTS (
         SELECT 1 FROM wallet_ledger
         WHERE transaction_type = 'COMMISSION_RELEASE'
-          AND reference_number = $5
-          AND $5 IS NOT NULL
+          AND reference_number = $5::text
+          AND $5::text IS NOT NULL
       )
       RETURNING id
     `, [
@@ -1362,12 +1362,12 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
       )
-      SELECT $1, $2, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4, $5, 'Released', $6
+      SELECT $1::uuid, $2::uuid, 'COMMISSION_RELEASE'::ledger_transaction_type, $3::numeric, 0, $4::text, $5::text, 'Released', $6::uuid
       WHERE NOT EXISTS (
         SELECT 1 FROM wallet_ledger
         WHERE transaction_type = 'COMMISSION_RELEASE'
-          AND reference_number = $5
-          AND $5 IS NOT NULL
+          AND reference_number = $5::text
+          AND $5::text IS NOT NULL
       )
       RETURNING id
     `, [
@@ -1477,12 +1477,12 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
       )
-      SELECT $1, $2, 'COMMISSION_REJECTED'::ledger_transaction_type, 0, 0, $3, $4, 'Released', $5
+      SELECT $1::uuid, $2::uuid, 'COMMISSION_REJECTED'::ledger_transaction_type, 0, 0, $3::text, $4::text, 'Released', $5::uuid
       WHERE NOT EXISTS (
         SELECT 1 FROM wallet_ledger
         WHERE transaction_type = 'COMMISSION_REJECTED'
-          AND reference_number = $4
-          AND $4 IS NOT NULL
+          AND reference_number = $4::text
+          AND $4::text IS NOT NULL
       )
       RETURNING id
     `, [
