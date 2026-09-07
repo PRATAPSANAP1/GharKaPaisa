@@ -139,7 +139,7 @@ const reverseCommission = async (applicationId, adminUserId, reason) => {
         await client.query(`
           INSERT INTO wallet_ledger (
             wallet_id, partner_id, application_id, transaction_type, credit, debit, description, status, created_by
-          ) VALUES ($1, $2, $3, 'COMMISSION_REJECTED'::ledger_transaction_type, 0, 0, $4, 'Released', $5)
+          ) VALUES ($1, $2, $3, 'COMMISSION_REJECTED', 0, 0, $4, 'Released', $5)
         `, [
           wallet.id, txn.partner_id, applicationId,
           `Pending commission rejected for App ${app.app_number}${reason ? `: ${reason}` : ''}`,
