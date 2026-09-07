@@ -173,7 +173,7 @@ export function HeroBannerCarousel({ C, navigate }) {
   const [isPaused, setIsPaused] = useState(false);
   const [dynamicBanners, setDynamicBanners] = useState([]);
   const isMobile = useIsMobile();
-  const { t } = useTranslation();
+  const { isDark } = useTheme();
 
   const localBannerMap = {
     'lifetimefree card.png': ltfBanner,
@@ -212,126 +212,146 @@ export function HeroBannerCarousel({ C, navigate }) {
 
   const activeBannerList = (dynamicBanners && dynamicBanners.length > 0) ? dynamicBanners : defaultHomeBanners;
 
-  const bannerSlides = activeBannerList.map(b => ({
+  const bannerSlides = activeBannerList.map((b, idx) => ({
+    id: b.id || idx,
     title: b.title,
     subtitle: b.subtitle,
-    btnText: b.btn_text || 'Apply Now',
-    bgImage: localBannerMap[b.image_url] || (b.image_url && b.image_url.startsWith('http') ? b.image_url : offerBanner),
-    action: () => {
-      const target = b.click_url || "/credit-cards";
-      if (target.startsWith("http://") || target.startsWith("https://")) {
-        window.open(target, "_blank");
-      } else {
-        navigate(target);
-      }
-    }
+    btnText: b.btn_text,
+    image: localBannerMap[b.image_url] || (b.image_url && b.image_url.startsWith('http') ? b.image_url : offerBanner),
+    link: b.click_url || "/credit-cards"
   }));
 
   useEffect(() => {
     if (isPaused || bannerSlides.length <= 1) return;
     const interval = setInterval(() => {
       setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
-    }, 3500);
+    }, 4000);
     return () => clearInterval(interval);
   }, [isPaused, bannerSlides.length]);
 
   const handlePrev = (e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setBannerIndex((prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length);
   };
 
   const handleNext = (e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
   };
 
+  const handleBannerClick = (link) => {
+    if (!link) return;
+    if (link.startsWith('http://') || link.startsWith('https://')) {
+      window.open(link, '_blank');
+    } else {
+      navigate(link);
+    }
+  };
+
+  if (!bannerSlides.length) return null;
+
   return (
     <div 
-      style={{
-        position: "relative",
-        height: isMobile ? "200px" : "320px",
-        borderRadius: "20px",
-        overflow: "hidden",
-        marginBottom: isMobile ? "20px" : "32px",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-        background: "#0F172A"
-      }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
+      style={{
+        width: '100%',
+        position: 'relative',
+        borderRadius: '20px',
+        overflow: 'hidden',
+        boxShadow: isDark ? 'none' : '0 8px 24px rgba(0,0,0,0.08)',
+        border: `1px solid ${isDark ? C?.border : 'rgba(0,0,0,0.06)'}`,
+        background: isDark ? C?.card : '#FFFFFF',
+        height: isMobile ? '160px' : '280px',
+        marginBottom: isMobile ? '20px' : '28px'
+      }}
     >
-      {bannerSlides.map((slide, idx) => (
-        <div
-          key={idx}
-          onClick={slide.action}
-          style={{
-            position: "absolute",
-            inset: 0,
-            opacity: bannerIndex === idx ? 1 : 0,
-            transition: "opacity 0.6s ease-in-out",
-            cursor: "pointer",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundImage: `url(${slide.bgImage})`
-          }}
-        >
-          <div style={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(135deg, rgba(15, 23, 42, 0.75) 0%, rgba(15, 23, 42, 0.35) 100%)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: isMobile ? "flex-start" : "flex-start",
-            padding: isMobile ? "20px 24px" : "40px 60px",
-            textAlign: "left"
-          }}>
-            {slide.title && (
-              <h2 style={{ 
-                color: "#FFFFFF", 
-                fontSize: isMobile ? "22px" : "34px", 
-                fontWeight: 900, 
-                margin: "0 0 8px 0",
-                textShadow: "0 2px 8px rgba(0,0,0,0.4)",
-                maxWidth: "600px",
-                lineHeight: 1.25
-              }}>
-                {slide.title}
-              </h2>
-            )}
-            {slide.subtitle && (
-              <p style={{ 
-                color: "rgba(248, 250, 252, 0.9)", 
-                fontSize: isMobile ? "13px" : "16px", 
-                margin: "0 0 20px 0",
-                fontWeight: 500,
-                maxWidth: "500px",
-                lineHeight: 1.4
-              }}>
-                {slide.subtitle}
-              </p>
-            )}
-            <button
-              onClick={(e) => { e.stopPropagation(); slide.action(); }}
-              style={{
-                background: "linear-gradient(135deg, #0284C7 0%, #0369A1 100%)",
-                color: "#FFFFFF",
-                border: "none",
-                padding: isMobile ? "10px 20px" : "12px 28px",
-                borderRadius: "30px",
-                fontSize: isMobile ? "13px" : "14px",
-                fontWeight: 800,
-                cursor: "pointer",
-                boxShadow: "0 6px 18px rgba(2, 132, 199, 0.4)",
-                transition: "transform 0.2s, box-shadow 0.2s"
+      {/* Banner Slides Stack */}
+      {bannerSlides.map((banner, idx) => {
+        const isActive = idx === bannerIndex;
+        return (
+          <div
+            key={banner.id || idx}
+            onClick={() => handleBannerClick(banner.link)}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              opacity: isActive ? 1 : 0,
+              pointerEvents: isActive ? 'auto' : 'none',
+              transition: 'opacity 0.6s ease-in-out',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: C?.bgSecondary || '#F8FAFC'
+            }}
+          >
+            <img
+              src={banner.image}
+              alt={banner.title || 'Offer Banner'}
+              onError={(e) => {
+                e.currentTarget.src = offerBanner;
               }}
-              onMouseEnter={(e) => e.target.style.transform = "translateY(-2px)"}
-              onMouseLeave={(e) => e.target.style.transform = "none"}
-            >
-              {slide.btnText}
-            </button>
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center',
+                display: 'block'
+              }}
+            />
+
+            {/* Title / Subtitle Overlay if provided */}
+            {(banner.title || banner.subtitle) && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  padding: isMobile ? '12px 16px' : '20px 24px',
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)',
+                  color: '#ffffff',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                  zIndex: 2
+                }}
+              >
+                {banner.title && (
+                  <h3 style={{ margin: 0, fontSize: isMobile ? '14px' : '18px', fontWeight: 800, color: '#ffffff' }}>
+                    {banner.title}
+                  </h3>
+                )}
+                {banner.subtitle && (
+                  <p style={{ margin: 0, fontSize: isMobile ? '11px' : '13px', color: 'rgba(255,255,255,0.9)' }}>
+                    {banner.subtitle}
+                  </p>
+                )}
+                {banner.btnText && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleBannerClick(banner.link); }}
+                    style={{
+                      marginTop: '6px',
+                      alignSelf: 'flex-start',
+                      padding: isMobile ? '4px 12px' : '6px 16px',
+                      borderRadius: '8px',
+                      background: C?.teal || '#0D5CAB',
+                      color: '#ffffff',
+                      fontWeight: 700,
+                      fontSize: '11px',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {banner.btnText}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {/* Navigation Arrows */}
       {bannerSlides.length > 1 && (
@@ -340,71 +360,79 @@ export function HeroBannerCarousel({ C, navigate }) {
             onClick={handlePrev}
             style={{
               position: 'absolute',
-              left: isMobile ? '8px' : '16px',
+              left: '12px',
               top: '50%',
               transform: 'translateY(-50%)',
-              width: isMobile ? '32px' : '40px',
-              height: isMobile ? '32px' : '40px',
+              width: '36px',
+              height: '36px',
               borderRadius: '50%',
-              background: 'rgba(15, 23, 42, 0.6)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: '#FFFFFF',
+              background: 'rgba(0,0,0,0.45)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               zIndex: 10,
-              backdropFilter: 'blur(4px)'
+              transition: 'background 0.2s'
             }}
           >
-            <FaChevronLeft size={isMobile ? 12 : 16} />
+            <FaChevronLeft size={16} />
           </button>
           <button
             onClick={handleNext}
             style={{
               position: 'absolute',
-              right: isMobile ? '8px' : '16px',
+              right: '12px',
               top: '50%',
               transform: 'translateY(-50%)',
-              width: isMobile ? '32px' : '40px',
-              height: isMobile ? '32px' : '40px',
+              width: '36px',
+              height: '36px',
               borderRadius: '50%',
-              background: 'rgba(15, 23, 42, 0.6)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              color: '#FFFFFF',
+              background: 'rgba(0,0,0,0.45)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               zIndex: 10,
-              backdropFilter: 'blur(4px)'
+              transition: 'background 0.2s'
             }}
           >
-            <FaChevronRight size={isMobile ? 12 : 16} />
+            <FaChevronRight size={16} />
           </button>
         </>
       )}
 
-      {/* Navigation Indicators */}
+      {/* Carousel Indicator Dots */}
       {bannerSlides.length > 1 && (
-        <div style={{
-          position: 'absolute',
-          bottom: '12px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          gap: '8px',
-          zIndex: 10
-        }}>
-          {bannerSlides.map((_, idx) => (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '12px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            gap: '8px',
+            zIndex: 10
+          }}
+        >
+          {bannerSlides.map((_, index) => (
             <div
-              key={idx}
-              onClick={(e) => { e.stopPropagation(); setBannerIndex(idx); }}
+              key={index}
+              onClick={(e) => {
+                e.stopPropagation();
+                setBannerIndex(index);
+              }}
               style={{
-                width: bannerIndex === idx ? '28px' : '8px',
+                width: index === bannerIndex ? '24px' : '8px',
                 height: '8px',
                 borderRadius: '4px',
-                background: bannerIndex === idx ? '#38BDF8' : 'rgba(255, 255, 255, 0.4)',
+                backgroundColor: index === bannerIndex ? '#FFFFFF' : 'rgba(255, 255, 255, 0.5)',
+                boxShadow: index === bannerIndex ? '0 2px 6px rgba(0,0,0,0.3)' : 'none',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease'
               }}
