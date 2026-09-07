@@ -873,25 +873,27 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
                   
-                  {/* IPA Stage */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA STAGE</label>
-                    <select
-                      disabled={!canEditRemark}
-                      value={ipaStage || 'None'}
-                      onChange={(e) => setIpaStage(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                    >
-                      <option value="None">None</option>
-                      <option value="Approve">Approve</option>
-                      <option value="Decline">Decline</option>
-                      <option value="Error">Error</option>
-                      <option value="IPA Failed">IPA Failed</option>
-                      {ipaStage && !['None', 'Approve', 'Decline', 'Error', 'IPA Failed', ''].includes(ipaStage) && (
-                        <option value={ipaStage}>{ipaStage}</option>
-                      )}
-                    </select>
-                  </div>
+                  {/* IPA Stage (Hidden for SBI Bank) */}
+                  {!isSbi && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA STAGE</label>
+                      <select
+                        disabled={!canEditRemark}
+                        value={ipaStage || 'None'}
+                        onChange={(e) => setIpaStage(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                      >
+                        <option value="None">None</option>
+                        <option value="Approve">Approve</option>
+                        <option value="Decline">Decline</option>
+                        <option value="Error">Error</option>
+                        <option value="IPA Failed">IPA Failed</option>
+                        {ipaStage && !['None', 'Approve', 'Decline', 'Error', 'IPA Failed', ''].includes(ipaStage) && (
+                          <option value={ipaStage}>{ipaStage}</option>
+                        )}
+                      </select>
+                    </div>
+                  )}
 
                   {/* KYC Stage */}
                   <div>
