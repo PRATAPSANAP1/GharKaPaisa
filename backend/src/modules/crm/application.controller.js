@@ -668,7 +668,7 @@ const syncEmployeeIncentiveLifecycle = async (dbOrClient, app, appFileGenVal = n
         // App file generated is not Yes -> Hold incentive
         await dbOrClient.query(`
           UPDATE employee_incentive_transactions 
-          SET status = 'HELD_APP_FILE_PENDING', updated_at = NOW() 
+          SET status = 'HELD_APPFILE_PENDING', updated_at = NOW() 
           WHERE application_id = $1
         `, [app.id]);
         return;
@@ -4620,10 +4620,10 @@ const get360ApplicationTrace = async (req, res, next) => {
     }
 
     const [timelineRes, docsRes, physRes, walletRes, smsRes] = await Promise.all([
-      query(`SELECT at.*, u.full_name as performed_by_name, u.role as performed_by_role FROM application_timeline at LEFT JOIN users u ON u.id = at.performed_by WHERE at.application_id = $1 ORDER BY at.created_at DESC`, [id]),
-      query(`SELECT * FROM application_documents WHERE application_id = $1 ORDER BY created_at DESC`, [id]),
-      query(`SELECT * FROM physical_application_details WHERE application_id = $1`, [id]),
-      query(`SELECT * FROM wallet_ledger WHERE application_id = $1 ORDER BY created_at DESC`, [id]),
+      query(`SELECT at.*, u.full_name as performed_by_name, u.role as performed_by_role FROM application_timeline at LEFT JOIN users u ON u.id = at.performed_by WHERE at.application_id = $1 ORDER BY COALESCE(at.performed_at, NOW()) DESC`, [id]).catch(() => ({ rows: [] })),
+      query(`SELECT * FROM application_documents WHERE application_id = $1 ORDER BY COALESCE(uploaded_at, NOW()) DESC`, [id]).catch(() => ({ rows: [] })),
+      query(`SELECT * FROM physical_application_details WHERE application_id = $1`, [id]).catch(() => ({ rows: [] })),
+      query(`SELECT * FROM wallet_ledger WHERE application_id = $1 ORDER BY created_at DESC`, [id]).catch(() => ({ rows: [] })),
       query(`SELECT * FROM sms_logs WHERE application_id = $1 ORDER BY created_at DESC`, [id]).catch(() => ({ rows: [] }))
     ]);
 
