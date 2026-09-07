@@ -29,6 +29,7 @@ import { attractiveCategories } from "./components/AttractiveSections/index";
 import { popularCards } from "./components/PopularCards/index";
 import { travelTransitData } from "./components/TravelTransit/index";
 import CategoryCardItem from "./components/CategoryCardItem";
+import { HeroBannerCarousel } from "./components/HomePageSections";
 import PersonalLoanPage from "./components/Loans/PersonalLoanPage";
 import "./Home.css";
 
@@ -1999,31 +2000,6 @@ export default function Home({ onNavigate }) {
     return () => navigate("/credit-cards");
   };
 
-  // Auto rotate banner slides (height 320px)
-  const bannerSlides = dynamicBanners.map(b => ({
-    title: b.title,
-    subtitle: b.subtitle,
-    btnText: b.btn_text || 'Apply Now',
-    bgImage: localBannerMap[b.image_url] || b.image_url,
-    action: () => {
-      const target = b.click_url || "/credit-cards";
-      if (target.startsWith("http://") || target.startsWith("https://")) {
-        window.open(target, "_blank");
-      } else {
-        navigate(target);
-      }
-    }
-  }));
-
-
-  useEffect(() => {
-    if (isPaused) return;
-    const interval = setInterval(() => {
-      setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [isPaused, bannerSlides.length]);
-
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [activeCategory]);
@@ -2393,32 +2369,7 @@ export default function Home({ onNavigate }) {
       <div style={{ maxWidth: "1200px", margin: "0 auto", padding: isMobile ? "12px 16px" : "20px 16px" }}>
 
         {/* ── HERO BANNER OVERHAUL ── */}
-        <div 
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-          style={{ 
-            width: "100%", height: isMobile ? "180px" : "320px", 
-            borderRadius: "20px", marginBottom: isMobile ? "20px" : "24px", display: "flex", 
-            alignItems: "center", justifyContent: "center", overflow: "hidden", 
-            position: "relative", boxShadow: `0 8px 32px rgba(0,0,0,0.12)` 
-          }}
-        >
-          {bannerSlides.map((slide, idx) => (
-            <div key={idx} 
-              onClick={() => slide.action()}
-              style={{
-                position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-                background: `url(${slide.bgImage}) center/100% 100% no-repeat`,
-                opacity: idx === bannerIndex ? 1 : 0,
-                pointerEvents: idx === bannerIndex ? "auto" : "none",
-                transition: "opacity 0.6s ease-in-out",
-                cursor: "pointer"
-              }}
-            />
-          ))}
-
-
-        </div>
+        <HeroBannerCarousel C={C} navigate={navigate} />
 
         {/* ── SECTION 1: Money Transfer & Payments ── */}
         {settings.section_visibility_money_transfer !== "hide" && (

@@ -125,6 +125,49 @@ function Section({ title, viewAllLabel, onViewAll, C, children }) {
 }
 
 // Hero Banner Carousel Component
+const defaultHomeBanners = [
+  {
+    id: 'default-offer',
+    title: 'Special Credit Card & Financial Offers',
+    subtitle: 'Instant Bank Approvals & Exclusive Cashback Rewards',
+    btn_text: 'Explore Offers',
+    image_url: 'offerbanner.png',
+    click_url: '/credit-cards'
+  },
+  {
+    id: 'default-ltf',
+    title: 'Lifetime Free Credit Cards',
+    subtitle: 'No Annual Fees Forever + Pre-Approved Credit Limits',
+    btn_text: 'Apply LTF Card',
+    image_url: 'lifetimefree card.png',
+    click_url: '/credit-cards/lifetime-free-credit-cards-ltf'
+  },
+  {
+    id: 'default-loan',
+    title: 'Instant Personal & Business Loans',
+    subtitle: 'Low Interest Rates starting at 10.5% p.a. with fast disbursal',
+    btn_text: 'Check Loan Offers',
+    image_url: 'loan.png',
+    click_url: '/loans'
+  },
+  {
+    id: 'default-emi',
+    title: 'Smart EMI Credit Cards',
+    subtitle: 'Convert Big Purchases into Easy Monthly Installments',
+    btn_text: 'Get EMI Card',
+    image_url: 'smart emi.png',
+    click_url: '/attractive-cards-loans/smart-emi-card'
+  },
+  {
+    id: 'default-insurance',
+    title: 'Health & Life Protection Plans',
+    subtitle: 'Comprehensive Family Coverage with Hassle-free Claims',
+    btn_text: 'View Plans',
+    image_url: 'insurance.png',
+    click_url: '/insurance'
+  }
+];
+
 export function HeroBannerCarousel({ C, navigate }) {
   const [bannerIndex, setBannerIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -142,44 +185,23 @@ export function HeroBannerCarousel({ C, navigate }) {
     'offerbanner.png': offerBanner
   };
 
-  const getBannerAction = (title, image_url) => {
-    const tLower = (title || "").toLowerCase();
-    const imgLower = (image_url || "").toLowerCase();
-    if (tLower.includes("pixel") || imgLower.includes("pixel")) {
-      return () => navigate("/credit-cards/hdfc-bank");
-    }
-    if (tLower.includes("lifetime") || tLower.includes("ltf") || imgLower.includes("lifetimefree")) {
-      return () => navigate("/credit-cards/lifetime-free-credit-cards-ltf");
-    }
-    if (tLower.includes("personal loan") || tLower.includes("business loan") || tLower.includes("loans") || imgLower.includes("loan")) {
-      return () => navigate("/loans");
-    }
-    if (tLower.includes("insurance") || imgLower.includes("insurance")) {
-      return () => navigate("/insurance");
-    }
-    if (tLower.includes("emi") || imgLower.includes("emi")) {
-      return () => navigate("/attractive-cards-loans/smart-emi-card");
-    }
-    if (tLower.includes("offer") || imgLower.includes("offer")) {
-      return () => navigate("/credit-cards");
-    }
-    return () => navigate("/credit-cards");
-  };
-
   useEffect(() => {
     const fetchBanners = async () => {
       const apiBase = getApiV1Url();
       try {
         const cachedBanners = sessionStorage.getItem('gkp_banners');
         if (cachedBanners) {
-          setDynamicBanners(JSON.parse(cachedBanners));
-        } else {
-          const res = await fetch(`${apiBase}/banners?page=home`);
-          const data = await res.json();
-          if (data && data.success && data.data?.length > 0) {
-            setDynamicBanners(data.data);
-            sessionStorage.setItem('gkp_banners', JSON.stringify(data.data));
+          const parsed = JSON.parse(cachedBanners);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setDynamicBanners(parsed);
           }
+        }
+        
+        const res = await fetch(`${apiBase}/banners?page=home`);
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.data) && data.data.length > 0) {
+          setDynamicBanners(data.data);
+          sessionStorage.setItem('gkp_banners', JSON.stringify(data.data));
         }
       } catch (err) {
         console.warn("Failed to load banners:", err);
@@ -188,11 +210,13 @@ export function HeroBannerCarousel({ C, navigate }) {
     fetchBanners();
   }, []);
 
-  const bannerSlides = dynamicBanners.map(b => ({
+  const activeBannerList = (dynamicBanners && dynamicBanners.length > 0) ? dynamicBanners : defaultHomeBanners;
+
+  const bannerSlides = activeBannerList.map(b => ({
     title: b.title,
     subtitle: b.subtitle,
     btnText: b.btn_text || 'Apply Now',
-    bgImage: localBannerMap[b.image_url] || b.image_url,
+    bgImage: localBannerMap[b.image_url] || (b.image_url && b.image_url.startsWith('http') ? b.image_url : offerBanner),
     action: () => {
       const target = b.click_url || "/credit-cards";
       if (target.startsWith("http://") || target.startsWith("https://")) {
@@ -204,12 +228,22 @@ export function HeroBannerCarousel({ C, navigate }) {
   }));
 
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || bannerSlides.length <= 1) return;
     const interval = setInterval(() => {
       setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
-    }, 3000);
+    }, 3500);
     return () => clearInterval(interval);
   }, [isPaused, bannerSlides.length]);
+
+  const handlePrev = (e) => {
+    e.stopPropagation();
+    setBannerIndex((prev) => (prev - 1 + bannerSlides.length) % bannerSlides.length);
+  };
+
+  const handleNext = (e) => {
+    e.stopPropagation();
+    setBannerIndex((prev) => (prev + 1) % bannerSlides.length);
+  };
 
   return (
     <div 
@@ -219,7 +253,8 @@ export function HeroBannerCarousel({ C, navigate }) {
         borderRadius: "20px",
         overflow: "hidden",
         marginBottom: isMobile ? "20px" : "32px",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.1)"
+        boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+        background: "#0F172A"
       }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
@@ -232,7 +267,7 @@ export function HeroBannerCarousel({ C, navigate }) {
             position: "absolute",
             inset: 0,
             opacity: bannerIndex === idx ? 1 : 0,
-            transition: "opacity 0.5s ease-in-out",
+            transition: "opacity 0.6s ease-in-out",
             cursor: "pointer",
             backgroundSize: "cover",
             backgroundPosition: "center",
@@ -242,44 +277,52 @@ export function HeroBannerCarousel({ C, navigate }) {
           <div style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 100%)",
+            background: "linear-gradient(135deg, rgba(15, 23, 42, 0.75) 0%, rgba(15, 23, 42, 0.35) 100%)",
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
-            alignItems: isMobile ? "flex-start" : "center",
-            padding: isMobile ? "24px" : "40px",
-            textAlign: isMobile ? "left" : "center"
+            alignItems: isMobile ? "flex-start" : "flex-start",
+            padding: isMobile ? "20px 24px" : "40px 60px",
+            textAlign: "left"
           }}>
-            <h2 style={{ 
-              color: "#fff", 
-              fontSize: isMobile ? "24px" : "36px", 
-              fontWeight: 800, 
-              margin: "0 0 8px 0",
-              textShadow: "0 2px 8px rgba(0,0,0,0.3)"
-            }}>
-              {slide.title}
-            </h2>
-            <p style={{ 
-              color: "rgba(255,255,255,0.9)", 
-              fontSize: isMobile ? "14px" : "16px", 
-              margin: "0 0 16px 0",
-              fontWeight: 500
-            }}>
-              {slide.subtitle}
-            </p>
+            {slide.title && (
+              <h2 style={{ 
+                color: "#FFFFFF", 
+                fontSize: isMobile ? "22px" : "34px", 
+                fontWeight: 900, 
+                margin: "0 0 8px 0",
+                textShadow: "0 2px 8px rgba(0,0,0,0.4)",
+                maxWidth: "600px",
+                lineHeight: 1.25
+              }}>
+                {slide.title}
+              </h2>
+            )}
+            {slide.subtitle && (
+              <p style={{ 
+                color: "rgba(248, 250, 252, 0.9)", 
+                fontSize: isMobile ? "13px" : "16px", 
+                margin: "0 0 20px 0",
+                fontWeight: 500,
+                maxWidth: "500px",
+                lineHeight: 1.4
+              }}>
+                {slide.subtitle}
+              </p>
+            )}
             <button
               onClick={(e) => { e.stopPropagation(); slide.action(); }}
               style={{
-                background: "#fff",
-                color: "#0D5CAB",
+                background: "linear-gradient(135deg, #0284C7 0%, #0369A1 100%)",
+                color: "#FFFFFF",
                 border: "none",
                 padding: isMobile ? "10px 20px" : "12px 28px",
                 borderRadius: "30px",
                 fontSize: isMobile ? "13px" : "14px",
                 fontWeight: 800,
                 cursor: "pointer",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-                transition: "all 0.2s"
+                boxShadow: "0 6px 18px rgba(2, 132, 199, 0.4)",
+                transition: "transform 0.2s, box-shadow 0.2s"
               }}
               onMouseEnter={(e) => e.target.style.transform = "translateY(-2px)"}
               onMouseLeave={(e) => e.target.style.transform = "none"}
@@ -290,7 +333,85 @@ export function HeroBannerCarousel({ C, navigate }) {
         </div>
       ))}
 
+      {/* Navigation Arrows */}
+      {bannerSlides.length > 1 && (
+        <>
+          <button
+            onClick={handlePrev}
+            style={{
+              position: 'absolute',
+              left: isMobile ? '8px' : '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: isMobile ? '32px' : '40px',
+              height: isMobile ? '32px' : '40px',
+              borderRadius: '50%',
+              background: 'rgba(15, 23, 42, 0.6)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 10,
+              backdropFilter: 'blur(4px)'
+            }}
+          >
+            <FaChevronLeft size={isMobile ? 12 : 16} />
+          </button>
+          <button
+            onClick={handleNext}
+            style={{
+              position: 'absolute',
+              right: isMobile ? '8px' : '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: isMobile ? '32px' : '40px',
+              height: isMobile ? '32px' : '40px',
+              borderRadius: '50%',
+              background: 'rgba(15, 23, 42, 0.6)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 10,
+              backdropFilter: 'blur(4px)'
+            }}
+          >
+            <FaChevronRight size={isMobile ? 12 : 16} />
+          </button>
+        </>
+      )}
 
+      {/* Navigation Indicators */}
+      {bannerSlides.length > 1 && (
+        <div style={{
+          position: 'absolute',
+          bottom: '12px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: '8px',
+          zIndex: 10
+        }}>
+          {bannerSlides.map((_, idx) => (
+            <div
+              key={idx}
+              onClick={(e) => { e.stopPropagation(); setBannerIndex(idx); }}
+              style={{
+                width: bannerIndex === idx ? '28px' : '8px',
+                height: '8px',
+                borderRadius: '4px',
+                background: bannerIndex === idx ? '#38BDF8' : 'rgba(255, 255, 255, 0.4)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
