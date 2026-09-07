@@ -977,6 +977,27 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   {/* SOFT APPROVAL STATUS & Additional Stages */}
                   {!isTataCobrandHdfc && (
                     <>
+                      {/* IQA STAGE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>IQA STAGE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={iqaStage || 'None'}
+                          onChange={(e) => setIqaStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="IQT Send">IQT Send</option>
+                          <option value="IQT Pending">IQT Pending</option>
+                          <option value="IQT Complete">IQT Complete</option>
+                          <option value="Blaze Continue">Blaze Continue</option>
+                          <option value="Blaze Decline">Blaze Decline</option>
+                          {iqaStage && !['None', 'IQT Send', 'IQT Pending', 'IQT Complete', 'Blaze Continue', 'Blaze Decline', ''].includes(iqaStage) && (
+                            <option value={iqaStage}>{iqaStage}</option>
+                          )}
+                        </select>
+                      </div>
+
                       {!isLinkedShare && !isDirectBank && (
                         <div>
                           <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>APPCODE STATUS</label>
