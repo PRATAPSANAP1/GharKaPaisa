@@ -13,4 +13,8 @@ router.get('/link/:token', customerPortalCtrl.getCustomerPortalLinkData);
 router.post('/link/:token/update-details', customerPortalCtrl.updateCustomerPortalDetails);
 router.post('/link/:token/upload-document', upload.single('file'), customerPortalCtrl.uploadCustomerPortalDocument);
 
+// Public Customer Application Tracking Route
+router.all('/public/track-application', customerPortalCtrl.trackCustomerApplication);
+router.all('/track', customerPortalCtrl.trackCustomerApplication);
+
 module.exports = router;

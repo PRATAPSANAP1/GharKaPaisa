@@ -47,6 +47,7 @@ import CustomerUploadPortal from '../modules/customer/CustomerUploadPortal';
 import PublicCustomerUploadPage from '../modules/public/PublicCustomerUploadPage';
 import PhysicalApplicationForm from '../modules/customer/PhysicalApplicationForm';
 import CustomerShareApplyForm from '../modules/customer/CustomerShareApplyForm';
+import CustomerTrackApplication from '../modules/customer/CustomerTrackApplication';
 
 // Services Pages
 import MoneyTransfer from '../modules/cms/MoneyTransfer';
@@ -207,6 +208,9 @@ const AppRoutes = () => {
       </Route>
 
       {/* Customer Secure Self-Fulfillment & Post-Apply Portals (Standalone Public Routes) */}
+      <Route path="/track-application" element={<CustomerTrackApplication />} />
+      <Route path="/track" element={<CustomerTrackApplication />} />
+      <Route path="/customer/track" element={<CustomerTrackApplication />} />
       <Route path="/physical-application/:token" element={<PhysicalApplicationForm />} />
       <Route path="/apply/:token" element={<CustomerApplyStep1 />} />
       <Route path="/a/:token" element={<CustomerApplyStep1 />} />

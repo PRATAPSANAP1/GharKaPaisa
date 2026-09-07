@@ -504,6 +504,176 @@ const uploadCustomerPortalDocument = async (req, res) => {
   }
 };
 
+/**
+ * Public Customer Application Tracking Endpoint
+ * GET or POST /api/v1/customer-portal/public/track-application
+ */
+const trackCustomerApplication = async (req, res) => {
+  try {
+    const rawAppNum = (req.query.app_number || req.query.appNumber || req.body.app_number || req.body.appNumber || '').toString().trim();
+    const rawMobile = (req.query.mobile || req.query.mobileNumber || req.query.phone || req.body.mobile || req.body.phone || '').toString().trim();
+
+    if (!rawAppNum || !rawMobile) {
+      return res.status(400).json({
+        success: false,
+        message: 'Both Application Number and Mobile Number are required to track status.'
+      });
+    }
+
+    const cleanMobile = rawMobile.replace(/\D/g, '').slice(-10);
+    if (cleanMobile.length !== 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid 10-digit customer mobile number.'
+      });
+    }
+
+    const cleanAppNum = rawAppNum.toUpperCase();
+
+    // 1. Search in applications table
+    const appQuery = await query(
+      `SELECT a.id as app_id, a.app_number, a.status as app_status,
+              a.loan_amount, a.approved_amount, a.credit_limit,
+              a.created_at as app_created_at, a.updated_at as app_updated_at,
+              a.rejection_reason, a.bank_application_number, a.vkyc_status,
+              c.id as cust_id, c.full_name as customer_name, c.mobile as customer_mobile, c.email as customer_email,
+              p.name as product_name, p.category as product_category, p.image_url as product_image,
+              b.name as bank_name, b.logo_url as bank_logo
+       FROM applications a
+       JOIN customers c ON a.customer_id = c.id
+       LEFT JOIN products p ON a.product_id = p.id
+       LEFT JOIN banks b ON p.bank_id = b.id
+       WHERE (
+         UPPER(a.app_number) = $1
+         OR UPPER(a.bank_application_number) = $1
+         OR a.id::text = $1
+       )
+       AND RIGHT(REGEXP_REPLACE(c.mobile, '\\D', '', 'g'), 10) = $2
+       LIMIT 1`,
+      [cleanAppNum, cleanMobile]
+    );
+
+    let match = null;
+    let isLead = false;
+
+    if (appQuery.rows.length > 0) {
+      match = appQuery.rows[0];
+    } else {
+      // 2. Fallback: Search in leads table
+      const leadQuery = await query(
+        `SELECT l.id as app_id,
+                COALESCE(NULLIF(l.lead_number, ''), CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) as app_number,
+                l.status as app_status, l.loan_amount, NULL as approved_amount, NULL as credit_limit,
+                l.created_at as app_created_at, l.updated_at as app_updated_at,
+                l.notes as rejection_reason, NULL as bank_application_number, NULL as vkyc_status,
+                c.id as cust_id, COALESCE(l.customer_name, c.full_name, 'Customer') as customer_name,
+                COALESCE(l.mobile, c.mobile) as customer_mobile, c.email as customer_email,
+                p.name as product_name, p.category as product_category, p.image_url as product_image,
+                b.name as bank_name, b.logo_url as bank_logo
+         FROM leads l
+         LEFT JOIN customers c ON l.customer_id = c.id
+         LEFT JOIN products p ON l.product_id = p.id
+         LEFT JOIN banks b ON p.bank_id = b.id
+         WHERE (
+           UPPER(l.lead_number) = $1
+           OR UPPER(CONCAT('LEAD-', UPPER(SUBSTRING(l.id::text, 1, 8)))) = $1
+           OR l.id::text = $1
+         )
+         AND (
+           RIGHT(REGEXP_REPLACE(l.mobile, '\\D', '', 'g'), 10) = $2
+           OR RIGHT(REGEXP_REPLACE(c.mobile, '\\D', '', 'g'), 10) = $2
+         )
+         LIMIT 1`,
+        [cleanAppNum, cleanMobile]
+      );
+
+      if (leadQuery.rows.length > 0) {
+        match = leadQuery.rows[0];
+        isLead = true;
+      }
+    }
+
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'No matching application found for the provided Application Number and Mobile Number. Please verify your details.'
+      });
+    }
+
+    // Mask customer name for privacy (e.g. Ramesh Kumar -> R***h K***r)
+    const maskName = (nameStr) => {
+      if (!nameStr) return 'Customer';
+      return nameStr.split(' ').map(part => {
+        if (part.length <= 2) return part[0] + '*';
+        return part[0] + '*'.repeat(part.length - 2) + part[part.length - 1];
+      }).join(' ');
+    };
+
+    // Mask mobile number for privacy (e.g. 9876543210 -> 98******10)
+    const maskMobile = (mob) => {
+      if (!mob || mob.length < 10) return '******';
+      const clean = mob.slice(-10);
+      return clean.slice(0, 2) + '******' + clean.slice(-2);
+    };
+
+    let currentStage = 1;
+    let stageStatus = 'active';
+    const statusLower = (match.app_status || '').toLowerCase();
+
+    if (['approved', 'disbursed', 'completed'].includes(statusLower)) {
+      currentStage = 4;
+      stageStatus = 'completed';
+    } else if (['in_progress', 'bank_processing', 'bank_submitted', 'sent_to_bank', 'vkyc_completed'].includes(statusLower)) {
+      currentStage = 3;
+      stageStatus = 'active';
+    } else if (['details_submitted', 'under_review', 'pending_verification', 'assigned', 'review_pending'].includes(statusLower)) {
+      currentStage = 2;
+      stageStatus = 'active';
+    } else if (['rejected', 'declined', 'cancelled'].includes(statusLower)) {
+      stageStatus = 'rejected';
+    }
+
+    let timelineEvents = [];
+    if (!isLead) {
+      const timelineRes = await query(
+        `SELECT event_type, title, description, created_at
+         FROM application_timeline
+         WHERE application_id = $1
+         ORDER BY created_at ASC`,
+        [match.app_id]
+      );
+      timelineEvents = timelineRes.rows;
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        application_id: match.app_id,
+        app_number: match.app_number,
+        bank_application_number: match.bank_application_number,
+        status: match.app_status,
+        status_label: (match.app_status || 'Submitted').replace(/_/g, ' ').toUpperCase(),
+        current_stage: currentStage,
+        stage_status: stageStatus,
+        customer_name_masked: maskName(match.customer_name),
+        customer_mobile_masked: maskMobile(match.customer_mobile),
+        product_name: match.product_name || 'Credit / Loan Product',
+        product_category: match.product_category || 'financial_services',
+        bank_name: match.bank_name || 'Partner Bank',
+        bank_logo: match.bank_logo || null,
+        loan_amount: match.loan_amount || match.approved_amount || match.credit_limit || null,
+        rejection_reason: match.rejection_reason || null,
+        applied_at: match.app_created_at,
+        updated_at: match.app_updated_at,
+        timeline: timelineEvents
+      }
+    });
+  } catch (err) {
+    logger.error('Error tracking customer application:', err);
+    res.status(500).json({ success: false, message: 'Server error while tracking application details.' });
+  }
+};
+
 module.exports = {
   getPortalData,
   uploadCustomerDocument,
@@ -511,5 +681,6 @@ module.exports = {
   addTimelineEvent,
   getCustomerPortalLinkData,
   updateCustomerPortalDetails,
-  uploadCustomerPortalDocument
+  uploadCustomerPortalDocument,
+  trackCustomerApplication
 };
