@@ -33,14 +33,14 @@ poolOptions.allowExitOnIdle = false;
 poolOptions.keepAlive = true;
 poolOptions.keepAliveInitialDelayMillis = 10000;
 
-// Set 10s statement timeout to prevent indefinite lock holds
-if (!poolOptions.options) {
-  poolOptions.options = '-c statement_timeout=10000';
-}
-
 const pool = new Pool(poolOptions);
 
-pool.on('connect', () => {
+// Set statement_timeout via SQL after connection (RDS Proxy compliant)
+pool.on('connect', (client) => {
+  client.query('SET statement_timeout = 10000').catch(err => {
+    logger.warn('Failed to set statement_timeout', { error: err.message });
+  });
+
   if (process.env.NODE_ENV !== 'production') {
     logger.debug(`New DB client connected. Pool size: ${pool.totalCount}/${pool.options.max}`);
   }
