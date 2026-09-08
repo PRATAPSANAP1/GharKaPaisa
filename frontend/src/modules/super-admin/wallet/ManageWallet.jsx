@@ -112,6 +112,7 @@ export default function ManageWallet() {
   const [ledgerEntries, setLedgerEntries] = useState([]);
   const [teamCommissions, setTeamCommissions] = useState({ summary: {}, transactions: [] });
   const [reconciliation, setReconciliation] = useState(null);
+  const [razorpayBalance, setRazorpayBalance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toastNotification, setToastNotification] = useState(null);
 
@@ -151,14 +152,15 @@ export default function ManageWallet() {
         to_date: filters.toDate 
       };
 
-      const [wRes, fRes, cRes, pRes, lRes, rRes, tRes] = await Promise.allSettled([
+      const [wRes, fRes, cRes, pRes, lRes, rRes, tRes, rzRes] = await Promise.allSettled([
         api.get('/wallet/admin/withdrawals', { params: { ...queryParams, status: 'all' } }),
         api.get('/wallet/admin/fund-requests', { params: queryParams }),
         api.get('/wallet/admin/commissions/pending', { params: queryParams }),
         api.get('/wallet/admin/partners-overview'),
         api.get('/wallet/ledger', { params: queryParams }),
         api.get('/wallet/reconciliation'),
-        api.get('/wallet/admin/team-commissions', { params: queryParams })
+        api.get('/wallet/admin/team-commissions', { params: queryParams }),
+        api.get('/wallet/admin/razorpay/balance')
       ]);
 
       const wData = wRes.status === 'fulfilled' ? (wRes.value?.data?.data || wRes.value?.data || []) : [];
@@ -168,6 +170,9 @@ export default function ManageWallet() {
       const lData = lRes.status === 'fulfilled' ? (lRes.value?.data?.data || lRes.value?.data || []) : [];
       const rData = rRes.status === 'fulfilled' ? (rRes.value?.data?.data || rRes.value?.data || null) : null;
       const tData = tRes.status === 'fulfilled' ? (tRes.value?.data?.data || tRes.value?.data || { summary: {}, transactions: [] }) : { summary: {}, transactions: [] };
+      const rzData = rzRes.status === 'fulfilled' ? (rzRes.value?.data?.data || rzRes.value?.data || null) : null;
+
+      if (rzData) setRazorpayBalance(rzData);
 
       // Client-side date filter safeguard
       const filterByDate = (arr, dateField = 'created_at') => {
@@ -543,10 +548,15 @@ export default function ManageWallet() {
           </div>
           <div>
             <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
-              ₹{(reconciliation?.system_closing || partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0) || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              ₹{(
+                razorpayBalance?.balance !== undefined && razorpayBalance?.balance !== null
+                  ? parseFloat(razorpayBalance.balance)
+                  : parseFloat(reconciliation?.system_closing || partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0) || 0)
+              ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </h3>
             <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> Live System Balance
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> 
+              {razorpayBalance?.balance !== undefined ? 'Razorpay Wallet Balance' : 'Live System Balance'}
             </span>
           </div>
         </div>
@@ -560,9 +570,14 @@ export default function ManageWallet() {
           <div>
             <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.green, margin: 0, letterSpacing: '-0.5px' }}>
               ₹{(() => {
-                const approvedComms = ledgerEntries.filter(l => (l.type === 'Credited' || parseFloat(l.credit || 0) > 0) && (l.status || '').toLowerCase().includes('approved'));
+                const approvedComms = ledgerEntries.filter(l => {
+                  const isCredit = (l.type === 'Credited' || parseFloat(l.credit || 0) > 0 || (l.transaction_type || '').toLowerCase().includes('commission'));
+                  const statusStr = (l.status || '').toLowerCase();
+                  const isApproved = statusStr.includes('approved') || statusStr.includes('released') || statusStr.includes('completed') || statusStr.includes('credited') || statusStr.includes('success');
+                  return isCredit && isApproved;
+                });
                 const sum = approvedComms.reduce((acc, c) => acc + parseFloat(c.credit || c.amount || 0), 0);
-                return (sum || 45280).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                return sum.toLocaleString('en-IN', { minimumFractionDigits: 2 });
               })()}
             </h3>
             <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, marginTop: '4px', display: 'block' }}>
@@ -582,10 +597,10 @@ export default function ManageWallet() {
               ₹{(() => {
                 const approvedWd = withdrawals.filter(w => {
                   const s = (w.status || '').toLowerCase();
-                  return s.includes('approved') || s.includes('processed') || s.includes('completed') || s.includes('transferred');
+                  return s.includes('approved') || s.includes('processed') || s.includes('completed') || s.includes('transferred') || s.includes('success');
                 });
                 const sum = approvedWd.reduce((acc, w) => acc + parseFloat(w.amount || 0), 0);
-                return (sum || 124500).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                return sum.toLocaleString('en-IN', { minimumFractionDigits: 2 });
               })()}
             </h3>
             <span style={{ fontSize: '11px', color: '#0284C7', fontWeight: 700, marginTop: '4px', display: 'block' }}>
@@ -608,7 +623,7 @@ export default function ManageWallet() {
                   return s.includes('pending') || s.includes('review');
                 });
                 const sum = pendingWd.reduce((acc, w) => acc + parseFloat(w.amount || 0), 0);
-                return (sum || 5570).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                return sum.toLocaleString('en-IN', { minimumFractionDigits: 2 });
               })()}
             </h3>
             <span style={{ fontSize: '11px', color: '#EA580C', fontWeight: 700, marginTop: '4px', display: 'block' }}>
