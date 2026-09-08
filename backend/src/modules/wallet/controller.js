@@ -1802,14 +1802,39 @@ const getPendingCommissions = async (req, res, next) => {
       query(`
         SELECT COUNT(DISTINCT wl.id) as count
         FROM wallet_ledger wl
+        LEFT JOIN partner_profiles ap ON (ap.id = wl.partner_id OR ap.user_id = wl.partner_id)
+        LEFT JOIN employees emp ON (emp.id = wl.partner_id OR emp.user_id = wl.partner_id)
+        LEFT JOIN users u ON (u.id = wl.partner_id OR u.id = ap.user_id OR u.id = emp.user_id)
         WHERE LOWER(COALESCE(wl.status::text, '')) IN ('pending', 'pending approval', 'on_hold', 'held', 'processing') AND wl.credit > 0
       `),
       query(`
         SELECT wl.id, wl.credit, wl.created_at, wl.status, wl.description,
-               ap.partner_code, ap.first_name, ap.last_name,
-               a.app_number, p.name as product_name
+               wl.partner_id,
+               COALESCE(ap.partner_code, emp.employee_id, u.id::text, 'USER') as partner_code,
+               COALESCE(
+                 NULLIF(TRIM(CONCAT(ap.first_name, ' ', ap.last_name)), ''),
+                 NULLIF(TRIM(emp.full_name), ''),
+                 NULLIF(TRIM(u.full_name), ''),
+                 'Beneficiary User'
+               ) as user_name,
+               COALESCE(ap.first_name, emp.full_name, u.full_name, 'User') as first_name,
+               COALESCE(ap.last_name, '') as last_name,
+               COALESCE(
+                 NULLIF(emp.designation, ''),
+                 CASE 
+                   WHEN u.role = 'EMPLOYEE' THEN 'Employee'
+                   WHEN u.role = 'SUPER_ADMIN' OR u.role = 'ADMIN' THEN 'Admin'
+                   WHEN emp.id IS NOT NULL THEN 'Employee'
+                   WHEN ap.id IS NOT NULL THEN 'Partner'
+                   ELSE COALESCE(u.role, 'Partner')
+                 END
+               ) as role,
+               COALESCE(a.app_number, wl.reference_number, 'N/A') as app_number,
+               COALESCE(p.name, 'Credit Product') as product_name
         FROM wallet_ledger wl
-        JOIN partner_profiles ap ON ap.id = wl.partner_id
+        LEFT JOIN partner_profiles ap ON (ap.id = wl.partner_id OR ap.user_id = wl.partner_id)
+        LEFT JOIN employees emp ON (emp.id = wl.partner_id OR emp.user_id = wl.partner_id)
+        LEFT JOIN users u ON (u.id = wl.partner_id OR u.id = ap.user_id OR u.id = emp.user_id)
         LEFT JOIN applications a ON a.id = wl.application_id
         LEFT JOIN products p ON p.id = a.product_id
         WHERE LOWER(COALESCE(wl.status::text, '')) IN ('pending', 'pending approval', 'on_hold', 'held', 'processing') AND wl.credit > 0

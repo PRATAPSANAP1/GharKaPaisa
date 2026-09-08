@@ -1325,12 +1325,12 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
   try {
     await client.query('BEGIN');
     
-    // 1. Get the ledger transaction
+    // 1. Get the ledger transaction (Use FOR UPDATE OF l to lock wallet_ledger only and avoid outer join lock error)
     const { rows: [ledgerTxn] } = await client.query(
       `SELECT l.id, l.partner_id, l.credit, l.transaction_type, l.description, l.status, p.user_id
        FROM wallet_ledger l
-       LEFT JOIN partner_profiles p ON p.id = l.partner_id
-       WHERE l.id = $1 FOR UPDATE`,
+       LEFT JOIN partner_profiles p ON (p.id = l.partner_id OR p.user_id = l.partner_id)
+       WHERE l.id = $1 FOR UPDATE OF l`,
       [transactionId]
     );
     if (!ledgerTxn) throw new Error('Transaction not found in ledger');
@@ -1440,12 +1440,12 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
   try {
     await client.query('BEGIN');
     
-    // 1. Get the ledger transaction
+    // 1. Get the ledger transaction (Use FOR UPDATE OF l to lock wallet_ledger only and avoid outer join lock error)
     const { rows: [ledgerTxn] } = await client.query(
       `SELECT l.id, l.partner_id, l.credit, l.transaction_type, l.description, l.status, p.user_id
        FROM wallet_ledger l
-       LEFT JOIN partner_profiles p ON p.id = l.partner_id
-       WHERE l.id = $1 FOR UPDATE`,
+       LEFT JOIN partner_profiles p ON (p.id = l.partner_id OR p.user_id = l.partner_id)
+       WHERE l.id = $1 FOR UPDATE OF l`,
       [transactionId]
     );
     if (!ledgerTxn) throw new Error('Transaction not found in ledger');

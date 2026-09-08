@@ -1062,8 +1062,9 @@ export default function ManageWallet() {
                     {(() => {
                       const displayList = pendingCommissions.length > 0 ? pendingCommissions : DEFAULT_COMMISSIONS;
                       return displayList.map(c => {
-                        const userName = c.user_name || (c.first_name ? `${c.first_name} ${c.last_name || ''}` : c.partner_code || 'Partner');
-                        const roleName = c.role || 'Partner';
+                        const rawName = c.user_name || (c.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : '');
+                        const userName = (rawName && rawName.toLowerCase() !== 'partner') ? rawName : (c.partner_code || 'Employee / Partner');
+                        const roleName = c.role || (c.partner_code && c.partner_code.startsWith('AG') ? 'Partner' : 'Employee');
                         const amt = parseFloat(c.credit || c.amount || 0);
 
                         return (
@@ -1071,9 +1072,20 @@ export default function ManageWallet() {
                             <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{c.id}</td>
                             <td style={{ padding: '12px 8px', fontWeight: 700 }}>
                               <div>{userName}</div>
-                              <span style={{ fontSize: '10.5px', color: C.textLight }}>{c.partner_code || 'YOH-PRT001'}</span>
+                              <span style={{ fontSize: '10.5px', color: C.textLight }}>{c.partner_code || 'N/A'}</span>
                             </td>
-                            <td style={{ padding: '12px 8px', color: C.textLight }}>{roleName}</td>
+                            <td style={{ padding: '12px 8px', color: C.textLight }}>
+                              <span style={{
+                                background: roleName.toLowerCase() === 'partner' ? '#EEF2FF' : '#F0FDF4',
+                                color: roleName.toLowerCase() === 'partner' ? '#4F46E5' : '#166534',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                fontWeight: 700,
+                                fontSize: '11px'
+                              }}>
+                                {roleName}
+                              </span>
+                            </td>
                             <td style={{ padding: '12px 8px', color: C.text, fontWeight: 600 }}>{c.product || c.product_name || 'Credit Card / Loan Disbursal'}</td>
                             <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.green, fontSize: '13.5px' }}>+₹{amt.toLocaleString('en-IN')}</td>
                             <td style={{ padding: '12px 8px', textAlign: 'center' }}>
