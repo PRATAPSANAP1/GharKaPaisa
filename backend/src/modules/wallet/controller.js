@@ -824,7 +824,8 @@ const walletManualDebit = async (req, res, next) => {
 };
 const approveWithdrawalController = async (req, res, next) => {
   try {
-    const { id, utr_number, admin_note, action } = req.body;
+    const id = req.params.id || req.body.id;
+    const { utr_number, admin_note, action } = req.body || {};
     if (!id) return error(res, 'Withdrawal request ID is required');
 
     let determinedAction = action;
@@ -832,7 +833,7 @@ const approveWithdrawalController = async (req, res, next) => {
       determinedAction = utr_number ? 'transfer' : 'approve';
     }
 
-    await processWithdrawal(id, determinedAction, req.user.id, utr_number, null, admin_note);
+    await processWithdrawal(id, determinedAction, req.user?.id, utr_number, null, admin_note);
 
     const actionName = determinedAction === 'transfer' ? 'TRANSFER_WITHDRAWAL' : 'APPROVE_WITHDRAWAL';
     await logAction(req, actionName, id, { utr_number, admin_note });
@@ -846,12 +847,13 @@ const approveWithdrawalController = async (req, res, next) => {
 // POST /withdrawal/reject (Admin)
 const rejectWithdrawalController = async (req, res, next) => {
   try {
-    const { id, rejection_reason, admin_note } = req.body;
+    const id = req.params.id || req.body.id;
+    const { rejection_reason, reason, remarks, admin_note } = req.body || {};
+    const finalReason = rejection_reason || reason || remarks || 'Admin Rejected';
     if (!id) return error(res, 'Withdrawal request ID is required');
-    if (!rejection_reason) return error(res, 'Rejection reason is required to reject withdrawal');
 
-    await processWithdrawal(id, 'reject', req.user.id, null, rejection_reason, admin_note);
-    await logAction(req, 'REJECT_WITHDRAWAL', id, { rejection_reason, admin_note });
+    await processWithdrawal(id, 'reject', req.user?.id, null, finalReason, admin_note);
+    await logAction(req, 'REJECT_WITHDRAWAL', id, { rejection_reason: finalReason, admin_note });
 
     return success(res, {}, 'Withdrawal request successfully rejected');
   } catch (err) {
