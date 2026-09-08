@@ -77,17 +77,23 @@ export default function PartnerWallet() {
 
   // Bank Setup States
   const [bankDetails, setBankDetails] = useState({
-    bank_name: 'Central Bank of India',
-    account_number: '•••• 8519',
-    ifsc_code: 'CBIN0263571',
+    bank_name: '',
+    account_number: '',
+    ifsc_code: '',
     account_holder_name: '',
-    is_verified: true
+    is_verified: false
   });
   const [allBankAccounts, setAllBankAccounts] = useState([]);
   const [selectedBankId, setSelectedBankId] = useState('');
   const [savingBank, setSavingBank] = useState(false);
   const [kycStatus, setKycStatus] = useState('approved');
   const [copiedId, setCopiedId] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   // Data Fetching Effects
   useEffect(() => {
@@ -193,11 +199,11 @@ export default function PartnerWallet() {
     try {
       const res = await api.post('/wallet/bank-details', bankDetails);
       if (res.data?.success) {
-        alert(res.data.message || 'Bank details saved successfully!');
+        showToast(res.data.message || 'Bank details saved successfully!', 'success');
         fetchBankDetails();
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to save bank details.');
+      showToast(err.response?.data?.message || 'Failed to save bank details.', 'error');
     } finally {
       setSavingBank(false);
     }
@@ -206,9 +212,9 @@ export default function PartnerWallet() {
   const handleSendWithdrawalOTP = async (e) => {
     if (e) e.preventDefault();
     const amt = parseFloat(withdrawAmount);
-    if (isNaN(amt) || amt < 100) return alert('Minimum withdrawal amount is ₹100');
-    const availBal = parseFloat(dashboardData?.wallet?.available_balance ?? dashboardData?.available_balance ?? 5075);
-    if (amt > availBal) return alert(`Withdrawal amount exceeds available balance (Max: ₹${availBal})`);
+    if (isNaN(amt) || amt < 100) return showToast('Minimum withdrawal amount is ₹100', 'error');
+    const availBal = parseFloat(dashboardData?.wallet?.available_balance ?? dashboardData?.available_balance ?? 0);
+    if (amt > availBal) return showToast(`Withdrawal amount exceeds available balance (Max: ₹${availBal})`, 'error');
 
     setRequestingWithdraw(true);
     try {
@@ -216,12 +222,13 @@ export default function PartnerWallet() {
       if (res.data?.success) {
         setEmailMasked(res.data.data?.email_sent_to || 'your registered email');
         setShowOtpModal(true);
+        showToast('OTP sent for withdrawal verification.', 'success');
       } else {
-        alert(res.data.message || 'OTP sent for withdrawal verification.');
+        showToast(res.data.message || 'OTP sent for withdrawal verification.', 'success');
         setShowOtpModal(true);
       }
     } catch (err) {
-      alert('Withdrawal request initiated. Verification OTP sent to registered email.');
+      showToast('Withdrawal request initiated. Verification OTP sent to registered email.', 'success');
       setShowOtpModal(true);
     } finally {
       setRequestingWithdraw(false);
@@ -230,7 +237,7 @@ export default function PartnerWallet() {
 
   const handleConfirmWithdrawalOTP = async (e) => {
     e.preventDefault();
-    if (!otpCode || otpCode.length < 6) return alert('Please enter complete 6-digit OTP code');
+    if (!otpCode || otpCode.length < 6) return showToast('Please enter complete 6-digit OTP code', 'error');
     setVerifyingOtp(true);
     try {
       const res = await api.post('/wallet/withdraw/otp/verify', {
@@ -239,14 +246,14 @@ export default function PartnerWallet() {
         bank_account_id: selectedBankId || undefined
       });
       if (res.data?.success) {
-        alert('Withdrawal request submitted successfully!');
+        showToast('Withdrawal request submitted successfully!', 'success');
         setWithdrawAmount('');
         setOtpCode('');
         setShowOtpModal(false);
         fetchAllData();
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Withdrawal verification complete.');
+      showToast(err.response?.data?.message || 'Withdrawal verification complete.', 'info');
       setShowOtpModal(false);
     } finally {
       setVerifyingOtp(false);
@@ -265,8 +272,9 @@ export default function PartnerWallet() {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      showToast(`Wallet Statement downloaded as ${type.toUpperCase()}`, 'success');
     } catch (e) {
-      alert('Generating statement report...');
+      showToast('Downloading wallet statement...', 'info');
     }
   };
 
@@ -274,12 +282,16 @@ export default function PartnerWallet() {
     return '₹' + parseFloat(val || 0).toLocaleString('en-IN');
   };
 
-  // Extract Dynamic Summary Values with Fallbacks
-  const availableBal = parseFloat(dashboardData?.wallet?.available_balance ?? dashboardData?.available_balance ?? 5075);
-  const pendingBal = parseFloat(dashboardData?.wallet?.hold_balance ?? dashboardData?.pending_balance ?? 150);
-  const totalEarnings = parseFloat(dashboardData?.wallet?.total_earned ?? dashboardData?.lifetime_earnings ?? 5500);
-  const settledPayouts = parseFloat(dashboardData?.wallet?.total_withdrawn ?? dashboardData?.total_withdrawn ?? 25);
-  const successRate = 98.6;
+  // Extract Dynamic Summary Values directly from backend database response
+  const availableBal = parseFloat(dashboardData?.wallet?.available_balance ?? dashboardData?.available_balance ?? 0);
+  const pendingBal = parseFloat(dashboardData?.wallet?.hold_balance ?? dashboardData?.pending_balance ?? 0);
+  const totalEarnings = parseFloat(dashboardData?.wallet?.total_earned ?? dashboardData?.lifetime_earnings ?? 0);
+  const settledPayouts = parseFloat(dashboardData?.wallet?.total_withdrawn ?? dashboardData?.total_withdrawn ?? 0);
+  const openingBal = parseFloat(dashboardData?.wallet?.opening_balance ?? dashboardData?.opening_balance ?? 0);
+
+  const totalWdrCount = withdrawals.length;
+  const approvedWdrCount = withdrawals.filter(w => ['approved', 'completed', 'paid', 'processed', 'transferred', 'released'].includes(String(w.status).toLowerCase())).length;
+  const successRate = totalWdrCount > 0 ? ((approvedWdrCount / totalWdrCount) * 100).toFixed(1) : '100.0';
 
   // Donut Dynamic Breakdown Data
   const totalSum = (availableBal + pendingBal + settledPayouts) || 1;
@@ -300,33 +312,20 @@ export default function PartnerWallet() {
         day: item.month_label || item.month_val,
         val: parseFloat(item.total_credited || 0)
       }))
-    : [
-        { day: '01 Aug', val: 375 },
-        { day: '08 Aug', val: 820 },
-        { day: '15 Aug', val: 510 },
-        { day: '22 Aug', val: 1120 },
-        { day: '29 Aug', val: 780 }
-      ];
+    : [];
+
+  const chartVals = chartData.map(d => d.val).filter(v => typeof v === 'number');
+  const minEarnings = chartVals.length > 0 ? Math.min(...chartVals) : 0;
+  const maxEarnings = chartVals.length > 0 ? Math.max(...chartVals) : 0;
+  const avgEarnings = chartVals.length > 0 ? Math.round(chartVals.reduce((a, b) => a + b, 0) / chartVals.length) : 0;
 
   // Dynamic Recent Withdrawals List
-  const displayWithdrawals = withdrawals.length > 0 ? withdrawals.slice(0, 5) : [
-    { id: 'WDR-2026-0897', amount: 150, created_at: '2026-09-02T10:00:00Z', status: 'Pending' },
-    { id: 'WDR-2026-0876', amount: 2000, created_at: '2026-08-28T10:00:00Z', status: 'Approved' },
-    { id: 'WDR-2026-0834', amount: 1200, created_at: '2026-08-20T10:00:00Z', status: 'Approved' },
-    { id: 'WDR-2026-0790', amount: 1500, created_at: '2026-08-12T10:00:00Z', status: 'Rejected' },
-    { id: 'WDR-2026-0712', amount: 800, created_at: '2026-08-05T10:00:00Z', status: 'Approved' }
-  ];
+  const displayWithdrawals = withdrawals.slice(0, 5);
 
   // Dynamic Recent Payouts List
-  const displayPayouts = withdrawals.filter(w => ['processed', 'transferred', 'completed', 'paid'].includes(String(w.status).toLowerCase())).length > 0
-    ? withdrawals.filter(w => ['processed', 'transferred', 'completed', 'paid'].includes(String(w.status).toLowerCase())).slice(0, 5)
-    : [
-        { id: 'PAY-2026-0896', amount: 25, created_at: '2026-09-02T10:00:00Z', status: 'Paid' },
-        { id: 'PAY-2026-0841', amount: 1500, created_at: '2026-08-20T10:00:00Z', status: 'Paid' },
-        { id: 'PAY-2026-0775', amount: 1200, created_at: '2026-08-12T10:00:00Z', status: 'Paid' },
-        { id: 'PAY-2026-0590', amount: 800, created_at: '2026-08-05T10:00:00Z', status: 'Paid' },
-        { id: 'PAY-2026-0512', amount: 700, created_at: '2026-07-29T10:00:00Z', status: 'Paid' }
-      ];
+  const displayPayouts = withdrawals
+    .filter(w => ['processed', 'transferred', 'completed', 'paid', 'released'].includes(String(w.status).toLowerCase()))
+    .slice(0, 5);
 
   const renderStatusBadge = (status) => {
     const s = String(status || '').toLowerCase().trim();
@@ -482,8 +481,8 @@ export default function PartnerWallet() {
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11.5px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: C.textLight }}>Opening Balance (01 Aug 2026)</span>
-                    <span style={{ fontWeight: 700, color: C.text }}>₹4,250</span>
+                    <span style={{ color: C.textLight }}>Opening Balance</span>
+                    <span style={{ fontWeight: 700, color: C.text }}>{formatINR(openingBal)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: C.textLight }}>Total Credits</span>
@@ -541,15 +540,15 @@ export default function PartnerWallet() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', background: C.bgSecondary, padding: '8px', borderRadius: '8px', marginTop: '10px', textAlign: 'center' }}>
                 <div>
                   <span style={{ fontSize: '9.5px', color: C.textLight, display: 'block' }}>Min. Earnings</span>
-                  <strong style={{ fontSize: '11px', color: C.text }}>₹320</strong>
+                  <strong style={{ fontSize: '11px', color: C.text }}>{formatINR(minEarnings)}</strong>
                 </div>
                 <div>
                   <span style={{ fontSize: '9.5px', color: C.textLight, display: 'block' }}>Max. Earnings</span>
-                  <strong style={{ fontSize: '11px', color: C.text }}>₹1,280</strong>
+                  <strong style={{ fontSize: '11px', color: C.text }}>{formatINR(maxEarnings)}</strong>
                 </div>
                 <div>
                   <span style={{ fontSize: '9.5px', color: C.textLight, display: 'block' }}>Avg. Earnings</span>
-                  <strong style={{ fontSize: '11px', color: C.text }}>₹820</strong>
+                  <strong style={{ fontSize: '11px', color: C.text }}>{formatINR(avgEarnings)}</strong>
                 </div>
                 <div>
                   <span style={{ fontSize: '9.5px', color: C.textLight, display: 'block' }}>Total Earnings</span>
@@ -615,8 +614,10 @@ export default function PartnerWallet() {
                   <span style={{ fontSize: '9px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px', display: 'block', marginBottom: '3px' }}>
                     DESTINATION BANK ACCOUNT
                   </span>
-                  <div style={{ fontSize: '12px', fontWeight: 800, color: C.text }}>{bankDetails.bank_name || 'Central Bank of India'}</div>
-                  <div style={{ fontSize: '10.5px', color: C.textLight }}>A/C {bankDetails.account_number || '•••• 8519'} • IFSC: {bankDetails.ifsc_code || 'CBIN0263571'}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: C.text }}>{bankDetails.bank_name || 'No Primary Bank Configured'}</div>
+                  <div style={{ fontSize: '10.5px', color: C.textLight }}>
+                    {bankDetails.account_number ? `A/C ${bankDetails.account_number} • IFSC: ${bankDetails.ifsc_code}` : 'Configure primary bank details in Bank Setup tab'}
+                  </div>
                 </div>
 
                 <form onSubmit={handleSendWithdrawalOTP} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -644,7 +645,7 @@ export default function PartnerWallet() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', background: C.bgSecondary, padding: '8px 10px', borderRadius: '7px', fontSize: '10px', color: C.textLight, marginTop: '12px' }}>
                 <div>⏱ Processing Time: 1-2 Business Days (NEFT/IMPS)</div>
-                <div>🛡 KYC Status: Verified & Approved</div>
+                <div>🛡 KYC Status: {kycStatus ? (kycStatus.toUpperCase() === 'APPROVED' ? 'Verified & Approved' : kycStatus) : 'Pending Verification'}</div>
               </div>
             </div>
 
@@ -667,14 +668,20 @@ export default function PartnerWallet() {
                       </tr>
                     </thead>
                     <tbody>
-                      {displayWithdrawals.map((w, idx) => (
-                        <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                          <td style={{ padding: '8px 3px', fontWeight: 700, color: C.text, fontFamily: 'monospace' }}>{w.id}</td>
-                          <td style={{ padding: '8px 3px', fontWeight: 700, color: C.text }}>{formatINR(w.amount)}</td>
-                          <td style={{ padding: '8px 3px', color: C.textLight }}>{new Date(w.created_at).toLocaleDateString()}</td>
-                          <td style={{ padding: '8px 3px', textAlign: 'center' }}>{renderStatusBadge(w.status)}</td>
+                      {displayWithdrawals.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" style={{ padding: '16px 3px', textAlign: 'center', color: C.textLight }}>No withdrawal requests found.</td>
                         </tr>
-                      ))}
+                      ) : (
+                        displayWithdrawals.map((w, idx) => (
+                          <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '8px 3px', fontWeight: 700, color: C.text, fontFamily: 'monospace' }}>{w.id}</td>
+                            <td style={{ padding: '8px 3px', fontWeight: 700, color: C.text }}>{formatINR(w.amount)}</td>
+                            <td style={{ padding: '8px 3px', color: C.textLight }}>{new Date(w.created_at).toLocaleDateString()}</td>
+                            <td style={{ padding: '8px 3px', textAlign: 'center' }}>{renderStatusBadge(w.status)}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -704,16 +711,22 @@ export default function PartnerWallet() {
                       </tr>
                     </thead>
                     <tbody>
-                      {displayPayouts.map((p, idx) => (
-                        <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                          <td style={{ padding: '8px 3px', fontWeight: 700, color: C.text, fontFamily: 'monospace' }}>{p.id}</td>
-                          <td style={{ padding: '8px 3px', fontWeight: 700, color: C.text }}>{formatINR(p.amount)}</td>
-                          <td style={{ padding: '8px 3px', color: C.textLight }}>{new Date(p.created_at).toLocaleDateString()}</td>
-                          <td style={{ padding: '8px 3px', textAlign: 'center' }}>
-                            <span style={{ padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, background: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0' }}>Paid</span>
-                          </td>
+                      {displayPayouts.length === 0 ? (
+                        <tr>
+                          <td colSpan="4" style={{ padding: '16px 3px', textAlign: 'center', color: C.textLight }}>No settled payouts recorded yet.</td>
                         </tr>
-                      ))}
+                      ) : (
+                        displayPayouts.map((p, idx) => (
+                          <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '8px 3px', fontWeight: 700, color: C.text, fontFamily: 'monospace' }}>{p.id}</td>
+                            <td style={{ padding: '8px 3px', fontWeight: 700, color: C.text }}>{formatINR(p.amount)}</td>
+                            <td style={{ padding: '8px 3px', color: C.textLight }}>{new Date(p.created_at).toLocaleDateString()}</td>
+                            <td style={{ padding: '8px 3px', textAlign: 'center' }}>
+                              <span style={{ padding: '2px 8px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, background: '#DCFCE7', color: '#166534', border: '1px solid #BBF7D0' }}>Paid</span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -915,23 +928,26 @@ export default function PartnerWallet() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(commissionSummary.length > 0 ? commissionSummary : [
-                    { product_name: 'HDFC Bank Credit Card', bank_code: 'HDFC', total_cases: 12, approved_cases: 10, rejected_cases: 2, commission_earned: 3500 },
-                    { product_name: 'Axis Bank Personal Loan', bank_code: 'AXIS', total_cases: 4, approved_cases: 3, rejected_cases: 1, commission_earned: 2000 }
-                  ]).map((item, idx) => (
-                    <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '10px', fontWeight: 700, color: C.text }}>{item.product_name}</td>
-                      <td style={{ padding: '10px', textAlign: 'center' }}>
-                        <span style={{ padding: '2px 6px', borderRadius: '4px', background: C.bgSecondary, border: `1px solid ${C.border}`, fontSize: '10px', fontWeight: 800, color: '#0052FF' }}>
-                          {item.bank_code || 'GKP'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700 }}>{item.total_cases || 0}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', color: '#10B981', fontWeight: 700 }}>{item.approved_cases || 0}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', color: '#EF4444', fontWeight: 700 }}>{item.rejected_cases || 0}</td>
-                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: 800, color: '#0052FF' }}>{formatINR(item.commission_earned)}</td>
+                  {commissionSummary.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: C.textLight }}>No product commission breakup data recorded yet.</td>
                     </tr>
-                  ))}
+                  ) : (
+                    commissionSummary.map((item, idx) => (
+                      <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '10px', fontWeight: 700, color: C.text }}>{item.product_name}</td>
+                        <td style={{ padding: '10px', textAlign: 'center' }}>
+                          <span style={{ padding: '2px 6px', borderRadius: '4px', background: C.bgSecondary, border: `1px solid ${C.border}`, fontSize: '10px', fontWeight: 800, color: '#0052FF' }}>
+                            {item.bank_code || 'GKP'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px', textAlign: 'right', fontWeight: 700 }}>{item.total_cases || 0}</td>
+                        <td style={{ padding: '10px', textAlign: 'right', color: '#10B981', fontWeight: 700 }}>{item.approved_cases || 0}</td>
+                        <td style={{ padding: '10px', textAlign: 'right', color: '#EF4444', fontWeight: 700 }}>{item.rejected_cases || 0}</td>
+                        <td style={{ padding: '10px', textAlign: 'right', fontWeight: 800, color: '#0052FF' }}>{formatINR(item.commission_earned)}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -965,6 +981,31 @@ export default function PartnerWallet() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* ── Toast Notification Banner Overlay ── */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '12px 18px',
+          borderRadius: '10px',
+          color: '#FFFFFF',
+          fontWeight: 700,
+          fontSize: '12.5px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.25)',
+          background: toast.type === 'success' ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)' : toast.type === 'error' ? 'linear-gradient(135deg, #DC2626 0%, #EF4444 100%)' : 'linear-gradient(135deg, #2563EB 0%, #3B82F6 100%)',
+          animation: 'fadeIn 0.25s ease-out'
+        }}>
+          <span>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}</span>
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#FFF', fontSize: '14px', cursor: 'pointer', marginLeft: '6px' }}>✕</button>
         </div>
       )}
 

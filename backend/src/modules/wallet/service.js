@@ -988,7 +988,7 @@ const releaseMaturedCommissions = async () => {
       SELECT l.id, l.wallet_id, l.credit as amount, l.partner_id
       FROM wallet_ledger l
       LEFT JOIN products p ON p.id = l.product_id
-      WHERE l.status = 'Pending Approval' 
+      WHERE LOWER(l.status) IN ('pending approval', 'pending') 
         AND (l.transaction_type = 'PERSONAL_COMMISSION' OR l.transaction_type = 'TEAM_COMMISSION' OR l.transaction_type = 'OVERRIDE_COMMISSION') 
         AND l.created_at <= NOW() - (COALESCE((to_jsonb(p)->>'commission_release_days')::int, 7) || ' days')::interval
     `);
@@ -1353,17 +1353,6 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
     partnerUserId = ledgerTxn.user_id;
 
     // 1b. Enforce Single Decision Gate in commission_decisions (PRIMARY KEY ON commission_ledger_id)
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS commission_decisions (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        commission_ledger_id UUID UNIQUE NOT NULL,
-        decision VARCHAR(20) NOT NULL,
-        decided_by UUID,
-        remarks TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-
     const { rows: [decisionRow] } = await client.query(`
       INSERT INTO commission_decisions (commission_ledger_id, decision, decided_by, remarks)
       VALUES ($1, 'RELEASED', $2, $3)
@@ -1485,21 +1474,10 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
     if (ledgerTxn.status === 'Released') throw new Error('Commission already released');
     if (ledgerTxn.status === 'Rejected') throw new Error('Commission already rejected');
 
-    const amount = ledgerTxn.credit || 0;
+    amount = ledgerTxn.credit || 0;
     partnerUserId = ledgerTxn.user_id;
 
     // 1b. Enforce Single Decision Gate in commission_decisions (PRIMARY KEY ON commission_ledger_id)
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS commission_decisions (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        commission_ledger_id UUID UNIQUE NOT NULL,
-        decision VARCHAR(20) NOT NULL,
-        decided_by UUID,
-        remarks TEXT,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      )
-    `);
-
     const { rows: [decisionRow] } = await client.query(`
       INSERT INTO commission_decisions (commission_ledger_id, decision, decided_by, remarks)
       VALUES ($1, 'REJECTED', $2, $3)
@@ -1527,7 +1505,7 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
       )
-      SELECT $1::uuid, $2::uuid, 'COMMISSION_REJECTED'::varchar, 0, 0, $3::text, $4::text, 'Released', $5::uuid
+      SELECT $1::uuid, $2::uuid, 'COMMISSION_REJECTED'::varchar, 0, 0, $3::text, $4::text, 'Rejected', $5::uuid
       WHERE NOT EXISTS (
         SELECT 1 FROM wallet_ledger
         WHERE transaction_type::text = 'COMMISSION_REJECTED'
@@ -1559,7 +1537,7 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
       0, 
       null, 
       null, 
-      'Released', 
+      'Rejected', 
       ledgerTxn.description || 'Commission rejected by Admin', 
       null, 
       null, 
@@ -1569,6 +1547,9 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
 
     // 4. Sync Wallet Balance and update original ledger record status
     await client.query(`UPDATE wallet_ledger SET status = 'Rejected' WHERE id = $1`, [ledgerTxn.id]);
+    if (ledgerTxn.application_id) {
+      await client.query(`UPDATE applications SET commission_status = 'rejected' WHERE id = $1`, [ledgerTxn.application_id]);
+    }
     await syncWalletBalance(ledgerTxn.partner_id, client);
 
     await client.query('COMMIT');
