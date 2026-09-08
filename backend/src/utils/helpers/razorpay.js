@@ -7,11 +7,13 @@ const KEY_ID = process.env.RAZORPAY_KEY_ID;
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 const MERCHANT_ACCOUNT = process.env.RAZORPAY_ACCOUNT_NUMBER;
 
-if (process.env.NODE_ENV === 'production' && (!KEY_ID || !KEY_SECRET)) {
-  logger.error('CRITICAL: Razorpay credentials (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are not configured in production environment.');
-}
-
+const hasCredentials = !!(KEY_ID && KEY_SECRET);
 const isLive = !!(KEY_ID && KEY_SECRET && !KEY_ID.includes('test'));
+const allowSimulation = process.env.RAZORPAY_ALLOW_SIMULATED_PAYOUTS === 'true' || process.env.NODE_ENV !== 'production';
+
+if (!hasCredentials) {
+  logger.warn('NOTICE: Razorpay API credentials (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are not configured in environment.');
+}
 
 // Helper to log payout API request/responses
 const logPayoutApiCall = async (withdrawalId, request, response, httpStatus, retryCount = 0) => {
@@ -37,11 +39,11 @@ const createRazorpayContact = async (partner, withdrawalId) => {
     reference_id: partner.id
   };
 
-  if (!isLive) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Razorpay live credentials are required in production mode for contact creation.');
+  if (!hasCredentials) {
+    if (!allowSimulation) {
+      throw new Error('Razorpay credentials (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are required to create contact.');
     }
-    // Simulator (Development / Testing)
+    // Simulator (Development / Simulation Mode)
     const responseBody = {
       id: `cont_sim_${crypto.randomBytes(6).toString('hex')}`,
       entity: 'contact',
@@ -88,11 +90,11 @@ const createRazorpayFundAccount = async (contactId, bankDetails, withdrawalId) =
     }
   };
 
-  if (!isLive) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Razorpay live credentials are required in production mode for fund account creation.');
+  if (!hasCredentials) {
+    if (!allowSimulation) {
+      throw new Error('Razorpay credentials (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are required to create fund account.');
     }
-    // Simulator (Development / Testing)
+    // Simulator (Development / Simulation Mode)
     const responseBody = {
       id: `fa_sim_${crypto.randomBytes(6).toString('hex')}`,
       entity: 'fund_account',
@@ -132,7 +134,7 @@ const createRazorpayFundAccount = async (contactId, bankDetails, withdrawalId) =
 // Fetch Banking Balance from RazorpayX
 const getRazorpayBalance = async () => {
   // 1. Try fetching real balance from Razorpay API
-  if (KEY_ID && KEY_SECRET) {
+  if (hasCredentials) {
     try {
       const auth = Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString('base64');
       const url = MERCHANT_ACCOUNT 
@@ -226,11 +228,11 @@ const createRazorpayPayout = async (fundAccountId, amountRupees, withdrawalId, o
     reference_id: withdrawalId.toString()
   };
 
-  if (!isLive) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Razorpay live credentials are required in production mode to initiate payouts.');
+  if (!hasCredentials) {
+    if (!allowSimulation) {
+      throw new Error('Razorpay credentials (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are required to initiate payouts.');
     }
-    // Simulator - auto process after simulation (Development / Testing only)
+    // Simulator - auto process after simulation (Development / Testing / Simulated Payouts)
     const responseBody = {
       id: `pout_sim_${crypto.randomBytes(6).toString('hex')}`,
       entity: 'payout',
