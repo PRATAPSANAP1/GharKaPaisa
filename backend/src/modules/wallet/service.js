@@ -92,7 +92,9 @@ const syncWalletBalance = async (partnerId, client) => {
         COALESCE(SUM(CASE WHEN transaction_type = 'REFERRAL_BONUS' THEN credit ELSE 0 END), 0.00)::numeric as ref_bonus,
         COALESCE(SUM(CASE WHEN transaction_type = 'OVERRIDE_COMMISSION' THEN credit ELSE 0 END), 0.00)::numeric as override_earn
       FROM wallet_ledger 
-      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status IN ('Released', 'Approved')
+      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) 
+        AND status IN ('Released', 'Approved')
+        AND transaction_type NOT IN ('WITHDRAWAL_CANCELLED', 'WITHDRAWAL_REJECTED')
     ),
     debit_stats AS (
       SELECT 
