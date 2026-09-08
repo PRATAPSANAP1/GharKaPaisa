@@ -680,7 +680,7 @@ export default function ManageWallet() {
               </div>
             </div>
 
-            {/* Sub-Tabs: Pending Requests vs Approved */}
+            {/* Sub-Tabs: Pending Requests vs Approved & Paid vs Rejected */}
             <div style={{ display: 'flex', gap: '10px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
               <button
                 onClick={() => setWithdrawalSubTab('pending')}
@@ -700,7 +700,10 @@ export default function ManageWallet() {
               >
                 <span>Pending Requests</span>
                 <span style={{ background: withdrawalSubTab === 'pending' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
-                  {withdrawals.filter(w => (w.status || '').toLowerCase().includes('pending')).length}
+                  {withdrawals.filter(w => {
+                    const s = (w.status || '').toLowerCase();
+                    return s.includes('pending') && !s.includes('reject') && !s.includes('fail') && !s.includes('cancel');
+                  }).length}
                 </span>
               </button>
 
@@ -720,11 +723,37 @@ export default function ManageWallet() {
                   gap: '6px'
                 }}
               >
-                <span>Approved & History</span>
+                <span>Approved & Paid</span>
                 <span style={{ background: withdrawalSubTab === 'approved' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
                   {withdrawals.filter(w => {
                     const s = (w.status || '').toLowerCase();
-                    return s.includes('approved') || s.includes('processed') || s.includes('transferred') || s.includes('completed');
+                    return (s.includes('approved') || s.includes('processed') || s.includes('transferred') || s.includes('completed') || s.includes('paid')) &&
+                           !s.includes('reject') && !s.includes('fail') && !s.includes('cancel');
+                  }).length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setWithdrawalSubTab('rejected')}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: withdrawalSubTab === 'rejected' ? C.teal : (isDark ? '#27272A' : '#F1F5F9'),
+                  color: withdrawalSubTab === 'rejected' ? '#FFF' : C.text,
+                  fontWeight: 800,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>Rejected & Cancelled</span>
+                <span style={{ background: withdrawalSubTab === 'rejected' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
+                  {withdrawals.filter(w => {
+                    const s = (w.status || '').toLowerCase();
+                    return s.includes('reject') || s.includes('fail') || s.includes('cancel');
                   }).length}
                 </span>
               </button>
@@ -747,7 +776,10 @@ export default function ManageWallet() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const pendingList = withdrawals.filter(w => (w.status || '').toLowerCase().includes('pending'));
+                      const pendingList = withdrawals.filter(w => {
+                        const s = (w.status || '').toLowerCase();
+                        return s.includes('pending') && !s.includes('reject') && !s.includes('fail') && !s.includes('cancel');
+                      });
                       const displayList = pendingList;
 
                       if (displayList.length === 0) {
@@ -815,7 +847,7 @@ export default function ManageWallet() {
               </div>
             )}
 
-            {/* Sub-Tab 2: Approved & Completed Withdrawals (with 1-Hour Time Lock Reject) */}
+            {/* Sub-Tab 2: Approved & Completed Withdrawals */}
             {withdrawalSubTab === 'approved' && (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
@@ -834,7 +866,8 @@ export default function ManageWallet() {
                     {(() => {
                       const approvedList = withdrawals.filter(w => {
                         const s = (w.status || '').toLowerCase();
-                        return s.includes('approved') || s.includes('processed') || s.includes('transferred') || s.includes('completed');
+                        return (s.includes('approved') || s.includes('processed') || s.includes('transferred') || s.includes('completed') || s.includes('paid')) &&
+                               !s.includes('reject') && !s.includes('fail') && !s.includes('cancel');
                       });
                       
                       if (approvedList.length === 0) {
@@ -900,6 +933,78 @@ export default function ManageWallet() {
                                   {undoInfo.canUndo ? `Reject (${undoInfo.remainingMins}m left)` : 'Reject Window Expired'}
                                 </button>
                               </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Sub-Tab 3: Rejected & Cancelled Withdrawals */}
+            {withdrawalSubTab === 'rejected' && (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                      <th style={{ padding: '10px 8px' }}>Transaction / Request ID</th>
+                      <th style={{ padding: '10px 8px' }}>User / Partner</th>
+                      <th style={{ padding: '10px 8px' }}>Bank Account</th>
+                      <th style={{ padding: '10px 8px' }}>Rejected On</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'right' }}>Amount</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Status</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const rejectedList = withdrawals.filter(w => {
+                        const s = (w.status || '').toLowerCase();
+                        return s.includes('reject') || s.includes('fail') || s.includes('cancel');
+                      });
+                      
+                      if (rejectedList.length === 0) {
+                        return (
+                          <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No rejected or cancelled withdrawal records found</td></tr>
+                        );
+                      }
+
+                      return rejectedList.map(w => {
+                        const badge = getStatusBadge(w.status || 'Rejected');
+                        const userName = w.user_name || (w.first_name ? `${w.first_name} ${w.last_name || ''}` : w.partner_code || 'Partner');
+                        const amt = parseFloat(w.amount || 0);
+                        const rejectedTimeStr = w.updated_at || w.created_at || new Date().toISOString();
+
+                        return (
+                          <tr key={w.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>
+                              <div>{w.id}</div>
+                              {w.rejection_reason && <span style={{ fontSize: '10.5px', color: '#EF4444' }}>Reason: {w.rejection_reason}</span>}
+                            </td>
+                            <td style={{ padding: '12px 8px', fontWeight: 700 }}>
+                              <div>{userName}</div>
+                              <span style={{ fontSize: '10.5px', color: C.textLight }}>{w.partner_code || 'N/A'}</span>
+                            </td>
+                            <td style={{ padding: '12px 8px', fontSize: '11.5px' }}>
+                              <div>{w.bank_name || 'Bank'}</div>
+                              <div style={{ color: C.textLight, fontSize: '10.5px' }}>{w.account_number || ''}</div>
+                            </td>
+                            <td style={{ padding: '12px 8px', color: C.textLight, fontSize: '11px' }}>
+                              {new Date(rejectedTimeStr).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                            </td>
+                            <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: '#EF4444', fontSize: '13.5px' }}>₹{amt.toLocaleString('en-IN')}</td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                              <span style={{ background: badge.bg, color: badge.color, padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>{badge.label}</span>
+                            </td>
+                            <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                              <button
+                                onClick={() => setViewDetailModalItem({ ...w, type: 'withdrawal' })}
+                                style={{ background: isDark ? '#27272A' : '#E2E8F0', color: C.text, border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                View Detailed
+                              </button>
                             </td>
                           </tr>
                         );
