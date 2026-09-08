@@ -1341,6 +1341,17 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
     partnerUserId = ledgerTxn.user_id;
 
     // 1b. Enforce Single Decision Gate in commission_decisions (PRIMARY KEY ON commission_ledger_id)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS commission_decisions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        commission_ledger_id UUID UNIQUE NOT NULL,
+        decision VARCHAR(20) NOT NULL,
+        decided_by UUID,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
     const { rows: [decisionRow] } = await client.query(`
       INSERT INTO commission_decisions (commission_ledger_id, decision, decided_by, remarks)
       VALUES ($1, 'RELEASED', $2, $3)
@@ -1456,6 +1467,17 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
     partnerUserId = ledgerTxn.user_id;
 
     // 1b. Enforce Single Decision Gate in commission_decisions (PRIMARY KEY ON commission_ledger_id)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS commission_decisions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        commission_ledger_id UUID UNIQUE NOT NULL,
+        decision VARCHAR(20) NOT NULL,
+        decided_by UUID,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
     const { rows: [decisionRow] } = await client.query(`
       INSERT INTO commission_decisions (commission_ledger_id, decision, decided_by, remarks)
       VALUES ($1, 'REJECTED', $2, $3)
