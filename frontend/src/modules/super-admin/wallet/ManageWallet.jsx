@@ -981,7 +981,24 @@ export default function ManageWallet() {
                           <span style={{ background: badge.bg, color: badge.color, padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>{badge.label}</span>
                         </td>
                         <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                          <button onClick={() => alert(`Reviewing Add Funds Request ${f.id}`)} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Review Request</button>
+                          {['confirmed', 'rejected'].includes((f.status || '').toLowerCase()) ? (
+                            <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>Processed</span>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                              <button 
+                                onClick={() => handleReconcileFundRequest(f.id, 'confirm')} 
+                                style={{ background: C.green, color: '#FFF', border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                Confirm & Add
+                              </button>
+                              <button 
+                                onClick={() => handleReconcileFundRequest(f.id, 'reject')} 
+                                style={{ background: '#EF4444', color: '#FFF', border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                Reject / Refund
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
