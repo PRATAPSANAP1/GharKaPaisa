@@ -24,20 +24,22 @@ export default function SuperAdminCommission() {
       const res = await api.get('/applications', {
         params: {
           search: search.trim() || undefined,
-          commission_status: statusFilter || undefined,
-          limit: 200
+          status: 'approved',
+          limit: 1000
         }
       });
       if (res.data?.success) {
         const raw = res.data.data;
         const list = Array.isArray(raw) ? raw : (raw?.items || raw?.rows || []);
-        // Only show applications whose status is approved and commission_status is pending/held/released
+        // Only show applications whose application status is approved and matches selected commission status filter
         const approvedOnly = list.filter(app => {
           const st = (app.status || '').toLowerCase();
           const cst = (app.commission_status || 'pending').toLowerCase();
           const isApprovedStatus = ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(st);
-          const isCommissionValid = ['pending', 'on_hold', 'held', 'released', 'processing'].includes(cst);
-          return isApprovedStatus && isCommissionValid;
+          if (statusFilter) {
+            return isApprovedStatus && cst === statusFilter.toLowerCase();
+          }
+          return isApprovedStatus && ['pending', 'on_hold', 'held', 'released', 'processing'].includes(cst);
         });
         setApplications(approvedOnly);
       }
