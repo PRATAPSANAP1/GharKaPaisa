@@ -469,23 +469,48 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
     return ['All Banks', ...activeBanks.map(b => b.short_code).filter(Boolean)];
   }, [activeBanks]);
 
-  // Reset bank filter when category changes and selected bank is no longer available
+  // Helper to check if a product belongs to selected bank filter
+  const isProductOfBank = (p, bankFilter) => {
+    if (!bankFilter || bankFilter.toLowerCase() === 'all banks' || bankFilter.toLowerCase() === 'all') return true;
+    const filterLower = bankFilter.toLowerCase().trim();
+    const pBankName = (p.bank_name || '').toLowerCase();
+    const pBankCode = (p.bank_code || '').toLowerCase();
+    const pBankSlug = (p.bank_slug || '').toLowerCase();
+    const pName = (p.name || '').toLowerCase();
+    const pBankId = p.bank_id || '';
+
+    if (filterLower.includes('tata')) {
+      const isTataProduct = pBankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || 
+                            pBankId === 'ad9a965f-63c9-4a67-92be-058b45eea1f5' || 
+                            pBankName.includes('tata') || pName.includes('tata');
+
+      if (filterLower.includes('hdfc')) {
+        return isTataProduct && (pBankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || pBankName.includes('hdfc') || pName.includes('hdfc'));
+      } else if (filterLower.includes('sbi')) {
+        return isTataProduct && (pBankId === 'ad9a965f-63c9-4a67-92be-058b45eea1f5' || pBankName.includes('sbi') || pName.includes('sbi'));
+      }
+      return isTataProduct;
+    }
+
+    const cleanFilterWord = filterLower.replace(/bank/g, '').trim();
+
+    return (pBankCode && pBankCode === filterLower) ||
+           (pBankName && pBankName.includes(filterLower)) ||
+           (pBankName && cleanFilterWord && pBankName.includes(cleanFilterWord)) ||
+           (pBankSlug && pBankSlug === filterLower) ||
+           (pName && pName.includes(filterLower)) ||
+           (pName && cleanFilterWord && pName.includes(cleanFilterWord));
+  };
+
+  // Reset bank filter ONLY if products are loaded and no product matches selected bank
   useEffect(() => {
-    if (activeBank !== 'All Banks') {
-      const activeBankLower = activeBank.toLowerCase().trim();
-      const isAvailableInActive = banksForCategory.some(b => b.toLowerCase().trim() === activeBankLower);
-      if (!isAvailableInActive && banksForCategory.length > 1) {
-        const hasMatchingProduct = products.some(p => 
-          p.bank_code?.toLowerCase() === activeBankLower || 
-          p.bank_name?.toLowerCase().includes(activeBankLower) || 
-          p.name?.toLowerCase().includes(activeBankLower)
-        );
-        if (!hasMatchingProduct) {
-          setActiveBank('All Banks');
-        }
+    if (activeBank !== 'All Banks' && products.length > 0) {
+      const hasMatchingProduct = products.some(p => isProductOfBank(p, activeBank));
+      if (!hasMatchingProduct) {
+        setActiveBank('All Banks');
       }
     }
-  }, [banksForCategory, activeBank, products]);
+  }, [activeBank, products]);
 
   // Filter Logic
   const filteredProducts = products.filter(p => {
@@ -518,36 +543,8 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
     } else {
       matchCategory = pCat === activeCategory || pCat.includes(activeCategory);
     }
-    const activeBankLower = (activeBank || '').toLowerCase().trim();
-    let matchBank = false;
-    if (!activeBank || activeBankLower === 'all banks' || activeBankLower === 'all') {
-      matchBank = true;
-    } else {
-      const pBankName = (p.bank_name || '').toLowerCase();
-      const pBankCode = (p.bank_code || '').toLowerCase();
-      const pBankSlug = (p.bank_slug || '').toLowerCase();
-      const pName = (p.name || '').toLowerCase();
-      const pBankId = p.bank_id || '';
 
-      if (activeBankLower.includes('tata')) {
-        const isTataProduct = pBankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || 
-                              pBankId === 'ad9a965f-63c9-4a67-92be-058b45eea1f5' || 
-                              pBankName.includes('tata') || pName.includes('tata');
-
-        if (activeBankLower.includes('hdfc')) {
-          matchBank = isTataProduct && (pBankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || pBankName.includes('hdfc') || pName.includes('hdfc'));
-        } else if (activeBankLower.includes('sbi')) {
-          matchBank = isTataProduct && (pBankId === 'ad9a965f-63c9-4a67-92be-058b45eea1f5' || pBankName.includes('sbi') || pName.includes('sbi'));
-        } else {
-          matchBank = isTataProduct;
-        }
-      } else {
-        matchBank = (pBankCode && pBankCode === activeBankLower) ||
-                    (pBankName && pBankName.includes(activeBankLower)) ||
-                    (pBankSlug && pBankSlug === activeBankLower) ||
-                    (pName && pName.includes(activeBankLower));
-      }
-    }
+    const matchBank = isProductOfBank(p, activeBank);
     
     // Commission Filter
     const matchCommission = parseFloat(p.commission_value || 0) >= minCommission;
