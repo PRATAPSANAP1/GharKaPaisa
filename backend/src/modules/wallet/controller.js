@@ -1776,7 +1776,10 @@ const releaseCommission = async (req, res, next) => {
     const { transactionId } = req.params;
     const { remarks } = req.body;
     
-    await manualReleaseCommission(transactionId, req.user.id, remarks);
+    const result = await manualReleaseCommission(transactionId, req.user.id, remarks);
+    if (result && result.alreadyProcessed) {
+      return error(res, result.message || `Commission is already ${result.status || 'processed'}`, 400);
+    }
     await logAction(req, 'RELEASE_COMMISSION', transactionId, { remarks });
 
     return success(res, {}, 'Commission released successfully to partner available balance');
@@ -1790,7 +1793,10 @@ const rejectCommission = async (req, res, next) => {
     const { transactionId } = req.params;
     const { remarks } = req.body;
     
-    await manualRejectCommission(transactionId, req.user.id, remarks);
+    const result = await manualRejectCommission(transactionId, req.user.id, remarks);
+    if (result && result.alreadyProcessed) {
+      return error(res, result.message || `Commission is already ${result.status || 'processed'}`, 400);
+    }
     await logAction(req, 'REJECT_COMMISSION', transactionId, { remarks });
 
     return success(res, {}, 'Commission hold rejected successfully');

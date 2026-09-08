@@ -1371,8 +1371,14 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
       [transactionId]
     );
     if (!ledgerTxn) throw new Error('Transaction not found in ledger');
-    if (ledgerTxn.status === 'Released') throw new Error('Commission already released');
-    if (ledgerTxn.status === 'Rejected') throw new Error('Commission already rejected');
+    if (ledgerTxn.status === 'Released' || ledgerTxn.status === 'Approved') {
+      await client.query('COMMIT');
+      return { alreadyProcessed: true, status: ledgerTxn.status, message: 'Commission already released' };
+    }
+    if (ledgerTxn.status === 'Rejected') {
+      await client.query('COMMIT');
+      return { alreadyProcessed: true, status: ledgerTxn.status, message: 'Commission already rejected' };
+    }
 
     amount = ledgerTxn.credit || 0;
     partnerUserId = ledgerTxn.user_id;
@@ -1496,8 +1502,14 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
       [transactionId]
     );
     if (!ledgerTxn) throw new Error('Transaction not found in ledger');
-    if (ledgerTxn.status === 'Released') throw new Error('Commission already released');
-    if (ledgerTxn.status === 'Rejected') throw new Error('Commission already rejected');
+    if (ledgerTxn.status === 'Released' || ledgerTxn.status === 'Approved') {
+      await client.query('COMMIT');
+      return { alreadyProcessed: true, status: ledgerTxn.status, message: 'Commission already released' };
+    }
+    if (ledgerTxn.status === 'Rejected') {
+      await client.query('COMMIT');
+      return { alreadyProcessed: true, status: ledgerTxn.status, message: 'Commission already rejected' };
+    }
 
     amount = ledgerTxn.credit || 0;
     partnerUserId = ledgerTxn.user_id;
