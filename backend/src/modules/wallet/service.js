@@ -1342,7 +1342,7 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
       `SELECT l.id, l.partner_id, l.credit, l.transaction_type, l.description, l.status, p.user_id
        FROM wallet_ledger l
        LEFT JOIN partner_profiles p ON (p.id = l.partner_id OR p.user_id = l.partner_id)
-       WHERE l.id = $1 FOR UPDATE OF l`,
+       WHERE (l.id::text = $1::text OR l.reference_number = $1::text) FOR UPDATE OF l`,
       [transactionId]
     );
     if (!ledgerTxn) throw new Error('Transaction not found in ledger');
@@ -1474,7 +1474,7 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
       `SELECT l.id, l.partner_id, l.credit, l.transaction_type, l.description, l.status, p.user_id
        FROM wallet_ledger l
        LEFT JOIN partner_profiles p ON (p.id = l.partner_id OR p.user_id = l.partner_id)
-       WHERE l.id = $1 FOR UPDATE OF l`,
+       WHERE (l.id::text = $1::text OR l.reference_number = $1::text) FOR UPDATE OF l`,
       [transactionId]
     );
     if (!ledgerTxn) throw new Error('Transaction not found in ledger');
