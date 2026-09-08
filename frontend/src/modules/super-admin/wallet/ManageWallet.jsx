@@ -13,46 +13,12 @@ import {
   MdBarChart, MdAssignment
 } from 'react-icons/md';
 
-// ── Default Mock Data Fallbacks for 100% Dynamic Visual Completeness ────────
-const DEFAULT_WITHDRAWALS = [
-  { id: 'WDR-2026-0887', user_name: 'Rohit Kumar', role: 'Team Leader', amount: 2480, status: 'Approved', requested_at: '2026-09-02T10:15:00', partner_code: 'YOH-TL1001', account_number: '918237128911', ifsc_code: 'HDFC0001234', bank_name: 'HDFC Bank' },
-  { id: 'WDR-2026-0886', user_name: 'Priya Singh', role: 'Telecaller', amount: 1780, status: 'Pending', requested_at: '2026-09-02T09:40:00', partner_code: 'YOH-TC2001', account_number: '501002341298', ifsc_code: 'ICIC0000456', bank_name: 'ICICI Bank' },
-  { id: 'WDR-2026-0885', user_name: 'Ankit Verma', role: 'Telecaller', amount: 1320, status: 'In Review', requested_at: '2026-09-01T16:20:00', partner_code: 'YOH-TC2002', account_number: '302918273612', ifsc_code: 'SBIN0007890', bank_name: 'State Bank of India' },
-  { id: 'WDR-2026-0884', user_name: 'Neha Patel', role: 'Telecaller', amount: 950, status: 'Completed', requested_at: '2026-09-01T14:10:00', partner_code: 'YOH-TC2003', account_number: '601293847510', ifsc_code: 'UTIB0000123', bank_name: 'Axis Bank' },
-  { id: 'WDR-2026-0883', user_name: 'Vikram Joshi', role: 'Team Leader', amount: 3790, status: 'Pending', requested_at: '2026-08-31T18:05:00', partner_code: 'YOH-TL1002', account_number: '409182736412', ifsc_code: 'KKBK0000567', bank_name: 'Kotak Bank' },
-];
-
-const DEFAULT_ADD_FUNDS = [
-  { id: 'FND-2026-0567', user_name: 'Sunil Partner', role: 'Partner', amount: 8000, status: 'Pending', requested_at: '2026-09-02T11:00:00', purpose: 'Wallet Topup for leads' },
-  { id: 'FND-2026-0566', user_name: 'Amit Sharma', role: 'Manager', amount: 10000, status: 'Approved', requested_at: '2026-09-02T08:30:00', purpose: 'Marketing Fund' },
-  { id: 'FND-2026-0565', user_name: 'Neha Patel', role: 'Telecaller', amount: 2000, status: 'In Review', requested_at: '2026-09-01T15:45:00', purpose: 'Incentive advance' },
-  { id: 'FND-2026-0564', user_name: 'Priya Singh', role: 'Telecaller', amount: 1000, status: 'Approved', requested_at: '2026-09-01T11:20:00', purpose: 'Client visits' },
-  { id: 'FND-2026-0563', user_name: 'Rohit Kumar', role: 'Team Leader', amount: 3000, status: 'Rejected', requested_at: '2026-08-31T17:10:00', purpose: 'Travel expense' },
-];
-
-const DEFAULT_COMMISSIONS = [
-  { id: 'COM-2026-0787', user_name: 'Rohit Kumar', role: 'Team Leader', amount: 1250, requested_at: '2026-09-02T10:30:00', product: 'HDFC Regalia Credit Card', status: 'Pending' },
-  { id: 'COM-2026-0786', user_name: 'Ankit Verma', role: 'Telecaller', amount: 850, requested_at: '2026-09-02T09:15:00', product: 'SBI SimplyClick', status: 'Pending' },
-  { id: 'COM-2026-0785', user_name: 'Neha Patel', role: 'Telecaller', amount: 950, requested_at: '2026-09-01T17:00:00', product: 'ICICI Rubyx Credit Card', status: 'Pending' },
-  { id: 'COM-2026-0784', user_name: 'Vikram Joshi', role: 'Team Leader', amount: 1100, requested_at: '2026-09-01T13:40:00', product: 'Axis Flipkart Card', status: 'Pending' },
-  { id: 'COM-2026-0783', user_name: 'Sunil Partner', role: 'Partner', amount: 2350, requested_at: '2026-08-31T16:50:00', product: 'Personal Loan Disbursement', status: 'Pending' },
-];
-
-const DEFAULT_PARTNERS = [
-  { name: 'Sunil Partner', balance: 345780, status: 'Active', color: '#3B82F6' },
-  { name: 'Raj Finance Hub', balance: 275480, status: 'Active', color: '#10B981' },
-  { name: 'Kumar Associates', balance: 215860, status: 'Active', color: '#F59E0B' },
-  { name: 'Sharma Financial', balance: 125300, status: 'Active', color: '#8B5CF6' },
-  { name: 'Others (124)', balance: 223250, status: 'Active', color: '#EF4444' },
-];
-
-const DEFAULT_LEDGER = [
-  { id: 'TXN-2026-5843', user_name: 'Rohit Kumar', type: 'Credited', amount: 1250, description: 'Incentive for APP-2026-0987', datetime: '02 Sep 2026 10:30 AM' },
-  { id: 'TXN-2026-5842', user_name: 'Priya Singh', type: 'Debited', amount: 2000, description: 'Settlement Paid', datetime: '02 Sep 2026 09:18 AM' },
-  { id: 'TXN-2026-5841', user_name: 'Ankit Verma', type: 'Credited', amount: 850, description: 'Incentive for APP-2026-0986', datetime: '01 Sep 2026 06:45 PM' },
-  { id: 'TXN-2026-5840', user_name: 'Sunil Partner', type: 'Debited', amount: 3500, description: 'Partner Settlement Paid', datetime: '01 Sep 2026 03:30 PM' },
-  { id: 'TXN-2026-5839', user_name: 'Neha Patel', type: 'Credited', amount: 950, description: 'Incentive for APP-2026-0985', datetime: '01 Sep 2026 01:10 PM' },
-];
+// ── Clean Empty Default Arrays for 100% Dynamic Backend Data ────────
+const DEFAULT_WITHDRAWALS = [];
+const DEFAULT_ADD_FUNDS = [];
+const DEFAULT_COMMISSIONS = [];
+const DEFAULT_PARTNERS = [];
+const DEFAULT_LEDGER = [];
 
 export default function ManageWallet() {
   const { C, isDark } = useTheme();
@@ -370,20 +336,27 @@ export default function ManageWallet() {
     else if (datasetName === 'ledger') dataToExport = ledgerEntries;
     else dataToExport = [reconciliation || {}];
 
-    if (!dataToExport || dataToExport.length === 0) return alert('No data available to export');
+    if (!dataToExport || dataToExport.length === 0) {
+      return showToast('No data available to export in this category', 'error');
+    }
 
-    const headers = Object.keys(dataToExport[0]).join(',');
-    const rows = dataToExport.map(row =>
-      Object.values(row).map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(',')
-    );
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers, ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      showToast(`Exporting ${datasetName} report...`, 'success');
+      const headers = Object.keys(dataToExport[0]).join(',');
+      const rows = dataToExport.map(row =>
+        Object.values(row).map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(',')
+      );
+      const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers, ...rows].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      showToast('Export failed. Please try again.', 'error');
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -775,7 +748,7 @@ export default function ManageWallet() {
                   <tbody>
                     {(() => {
                       const pendingList = withdrawals.filter(w => (w.status || '').toLowerCase().includes('pending'));
-                      const displayList = pendingList.length > 0 ? pendingList : DEFAULT_WITHDRAWALS.filter(w => w.status === 'Pending');
+                      const displayList = pendingList;
 
                       if (displayList.length === 0) {
                         return (
@@ -858,15 +831,13 @@ export default function ManageWallet() {
                         return s.includes('approved') || s.includes('processed') || s.includes('transferred') || s.includes('completed');
                       });
                       
-                      // Fallback mock items with timestamps to test 1-hour window
-                      const defaultApproved = [
-                        { id: 'WDR-2026-9012', user_name: 'Sunil Partner', partner_code: 'YOH-PRT001', role: 'Partner', amount: 4500, status: 'Approved', approved_at: new Date(Date.now() - 20 * 60 * 1000).toISOString(), bank_name: 'ICICI Bank', account_number: '•••• 4561', ifsc_code: 'ICIC0000104', utr: 'UTR981273918' },
-                        { id: 'WDR-2026-9011', user_name: 'Rohit Kumar', partner_code: 'YOH-TL1001', role: 'Team Leader', amount: 2480, status: 'Completed', approved_at: new Date(Date.now() - 90 * 60 * 1000).toISOString(), bank_name: 'HDFC Bank', account_number: '•••• 8911', ifsc_code: 'HDFC0001234', utr: 'UTR817263541' }
-                      ];
+                      if (approvedList.length === 0) {
+                        return (
+                          <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No approved withdrawal records found</td></tr>
+                        );
+                      }
 
-                      const displayList = approvedList.length > 0 ? approvedList : defaultApproved;
-
-                      return displayList.map(w => {
+                      return approvedList.map(w => {
                         const badge = getStatusBadge(w.status || 'Approved');
                         const userName = w.user_name || (w.first_name ? `${w.first_name} ${w.last_name || ''}` : w.partner_code || 'Partner');
                         const amt = parseFloat(w.amount || 0);
