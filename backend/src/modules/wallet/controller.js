@@ -1747,7 +1747,6 @@ const getPartnersOverview = async (req, res, next) => {
       JOIN partner_profiles ap ON ap.id = w.partner_id
       LEFT JOIN users u ON u.id = ap.user_id
       ORDER BY w.available_balance DESC
-      LIMIT 10
     `);
     
     const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#6366F1', '#14B8A6'];

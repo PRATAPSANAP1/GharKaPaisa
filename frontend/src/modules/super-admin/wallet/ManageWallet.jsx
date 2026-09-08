@@ -548,10 +548,10 @@ export default function ManageWallet() {
       {/* ── TOP 4 MAIN KPI CARDS ── */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '14px' }}>
         
-        {/* Card 1: Account Balance */}
-        <div onClick={() => setActiveTab('reconciliation')} style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
+        {/* Card 1: Razorpay Account Balance */}
+        <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Account Balance</span>
+            <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Razorpay Account Balance</span>
             <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdAccountBalanceWallet size={22} /></div>
           </div>
           <div>
@@ -559,12 +559,12 @@ export default function ManageWallet() {
               ₹{(
                 razorpayBalance?.balance !== undefined && razorpayBalance?.balance !== null
                   ? parseFloat(razorpayBalance.balance)
-                  : parseFloat(reconciliation?.system_closing || partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0) || 0)
+                  : parseFloat(partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0) || 0)
               ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </h3>
             <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> 
-              {razorpayBalance?.balance !== undefined ? 'Razorpay Wallet Balance' : 'Live System Balance'}
+              RazorpayX Live Wallet Balance
             </span>
           </div>
         </div>
@@ -659,8 +659,7 @@ export default function ManageWallet() {
           { id: 'add_funds', label: 'Add Funds Requests', icon: <MdAddCard size={18} /> },
           { id: 'team_commission', label: 'Team Commission Hierarchy', icon: <MdPeople size={18} /> },
           { id: 'partners', label: 'Partner Balances Overview', icon: <MdPieChart size={18} /> },
-          { id: 'ledger', label: 'Ledger Audit Trail', icon: <MdReceipt size={18} /> },
-          { id: 'reconciliation', label: 'Wallet Reconciliation', icon: <MdScale size={18} /> }
+          { id: 'ledger', label: 'Ledger Audit Trail', icon: <MdReceipt size={18} /> }
         ].map(tab => {
           const isActive = activeTab === tab.id;
           return (
@@ -1479,66 +1478,7 @@ export default function ManageWallet() {
           </div>
         )}
 
-        {/* TAB 7: Wallet Reconciliation */}
-        {activeTab === 'reconciliation' && (
-          <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-              <div>
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <MdScale style={{ color: C.teal }} size={20} /> 7. Wallet Reconciliation & DB Data Source
-                </h3>
-                <span style={{ fontSize: '12px', color: C.textLight }}>Verify wallet balances against total ledger credits and debits</span>
-              </div>
-              <button onClick={() => { setModalSearchTerm(''); setModalStatusFilter('all'); setActiveFullViewModal('reconciliation'); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>View All Audit Logs</button>
-            </div>
 
-            {/* DB Source Badge */}
-            <div style={{ padding: '8px 14px', borderRadius: '8px', background: isDark ? '#27272A' : '#EFF6FF', border: `1px solid ${isDark ? '#3F3F46' : '#BFDBFE'}`, fontSize: '11.5px', color: isDark ? '#93C5FD' : '#1D4ED8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>🗄️ <strong>Live DB Connection:</strong> Querying directly from PostgreSQL production database tables: <code>partner_wallets</code>, <code>wallet_ledger</code>, and <code>fund_requests</code>.</span>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '20px', alignItems: 'center' }}>
-              <div style={{ flex: 1, background: isDark ? '#27272A' : '#F8FAFC', padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}`, fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 900, color: C.text, marginBottom: '4px' }}>System Balance Audit Summary</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: C.textLight }}>Opening Balance:</span>
-                  <strong style={{ color: C.text }}>₹{(reconciliation?.opening_balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: C.textLight }}>Total Credits:</span>
-                  <strong style={{ color: C.green }}>+₹{(reconciliation?.total_credits || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: C.textLight }}>Total Debits:</span>
-                  <strong style={{ color: C.red }}>-₹{(reconciliation?.total_debits || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${C.border}`, paddingTop: '6px' }}>
-                  <span style={{ color: C.textLight }}>Closing Balance (System):</span>
-                  <strong style={{ color: C.text }}>₹{(reconciliation?.system_closing || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: C.textLight }}>Discrepancy Drift:</span>
-                  <strong style={{ color: (reconciliation?.difference || 0) === 0 ? C.green : C.red }}>₹{(reconciliation?.difference || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '16px', textAlign: 'center' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: (reconciliation?.difference || 0) === 0 ? '#DCFCE7' : '#FEE2E2', color: (reconciliation?.difference || 0) === 0 ? '#15803D' : '#B91C1C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MdCheck size={32} />
-                </div>
-                <div>
-                  <strong style={{ fontSize: '14px', color: (reconciliation?.difference || 0) === 0 ? '#15803D' : '#B91C1C', display: 'block' }}>
-                    {reconciliation?.status === 'MATCHED' || (reconciliation?.difference || 0) === 0 ? 'Reconciliation Matched' : 'Discrepancy Found'}
-                  </strong>
-                  <span style={{ fontSize: '11px', color: C.textLight }}>Last Reconciled On {reconciliation?.last_reconciled || 'Just now'}</span>
-                </div>
-                <button onClick={handleReconcileNow} disabled={actionLoading} style={{ ...S.btn('primary'), background: C.teal, padding: '8px 18px', fontSize: '12px', borderRadius: '10px', opacity: actionLoading ? 0.7 : 1 }}>
-                  {actionLoading ? 'Reconciling...' : 'Reconcile Now'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
       </div>
 
