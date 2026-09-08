@@ -1214,12 +1214,6 @@ export default function ManageWallet() {
                                 >
                                   Approve & Release
                                 </button>
-                                <button
-                                  onClick={() => setRejectModalItem({ item: c, type: 'commission', reason: '' })}
-                                  style={{ background: '#EF4444', border: 'none', color: '#FFF', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
-                                >
-                                  Reject
-                                </button>
                               </div>
                             </td>
                           </tr>
@@ -1231,7 +1225,7 @@ export default function ManageWallet() {
               </div>
             )}
 
-            {/* Sub-Tab 2: Approved & Released Commissions (with 1-Hour Time Lock Reject) */}
+            {/* Sub-Tab 2: Approved & Released Commissions */}
             {commissionSubTab === 'approved' && (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
@@ -1267,7 +1261,6 @@ export default function ManageWallet() {
                         const userName = c.user_name || (c.first_name ? `${c.first_name} ${c.last_name || ''}` : c.partner_code || 'Partner');
                         const amt = parseFloat(c.credit || c.amount || 0);
                         const approvedTimeStr = c.approved_at || c.updated_at || c.created_at || new Date().toISOString();
-                        const undoInfo = getRemainingUndoTime(approvedTimeStr);
 
                         return (
                           <tr key={c.id} style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -1291,26 +1284,6 @@ export default function ManageWallet() {
                                   style={{ background: isDark ? '#27272A' : '#E2E8F0', color: C.text, border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
                                 >
                                   View Detailed
-                                </button>
-                                
-                                {/* 1-HOUR REJECT BUTTON TIME LOCK (LIVE REAL-TIME COUNTDOWN) */}
-                                <button
-                                  disabled={!undoInfo.canUndo}
-                                  onClick={() => undoInfo.canUndo && setRejectModalItem({ item: c, type: 'undo_commission', reason: '' })}
-                                  title={undoInfo.canUndo ? `Reject/Undo available for ${undoInfo.label}` : 'Reject option disabled (1 hour post-approval limit reached)'}
-                                  style={{
-                                    background: undoInfo.canUndo ? '#EF4444' : (isDark ? '#3F3F46' : '#E2E8F0'),
-                                    color: undoInfo.canUndo ? '#FFF' : (isDark ? '#71717A' : '#94A3B8'),
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    padding: '5px 10px',
-                                    fontSize: '11px',
-                                    fontWeight: 800,
-                                    cursor: undoInfo.canUndo ? 'pointer' : 'not-allowed',
-                                    opacity: undoInfo.canUndo ? 1 : 0.6
-                                  }}
-                                >
-                                  {undoInfo.canUndo ? undoInfo.label : 'Reject Window Expired'}
                                 </button>
                               </div>
                             </td>

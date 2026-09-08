@@ -499,7 +499,7 @@ export default function PartnerWallet() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: C.textLight }}>Total Debits</span>
-                    <span style={{ fontWeight: 700, color: '#EF4444' }}>- {formatINR(settledPayouts + pendingBal)}</span>
+                    <span style={{ fontWeight: 700, color: '#EF4444' }}>- {formatINR(settledPayouts + pendingWithdrawalAmt + holdBal)}</span>
                   </div>
                 </div>
 
