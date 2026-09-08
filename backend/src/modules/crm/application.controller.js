@@ -71,7 +71,7 @@ const submitApplication = async (req, res, next) => {
       const { rows: [p] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (p) {
         PartnerId = p.id;
-      } else {
+      } else if (['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
         const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
         const { rows: [newP] } = await client.query(`
           INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
@@ -81,7 +81,7 @@ const submitApplication = async (req, res, next) => {
       }
     }
 
-    if (!PartnerId) {
+    if (!PartnerId && ['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
       await client.query('ROLLBACK');
       return error(res, 'Partner ID is required', 400);
     }
@@ -2380,7 +2380,7 @@ const submitPartnerApplication = async (req, res, next) => {
       const { rows: [p] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (p) {
         partnerId = p.id;
-      } else {
+      } else if (['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
         const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
         const { rows: [newP] } = await client.query(`
           INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
@@ -2390,7 +2390,7 @@ const submitPartnerApplication = async (req, res, next) => {
       }
     }
 
-    if (!partnerId) {
+    if (!partnerId && ['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
       await client.query('ROLLBACK');
       return error(res, 'Partner profile not found', 400);
     }

@@ -305,7 +305,7 @@ const createLead = async (req, res, next) => {
       partner = p;
     }
 
-    if (!partner) {
+    if (!partner && ['PARTNER', 'TEAM_MEMBER'].includes(req.user.role)) {
       const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
       const { rows: [newP] } = await query(`
         INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)

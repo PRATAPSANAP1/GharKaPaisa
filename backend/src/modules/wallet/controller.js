@@ -1320,15 +1320,16 @@ const cancelWithdrawal = async (req, res, next) => {
     );
     await client.query(`INSERT INTO wallet_withdrawal_events (withdrawal_id,status,remarks,changed_by) VALUES ($1,'cancelled',$2,$3)`, [id, 'Cancelled by partner', req.user?.id || null]);
 
-    // Append-Only Financial Entry for Withdrawal Cancellation (Zero UPDATE on historical rows)
+    // Append-Only Financial Entry for Withdrawal Cancellation - Credit back the cancelled amount
     await client.query(`
       INSERT INTO wallet_ledger (
         wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
-      ) VALUES ($1, $2, 'WITHDRAWAL_CANCELLED', 0, 0, $3, $4, 'Released', $5)
+      ) VALUES ($1, $2, 'WITHDRAWAL_CANCELLED', $3, 0, $4, $5, 'Released', $6)
     `, [
       wr.wallet_id || (await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [partnerId])).rows[0]?.id,
       partnerId,
-      'Withdrawal cancelled by Partner',
+      wr.amount,
+      'Withdrawal cancelled by Partner - Amount restored to available balance',
       id.toString(),
       req.user?.id || null
     ]);

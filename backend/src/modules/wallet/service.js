@@ -696,14 +696,15 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
         throw new Error(`Cannot reject withdrawal in status: ${wr.status}`);
       }
 
-      // Append-Only Financial Entry for Withdrawal Rejection (Zero UPDATE on historical rows)
+      // Append-Only Financial Entry for Withdrawal Rejection - Credit back the rejected amount
       await client.query(`
         INSERT INTO wallet_ledger (
           wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
-        ) VALUES ($1, $2, 'WITHDRAWAL_CANCELLED', 0, 0, $3, $4, 'Released', $5)
+        ) VALUES ($1, $2, 'WITHDRAWAL_CANCELLED', $3, 0, $4, $5, 'Released', $6)
       `, [
         wr.wallet_id, wr.partner_id,
-        `Withdrawal rejected - Reason: ${rejectionReason || 'Rejected by Admin'}`,
+        wr.amount,
+        `Withdrawal rejected - Reason: ${rejectionReason || 'Rejected by Admin'} - Amount restored to available balance`,
         withdrawalId.toString(),
         processedBy
       ]);
@@ -723,6 +724,9 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
         INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
         VALUES ($1, 'WITHDRAWAL_REJECTED', $2, $3)
       `, [withdrawalId, `Rejection reason: ${rejectionReason || 'Rejected by Admin'}`, processedBy]);
+
+      // Sync wallet balance to restore the cancelled amount to available balance
+      await syncWalletBalance(wr.partner_id, client);
 
     } else if (action === 'transfer' || utrNumber) {
       if (!['approved', 'processing'].includes(wr.status)) {
