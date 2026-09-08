@@ -1024,7 +1024,7 @@ export default function ManageWallet() {
               >
                 <span>Pending Requests</span>
                 <span style={{ background: commissionSubTab === 'pending' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
-                  {pendingCommissions.length > 0 ? pendingCommissions.length : DEFAULT_COMMISSIONS.length}
+                  {pendingCommissions.length}
                 </span>
               </button>
 
@@ -1046,7 +1046,7 @@ export default function ManageWallet() {
               >
                 <span>Approved & Released</span>
                 <span style={{ background: commissionSubTab === 'approved' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
-                  {ledgerEntries.filter(l => (l.type === 'Credited' || parseFloat(l.credit || 0) > 0) && (l.status || '').toLowerCase().includes('approved')).length || 2}
+                  {ledgerEntries.filter(l => (l.type === 'Credited' || parseFloat(l.credit || 0) > 0 || l.transaction_type === 'COMMISSION_RELEASE') && ((l.status || '').toLowerCase().includes('approved') || (l.status || '').toLowerCase().includes('released'))).length}
                 </span>
               </button>
             </div>
