@@ -15,16 +15,18 @@ if (!hasCredentials) {
   logger.warn('NOTICE: Razorpay API credentials (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are not configured in environment.');
 }
 
-// Helper to log payout API request/responses
-const logPayoutApiCall = async (withdrawalId, request, response, httpStatus, retryCount = 0) => {
-  try {
-    await query(`
-      INSERT INTO payout_logs (withdrawal_id, api_request, api_response, http_status, retry_count)
-      VALUES ($1, $2, $3, $4, $5)
-    `, [withdrawalId, JSON.stringify(request), JSON.stringify(response), httpStatus, retryCount]);
-  } catch (err) {
-    logger.error('Failed to write payout log:', err.message);
-  }
+// Helper to log payout API request/responses (Non-blocking background execution)
+const logPayoutApiCall = (withdrawalId, request, response, httpStatus, retryCount = 0) => {
+  setImmediate(async () => {
+    try {
+      await query(`
+        INSERT INTO payout_logs (withdrawal_id, api_request, api_response, http_status, retry_count)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [withdrawalId, JSON.stringify(request), JSON.stringify(response), httpStatus, retryCount]);
+    } catch (err) {
+      logger.error('Failed to write payout log:', err.message);
+    }
+  });
 };
 
 // Create a contact in Razorpay
