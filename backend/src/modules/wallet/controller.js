@@ -1822,11 +1822,11 @@ const getPendingCommissions = async (req, res, next) => {
                COALESCE(
                  NULLIF(emp.designation, ''),
                  CASE 
-                   WHEN u.role = 'EMPLOYEE' THEN 'Employee'
-                   WHEN u.role = 'SUPER_ADMIN' OR u.role = 'ADMIN' THEN 'Admin'
+                   WHEN u.role::text = 'EMPLOYEE' THEN 'Employee'
+                   WHEN u.role::text = 'SUPER_ADMIN' OR u.role::text = 'ADMIN' THEN 'Admin'
                    WHEN emp.id IS NOT NULL THEN 'Employee'
                    WHEN ap.id IS NOT NULL THEN 'Partner'
-                   ELSE COALESCE(u.role, 'Partner')
+                   ELSE COALESCE(u.role::text, 'Partner')
                  END
                ) as role,
                COALESCE(a.app_number, wl.reference_number, 'N/A') as app_number,
