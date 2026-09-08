@@ -270,8 +270,8 @@ export default function ManageWallet() {
   const handleProcessPayout = async (id) => {
     setActionLoading(true);
     try {
-      await api.post(`/wallet/admin/withdrawals/${id}/process`);
-      showToast(`Payout processed successfully for ${id}!`, 'success');
+      await api.post(`/wallet/admin/withdrawals/${id}/process`, { action: 'transfer', approved: true });
+      showToast(`Payout processed via Razorpay for withdrawal ${id}!`, 'success');
       setSelectedItem(null);
       fetchAllDashboardData();
     } catch (err) {

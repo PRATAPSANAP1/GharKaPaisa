@@ -757,7 +757,13 @@ const processWithdrawalRequest = async (req, res, next) => {
 
     let determinedAction = action;
     if (!determinedAction) {
-      determinedAction = approved ? (utr_number ? 'transfer' : 'approve') : 'reject';
+      if (approved === false) {
+        determinedAction = 'reject';
+      } else if (approved === true) {
+        determinedAction = utr_number ? 'transfer' : 'approve';
+      } else {
+        determinedAction = 'transfer';
+      }
     }
 
     const payoutOptions = {

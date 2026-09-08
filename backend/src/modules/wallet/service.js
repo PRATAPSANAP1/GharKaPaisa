@@ -686,13 +686,34 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
         WHERE id = $3
       `, [processedBy, adminNote, withdrawalId]);
 
+      // Insert WITHDRAWAL_SETTLED ledger entry so approved amount reflects in total_withdrawn
+      await client.query(`
+        INSERT INTO wallet_ledger (
+          wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+        )
+        SELECT $1, $2, 'WITHDRAWAL_SETTLED', 0, $3::numeric, $4, $5, 'Released', $6
+        WHERE NOT EXISTS (
+          SELECT 1 FROM wallet_ledger
+          WHERE transaction_type = 'WITHDRAWAL_SETTLED'
+            AND reference_number = $5
+            AND status IN ('Released', 'Approved')
+        )
+      `, [
+        wr.wallet_id, wr.partner_id, wr.amount,
+        `Withdrawal request approved - Amount ₹${wr.amount}`,
+        withdrawalId.toString(),
+        processedBy
+      ]);
+
       await client.query(`
         INSERT INTO wallet_withdrawal_events (withdrawal_id, status, remarks, changed_by)
         VALUES ($1, 'WITHDRAWAL_APPROVED', $2, $3)
       `, [withdrawalId, adminNote || 'Approved by Super Admin', processedBy]);
 
+      await syncWalletBalance(wr.partner_id, client);
+
     } else if (action === 'reject') {
-      if (!['pending', 'approved', 'failed'].includes(wr.status)) {
+      if (!['pending', 'approved', 'processing', 'failed'].includes(wr.status)) {
         throw new Error(`Cannot reject withdrawal in status: ${wr.status}`);
       }
 
@@ -729,7 +750,7 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
       await syncWalletBalance(wr.partner_id, client);
 
     } else if (action === 'transfer' || utrNumber) {
-      if (!['approved', 'processing'].includes(wr.status)) {
+      if (!['pending', 'approved', 'processing'].includes(wr.status)) {
         throw new Error(`Cannot transfer withdrawal in status: ${wr.status}`);
       }
 
