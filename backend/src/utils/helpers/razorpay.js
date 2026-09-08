@@ -79,6 +79,8 @@ const createRazorpayContact = async (partner, withdrawalId) => {
   }
 };
 
+const sanitizeAlphanumeric = (str) => String(str || '').replace(/[^a-zA-Z0-9]/g, '').trim();
+
 // Create a Fund Account (Bank Account) in Razorpay
 const createRazorpayFundAccount = async (contactId, bankDetails, withdrawalId) => {
   const url = 'https://api.razorpay.com/v1/fund_accounts';
@@ -87,8 +89,8 @@ const createRazorpayFundAccount = async (contactId, bankDetails, withdrawalId) =
     account_type: 'bank_account',
     bank_account: {
       name: bankDetails.account_holder_name,
-      ifsc: bankDetails.ifsc_code,
-      account_number: bankDetails.account_number
+      ifsc: String(bankDetails.ifsc_code || '').trim(),
+      account_number: sanitizeAlphanumeric(bankDetails.account_number)
     }
   };
 
@@ -219,7 +221,7 @@ const createRazorpayPayout = async (fundAccountId, amountRupees, withdrawalId, o
   }
 
   const requestBody = {
-    account_number: MERCHANT_ACCOUNT || 'RAZORPAYX_ACC',
+    account_number: sanitizeAlphanumeric(MERCHANT_ACCOUNT || '2333300582845610'),
     fund_account_id: fundAccountId,
     amount: amountPaise,
     currency: 'INR',
