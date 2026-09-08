@@ -254,12 +254,14 @@ export default function ManageWallet() {
 
   const handleApproveCommission = async (id) => {
     setActionLoading(true);
+    setPendingCommissions(prev => prev.filter(item => item.id !== id));
     try {
       await api.post(`/wallet/admin/commissions/${id}/release`);
       showToast(`Commission ${id} approved & released successfully!`, 'success');
       fetchAllDashboardData();
     } catch (err) {
       showToast(err.response?.data?.message || `Failed to release commission ${id}`, 'error');
+      fetchAllDashboardData();
     } finally {
       setActionLoading(false);
     }
@@ -267,6 +269,7 @@ export default function ManageWallet() {
 
   const handleRejectCommission = async (id, reason = 'Admin Rejected') => {
     setActionLoading(true);
+    setPendingCommissions(prev => prev.filter(item => item.id !== id));
     try {
       await api.post(`/wallet/admin/commissions/${id}/reject`, { remarks: reason, rejection_reason: reason });
       showToast(`Commission ${id} rejected.`, 'success');
@@ -274,6 +277,7 @@ export default function ManageWallet() {
       fetchAllDashboardData();
     } catch (err) {
       showToast(err.response?.data?.message || `Failed to reject commission ${id}`, 'error');
+      fetchAllDashboardData();
     } finally {
       setActionLoading(false);
     }
