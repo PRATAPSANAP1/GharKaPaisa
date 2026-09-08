@@ -31,13 +31,14 @@ export default function SuperAdminCommission() {
       if (res.data?.success) {
         const raw = res.data.data;
         const list = Array.isArray(raw) ? raw : (raw?.items || raw?.rows || []);
-        // Only show applications where all process steps are complete and Super Admin has approved
-        const approvedOnly = list.filter(app => {
+        // Include all applications with pending, approved, or released commissions
+        const commissionApps = list.filter(app => {
           const st = (app.status || '').toLowerCase();
-          const cst = (app.commission_status || '').toLowerCase();
-          return ['super_admin_approved', 'approved', 'disbursed', 'commission_released', 'commission_received'].includes(st) || ['released', 'approved', 'on_hold', 'held'].includes(cst);
+          const cst = (app.commission_status || 'pending').toLowerCase();
+          const commAmt = parseFloat(app.commission_amount || 0);
+          return commAmt > 0 || ['pending', 'released', 'approved', 'on_hold', 'held', 'processing'].includes(cst) || ['super_admin_approved', 'approved', 'disbursed', 'commission_released', 'commission_received'].includes(st);
         });
-        setApplications(approvedOnly);
+        setApplications(commissionApps);
       }
     } catch (err) {
       console.error('Failed to load commission applications:', err);

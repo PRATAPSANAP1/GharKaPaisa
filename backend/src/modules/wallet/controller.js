@@ -1797,35 +1797,37 @@ const getPendingCommissions = async (req, res, next) => {
   try {
     const { page, limit, offset } = getPaginationParams(req.query);
 
-    const [count, data] = await Promise.all([
-      query(`
-        SELECT COUNT(DISTINCT wl.id) as count
+    const countQuery = `
+      SELECT COUNT(*) as count FROM (
+        SELECT wl.id::text
         FROM wallet_ledger wl
-        LEFT JOIN partner_profiles ap ON (ap.id = wl.partner_id OR ap.user_id = wl.partner_id)
-        LEFT JOIN employees emp ON (emp.id = wl.partner_id OR emp.user_id = wl.partner_id)
-        LEFT JOIN users u ON (u.id = wl.partner_id OR u.id = ap.user_id OR u.id = emp.user_id)
         WHERE LOWER(COALESCE(wl.status::text, '')) IN ('pending', 'pending approval', 'on_hold', 'held', 'processing') AND wl.credit > 0
-      `),
-      query(`
-        SELECT wl.id, wl.credit, wl.created_at, wl.status, wl.description,
+
+        UNION ALL
+
+        SELECT a.id::text
+        FROM applications a
+        WHERE LOWER(COALESCE(a.commission_status::text, 'pending')) IN ('pending', 'processing', 'held', 'on_hold')
+          AND COALESCE(a.commission_amount, 0) > 0
+          AND a.id::text NOT IN (SELECT application_id::text FROM wallet_ledger WHERE application_id IS NOT NULL)
+      ) c
+    `;
+
+    const dataQuery = `
+      SELECT * FROM (
+        SELECT wl.id::text as id, wl.credit as amount, wl.credit, wl.created_at, wl.status, wl.description,
                wl.partner_id,
                COALESCE(ap.partner_code, emp.employee_id, u.id::text, 'USER') as partner_code,
                COALESCE(
                  NULLIF(TRIM(emp.full_name), ''),
                  NULLIF(TRIM(u.full_name), ''),
-                 CASE 
-                   WHEN TRIM(CONCAT(ap.first_name, ' ', ap.last_name)) != COALESCE(ap.partner_code, '') 
-                        AND TRIM(ap.first_name) != COALESCE(ap.partner_code, '') 
-                   THEN NULLIF(TRIM(CONCAT(ap.first_name, ' ', ap.last_name)), '')
-                   ELSE NULL 
-                 END,
                  NULLIF(TRIM(CONCAT(ap.first_name, ' ', ap.last_name)), ''),
                  'Beneficiary Member'
                ) as user_name,
                COALESCE(
                  NULLIF(TRIM(emp.full_name), ''),
                  NULLIF(TRIM(u.full_name), ''),
-                 CASE WHEN TRIM(ap.first_name) != COALESCE(ap.partner_code, '') THEN ap.first_name ELSE NULL END,
+                 NULLIF(TRIM(ap.first_name), ''),
                  'User'
                ) as first_name,
                COALESCE(ap.last_name, '') as last_name,
@@ -1833,10 +1835,8 @@ const getPendingCommissions = async (req, res, next) => {
                  NULLIF(emp.designation, ''),
                  CASE 
                    WHEN u.role::text = 'EMPLOYEE' THEN 'Employee'
-                   WHEN u.role::text = 'SUPER_ADMIN' OR u.role::text = 'ADMIN' THEN 'Admin'
                    WHEN emp.id IS NOT NULL THEN 'Employee'
-                   WHEN ap.id IS NOT NULL THEN 'Partner'
-                   ELSE COALESCE(u.role::text, 'Partner')
+                   ELSE 'Partner'
                  END
                ) as role,
                COALESCE(a.app_number, wl.reference_number, 'N/A') as app_number,
@@ -1844,16 +1844,59 @@ const getPendingCommissions = async (req, res, next) => {
         FROM wallet_ledger wl
         LEFT JOIN partner_profiles ap ON (ap.id = wl.partner_id OR ap.user_id = wl.partner_id)
         LEFT JOIN users u ON (u.id = wl.partner_id OR u.id = ap.user_id)
-        LEFT JOIN employees emp ON (emp.id = wl.partner_id OR emp.user_id = wl.partner_id OR emp.user_id = u.id OR emp.user_id = ap.user_id)
+        LEFT JOIN employees emp ON (emp.id = wl.partner_id OR emp.user_id = wl.partner_id OR emp.user_id = u.id)
         LEFT JOIN applications a ON a.id = wl.application_id
         LEFT JOIN products p ON p.id = a.product_id
         WHERE LOWER(COALESCE(wl.status::text, '')) IN ('pending', 'pending approval', 'on_hold', 'held', 'processing') AND wl.credit > 0
-        ORDER BY wl.created_at DESC
-        LIMIT $1 OFFSET $2
-      `, [limit, offset])
+
+        UNION ALL
+
+        SELECT a.id::text as id, COALESCE(a.commission_amount, 0) as amount, COALESCE(a.commission_amount, 0) as credit, a.created_at,
+               'Pending Approval' as status, 'Application Commission Payout' as description,
+               a.partner_id,
+               COALESCE(ap.partner_code, emp.employee_id, u.id::text, 'AG01019') as partner_code,
+               COALESCE(
+                 NULLIF(TRIM(emp.full_name), ''),
+                 NULLIF(TRIM(u.full_name), ''),
+                 NULLIF(TRIM(CONCAT(ap.first_name, ' ', ap.last_name)), ''),
+                 'Beneficiary Member'
+               ) as user_name,
+               COALESCE(
+                 NULLIF(TRIM(emp.full_name), ''),
+                 NULLIF(TRIM(u.full_name), ''),
+                 NULLIF(TRIM(ap.first_name), ''),
+                 'User'
+               ) as first_name,
+               COALESCE(ap.last_name, '') as last_name,
+               COALESCE(
+                 NULLIF(emp.designation, ''),
+                 CASE 
+                   WHEN u.role::text = 'EMPLOYEE' THEN 'Employee'
+                   WHEN emp.id IS NOT NULL THEN 'Employee'
+                   ELSE 'Partner'
+                 END
+               ) as role,
+               a.app_number,
+               COALESCE(p.name, 'Credit Product') as product_name
+        FROM applications a
+        LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
+        LEFT JOIN users u ON u.id = ap.user_id OR u.id = a.submitted_by
+        LEFT JOIN employees emp ON emp.id = a.employee_id OR emp.user_id = u.id
+        LEFT JOIN products p ON p.id = a.product_id
+        WHERE LOWER(COALESCE(a.commission_status::text, 'pending')) IN ('pending', 'processing', 'held', 'on_hold')
+          AND COALESCE(a.commission_amount, 0) > 0
+          AND a.id::text NOT IN (SELECT application_id::text FROM wallet_ledger WHERE application_id IS NOT NULL)
+      ) combined
+      ORDER BY created_at DESC
+      LIMIT $1 OFFSET $2
+    `;
+
+    const [count, data] = await Promise.all([
+      query(countQuery),
+      query(dataQuery, [limit, offset])
     ]);
 
-    return paginate(res, data.rows, parseInt(count.rows[0].count), page, limit);
+    return paginate(res, data.rows, parseInt(count.rows[0]?.count || 0), page, limit);
   } catch (err) {
     next(err);
   }
