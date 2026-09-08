@@ -693,11 +693,11 @@ const processWithdrawal = async (withdrawalId, action, processedBy, utrNumber = 
         INSERT INTO wallet_ledger (
           wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
         )
-        SELECT $1, $2, 'WITHDRAWAL_SETTLED', 0, $3::numeric, $4, $5, 'Released', $6
+        SELECT $1::uuid, $2::uuid, 'WITHDRAWAL_SETTLED'::varchar, 0, $3::numeric, $4::text, $5::text, 'Released'::varchar, $6::uuid
         WHERE NOT EXISTS (
           SELECT 1 FROM wallet_ledger
           WHERE transaction_type = 'WITHDRAWAL_SETTLED'
-            AND reference_number = $5
+            AND reference_number = $5::text
             AND status IN ('Released', 'Approved')
         )
       `, [

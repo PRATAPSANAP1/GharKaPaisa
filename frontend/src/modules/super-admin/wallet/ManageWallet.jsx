@@ -825,12 +825,6 @@ export default function ManageWallet() {
                                   Pay
                                 </button>
                                 <button
-                                  onClick={() => handleApproveWithdrawal(w.id)}
-                                  style={{ background: C.green, color: '#FFF', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
-                                >
-                                  Approve
-                                </button>
-                                <button
                                   onClick={() => setRejectModalItem({ item: w, type: 'withdrawal', reason: '' })}
                                   style={{ background: '#EF4444', color: '#FFF', border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
                                 >
