@@ -331,41 +331,11 @@ router.get('/', async (req, res, next) => {
   try {
     await syncAndSeedEmployees();
 
-    const { status, activation_status, designation, search, limit = 200, offset = 0 } = req.query;
-    let queryStr = `
-      SELECT 
-        e.*,
-        c.overall_progress, c.current_stage, c.kyc_verified, c.terms_completed,
-        h.team_leader_id, h.manager_id, h.senior_manager_id, h.branch_head_id, h.hierarchy_level,
-        tl.full_name as team_leader_name,
-        mgr.full_name as manager_name,
-        sm.full_name as senior_manager_name,
-        bh.full_name as branch_head_name,
-        (SELECT COUNT(*) FROM employee_product_links pl WHERE pl.employee_id = e.id AND pl.status = 'ACTIVE') as active_links_count,
-        (SELECT COUNT(*) FROM applications app WHERE app.employee_id = e.id) as total_applications,
-        (SELECT COALESCE(SUM(amount), 0) FROM employee_incentive_transactions it WHERE it.employee_id = e.id AND it.status = 'COMPLETED') as total_incentives_earned
-      FROM employees e
-      LEFT JOIN users u ON u.id = e.user_id
-      LEFT JOIN employee_onboarding_checklist c ON c.employee_id = e.id
-      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
-      LEFT JOIN employees tl ON tl.id = h.team_leader_id
-      LEFT JOIN employees mgr ON mgr.id = h.manager_id
-      LEFT JOIN employees sm ON sm.id = h.senior_manager_id
-      LEFT JOIN employees bh ON bh.id = h.branch_head_id
-      WHERE (u.role IS NULL OR u.role = 'EMPLOYEE')
-        AND (e.designation NOT ILIKE '%HR%' AND e.designation NOT ILIKE '%Human Resource%')
-    `;
-    const params = [];
+    const { status, activation_status, designation, search, page = 1, limit = 20, offset } = req.query;
 
-    if (status) {
-      params.push(status);
-      queryStr += ` AND e.employee_status = $${params.length}`;
-    }
-
-    if (activation_status) {
-      params.push(activation_status);
-      queryStr += ` AND e.activation_status = $${params.length}`;
-    }
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.max(1, parseInt(limit) || 20);
+    const offsetNum = offset !== undefined ? Math.max(0, parseInt(offset)) : (pageNum - 1) * limitNum;
 
     // Standardize designations in DB
     await query(`
@@ -382,44 +352,84 @@ router.get('/', async (req, res, next) => {
       WHERE h.employee_id = e.id AND h.is_active = true
     `).catch(() => {});
 
+    let whereStr = `
+      FROM employees e
+      LEFT JOIN users u ON u.id = e.user_id
+      LEFT JOIN employee_onboarding_checklist c ON c.employee_id = e.id
+      LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
+      LEFT JOIN employees tl ON tl.id = h.team_leader_id
+      LEFT JOIN employees mgr ON mgr.id = h.manager_id
+      LEFT JOIN employees sm ON sm.id = h.senior_manager_id
+      LEFT JOIN employees bh ON bh.id = h.branch_head_id
+      WHERE (u.role IS NULL OR u.role = 'EMPLOYEE')
+        AND (e.designation NOT ILIKE '%HR%' AND e.designation NOT ILIKE '%Human Resource%')
+    `;
+    const params = [];
+
+    if (status) {
+      params.push(status);
+      whereStr += ` AND e.employee_status = $${params.length}`;
+    }
+
+    if (activation_status) {
+      params.push(activation_status);
+      whereStr += ` AND e.activation_status = $${params.length}`;
+    }
+
     if (designation) {
       if (designation === 'TC' || designation === 'Telecaller (TC)' || designation === 'Telecaller') {
-        queryStr += ` AND (e.designation = 'TC' OR e.designation ILIKE '%Telecaller%' OR h.hierarchy_level = 'TC')`;
+        whereStr += ` AND (e.designation = 'TC' OR e.designation ILIKE '%Telecaller%' OR h.hierarchy_level = 'TC')`;
       } else if (designation === 'TL' || designation === 'Team Leader') {
-        queryStr += ` AND (e.designation ILIKE '%Team Leader%' OR e.designation = 'TL' OR h.hierarchy_level = 'TEAM_LEADER')`;
+        whereStr += ` AND (e.designation ILIKE '%Team Leader%' OR e.designation = 'TL' OR h.hierarchy_level = 'TEAM_LEADER')`;
       } else if (designation === 'Manager' || designation === 'MANAGER') {
-        queryStr += ` AND (e.designation = 'Manager' OR e.designation = 'MANAGER' OR h.hierarchy_level = 'MANAGER')`;
+        whereStr += ` AND (e.designation = 'Manager' OR e.designation = 'MANAGER' OR h.hierarchy_level = 'MANAGER')`;
       } else if (designation === 'Senior Manager' || designation === 'SENIOR_MANAGER' || designation === 'SENIOR MANAGER') {
-        queryStr += ` AND (e.designation ILIKE '%Senior Manager%' OR e.designation = 'SENIOR MANAGER' OR h.hierarchy_level = 'SENIOR_MANAGER')`;
+        whereStr += ` AND (e.designation ILIKE '%Senior Manager%' OR e.designation = 'SENIOR MANAGER' OR h.hierarchy_level = 'SENIOR_MANAGER')`;
       } else if (designation === 'Branch Head' || designation === 'BRANCH_HEAD' || designation === 'BRANCH HEAD') {
-        queryStr += ` AND (e.designation ILIKE '%Branch Head%' OR e.designation = 'BRANCH HEAD' OR h.hierarchy_level = 'BRANCH_HEAD')`;
+        whereStr += ` AND (e.designation ILIKE '%Branch Head%' OR e.designation = 'BRANCH HEAD' OR h.hierarchy_level = 'BRANCH_HEAD')`;
       } else {
         params.push(designation);
-        queryStr += ` AND e.designation = $${params.length}`;
+        whereStr += ` AND e.designation = $${params.length}`;
       }
     }
 
     if (search) {
       params.push(`%${search}%`);
-      queryStr += ` AND (e.full_name ILIKE $${params.length} OR e.employee_id ILIKE $${params.length} OR e.mobile_number ILIKE $${params.length} OR e.email_id ILIKE $${params.length})`;
+      whereStr += ` AND (e.full_name ILIKE $${params.length} OR e.employee_id ILIKE $${params.length} OR e.mobile_number ILIKE $${params.length} OR e.email_id ILIKE $${params.length})`;
     }
 
-    queryStr += ` ORDER BY e.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    params.push(parseInt(limit), parseInt(offset));
+    // Execute filtered count query first
+    const countRes = await query(`SELECT COUNT(DISTINCT e.id) as total ${whereStr}`, params);
+    const totalRecords = parseInt(countRes.rows[0]?.total || 0);
 
-    const { rows } = await query(queryStr, params);
-    const countRes = await query(`
-      SELECT COUNT(*) 
-      FROM employees e 
-      LEFT JOIN users u ON u.id = e.user_id 
-      WHERE (u.role IS NULL OR u.role = 'EMPLOYEE')
-        AND (e.designation NOT ILIKE '%HR%' AND e.designation NOT ILIKE '%Human Resource%')
-    `);
+    // Build main data query with pagination
+    let selectFields = `
+      SELECT 
+        e.*,
+        c.overall_progress, c.current_stage, c.kyc_verified, c.terms_completed,
+        h.team_leader_id, h.manager_id, h.senior_manager_id, h.branch_head_id, h.hierarchy_level,
+        tl.full_name as team_leader_name,
+        mgr.full_name as manager_name,
+        sm.full_name as senior_manager_name,
+        bh.full_name as branch_head_name,
+        (SELECT COUNT(*) FROM employee_product_links pl WHERE pl.employee_id = e.id AND pl.status = 'ACTIVE') as active_links_count,
+        (SELECT COUNT(*) FROM applications app WHERE app.employee_id = e.id) as total_applications,
+        (SELECT COALESCE(SUM(amount), 0) FROM employee_incentive_transactions it WHERE it.employee_id = e.id AND it.status = 'COMPLETED') as total_incentives_earned
+    `;
+
+    const queryParams = [...params];
+    queryParams.push(limitNum, offsetNum);
+    const fullQueryStr = `${selectFields} ${whereStr} ORDER BY e.created_at DESC LIMIT $${queryParams.length - 1} OFFSET $${queryParams.length}`;
+
+    const { rows } = await query(fullQueryStr, queryParams);
 
     res.json({
       success: true,
       data: rows,
-      total: parseInt(countRes.rows[0].count)
+      total: totalRecords,
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(totalRecords / limitNum) || 1
     });
   } catch (err) {
     next(err);

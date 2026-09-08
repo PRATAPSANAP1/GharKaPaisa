@@ -27,6 +27,9 @@ export default function EmployeeManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [designationFilter, setDesignationFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalEmployees, setTotalEmployees] = useState(0);
 
   // Hierarchy Tree selected Role, Person & Popovers
   const [selectedTreeRole, setSelectedTreeRole] = useState('MANAGER'); // 'BRANCH_HEAD', 'SENIOR_MANAGER', 'MANAGER', 'TEAM_LEADER'
@@ -826,12 +829,17 @@ export default function EmployeeManagement() {
 
       const empRes = await api.get('/employees', { 
         params: { 
+          page: currentPage,
+          limit: pageSize,
           search: searchTerm,
           status: statusFilter,
           designation: designationFilter
         } 
       });
-      if (empRes.data.success) setEmployees(empRes.data.data || []);
+      if (empRes.data.success) {
+        setEmployees(empRes.data.data || []);
+        setTotalEmployees(empRes.data.total || 0);
+      }
 
       const prodRes = await api.get('/products');
       if (prodRes.data.success) setProductsList(prodRes.data.data || []);
@@ -844,7 +852,7 @@ export default function EmployeeManagement() {
 
   useEffect(() => {
     fetchData();
-  }, [searchTerm, statusFilter, designationFilter]);
+  }, [currentPage, pageSize, searchTerm, statusFilter, designationFilter]);
 
   const handleActivateEmployee = async (empId, currentActivation) => {
     const newActivation = currentActivation === 'APPROVED' ? 'PENDING' : 'APPROVED';
@@ -1142,14 +1150,24 @@ export default function EmployeeManagement() {
                     type="text" 
                     placeholder="Search by Employee ID, Name, Mobile..." 
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
                     style={{ width: '100%', padding: '9px 14px 9px 38px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, outline: 'none', fontSize: '13.5px' }}
                   />
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
-                <select value={designationFilter} onChange={(e) => setDesignationFilter(e.target.value)} style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}>
+                <select 
+                  value={designationFilter} 
+                  onChange={(e) => {
+                    setDesignationFilter(e.target.value);
+                    setCurrentPage(1);
+                  }} 
+                  style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}
+                >
                   <option value="">All Designations</option>
                   <option value="TC">TC (Telecaller)</option>
                   <option value="TL">TL (Team Leader)</option>
@@ -1158,7 +1176,14 @@ export default function EmployeeManagement() {
                   <option value="Branch Head">BRANCH HEAD</option>
                 </select>
 
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}>
+                <select 
+                  value={statusFilter} 
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setCurrentPage(1);
+                  }} 
+                  style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}
+                >
                   <option value="">All Statuses</option>
                   <option value="ACTIVE">Active</option>
                   <option value="ONBOARDING">Onboarding</option>
@@ -1365,6 +1390,144 @@ export default function EmployeeManagement() {
                 </table>
               </div>
             )}
+
+            {/* Pagination Toolbar */}
+            <div style={{
+              padding: '14px 20px',
+              borderTop: `1px solid ${C.border}`,
+              background: C.bgSecondary,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', color: C.textMid, fontWeight: 600 }}>
+                  Showing {totalEmployees === 0 ? 0 : (currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalEmployees)} of <strong>{totalEmployees}</strong> records
+                </span>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '12.5px', color: C.textMid, fontWeight: 600 }}>Per page:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      border: `1px solid ${C.border}`,
+                      background: C.card,
+                      color: C.text,
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={200}>200</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <button
+                  disabled={currentPage <= 1 || loading}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: `1px solid ${currentPage <= 1 ? C.border : C.teal}`,
+                    background: currentPage <= 1 ? C.card : `${C.teal}10`,
+                    color: currentPage <= 1 ? C.textMid : C.teal,
+                    fontSize: '12.5px',
+                    fontWeight: 800,
+                    cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+                    opacity: currentPage <= 1 ? 0.6 : 1,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Previous
+                </button>
+
+                {(() => {
+                  const totalPages = Math.max(1, Math.ceil(totalEmployees / pageSize));
+                  const pages = [];
+                  if (totalPages <= 7) {
+                    for (let i = 1; i <= totalPages; i++) pages.push(i);
+                  } else {
+                    pages.push(1);
+                    let start = Math.max(2, currentPage - 1);
+                    let end = Math.min(totalPages - 1, currentPage + 1);
+                    if (currentPage <= 3) end = 4;
+                    if (currentPage >= totalPages - 2) start = totalPages - 3;
+                    
+                    if (start > 2) pages.push('...');
+                    for (let i = start; i <= end; i++) pages.push(i);
+                    if (end < totalPages - 1) pages.push('...');
+                    pages.push(totalPages);
+                  }
+
+                  return pages.map((pg, idx) => {
+                    if (pg === '...') {
+                      return (
+                        <span key={`dots-${idx}`} style={{ padding: '4px 8px', color: C.textMid, fontSize: '13px', fontWeight: 700 }}>
+                          ...
+                        </span>
+                      );
+                    }
+
+                    const isCurrent = pg === currentPage;
+                    return (
+                      <button
+                        key={pg}
+                        onClick={() => setCurrentPage(pg)}
+                        style={{
+                          minWidth: '32px',
+                          height: '32px',
+                          padding: '0 6px',
+                          borderRadius: '8px',
+                          border: isCurrent ? `1px solid ${C.teal}` : `1px solid ${C.border}`,
+                          background: isCurrent ? C.teal : C.card,
+                          color: isCurrent ? '#FFFFFF' : C.text,
+                          fontSize: '12.5px',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          boxShadow: isCurrent ? '0 2px 6px rgba(13, 148, 136, 0.3)' : 'none',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {pg}
+                      </button>
+                    );
+                  });
+                })()}
+
+                <button
+                  disabled={currentPage >= Math.max(1, Math.ceil(totalEmployees / pageSize)) || loading}
+                  onClick={() => setCurrentPage(prev => Math.min(Math.max(1, Math.ceil(totalEmployees / pageSize)), prev + 1))}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: `1px solid ${currentPage >= Math.max(1, Math.ceil(totalEmployees / pageSize)) ? C.border : C.teal}`,
+                    background: currentPage >= Math.max(1, Math.ceil(totalEmployees / pageSize)) ? C.card : `${C.teal}10`,
+                    color: currentPage >= Math.max(1, Math.ceil(totalEmployees / pageSize)) ? C.textMid : C.teal,
+                    fontSize: '12.5px',
+                    fontWeight: 800,
+                    cursor: currentPage >= Math.max(1, Math.ceil(totalEmployees / pageSize)) ? 'not-allowed' : 'pointer',
+                    opacity: currentPage >= Math.max(1, Math.ceil(totalEmployees / pageSize)) ? 0.6 : 1,
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
