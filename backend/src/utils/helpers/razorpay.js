@@ -204,7 +204,7 @@ const createRazorpayPayout = async (fundAccountId, amountRupees, withdrawalId, o
   const { mode = 'IMPS', purpose = 'payout', narration = 'GharKaPaisa Commission' } = options;
   const url = 'https://api.razorpay.com/v1/payouts';
   const amountPaise = Math.round(amountRupees * 100);
-  const idempotencyKey = crypto.createHash('sha256').update(withdrawalId.toString()).digest('hex');
+  const idempotencyKey = String(withdrawalId).slice(0, 36);
 
   // Explicit balance check before payout
   try {

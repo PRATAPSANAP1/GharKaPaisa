@@ -284,26 +284,35 @@ export default function PartnerWallet() {
 
   // Extract Dynamic Summary Values directly from backend database response
   const availableBal = parseFloat(dashboardData?.wallet?.available_balance ?? dashboardData?.available_balance ?? 0);
-  const pendingBal = parseFloat(dashboardData?.wallet?.hold_balance ?? dashboardData?.pending_balance ?? 0);
+  const holdBal = parseFloat(dashboardData?.wallet?.hold_balance ?? dashboardData?.pending_balance ?? 0);
   const totalEarnings = parseFloat(dashboardData?.wallet?.total_earned ?? dashboardData?.lifetime_earnings ?? 0);
   const settledPayouts = parseFloat(dashboardData?.wallet?.total_withdrawn ?? dashboardData?.total_withdrawn ?? 0);
   const openingBal = parseFloat(dashboardData?.wallet?.opening_balance ?? dashboardData?.opening_balance ?? 0);
+
+  // Compute exact pending withdrawal requests amount and count
+  const pendingWithdrawalList = withdrawals.filter(w => {
+    const s = String(w.status || '').toLowerCase();
+    return s.includes('pending') && !s.includes('reject') && !s.includes('fail') && !s.includes('cancel');
+  });
+  const pendingWithdrawalAmt = pendingWithdrawalList.reduce((acc, w) => acc + parseFloat(w.amount || 0), 0);
+  const pendingWithdrawalCount = pendingWithdrawalList.length;
 
   const totalWdrCount = withdrawals.length;
   const approvedWdrCount = withdrawals.filter(w => ['approved', 'completed', 'paid', 'processed', 'transferred', 'released'].includes(String(w.status).toLowerCase())).length;
   const successRate = totalWdrCount > 0 ? ((approvedWdrCount / totalWdrCount) * 100).toFixed(1) : '100.0';
 
   // Donut Dynamic Breakdown Data
-  const totalSum = (availableBal + pendingBal + settledPayouts) || 1;
+  const totalSum = (availableBal + pendingWithdrawalAmt + settledPayouts + holdBal) || 1;
   const availPct = ((availableBal / totalSum) * 100).toFixed(1);
-  const pendPct = ((pendingBal / totalSum) * 100).toFixed(1);
+  const pendPct = ((pendingWithdrawalAmt / totalSum) * 100).toFixed(1);
   const settPct = ((settledPayouts / totalSum) * 100).toFixed(1);
+  const holdPct = ((holdBal / totalSum) * 100).toFixed(1);
 
   const donutData = [
     { name: 'Available Balance', value: availableBal, color: '#10B981', pct: `${availPct}%` },
-    { name: 'Pending Withdrawals', value: pendingBal, color: '#F97316', pct: `${pendPct}%` },
+    { name: 'Pending Withdrawals', value: pendingWithdrawalAmt, color: '#F97316', pct: `${pendPct}%` },
     { name: 'Settled Payouts', value: settledPayouts, color: '#2563EB', pct: `${settPct}%` },
-    { name: 'Other Holds', value: 0, color: '#94A3B8', pct: '0.0%' }
+    { name: 'Hold Commissions', value: holdBal, color: '#8B5CF6', pct: `${holdPct}%` }
   ];
 
   // Dynamic Chart Data Mapping
@@ -385,8 +394,8 @@ export default function PartnerWallet() {
             </div>
             <div>
               <span style={{ fontSize: isMobile ? '9px' : '10px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px', display: 'block', lineHeight: 1.1 }}>Pending Withdrawals</span>
-              <div style={{ fontSize: isMobile ? '15px' : '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{formatINR(pendingBal)}</div>
-              {!isMobile && <span style={{ fontSize: '10px', color: C.textLight }}>• {withdrawals.filter(w => w.status === 'pending').length || 1} Request Pending</span>}
+              <div style={{ fontSize: isMobile ? '15px' : '19px', fontWeight: 900, color: C.text, marginTop: '1px' }}>{formatINR(pendingWithdrawalAmt)}</div>
+              {!isMobile && <span style={{ fontSize: '10px', color: C.textLight }}>• {pendingWithdrawalCount} Request{pendingWithdrawalCount === 1 ? '' : 's'} Pending</span>}
             </div>
           </div>
         </div>
