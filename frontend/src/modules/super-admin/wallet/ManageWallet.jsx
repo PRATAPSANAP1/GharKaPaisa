@@ -1063,8 +1063,9 @@ export default function ManageWallet() {
                       const displayList = pendingCommissions.length > 0 ? pendingCommissions : DEFAULT_COMMISSIONS;
                       return displayList.map(c => {
                         const rawName = c.user_name || (c.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : '');
-                        const userName = (rawName && rawName.toLowerCase() !== 'partner') ? rawName : (c.partner_code || 'Employee / Partner');
+                        const isCodeName = !rawName || rawName === c.partner_code || rawName.toLowerCase() === 'partner' || rawName.toLowerCase() === 'user';
                         const roleName = c.role || (c.partner_code && c.partner_code.startsWith('AG') ? 'Partner' : 'Employee');
+                        const userName = !isCodeName ? rawName : (roleName === 'Employee' ? 'Employee Member' : 'Partner Member');
                         const amt = parseFloat(c.credit || c.amount || 0);
 
                         return (

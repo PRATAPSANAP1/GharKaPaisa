@@ -1812,12 +1812,23 @@ const getPendingCommissions = async (req, res, next) => {
                wl.partner_id,
                COALESCE(ap.partner_code, emp.employee_id, u.id::text, 'USER') as partner_code,
                COALESCE(
-                 NULLIF(TRIM(CONCAT(ap.first_name, ' ', ap.last_name)), ''),
                  NULLIF(TRIM(emp.full_name), ''),
                  NULLIF(TRIM(u.full_name), ''),
-                 'Beneficiary User'
+                 CASE 
+                   WHEN TRIM(CONCAT(ap.first_name, ' ', ap.last_name)) != COALESCE(ap.partner_code, '') 
+                        AND TRIM(ap.first_name) != COALESCE(ap.partner_code, '') 
+                   THEN NULLIF(TRIM(CONCAT(ap.first_name, ' ', ap.last_name)), '')
+                   ELSE NULL 
+                 END,
+                 NULLIF(TRIM(CONCAT(ap.first_name, ' ', ap.last_name)), ''),
+                 'Beneficiary Member'
                ) as user_name,
-               COALESCE(ap.first_name, emp.full_name, u.full_name, 'User') as first_name,
+               COALESCE(
+                 NULLIF(TRIM(emp.full_name), ''),
+                 NULLIF(TRIM(u.full_name), ''),
+                 CASE WHEN TRIM(ap.first_name) != COALESCE(ap.partner_code, '') THEN ap.first_name ELSE NULL END,
+                 'User'
+               ) as first_name,
                COALESCE(ap.last_name, '') as last_name,
                COALESCE(
                  NULLIF(emp.designation, ''),
@@ -1833,8 +1844,8 @@ const getPendingCommissions = async (req, res, next) => {
                COALESCE(p.name, 'Credit Product') as product_name
         FROM wallet_ledger wl
         LEFT JOIN partner_profiles ap ON (ap.id = wl.partner_id OR ap.user_id = wl.partner_id)
-        LEFT JOIN employees emp ON (emp.id = wl.partner_id OR emp.user_id = wl.partner_id)
-        LEFT JOIN users u ON (u.id = wl.partner_id OR u.id = ap.user_id OR u.id = emp.user_id)
+        LEFT JOIN users u ON (u.id = wl.partner_id OR u.id = ap.user_id)
+        LEFT JOIN employees emp ON (emp.id = wl.partner_id OR emp.user_id = wl.partner_id OR emp.user_id = u.id OR emp.user_id = ap.user_id)
         LEFT JOIN applications a ON a.id = wl.application_id
         LEFT JOIN products p ON p.id = a.product_id
         WHERE LOWER(COALESCE(wl.status::text, '')) IN ('pending', 'pending approval', 'on_hold', 'held', 'processing') AND wl.credit > 0
