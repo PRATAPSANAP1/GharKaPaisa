@@ -787,6 +787,12 @@ export default function ManageWallet() {
                                   View Detailed
                                 </button>
                                 <button
+                                  onClick={() => handleProcessPayout(w.id)}
+                                  style={{ background: '#0052FF', color: '#FFF', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                                >
+                                  Pay
+                                </button>
+                                <button
                                   onClick={() => handleApproveWithdrawal(w.id)}
                                   style={{ background: C.green, color: '#FFF', border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
                                 >
@@ -1534,6 +1540,18 @@ export default function ManageWallet() {
 
               {(viewDetailModalItem.status || '').toLowerCase().includes('pending') && (
                 <>
+                  {viewDetailModalItem.type !== 'commission' && (
+                    <button
+                      onClick={() => {
+                        const targetId = viewDetailModalItem.id;
+                        setViewDetailModalItem(null);
+                        handleProcessPayout(targetId);
+                      }}
+                      style={{ ...S.btn('primary'), background: '#0052FF', color: '#FFFFFF', padding: '8px 18px', borderRadius: '8px', fontWeight: 900 }}
+                    >
+                      💳 Pay Now
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       if (viewDetailModalItem.type === 'commission') handleApproveCommission(viewDetailModalItem.id);
