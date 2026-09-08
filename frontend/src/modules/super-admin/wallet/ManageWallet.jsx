@@ -65,23 +65,27 @@ export default function ManageWallet() {
   const [nowTime, setNowTime] = useState(Date.now());
 
   useEffect(() => {
-    const timer = setInterval(() => setNowTime(Date.now()), 30000);
+    const timer = setInterval(() => setNowTime(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
 
   // 1-Hour Window Calculation Helper for Undo/Reject after approval
   const getRemainingUndoTime = (approvedAtStr) => {
-    if (!approvedAtStr) return { canUndo: false, label: 'Reject Expired', remainingMins: 0 };
+    if (!approvedAtStr) return { canUndo: false, label: 'Reject Expired', remainingMins: 0, remainingSecs: 0 };
     const approvedTime = new Date(approvedAtStr).getTime();
-    if (isNaN(approvedTime)) return { canUndo: false, label: 'Reject Expired', remainingMins: 0 };
+    if (isNaN(approvedTime)) return { canUndo: false, label: 'Reject Expired', remainingMins: 0, remainingSecs: 0 };
     const elapsedMs = nowTime - approvedTime;
     const ONE_HOUR_MS = 60 * 60 * 1000;
     if (elapsedMs < 0 || elapsedMs >= ONE_HOUR_MS) {
-      return { canUndo: false, label: 'Reject Expired (>1h)', remainingMins: 0 };
+      return { canUndo: false, label: 'Reject Expired (>1h)', remainingMins: 0, remainingSecs: 0 };
     }
     const remainingMs = ONE_HOUR_MS - elapsedMs;
-    const remainingMins = Math.ceil(remainingMs / 60000);
-    return { canUndo: true, label: `Reject (${remainingMins}m left)`, remainingMins };
+    const remainingMins = Math.floor(remainingMs / 60000);
+    const remainingSecs = Math.floor((remainingMs % 60000) / 1000);
+    const timeLabel = remainingMins > 0 
+      ? `Reject (${remainingMins}m ${remainingSecs}s left)`
+      : `Reject (${remainingSecs}s left)`;
+    return { canUndo: true, label: timeLabel, remainingMins, remainingSecs };
   };
 
   useEffect(() => {
@@ -1064,8 +1068,16 @@ export default function ManageWallet() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const displayList = pendingCommissions.length > 0 ? pendingCommissions : DEFAULT_COMMISSIONS;
-                      return displayList.map(c => {
+                      if (pendingCommissions.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: C.textLight }}>
+                              No pending commission requests found.
+                            </td>
+                          </tr>
+                        );
+                      }
+                      return pendingCommissions.map(c => {
                         const rawName = c.user_name || (c.first_name ? `${c.first_name} ${c.last_name || ''}`.trim() : '');
                         const isCodeName = !rawName || rawName === c.partner_code || rawName.toLowerCase() === 'partner' || rawName.toLowerCase() === 'user';
                         const roleName = c.role || (c.partner_code && c.partner_code.startsWith('AG') ? 'Partner' : 'Employee');
@@ -1144,16 +1156,22 @@ export default function ManageWallet() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const approvedList = ledgerEntries.filter(l => (l.type === 'Credited' || parseFloat(l.credit || 0) > 0) && (l.status || '').toLowerCase().includes('approved'));
+                      const approvedList = ledgerEntries.filter(l => 
+                        (l.type === 'Credited' || parseFloat(l.credit || 0) > 0 || l.transaction_type === 'COMMISSION_RELEASE') && 
+                        ((l.status || '').toLowerCase().includes('approved') || (l.status || '').toLowerCase().includes('released'))
+                      );
 
-                      const defaultApprovedComms = [
-                        { id: 'COM-2026-8099', user_name: 'Priya Singh', partner_code: 'YOH-TC2001', role: 'Telecaller', product: 'HDFC Regalia Credit Card', amount: 1450, status: 'Approved', approved_at: new Date(Date.now() - 15 * 60 * 1000).toISOString() },
-                        { id: 'COM-2026-8098', user_name: 'Sunil Partner', partner_code: 'YOH-PRT001', role: 'Partner', product: 'Personal Loan Disbursement', amount: 4800, status: 'Approved', approved_at: new Date(Date.now() - 85 * 60 * 1000).toISOString() }
-                      ];
+                      if (approvedList.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={7} style={{ textAlign: 'center', padding: '30px', color: C.textLight }}>
+                              No approved & released commission records found.
+                            </td>
+                          </tr>
+                        );
+                      }
 
-                      const displayList = approvedList.length > 0 ? approvedList : defaultApprovedComms;
-
-                      return displayList.map(c => {
+                      return approvedList.map(c => {
                         const userName = c.user_name || (c.first_name ? `${c.first_name} ${c.last_name || ''}` : c.partner_code || 'Partner');
                         const amt = parseFloat(c.credit || c.amount || 0);
                         const approvedTimeStr = c.approved_at || c.updated_at || c.created_at || new Date().toISOString();
@@ -1183,11 +1201,11 @@ export default function ManageWallet() {
                                   View Detailed
                                 </button>
                                 
-                                {/* 1-HOUR REJECT BUTTON TIME LOCK */}
+                                {/* 1-HOUR REJECT BUTTON TIME LOCK (LIVE REAL-TIME COUNTDOWN) */}
                                 <button
                                   disabled={!undoInfo.canUndo}
                                   onClick={() => undoInfo.canUndo && setRejectModalItem({ item: c, type: 'undo_commission', reason: '' })}
-                                  title={undoInfo.canUndo ? `Reject/Undo available for next ${undoInfo.remainingMins} minutes` : 'Reject option disabled (1 hour post-approval limit reached)'}
+                                  title={undoInfo.canUndo ? `Reject/Undo available for ${undoInfo.label}` : 'Reject option disabled (1 hour post-approval limit reached)'}
                                   style={{
                                     background: undoInfo.canUndo ? '#EF4444' : (isDark ? '#3F3F46' : '#E2E8F0'),
                                     color: undoInfo.canUndo ? '#FFF' : (isDark ? '#71717A' : '#94A3B8'),
@@ -1200,7 +1218,7 @@ export default function ManageWallet() {
                                     opacity: undoInfo.canUndo ? 1 : 0.6
                                   }}
                                 >
-                                  {undoInfo.canUndo ? `Reject (${undoInfo.remainingMins}m left)` : 'Reject Window Expired'}
+                                  {undoInfo.canUndo ? undoInfo.label : 'Reject Window Expired'}
                                 </button>
                               </div>
                             </td>
