@@ -28,7 +28,7 @@ export default function EmployeeManagement() {
   const [statusFilter, setStatusFilter] = useState('');
   const [designationFilter, setDesignationFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(100);
   const [totalEmployees, setTotalEmployees] = useState(0);
 
   // Hierarchy Tree selected Role, Person & Popovers
@@ -837,8 +837,13 @@ export default function EmployeeManagement() {
         } 
       });
       if (empRes.data.success) {
+        const totalCount = empRes.data.total || 0;
+        const maxPages = Math.max(1, Math.ceil(totalCount / pageSize));
         setEmployees(empRes.data.data || []);
-        setTotalEmployees(empRes.data.total || 0);
+        setTotalEmployees(totalCount);
+        if (currentPage > maxPages) {
+          setCurrentPage(maxPages);
+        }
       }
 
       const prodRes = await api.get('/products');
@@ -1410,9 +1415,10 @@ export default function EmployeeManagement() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ fontSize: '12.5px', color: C.textMid, fontWeight: 600 }}>Per page:</span>
                   <select
-                    value={pageSize}
+                    value={pageSize >= 10000 ? 'ALL' : pageSize}
                     onChange={(e) => {
-                      setPageSize(Number(e.target.value));
+                      const val = e.target.value === 'ALL' ? 10000 : Number(e.target.value);
+                      setPageSize(val);
                       setCurrentPage(1);
                     }}
                     style={{
@@ -1426,11 +1432,11 @@ export default function EmployeeManagement() {
                       cursor: 'pointer'
                     }}
                   >
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                    <option value={200}>200</option>
+                    <option value={50}>50 per page</option>
+                    <option value={100}>100 per page</option>
+                    <option value={200}>200 per page</option>
+                    <option value={500}>500 per page</option>
+                    <option value="ALL">Show All ({totalEmployees})</option>
                   </select>
                 </div>
               </div>
