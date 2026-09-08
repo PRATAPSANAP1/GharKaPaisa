@@ -1431,7 +1431,11 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
       { remarks }
     );
 
-    // 4. Sync Wallet Balance
+    // 4. Sync Wallet Balance and update original ledger record status
+    await client.query(`UPDATE wallet_ledger SET status = 'Released' WHERE id = $1`, [ledgerTxn.id]);
+    if (ledgerTxn.application_id) {
+      await client.query(`UPDATE applications SET commission_status = 'released' WHERE id = $1`, [ledgerTxn.application_id]);
+    }
     await syncWalletBalance(ledgerTxn.partner_id, client);
 
     await client.query('COMMIT');
@@ -1563,7 +1567,8 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
       { remarks }
     );
 
-    // 4. Sync Wallet Balance
+    // 4. Sync Wallet Balance and update original ledger record status
+    await client.query(`UPDATE wallet_ledger SET status = 'Rejected' WHERE id = $1`, [ledgerTxn.id]);
     await syncWalletBalance(ledgerTxn.partner_id, client);
 
     await client.query('COMMIT');

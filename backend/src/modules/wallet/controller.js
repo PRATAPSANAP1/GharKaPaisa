@@ -1804,7 +1804,15 @@ const getPendingCommissions = async (req, res, next) => {
         LEFT JOIN partner_profiles ap ON (ap.id = wl.partner_id OR ap.user_id = wl.partner_id)
         LEFT JOIN employees emp ON (emp.id = wl.partner_id OR emp.user_id = wl.partner_id)
         LEFT JOIN users u ON (u.id = wl.partner_id OR u.id = ap.user_id OR u.id = emp.user_id)
-        WHERE LOWER(COALESCE(wl.status::text, '')) IN ('pending', 'pending approval', 'on_hold', 'held', 'processing') AND wl.credit > 0
+        WHERE LOWER(COALESCE(wl.status::text, '')) IN ('pending', 'pending approval', 'on_hold', 'held', 'processing')
+          AND LOWER(COALESCE(wl.status::text, '')) NOT IN ('released', 'approved', 'rejected', 'completed')
+          AND wl.credit > 0
+          AND wl.id NOT IN (SELECT commission_ledger_id FROM commission_decisions)
+          AND NOT EXISTS (
+            SELECT 1 FROM wallet_ledger sub 
+            WHERE sub.reference_number = wl.id::text 
+              AND sub.transaction_type IN ('COMMISSION_RELEASE', 'COMMISSION_REJECTED', 'COMMISSION_REJECT')
+          )
       `),
       query(`
         SELECT wl.id::text as id, wl.credit as amount, wl.credit, wl.created_at, wl.status, wl.description,
@@ -1839,7 +1847,15 @@ const getPendingCommissions = async (req, res, next) => {
         LEFT JOIN employees emp ON (emp.id = wl.partner_id OR emp.user_id = wl.partner_id OR emp.user_id = u.id)
         LEFT JOIN applications a ON a.id = wl.application_id
         LEFT JOIN products p ON p.id = a.product_id
-        WHERE LOWER(COALESCE(wl.status::text, '')) IN ('pending', 'pending approval', 'on_hold', 'held', 'processing') AND wl.credit > 0
+        WHERE LOWER(COALESCE(wl.status::text, '')) IN ('pending', 'pending approval', 'on_hold', 'held', 'processing')
+          AND LOWER(COALESCE(wl.status::text, '')) NOT IN ('released', 'approved', 'rejected', 'completed')
+          AND wl.credit > 0
+          AND wl.id NOT IN (SELECT commission_ledger_id FROM commission_decisions)
+          AND NOT EXISTS (
+            SELECT 1 FROM wallet_ledger sub 
+            WHERE sub.reference_number = wl.id::text 
+              AND sub.transaction_type IN ('COMMISSION_RELEASE', 'COMMISSION_REJECTED', 'COMMISSION_REJECT')
+          )
         ORDER BY wl.created_at DESC
         LIMIT $1 OFFSET $2
       `, [limit, offset])
