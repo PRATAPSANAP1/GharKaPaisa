@@ -15,6 +15,18 @@ const ensureWallet = async (partnerId, client = null) => {
 const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, applicationId, type, amount, balanceBefore, balanceAfter, status, description, referenceType, referenceId, processedBy, meta = {}) => {
   const { rows } = await client.query(`SELECT id FROM wallet_transactions WHERE id = $1`, [ledgerTxnId]);
   
+  let targetWalletId = walletId;
+  if (!targetWalletId && partnerId) {
+    const { rows: [w] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [partnerId]);
+    if (w) {
+      targetWalletId = w.id;
+    } else {
+      await client.query(`INSERT INTO partner_wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING`, [partnerId]);
+      const { rows: [w2] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [partnerId]);
+      targetWalletId = w2 ? w2.id : null;
+    }
+  }
+
   let tds = parseFloat(meta.tds || 0);
   let gst = parseFloat(meta.gst || 0);
   let netAmount = parseFloat(meta.net_amount || amount);
@@ -42,7 +54,7 @@ const syncTransactionTable = async (client, ledgerTxnId, walletId, partnerId, ap
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW(), $14, $15, $16, $17, $18, $19)
     `, [
       ledgerTxnId,
-      walletId,
+      targetWalletId,
       partnerId,
       applicationId || null,
       type,
@@ -1366,7 +1378,13 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
     }
 
     // 2. Append-Only Financial Entry for Commission Release (Zero UPDATE on historical rows)
-    const { rows: [wallet] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
+    let { rows: [wallet] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
+    if (!wallet) {
+      await client.query(`INSERT INTO partner_wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING`, [ledgerTxn.partner_id]);
+      const res = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
+      wallet = res.rows[0];
+    }
+    const resolvedWalletId = wallet ? wallet.id : null;
     const refNum = transactionId.toString();
 
     const { rows: [releaseTxn] } = await client.query(`
@@ -1382,7 +1400,7 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
       )
       RETURNING id
     `, [
-      wallet ? wallet.id : null, ledgerTxn.partner_id, amount,
+      resolvedWalletId, ledgerTxn.partner_id, amount,
       ledgerTxn.description ? `${ledgerTxn.description} [Released by Admin]` : 'Commission Released by Admin',
       refNum,
       processedBy
@@ -1398,7 +1416,7 @@ const manualReleaseCommission = async (transactionId, processedBy, remarks = nul
     await syncTransactionTable(
       client, 
       releaseTxn.id, 
-      null, 
+      resolvedWalletId, 
       ledgerTxn.partner_id, 
       null, 
       'COMMISSION_RELEASE', 
@@ -1492,7 +1510,13 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
     }
 
     // 2. Append-Only Financial Entry for Commission Rejection (Zero UPDATE on historical rows)
-    const { rows: [wallet] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
+    let { rows: [wallet] } = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
+    if (!wallet) {
+      await client.query(`INSERT INTO partner_wallets (partner_id) VALUES ($1) ON CONFLICT (partner_id) DO NOTHING`, [ledgerTxn.partner_id]);
+      const res = await client.query(`SELECT id FROM partner_wallets WHERE partner_id = $1`, [ledgerTxn.partner_id]);
+      wallet = res.rows[0];
+    }
+    const resolvedWalletId = wallet ? wallet.id : null;
     const refNum = transactionId.toString();
 
     const { rows: [rejectTxn] } = await client.query(`
@@ -1508,7 +1532,7 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
       )
       RETURNING id
     `, [
-      wallet ? wallet.id : null, ledgerTxn.partner_id,
+      resolvedWalletId, ledgerTxn.partner_id,
       ledgerTxn.description ? `${ledgerTxn.description} [Rejected by Admin]` : 'Commission Rejected by Admin',
       refNum,
       processedBy
@@ -1524,7 +1548,7 @@ const manualRejectCommission = async (transactionId, processedBy, remarks = null
     await syncTransactionTable(
       client, 
       rejectTxn.id, 
-      null, 
+      resolvedWalletId, 
       ledgerTxn.partner_id, 
       null, 
       'COMMISSION_REJECTED', 
