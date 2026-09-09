@@ -104,7 +104,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const combinedBankText = `${application?.bank_name || application?.bank?.name || application?.bank_code || ''} ${application?.product_name || application?.product?.name || ''}`.toUpperCase();
   const isSbi = bankId === 'e7c2c604-139d-4fcf-a87c-695633535a02' || combinedBankText.includes('SBI') || combinedBankText.includes('STATE BANK');
   const isTataCobrandHdfc = bankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || combinedBankText.includes('TATA CO-BRAND HDFC') || combinedBankText.includes('TATA CO BRAND HDFC') || (combinedBankText.includes('TATA') && combinedBankText.includes('HDFC'));
-  const isHdfcPure = (bankId === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' || (combinedBankText.includes('HDFC') && !combinedBankText.includes('TATA'))) && !isTataCobrandHdfc;
+  const isHdfcBank = (bankId === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' || (combinedBankText.includes('HDFC') && !combinedBankText.includes('TATA'))) && !isTataCobrandHdfc;
 
   const [ipaStage, setIpaStage] = useState(sanitizeVal(application?.ipa_stage) || sanitizeVal(application?.physical_details?.ipa_stage) || 'None');
   const [kycStage, setKycStage] = useState(sanitizeVal(application?.kyc_stage) || sanitizeVal(application?.physical_details?.kyc_stage) || 'None');
@@ -145,6 +145,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     iqaStage: sanitizeVal(application?.iqa_stage) || sanitizeVal(application?.physical_details?.iqa_stage),
     dispatchStatus: sanitizeVal(application?.dispatch_status) || sanitizeVal(application?.physical_details?.dispatch_status),
     finalStatus: sanitizeVal(application?.final_status) || sanitizeVal(application?.physical_details?.final_status) || sanitizeVal(application?.status) || 'In Process',
+    appFileGenerated: sanitizeVal(application?.app_file_generated) || sanitizeVal(application?.appfile_generated) || sanitizeVal(application?.physical_details?.app_file_generated) || 'None',
     bankRemark: sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark),
     userRemark: sanitizeVal(application?.user_remark) || sanitizeVal(application?.notes)
   });
@@ -220,97 +221,104 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     }
   };
 
-  const fetchData = async () => {
-    if (!application?.id) return;
-    try {
-      setLoading(true);
-      const [appRes, timelineRes] = await Promise.all([
-        api.get(`/applications/${application.id}`).catch(() => null),
-        api.get(`/applications/${application.id}/timeline`).catch(() => ({ data: { data: [] } }))
-      ]);
-
-      if (appRes?.data?.success && appRes.data.data) {
-        const app = appRes.data.data;
-        const cust = app.customer || {};
-        const pd = app.physical_details || {};
-
-        if (pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile) setCustomerMobile(pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile || app.mobile || '');
-        if (pd.pan_name || cust.full_name || app.customer_name) setCustomerName(pd.pan_name || cust.full_name || app.customer_name || app.full_name || '');
-        if (pd.dob || cust.dob || app.dob) setDob(pd.dob || cust.dob || app.dob || '');
-        if (pd.personal_email || cust.email || app.customer_email) setCustomerEmail(pd.personal_email || cust.email || app.customer_email || app.email || '');
-        if (pd.pan_number || cust.pan_number || app.pan_number) setPanNumber(pd.pan_number || cust.pan_number || app.pan_number || app.pan || '');
-        if (pd.company_name || app.company_name) setCompanyName(pd.company_name || app.company_name || app.employer_name || '');
-        if (pd.designation || app.designation) setDesignation(pd.designation || app.designation || app.occupation || '');
-        if (pd.address1 || pd.flat_no || app.address1 || app.address) setAddress1(pd.address1 || pd.flat_no || app.address1 || app.address || '');
-        if (pd.address2 || pd.sub_area || app.address2) setAddress2(pd.address2 || pd.sub_area || app.address2 || '');
-        if (pd.landmark || app.landmark) setLandmark(pd.landmark || app.landmark || '');
-        if (pd.pincode || app.pincode || cust.pincode) setPincode(pd.pincode || app.pincode || cust.pincode || '');
-        if (pd.city || app.city || cust.city) setCity(pd.city || app.city || cust.city || '');
-        if (pd.state || app.state || cust.state) setState(pd.state || app.state || cust.state || '');
-        if (pd.company_address || app.company_address) setCompanyAddress(pd.company_address || app.company_address || app.office_address || '');
-        if (pd.mother_name || app.mother_name) setMotherName(pd.mother_name || app.mother_name || '');
-        if (app.app_number) setAppNumber(app.app_number || app.application_no || '');
-        setBankRefNumber(resolveBankRefNo(
-          app.bank_application_number || app.bank_ref_number || pd.bank_application_number || pd.bank_ref_number,
-          app.app_number || application?.app_number
-        ));
-        if (app.vkyc_url || pd.vkyc_url) setVkycUrl(app.vkyc_url || pd.vkyc_url || '');
-
-        if (app.status) setCurrentStatus(app.status);
-        const realAppcode = sanitizeVal(app.appcode_status) || sanitizeVal(pd.appcode_status);
-        const realSoftApproval = sanitizeVal(app.soft_approval_status) || sanitizeVal(pd.soft_approval_status);
-        const realVkyc = sanitizeVal(app.vkyc_stage) || sanitizeVal(app.vkyc_status) || sanitizeVal(pd.vkyc_stage);
-        const realIqa = sanitizeVal(app.iqa_stage) || sanitizeVal(pd.iqa_stage);
-        const realDispatch = sanitizeVal(app.dispatch_status) || sanitizeVal(pd.dispatch_status);
-        const realFinal = sanitizeVal(app.final_status) || sanitizeVal(pd.final_status) || sanitizeVal(app.status) || 'In Process';
-        const realAppFileGenerated = sanitizeVal(app.app_file_generated) || sanitizeVal(app.appfile_generated) || sanitizeVal(pd.app_file_generated) || sanitizeVal(pd.appfile_generated);
-        const realRemark = sanitizeVal(app.bank_remark) || sanitizeVal(pd.bank_remark);
-        const realUserRemark = sanitizeVal(app.user_remark) || sanitizeVal(app.notes) || sanitizeVal(pd.user_remark) || sanitizeVal(pd.notes) || sanitizeVal(app.remarks) || '';
-
-        setRealData({
-          appcodeStatus: realAppcode,
-          softApprovalStatus: realSoftApproval,
-          vkycStage: realVkyc,
-          iqaStage: realIqa,
-          dispatchStatus: realDispatch,
-          finalStatus: realFinal,
-          appFileGenerated: realAppFileGenerated,
-          bankRemark: realRemark,
-          userRemark: realUserRemark
-        });
-
-        setAppcodeStatus(realAppcode);
-        setSoftApprovalStatus(realSoftApproval);
-        setVkycStage(realVkyc);
-        setIqaStage(realIqa);
-        setDispatchStatus(realDispatch);
-        setBankRemark(realRemark);
-        setUserRemark(realUserRemark);
-        setFinalStatus(realFinal);
-        setIpaStage(sanitizeVal(app.ipa_stage) || sanitizeVal(pd.ipa_stage) || 'None');
-        setKycStage(sanitizeVal(app.kyc_stage) || sanitizeVal(pd.kyc_stage) || 'None');
-        setIncomeDetails(sanitizeVal(app.income_details) || sanitizeVal(pd.income_details) || 'None');
-        setMailStatus(sanitizeVal(app.mail_status) || sanitizeVal(pd.mail_status) || 'None');
-        setCardApprovalStage(sanitizeVal(app.card_approval_stage) || sanitizeVal(pd.card_approval_stage) || 'None');
-        setDigitalCardIssued(sanitizeVal(app.digital_card_issued) || sanitizeVal(pd.digital_card_issued) || 'None');
-        if (realAppFileGenerated) setAppFileGenerated(realAppFileGenerated);
-        if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
-        if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
-        if (app.approved_amount || pd.approved_amount) setApprovedAmount(app.approved_amount || pd.approved_amount);
-      }
-
-      if (timelineRes?.data?.data) {
-        setTimeline(timelineRes.data.data);
-      }
-    } catch (err) {
-      console.error('Error fetching verification details:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let isMounted = true;
+    const fetchData = async () => {
+      if (!application?.id) return;
+      try {
+        setLoading(true);
+        const [appRes, timelineRes] = await Promise.all([
+          api.get(`/applications/${application.id}`).catch(() => null),
+          api.get(`/applications/${application.id}/timeline`).catch(() => ({ data: { data: [] } }))
+        ]);
+
+        if (!isMounted) return;
+
+        if (appRes?.data?.success && appRes.data.data) {
+          const app = appRes.data.data;
+          const cust = app.customer || {};
+          const pd = app.physical_details || {};
+
+          if (pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile) setCustomerMobile(pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile || app.mobile || '');
+          if (pd.pan_name || cust.full_name || app.customer_name) setCustomerName(pd.pan_name || cust.full_name || app.customer_name || app.full_name || '');
+          if (pd.dob || cust.dob || app.dob) setDob(pd.dob || cust.dob || app.dob || '');
+          if (pd.personal_email || cust.email || app.customer_email) setCustomerEmail(pd.personal_email || cust.email || app.customer_email || app.email || '');
+          if (pd.pan_number || cust.pan_number || app.pan_number) setPanNumber(pd.pan_number || cust.pan_number || app.pan_number || app.pan || '');
+          if (pd.company_name || app.company_name) setCompanyName(pd.company_name || app.company_name || app.employer_name || '');
+          if (pd.designation || app.designation) setDesignation(pd.designation || app.designation || app.occupation || '');
+          if (pd.address1 || pd.flat_no || app.address1 || app.address) setAddress1(pd.address1 || pd.flat_no || app.address1 || app.address || '');
+          if (pd.address2 || pd.sub_area || app.address2) setAddress2(pd.address2 || pd.sub_area || app.address2 || '');
+          if (pd.landmark || app.landmark) setLandmark(pd.landmark || app.landmark || '');
+          if (pd.pincode || app.pincode || cust.pincode) setPincode(pd.pincode || app.pincode || cust.pincode || '');
+          if (pd.city || app.city || cust.city) setCity(pd.city || app.city || cust.city || '');
+          if (pd.state || app.state || cust.state) setState(pd.state || app.state || cust.state || '');
+          if (pd.company_address || app.company_address) setCompanyAddress(pd.company_address || app.company_address || app.office_address || '');
+          if (pd.mother_name || app.mother_name) setMotherName(pd.mother_name || app.mother_name || '');
+          if (app.app_number) setAppNumber(app.app_number || app.application_no || '');
+          setBankRefNumber(resolveBankRefNo(
+            app.bank_application_number || app.bank_ref_number || pd.bank_application_number || pd.bank_ref_number,
+            app.app_number || application?.app_number
+          ));
+          if (app.vkyc_url || pd.vkyc_url) setVkycUrl(app.vkyc_url || pd.vkyc_url || '');
+
+          if (app.status) setCurrentStatus(app.status);
+          const realAppcode = sanitizeVal(app.appcode_status) || sanitizeVal(pd.appcode_status);
+          const realSoftApproval = sanitizeVal(app.soft_approval_status) || sanitizeVal(pd.soft_approval_status);
+          const realVkyc = sanitizeVal(app.vkyc_stage) || sanitizeVal(app.vkyc_status) || sanitizeVal(pd.vkyc_stage);
+          const realIqa = sanitizeVal(app.iqa_stage) || sanitizeVal(pd.iqa_stage);
+          const realDispatch = sanitizeVal(app.dispatch_status) || sanitizeVal(pd.dispatch_status);
+          const realFinal = sanitizeVal(app.final_status) || sanitizeVal(pd.final_status) || sanitizeVal(app.status) || 'In Process';
+          const realAppFileGenerated = sanitizeVal(app.app_file_generated) || sanitizeVal(app.appfile_generated) || sanitizeVal(pd.app_file_generated) || sanitizeVal(pd.appfile_generated);
+          const realRemark = sanitizeVal(app.bank_remark) || sanitizeVal(pd.bank_remark);
+          const realUserRemark = sanitizeVal(app.user_remark) || sanitizeVal(app.notes) || sanitizeVal(pd.user_remark) || sanitizeVal(pd.notes) || sanitizeVal(app.remarks) || '';
+
+          setRealData({
+            appcodeStatus: realAppcode,
+            softApprovalStatus: realSoftApproval,
+            vkycStage: realVkyc,
+            iqaStage: realIqa,
+            dispatchStatus: realDispatch,
+            finalStatus: realFinal,
+            appFileGenerated: realAppFileGenerated,
+            bankRemark: realRemark,
+            userRemark: realUserRemark
+          });
+
+          setAppcodeStatus(realAppcode);
+          setSoftApprovalStatus(realSoftApproval);
+          setVkycStage(realVkyc);
+          setIqaStage(realIqa);
+          setDispatchStatus(realDispatch);
+          setBankRemark(realRemark);
+          setUserRemark(realUserRemark);
+          setFinalStatus(realFinal);
+          setIpaStage(sanitizeVal(app.ipa_stage) || sanitizeVal(pd.ipa_stage) || 'None');
+          setKycStage(sanitizeVal(app.kyc_stage) || sanitizeVal(pd.kyc_stage) || 'None');
+          setIncomeDetails(sanitizeVal(app.income_details) || sanitizeVal(pd.income_details) || 'None');
+          setMailStatus(sanitizeVal(app.mail_status) || sanitizeVal(pd.mail_status) || 'None');
+          setCardApprovalStage(sanitizeVal(app.card_approval_stage) || sanitizeVal(pd.card_approval_stage) || 'None');
+          setDigitalCardIssued(sanitizeVal(app.digital_card_issued) || sanitizeVal(pd.digital_card_issued) || 'None');
+          if (realAppFileGenerated) setAppFileGenerated(realAppFileGenerated);
+          if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
+          if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
+          if (app.approved_amount || pd.approved_amount) setApprovedAmount(app.approved_amount || pd.approved_amount);
+        }
+
+        if (timelineRes?.data?.data) {
+          setTimeline(timelineRes.data.data);
+        }
+      } catch (err) {
+        if (isMounted) console.error('Error fetching verification details:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
     fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [application?.id]);
 
   const handleSaveDetails = async (formType) => {
@@ -393,15 +401,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
             targetStatus = 'technical_error';
           }
         } else {
-          // Non-SBI logic
-          if (appFileGenerated === 'Yes' || appFileGenerated === 'yes') {
+          // Non-SBI logic (Uses digitalCardIssued for card approval check)
+          if (digitalCardIssued === 'Yes' || digitalCardIssued === 'yes') {
             targetStatus = 'approved';
-          } else if (appFileGenerated === 'No' || appFileGenerated === 'no') {
-            if (!bankRemark?.trim() && !userRemark?.trim()) {
-              alert('Please provide a rejection reason in Bank Remark or User Remark before marking App File Generated as No.');
-              setActionLoading(false);
-              return;
-            }
+          } else if (digitalCardIssued === 'No' || digitalCardIssued === 'no') {
             targetStatus = 'rejected';
           } else if (finalStatus && (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('reject'))) {
             targetStatus = 'rejected';
@@ -939,7 +942,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     </div>
                   )}
 
-                  {isHdfcPure && (
+                  {isHdfcBank && (
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA</label>
                       <select
@@ -963,7 +966,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   {!isPhysical && (
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                        {isHdfcPure ? '2. VKYC LINK' : isTataCobrandHdfc ? '4. VKYC LINK' : 'VKYC LINK'}
+                        {isHdfcBank ? '2. VKYC LINK' : isTataCobrandHdfc ? '4. VKYC LINK' : 'VKYC LINK'}
                       </label>
                       <input
                         type="url"
@@ -979,7 +982,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   {/* 3. KYC STAGE */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                      {isSbi ? '5. VKYC STATUS' : isHdfcPure ? '3. KYC STAGE' : isTataCobrandHdfc ? '2. KYC STAGE' : 'KYC STAGE'}
+                      {isSbi ? '5. VKYC STATUS' : isHdfcBank ? '3. KYC STAGE' : isTataCobrandHdfc ? '2. KYC STAGE' : 'KYC STAGE'}
                     </label>
                     <select
                       disabled={!canEditRemark}
@@ -994,7 +997,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="Vkyc Pending">Vkyc Pending</option>
                           <option value="Vkyc Failed">Vkyc Failed</option>
                         </>
-                      ) : isHdfcPure ? (
+                      ) : isHdfcBank ? (
                         <>
                           <option value="None">None</option>
                           <option value="VKYC Link Send">VKYC Link Send</option>
@@ -1035,8 +1038,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     </select>
                   </div>
 
-                  {/* 4. CONDITIONAL FIELD FOR HDFC PURE: INCOME DETAILS OR MAIL STATUS */}
-                  {isHdfcPure && (
+                  {/* 4. CONDITIONAL FIELD FOR HDFC BANK: INCOME DETAILS OR MAIL STATUS */}
+                  {isHdfcBank && (
                     ipaStage === 'IPA Approved Income' ? (
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. INCOME DETAILS</label>
@@ -1078,8 +1081,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     )
                   )}
 
-                  {/* 5. DISPATCH STAGE (FOR HDFC PURE) */}
-                  {isHdfcPure && (
+                  {/* 5. DISPATCH STAGE (FOR HDFC BANK) */}
+                  {isHdfcBank && (
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>5. DISPATCH STAGE</label>
                       <select
@@ -1102,28 +1105,28 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   {/* BANK APPLICATION NUMBER */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                      {isTataCobrandHdfc ? '3. BANK APPLICATION NUMBER' : 'BANK APPLICATION NUMBER'}
+                      {isTataCobrandHdfc ? '3. BANK APPLICATION NUMBER' : isHdfcBank ? '6. BANK APPLICATION NUMBER' : isSbi ? '3. BANK APPLICATION NUMBER' : 'BANK APPLICATION NUMBER'}
                     </label>
                     <input
                       type="text"
-                      maxLength={(isTataCobrandHdfc || isHdfcPure) ? 25 : 13}
+                      maxLength={(isTataCobrandHdfc || isHdfcBank) ? 25 : 13}
                       disabled={!canEditRemark}
                       value={bankRefNumber}
                       onChange={(e) => {
                         const val = e.target.value;
-                        if (isTataCobrandHdfc || isHdfcPure) {
+                        if (isTataCobrandHdfc || isHdfcBank) {
                           setBankRefNumber(val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25));
                         } else {
                           setBankRefNumber(val.replace(/\D/g, '').slice(0, 13));
                         }
                       }}
-                      placeholder={(isTataCobrandHdfc || isHdfcPure) ? "Enter Alphanumeric Bank App Ref Number" : "Enter 13-digit Bank App Reference Number"}
+                      placeholder={(isTataCobrandHdfc || isHdfcBank) ? "Enter Alphanumeric Bank App Ref Number" : "Enter 13-digit Bank App Reference Number"}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                     />
                   </div>
 
                   {/* 5. CARD APPROVAL STAGE */}
-                  {(isTataCobrandHdfc || (!isSbi && !isHdfcPure)) && (
+                  {(isTataCobrandHdfc || (!isSbi && !isHdfcBank)) && (
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
                         {isTataCobrandHdfc ? '5. CARD APPROVAL STAGE' : 'CARD APPROVAL STAGE'}
@@ -1146,7 +1149,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   )}
 
                   {/* APPCODE & SOFT APPROVAL & IQA & DISPATCH FOR SBI & OTHER BANKS */}
-                  {!isTataCobrandHdfc && !isHdfcPure && (
+                  {!isTataCobrandHdfc && !isHdfcBank && (
                     <>
                       {/* IQA STAGE */}
                       <div>
