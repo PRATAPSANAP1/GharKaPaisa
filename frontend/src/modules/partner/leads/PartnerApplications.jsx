@@ -317,18 +317,8 @@ export default function PartnerApplications() {
         token: tokenVal
       });
 
-      // Trigger native device share sheet (Share via any app)
-      if (navigator.share) {
-        navigator.share({
-          title: shareTitle,
-          text: shareText,
-          url: shareUrl
-        }).catch(() => {
-          setShowShareModal(true);
-        });
-      } else {
-        setShowShareModal(true);
-      }
+      // Open custom share popup modal
+      setShowShareModal(true);
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to generate customer share link');
     } finally {

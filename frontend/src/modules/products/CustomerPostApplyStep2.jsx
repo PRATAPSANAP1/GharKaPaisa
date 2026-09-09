@@ -80,13 +80,24 @@ export default function CustomerPostApplyStep2() {
   };
 
   useEffect(() => {
+    const elRoot = document.getElementById('root');
+    if (elRoot) {
+      elRoot.style.overflow = 'auto';
+      elRoot.style.height = '100%';
+    }
     document.body.style.overflow = 'auto';
     document.body.style.overflowY = 'auto';
+    document.body.style.height = '100%';
     document.documentElement.style.overflow = 'auto';
     document.documentElement.style.overflowY = 'auto';
     return () => {
+      if (elRoot) {
+        elRoot.style.overflow = '';
+        elRoot.style.height = '';
+      }
       document.body.style.overflow = '';
       document.body.style.overflowY = '';
+      document.body.style.height = '';
       document.documentElement.style.overflow = '';
       document.documentElement.style.overflowY = '';
     };
@@ -313,6 +324,7 @@ export default function CustomerPostApplyStep2() {
   return (
     <div style={{
       minHeight: '100vh',
+      height: '100vh',
       width: '100%',
       overflowY: 'auto',
       overflowX: 'hidden',
