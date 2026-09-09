@@ -32,7 +32,7 @@ poolOptions.acquireTimeoutMillis = parseInt(process.env.DB_ACQUIRE_TIMEOUT) || 1
 poolOptions.allowExitOnIdle = false;
 poolOptions.keepAlive = true;
 poolOptions.keepAliveInitialDelayMillis = 10000;
-poolOptions.statement_timeout = parseInt(process.env.DB_STATEMENT_TIMEOUT) || 10000;
+// Note: Do NOT set statement_timeout here to remain fully compliant with RDS Proxy and prevent connection pinning
 
 const pool = new Pool(poolOptions);
 
