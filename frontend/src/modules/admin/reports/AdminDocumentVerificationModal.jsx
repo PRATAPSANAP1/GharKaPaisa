@@ -932,7 +932,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
                   {/* KYC Stage */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>2. KYC STAGE</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                      {isSbi ? 'KYC STATUS / STAGE' : 'KYC STAGE'}
+                    </label>
                     <select
                       disabled={!canEditRemark}
                       value={kycStage || 'None'}
@@ -942,15 +944,12 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       {isSbi ? (
                         <>
                           <option value="None">None</option>
-                          <option value="ID-COM Complete">ID-COM Complete</option>
-                          <option value="ID-COM Pending">ID-COM Pending</option>
-                          <option value="ID-COM Failed">ID-COM Failed</option>
-                          <option value="BIO Complete">BIO Complete</option>
-                          <option value="BIO Pending">BIO Pending</option>
-                          <option value="BIO Failed">BIO Failed</option>
                           <option value="VKYC Complete">VKYC Complete</option>
                           <option value="VKYC Pending">VKYC Pending</option>
                           <option value="VKYC Failed">VKYC Failed</option>
+                          <option value="BIO Complete">BIO Complete</option>
+                          <option value="BIO Pending">BIO Pending</option>
+                          <option value="BIO Failed">BIO Failed</option>
                         </>
                       ) : (
                         <>
@@ -960,7 +959,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="Vkyc Failed">Vkyc Failed</option>
                         </>
                       )}
-                      {kycStage && !['None', 'ID-COM Complete', 'ID-COM Pending', 'ID-COM Failed', 'BIO Complete', 'BIO Pending', 'BIO Failed', 'VKYC Complete', 'VKYC Pending', 'VKYC Failed', 'Vkyc Complete', 'Vkyc Pending', 'Vkyc Failed', 'IDCOM Success', 'IDCOM Failed', 'IDCOM Pending', 'BIO Success', 'BIO Pending', 'Vkyc Success', ''].includes(kycStage) && (
+                      {kycStage && !['None', 'VKYC Complete', 'VKYC Pending', 'VKYC Failed', 'BIO Complete', 'BIO Pending', 'BIO Failed', 'Vkyc Complete', 'Vkyc Pending', 'Vkyc Failed', 'ID-COM Complete', 'ID-COM Pending', 'ID-COM Failed', ''].includes(kycStage) && (
                         <option value={kycStage}>{kycStage}</option>
                       )}
                     </select>
@@ -968,7 +967,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
                   {/* BANK APPLICATION NUMBER */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. BANK APPLICATION NUMBER</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>BANK APPLICATION NUMBER</label>
                     <input
                       type="text"
                       maxLength={isTataCobrandHdfc ? 25 : 13}
@@ -990,7 +989,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   {/* VKYC LINK */}
                   {!isPhysical && (
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. VKYC LINK</label>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>VKYC LINK</label>
                       <input
                         type="url"
                         disabled={!canEditRemark}
@@ -1005,7 +1004,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   {/* Card Approval Stage (Hidden for SBI Bank products) */}
                   {!isSbi && (
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>5. CARD APPROVAL STAGE</label>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>CARD APPROVAL STAGE</label>
                       <select
                         disabled={!canEditRemark}
                         value={cardApprovalStage || 'None'}
@@ -1060,7 +1059,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         </select>
                       </div>
 
-                      {!isLinkedShare && !isDirectBank && (
+                      {/* APPCODE STATUS (Shown only for Punching and Physical process) */}
+                      {(isPunchLead || isPhysical || (!isLinkedShare && !isDirectBank)) && (
                         <div>
                           <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>APPCODE STATUS</label>
                           <select
@@ -1077,6 +1077,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         </div>
                       )}
 
+                      {/* SOFT APPROVAL STATUS */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>SOFT APPROVAL STATUS</label>
                         <select
@@ -1085,14 +1086,32 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           onChange={(e) => setSoftApprovalStatus(e.target.value)}
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                         >
-                          <option value="None">None</option>
-                          <option value="Approve">Approve</option>
-                          <option value="Decline">Decline</option>
-                          <option value="EQT">EQT</option>
-                          <option value="Technical Error">Technical Error</option>
+                          {isSbi ? (
+                            <>
+                              <option value="None">None</option>
+                              <option value="Approval income 25k">Approval income 25k</option>
+                              <option value="Approval income 30k">Approval income 30k</option>
+                              <option value="Approval NSDP Civil base">Approval NSDP Civil base</option>
+                              <option value="DeclineS5">DeclineS5</option>
+                              <option value="Decline U2">Decline U2</option>
+                              <option value="Normal Decline">Normal Decline</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="None">None</option>
+                              <option value="Approve">Approve</option>
+                              <option value="Decline">Decline</option>
+                              <option value="EQT">EQT</option>
+                              <option value="Technical Error">Technical Error</option>
+                            </>
+                          )}
+                          {softApprovalStatus && !['None', 'Approval income 25k', 'Approval income 30k', 'Approval NSDP Civil base', 'DeclineS5', 'Decline U2', 'Normal Decline', 'Approve', 'Decline', 'EQT', 'Technical Error', ''].includes(softApprovalStatus) && (
+                            <option value={softApprovalStatus}>{softApprovalStatus}</option>
+                          )}
                         </select>
                       </div>
 
+                      {/* DISPATCH STATUS */}
                       <div>
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DISPATCH STATUS</label>
                         <select
