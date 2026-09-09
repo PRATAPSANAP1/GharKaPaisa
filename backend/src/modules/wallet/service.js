@@ -2,13 +2,68 @@ const { query, getClient } = require('../../config/database');
 const { notify } = require('../notifications/service.js');
 const logger = require('../../config/logger');
 
+// Helper to resolve canonical partner_profiles.id safely from partnerId, user_id, partner_code, email, or mobile
+const resolvePartnerProfileId = async (dbOrClient, partnerId) => {
+  if (!partnerId) return null;
+  const searchStr = String(partnerId).trim();
+  if (!searchStr) return null;
+
+  const db = dbOrClient || { query };
+  try {
+    // 1. Direct search in partner_profiles
+    const { rows: [pRec] } = await db.query(
+      `SELECT id FROM partner_profiles 
+       WHERE id::text = $1 
+          OR user_id::text = $1 
+          OR partner_code ILIKE $1 
+       LIMIT 1`,
+      [searchStr]
+    );
+    if (pRec) return pRec.id;
+
+    // 2. Search users table by id, email, or mobile
+    const { rows: [uRec] } = await db.query(
+      `SELECT id, first_name, last_name FROM users 
+       WHERE id::text = $1 
+          OR email ILIKE $1 
+          OR mobile = $1 
+       LIMIT 1`,
+      [searchStr]
+    );
+
+    if (uRec) {
+      const { rows: [existingP] } = await db.query(
+        `SELECT id FROM partner_profiles WHERE user_id::text = $1::text LIMIT 1`,
+        [uRec.id]
+      );
+      if (existingP) return existingP.id;
+
+      // Auto-create missing partner_profile for existing user to ensure walletFK works
+      const partnerCode = 'PART' + String(Math.floor(100000 + Math.random() * 900000));
+      const { rows: [newP] } = await db.query(`
+        INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
+        VALUES ($1, $2, $3, $4, 'active', 'approved')
+        ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
+        RETURNING id
+      `, [uRec.id, partnerCode, uRec.first_name || 'Partner', uRec.last_name || 'User']);
+      if (newP) return newP.id;
+    }
+  } catch (err) {
+    logger.warn('[resolvePartnerProfileId] resolution error:', err.message);
+  }
+
+  return null;
+};
+
 // Ensure wallet exists for partner (called on partner approval)
 const ensureWallet = async (partnerId, client = null) => {
   const db = client || { query };
+  const resolvedPartnerId = await resolvePartnerProfileId(db, partnerId);
+  if (!resolvedPartnerId) return;
   await db.query(`
     INSERT INTO partner_wallets (partner_id) VALUES ($1)
     ON CONFLICT (partner_id) DO NOTHING
-  `, [partnerId]);
+  `, [resolvedPartnerId]);
 };
 
 // Sync transactions table helper to ensure wallet_transactions replicates wallet_ledger
@@ -215,14 +270,12 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
   try {
     if (isInternalTxn) await client.query('BEGIN');
 
-    // Resolve partner profile ID in case user_id was passed
-    let resolvedPartnerId = partnerId;
-    const { rows: [p] } = await client.query(
-      `SELECT id FROM partner_profiles WHERE id::text = $1::text OR user_id::text = $1::text`,
-      [partnerId]
-    );
-    if (p) {
-      resolvedPartnerId = p.id;
+    // Resolve partner profile ID in case user_id/code was passed
+    const resolvedPartnerId = await resolvePartnerProfileId(client, partnerId);
+    if (!resolvedPartnerId) {
+      logger.warn(`[WALLET_SERVICE] creditHold skipped: Partner profile not found for identifier "${partnerId}"`);
+      if (isInternalTxn) await client.query('COMMIT');
+      return null;
     }
 
     // Get/ensure wallet
@@ -418,6 +471,13 @@ const debitAvailable = async (partnerId, amount, meta = {}, existingClient = nul
 // Credit commission helper wrapper for application approval flow (supports ACID transactions)
 const creditCommission = async (partnerId, applicationId, amount, description, userId, existingClient = null) => {
   const db = existingClient || { query };
+  const resolvedPartnerId = await resolvePartnerProfileId(db, partnerId);
+  if (!resolvedPartnerId) {
+    logger.warn(`[COMMISSION_SERVICE] creditCommission skipped: Partner profile not found for identifier "${partnerId}"`);
+    return null;
+  }
+  partnerId = resolvedPartnerId;
+
   const { rows: [app] } = await db.query(`
     SELECT a.*, p.name as product_name, p.category as product_category, b.name as bank_name
     FROM applications a
@@ -525,13 +585,11 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
     if (isInternalTxn) await client.query('BEGIN');
 
     // Resolve partner profile ID
-    let resolvedPartnerId = partnerId;
-    const { rows: [p] } = await client.query(
-      `SELECT id FROM partner_profiles WHERE id::text = $1::text OR user_id::text = $1::text`,
-      [String(partnerId)]
-    );
-    if (p) {
-      resolvedPartnerId = p.id;
+    const resolvedPartnerId = await resolvePartnerProfileId(client, partnerId);
+    if (!resolvedPartnerId) {
+      logger.warn(`[WALLET_SERVICE] releaseHold skipped: Partner profile not found for identifier "${partnerId}"`);
+      if (isInternalTxn) await client.query('COMMIT');
+      return null;
     }
 
     // Get/ensure wallet
@@ -1714,6 +1772,7 @@ const creditWalletFromPayment = async (partnerId, amountInInr, paymentId, orderI
 };
 
 module.exports = {
+  resolvePartnerProfileId,
   ensureWallet,
   creditHold,
   releaseHold,
