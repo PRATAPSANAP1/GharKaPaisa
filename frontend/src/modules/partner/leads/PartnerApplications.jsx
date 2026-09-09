@@ -1849,7 +1849,7 @@ export default function PartnerApplications() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
                         }}
                       >
-                        <FileText size={16} /> Physical Form Link
+                        <FileText size={16} /> Physical Form(QD form)
                       </a>
 
                       <a
