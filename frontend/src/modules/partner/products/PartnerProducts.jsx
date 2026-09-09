@@ -422,25 +422,14 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
           type: 'success',
           message: `Co-Browsing lead created for ${customerName.trim()} (${mobile.trim()})! Application #${appData?.app_number || ''} recorded.`
         });
-        const cleanMobile = mobile.trim().replace(/\D/g, '');
-        const token = appData?.tracking_token || appData?.token || appData?.application_id || appData?.app_id || appData?.id;
         const cobrowsingUrl = 'https://agentapp.ddp.hdfcbank.com/dsa-agent-portal/welcome';
-        const shareMsg = `Hello ${customerName.trim()},\n\nPlease complete your Co-Browsing Card Assist application using this link: ${cobrowsingUrl}`;
-        const waUrl = appData?.whatsapp_url || (cleanMobile 
-          ? `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(shareMsg)}`
-          : `https://wa.me/?text=${encodeURIComponent(shareMsg)}`);
+        window.open(cobrowsingUrl, '_blank');
 
-        if (navigator.share) {
-          navigator.share({
-            title: selectedProduct.name,
-            text: shareMsg,
-            url: cobrowsingUrl
-          }).catch(() => {
-            window.open(waUrl, '_blank');
-          });
-        } else {
-          window.open(waUrl, '_blank');
-        }
+        setSelectedProduct(null);
+        setCustomerName("");
+        setMobile("");
+        setPanNumber("");
+        return;
       } else if (processType === 'physical_process') {
         setToast({
           type: 'success',

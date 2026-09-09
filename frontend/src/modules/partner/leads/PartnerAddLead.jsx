@@ -313,6 +313,12 @@ export default function PartnerAddLead() {
           clearPersistedDraft();
           alert(`Direct Bank Application #${leadData?.app_number || ''} created! Opening official bank portal...`);
           navigate('/partner/applications');
+        } else if (processType === 'co_browsing') {
+          const cobrowsingUrl = 'https://agentapp.ddp.hdfcbank.com/dsa-agent-portal/welcome';
+          window.open(cobrowsingUrl, '_blank');
+          clearPersistedDraft();
+          alert(`Co-Browsing Application #${leadData?.app_number || ''} logged! Opening HDFC Co-Browsing Portal...`);
+          navigate('/partner/applications');
         } else {
           clearPersistedDraft();
           setToast({
@@ -367,6 +373,12 @@ export default function PartnerAddLead() {
           }
           clearPersistedDraft();
           alert(`Lead verified & Application APP#${appData?.app_number || ''} created! Official Bank portal opened.`);
+          navigate('/partner/applications');
+        } else if (processType === 'co_browsing') {
+          const cobrowsingUrl = 'https://agentapp.ddp.hdfcbank.com/dsa-agent-portal/welcome';
+          window.open(cobrowsingUrl, '_blank');
+          clearPersistedDraft();
+          alert(`Lead verified & Application APP#${appData?.app_number || ''} created! Opening HDFC Co-Browsing Portal...`);
           navigate('/partner/applications');
         } else {
           clearPersistedDraft();
