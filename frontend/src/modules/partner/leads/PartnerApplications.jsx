@@ -1826,8 +1826,9 @@ export default function PartnerApplications() {
               const isHdfcApp = shareData.app && (
                 shareData.app.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
                 shareData.app.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
-                `${shareData.app.bank_name || ''} ${shareData.app.product_name || ''}`.toUpperCase().includes('HDFC') ||
-                `${shareData.app.bank_name || ''} ${shareData.app.product_name || ''}`.toUpperCase().includes('TATA')
+                String(shareData.app.bank_id || '').toLowerCase() === 'hdfc' ||
+                `${shareData.app.bank_name || ''} ${shareData.app.product_bank || ''} ${shareData.app.bank_code || ''} ${shareData.app.product_name || ''}`.toUpperCase().includes('HDFC') ||
+                `${shareData.app.bank_name || ''} ${shareData.app.product_bank || ''} ${shareData.app.bank_code || ''} ${shareData.app.product_name || ''}`.toUpperCase().includes('TATA')
               );
 
               const tokenVal = shareData.token || shareData.app?.tracking_token || shareData.app?.id;
