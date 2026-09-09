@@ -919,280 +919,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
-                  
-                  {/* 1. IPA STAGE */}
-                  {isTataCobrandHdfc && (
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA STAGE</label>
-                      <select
-                        disabled={!canEditRemark}
-                        value={ipaStage || 'None'}
-                        onChange={(e) => setIpaStage(e.target.value)}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                      >
-                        <option value="None">None</option>
-                        <option value="Approve">Approve</option>
-                        <option value="Decline">Decline</option>
-                        <option value="Error">Error</option>
-                        <option value="IPA Failed">IPA Failed</option>
-                        {ipaStage && !['None', 'Approve', 'Decline', 'Error', 'IPA Failed', ''].includes(ipaStage) && (
-                          <option value={ipaStage}>{ipaStage}</option>
-                        )}
-                      </select>
-                    </div>
-                  )}
-
-                  {isHdfcBank && (
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA</label>
-                      <select
-                        disabled={!canEditRemark}
-                        value={ipaStage || 'None'}
-                        onChange={(e) => setIpaStage(e.target.value)}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                      >
-                        <option value="None">None</option>
-                        <option value="IPA Approved Cibil">IPA Approved Cibil</option>
-                        <option value="IPA Approved Income">IPA Approved Income</option>
-                        <option value="IPA Approved Decline">IPA Approved Decline</option>
-                        {ipaStage && !['None', 'IPA Approved Cibil', 'IPA Approved Income', 'IPA Approved Decline', ''].includes(ipaStage) && (
-                          <option value={ipaStage}>{ipaStage}</option>
-                        )}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* 2. VKYC LINK */}
-                  {!isPhysical && (
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                        {isHdfcBank ? '2. VKYC LINK' : isTataCobrandHdfc ? '4. VKYC LINK' : 'VKYC LINK'}
-                      </label>
-                      <input
-                        type="url"
-                        disabled={!canEditRemark}
-                        value={vkycUrl}
-                        onChange={(e) => setVkycUrl(e.target.value)}
-                        placeholder="https://vkyc..."
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
-                      />
-                    </div>
-                  )}
-
-                  {/* 3. KYC STAGE */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                      {isSbi ? '5. VKYC STATUS' : isHdfcBank ? '3. KYC STAGE' : isTataCobrandHdfc ? '2. KYC STAGE' : 'KYC STAGE'}
-                    </label>
-                    <select
-                      disabled={!canEditRemark}
-                      value={kycStage || 'None'}
-                      onChange={(e) => setKycStage(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                    >
-                      {isTataCobrandHdfc ? (
-                        <>
-                          <option value="None">None</option>
-                          <option value="Vkyc Complete">Vkyc Complete</option>
-                          <option value="Vkyc Pending">Vkyc Pending</option>
-                          <option value="Vkyc Failed">Vkyc Failed</option>
-                        </>
-                      ) : isHdfcBank ? (
-                        <>
-                          <option value="None">None</option>
-                          <option value="VKYC Link Send">VKYC Link Send</option>
-                          <option value="VKYC Success">VKYC Success</option>
-                          <option value="VKYC Pending">VKYC Pending</option>
-                          <option value="VKYC Failed">VKYC Failed</option>
-                          <option value="VKYC Expired">VKYC Expired</option>
-                          <option value="ID-COM Success">ID-COM Success</option>
-                          <option value="ID-COM Pending">ID-COM Pending</option>
-                          <option value="ID-COM Failed">ID-COM Failed</option>
-                          <option value="BIO Link Send">BIO Link Send</option>
-                          <option value="BIO Success">BIO Success</option>
-                          <option value="BIO Pending">BIO Pending</option>
-                          <option value="KYC Link Not Working">KYC Link Not Working</option>
-                          <option value="Error Occured">Error Occured</option>
-                        </>
-                      ) : isSbi ? (
-                        <>
-                          <option value="None">None</option>
-                          <option value="VKYC Complete">VKYC Complete</option>
-                          <option value="VKYC Pending">VKYC Pending</option>
-                          <option value="VKYC Failed">VKYC Failed</option>
-                          <option value="BIO Complete">BIO Complete</option>
-                          <option value="BIO Pending">BIO Pending</option>
-                          <option value="BIO Failed">BIO Failed</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="None">None</option>
-                          <option value="Vkyc Complete">Vkyc Complete</option>
-                          <option value="Vkyc Pending">Vkyc Pending</option>
-                          <option value="Vkyc Failed">Vkyc Failed</option>
-                        </>
-                      )}
-                      {kycStage && !['None', 'Vkyc Complete', 'Vkyc Pending', 'Vkyc Failed', 'VKYC Link Send', 'VKYC Success', 'VKYC Pending', 'VKYC Failed', 'VKYC Expired', 'ID-COM Success', 'ID-COM Pending', 'ID-COM Failed', 'BIO Link Send', 'BIO Success', 'BIO Pending', 'KYC Link Not Working', 'Error Occured', 'VKYC Complete', 'BIO Complete', ''].includes(kycStage) && (
-                        <option value={kycStage}>{kycStage}</option>
-                      )}
-                    </select>
-                  </div>
-
-                  {/* 4. CONDITIONAL FIELD FOR HDFC BANK: INCOME DETAILS OR MAIL STATUS */}
-                  {isHdfcBank && (
-                    ipaStage === 'IPA Approved Income' ? (
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. INCOME DETAILS</label>
-                        <select
-                          disabled={!canEditRemark}
-                          value={incomeDetails || 'None'}
-                          onChange={(e) => setIncomeDetails(e.target.value)}
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                        >
-                          <option value="None">None</option>
-                          <option value="Payslip">Payslip</option>
-                          <option value="ITR">ITR</option>
-                          <option value="Card Started">Card Started</option>
-                          <option value="Form 16">Form 16</option>
-                          <option value="Bank Started">Bank Started</option>
-                          <option value="Gov. ID">Gov. ID</option>
-                          {incomeDetails && !['None', 'Payslip', 'ITR', 'Card Started', 'Form 16', 'Bank Started', 'Gov. ID', ''].includes(incomeDetails) && (
-                            <option value={incomeDetails}>{incomeDetails}</option>
-                          )}
-                        </select>
-                      </div>
-                    ) : (
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. MAIL STATUS</label>
-                        <select
-                          disabled={!canEditRemark}
-                          value={mailStatus || 'None'}
-                          onChange={(e) => setMailStatus(e.target.value)}
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                        >
-                          <option value="None">None</option>
-                          <option value="Verified">Verified</option>
-                          <option value="Pending">Pending</option>
-                          {mailStatus && !['None', 'Verified', 'Pending', ''].includes(mailStatus) && (
-                            <option value={mailStatus}>{mailStatus}</option>
-                          )}
-                        </select>
-                      </div>
-                    )
-                  )}
-
-                  {/* 5. DISPATCH STAGE (FOR HDFC BANK) */}
-                  {isHdfcBank && (
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>5. DISPATCH STAGE</label>
-                      <select
-                        disabled={!canEditRemark}
-                        value={dispatchStatus || 'None'}
-                        onChange={(e) => setDispatchStatus(e.target.value)}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                      >
-                        <option value="None">None</option>
-                        <option value="Dispatch Complete">Dispatch Complete</option>
-                        <option value="Dispatch Pending">Dispatch Pending</option>
-                        <option value="Dispatch Hold">Dispatch Hold</option>
-                        {dispatchStatus && !['None', 'Dispatch Complete', 'Dispatch Pending', 'Dispatch Hold', ''].includes(dispatchStatus) && (
-                          <option value={dispatchStatus}>{dispatchStatus}</option>
-                        )}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* BANK APPLICATION NUMBER */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                      {isTataCobrandHdfc ? '3. BANK APPLICATION NUMBER' : isHdfcBank ? '6. BANK APPLICATION NUMBER' : isSbi ? '3. BANK APPLICATION NUMBER' : 'BANK APPLICATION NUMBER'}
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={(isTataCobrandHdfc || isHdfcBank) ? 25 : 13}
-                      disabled={!canEditRemark}
-                      value={bankRefNumber}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (isTataCobrandHdfc || isHdfcBank) {
-                          setBankRefNumber(val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25));
-                        } else {
-                          setBankRefNumber(val.replace(/\D/g, '').slice(0, 13));
-                        }
-                      }}
-                      placeholder={(isTataCobrandHdfc || isHdfcBank) ? "Enter Alphanumeric Bank App Ref Number" : "Enter 13-digit Bank App Reference Number"}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
-                    />
-                  </div>
-
-                  {/* 5. CARD APPROVAL STAGE */}
-                  {(isTataCobrandHdfc || (!isSbi && !isHdfcBank)) && (
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                        {isTataCobrandHdfc ? '5. CARD APPROVAL STAGE' : 'CARD APPROVAL STAGE'}
-                      </label>
-                      <select
-                        disabled={!canEditRemark}
-                        value={cardApprovalStage || 'None'}
-                        onChange={(e) => setCardApprovalStage(e.target.value)}
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                      >
-                        <option value="None">None</option>
-                        <option value="instant approved">instant approved</option>
-                        <option value="in process">in process</option>
-                        <option value="decline">decline</option>
-                        {cardApprovalStage && !['None', 'instant approved', 'in process', 'decline', ''].includes(cardApprovalStage) && (
-                          <option value={cardApprovalStage}>{cardApprovalStage}</option>
-                        )}
-                      </select>
-                    </div>
-                  )}
-
-                  {/* APPCODE & SOFT APPROVAL & IQA & DISPATCH FOR SBI & OTHER BANKS */}
-                  {!isTataCobrandHdfc && !isHdfcBank && (
+                  {/* 🅰️ SBI BANK WORKFLOW */}
+                  {isSbi ? (
                     <>
-                      {/* IQA STAGE */}
-                      <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                          {isSbi ? '6. IQA STAGE' : 'IQA STAGE'}
-                        </label>
-                        <select
-                          disabled={!canEditRemark}
-                          value={iqaStage || 'None'}
-                          onChange={(e) => setIqaStage(e.target.value)}
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
-                        >
-                          {isSbi ? (
-                            <>
-                              <option value="None">None</option>
-                              <option value="IQA complete">IQA complete</option>
-                              <option value="IQA Pending">IQA Pending</option>
-                              <option value="IQA Failed">IQA Failed</option>
-                              <option value="Blaze Complete">Blaze Complete</option>
-                              <option value="Blaze Decline">Blaze Decline</option>
-                            </>
-                          ) : (
-                            <>
-                              <option value="None">None</option>
-                              <option value="IQT Send">IQT Send</option>
-                              <option value="IQT Pending">IQT Pending</option>
-                              <option value="IQT Complete">IQT Complete</option>
-                              <option value="Blaze Continue">Blaze Continue</option>
-                              <option value="Blaze Decline">Blaze Decline</option>
-                            </>
-                          )}
-                          {iqaStage && !['None', 'IQA complete', 'IQA Pending', 'IQA Failed', 'Blaze Complete', 'Blaze Decline', 'IQT Send', 'IQT Pending', 'IQT Complete', 'Blaze Continue', ''].includes(iqaStage) && (
-                            <option value={iqaStage}>{iqaStage}</option>
-                          )}
-                        </select>
-                      </div>
-
-                      {/* APPCODE STATUS (Shown for SBI & Punching/Physical process) */}
+                      {/* 1. APPCODE STATUS (Punching only & Physical process) */}
                       {(isPunchLead || isPhysical || (!isLinkedShare && !isDirectBank)) && (
                         <div>
-                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                            {isSbi ? '1. APPCODE STATUS' : 'APPCODE STATUS'}
-                          </label>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. APPCODE STATUS</label>
                           <select
                             disabled={!canEditRemark}
                             value={appcodeStatus || 'None'}
@@ -1207,47 +940,103 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         </div>
                       )}
 
-                      {/* SOFT APPROVAL STATUS */}
+                      {/* 2. SOFT APPROVAL STATUS */}
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                          {isSbi ? '2. SOFT APPROVAL STATUS' : 'SOFT APPROVAL STATUS'}
-                        </label>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>2. SOFT APPROVAL STATUS</label>
                         <select
                           disabled={!canEditRemark}
                           value={softApprovalStatus || 'None'}
                           onChange={(e) => setSoftApprovalStatus(e.target.value)}
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                         >
-                          {isSbi ? (
-                            <>
-                              <option value="None">None</option>
-                              <option value="Approval income 25k">Approval income 25k</option>
-                              <option value="Approval income 30k">Approval income 30k</option>
-                              <option value="Approval NSDP Cibil based">Approval NSDP Cibil based</option>
-                              <option value="DeclineS5">DeclineS5</option>
-                              <option value="Decline U2">Decline U2</option>
-                              <option value="Normal Decline">Normal Decline</option>
-                            </>
-                          ) : (
-                            <>
-                              <option value="None">None</option>
-                              <option value="Approve">Approve</option>
-                              <option value="Decline">Decline</option>
-                              <option value="EQT">EQT</option>
-                              <option value="Technical Error">Technical Error</option>
-                            </>
-                          )}
-                          {softApprovalStatus && !['None', 'Approval income 25k', 'Approval income 30k', 'Approval NSDP Cibil based', 'Decline S5', 'Decline U2', 'Normal Decline', 'Approve', 'Decline', 'EQT', 'Technical Error', ''].includes(softApprovalStatus) && (
+                          <option value="None">None</option>
+                          <option value="Approval income 25k">Approval income 25k</option>
+                          <option value="Approval income 30k">Approval income 30k</option>
+                          <option value="Approval NSDP Cibil based">Approval NSDP Cibil based</option>
+                          <option value="DeclineS5">DeclineS5</option>
+                          <option value="Decline U2">Decline U2</option>
+                          <option value="Normal Decline">Normal Decline</option>
+                          {softApprovalStatus && !['None', 'Approval income 25k', 'Approval income 30k', 'Approval NSDP Cibil based', 'Approval NSDP Civil base', 'DeclineS5', 'Decline S5', 'Decline U2', 'Normal Decline', ''].includes(softApprovalStatus) && (
                             <option value={softApprovalStatus}>{softApprovalStatus}</option>
                           )}
                         </select>
                       </div>
 
-                      {/* DISPATCH STATUS FOR SBI & GENERAL */}
+                      {/* 3. BANK APPLICATION NUMBER */}
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                          {isSbi ? '7. DISPATCH STATUS' : 'DISPATCH STATUS'}
-                        </label>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. BANK APPLICATION NUMBER</label>
+                        <input
+                          type="text"
+                          maxLength={13}
+                          disabled={!canEditRemark}
+                          value={bankRefNumber}
+                          onChange={(e) => setBankRefNumber(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                          placeholder="Enter 13-digit Bank App Reference Number"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                        />
+                      </div>
+
+                      {/* 4. VKYC LINK */}
+                      {!isPhysical && (
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. VKYC LINK</label>
+                          <input
+                            type="url"
+                            disabled={!canEditRemark}
+                            value={vkycUrl}
+                            onChange={(e) => setVkycUrl(e.target.value)}
+                            placeholder="https://vkyc..."
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                          />
+                        </div>
+                      )}
+
+                      {/* 5. VKYC STATUS */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>5. VKYC STATUS</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={kycStage || 'None'}
+                          onChange={(e) => setKycStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="VKYC Complete">VKYC Complete</option>
+                          <option value="VKYC Pending">VKYC Pending</option>
+                          <option value="VKYC Failed">VKYC Failed</option>
+                          <option value="BIO Complete">BIO Complete</option>
+                          <option value="BIO Pending">BIO Pending</option>
+                          <option value="BIO Failed">BIO Failed</option>
+                          {kycStage && !['None', 'VKYC Complete', 'VKYC Pending', 'VKYC Failed', 'BIO Complete', 'BIO Pending', 'BIO Failed', ''].includes(kycStage) && (
+                            <option value={kycStage}>{kycStage}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* 6. IQA STAGE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>6. IQA STAGE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={iqaStage || 'None'}
+                          onChange={(e) => setIqaStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="IQA complete">IQA complete</option>
+                          <option value="IQA Pending">IQA Pending</option>
+                          <option value="IQA Failed">IQA Failed</option>
+                          <option value="Blaze Complete">Blaze Complete</option>
+                          <option value="Blaze Decline">Blaze Decline</option>
+                          {iqaStage && !['None', 'IQA complete', 'IQA Pending', 'IQA Failed', 'Blaze Complete', 'Blaze Decline', ''].includes(iqaStage) && (
+                            <option value={iqaStage}>{iqaStage}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* 7. DISPATCH STATUS */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>7. DISPATCH STATUS</label>
                         <select
                           disabled={!canEditRemark}
                           value={dispatchStatus || 'None'}
@@ -1260,6 +1049,296 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="E-Sign Pending">E-Sign Pending</option>
                           <option value="E-sign Complete">E-sign Complete</option>
                           <option value="RTB(Error)">RTB(Error)</option>
+                          {dispatchStatus && !['None', 'Dispatch Pending', 'Dispatch Complete', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)', ''].includes(dispatchStatus) && (
+                            <option value={dispatchStatus}>{dispatchStatus}</option>
+                          )}
+                        </select>
+                      </div>
+                    </>
+                  ) : isHdfcBank ? (
+                    /* 🅱️ HDFC BANK WORKFLOW */
+                    <>
+                      {/* 1. IPA */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={ipaStage || 'None'}
+                          onChange={(e) => setIpaStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="IPA Approved Cibil">IPA Approved Cibil</option>
+                          <option value="IPA Approved Income">IPA Approved Income</option>
+                          <option value="IPA Approved Decline">IPA Approved Decline</option>
+                          {ipaStage && !['None', 'IPA Approved Cibil', 'IPA Approved Income', 'IPA Approved Decline', ''].includes(ipaStage) && (
+                            <option value={ipaStage}>{ipaStage}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* 2. VKYC LINK */}
+                      {!isPhysical && (
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>2. VKYC LINK</label>
+                          <input
+                            type="url"
+                            disabled={!canEditRemark}
+                            value={vkycUrl}
+                            onChange={(e) => setVkycUrl(e.target.value)}
+                            placeholder="https://vkyc..."
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                          />
+                        </div>
+                      )}
+
+                      {/* 3. KYC STAGE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. KYC STAGE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={kycStage || 'None'}
+                          onChange={(e) => setKycStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="VKYC Link Send">VKYC Link Send</option>
+                          <option value="VKYC Success">VKYC Success</option>
+                          <option value="VKYC Pending">VKYC Pending</option>
+                          <option value="VKYC Failed">VKYC Failed</option>
+                          <option value="VKYC Expired">VKYC Expired</option>
+                          <option value="ID-COM Success">ID-COM Success</option>
+                          <option value="ID-COM Pending">ID-COM Pending</option>
+                          <option value="ID-COM Failed">ID-COM Failed</option>
+                          <option value="BIO Link Send">BIO Link Send</option>
+                          <option value="BIO Success">BIO Success</option>
+                          <option value="BIO Pending">BIO Pending</option>
+                          <option value="KYC Link Not Working">KYC Link Not Working</option>
+                          <option value="Error Occured">Error Occured</option>
+                          {kycStage && !['None', 'VKYC Link Send', 'VKYC Success', 'VKYC Pending', 'VKYC Failed', 'VKYC Expired', 'ID-COM Success', 'ID-COM Pending', 'ID-COM Failed', 'BIO Link Send', 'BIO Success', 'BIO Pending', 'KYC Link Not Working', 'Error Occured', ''].includes(kycStage) && (
+                            <option value={kycStage}>{kycStage}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* 4. INCOME DETAILS OR MAIL STATUS */}
+                      {ipaStage === 'IPA Approved Income' ? (
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. INCOME DETAILS</label>
+                          <select
+                            disabled={!canEditRemark}
+                            value={incomeDetails || 'None'}
+                            onChange={(e) => setIncomeDetails(e.target.value)}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                          >
+                            <option value="None">None</option>
+                            <option value="Payslip">Payslip</option>
+                            <option value="ITR">ITR</option>
+                            <option value="Card Started">Card Started</option>
+                            <option value="Form 16">Form 16</option>
+                            <option value="Bank Started">Bank Started</option>
+                            <option value="Gov. ID">Gov. ID</option>
+                            {incomeDetails && !['None', 'Payslip', 'ITR', 'Card Started', 'Form 16', 'Bank Started', 'Gov. ID', ''].includes(incomeDetails) && (
+                              <option value={incomeDetails}>{incomeDetails}</option>
+                            )}
+                          </select>
+                        </div>
+                      ) : (
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. MAIL STATUS</label>
+                          <select
+                            disabled={!canEditRemark}
+                            value={mailStatus || 'None'}
+                            onChange={(e) => setMailStatus(e.target.value)}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                          >
+                            <option value="None">None</option>
+                            <option value="Verified">Verified</option>
+                            <option value="Pending">Pending</option>
+                            {mailStatus && !['None', 'Verified', 'Pending', ''].includes(mailStatus) && (
+                              <option value={mailStatus}>{mailStatus}</option>
+                            )}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* 5. DISPATCH STAGE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>5. DISPATCH STAGE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={dispatchStatus || 'None'}
+                          onChange={(e) => setDispatchStatus(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Dispatch Complete">Dispatch Complete</option>
+                          <option value="Dispatch Pending">Dispatch Pending</option>
+                          <option value="Dispatch Hold">Dispatch Hold</option>
+                          {dispatchStatus && !['None', 'Dispatch Complete', 'Dispatch Pending', 'Dispatch Hold', ''].includes(dispatchStatus) && (
+                            <option value={dispatchStatus}>{dispatchStatus}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* 6. BANK APPLICATION NUMBER */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>6. BANK APPLICATION NUMBER</label>
+                        <input
+                          type="text"
+                          maxLength={25}
+                          disabled={!canEditRemark}
+                          value={bankRefNumber}
+                          onChange={(e) => setBankRefNumber(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25))}
+                          placeholder="Enter Alphanumeric Bank App Ref Number"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                        />
+                      </div>
+                    </>
+                  ) : isTataCobrandHdfc ? (
+                    /* 🆃 TATA CO-BRAND HDFC WORKFLOW */
+                    <>
+                      {/* 1. IPA STAGE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA STAGE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={ipaStage || 'None'}
+                          onChange={(e) => setIpaStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Approve">Approve</option>
+                          <option value="Decline">Decline</option>
+                          <option value="Error">Error</option>
+                          <option value="IPA Failed">IPA Failed</option>
+                          {ipaStage && !['None', 'Approve', 'Decline', 'Error', 'IPA Failed', ''].includes(ipaStage) && (
+                            <option value={ipaStage}>{ipaStage}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* 2. KYC STAGE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>2. KYC STAGE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={kycStage || 'None'}
+                          onChange={(e) => setKycStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Vkyc Complete">Vkyc Complete</option>
+                          <option value="Vkyc Pending">Vkyc Pending</option>
+                          <option value="Vkyc Failed">Vkyc Failed</option>
+                          {kycStage && !['None', 'Vkyc Complete', 'Vkyc Pending', 'Vkyc Failed', ''].includes(kycStage) && (
+                            <option value={kycStage}>{kycStage}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* 3. BANK APPLICATION NUMBER */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. BANK APPLICATION NUMBER</label>
+                        <input
+                          type="text"
+                          maxLength={25}
+                          disabled={!canEditRemark}
+                          value={bankRefNumber}
+                          onChange={(e) => setBankRefNumber(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25))}
+                          placeholder="Enter Alphanumeric Bank App Ref Number"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                        />
+                      </div>
+
+                      {/* 4. VKYC LINK */}
+                      {!isPhysical && (
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. VKYC LINK</label>
+                          <input
+                            type="url"
+                            disabled={!canEditRemark}
+                            value={vkycUrl}
+                            onChange={(e) => setVkycUrl(e.target.value)}
+                            placeholder="https://vkyc..."
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                          />
+                        </div>
+                      )}
+
+                      {/* 5. CARD APPROVAL STAGE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>5. CARD APPROVAL STAGE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={cardApprovalStage || 'None'}
+                          onChange={(e) => setCardApprovalStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="instant approved">instant approved</option>
+                          <option value="in process">in process</option>
+                          <option value="decline">decline</option>
+                          {cardApprovalStage && !['None', 'instant approved', 'in process', 'decline', ''].includes(cardApprovalStage) && (
+                            <option value={cardApprovalStage}>{cardApprovalStage}</option>
+                          )}
+                        </select>
+                      </div>
+                    </>
+                  ) : (
+                    /* 🌐 GENERAL / FALLBACK BANK WORKFLOW */
+                    <>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>BANK APPLICATION NUMBER</label>
+                        <input
+                          type="text"
+                          maxLength={13}
+                          disabled={!canEditRemark}
+                          value={bankRefNumber}
+                          onChange={(e) => setBankRefNumber(e.target.value.replace(/\D/g, '').slice(0, 13))}
+                          placeholder="Enter 13-digit Reference Number"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                        />
+                      </div>
+                      {!isPhysical && (
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>VKYC LINK</label>
+                          <input
+                            type="url"
+                            disabled={!canEditRemark}
+                            value={vkycUrl}
+                            onChange={(e) => setVkycUrl(e.target.value)}
+                            placeholder="https://vkyc..."
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>KYC STAGE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={kycStage || 'None'}
+                          onChange={(e) => setKycStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Vkyc Complete">Vkyc Complete</option>
+                          <option value="Vkyc Pending">Vkyc Pending</option>
+                          <option value="Vkyc Failed">Vkyc Failed</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>CARD APPROVAL STAGE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={cardApprovalStage || 'None'}
+                          onChange={(e) => setCardApprovalStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="instant approved">instant approved</option>
+                          <option value="in process">in process</option>
+                          <option value="decline">decline</option>
                         </select>
                       </div>
                     </>
