@@ -362,20 +362,45 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         }
       } else if (formType === 'final') {
         let targetStatus = currentStatus;
-        if (appFileGenerated === 'Yes' || appFileGenerated === 'yes') {
-          targetStatus = 'approved';
-        } else if (appFileGenerated === 'No' || appFileGenerated === 'no') {
-          if (!bankRemark?.trim() && !userRemark?.trim()) {
-            alert('Please provide a rejection reason in Bank Remark or User Remark before marking App File Generated as No.');
-            setActionLoading(false);
-            return;
+        
+        // SBI-specific validation and logic
+        if (isSbi) {
+          if (appFileGenerated === 'Yes' || appFileGenerated === 'yes') {
+            targetStatus = 'approved';
+          } else if (appFileGenerated === 'No' || appFileGenerated === 'no') {
+            if (!declineReason?.trim()) {
+              alert('Rejection reason is required when App File Generated is set to No for SBI products.');
+              setActionLoading(false);
+              return;
+            }
+            targetStatus = 'rejected';
+          } else if (finalStatus && finalStatus.toLowerCase().includes('approve')) {
+            targetStatus = 'approved';
+          } else if (finalStatus && (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('reject'))) {
+            targetStatus = 'rejected';
+          } else if (finalStatus && finalStatus.toLowerCase().includes('process')) {
+            targetStatus = 'in_process';
+          } else if (finalStatus && finalStatus.toLowerCase().includes('error')) {
+            targetStatus = 'technical_error';
           }
-          targetStatus = 'rejected';
-        } else if (finalStatus && (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('reject'))) {
-          targetStatus = 'rejected';
-        } else if (finalStatus && finalStatus.toLowerCase().includes('approve')) {
-          targetStatus = 'approved';
+        } else {
+          // Non-SBI logic
+          if (appFileGenerated === 'Yes' || appFileGenerated === 'yes') {
+            targetStatus = 'approved';
+          } else if (appFileGenerated === 'No' || appFileGenerated === 'no') {
+            if (!bankRemark?.trim() && !userRemark?.trim()) {
+              alert('Please provide a rejection reason in Bank Remark or User Remark before marking App File Generated as No.');
+              setActionLoading(false);
+              return;
+            }
+            targetStatus = 'rejected';
+          } else if (finalStatus && (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('reject'))) {
+            targetStatus = 'rejected';
+          } else if (finalStatus && finalStatus.toLowerCase().includes('approve')) {
+            targetStatus = 'approved';
+          }
         }
+        
         payload = {
           ...payload,
           ipa_stage: ipaStage,
@@ -383,7 +408,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           card_approval_stage: cardApprovalStage,
           digital_card_issued: digitalCardIssued,
           bank_remark: bankRemark,
-          decline_reason: bankRemark || userRemark,
+          decline_reason: declineReason || bankRemark || userRemark,
           user_remark: userRemark,
           notes: userRemark,
           operational_remarks: userRemark,
@@ -1228,6 +1253,23 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         )}
                       </select>
                     )}
+
+                  {/* 3. SBI Rejection Reason (Only shown when App File Generated is No for SBI) */}
+                  {isSbi && appFileGenerated === 'No' && (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        * REJECTION REASON (Required when App File Generated is No)
+                      </label>
+                      <textarea
+                        disabled={!canEditFinal}
+                        value={declineReason || ''}
+                        onChange={(e) => setDeclineReason(e.target.value)}
+                        placeholder="Enter rejection reason for why app file was not generated..."
+                        rows={2}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #ef4444', fontSize: '13px', background: !canEditFinal ? '#fef2f2' : '#fff', fontWeight: 600, color: '#dc2626' }}
+                      />
+                    </div>
+                  )}
                   </div>
 
                   {/* 3. USER REMARK */}

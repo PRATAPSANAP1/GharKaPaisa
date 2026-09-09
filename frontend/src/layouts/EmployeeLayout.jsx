@@ -126,7 +126,7 @@ export default function EmployeeLayout() {
   ];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: C.bg, fontFamily: "'Inter', sans-serif", color: C.text }}>
+    <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', background: C.bg, fontFamily: "'Inter', sans-serif", color: C.text }}>
       
       {/* Mobile Overlay Backdrop */}
       {isMobile && mobileMenuOpen && (
@@ -222,7 +222,7 @@ export default function EmployeeLayout() {
       </aside>
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', minWidth: 0 }}>
         
         {/* Top Navbar */}
         <header style={{ 
@@ -499,7 +499,7 @@ export default function EmployeeLayout() {
         </header>
 
         {/* Page Content Rendered Here */}
-        <main style={{ flex: 1, padding: isMobile ? '16px 12px 60px' : '24px' }}>
+        <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 12px 60px' : '24px', boxSizing: 'border-box' }}>
           <Outlet />
         </main>
       </div>

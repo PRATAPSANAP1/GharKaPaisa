@@ -2130,6 +2130,29 @@ const markVerificationComplete = async (req, res, next) => {
   }
 };
 
+// Helper function to check if a product is SBI
+const checkIfSbiProduct = async (productId) => {
+  try {
+    const res = await query(`
+      SELECT p.*, b.name as bank_name
+      FROM products p
+      LEFT JOIN banks b ON b.id = p.bank_id
+      WHERE p.id = $1
+    `, [productId]);
+    
+    if (res.rows.length === 0) return false;
+    
+    const product = res.rows[0];
+    const bankName = (product.bank_name || '').toUpperCase();
+    const productName = (product.name || '').toUpperCase();
+    
+    return bankName.includes('SBI') || bankName.includes('STATE BANK') || productName.includes('SBI');
+  } catch (err) {
+    logger.error('Error checking if product is SBI:', err);
+    return false;
+  }
+};
+
 // PUT /applications/:id/bank-status — Update bank review / approval status & SBI Physical Form fields
 const updateBankProcessingStatus = async (req, res, next) => {
   try {
@@ -2335,9 +2358,35 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
     const category = app.product_category || 'loan';
     const isDisbursed = currentStatus === 'disbursed';
-    const isApprovedForNonLoan = (currentStatus === 'approved' || currentStatus === 'app_file_generated') && ['credit_card', 'insurance'].includes(category);
+    
+    // Check if this is an SBI product
+    const isSbiProduct = await checkIfSbiProduct(app.product_id);
+    
+    // SBI-specific validation: if app_file_generated is 'No', require rejection reason and reject application
+    if (isSbiProduct && appFileGenVal && appFileGenVal.toLowerCase() === 'no') {
+      if (!decline_reason && !rejection_reason) {
+        return badRequest(res, 'Rejection reason is required when App File Generated is set to No for SBI products');
+      }
+      // Automatically set final status to Decline for SBI when app_file_generated is No
+      const currentFinalStatus = final_status || app.final_status;
+      if (!currentFinalStatus || currentFinalStatus.toLowerCase() !== 'decline') {
+        await query(`UPDATE applications SET final_status = 'Decline', status = 'rejected' WHERE id = $1`, [id]);
+      }
+    }
+    
+    // SBI-specific commission logic: only credit commission if app_file_generated is 'Yes'
+    let shouldCreditCommission = false;
+    if (isSbiProduct) {
+      shouldCreditCommission = appFileGenVal && appFileGenVal.toLowerCase() === 'yes' && 
+                                 app.commission_amount > 0 && app.partner_id;
+    } else {
+      // Non-SBI logic: commission on approved or app_file_generated for credit cards/insurance
+      const isApprovedForNonLoan = (currentStatus === 'approved' || currentStatus === 'app_file_generated') && 
+                                   ['credit_card', 'insurance'].includes(category);
+      shouldCreditCommission = (isDisbursed || isApprovedForNonLoan) && app.commission_amount > 0 && app.partner_id;
+    }
 
-    if ((isDisbursed || isApprovedForNonLoan) && app.commission_amount > 0 && app.partner_id) {
+    if (shouldCreditCommission) {
       try {
         await creditCommission(
           app.partner_id,
@@ -3601,6 +3650,7 @@ const updateApplicationDetails = async (req, res, next) => {
           dispatch_status,
           bank_remark,
           final_status,
+          app_file_generated,
           decline_reason,
           eligible_reqd,
           ipa_stage,
@@ -3644,6 +3694,7 @@ const updateApplicationDetails = async (req, res, next) => {
           $28,
           $29,
           $30,
+          $31,
           NOW(),
           NOW()
         ) ON CONFLICT (application_id) DO UPDATE SET
@@ -3705,6 +3756,7 @@ const updateApplicationDetails = async (req, res, next) => {
         cleanStr(dispatch_status || req.body.dispatch_status),
         cleanStr(bank_remark || req.body.bank_remark),
         cleanStr(final_status || req.body.final_status),
+        cleanStr(app_file_generated || appfile_generated || req.body.app_file_generated || req.body.appfile_generated),
         cleanStr(decline_reason || req.body.decline_reason),
         cleanStr(eligible_reqd || req.body.eligible_reqd),
         cleanStr(ipa_stage || req.body.ipa_stage),
