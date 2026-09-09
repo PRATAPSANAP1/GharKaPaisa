@@ -125,6 +125,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [finalStatus, setFinalStatus] = useState(sanitizeVal(application?.final_status) || sanitizeVal(application?.physical_details?.final_status) || sanitizeVal(application?.status) || 'None');
   const [appFileGenerated, setAppFileGenerated] = useState(sanitizeVal(application?.app_file_generated) || sanitizeVal(application?.appfile_generated) || sanitizeVal(application?.physical_details?.app_file_generated) || 'None');
   const [declineReason, setDeclineReason] = useState(sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.decline_reason));
+  const [eligibleReQd, setEligibleReQd] = useState(sanitizeVal(application?.eligible_reqd) || sanitizeVal(application?.physical_details?.eligible_reqd) || 'No');
   const resolveBankRefNo = (rawRef, sysNo) => {
     const s = sanitizeVal(rawRef);
     if (!s || s === sysNo || s.toUpperCase() === 'NA' || s.toUpperCase() === 'N/A') return '';
