@@ -309,6 +309,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                        String(selectedProduct?.bank_slug || '').toLowerCase() === 'sbi';
 
   const isTataCobrandHdfcProduct = selectedProduct?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
+    selectedProduct?.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
     String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA CO-BRAND HDFC') ||
     String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA CO BRAND HDFC') ||
     (String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA') &&

@@ -127,6 +127,9 @@ const getSignedDownloadUrl = async (key, expiresInSeconds = 3600) => {
 // Get CloudFront / Public S3 URL for images & media
 const getCloudFrontUrl = (urlOrKey) => {
   if (!urlOrKey) return null;
+  if (typeof urlOrKey === 'string' && (urlOrKey.startsWith('/uploads/') || urlOrKey.startsWith('uploads/'))) {
+    return urlOrKey;
+  }
   const cfDomain = getCloudFrontDomain();
 
   let key = urlOrKey;

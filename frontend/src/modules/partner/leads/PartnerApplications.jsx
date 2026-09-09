@@ -1822,54 +1822,113 @@ export default function PartnerApplications() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
-              <a
-                href={shareData.whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  padding: '11px 16px', borderRadius: 12, border: 'none', background: '#25D366',
-                  color: '#ffffff', fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-                }}
-              >
-                <MessageSquare size={16} /> Share via WhatsApp to Customer
-              </a>
+            {(() => {
+              const isHdfcApp = shareData.app && (
+                shareData.app.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
+                shareData.app.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
+                `${shareData.app.bank_name || ''} ${shareData.app.product_name || ''}`.toUpperCase().includes('HDFC') ||
+                `${shareData.app.bank_name || ''} ${shareData.app.product_name || ''}`.toUpperCase().includes('TATA')
+              );
 
-              <a
-                href={shareData.shareUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  padding: '11px 16px', borderRadius: 12, border: `1.5px solid ${accent}`, background: `${accent}12`,
-                  color: accent, fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-                }}
-              >
-                <ArrowUpRight size={16} /> Open & Fill Application Tracking Form
-              </a>
+              const tokenVal = shareData.token || shareData.app?.tracking_token || shareData.app?.id;
+              const physicalUrl = `${window.location.origin}/physical-application/${tokenVal}`;
+              const cobrowsingUrl = `${window.location.origin}/apply/${tokenVal}?mode=cobrowsing`;
+              const adobeUrl = shareData.shareUrl;
 
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    const res = await api.post(`/applications/${shareData.app?.id}/send-link`);
-                    if (res.data?.success) {
-                      alert(`✅ SMS Link dispatched successfully to customer ${shareData.app?.customer_mobile || shareData.app?.mobile}!`);
-                    }
-                  } catch (smsErr) {
-                    alert(smsErr.response?.data?.message || 'Failed to resend SMS to customer');
-                  }
-                }}
-                style={{
-                  padding: '11px 16px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#f1f5f9',
-                  color: textPrimary, fontWeight: 800, fontSize: 12.5, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-                }}
-              >
-                <Send size={15} /> Send / Resend Automatic SMS to Customer
-              </button>
-            </div>
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+                  {isHdfcApp ? (
+                    <>
+                      <a
+                        href={physicalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          padding: '11px 16px', borderRadius: 12, border: `1.5px solid #f59e0b`, background: `#f59e0b12`,
+                          color: '#d97706', fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                        }}
+                      >
+                        <FileText size={16} /> Physical Form Link
+                      </a>
+
+                      <a
+                        href={adobeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          padding: '11px 16px', borderRadius: 12, border: `1.5px solid ${accent}`, background: `${accent}12`,
+                          color: accent, fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                        }}
+                      >
+                        <ArrowUpRight size={16} /> Adobe Process Link
+                      </a>
+
+                      <a
+                        href={cobrowsingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          padding: '11px 16px', borderRadius: 12, border: `1.5px solid #ec4899`, background: `#ec489912`,
+                          color: '#db2777', fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                        }}
+                      >
+                        <Share2 size={16} /> Co-Browsing Process Link
+                      </a>
+                    </>
+                  ) : (
+                    <a
+                      href={shareData.shareUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        padding: '11px 16px', borderRadius: 12, border: `1.5px solid ${accent}`, background: `${accent}12`,
+                        color: accent, fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                      }}
+                    >
+                      <ArrowUpRight size={16} /> Open & Fill Application Tracking Form
+                    </a>
+                  )}
+
+                  <a
+                    href={shareData.whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '11px 16px', borderRadius: 12, border: 'none', background: '#25D366',
+                      color: '#ffffff', fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                    }}
+                  >
+                    <MessageSquare size={16} /> Share via WhatsApp to Customer
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const res = await api.post(`/applications/${shareData.app?.id}/send-link`);
+                        if (res.data?.success) {
+                          alert(`✅ SMS Link dispatched successfully to customer ${shareData.app?.customer_mobile || shareData.app?.mobile}!`);
+                        }
+                      } catch (smsErr) {
+                        alert(smsErr.response?.data?.message || 'Failed to resend SMS to customer');
+                      }
+                    }}
+                    style={{
+                      padding: '11px 16px', borderRadius: 12, border: `1px solid ${border}`, background: isDark ? '#1a1a1a' : '#f1f5f9',
+                      color: textPrimary, fontWeight: 800, fontSize: 12.5, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                    }}
+                  >
+                    <Send size={15} /> Send / Resend Automatic SMS to Customer
+                  </button>
+                </div>
+              );
+            })()}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: `1px solid ${border}`, paddingTop: 12 }}>
               <button

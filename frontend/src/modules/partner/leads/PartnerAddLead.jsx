@@ -8,11 +8,11 @@ import { MdArrowBack, MdSend, MdContentCopy, MdShare, MdOpenInNew, MdCheckCircle
 import { isSbiProductOrBank } from '../../../utils/sbiPincodeChecker';
 import PincodeAutoComplete, { isSbiPincodeValid } from '../../../components/PincodeAutoComplete';
 
-const PROCESS_OPTIONS = [
+const ALL_PROCESS_OPTIONS = [
   {
     id: 'lead_punching',
-    title: 'Lead Punching Only',
-    badge: '1. Lead Punching',
+    title: 'Punching only',
+    badge: '1. Punching only',
     icon: <MdAssignment size={24} />,
     color: '#3B82F6',
     bgColor: '#EFF6FF',
@@ -21,8 +21,8 @@ const PROCESS_OPTIONS = [
   },
   {
     id: 'linked_share',
-    title: 'Linked Share',
-    badge: '2. Tracked WhatsApp Share',
+    title: 'Link Share',
+    badge: '2. Link Share',
     icon: <MdLink size={24} />,
     color: '#10B981',
     bgColor: '#ECFDF5',
@@ -31,8 +31,8 @@ const PROCESS_OPTIONS = [
   },
   {
     id: 'direct_bank',
-    title: 'Direct Bank Process',
-    badge: '3. Direct Bank Portal',
+    title: 'Direct Link',
+    badge: '3. Direct Link',
     icon: <MdAccountBalance size={24} />,
     color: '#8B5CF6',
     bgColor: '#F5F3FF',
@@ -40,9 +40,19 @@ const PROCESS_OPTIONS = [
     description: 'Immediately opens official bank portal in a new tab for instant application completion.'
   },
   {
+    id: 'co_browsing',
+    title: 'Card Assist process (Co-Browsing)',
+    badge: '4. Card Assist process (Co-Browsing)',
+    icon: <MdVerifiedUser size={24} />,
+    color: '#EC4899',
+    bgColor: '#FDF2F8',
+    darkBgColor: '#831843',
+    description: 'Co-Browsing Card Assist process link for live customer guidance and application assist.'
+  },
+  {
     id: 'physical_process',
     title: 'Physical Process',
-    badge: '4. Physical Detail Sheet',
+    badge: 'Physical Detail Sheet',
     icon: <MdAssignment size={24} />,
     color: '#F59E0B',
     bgColor: '#FFFBEB',
@@ -733,16 +743,27 @@ export default function PartnerAddLead() {
       }}>
         <form onSubmit={handleSubmitLead} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
           
-          {/* PROCESS ASSIGNMENT - 3 CARDS SELECTION */}
+          {/* PROCESS ASSIGNMENT - CARDS SELECTION */}
           <div>
-            <label style={{ ...S.label, marginBottom: '10px', display: 'block' }}>Select Process Workflow *</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px' }}>
-              {PROCESS_OPTIONS.map((opt) => {
-                const isSelected = processType === opt.id;
-                return (
-                  <div
-                    key={opt.id}
-                    onClick={() => setProcessType(opt.id)}
+            <label style={{ ...S.label, marginBottom: '10px', display: 'block' }}>Process By *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+              {(() => {
+                const selectedProd = products.find(p => String(p.id) === String(selectedProductId));
+                const isHdfcSelected = selectedProd && (
+                  selectedProd.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
+                  selectedProd.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
+                  `${selectedProd.bank_name || ''} ${selectedProd.name || ''}`.toUpperCase().includes('HDFC') ||
+                  `${selectedProd.bank_name || ''} ${selectedProd.name || ''}`.toUpperCase().includes('TATA')
+                );
+                const opts = isHdfcSelected 
+                  ? ALL_PROCESS_OPTIONS.filter(o => ['lead_punching', 'linked_share', 'direct_bank', 'co_browsing'].includes(o.id))
+                  : ALL_PROCESS_OPTIONS.filter(o => ['lead_punching', 'linked_share', 'direct_bank', 'physical_process'].includes(o.id));
+                return opts.map((opt) => {
+                  const isSelected = processType === opt.id;
+                  return (
+                    <div
+                      key={opt.id}
+                      onClick={() => setProcessType(opt.id)}
                     style={{
                       border: `2px solid ${isSelected ? opt.color : C.border}`,
                       borderRadius: '16px',
@@ -789,7 +810,8 @@ export default function PartnerAddLead() {
                     </div>
                   </div>
                 );
-              })}
+              });
+            })()}
             </div>
           </div>
 

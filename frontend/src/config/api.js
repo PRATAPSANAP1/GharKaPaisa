@@ -17,9 +17,10 @@ export function getApiV1Url() {
 
 export function getImageUrl(url) {
   if (!url) return '';
-  if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
+  const normalizedUrl = String(url).replace(/\\/g, '/');
+  if (normalizedUrl.startsWith('data:') || normalizedUrl.startsWith('blob:') || normalizedUrl.startsWith('http://') || normalizedUrl.startsWith('https://')) {
+    return normalizedUrl;
   }
-  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  const cleanPath = normalizedUrl.startsWith('/') ? normalizedUrl : `/${normalizedUrl}`;
   return `${getApiRoot()}${cleanPath}`;
 }

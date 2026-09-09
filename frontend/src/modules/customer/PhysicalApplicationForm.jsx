@@ -203,7 +203,7 @@ export default function PhysicalApplicationForm() {
 
   const bankNameStr = String(appData?.bank_name || appData?.bank?.name || appData?.product_name || appData?.product?.name || appData?.application?.bank_name || '').toLowerCase();
   const isSbi = bankNameStr.includes('sbi');
-  const isTataCobrandHdfc = bankNameStr.includes('tata') || String(appData?.bank_id || '').includes('1eacfa67');
+  const isTataCobrandHdfc = bankNameStr.includes('tata') || bankNameStr.includes('hdfc') || String(appData?.bank_id || '').includes('1eacfa67') || String(appData?.bank_id || '').includes('f0b5742d');
   const processTypeStr = String(appData?.process_type || appData?.process_by || appData?.application?.process_type || appData?.application?.process_by || '').toLowerCase();
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
   const isDigitalProcess = processTypeStr.includes('linked') || processTypeStr.includes('share') || processTypeStr.includes('direct') || processTypeStr.includes('link');

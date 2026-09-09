@@ -133,12 +133,15 @@ export default function PartnerLayout() {
     }
   };
 
+  const fetchProfile = usePartnerStore((state) => state.fetchProfile);
+
   // Data synchronization on mount and navigation (no page-wide polling timer)
   useEffect(() => {
     if (!user?.id) return;
     fetchWallet();
     fetchUnreadNotifs();
-  }, [user?.id, location.pathname]);
+    fetchProfile().catch(() => {});
+  }, [user?.id, location.pathname, fetchProfile]);
   const accountStatus = user?.status || 'pending';
   const kycStatus = user?.kyc_status || 'pending';
   const isKycPage = location.pathname === '/partner/kyc-centre';
@@ -811,10 +814,10 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
   const profile = usePartnerStore((state) => state.profile);
 
   const currentPhotoUrl = user?.profile_photo_url || 
+                         profile?.profile_photo_url ||
                          user?.photo_url || 
                          user?.avatar || 
                          user?.profile_photo || 
-                         profile?.profile_photo_url || 
                          profile?.photo_url;
 
   useEffect(() => {

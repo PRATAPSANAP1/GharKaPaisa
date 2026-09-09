@@ -102,10 +102,12 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   // 2. Remark Form State (Appcode Status, Soft Approval, VKYC Stage, IQA Stage, Dispatch Status, TATA HDFC Stages)
   const combinedBankText = `${application?.bank_name || application?.bank?.name || application?.bank_code || ''} ${application?.product_name || application?.product?.name || ''}`.toUpperCase();
   const isSbi = combinedBankText.includes('SBI') || combinedBankText.includes('STATE BANK');
-  const isTataCobrandHdfc = application?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || combinedBankText.includes('TATA');
+  const isTataCobrandHdfc = application?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || application?.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' || combinedBankText.includes('TATA') || combinedBankText.includes('HDFC');
 
   const [ipaStage, setIpaStage] = useState(sanitizeVal(application?.ipa_stage) || sanitizeVal(application?.physical_details?.ipa_stage) || 'None');
   const [kycStage, setKycStage] = useState(sanitizeVal(application?.kyc_stage) || sanitizeVal(application?.physical_details?.kyc_stage) || 'None');
+  const [incomeDetails, setIncomeDetails] = useState(sanitizeVal(application?.income_details) || sanitizeVal(application?.physical_details?.income_details) || 'None');
+  const [mailStatus, setMailStatus] = useState(sanitizeVal(application?.mail_status) || sanitizeVal(application?.physical_details?.mail_status) || 'None');
   const [cardApprovalStage, setCardApprovalStage] = useState(sanitizeVal(application?.card_approval_stage) || sanitizeVal(application?.physical_details?.card_approval_stage) || 'None');
   const [digitalCardIssued, setDigitalCardIssued] = useState(sanitizeVal(application?.digital_card_issued) || sanitizeVal(application?.physical_details?.digital_card_issued) || 'None');
 
@@ -284,6 +286,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         setFinalStatus(realFinal);
         setIpaStage(sanitizeVal(app.ipa_stage) || sanitizeVal(pd.ipa_stage) || 'None');
         setKycStage(sanitizeVal(app.kyc_stage) || sanitizeVal(pd.kyc_stage) || 'None');
+        setIncomeDetails(sanitizeVal(app.income_details) || sanitizeVal(pd.income_details) || 'None');
+        setMailStatus(sanitizeVal(app.mail_status) || sanitizeVal(pd.mail_status) || 'None');
         setCardApprovalStage(sanitizeVal(app.card_approval_stage) || sanitizeVal(pd.card_approval_stage) || 'None');
         setDigitalCardIssued(sanitizeVal(app.digital_card_issued) || sanitizeVal(pd.digital_card_issued) || 'None');
         if (realAppFileGenerated) setAppFileGenerated(realAppFileGenerated);
@@ -343,6 +347,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           ...payload,
           ipa_stage: ipaStage || 'None',
           kyc_stage: kycStage || 'None',
+          income_details: ipaStage === 'IPA Approved Income' ? (incomeDetails || 'None') : undefined,
+          mail_status: ipaStage !== 'IPA Approved Income' ? (mailStatus || 'None') : undefined,
           card_approval_stage: cardApprovalStage || 'None',
           digital_card_issued: digitalCardIssued || 'None',
           appcode_status: appcodeStatus || 'None',
@@ -909,9 +915,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
                   
                   {/* IPA Stage (Only shown for Tata HDFC, Hidden for SBI Bank & standard products) */}
+                  {/* 1. IPA STAGE (Shown for HDFC Bank products) */}
                   {!isSbi && isTataCobrandHdfc && (
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA STAGE</label>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. IPA</label>
                       <select
                         disabled={!canEditRemark}
                         value={ipaStage || 'None'}
@@ -919,21 +926,35 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                       >
                         <option value="None">None</option>
-                        <option value="Approve">Approve</option>
-                        <option value="Decline">Decline</option>
-                        <option value="Error">Error</option>
-                        <option value="IPA Failed">IPA Failed</option>
-                        {ipaStage && !['None', 'Approve', 'Decline', 'Error', 'IPA Failed', ''].includes(ipaStage) && (
+                        <option value="IPA Approved Cibil">IPA Approved Cibil</option>
+                        <option value="IPA Approved Income">IPA Approved Income</option>
+                        <option value="IPA Approved Decline">IPA Approved Decline</option>
+                        {ipaStage && !['None', 'IPA Approved Cibil', 'IPA Approved Income', 'IPA Approved Decline', 'Approve', 'Decline', 'Error', 'IPA Failed', ''].includes(ipaStage) && (
                           <option value={ipaStage}>{ipaStage}</option>
                         )}
                       </select>
                     </div>
                   )}
 
-                  {/* KYC Stage */}
+                  {/* 2. VKYC LINK */}
+                  {!isPhysical && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>2. VKYC LINK</label>
+                      <input
+                        type="url"
+                        disabled={!canEditRemark}
+                        value={vkycUrl}
+                        onChange={(e) => setVkycUrl(e.target.value)}
+                        placeholder="https://vkyc..."
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                      />
+                    </div>
+                  )}
+
+                  {/* 3. KYC STAGE */}
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                      {isSbi ? 'KYC STATUS / STAGE' : 'KYC STAGE'}
+                      {isSbi ? 'KYC STATUS / STAGE' : '3. KYC STAGE'}
                     </label>
                     <select
                       disabled={!canEditRemark}
@@ -951,6 +972,23 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="BIO Pending">BIO Pending</option>
                           <option value="BIO Failed">BIO Failed</option>
                         </>
+                      ) : isTataCobrandHdfc ? (
+                        <>
+                          <option value="None">None</option>
+                          <option value="VKYC Link Send">VKYC Link Send</option>
+                          <option value="VKYC Success">VKYC Success</option>
+                          <option value="VKYC Pending">VKYC Pending</option>
+                          <option value="VKYC Failed">VKYC Failed</option>
+                          <option value="VKYC Expired">VKYC Expired</option>
+                          <option value="ID-COM Success">ID-COM Success</option>
+                          <option value="ID-COM Pending">ID-COM Pending</option>
+                          <option value="ID-COM Failed">ID-COM Failed</option>
+                          <option value="BIO Link Send">BIO Link Send</option>
+                          <option value="BIO Success">BIO Success</option>
+                          <option value="BIO Pending">BIO Pending</option>
+                          <option value="KYC Link Not Working">KYC Link Not Working</option>
+                          <option value="Error Occured">Error Occured</option>
+                        </>
                       ) : (
                         <>
                           <option value="None">None</option>
@@ -959,11 +997,54 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="Vkyc Failed">Vkyc Failed</option>
                         </>
                       )}
-                      {kycStage && !['None', 'VKYC Complete', 'VKYC Pending', 'VKYC Failed', 'BIO Complete', 'BIO Pending', 'BIO Failed', 'Vkyc Complete', 'Vkyc Pending', 'Vkyc Failed', 'ID-COM Complete', 'ID-COM Pending', 'ID-COM Failed', ''].includes(kycStage) && (
+                      {kycStage && !['None', 'VKYC Link Send', 'VKYC Success', 'VKYC Pending', 'VKYC Failed', 'VKYC Expired', 'ID-COM Success', 'ID-COM Pending', 'ID-COM Failed', 'BIO Link Send', 'BIO Success', 'BIO Pending', 'KYC Link Not Working', 'Error Occured', 'VKYC Complete', 'BIO Complete', 'Vkyc Complete', ''].includes(kycStage) && (
                         <option value={kycStage}>{kycStage}</option>
                       )}
                     </select>
                   </div>
+
+                  {/* 4. CONDITIONAL FIELD: INCOME DETAILS (if IPA Approved Income) OR MAIL STATUS */}
+                  {!isSbi && isTataCobrandHdfc && (
+                    ipaStage === 'IPA Approved Income' ? (
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. INCOME DETAILS</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={incomeDetails || 'None'}
+                          onChange={(e) => setIncomeDetails(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Payslip">Payslip</option>
+                          <option value="ITR">ITR</option>
+                          <option value="Card Started">Card Started</option>
+                          <option value="Form 16">Form 16</option>
+                          <option value="Bank Started">Bank Started</option>
+                          <option value="Gov. ID">Gov. ID</option>
+                          {incomeDetails && !['None', 'Payslip', 'ITR', 'Card Started', 'Form 16', 'Bank Started', 'Gov. ID', ''].includes(incomeDetails) && (
+                            <option value={incomeDetails}>{incomeDetails}</option>
+                          )}
+                        </select>
+                      </div>
+                    ) : (
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>4. MAIL STATUS</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={mailStatus || 'None'}
+                          onChange={(e) => setMailStatus(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Verified">Verified</option>
+                          <option value="Pending">Pending</option>
+                          {mailStatus && !['None', 'Verified', 'Pending', ''].includes(mailStatus) && (
+                            <option value={mailStatus}>{mailStatus}</option>
+                          )}
+                        </select>
+                      </div>
+                    )
+                  )}
 
                   {/* BANK APPLICATION NUMBER */}
                   <div>
@@ -985,21 +1066,6 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                     />
                   </div>
-
-                  {/* VKYC LINK */}
-                  {!isPhysical && (
-                    <div>
-                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>VKYC LINK</label>
-                      <input
-                        type="url"
-                        disabled={!canEditRemark}
-                        value={vkycUrl}
-                        onChange={(e) => setVkycUrl(e.target.value)}
-                        placeholder="https://vkyc..."
-                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
-                      />
-                    </div>
-                  )}
 
                   {/* Card Approval Stage (Hidden for SBI Bank products) */}
                   {!isSbi && (
@@ -1091,7 +1157,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                               <option value="None">None</option>
                               <option value="Approval income 25k">Approval income 25k</option>
                               <option value="Approval income 30k">Approval income 30k</option>
-                              <option value="Approval NSDP Civil based">Approval NSDP Civil based</option>
+                              <option value="Approval NSDP Cibil based">Approval NSDP Cibil based</option>
                               <option value="DeclineS5">DeclineS5</option>
                               <option value="Decline U2">Decline U2</option>
                               <option value="Normal Decline">Normal Decline</option>
@@ -1105,7 +1171,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                               <option value="Technical Error">Technical Error</option>
                             </>
                           )}
-                          {softApprovalStatus && !['None', 'Approval income 25k', 'Approval income 30k', 'Approval NSDP Civil based', 'Approval NSDP Civil base', 'DeclineS5', 'Decline U2', 'Normal Decline', 'Approve', 'Decline', 'EQT', 'Technical Error', ''].includes(softApprovalStatus) && (
+                          {softApprovalStatus && !['None', 'Approval income 25k', 'Approval income 30k', 'Approval NSDP Cibil based', 'Decline S5', 'Decline U2', 'Normal Decline', 'Approve', 'Decline', 'EQT', 'Technical Error', ''].includes(softApprovalStatus) && (
                             <option value={softApprovalStatus}>{softApprovalStatus}</option>
                           )}
                         </select>

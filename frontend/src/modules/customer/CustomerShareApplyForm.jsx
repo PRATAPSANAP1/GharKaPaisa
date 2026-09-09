@@ -57,6 +57,8 @@ export default function CustomerShareApplyForm() {
                        String(data?.product?.bank_code || data?.product?.bank_name || '').toLowerCase().includes('sbi');
 
   const isTataCobrandHdfc = data?.product?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
+    data?.product?.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
+    String(data?.product?.bank_name || data?.product?.bank_code || data?.product?.name || '').toUpperCase().includes('HDFC') ||
     String(data?.product?.bank_name || data?.product?.bank_code || data?.product?.name || '').toUpperCase().includes('TATA CO-BRAND HDFC') ||
     String(data?.product?.bank_name || data?.product?.bank_code || data?.product?.name || '').toUpperCase().includes('TATA CO BRAND HDFC') ||
     (String(data?.product?.bank_name || data?.product?.bank_code || data?.product?.name || '').toUpperCase().includes('TATA') &&

@@ -2162,6 +2162,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
       appcode_status, soft_approval_status, vkyc_stage, iqa_stage, dispatch_status,
       bank_remark, user_remark, user_notes, notes, final_status, decline_reason, eligible_reqd,
       app_file_generated, appfile_generated, ipa_stage, kyc_stage, card_approval_stage, digital_card_issued,
+      income_details, mail_status,
       // Form 1 Customer Application Details
       customer_mobile, customer_name, dob, customer_email, pan_number,
       company_name, designation, address, company_address, mother_name, vkyc_url
@@ -2189,10 +2190,12 @@ const updateBankProcessingStatus = async (req, res, next) => {
     try {
       await query(`
         ALTER TABLE applications 
-        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS income_details VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS mail_status VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100),
         ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
         ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
         ADD COLUMN IF NOT EXISTS user_remark TEXT,
@@ -2201,10 +2204,12 @@ const updateBankProcessingStatus = async (req, res, next) => {
       `);
       await query(`
         ALTER TABLE physical_application_details 
-        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS income_details VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS mail_status VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100),
         ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100),
         ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
         ADD COLUMN IF NOT EXISTS user_remark TEXT,
@@ -2311,22 +2316,25 @@ const updateBankProcessingStatus = async (req, res, next) => {
           kyc_stage = COALESCE(NULLIF($23, 'None'), NULLIF($23, ''), kyc_stage),
           card_approval_stage = COALESCE(NULLIF($24, 'None'), NULLIF($24, ''), card_approval_stage),
           digital_card_issued = COALESCE(NULLIF($25, 'None'), NULLIF($25, ''), digital_card_issued),
+          income_details = COALESCE(NULLIF($26, 'None'), NULLIF($26, ''), income_details),
+          mail_status = COALESCE(NULLIF($27, 'None'), NULLIF($27, ''), mail_status),
           updated_at = NOW()
-      WHERE id = $26
+      WHERE id = $28
     `, [
       currentStatus, bank_ref_number || bankAppNoVal || null, bankAppNoVal || null, rejection_reason || decline_reason || null, parsedAmount,
       appcode_status || null, soft_approval_status || null, vkyc_stage || null, iqa_stage || null,
       dispatch_status || null, bank_remark || null, final_status || null, decline_reason || null,
       eligible_reqd || null, dob || null, designation || null, company_address || null,
       mother_name || null, vkyc_url || null, userRemarkVal, appFileGenVal,
-      ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null, id
+      ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null,
+      income_details || null, mail_status || null, id
     ]);
 
     try {
       await query(`
         INSERT INTO physical_application_details (
-          application_id, bank_application_number, bank_ref_number, vkyc_url, user_remark, ipa_stage, kyc_stage, card_approval_stage, digital_card_issued, created_at, updated_at
-        ) VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+          application_id, bank_application_number, bank_ref_number, vkyc_url, user_remark, ipa_stage, kyc_stage, card_approval_stage, digital_card_issued, income_details, mail_status, created_at, updated_at
+        ) VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
         ON CONFLICT (application_id) DO UPDATE SET
           bank_application_number = COALESCE(EXCLUDED.bank_application_number, physical_application_details.bank_application_number),
           bank_ref_number = COALESCE(EXCLUDED.bank_ref_number, physical_application_details.bank_ref_number),
@@ -2336,8 +2344,10 @@ const updateBankProcessingStatus = async (req, res, next) => {
           kyc_stage = COALESCE(NULLIF(EXCLUDED.kyc_stage, 'None'), NULLIF(EXCLUDED.kyc_stage, ''), physical_application_details.kyc_stage),
           card_approval_stage = COALESCE(NULLIF(EXCLUDED.card_approval_stage, 'None'), NULLIF(EXCLUDED.card_approval_stage, ''), physical_application_details.card_approval_stage),
           digital_card_issued = COALESCE(NULLIF(EXCLUDED.digital_card_issued, 'None'), NULLIF(EXCLUDED.digital_card_issued, ''), physical_application_details.digital_card_issued),
+          income_details = COALESCE(NULLIF(EXCLUDED.income_details, 'None'), NULLIF(EXCLUDED.income_details, ''), physical_application_details.income_details),
+          mail_status = COALESCE(NULLIF(EXCLUDED.mail_status, 'None'), NULLIF(EXCLUDED.mail_status, ''), physical_application_details.mail_status),
           updated_at = NOW()
-      `, [id, bankAppNoVal, vkyc_url || null, userRemarkVal, ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null]);
+      `, [id, bankAppNoVal, vkyc_url || null, userRemarkVal, ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null, income_details || null, mail_status || null]);
     } catch (_) { }
 
     const titleMap = {
@@ -2533,10 +2543,10 @@ const submitPartnerApplication = async (req, res, next) => {
         return error(res, 'Please enter a valid 6-digit postal pincode', 400);
       }
 
-      const validProcesses = ['lead_punching', 'linked_share', 'direct_bank', 'physical_process'];
+      const validProcesses = ['lead_punching', 'linked_share', 'direct_bank', 'physical_process', 'co_browsing', 'card_assist_cobrowsing'];
       if (!validProcesses.includes(process_type)) {
         await client.query('ROLLBACK');
-        return error(res, 'Invalid Process Assignment selection. Must be one of: lead_punching, linked_share, direct_bank, physical_process', 400);
+        return error(res, 'Invalid Process Assignment selection.', 400);
       }
 
       if (!agree_terms) {
