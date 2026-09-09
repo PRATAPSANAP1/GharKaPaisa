@@ -729,13 +729,16 @@ export default function PartnerApplications() {
     if (p.includes('physical')) {
       return { label: 'Physical Process', color: '#d97706', bg: '#fef3c7', border: '#f59e0b40' };
     }
-    if (p.includes('share') || p.includes('link') || p.includes('customer_self')) {
-      return { label: 'Share Link', color: '#14b8a6', bg: '#14b8a618', border: '#14b8a640' };
+    if (p.includes('cobrowsing') || p.includes('co_browsing') || p.includes('co-browsing') || p.includes('assist')) {
+      return { label: 'Card Assist process(Co-Browsing)', color: '#ec4899', bg: '#fce7f3', border: '#f472b640' };
+    }
+    if (p.includes('share') || p.includes('linked_share') || p.includes('customer_self')) {
+      return { label: 'Linked share', color: '#14b8a6', bg: '#14b8a618', border: '#14b8a640' };
     }
     if (p.includes('direct') || p.includes('bank') || p.includes('partner_self')) {
-      return { label: 'Direct Link', color: '#3b82f6', bg: '#3b82f618', border: '#3b82f640' };
+      return { label: 'Direct Bank Process', color: '#3b82f6', bg: '#3b82f618', border: '#3b82f640' };
     }
-    return { label: 'Punch Only', color: '#8b5cf6', bg: '#8b5cf618', border: '#8b5cf640' };
+    return { label: 'Lead punching', color: '#8b5cf6', bg: '#8b5cf618', border: '#8b5cf640' };
   };
 
   const getStepProgress = (status, commStatus) => {

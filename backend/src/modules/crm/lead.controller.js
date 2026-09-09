@@ -567,6 +567,44 @@ const createLead = async (req, res, next) => {
       }, 'Physical process application created successfully.');
     }
 
+    if (targetProcess === 'co_browsing' || targetProcess === 'card_assist_cobrowsing') {
+      const cobrowsingUrl = 'https://agentapp.ddp.hdfcbank.com/dsa-agent-portal/welcome';
+
+      const { rows: [lead] } = await query(`
+        INSERT INTO leads (
+          lead_number, partner_id, parent_partner_id, created_by, customer_id,
+          product_id, customer_name, mobile, city, status, process_type, process_by,
+          otp_verified, source, priority, pipeline_stage
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'co_browsing', 'co_browsing', TRUE, $10, $11, 'co_browsing_initiated')
+        RETURNING *
+      `, [
+        leadNum, partner.id, partner.parent_partner_id || null, req.user.id, customer.id,
+        targetProductId, targetName.trim(), trimmedMobile, targetCity, source || 'partner', priority || 'medium'
+      ]);
+
+      const { rows: [app] } = await query(`
+        INSERT INTO applications (app_number, lead_id, customer_id, product_id, partner_id, bank_id, submitted_by, loan_amount, status, process_type, process_by, bank_url, agree_terms, submitted_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', 'co_browsing', 'co_browsing', $9, TRUE, NOW())
+        RETURNING *
+      `, [appNum, lead.id, customer.id, targetProductId, partner.id, product.bank_id || null, req.user.id, incomeVal || 0, cobrowsingUrl]);
+
+      await initializeLeadPipeline(lead.id, req.user.id, source || 'partner', priority || 'medium');
+
+      return created(res, {
+        lead_id: lead.id,
+        app_id: app.id,
+        app_number: app.app_number,
+        customer_id: customer.id,
+        mobile: lead.mobile,
+        process_type: 'co_browsing',
+        process_by: 'co_browsing',
+        otp_required: false,
+        bank_url: cobrowsingUrl,
+        redirect_url: cobrowsingUrl
+      }, 'Card Assist process (Co-Browsing) application logged successfully.');
+    }
+
     // Default: Lead Punching Process (No OTP requirement for internal punching)
     const { rows: [lead] } = await query(`
       INSERT INTO leads (

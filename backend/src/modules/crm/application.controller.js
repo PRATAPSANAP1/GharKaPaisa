@@ -2561,19 +2561,22 @@ const submitPartnerApplication = async (req, res, next) => {
     const cleanPan = (pan_number || pan || '').toString().trim().toUpperCase() || null;
 
     // Resolve canonical process_by and source metadata
-    let processByVal = 'partner';
+    let processByVal = 'lead_punching';
     let sourceVal = 'partner_portal';
     if (process_type === 'linked_share') {
-      processByVal = 'partner';
+      processByVal = 'linked_share';
       sourceVal = 'share_link';
     } else if (process_type === 'direct_bank') {
-      processByVal = 'customer';
+      processByVal = 'direct_bank';
       sourceVal = 'bank_redirect';
     } else if (process_type === 'physical_process') {
-      processByVal = 'partner';
+      processByVal = 'physical_process';
       sourceVal = 'physical';
+    } else if (process_type === 'co_browsing' || process_type === 'card_assist_cobrowsing') {
+      processByVal = 'co_browsing';
+      sourceVal = 'co_browsing';
     } else {
-      processByVal = 'partner';
+      processByVal = 'lead_punching';
       sourceVal = 'partner_portal';
     }
 
