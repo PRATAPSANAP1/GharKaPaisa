@@ -308,8 +308,11 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                        String(selectedProduct?.bank_name || '').toLowerCase().includes('sbi') ||
                        String(selectedProduct?.bank_slug || '').toLowerCase() === 'sbi';
 
+  const isHdfcBankProduct = selectedProduct?.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
+    (String(selectedProduct?.bank_name || selectedProduct?.bank_code || '').toUpperCase() === 'HDFC' &&
+     !String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA'));
+
   const isTataCobrandHdfcProduct = selectedProduct?.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
-    selectedProduct?.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
     String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA CO-BRAND HDFC') ||
     String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA CO BRAND HDFC') ||
     (String(selectedProduct?.bank_name || selectedProduct?.bank_code || selectedProduct?.name || '').toUpperCase().includes('TATA') &&
@@ -424,6 +427,30 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
           type: 'success',
           message: `Lead punched successfully for ${customerName.trim()} (${mobile.trim()})! Application #${appData?.app_number || ''} recorded.`
         });
+      } else if (processType === 'co_browsing') {
+        setToast({
+          type: 'success',
+          message: `Co-Browsing lead created for ${customerName.trim()} (${mobile.trim()})! Application #${appData?.app_number || ''} recorded.`
+        });
+        const cleanMobile = mobile.trim().replace(/\D/g, '');
+        const token = appData?.tracking_token || appData?.token || appData?.application_id || appData?.app_id || appData?.id;
+        const cobrowsingUrl = (token ? `${window.location.origin}/apply/${token}?mode=cobrowsing` : null) || directBankUrl;
+        const shareMsg = `Hello ${customerName.trim()},\n\nPlease complete your Co-Browsing Card Assist application using this link: ${cobrowsingUrl}`;
+        const waUrl = appData?.whatsapp_url || (cleanMobile 
+          ? `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(shareMsg)}`
+          : `https://wa.me/?text=${encodeURIComponent(shareMsg)}`);
+
+        if (navigator.share) {
+          navigator.share({
+            title: selectedProduct.name,
+            text: shareMsg,
+            url: cobrowsingUrl
+          }).catch(() => {
+            window.open(waUrl, '_blank');
+          });
+        } else {
+          window.open(waUrl, '_blank');
+        }
       } else if (processType === 'physical_process') {
         setToast({
           type: 'success',
@@ -1920,8 +1947,35 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                       </div>
                     </label>
 
-                    {/* Mode 4: Physical process (Disabled for TATA CO-BRAND HDFC BANK) */}
-                    {!isTataCobrandHdfcProduct && (
+                    {/* Mode 4: Card Assist process (Co-Browsing) for HDFC BANK */}
+                    {isHdfcBankProduct && (
+                      <label style={{
+                        display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                        border: `2px solid ${processType === 'co_browsing' ? C.primary : C.border}`,
+                        background: processType === 'co_browsing' ? `${C.primary}0D` : C.card,
+                        cursor: 'pointer', transition: 'all 0.2s'
+                      }}>
+                        <input
+                          type="radio"
+                          name="processType"
+                          value="co_browsing"
+                          checked={processType === 'co_browsing'}
+                          onChange={(e) => setProcessType(e.target.value)}
+                          style={{ marginTop: '2px', accentColor: C.primary }}
+                        />
+                        <div>
+                          <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                            4. Card Assist process(Co-Browsing)
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                            Co-Browsing Card Assist process link for live customer guidance and application assist.
+                          </div>
+                        </div>
+                      </label>
+                    )}
+
+                    {/* Mode 4: Physical process (Disabled for TATA CO-BRAND HDFC & HDFC BANK) */}
+                    {!isTataCobrandHdfcProduct && !isHdfcBankProduct && (
                       <label style={{
                         display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
                         border: `2px solid ${processType === 'physical_process' ? C.primary : C.border}`,
@@ -1981,7 +2035,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
                   }}
                 >
-                  {submitting ? 'Processing...' : processType === 'lead_punching' ? 'Punch Lead' : processType === 'linked_share' ? 'Generate & Share Link' : processType === 'physical_process' ? 'Generate Detail Sheet' : 'Open Bank Portal'}
+                  {submitting ? 'Processing...' : processType === 'lead_punching' ? 'Punch Lead' : processType === 'linked_share' ? 'Generate & Share Link' : processType === 'co_browsing' ? 'Generate Co-Browsing Link' : processType === 'physical_process' ? 'Generate Detail Sheet' : 'Open Bank Portal'}
                 </button>
               </div>
             </form>
