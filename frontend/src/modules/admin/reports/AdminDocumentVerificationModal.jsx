@@ -1091,7 +1091,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                               <option value="None">None</option>
                               <option value="Approval income 25k">Approval income 25k</option>
                               <option value="Approval income 30k">Approval income 30k</option>
-                              <option value="Approval NSDP Civil base">Approval NSDP Civil base</option>
+                              <option value="Approval NSDP Civil based">Approval NSDP Civil based</option>
                               <option value="DeclineS5">DeclineS5</option>
                               <option value="Decline U2">Decline U2</option>
                               <option value="Normal Decline">Normal Decline</option>
@@ -1105,7 +1105,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                               <option value="Technical Error">Technical Error</option>
                             </>
                           )}
-                          {softApprovalStatus && !['None', 'Approval income 25k', 'Approval income 30k', 'Approval NSDP Civil base', 'DeclineS5', 'Decline U2', 'Normal Decline', 'Approve', 'Decline', 'EQT', 'Technical Error', ''].includes(softApprovalStatus) && (
+                          {softApprovalStatus && !['None', 'Approval income 25k', 'Approval income 30k', 'Approval NSDP Civil based', 'Approval NSDP Civil base', 'DeclineS5', 'Decline U2', 'Normal Decline', 'Approve', 'Decline', 'EQT', 'Technical Error', ''].includes(softApprovalStatus) && (
                             <option value={softApprovalStatus}>{softApprovalStatus}</option>
                           )}
                         </select>
