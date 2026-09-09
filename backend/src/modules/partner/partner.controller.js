@@ -459,6 +459,11 @@ const getSelfProfile = async (req, res, next) => {
     `, [userId]);
     if (!Partner) return notFound(res, 'Partner profile not found');
 
+    if (Partner.profile_photo_url) {
+      const { getCloudFrontUrl } = require('../../services/aws/s3.service.js');
+      Partner.profile_photo_url = getCloudFrontUrl(Partner.profile_photo_url);
+    }
+
     // Mask bank account number
     if (Partner && Partner.account_number) {
       const { decrypt } = require('../../utils/helpers/crypto');
@@ -1858,8 +1863,10 @@ const uploadProfilePhoto = async (req, res, next) => {
     if (!partnerId) return error(res, 'Partner profile not found', 404);
     if (!req.file) return error(res, 'Photo file is required', 400);
     const { url, key } = await uploadToS3(req.file.buffer, req.file.originalname, `profile/${partnerId}`);
-    await query(`UPDATE partner_profiles SET profile_photo_url = $1 WHERE id = $2`, [url, partnerId]);
-    return success(res, { url, key }, 'Profile photo uploaded successfully');
+    const { getCloudFrontUrl } = require('../../services/aws/s3.service.js');
+    const photoUrl = getCloudFrontUrl(url) || url;
+    await query(`UPDATE partner_profiles SET profile_photo_url = $1 WHERE id = $2`, [photoUrl, partnerId]);
+    return success(res, { url: photoUrl, key }, 'Profile photo uploaded successfully');
   } catch (err) {
     next(err);
   }

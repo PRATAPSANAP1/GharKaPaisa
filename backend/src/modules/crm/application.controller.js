@@ -3729,7 +3729,33 @@ const updateApplicationDetails = async (req, res, next) => {
       req.user ? req.user.id : null
     ]).catch(() => { });
 
-    await syncEmployeeIncentiveLifecycle(client, updatedApp, cleanStr(app_file_generated || appfile_generated || req.body.app_file_generated), status || app.status);
+    const appFileGenVal = cleanStr(app_file_generated || appfile_generated || req.body.app_file_generated || req.body.appfile_generated);
+    const isAppFileYes = appFileGenVal && appFileGenVal.toLowerCase() === 'yes';
+    const isAppFileNo = appFileGenVal && appFileGenVal.toLowerCase() === 'no';
+    const finalTargetStatus = status || targetStatus || app.status;
+
+    if ((isAppFileYes || ['approved', 'super_admin_approved'].includes(String(finalTargetStatus).toLowerCase())) && app.commission_amount > 0 && app.partner_id) {
+      if (app.commission_status !== 'approved') {
+        try {
+          await creditCommission(
+            app.partner_id,
+            app.id,
+            app.commission_amount,
+            `Approved commission for application ${app.app_number || app.id}`,
+            req.user ? req.user.id : null,
+            client
+          );
+          await processTeamOverrideCommission(app.id, app.partner_id, app.commission_amount);
+          await client.query(`UPDATE applications SET commission_status = 'approved', approved_at = COALESCE(approved_at, NOW()) WHERE id = $1`, [app.id]);
+        } catch (commErr) {
+          logger.error('Failed to credit commission on status update:', commErr);
+        }
+      }
+    } else if (isAppFileNo || String(finalTargetStatus).toLowerCase() === 'rejected') {
+      await client.query(`UPDATE applications SET commission_status = 'cancelled' WHERE id = $1`, [app.id]);
+    }
+
+    await syncEmployeeIncentiveLifecycle(client, updatedApp, appFileGenVal, finalTargetStatus);
 
     await client.query('COMMIT');
     return success(res, updatedApp, 'Application details updated successfully');

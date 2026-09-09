@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePartnerStore } from '../../../app/store/partnerStore';
+import { useAuthStore } from '../../../app/store/authStore';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
 import { getImageUrl } from '../../../config/api';
@@ -30,6 +31,12 @@ export default function PartnerProfile() {
   const [activeTab, setActiveTab] = useState('personal');
   const [isMobile, setIsMobile] = useState(false);
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    if (profile?.profile_photo_url) {
+      setImgError(false);
+    }
+  }, [profile?.profile_photo_url]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -161,10 +168,15 @@ export default function PartnerProfile() {
     const formData = new FormData();
     formData.append('photo', blob, 'partner_profile.png');
     try {
-      await api.post('/partner/profile/photo', formData, {
+      const res = await api.post('/partner/profile/photo', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      await fetchProfile();
+      const updatedProfile = await fetchProfile();
+      const newPhotoUrl = res.data?.data?.url || updatedProfile?.profile_photo_url;
+      if (newPhotoUrl) {
+        useAuthStore.getState().updateUser({ profile_photo_url: newPhotoUrl });
+      }
+      setImgError(false);
       alert('Profile photo updated successfully!');
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to upload photo');
@@ -261,7 +273,7 @@ export default function PartnerProfile() {
               position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)',
               color: '#fff', fontSize: '11px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center',
               opacity: 0, transition: 'opacity 0.2s', borderRadius: '50%', textAlign: 'center', padding: '4px'
-            }} onMouseEnter={(e) => e.target.style.opacity = 1} onMouseLeave={(e) => e.target.style.opacity = 0}>
+            }} onMouseEnter={(e) => e.currentTarget.style.opacity = 1} onMouseLeave={(e) => e.currentTarget.style.opacity = 0}>
               Change Photo
             </div>
             <input type="file" id="avatar-upload-input" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUploadSelect} />

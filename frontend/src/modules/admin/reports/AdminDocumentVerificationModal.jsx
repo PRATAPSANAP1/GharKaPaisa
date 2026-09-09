@@ -362,7 +362,16 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         }
       } else if (formType === 'final') {
         let targetStatus = currentStatus;
-        if (finalStatus && (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('reject'))) {
+        if (appFileGenerated === 'Yes' || appFileGenerated === 'yes') {
+          targetStatus = 'approved';
+        } else if (appFileGenerated === 'No' || appFileGenerated === 'no') {
+          if (!bankRemark?.trim() && !userRemark?.trim()) {
+            alert('Please provide a rejection reason in Bank Remark or User Remark before marking App File Generated as No.');
+            setActionLoading(false);
+            return;
+          }
+          targetStatus = 'rejected';
+        } else if (finalStatus && (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('reject'))) {
           targetStatus = 'rejected';
         } else if (finalStatus && finalStatus.toLowerCase().includes('approve')) {
           targetStatus = 'approved';
@@ -374,6 +383,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           card_approval_stage: cardApprovalStage,
           digital_card_issued: digitalCardIssued,
           bank_remark: bankRemark,
+          decline_reason: bankRemark || userRemark,
           user_remark: userRemark,
           notes: userRemark,
           operational_remarks: userRemark,
@@ -904,16 +914,28 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       onChange={(e) => setKycStage(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                     >
-                      <option value="None">None</option>
-                      <option value="IDCOM Success">IDCOM Success</option>
-                      <option value="IDCOM Failed">IDCOM Failed</option>
-                      <option value="IDCOM Pending">IDCOM Pending</option>
-                      <option value="BIO Success">BIO Success</option>
-                      <option value="BIO Pending">BIO Pending</option>
-                      <option value="Vkyc Success">Vkyc Success</option>
-                      <option value="Vkyc Pending">Vkyc Pending</option>
-                      <option value="Vkyc Failed">Vkyc Failed</option>
-                      {kycStage && !['None', 'IDCOM Success', 'IDCOM Failed', 'IDCOM Pending', 'BIO Success', 'BIO Pending', 'Vkyc Success', 'Vkyc Pending', 'Vkyc Failed', 'VKYC Success', 'VKYC Pending', 'VKYC Failed', ''].includes(kycStage) && (
+                      {isSbi ? (
+                        <>
+                          <option value="None">None</option>
+                          <option value="ID-COM Complete">ID-COM Complete</option>
+                          <option value="ID-COM Pending">ID-COM Pending</option>
+                          <option value="ID-COM Failed">ID-COM Failed</option>
+                          <option value="BIO Complete">BIO Complete</option>
+                          <option value="BIO Pending">BIO Pending</option>
+                          <option value="BIO Failed">BIO Failed</option>
+                          <option value="VKYC Complete">VKYC Complete</option>
+                          <option value="VKYC Pending">VKYC Pending</option>
+                          <option value="VKYC Failed">VKYC Failed</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="None">None</option>
+                          <option value="Vkyc Complete">Vkyc Complete</option>
+                          <option value="Vkyc Pending">Vkyc Pending</option>
+                          <option value="Vkyc Failed">Vkyc Failed</option>
+                        </>
+                      )}
+                      {kycStage && !['None', 'ID-COM Complete', 'ID-COM Pending', 'ID-COM Failed', 'BIO Complete', 'BIO Pending', 'BIO Failed', 'VKYC Complete', 'VKYC Pending', 'VKYC Failed', 'Vkyc Complete', 'Vkyc Pending', 'Vkyc Failed', 'IDCOM Success', 'IDCOM Failed', 'IDCOM Pending', 'BIO Success', 'BIO Pending', 'Vkyc Success', ''].includes(kycStage) && (
                         <option value={kycStage}>{kycStage}</option>
                       )}
                     </select>
@@ -988,13 +1010,26 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           onChange={(e) => setIqaStage(e.target.value)}
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                         >
-                          <option value="None">None</option>
-                          <option value="IQT Send">IQT Send</option>
-                          <option value="IQT Pending">IQT Pending</option>
-                          <option value="IQT Complete">IQT Complete</option>
-                          <option value="Blaze Continue">Blaze Continue</option>
-                          <option value="Blaze Decline">Blaze Decline</option>
-                          {iqaStage && !['None', 'IQT Send', 'IQT Pending', 'IQT Complete', 'Blaze Continue', 'Blaze Decline', ''].includes(iqaStage) && (
+                          {isSbi ? (
+                            <>
+                              <option value="None">None</option>
+                              <option value="IQA complete">IQA complete</option>
+                              <option value="IQA Pending">IQA Pending</option>
+                              <option value="IQA Failed">IQA Failed</option>
+                              <option value="Blaze Complete">Blaze Complete</option>
+                              <option value="Blaze Decline">Blaze Decline</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="None">None</option>
+                              <option value="IQT Send">IQT Send</option>
+                              <option value="IQT Pending">IQT Pending</option>
+                              <option value="IQT Complete">IQT Complete</option>
+                              <option value="Blaze Continue">Blaze Continue</option>
+                              <option value="Blaze Decline">Blaze Decline</option>
+                            </>
+                          )}
+                          {iqaStage && !['None', 'IQA complete', 'IQA Pending', 'IQA Failed', 'Blaze Complete', 'Blaze Decline', 'IQT Send', 'IQT Pending', 'IQT Complete', 'Blaze Continue', ''].includes(iqaStage) && (
                             <option value={iqaStage}>{iqaStage}</option>
                           )}
                         </select>
@@ -1118,41 +1153,81 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
                   
-                  {/* 1. FINAL CARD APPROVE */}
+                  {/* 1. FINAL BANK STAGE / CARD APPROVE */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. FINAL CARD APPROVE</label>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                      {isSbi ? '1. FINAL BANK STAGE' : '1. FINAL CARD APPROVE'}
+                    </label>
                     <select
                       disabled={!canEditFinal}
                       value={finalStatus || 'None'}
                       onChange={(e) => setFinalStatus(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
                     >
-                      <option value="None">None</option>
-                      <option value="approve">approve</option>
-                      <option value="decline">decline</option>
-                      <option value="in process">in process</option>
-                      {finalStatus && !['None', 'approve', 'decline', 'in process', ''].includes(finalStatus) && (
+                      {isSbi ? (
+                        <>
+                          <option value="None">None</option>
+                          <option value="Approved">Approved</option>
+                          <option value="In Process">In Process</option>
+                          <option value="Decline">Decline</option>
+                          <option value="Technical Error">Technical Error</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="None">None</option>
+                          <option value="approve">approve</option>
+                          <option value="decline">decline</option>
+                          <option value="in process">in process</option>
+                        </>
+                      )}
+                      {finalStatus && !['None', 'Approved', 'In Process', 'Decline', 'Technical Error', 'approve', 'decline', 'in process', ''].includes(finalStatus) && (
                         <option value={finalStatus}>{finalStatus}</option>
                       )}
                     </select>
                   </div>
 
-                  {/* 2. DIGITAL CARD ISSUED */}
+                  {/* 2. APP FILE GENERATED / DIGITAL CARD ISSUED */}
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>2. DIGITAL CARD ISSUED</label>
-                    <select
-                      disabled={!canEditFinal}
-                      value={digitalCardIssued || 'None'}
-                      onChange={(e) => setDigitalCardIssued(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
-                    >
-                      <option value="None">None</option>
-                      <option value="yes">yes</option>
-                      <option value="no">no</option>
-                      {digitalCardIssued && !['None', 'yes', 'no', ''].includes(digitalCardIssued) && (
-                        <option value={digitalCardIssued}>{digitalCardIssued}</option>
-                      )}
-                    </select>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                      {isSbi ? '2. APP FILE GENERATED' : '2. DIGITAL CARD ISSUED'}
+                    </label>
+                    {isSbi ? (
+                      <select
+                        disabled={!canEditFinal}
+                        value={appFileGenerated || 'None'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setAppFileGenerated(val);
+                          if (val === 'Yes') {
+                            setFinalStatus('Approved');
+                          } else if (val === 'No') {
+                            setFinalStatus('Decline');
+                          }
+                        }}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                      >
+                        <option value="None">None</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                        {appFileGenerated && !['None', 'Yes', 'No', ''].includes(appFileGenerated) && (
+                          <option value={appFileGenerated}>{appFileGenerated}</option>
+                        )}
+                      </select>
+                    ) : (
+                      <select
+                        disabled={!canEditFinal}
+                        value={digitalCardIssued || 'None'}
+                        onChange={(e) => setDigitalCardIssued(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                      >
+                        <option value="None">None</option>
+                        <option value="yes">yes</option>
+                        <option value="no">no</option>
+                        {digitalCardIssued && !['None', 'yes', 'no', ''].includes(digitalCardIssued) && (
+                          <option value={digitalCardIssued}>{digitalCardIssued}</option>
+                        )}
+                      </select>
+                    )}
                   </div>
 
                   {/* 3. USER REMARK */}

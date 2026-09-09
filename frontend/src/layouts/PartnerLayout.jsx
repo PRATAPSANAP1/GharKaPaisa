@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
+import { usePartnerStore } from '../app/store/partnerStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemeToggle } from '../contexts/ThemeContext';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
@@ -807,6 +808,31 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
   const { isDark } = useTheme();
   const [headerImgError, setHeaderImgError] = useState(false);
 
+  const profile = usePartnerStore((state) => state.profile);
+
+  const currentPhotoUrl = user?.profile_photo_url || 
+                         user?.photo_url || 
+                         user?.avatar || 
+                         user?.profile_photo || 
+                         profile?.profile_photo_url || 
+                         profile?.photo_url;
+
+  useEffect(() => {
+    if (currentPhotoUrl) {
+      setHeaderImgError(false);
+    }
+  }, [currentPhotoUrl]);
+
+  const displayName = user?.name || 
+    (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : null) || 
+    user?.full_name || 
+    (profile?.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : null) || 
+    t('partnerLayout.partner', 'Partner');
+
+  const userCode = user?.partner_code || user?.Partner_code || profile?.partner_code || profile?.Partner_code || "GKP000";
+
+  const userInitial = displayName?.[0]?.toUpperCase() || 'P';
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -997,21 +1023,21 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
               overflow: 'hidden',
               flexShrink: 0
             }}>
-              {(user?.profile_photo_url || user?.photo_url || user?.avatar) && !headerImgError ? (
+              {currentPhotoUrl && !headerImgError ? (
                 <img 
-                  src={getImageUrl(user?.profile_photo_url || user?.photo_url || user?.avatar)} 
+                  src={getImageUrl(currentPhotoUrl)} 
                   alt="Profile" 
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                   onError={() => setHeaderImgError(true)}
                 />
               ) : (
-                user?.name?.[0]?.toUpperCase() || 'P'
+                userInitial
               )}
             </div>
             {!isMobile && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{user?.name || t('partnerLayout.partner', 'Partner')}</div>
-                <div style={{ fontSize: '10px', fontWeight: 600, color: SIDEBAR_TEXT }}>{user?.partner_code || user?.Partner_code || "GKP000"}</div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, lineHeight: 1.2 }}>{displayName}</div>
+                <div style={{ fontSize: '10px', fontWeight: 600, color: SIDEBAR_TEXT }}>{userCode}</div>
               </div>
             )}
             <span style={{ fontSize: '9px', color: C.textLight, transform: profileDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>

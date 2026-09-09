@@ -82,6 +82,11 @@ const getMe = async (req, res, next) => {
 
     if (!user) return error(res, 'User not found', 404);
 
+    if (user.profile_photo_url) {
+      const { getCloudFrontUrl } = require('../../services/aws/s3.service.js');
+      user.profile_photo_url = getCloudFrontUrl(user.profile_photo_url);
+    }
+
     if (user.account_number) {
       const decrypted = decrypt(user.account_number);
       user.account_number_last4 = decrypted.slice(-4);
