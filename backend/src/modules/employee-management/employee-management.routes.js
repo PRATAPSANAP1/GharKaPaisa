@@ -189,12 +189,10 @@ async function syncAndSeedEmployees() {
       ON CONFLICT (mobile_number) DO UPDATE SET user_id = EXCLUDED.user_id
     `).catch(e => logger.warn('Employee candidate sync note:', e.message));
 
-    // Delete any partner_profiles for users with EMPLOYEE role or matched employee details
+    // Delete any partner_profiles for users with EMPLOYEE role
     await query(`
       DELETE FROM partner_profiles 
       WHERE user_id IN (SELECT id FROM users WHERE role = 'EMPLOYEE')
-         OR mobile_number IN (SELECT mobile FROM users WHERE role = 'EMPLOYEE')
-         OR (email_id IS NOT NULL AND LOWER(email_id) IN (SELECT LOWER(email) FROM users WHERE role = 'EMPLOYEE' AND email IS NOT NULL))
     `).catch(e => logger.warn('Partner profile employee cleanup note:', e.message));
 
     // 3. Ensure hr_profiles table exists and sync HR users

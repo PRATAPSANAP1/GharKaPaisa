@@ -344,10 +344,7 @@ router.post('/candidates/:id/select', async (req, res, next) => {
 
     // Ensure employee is NOT present in partner_profiles table
     if (userId) {
-      await query(
-        `DELETE FROM partner_profiles WHERE user_id = $1 OR mobile_number = $2 OR (email_id IS NOT NULL AND LOWER(email_id) = LOWER($3))`,
-        [userId, candidate.mobile_number, candidate.email_id || '']
-      ).catch(() => {});
+      await query(`DELETE FROM partner_profiles WHERE user_id = $1`, [userId]).catch(() => {});
     }
 
     // Create Employee record
