@@ -424,7 +424,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         });
         const cleanMobile = mobile.trim().replace(/\D/g, '');
         const token = appData?.tracking_token || appData?.token || appData?.application_id || appData?.app_id || appData?.id;
-        const cobrowsingUrl = (token ? `${window.location.origin}/apply/${token}?mode=cobrowsing` : null) || directBankUrl;
+        const cobrowsingUrl = 'https://agentapp.ddp.hdfcbank.com/dsa-agent-portal/welcome';
         const shareMsg = `Hello ${customerName.trim()},\n\nPlease complete your Co-Browsing Card Assist application using this link: ${cobrowsingUrl}`;
         const waUrl = appData?.whatsapp_url || (cleanMobile 
           ? `https://wa.me/91${cleanMobile}?text=${encodeURIComponent(shareMsg)}`

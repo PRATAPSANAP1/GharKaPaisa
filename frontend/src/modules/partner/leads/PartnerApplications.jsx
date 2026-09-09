@@ -1862,7 +1862,7 @@ export default function PartnerApplications() {
               const tokenVal = shareData.token || app?.tracking_token || app?.id;
               const physicalUrl = `${window.location.origin}/physical-application/${tokenVal}`;
               const adobeUrl = shareData.shareUrl;
-              const cobrowsingUrl = `${window.location.origin}/apply/${tokenVal}?mode=cobrowsing`;
+              const cobrowsingUrl = 'https://agentapp.ddp.hdfcbank.com/dsa-agent-portal/welcome';
 
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
