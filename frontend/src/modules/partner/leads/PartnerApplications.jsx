@@ -320,7 +320,32 @@ export default function PartnerApplications() {
       const HDFC_BANK_ID = 'f0b5742d-f04d-4a91-b162-6009ddf6e345';
       const isHdfcBank = app?.bank_id === HDFC_BANK_ID;
 
+      const normalizedProcess = String(app?.process_type || app?.process_by || '').trim().toLowerCase();
+
+      const isCoBrowsing =
+        normalizedProcess === 'co_browsing' ||
+        normalizedProcess === 'cobrowsing' ||
+        normalizedProcess.includes('co-browsing') ||
+        normalizedProcess.includes('cobrowsing');
+
+      const isAdobeProcess =
+        normalizedProcess === 'linked_share' ||
+        normalizedProcess === 'share_link' ||
+        normalizedProcess === 'direct_bank' ||
+        normalizedProcess === 'direct_apply' ||
+        normalizedProcess.includes('linked_share') ||
+        normalizedProcess.includes('direct');
+
       if (isHdfcBank) {
+        if (isCoBrowsing) {
+          window.open('https://agentapp.ddp.hdfcbank.com/dsa-agent-portal/welcome', '_blank');
+          return;
+        }
+        if (isAdobeProcess) {
+          const adobeLink = shareUrl || `${window.location.origin}/apply/${tokenVal}`;
+          window.open(adobeLink, '_blank');
+          return;
+        }
         setShowShareModal(true);
       } else if (navigator.share) {
         navigator.share({
