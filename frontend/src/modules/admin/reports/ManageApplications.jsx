@@ -729,6 +729,9 @@ export default function ManageApplications() {
                         <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
                           {formattedDate}
                         </div>
+                        <div style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px', borderRadius: '4px', background: '#FEF3C7', color: '#92400E', fontSize: '10.5px', fontWeight: 800 }}>
+                          <span>🔄 Updates: {app.update_count ?? 1}</span>
+                        </div>
                       </td>
 
                       {/* Customer Info */}
@@ -1035,18 +1038,24 @@ export default function ManageApplications() {
 
                 {/* Verification Lifecycle Log Stream */}
                 <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '16px' }}>
-                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px' }}>
-                    Verification Lifecycle Log
+                  <h4 style={{ fontSize: '13.5px', fontWeight: 800, color: C.text, margin: '0 0 12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>Verification Lifecycle Log</span>
+                    <span style={{ fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', background: '#FEF3C7', color: '#92400E' }}>
+                      Updates: {timelines?.length || appDetail?.update_count || 1}
+                    </span>
                   </h4>
                   {timelines && timelines.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {timelines.map((t, idx) => (
                         <div key={idx} style={{ padding: '10px 14px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, fontSize: '12px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', color: C.textLight, fontSize: '11px', marginBottom: '4px' }}>
-                            <span style={{ fontWeight: 700, color: C.primary }}>{t.activity || t.title || 'Event'}</span>
-                            <span>{new Date(t.created_at || t.timestamp).toLocaleString('en-IN')}</span>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: C.textLight, fontSize: '11px', marginBottom: '4px', flexWrap: 'wrap', gap: '4px' }}>
+                            <span style={{ fontWeight: 800, color: C.primary }}>{t.title || t.event_type || t.activity || 'Application Event'}</span>
+                            <span>📅 {new Date(t.performed_at || t.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} 🕒 {new Date(t.performed_at || t.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</span>
                           </div>
-                          <div style={{ fontWeight: 600, color: C.text }}>{t.description || t.status}</div>
+                          <div style={{ fontWeight: 600, color: C.text }}>{t.description || t.remarks || t.activity || t.status}</div>
+                          {t.performed_by_name && (
+                            <div style={{ fontSize: '10.5px', color: C.teal, fontWeight: 700, marginTop: '2px' }}>By: {t.performed_by_name}</div>
+                          )}
                         </div>
                       ))}
                     </div>

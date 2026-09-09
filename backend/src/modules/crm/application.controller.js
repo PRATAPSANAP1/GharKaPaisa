@@ -50,12 +50,16 @@ const parseDobToIso = (raw) => {
   return null;
 };
 
-// Helper to log timeline actions
+// Helper to log timeline actions with full audit metadata and timestamp
 const logTimeline = async (client, applicationId, status, activity, remarks, performedBy) => {
-  await client.query(`
-    INSERT INTO application_timeline (application_id, status, activity, remarks, performed_by)
-    VALUES ($1, $2, $3, $4, $5)
-  `, [applicationId, status, activity, remarks, performedBy]);
+  try {
+    await client.query(`
+      INSERT INTO application_timeline (application_id, status, activity, event_type, title, description, remarks, actor_type, actor_id, performed_by, created_at)
+      VALUES ($1, $2, $3, $2, $3, $4, $4, 'system', $5, $5, NOW())
+    `, [applicationId, status, activity, remarks, performedBy]);
+  } catch (err) {
+    console.warn('logTimeline error:', err.message);
+  }
 };
 
 // POST /applications — Partner submits application
@@ -1449,6 +1453,7 @@ const listApplications = async (req, res, next) => {
           a.commission_status::text,
           a.created_at,
           a.updated_at,
+          COALESCE((SELECT COUNT(*) FROM application_timeline WHERE application_id = a.id), 1)::int as update_count,
           COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, '')) as bank_application_number,
           a.bank_ref_number,
           (to_jsonb(a)->>'ipa_stage') as ipa_stage,
@@ -4763,6 +4768,10 @@ const get360ApplicationTrace = async (req, res, next) => {
       query(`SELECT * FROM wallet_ledger WHERE application_id = $1 ORDER BY created_at DESC`, [id]).catch(() => ({ rows: [] })),
       query(`SELECT * FROM sms_logs WHERE application_id = $1 ORDER BY created_at DESC`, [id]).catch(() => ({ rows: [] }))
     ]);
+
+    if (appTrace) {
+      appTrace.update_count = timelineRes.rows.length;
+    }
 
     return success(res, {
       application: appTrace,

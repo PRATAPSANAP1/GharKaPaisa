@@ -808,6 +808,9 @@ export default function ManageApplications() {
                         <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
                           {app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                         </div>
+                        <div style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px', borderRadius: '4px', background: '#FEF3C7', color: '#92400E', fontSize: '10.5px', fontWeight: 800 }}>
+                          <span>🔄 Updates: {app.update_count ?? 1}</span>
+                        </div>
                       </td>
 
                       {/* Customer Avatar & Metadata */}
@@ -1037,38 +1040,38 @@ export default function ManageApplications() {
               {/* Tab 2: Visual Application Timeline */}
               {activeDrawerTab === 'timeline' && (
                 <div style={{ padding: '10px 0' }}>
-                  <h4 style={{ margin: '0 0 16px 0', fontSize: '13px', fontWeight: 800, color: C.text }}>Lifecycle Timeline</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderLeft: `2px solid ${C.teal}`, paddingLeft: '16px', marginLeft: '8px' }}>
-                    
-                    <div style={{ position: 'relative' }}>
-                      <div style={{ position: 'absolute', left: '-23px', top: '0', width: '12px', height: '12px', borderRadius: '50%', background: C.teal }} />
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>✓ Lead Initiated</div>
-                      <div style={{ fontSize: '11px', color: C.textLight }}>Customer profile registered</div>
+                  <h4 style={{ margin: '0 0 16px 0', fontSize: '13px', fontWeight: 800, color: C.text }}>
+                    Lifecycle Timeline ({timelines.length > 0 ? timelines.length : (selectedApp?.update_count || 1)} Updates Logged)
+                  </h4>
+                  {timelines.length === 0 ? (
+                    <div style={{ color: C.textLight, fontSize: '12px', textAlign: 'center', padding: '20px' }}>
+                      No timeline events recorded yet.
                     </div>
-
-                    <div style={{ position: 'relative' }}>
-                      <div style={{ position: 'absolute', left: '-23px', top: '0', width: '12px', height: '12px', borderRadius: '50%', background: C.teal }} />
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>✓ Details Submitted</div>
-                      <div style={{ fontSize: '11px', color: C.textLight }}>QD form &amp; documents uploaded</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderLeft: `2px solid ${C.teal}`, paddingLeft: '16px', marginLeft: '8px' }}>
+                      {timelines.map((evt, idx) => (
+                        <div key={evt.id || idx} style={{ position: 'relative' }}>
+                          <div style={{ position: 'absolute', left: '-23px', top: '2px', width: '12px', height: '12px', borderRadius: '50%', background: idx === 0 ? C.teal : '#94A3B8' }} />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>
+                              {evt.title || evt.event_type || 'Application Updated'}
+                            </div>
+                            <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 600 }}>
+                              📅 {new Date(evt.performed_at || evt.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} 🕒 {new Date(evt.performed_at || evt.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '12px', color: C.textMid, marginTop: '2px' }}>
+                            {evt.description || evt.remarks || evt.activity || 'Application status or details modified.'}
+                          </div>
+                          {evt.performed_by_name && (
+                            <div style={{ fontSize: '11px', color: C.teal, fontWeight: 700, marginTop: '2px' }}>
+                              Actor: {evt.performed_by_name}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-
-                    <div style={{ position: 'relative' }}>
-                      <div style={{ position: 'absolute', left: '-23px', top: '0', width: '12px', height: '12px', borderRadius: '50%', background: '#F59E0B' }} />
-                      <div style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>● Operational Verification</div>
-                      <div style={{ fontSize: '11px', color: C.textLight }}>Under Ops Operator review</div>
-                    </div>
-
-                    <div style={{ position: 'relative' }}>
-                      <div style={{ position: 'absolute', left: '-23px', top: '0', width: '12px', height: '12px', borderRadius: '50%', background: C.border }} />
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: C.textLight }}>○ Bank Processing</div>
-                    </div>
-
-                    <div style={{ position: 'relative' }}>
-                      <div style={{ position: 'absolute', left: '-23px', top: '0', width: '12px', height: '12px', borderRadius: '50%', background: C.border }} />
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: C.textLight }}>○ Approved / Disbursed</div>
-                    </div>
-
-                  </div>
+                  )}
                 </div>
               )}
 

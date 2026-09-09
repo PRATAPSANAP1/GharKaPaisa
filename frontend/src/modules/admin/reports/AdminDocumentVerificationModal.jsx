@@ -1568,18 +1568,32 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           {/* ═════════ TAB 4: AUDIT LOG / TIMELINE ═════════ */}
           {activeTab === 'timeline' && (
             <div>
-              <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1e293b', marginBottom: '16px' }}>Application Timeline & Audit Log</h4>
+              <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Application Timeline &amp; Audit Log</span>
+                <span style={{ fontSize: '12px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309' }}>
+                  🔄 Total Updates: {timeline.length > 0 ? timeline.length : (application?.update_count || 1)}
+                </span>
+              </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {timeline.length === 0 ? (
-                  <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '24px' }}>No timeline events recorded.</div>
+                  <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '24px' }}>No timeline events recorded yet.</div>
                 ) : (
                   timeline.map((event, idx) => (
-                    <div key={event.id || idx} style={{ display: 'flex', gap: '14px', padding: '12px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ea580c', marginTop: '4px' }} />
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a' }}>{event.title}</div>
-                        <div style={{ fontSize: '13px', color: '#475569', marginTop: '2px' }}>{event.description}</div>
-                        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>{new Date(event.created_at).toLocaleString()}</div>
+                    <div key={event.id || idx} style={{ display: 'flex', gap: '14px', padding: '12px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ea580c', marginTop: '4px', flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                          <div style={{ fontWeight: 800, fontSize: '13.5px', color: '#0f172a' }}>{event.title || event.event_type || 'Application Updated'}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                            📅 {new Date(event.performed_at || event.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} 🕒 {new Date(event.performed_at || event.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '12.5px', color: '#475569', marginTop: '4px' }}>{event.description || event.remarks || event.activity || 'Application modified.'}</div>
+                        {event.performed_by_name && (
+                          <div style={{ fontSize: '11px', color: '#0284c7', marginTop: '4px', fontWeight: 600 }}>
+                            By: {event.performed_by_name}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))
