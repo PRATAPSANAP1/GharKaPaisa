@@ -404,18 +404,8 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
           message: `Linked share lead created for ${customerName.trim()} (${mobile.trim()})! Application #${appData?.app_number || ''} added to Applications.`
         });
 
-        // Open WhatsApp or Web Share
-        if (navigator.share) {
-          navigator.share({
-            title: selectedProduct.name,
-            text: shareMessage,
-            url: shareLink
-          }).catch(() => {
-            window.open(waUrl, '_blank');
-          });
-        } else {
-          window.open(waUrl, '_blank');
-        }
+        // Directly open WhatsApp page for customer
+        window.open(waUrl, '_blank');
 
         setSelectedProduct(null);
         setCustomerName("");
