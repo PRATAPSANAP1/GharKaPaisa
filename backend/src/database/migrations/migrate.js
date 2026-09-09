@@ -4679,6 +4679,19 @@ const migrate = async () => {
     logger.warn('Partner profiles cleanup note:', cleanupErr.message);
   }
 
+  // ── Make partner_id NULLABLE in applications, leads, partner_share_links ──
+  // Allows direct employee, customer, and admin applications to be processed without errors
+  try {
+    await query(`
+      ALTER TABLE applications ALTER COLUMN partner_id DROP NOT NULL;
+      ALTER TABLE leads ALTER COLUMN partner_id DROP NOT NULL;
+      ALTER TABLE partner_share_links ALTER COLUMN partner_id DROP NOT NULL;
+    `);
+    logger.info('[Migration] Made partner_id NULLABLE in applications, leads, and partner_share_links.');
+  } catch (dropErr) {
+    logger.warn('partner_id DROP NOT NULL migration note:', dropErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

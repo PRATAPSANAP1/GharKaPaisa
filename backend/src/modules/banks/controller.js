@@ -350,7 +350,6 @@ const deleteBank = async (req, res, next) => {
 // GET /api/v1/banks/active — Public, lightweight, no auth
 const getActiveBanks = async (req, res, next) => {
   try {
-    console.log("GET ACTIVE BANKS - CLOUDFRONT CODE RUNNING");
     const { rows } = await query(`
       SELECT
         b.id,

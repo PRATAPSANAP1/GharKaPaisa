@@ -65,23 +65,43 @@ const submitApplication = async (req, res, next) => {
     await client.query('BEGIN');
 
     const { product_id, customer, loan_amount, notes } = req.body;
-    let PartnerId = req.partner?.id || req.body.partner_id;
+    const rawRole = String(req.user?.role || '').toUpperCase().trim();
+    const isStaff = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR'].includes(rawRole);
+
+    try {
+      await client.query(`ALTER TABLE applications ALTER COLUMN partner_id DROP NOT NULL`);
+      await client.query(`ALTER TABLE leads ALTER COLUMN partner_id DROP NOT NULL`);
+    } catch (_) { }
+
+    let PartnerId = req.body.partner_id || req.body.PartnerId || null;
+
+    if (PartnerId) {
+      const { rows: [pCheck] } = await client.query(`SELECT id FROM partner_profiles WHERE id = $1`, [PartnerId]);
+      PartnerId = pCheck?.id || null;
+    }
+
+    if (!PartnerId && req.partner?.id) {
+      const { rows: [pCheck] } = await client.query(`SELECT id FROM partner_profiles WHERE id = $1`, [req.partner.id]);
+      if (pCheck) PartnerId = pCheck.id;
+    }
 
     if (!PartnerId && req.user?.id) {
       const { rows: [p] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (p) {
         PartnerId = p.id;
-      } else if (['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
+      } else if (!isStaff) {
         const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
         const { rows: [newP] } = await client.query(`
           INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
-          VALUES ($1, $2, $3, $4, 'active', 'pending') RETURNING id
+          VALUES ($1, $2, $3, $4, 'active', 'pending')
+          ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
+          RETURNING id
         `, [req.user.id, partnerCode, req.user.first_name || 'Partner', req.user.last_name || '']);
-        PartnerId = newP.id;
+        if (newP) PartnerId = newP.id;
       }
     }
 
-    if (!PartnerId && ['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
+    if (!PartnerId && ['PARTNER', 'TEAM_MEMBER'].includes(rawRole)) {
       await client.query('ROLLBACK');
       return error(res, 'Partner ID is required', 400);
     }
@@ -2373,26 +2393,52 @@ const submitPartnerApplication = async (req, res, next) => {
       return error(res, 'Product ID is required', 400);
     }
 
-    let partnerId;
-    if (req.partner?.id) {
-      partnerId = req.partner.id;
-    } else if (req.user?.id) {
-      const { rows: [p] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
-      if (p) {
-        partnerId = p.id;
-      } else if (['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
-        const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
-        const { rows: [newP] } = await client.query(`
-          INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
-          VALUES ($1, $2, $3, $4, 'active', 'pending') RETURNING id
-        `, [req.user.id, partnerCode, req.user.first_name || 'Partner', req.user.last_name || '']);
-        partnerId = newP.id;
+    const rawRole = String(req.user?.role || req.user?.user_role || '').toUpperCase().trim();
+    const isStaff = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR'].includes(rawRole);
+
+    // Ensure database columns allow NULL for applications / leads without partners (e.g. employee / direct leads)
+    try {
+      await client.query(`ALTER TABLE applications ALTER COLUMN partner_id DROP NOT NULL`);
+      await client.query(`ALTER TABLE leads ALTER COLUMN partner_id DROP NOT NULL`);
+      await client.query(`ALTER TABLE partner_share_links ALTER COLUMN partner_id DROP NOT NULL`);
+    } catch (_) { }
+
+    let partnerId = req.body.partner_id || req.body.PartnerId || null;
+
+    if (partnerId) {
+      const { rows: [pCheck] } = await client.query(`SELECT id FROM partner_profiles WHERE id = $1`, [partnerId]);
+      partnerId = pCheck?.id || null;
+    }
+
+    if (!partnerId && req.partner?.id) {
+      const { rows: [pCheck] } = await client.query(`SELECT id FROM partner_profiles WHERE id = $1`, [req.partner.id]);
+      if (pCheck) {
+        partnerId = pCheck.id;
       }
     }
 
-    if (!partnerId && ['PARTNER', 'TEAM_MEMBER'].includes(req.user?.role)) {
+    if (!partnerId && req.user?.id) {
+      const { rows: [p] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (p) {
+        partnerId = p.id;
+      } else if (!isStaff) {
+        // Auto-provision partner profile for non-staff partner/team-member
+        const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
+        const { rows: [newP] } = await client.query(`
+          INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
+          VALUES ($1, $2, $3, $4, 'active', 'pending')
+          ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
+          RETURNING id
+        `, [req.user.id, partnerCode, req.user.first_name || 'Partner', req.user.last_name || '']);
+        if (newP) {
+          partnerId = newP.id;
+        }
+      }
+    }
+
+    if (!partnerId && ['PARTNER', 'TEAM_MEMBER'].includes(rawRole)) {
       await client.query('ROLLBACK');
-      return error(res, 'Partner profile not found', 400);
+      return error(res, 'Partner profile not found. Please contact support.', 400);
     }
 
     const { rows: [product] } = await client.query(

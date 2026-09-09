@@ -32,15 +32,11 @@ poolOptions.acquireTimeoutMillis = parseInt(process.env.DB_ACQUIRE_TIMEOUT) || 1
 poolOptions.allowExitOnIdle = false;
 poolOptions.keepAlive = true;
 poolOptions.keepAliveInitialDelayMillis = 10000;
+poolOptions.statement_timeout = parseInt(process.env.DB_STATEMENT_TIMEOUT) || 10000;
 
 const pool = new Pool(poolOptions);
 
-// Set statement_timeout via SQL after connection (RDS Proxy compliant)
 pool.on('connect', (client) => {
-  client.query('SET statement_timeout = 10000').catch(err => {
-    logger.warn('Failed to set statement_timeout', { error: err.message });
-  });
-
   if (process.env.NODE_ENV !== 'production') {
     logger.debug(`New DB client connected. Pool size: ${pool.totalCount}/${pool.options.max}`);
   }
