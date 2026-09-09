@@ -1215,405 +1215,363 @@ export default function PartnerApplications() {
 
 
       {/* ═══ MODAL 6: READ-ONLY VIEW APPLICATION DETAILS ═══ */}
-      {showViewModal && viewApp && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
-          <div style={{ width: '100%', maxWidth: 580, maxHeight: '90vh', overflowY: 'auto', background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
-            
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: `1px solid ${border}`, paddingBottom: 12 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>APPLICATION DETAILS</h3>
-                <span style={{ fontSize: 11, color: textMuted }}>
-                  App #{viewApp.app_number} • Bank: {viewApp.bank_name || viewApp.bank_code || 'Bank'} • Product: {viewApp.product_name}
-                </span>
-              </div>
-              <button onClick={() => setShowViewModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
-            </div>
+      {showViewModal && viewApp && (() => {
+        const HDFC_BANK_ID = 'f0b5742d-f04d-4a91-b162-6009ddf6e345';
+        const d = viewAppDetails || viewApp || {};
+        const pd = d.physical_details || {};
 
-            {loadingView ? (
-              <div style={{ padding: 40, textAlign: 'center', color: textMuted }}>
-                <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 10px', color: accent }} />
-                <p style={{ fontSize: 12, fontWeight: 700 }}>Loading Application Details...</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        const bankId = d.bank_id || viewApp.bank_id || '';
+        const bankName = d.bank_name || viewApp.bank_name || d.bank_code || 'Bank';
+        const productName = d.product_name || viewApp.product_name || 'Application';
 
-                {/* Section 1: Customer Details */}
-                <div style={{ background: isDark ? '#161616' : '#f8fafc', borderRadius: 14, padding: 14, border: `1px solid ${border}` }}>
-                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Customer Details</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FULL NAME</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.customer_name || viewAppDetails?.full_name || viewAppDetails?.physical_details?.full_name || viewApp?.customer_name || 'N/A'}</div>
+        const isHdfcBank = (bankId === HDFC_BANK_ID) || 
+          (String(bankName).toLowerCase().includes('hdfc') && !String(productName).toLowerCase().includes('tata'));
+
+        const rawProcess = String(d.process_type || d.process_by || viewApp.process_type || viewApp.process_by || 'lead_punching').trim().toLowerCase();
+        const procBadge = getProcessByBadge(rawProcess, d.process_type);
+        const stBadge = getStatusBadge(d.status || viewApp.status);
+
+        // Fields extraction
+        const customerName = d.customer_name || d.full_name || pd.full_name || viewApp.customer_name || 'N/A';
+        const customerMobile = d.customer_mobile || d.mobile || pd.mobile || viewApp.customer_mobile || 'N/A';
+        const customerEmail = d.customer_email || d.email || pd.email || 'N/A';
+        const dob = d.dob || pd.dob || 'N/A';
+        const panNumber = d.pan_number || d.pan || pd.pan_number || viewApp.pan_number || 'N/A';
+        const companyName = d.company_name || pd.company_name || d.employer || 'N/A';
+        const designation = d.designation || pd.designation || 'N/A';
+        const currentAddress = d.address || pd.address || pd.residence_address || 'N/A';
+        const addressLine1 = pd.address_line1 || d.address_line1 || 'N/A';
+        const addressLine2 = pd.address_line2 || d.address_line2 || 'N/A';
+        const landmark = pd.landmark || d.landmark || 'N/A';
+        const pincode = d.pincode || pd.pincode || 'N/A';
+        const city = d.city || pd.city || 'N/A';
+        const state = d.state || pd.state || 'N/A';
+        const companyAddress = pd.company_address || d.company_address || pd.office_address || d.office_address || 'N/A';
+        const motherName = d.mother_name || pd.mother_name || 'N/A';
+        const employmentType = d.employment_type || d.occupation || pd.employment_type || 'N/A';
+        const monthlyIncome = d.monthly_income || pd.monthly_income || null;
+
+        // Remarks & Stage tracking
+        const userRemarkVal = d.user_remark || d.notes || pd.user_remark || pd.notes || d.operational_remarks || d.remarks || viewApp.user_remark || viewApp.notes || 'None';
+        const bankRemarkVal = d.bank_remark || pd.bank_remark || 'None';
+        const declineReasonVal = d.decline_reason || d.rejection_reason || pd.decline_reason || '';
+
+        const rawNum = d.bank_application_number || d.bank_ref_number || pd.bank_application_number || viewApp.bank_ref_number || '';
+        const sysNum = d.app_number || viewApp.app_number || '';
+        const displayBankAppNum = (!rawNum || rawNum === sysNum || rawNum.toUpperCase() === 'NA' || rawNum.toUpperCase() === 'N/A' || rawNum === 'Pending') ? 'NA' : rawNum;
+        const hasValidBankNum = displayBankAppNum !== 'NA';
+
+        const finalStatusVal = d.final_status || pd.final_status || d.status || viewApp.status || 'In Process';
+        const lowerFinalSt = String(finalStatusVal).toLowerCase();
+        let finalStatusColor = '#3b82f6';
+        if (lowerFinalSt.includes('approve') || lowerFinalSt.includes('disburs')) finalStatusColor = '#10b981';
+        else if (lowerFinalSt.includes('decline') || lowerFinalSt.includes('reject')) finalStatusColor = '#ef4444';
+        else if (lowerFinalSt.includes('etq') || lowerFinalSt.includes('error') || lowerFinalSt.includes('pending')) finalStatusColor = '#f59e0b';
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', padding: 16 }}>
+            <div style={{ width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto', background: cardBg, border: `1px solid ${border}`, borderRadius: 24, padding: 24, boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'fadeIn 0.3s ease' }}>
+              
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, borderBottom: `1px solid ${border}`, paddingBottom: 14 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: textPrimary }}>APPLICATION DETAILS</h3>
+                    {isHdfcBank && (
+                      <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 12, background: '#1e3a8a20', color: '#2563eb', border: '1px solid #2563eb40' }}>
+                        HDFC BANK
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: textMuted, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 800, color: accent }}>App #{viewApp.app_number}</span>
+                    <span>•</span>
+                    <span>Bank: <strong>{bankName}</strong></span>
+                    <span>•</span>
+                    <span>Product: <strong>{productName}</strong></span>
+                  </div>
+                </div>
+                <button onClick={() => setShowViewModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: textMuted }}><X size={18} /></button>
+              </div>
+
+              {loadingView ? (
+                <div style={{ padding: 40, textAlign: 'center', color: textMuted }}>
+                  <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 10px', color: accent }} />
+                  <p style={{ fontSize: 12, fontWeight: 700 }}>Loading Application Details...</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                  {/* Top Badges & Meta Banner */}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', background: isDark ? '#141414' : '#f1f5f9', padding: '10px 14px', borderRadius: 12, border: `1px solid ${border}` }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: procBadge.bg, color: procBadge.color, border: `1px solid ${procBadge.border}` }}>
+                      Process: {procBadge.label}
                     </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>MOBILE NUMBER</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{formatMobileForDisplay(viewAppDetails?.customer_mobile || viewAppDetails?.mobile || viewAppDetails?.physical_details?.mobile || viewApp?.customer_mobile)}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: stBadge.bg, color: stBadge.color, border: `1px solid ${stBadge.border}`, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      Status: {stBadge.label}
                     </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PERSONAL EMAIL ID</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.customer_email || viewAppDetails?.email || viewAppDetails?.physical_details?.email || 'N/A'}</div>
+                  </div>
+
+                  {/* Section 1: Bank & Process-Dependent Customer Form Details */}
+                  <div style={{ background: isDark ? '#161616' : '#f8fafc', borderRadius: 14, padding: 14, border: `1px solid ${border}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <h4 style={{ margin: 0, fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        {isHdfcBank ? 'HDFC Customer Details (Adobe / QD Form)' : 'Customer & Application Form Details'}
+                      </h4>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: textMuted }}>Bank: {bankName}</span>
                     </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DOB</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.dob || viewAppDetails?.physical_details?.dob || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PAN CARD NUMBER</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pan_number || viewAppDetails?.pan || viewAppDetails?.physical_details?.pan_number || viewApp?.pan_number || viewApp?.pan || 'N/A'}</div>
-                    </div>
-                    {(viewAppDetails?.aadhaar_number || viewAppDetails?.physical_details?.aadhaar_number) && (
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
                       <div>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>AADHAAR NUMBER</div>
-                        <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.aadhaar_number || viewAppDetails?.physical_details?.aadhaar_number}</div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>AADHAAR LINK CONTACT NUMBER</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{formatMobileForDisplay(customerMobile)}</div>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Section 2: Employment & Income */}
-                <div style={{ background: isDark ? '#161616' : '#f8fafc', borderRadius: 14, padding: 14, border: `1px solid ${border}` }}>
-                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Employment & Income</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>OCCUPATION / EMPLOYMENT</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.employment_type || viewAppDetails?.occupation || viewAppDetails?.physical_details?.employment_type || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>MONTHLY INCOME</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>
-                        {(viewAppDetails?.monthly_income || viewAppDetails?.physical_details?.monthly_income) ? `₹${Number(viewAppDetails?.monthly_income || viewAppDetails?.physical_details?.monthly_income).toLocaleString('en-IN')}` : 'N/A'}
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>NAME AS PER PAN CARD</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{customerName}</div>
                       </div>
-                    </div>
-                    <div style={{ gridColumn: 'span 2' }}>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>EMPLOYER / COMPANY NAME</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.company_name || viewAppDetails?.employer || viewAppDetails?.physical_details?.company_name || 'N/A'}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3: Location / Address Details */}
-                <div style={{ background: isDark ? '#161616' : '#f8fafc', borderRadius: 14, padding: 14, border: `1px solid ${border}` }}>
-                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Location Details</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>CITY</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.city || viewAppDetails?.physical_details?.city || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>STATE</div>
-                      <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.state || viewAppDetails?.physical_details?.state || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PINCODE</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.pincode || viewAppDetails?.physical_details?.pincode || 'N/A'}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 4: Operational Information & Stage Tracking */}
-                <div style={{ background: isDark ? '#1a2234' : '#eff6ff', borderRadius: 14, padding: 14, border: '1px solid #3b82f640' }}>
-                  <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operational & Stage Tracking Information</h4>
-                  {(() => {
-                    const bankNameCombined = `${viewAppDetails?.bank_name || viewApp?.bank_name || ''} ${viewAppDetails?.product_name || viewApp?.product_name || ''}`.toUpperCase();
-                    const isTataHdfc = bankNameCombined.includes('TATA');
-
-                    const rawNum = viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number || '';
-                    const sysNum = viewAppDetails?.app_number || viewApp?.app_number || '';
-                    const displayNum = (!rawNum || rawNum === sysNum || rawNum.toUpperCase() === 'NA' || rawNum.toUpperCase() === 'N/A' || rawNum === 'Pending') ? 'NA' : rawNum;
-                    const hasValidNum = displayNum !== 'NA';
-
-                    if (isTataHdfc) {
-                      const vkycLink = viewAppDetails?.vkyc_url || viewAppDetails?.physical_details?.vkyc_url || viewApp?.vkyc_url || viewApp?.physical_details?.vkyc_url;
-                      const userRemarkVal = viewAppDetails?.user_remark || viewAppDetails?.notes || viewAppDetails?.physical_details?.user_remark || viewAppDetails?.physical_details?.notes || viewAppDetails?.operational_remarks || viewAppDetails?.remarks || viewApp?.user_remark || viewApp?.notes || viewApp?.physical_details?.user_remark || 'None';
-
-                      const finalSt = viewAppDetails?.final_status || viewAppDetails?.physical_details?.final_status || viewAppDetails?.status || viewApp?.status || 'In Process';
-                      const lowerSt = String(finalSt).toLowerCase();
-                      let statusColor = '#3b82f6';
-                      if (lowerSt.includes('approve') || lowerSt.includes('disburs')) statusColor = '#10b981';
-                      else if (lowerSt.includes('decline') || lowerSt.includes('reject')) statusColor = '#ef4444';
-                      else if (lowerSt.includes('etq') || lowerSt.includes('error') || lowerSt.includes('pending')) statusColor = '#f59e0b';
-
-                      const bankRemarkVal = viewAppDetails?.bank_remark || viewAppDetails?.physical_details?.bank_remark || 'None';
-                      const approvedAmtVal = viewAppDetails?.approved_amount || viewAppDetails?.credit_limit || viewApp?.approved_amount || '';
-                      const declineReasonVal = viewAppDetails?.decline_reason || viewAppDetails?.rejection_reason || '';
-                      const digitalCardVal = viewAppDetails?.digital_card_issued || viewAppDetails?.physical_details?.digital_card_issued || viewApp?.digital_card_issued || viewApp?.physical_details?.digital_card_issued || 'None';
-
-                      return (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
-                          <div>
-                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>1. IPA STAGE</div>
-                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.ipa_stage || viewAppDetails?.physical_details?.ipa_stage || viewApp?.ipa_stage || viewApp?.physical_details?.ipa_stage || 'None'}</div>
-                          </div>
-                          <div>
-                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>2. KYC STAGE</div>
-                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.kyc_stage || viewAppDetails?.physical_details?.kyc_stage || viewApp?.kyc_stage || viewApp?.physical_details?.kyc_stage || 'None'}</div>
-                          </div>
-                          <div>
-                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>3. BANK APPLICATION NUMBER</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                              <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>{displayNum}</div>
-                              {hasValidNum && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(displayNum);
-                                    alert(`📋 Copied Bank Application Number: ${displayNum}`);
-                                  }}
-                                  title="Copy Bank Application Number"
-                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb', padding: '2px 4px', display: 'inline-flex', alignItems: 'center' }}
-                                >
-                                  <Copy size={13} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>4. VKYC LINK</div>
-                            {vkycLink ? (
-                              <a href={vkycLink} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700, fontSize: 12, wordBreak: 'break-all' }}>
-                                {vkycLink}
-                              </a>
-                            ) : (
-                              <div style={{ fontWeight: 700, color: textMuted }}>None</div>
-                            )}
-                          </div>
-                          <div>
-                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>5. CARD APPROVAL STAGE</div>
-                            <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.card_approval_stage || viewAppDetails?.card_approval_status || viewAppDetails?.physical_details?.card_approval_stage || viewApp?.card_approval_stage || viewApp?.card_approval_status || viewApp?.physical_details?.card_approval_stage || 'None'}</div>
-                          </div>
-                          <div>
-                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>1. FINAL CARD APPROVE</div>
-                            <div style={{ fontWeight: 800, color: statusColor, textTransform: 'capitalize' }}>
-                              {String(finalSt).replace(/_/g, ' ')}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>2. DIGITAL CARD ISSUED</div>
-                            <div style={{ fontWeight: 800, color: textPrimary }}>{digitalCardVal}</div>
-                          </div>
-                          {approvedAmtVal && (
-                            <div>
-                              <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>APPROVED AMOUNT</div>
-                              <div style={{ fontWeight: 800, color: '#10b981' }}>₹{Number(approvedAmtVal).toLocaleString('en-IN')}</div>
-                            </div>
-                          )}
-                          {declineReasonVal && (
-                            <div style={{ gridColumn: 'span 2' }}>
-                              <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DECLINE REASON</div>
-                              <div style={{ fontWeight: 700, color: '#ef4444', background: isDark ? '#2a1215' : '#fef2f2', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
-                                {declineReasonVal}
-                              </div>
-                            </div>
-                          )}
-                          <div style={{ gridColumn: 'span 2' }}>
-                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>USER REMARK (Employee / Partner Remark)</div>
-                            <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
-                              {userRemarkVal}
-                            </div>
-                          </div>
-                          <div style={{ gridColumn: 'span 2' }}>
-                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>4. BANK REMARK</div>
-                            <div style={{ fontWeight: 700, color: textPrimary, marginTop: 4 }}>{bankRemarkVal}</div>
-                          </div>
-                          <div style={{ gridColumn: 'span 2', display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap', borderTop: `1px solid ${border}`, paddingTop: 10 }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const shareUrl = vkycLink || (viewAppDetails?.app_number ? `https://gharkapaisa.in/track/${viewAppDetails.app_number}` : 'https://gharkapaisa.in');
-                                if (navigator.share) {
-                                  navigator.share({ title: 'VKYC Link', text: `VKYC Link for Application #${viewAppDetails?.app_number || viewApp?.app_number}:`, url: shareUrl }).catch(() => {});
-                                } else {
-                                  navigator.clipboard.writeText(shareUrl);
-                                  alert('📋 VKYC Link copied to clipboard!');
-                                }
-                              }}
-                              style={{
-                                padding: '7px 14px', borderRadius: 10, border: '1px solid #2563eb40',
-                                background: '#2563eb15', color: '#2563eb', fontSize: 11, fontWeight: 800,
-                                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
-                              }}
-                            >
-                              <Share2 size={13} /> VKYC Share Link
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                window.open('https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=TDCC&DEDUPE=N&DSACode=XYOH&LGcode=PTN01&LCcode=PTN01&LC2=A089&SMcode=A31964#nbb', '_blank');
-                              }}
-                              style={{
-                                padding: '7px 14px', borderRadius: 10, border: '1px solid #ea580c40',
-                                background: '#ea580c15', color: '#ea580c', fontSize: 11, fontWeight: 800,
-                                cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
-                              }}
-                            >
-                              <ArrowUpRight size={13} /> HDFC TATA Application Link
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>APPCODE STATUS</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.appcode_status || viewAppDetails?.physical_details?.appcode_status || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                        {(() => {
-                          const rawNum = viewAppDetails?.bank_application_number || viewAppDetails?.bank_ref_number || viewAppDetails?.physical_details?.bank_application_number || viewApp?.bank_ref_number || '';
-                          const sysNum = viewAppDetails?.app_number || viewApp?.app_number || '';
-                          const displayNum = (!rawNum || rawNum === sysNum || rawNum.toUpperCase() === 'NA' || rawNum.toUpperCase() === 'N/A' || rawNum === 'Pending') ? 'NA' : rawNum;
-                          const hasValidNum = displayNum !== 'NA';
-
-                          return (
-                            <>
-                              <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>
-                                {displayNum}
-                              </div>
-                              {hasValidNum && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(displayNum);
-                                    alert(`📋 Copied Bank Application Number: ${displayNum}`);
-                                  }}
-                                  title="Copy Bank Application Number"
-                                  style={{
-                                    border: 'none', background: 'transparent', cursor: 'pointer',
-                                    color: '#2563eb', padding: '2px 4px', display: 'inline-flex', alignItems: 'center'
-                                  }}
-                                >
-                                  <Copy size={13} />
-                                </button>
-                              )}
-                            </>
-                          );
-                        })()}
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DOB AS PER PAN CARD</div>
+                        <div style={{ fontWeight: 700, color: textPrimary }}>{dob}</div>
                       </div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>CURRENT STAGE</div>
-                      <div style={{ fontWeight: 800, color: textPrimary, textTransform: 'uppercase' }}>
-                        {(viewAppDetails?.status || viewApp?.status || 'submitted').replace(/_/g, ' ')}
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PERSONAL EMAIL ID</div>
+                        <div style={{ fontWeight: 700, color: textPrimary }}>{customerEmail}</div>
                       </div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>SOFT APPROVAL STAGE</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.soft_approval_status || viewAppDetails?.physical_details?.soft_approval_status || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>VKYC STAGE</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.vkyc_stage || viewAppDetails?.vkyc_status || viewAppDetails?.physical_details?.vkyc_stage || 'Pending'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>IQA STAGE</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.iqa_stage || viewAppDetails?.physical_details?.iqa_stage || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DISPATCH STATUS</div>
-                      <div style={{ fontWeight: 800, color: textPrimary }}>{viewAppDetails?.dispatch_status || viewAppDetails?.physical_details?.dispatch_status || 'N/A'}</div>
-                    </div>
-                    {(() => {
-                      const finalSt = viewAppDetails?.final_status || viewAppDetails?.physical_details?.final_status || viewAppDetails?.status || viewApp?.status || 'In Process';
-                      const lowerSt = String(finalSt).toLowerCase();
-                      let statusColor = '#3b82f6';
-                      if (lowerSt.includes('approve') || lowerSt.includes('disburs')) statusColor = '#10b981';
-                      else if (lowerSt.includes('decline') || lowerSt.includes('reject')) statusColor = '#ef4444';
-                      else if (lowerSt.includes('etq') || lowerSt.includes('error') || lowerSt.includes('pending')) statusColor = '#f59e0b';
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PAN CARD NUMBER</div>
+                        <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>{panNumber}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>MOTHER NAME</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{motherName}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>AS PER SALARY SLIP COMPANY NAME</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{companyName}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DESIGNATION</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{designation}</div>
+                      </div>
 
-                      return (
-                        <div>
-                          <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
-                          <div style={{ fontWeight: 800, color: statusColor, textTransform: 'capitalize' }}>
-                            {String(finalSt).replace(/_/g, ' ')}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                    {(viewAppDetails?.user_remark || viewAppDetails?.notes) && (
+                      {/* Address Fields */}
                       <div style={{ gridColumn: 'span 2' }}>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>USER REMARK</div>
-                        <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px' }}>{viewAppDetails?.user_remark || viewAppDetails?.notes}</div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>CURRENT HOME ADDRESS / RESIDENCE</div>
+                        <div style={{ fontWeight: 700, color: textPrimary, marginTop: 2 }}>{currentAddress}</div>
                       </div>
-                    )}
-                    {(viewAppDetails?.bank_remark || viewAppDetails?.physical_details?.bank_remark) && (
+
+                      {addressLine1 !== 'N/A' && (
+                        <div>
+                          <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>ADDRESS LINE 1</div>
+                          <div style={{ fontWeight: 700, color: textPrimary }}>{addressLine1}</div>
+                        </div>
+                      )}
+                      {addressLine2 !== 'N/A' && (
+                        <div>
+                          <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>ADDRESS LINE 2</div>
+                          <div style={{ fontWeight: 700, color: textPrimary }}>{addressLine2}</div>
+                        </div>
+                      )}
+
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>LANDMARK</div>
+                        <div style={{ fontWeight: 700, color: textPrimary }}>{landmark}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>PINCODE</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{pincode}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>CITY</div>
+                        <div style={{ fontWeight: 700, color: textPrimary }}>{city}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>STATE</div>
+                        <div style={{ fontWeight: 700, color: textPrimary }}>{state}</div>
+                      </div>
+
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FULL COMPANY ADDRESS</div>
+                        <div style={{ fontWeight: 700, color: textPrimary, marginTop: 2 }}>{companyAddress}</div>
+                      </div>
+
+                      {!isHdfcBank && (
+                        <>
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>EMPLOYMENT TYPE</div>
+                            <div style={{ fontWeight: 700, color: textPrimary }}>{employmentType}</div>
+                          </div>
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>MONTHLY INCOME</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>
+                              {monthlyIncome ? `₹${Number(monthlyIncome).toLocaleString('en-IN')}` : 'N/A'}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Section 2: Operational Stage & Remarks */}
+                  <div style={{ background: isDark ? '#1a2234' : '#eff6ff', borderRadius: 14, padding: 14, border: '1px solid #3b82f640' }}>
+                    <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operational Stage & Remarks</h4>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                          <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>{displayBankAppNum}</div>
+                          {hasValidBankNum && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(displayBankAppNum);
+                                alert(`📋 Copied Bank Application Number: ${displayBankAppNum}`);
+                              }}
+                              title="Copy Bank Application Number"
+                              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb', padding: '2px 4px', display: 'inline-flex', alignItems: 'center' }}
+                            >
+                              <Copy size={13} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
+                        <div style={{ fontWeight: 800, color: finalStatusColor, textTransform: 'capitalize' }}>
+                          {String(finalStatusVal).replace(/_/g, ' ')}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>IPA STAGE</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.ipa_stage || pd.ipa_stage || 'None'}</div>
+                      </div>
+
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>KYC STAGE</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.kyc_stage || pd.kyc_stage || 'None'}</div>
+                      </div>
+
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>SOFT APPROVAL STAGE</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.soft_approval_status || pd.soft_approval_status || 'N/A'}</div>
+                      </div>
+
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>VKYC STAGE</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.vkyc_stage || d.vkyc_status || pd.vkyc_stage || 'Pending'}</div>
+                      </div>
+
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>IQA STAGE</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.iqa_stage || pd.iqa_stage || 'N/A'}</div>
+                      </div>
+
+                      <div>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DISPATCH STATUS</div>
+                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.dispatch_status || pd.dispatch_status || 'N/A'}</div>
+                      </div>
+
+                      {/* Remarks */}
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>OPERATION / USER REMARK</div>
+                        <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                          {userRemarkVal}
+                        </div>
+                      </div>
+
                       <div style={{ gridColumn: 'span 2' }}>
                         <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>
-                        <div style={{ fontWeight: 700, color: textPrimary }}>{viewAppDetails?.bank_remark || viewAppDetails?.physical_details?.bank_remark}</div>
+                        <div style={{ fontWeight: 700, color: textPrimary, marginTop: 4 }}>
+                          {bankRemarkVal}
+                        </div>
                       </div>
-                    )}
-                    {viewAppDetails?.vkyc_url && (
-                      <div style={{ gridColumn: 'span 2' }}>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700, marginBottom: 4 }}>VKYC LINK</div>
-                        <a href={viewAppDetails.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700, fontSize: 12, wordBreak: 'break-all' }}>
-                          {viewAppDetails.vkyc_url}
-                        </a>
-                      </div>
-                    )}
-                    <div style={{ gridColumn: 'span 2', display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap', borderTop: `1px solid ${border}`, paddingTop: 10 }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const vkycUrl = viewAppDetails?.vkyc_url || (viewAppDetails?.app_number ? `https://gharkapaisa.in/track/${viewAppDetails.app_number}` : 'https://gharkapaisa.in');
-                          if (navigator.share) {
-                            navigator.share({ title: 'VKYC Link', text: `VKYC Link for Application #${viewAppDetails?.app_number || viewApp?.app_number}:`, url: vkycUrl }).catch(() => {});
-                          } else {
-                            navigator.clipboard.writeText(vkycUrl);
-                            alert('📋 VKYC Link copied to clipboard!');
-                          }
-                        }}
-                        style={{
-                          padding: '7px 14px', borderRadius: 10, border: '1px solid #2563eb40',
-                          background: '#2563eb15', color: '#2563eb', fontSize: 11, fontWeight: 800,
-                          cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
-                        }}
-                      >
-                        <Share2 size={13} /> VKYC Share Link
-                      </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const bName = viewAppDetails?.bank_name || viewApp?.bank_name || viewAppDetails?.product_name || viewApp?.product_name || '';
-                          const lower = String(bName).toLowerCase();
-                          let targetUrl = 'https://www.sbicard.com/en/eapply/track-credit-card-application.page';
-                          if (lower.includes('hdfc')) targetUrl = 'https://track.hdfcbank.com/';
-                          else if (lower.includes('icici')) targetUrl = 'https://www.icicibank.com/Personal-Banking/cards/credit-card/track-application.page';
-                          else if (lower.includes('axis')) targetUrl = 'https://www.axisbank.com/retail/cards/credit-card/track-your-application';
-                          
-                          window.open(targetUrl, '_blank');
-                        }}
-                        style={{
-                          padding: '7px 14px', borderRadius: 10, border: '1px solid #ea580c40',
-                          background: '#ea580c15', color: '#ea580c', fontSize: 11, fontWeight: 800,
-                          cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
-                        }}
-                      >
-                        <ArrowUpRight size={13} /> Digital Incomplete Restart
-                      </button>
+                      {declineReasonVal && (
+                        <div style={{ gridColumn: 'span 2' }}>
+                          <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DECLINE REASON</div>
+                          <div style={{ fontWeight: 700, color: '#ef4444', background: isDark ? '#2a1215' : '#fef2f2', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                            {declineReasonVal}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Process Actions & Direct Redirect Links */}
+                      <div style={{ gridColumn: 'span 2', display: 'flex', gap: 10, marginTop: 10, flexWrap: 'wrap', borderTop: `1px solid ${border}`, paddingTop: 10 }}>
+                        {isHdfcBank && (rawProcess.includes('cobrowsing') || rawProcess.includes('co-browsing')) && (
+                          <button
+                            type="button"
+                            onClick={() => window.open('https://agentapp.ddp.hdfcbank.com/dsa-agent-portal/welcome', '_blank')}
+                            style={{
+                              padding: '7px 14px', borderRadius: 10, border: '1px solid #2563eb40',
+                              background: '#2563eb15', color: '#2563eb', fontSize: 11, fontWeight: 800,
+                              cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
+                            }}
+                          >
+                            <ArrowUpRight size={13} /> Open HDFC Co-Browsing Portal
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const shareUrl = d.vkyc_url || (d.app_number ? `https://gharkapaisa.in/track/${d.app_number}` : 'https://gharkapaisa.in');
+                            if (navigator.share) {
+                              navigator.share({ title: 'VKYC Link', text: `VKYC Link for Application #${d.app_number || viewApp.app_number}:`, url: shareUrl }).catch(() => {});
+                            } else {
+                              navigator.clipboard.writeText(shareUrl);
+                              alert('📋 VKYC Link copied to clipboard!');
+                            }
+                          }}
+                          style={{
+                            padding: '7px 14px', borderRadius: 10, border: '1px solid #2563eb40',
+                            background: '#2563eb15', color: '#2563eb', fontSize: 11, fontWeight: 800,
+                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
+                          }}
+                        >
+                          <Share2 size={13} /> VKYC Share Link
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const bName = d.bank_name || viewApp.bank_name || d.product_name || viewApp.product_name || '';
+                            const lower = String(bName).toLowerCase();
+                            let targetUrl = 'https://www.sbicard.com/en/eapply/track-credit-card-application.page';
+                            if (lower.includes('hdfc')) targetUrl = 'https://track.hdfcbank.com/';
+                            else if (lower.includes('icici')) targetUrl = 'https://www.icicibank.com/Personal-Banking/cards/credit-card/track-application.page';
+                            else if (lower.includes('axis')) targetUrl = 'https://www.axisbank.com/retail/cards/credit-card/track-your-application';
+                            
+                            window.open(targetUrl, '_blank');
+                          }}
+                          style={{
+                            padding: '7px 14px', borderRadius: 10, border: '1px solid #ea580c40',
+                            background: '#ea580c15', color: '#ea580c', fontSize: 11, fontWeight: 800,
+                            cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6
+                          }}
+                        >
+                          <ArrowUpRight size={13} /> Digital Track / Restart
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  );
-                  })()}
+
                 </div>
+              )}
 
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18, borderTop: `1px solid ${border}`, paddingTop: 14 }}>
+                <button type="button" onClick={() => setShowViewModal(false)} style={{ padding: '9px 24px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
+                  Close
+                </button>
               </div>
-            )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18, borderTop: `1px solid ${border}`, paddingTop: 14 }}>
-              <button type="button" onClick={() => setShowViewModal(false)} style={{ padding: '9px 24px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>
-                Close
-              </button>
             </div>
-
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ═══ MODAL 7: TRACK APPLICATION LIFECYCLE ═══ */}
       {showTrackModal && trackApp && (() => {

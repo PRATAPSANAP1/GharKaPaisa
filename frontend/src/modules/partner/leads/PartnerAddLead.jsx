@@ -796,16 +796,16 @@ export default function PartnerAddLead() {
                         background: isSelected ? opt.color : C.border,
                         color: isSelected ? '#FFFFFF' : C.textMid
                       }}>
-                        {opt.badge}
+                        {opt.id === 'direct_bank' && isHdfcSelected ? '3. Adobe Direct Link' : opt.badge}
                       </span>
                     </div>
 
                     <div>
                       <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, margin: '0 0 4px' }}>
-                        {opt.title}
+                        {opt.id === 'direct_bank' && isHdfcSelected ? 'Adobe direct bank process' : opt.title}
                       </h4>
                       <p style={{ fontSize: '12px', color: C.textMid, margin: 0, lineHeight: '1.4' }}>
-                        {opt.description}
+                        {opt.id === 'direct_bank' && isHdfcSelected ? 'Immediately opens official Adobe application form portal for direct customer application.' : opt.description}
                       </p>
                     </div>
                   </div>
