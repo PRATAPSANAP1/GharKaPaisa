@@ -317,8 +317,27 @@ export default function PartnerApplications() {
         token: tokenVal
       });
 
-      // Open custom share popup modal
-      setShowShareModal(true);
+      const isHdfcApp = (
+        app.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
+        app.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
+        String(app.bank_id || '').toLowerCase() === 'hdfc' ||
+        `${app.bank_name || ''} ${app.product_bank || ''} ${app.bank_code || ''} ${app.product_name || ''}`.toUpperCase().includes('HDFC') ||
+        `${app.bank_name || ''} ${app.product_bank || ''} ${app.bank_code || ''} ${app.product_name || ''}`.toUpperCase().includes('TATA')
+      );
+
+      if (isHdfcApp) {
+        setShowShareModal(true);
+      } else if (navigator.share) {
+        navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl
+        }).catch(() => {
+          setShowShareModal(true);
+        });
+      } else {
+        setShowShareModal(true);
+      }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to generate customer share link');
     } finally {
