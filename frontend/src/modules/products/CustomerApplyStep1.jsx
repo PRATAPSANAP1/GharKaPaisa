@@ -36,7 +36,9 @@ export default function CustomerApplyStep1() {
   const [aadhaar, setAadhaar] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
-  const [pincode, setPincode] = useState('');
+  const [homeAddress, setHomeAddress] = useState('');
+  const [companyAddress, setCompanyAddress] = useState('');
+  const [motherName, setMotherName] = useState('');
 
   useEffect(() => {
     const fetchTokenDetails = async () => {
@@ -63,17 +65,20 @@ export default function CustomerApplyStep1() {
             setCustomer(data.customer);
             const initialName = data.customer.full_name && data.customer.full_name !== 'Valued Customer' ? data.customer.full_name : '';
             setFullName(initialName);
-            setMobileNum(data.customer.mobile || '');
-            setEmail(data.customer.email || '');
-            setDob(data.customer.dob || '');
-            setOccupation(data.customer.occupation || data.customer.employment_type || 'Salaried');
+            setMobileNum(data.customer.mobile || data.customer.customer_mobile || '');
+            setEmail(data.customer.email || data.customer.customer_email || '');
+            setDob(data.customer.dob || data.customer.date_of_birth || '');
+            setOccupation(data.customer.occupation || data.customer.designation || 'Salaried');
             setIncome(data.customer.monthly_income || '');
-            setEmployer(data.customer.employer || '');
-            setPan(data.customer.pan_number || '');
+            setEmployer(data.customer.employer || data.customer.company_name || '');
+            setPan(data.customer.pan_number || data.customer.pan || '');
             setAadhaar(data.customer.aadhaar_number || '');
             setCity(data.customer.city || '');
             setState(data.customer.state || '');
             setPincode(data.customer.pincode || '');
+            setHomeAddress(data.customer.address || data.customer.address1 || data.customer.landmark || '');
+            setCompanyAddress(data.customer.company_address || data.customer.office_address || '');
+            setMotherName(data.customer.mother_name || '');
           }
         } else {
           setError(json?.message || 'Invalid or expired application link');
@@ -90,7 +95,9 @@ export default function CustomerApplyStep1() {
   }, [activeToken]);
 
   const bankNameStr = String(product?.bank_name || product?.bank_code || product?.name || '').toLowerCase();
+  const HDFC_BANK_ID = 'f0b5742d-f04d-4a91-b162-6009ddf6e345';
   const isSbiProduct = product?.bank_id === 'e7c2c604-139d-4fcf-a87c-695633535a02' || bankNameStr.includes('sbi') || bankNameStr.includes('state bank');
+  const isHdfcProduct = product?.bank_id === HDFC_BANK_ID || (bankNameStr.includes('hdfc') && !bankNameStr.includes('tata'));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -99,19 +106,19 @@ export default function CustomerApplyStep1() {
     const mobileVal = mobileNum.trim() || customer?.mobile || '';
 
     if (!nameVal) {
-      return alert('Please enter your Customer Name.');
+      return alert('Please enter your Name As Per PAN Card.');
     }
 
     const cleanMobile = mobileVal.replace(/\D/g, '');
     if (!cleanMobile || cleanMobile.length !== 10) {
-      return alert('Please enter a valid 10-digit Mobile Number.');
+      return alert('Please enter a valid 10-digit Aadhaar Link Contact Number.');
     }
 
     const cleanPan = pan.trim().toUpperCase();
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    if (isSbiProduct) {
+    if (isSbiProduct || isHdfcProduct) {
       if (!cleanPan || !panRegex.test(cleanPan)) {
-        return alert('Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F) for SBI Bank product.');
+        return alert('Please enter a valid 10-character PAN Card number (e.g. ABCDE1234F).');
       }
     } else if (cleanPan) {
       if (!panRegex.test(cleanPan)) {
@@ -120,7 +127,7 @@ export default function CustomerApplyStep1() {
     }
 
     const cleanPincode = pincode.trim();
-    if (isSbiProduct || cleanPincode) {
+    if (isSbiProduct || isHdfcProduct || cleanPincode) {
       if (!cleanPincode || !/^\d{6}$/.test(cleanPincode)) {
         return alert('Please enter a valid 6-digit Pincode.');
       }
@@ -139,9 +146,23 @@ export default function CustomerApplyStep1() {
           customer_name: nameVal,
           mobile: cleanMobile,
           customer_mobile: cleanMobile,
+          email: email.trim(),
+          customer_email: email.trim(),
+          dob: dob.trim(),
           pan: cleanPan || null,
           pan_number: cleanPan || null,
+          company_name: employer.trim(),
+          employer: employer.trim(),
+          employer_name: employer.trim(),
+          designation: occupation.trim(),
+          occupation: occupation.trim(),
+          address: homeAddress.trim(),
+          address1: homeAddress.trim(),
+          landmark: homeAddress.trim(),
           pincode: cleanPincode || null,
+          company_address: companyAddress.trim(),
+          office_address: companyAddress.trim(),
+          mother_name: motherName.trim(),
           process_type: 'linked_share',
           process_by: 'partner',
           source: 'linked_share'
@@ -393,73 +414,222 @@ export default function CustomerApplyStep1() {
             <div>
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 
-                {/* Customer Name & Mobile Number */}
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Customer Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Enter Customer Full Name"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, outline: 'none' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Mobile Number *</label>
-                    <input
-                      type="tel"
-                      required
-                      maxLength={10}
-                      placeholder="10-Digit Mobile Number"
-                      value={mobileNum}
-                      onChange={(e) => setMobileNum(e.target.value.replace(/\D/g, ''))}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, fontFamily: 'monospace', outline: 'none' }}
-                    />
-                  </div>
-                </div>
+                {isHdfcProduct ? (
+                  /* HDFC ADOBE FORM SPECIFIC FIELDS */
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Aadhaar Link Contact Number *</label>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          placeholder="10-Digit Mobile Number"
+                          value={mobileNum}
+                          onChange={(e) => setMobileNum(e.target.value.replace(/\D/g, ''))}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, fontFamily: 'monospace', outline: 'none' }}
+                        />
+                      </div>
 
-                {/* PAN Card Field (Mandatory for SBI products, optional for others) */}
-                {(isSbiProduct || pan) && (
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>
-                      PAN Card Number {isSbiProduct ? '*' : '(Optional)'}
-                    </label>
-                    <input
-                      type="text"
-                      required={isSbiProduct}
-                      maxLength={10}
-                      placeholder="ABCDE1234F"
-                      value={pan}
-                      onChange={(e) => setPan(e.target.value.toUpperCase())}
-                      style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontFamily: 'monospace', fontWeight: 800, textTransform: 'uppercase', outline: 'none' }}
-                    />
-                    {isSbiProduct && (
-                      <span style={{ fontSize: '11px', color: '#2563eb', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                        <FaInfoCircle /> PAN Card details are required for SBI Bank applications.
-                      </span>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Name As Per PAN Card *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Full Name as on PAN Card"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, outline: 'none' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>DOB As Per PAN Card *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="DD-MM-YYYY"
+                          value={dob}
+                          onChange={(e) => setDob(e.target.value)}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, outline: 'none' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Personal Email ID *</label>
+                        <input
+                          type="email"
+                          required
+                          placeholder="your.name@gmail.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, outline: 'none' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>PAN Card Number *</label>
+                        <input
+                          type="text"
+                          required
+                          maxLength={10}
+                          placeholder="ABCDE1234F"
+                          value={pan}
+                          onChange={(e) => setPan(e.target.value.toUpperCase())}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontFamily: 'monospace', fontWeight: 800, textTransform: 'uppercase', outline: 'none' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>As Per Salary Slip Company Name *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Official Employer / Company Name"
+                          value={employer}
+                          onChange={(e) => setEmployer(e.target.value)}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, outline: 'none' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Designation *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Software Engineer, Manager"
+                          value={occupation}
+                          onChange={(e) => setOccupation(e.target.value)}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, outline: 'none' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Pincode *</label>
+                        <PincodeAutoComplete
+                          value={pincode}
+                          onChange={(val) => setPincode(val)}
+                          onSelect={({ pincode: pin, city: cName }) => {
+                            setPincode(pin);
+                            if (cName) setCity(cName);
+                          }}
+                          placeholder="Enter 6-digit Pincode"
+                          C={C}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Current Home Address with Landmark *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        placeholder="House / Flat No., Street, Area, Landmark"
+                        value={homeAddress}
+                        onChange={(e) => setHomeAddress(e.target.value)}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, outline: 'none', resize: 'vertical' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Full Company Address *</label>
+                      <textarea
+                        required
+                        rows={2}
+                        placeholder="Office Address, Building, Tech Park, City"
+                        value={companyAddress}
+                        onChange={(e) => setCompanyAddress(e.target.value)}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, outline: 'none', resize: 'vertical' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Mother Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Mother's Full Name"
+                        value={motherName}
+                        onChange={(e) => setMotherName(e.target.value)}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, outline: 'none' }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  /* STANDARD GENERIC FORM FIELDS FOR OTHER BANKS */
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Customer Name *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Enter Customer Full Name"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, outline: 'none' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>Mobile Number *</label>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          placeholder="10-Digit Mobile Number"
+                          value={mobileNum}
+                          onChange={(e) => setMobileNum(e.target.value.replace(/\D/g, ''))}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontWeight: 700, fontFamily: 'monospace', outline: 'none' }}
+                        />
+                      </div>
+                    </div>
+
+                    {(isSbiProduct || pan) && (
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>
+                          PAN Card Number {isSbiProduct ? '*' : '(Optional)'}
+                        </label>
+                        <input
+                          type="text"
+                          required={isSbiProduct}
+                          maxLength={10}
+                          placeholder="ABCDE1234F"
+                          value={pan}
+                          onChange={(e) => setPan(e.target.value.toUpperCase())}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '12px', border: `1px solid ${borderCol}`, background: inputBg, color: textCol, fontSize: '13.5px', fontFamily: 'monospace', fontWeight: 800, textTransform: 'uppercase', outline: 'none' }}
+                        />
+                        {isSbiProduct && (
+                          <span style={{ fontSize: '11px', color: '#2563eb', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                            <FaInfoCircle /> PAN Card details are required for SBI Bank applications.
+                          </span>
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
 
-                {/* Pincode Field (Mandatory for SBI products) */}
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>
-                    Pincode {isSbiProduct ? '*' : '(Optional)'}
-                  </label>
-                  <PincodeAutoComplete
-                    value={pincode}
-                    onChange={(val) => setPincode(val)}
-                    onSelect={({ pincode: pin, city: cName }) => {
-                      setPincode(pin);
-                      if (cName) setCity(cName);
-                    }}
-                    isSbiOnly={isSbiProduct}
-                    placeholder="Enter 6-digit Pincode"
-                    C={C}
-                  />
-                </div>
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: textCol, display: 'block', marginBottom: '5px' }}>
+                        Pincode {isSbiProduct ? '*' : '(Optional)'}
+                      </label>
+                      <PincodeAutoComplete
+                        value={pincode}
+                        onChange={(val) => setPincode(val)}
+                        onSelect={({ pincode: pin, city: cName }) => {
+                          setPincode(pin);
+                          if (cName) setCity(cName);
+                        }}
+                        isSbiOnly={isSbiProduct}
+                        placeholder="Enter 6-digit Pincode"
+                        C={C}
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Submit Button */}
                 <button
