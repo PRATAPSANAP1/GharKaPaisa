@@ -317,15 +317,10 @@ export default function PartnerApplications() {
         token: tokenVal
       });
 
-      const isHdfcApp = (
-        app.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
-        app.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
-        String(app.bank_id || '').toLowerCase() === 'hdfc' ||
-        `${app.bank_name || ''} ${app.product_bank || ''} ${app.bank_code || ''} ${app.product_name || ''}`.toUpperCase().includes('HDFC') ||
-        `${app.bank_name || ''} ${app.product_bank || ''} ${app.bank_code || ''} ${app.product_name || ''}`.toUpperCase().includes('TATA')
-      );
+      const HDFC_BANK_ID = 'f0b5742d-f04d-4a91-b162-6009ddf6e345';
+      const isHdfcBank = app?.bank_id === HDFC_BANK_ID;
 
-      if (isHdfcApp) {
+      if (isHdfcBank) {
         setShowShareModal(true);
       } else if (navigator.share) {
         navigator.share({
@@ -1832,61 +1827,138 @@ export default function PartnerApplications() {
             </div>
 
             {(() => {
-              const isHdfcApp = shareData.app && (
-                shareData.app.bank_id === '1eacfa67-1187-48c7-adde-8a6edcfe9969' ||
-                shareData.app.bank_id === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' ||
-                String(shareData.app.bank_id || '').toLowerCase() === 'hdfc' ||
-                `${shareData.app.bank_name || ''} ${shareData.app.product_bank || ''} ${shareData.app.bank_code || ''} ${shareData.app.product_name || ''}`.toUpperCase().includes('HDFC') ||
-                `${shareData.app.bank_name || ''} ${shareData.app.product_bank || ''} ${shareData.app.bank_code || ''} ${shareData.app.product_name || ''}`.toUpperCase().includes('TATA')
-              );
+              const HDFC_BANK_ID = 'f0b5742d-f04d-4a91-b162-6009ddf6e345';
+              const app = shareData.app;
 
-              const tokenVal = shareData.token || shareData.app?.tracking_token || shareData.app?.id;
+              const isHdfcBank = app?.bank_id === HDFC_BANK_ID;
+
+              const normalizedProcess = String(
+                app?.process_type || app?.process_by || ''
+              ).trim().toLowerCase();
+
+              const isPunching =
+                normalizedProcess === 'lead_punching' ||
+                normalizedProcess === 'punching' ||
+                normalizedProcess === 'punch_only' ||
+                normalizedProcess.includes('punch');
+
+              const isLinkedShare =
+                normalizedProcess === 'linked_share' ||
+                normalizedProcess === 'share_link' ||
+                normalizedProcess.includes('linked_share') ||
+                (normalizedProcess.includes('share') && !normalizedProcess.includes('punch'));
+
+              const isDirectProcess =
+                normalizedProcess === 'direct_bank' ||
+                normalizedProcess === 'direct_apply' ||
+                normalizedProcess.includes('direct');
+
+              const isCoBrowsing =
+                normalizedProcess === 'co_browsing' ||
+                normalizedProcess === 'cobrowsing' ||
+                normalizedProcess.includes('co-browsing') ||
+                normalizedProcess.includes('cobrowsing');
+
+              const tokenVal = shareData.token || app?.tracking_token || app?.id;
               const physicalUrl = `${window.location.origin}/physical-application/${tokenVal}`;
-              const cobrowsingUrl = `${window.location.origin}/apply/${tokenVal}?mode=cobrowsing`;
               const adobeUrl = shareData.shareUrl;
+              const cobrowsingUrl = `${window.location.origin}/apply/${tokenVal}?mode=cobrowsing`;
 
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
-                  {isHdfcApp ? (
+                  {isHdfcBank ? (
                     <>
-                      <a
-                        href={physicalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          padding: '11px 16px', borderRadius: 12, border: `1.5px solid #f59e0b`, background: `#f59e0b12`,
-                          color: '#d97706', fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-                        }}
-                      >
-                        <FileText size={16} /> Physical Form(QD form)
-                      </a>
+                      {/* 1. PUNCHING ONLY → 3 LINKS */}
+                      {(isPunching || (!isLinkedShare && !isDirectProcess && !isCoBrowsing)) && (
+                        <>
+                          <a
+                            href={physicalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              padding: '11px 16px', borderRadius: 12, border: `1.5px solid #f59e0b`, background: `#f59e0b12`,
+                              color: '#d97706', fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                            }}
+                          >
+                            <FileText size={16} /> Physical Form (QD Form)
+                          </a>
 
-                      <a
-                        href={adobeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          padding: '11px 16px', borderRadius: 12, border: `1.5px solid ${accent}`, background: `${accent}12`,
-                          color: accent, fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-                        }}
-                      >
-                        <ArrowUpRight size={16} /> Adobe Process Link
-                      </a>
+                          <a
+                            href={adobeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              padding: '11px 16px', borderRadius: 12, border: `1.5px solid ${accent}`, background: `${accent}12`,
+                              color: accent, fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                            }}
+                          >
+                            <ArrowUpRight size={16} /> Adobe Process Link
+                          </a>
 
-                      <a
-                        href={cobrowsingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          padding: '11px 16px', borderRadius: 12, border: `1.5px solid #ec4899`, background: `#ec489912`,
-                          color: '#db2777', fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-                        }}
-                      >
-                        <Share2 size={16} /> Co-Browsing Process Link
-                      </a>
+                          <a
+                            href={cobrowsingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              padding: '11px 16px', borderRadius: 12, border: `1.5px solid #ec4899`, background: `#ec489912`,
+                              color: '#db2777', fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                            }}
+                          >
+                            <Share2 size={16} /> Co-Browsing Process Link
+                          </a>
+                        </>
+                      )}
+
+                      {/* 2. LINKED SHARE → ADOBE */}
+                      {isLinkedShare && !isPunching && (
+                        <a
+                          href={adobeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            padding: '11px 16px', borderRadius: 12, border: `1.5px solid ${accent}`, background: `${accent}12`,
+                            color: accent, fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                          }}
+                        >
+                          <ArrowUpRight size={16} /> Adobe Process Link
+                        </a>
+                      )}
+
+                      {/* 3. DIRECT PROCESS → ADOBE */}
+                      {isDirectProcess && !isPunching && (
+                        <a
+                          href={adobeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            padding: '11px 16px', borderRadius: 12, border: `1.5px solid ${accent}`, background: `${accent}12`,
+                            color: accent, fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                          }}
+                        >
+                          <ArrowUpRight size={16} /> Adobe Process Link
+                        </a>
+                      )}
+
+                      {/* 4. CO-BROWSING → CO-BROWSING */}
+                      {isCoBrowsing && !isPunching && (
+                        <a
+                          href={cobrowsingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            padding: '11px 16px', borderRadius: 12, border: `1.5px solid #ec4899`, background: `#ec489912`,
+                            color: '#db2777', fontWeight: 800, fontSize: 13, cursor: 'pointer', textDecoration: 'none',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                          }}
+                        >
+                          <Share2 size={16} /> Co-Browsing Process Link
+                        </a>
+                      )}
                     </>
                   ) : (
                     <a
