@@ -923,7 +923,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   {isSbi ? (
                     <>
                       {/* 1. APPCODE STATUS (Punching only & Physical process) */}
-                      {(isPunchLead || isPhysical || (!isLinkedShare && !isDirectBank)) && (
+                      {(isPunchLead || isPhysical) && (
                         <div>
                           <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. APPCODE STATUS</label>
                           <select
@@ -952,11 +952,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="None">None</option>
                           <option value="Approval income 25k">Approval income 25k</option>
                           <option value="Approval income 30k">Approval income 30k</option>
-                          <option value="Approval NSDP Cibil based">Approval NSDP Cibil based</option>
+                          <option value="Approval NSDP Civil base">Approval NSDP Civil base</option>
                           <option value="DeclineS5">DeclineS5</option>
                           <option value="Decline U2">Decline U2</option>
                           <option value="Normal Decline">Normal Decline</option>
-                          {softApprovalStatus && !['None', 'Approval income 25k', 'Approval income 30k', 'Approval NSDP Cibil based', 'Approval NSDP Civil base', 'DeclineS5', 'Decline S5', 'Decline U2', 'Normal Decline', ''].includes(softApprovalStatus) && (
+                          {softApprovalStatus && !['None', 'Approval income 25k', 'Approval income 30k', 'Approval NSDP Civil base', 'Approval NSDP Cibil based', 'DeclineS5', 'Decline S5', 'Decline U2', 'Normal Decline', ''].includes(softApprovalStatus) && (
                             <option value={softApprovalStatus}>{softApprovalStatus}</option>
                           )}
                         </select>
