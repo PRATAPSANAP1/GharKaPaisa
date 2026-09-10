@@ -3279,6 +3279,8 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS approved_amount DECIMAL(15,2)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS income_details VARCHAR(100)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS mail_status VARCHAR(100)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(50)`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS user_remark TEXT`);
@@ -3307,6 +3309,8 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS eligible_reqd VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS income_details VARCHAR(100)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS mail_status VARCHAR(100)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(50)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_url TEXT`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS user_remark TEXT`);
@@ -3369,6 +3373,8 @@ const updateApplicationDetails = async (req, res, next) => {
       approved_amount,
       ipa_stage,
       kyc_stage,
+      income_details,
+      mail_status,
       card_approval_stage,
       digital_card_issued
     } = req.body;
@@ -3548,6 +3554,8 @@ const updateApplicationDetails = async (req, res, next) => {
         app_file_generated = COALESCE(NULLIF($37, ''), app_file_generated),
         ipa_stage = COALESCE(NULLIF($38, ''), ipa_stage),
         kyc_stage = COALESCE(NULLIF($39, ''), kyc_stage),
+        income_details = COALESCE(NULLIF($42, ''), income_details),
+        mail_status = COALESCE(NULLIF($43, ''), mail_status),
         card_approval_stage = COALESCE(NULLIF($40, ''), card_approval_stage),
         digital_card_issued = COALESCE(NULLIF($41, ''), digital_card_issued),
         updated_at = NOW()
@@ -3594,7 +3602,9 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(ipa_stage || req.body.ipa_stage),
       cleanStr(kyc_stage || req.body.kyc_stage),
       cleanStr(card_approval_stage || req.body.card_approval_stage),
-      cleanStr(digital_card_issued || req.body.digital_card_issued)
+      cleanStr(digital_card_issued || req.body.digital_card_issued),
+      cleanStr(income_details || req.body.income_details),
+      cleanStr(mail_status || req.body.mail_status)
     ]);
 
     // 2. Update customer details if customer_id exists
@@ -3676,6 +3686,8 @@ const updateApplicationDetails = async (req, res, next) => {
           card_approval_stage,
           vkyc_url,
           user_remark,
+          income_details,
+          mail_status,
           created_at,
           updated_at
         ) VALUES (
@@ -3713,6 +3725,8 @@ const updateApplicationDetails = async (req, res, next) => {
           $29,
           $30,
           $31,
+          $32,
+          $33,
           NOW(),
           NOW()
         ) ON CONFLICT (application_id) DO UPDATE SET
@@ -3746,6 +3760,8 @@ const updateApplicationDetails = async (req, res, next) => {
           eligible_reqd = COALESCE(NULLIF(EXCLUDED.eligible_reqd, ''), physical_application_details.eligible_reqd),
           ipa_stage = COALESCE(NULLIF(EXCLUDED.ipa_stage, ''), physical_application_details.ipa_stage),
           kyc_stage = COALESCE(NULLIF(EXCLUDED.kyc_stage, ''), physical_application_details.kyc_stage),
+          income_details = COALESCE(NULLIF(EXCLUDED.income_details, ''), physical_application_details.income_details),
+          mail_status = COALESCE(NULLIF(EXCLUDED.mail_status, ''), physical_application_details.mail_status),
           card_approval_stage = COALESCE(NULLIF(EXCLUDED.card_approval_stage, ''), physical_application_details.card_approval_stage),
           vkyc_url = COALESCE(NULLIF(EXCLUDED.vkyc_url, ''), physical_application_details.vkyc_url),
           user_remark = COALESCE(NULLIF(EXCLUDED.user_remark, ''), physical_application_details.user_remark),
@@ -3781,7 +3797,9 @@ const updateApplicationDetails = async (req, res, next) => {
         cleanStr(kyc_stage || req.body.kyc_stage),
         cleanStr(card_approval_stage || req.body.card_approval_stage),
         cleanStr(vkyc_url || req.body.vkyc_url),
-        cleanStr(user_remark || req.body.user_remark || req.body.user_notes || req.body.notes || notes || user_notes)
+        cleanStr(user_remark || req.body.user_remark || req.body.user_notes || req.body.notes || notes || user_notes),
+        cleanStr(income_details || req.body.income_details),
+        cleanStr(mail_status || req.body.mail_status)
       ]);
     } catch (physErr) {
       console.error('Failed to upsert physical_application_details:', physErr);
