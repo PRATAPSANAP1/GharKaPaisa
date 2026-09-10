@@ -91,7 +91,8 @@ const AdminLayout = () => {
   const userDesignation = user?.designation || '';
   const isOpHead = userDesignation === 'Operational Head' || userDesignation === 'OPERATIONAL_HEAD';
   const isSalesExec = ['Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
-  const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+  const isPanChecker = ['PAN Checker', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+  const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
   const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
   if ((isOpHead || isBackend || assignedList.length > 0) && assignedList.length > 0) {
     banks = assignedList.map(b => ({
@@ -140,7 +141,7 @@ const AdminLayout = () => {
             {t('adminLayout.title', 'GharKaPaisa')}
           </h2>
           <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {isHR ? 'HR Management Portal' : isSalesExec ? 'Administrative Sales Executive' : isBackend ? 'Administrative Operator' : 'Admin Operations Portal'}
+            {isHR ? 'HR Management Portal' : isPanChecker ? 'PAN Checker' : isSalesExec ? 'Administrative Sales Executive' : isBackend ? 'Administrative Operator' : 'Admin Operations Portal'}
           </span>
         </div>
       </div>

@@ -1405,11 +1405,20 @@ const listApplications = async (req, res, next) => {
     const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
 
     const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
     let salesExecFilterSQL = '';
     if (isSalesExecUser) {
       salesExecFilterSQL = ` AND (LOWER(combined.process_by) LIKE '%punching%' OR LOWER(combined.process_type) LIKE '%punching%')`;
+    }
+
+    const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+    let panCheckerFilterSQL = '';
+    if (isPanCheckerUser) {
+      panCheckerFilterSQL = ` AND (LOWER(combined.bank_code) = 'sbi' OR LOWER(combined.bank_name) LIKE '%sbi%' OR combined.bank_id IN (SELECT id FROM banks WHERE LOWER(short_code) = 'sbi' OR LOWER(name) LIKE '%sbi%'))`;
+      if (!validStatus) {
+        panCheckerFilterSQL += ` AND (combined.status IN ('pending', 'lead_created', 'details_submitted', 'submitted', 'new', 'draft', 'link_sent') AND (combined.bank_remark IS NULL OR combined.bank_remark = ''))`;
+      }
     }
 
     if (!isPartnerOrTeam && req.user?.id) {
@@ -1572,6 +1581,7 @@ const listApplications = async (req, res, next) => {
         AND ($17::timestamp IS NULL OR combined.created_at <= $17::timestamp)
         ${opHeadBankFilterSQL}
         ${salesExecFilterSQL}
+        ${panCheckerFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
@@ -1654,6 +1664,7 @@ const listApplications = async (req, res, next) => {
         AND ($15::timestamp IS NULL OR combined.created_at <= $15::timestamp)
         ${countOpHeadBankFilterSQL}
         ${salesExecFilterSQL}
+        ${panCheckerFilterSQL}
     `, countQueryParams);
 
     // Compute real-time canonical status counts directly from applications table

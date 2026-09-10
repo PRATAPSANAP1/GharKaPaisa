@@ -54,9 +54,9 @@ const createAdmin = async (req, res, next) => {
     // Check bank assignment requirement BEFORE user insert
     const bankIds = Array.isArray(req.body.bank_ids) ? req.body.bank_ids : (req.body.bank_id ? [req.body.bank_id] : []);
     const desigUpper = String(designation || '').toUpperCase();
-    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE'].includes(desigUpper);
+    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER'].includes(desigUpper);
     if (isOpHead && bankIds.length === 0) {
-      return error(res, 'At least one assigned bank is required for Operational Head, Administrative Operator or Administrative Sales Executive designation', 400);
+      return error(res, 'At least one assigned bank is required for Operational Head, Administrative Operator, Administrative Sales Executive, or PAN Checker designation', 400);
     }
 
     // Generate unique employeeId in format YOH-SE9983, YOH-TL2324, YOH-MGR0985, YOH-HR0123

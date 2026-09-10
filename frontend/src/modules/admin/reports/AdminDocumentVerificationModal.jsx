@@ -47,7 +47,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const user = useAuthStore((state) => state.user);
   const role = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
-  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
+  const isPanChecker = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
   const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
   const isOpsOrAdmin = isOpsHead || isOpsOperator;
   const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
@@ -578,6 +579,69 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
               >
                 <CheckCircle size={15} /> Mark Operational Verified
               </button>
+            )}
+            {isPanChecker && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  disabled={actionLoading}
+                  onClick={async () => {
+                    setActionLoading(true);
+                    try {
+                      const targetId = application.app_number || application.id || application.application_id;
+                      const res = await api.put(`/applications/${targetId}/verification`, {
+                        status: 'operational_verified',
+                        final_status: 'Operational Verified',
+                        bank_remark: bankRemark || 'PAN Verified OK',
+                        user_remark: userRemark || 'PAN Verified OK',
+                        ops_remark: 'PAN Verified OK by PAN Checker'
+                      });
+                      if (res.data?.success) {
+                        alert('PAN Verified successfully!');
+                        onClose();
+                        if (onRefresh) onRefresh();
+                      }
+                    } catch (err) {
+                      alert(err.response?.data?.message || 'Failed to verify PAN');
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  style={{ background: '#10B981', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <CheckCircle size={15} /> Verify PAN
+                </button>
+                <button
+                  disabled={actionLoading}
+                  onClick={async () => {
+                    const remark = prompt('Enter Bank / Rejection Remark for this PAN:');
+                    if (!remark) return;
+                    setActionLoading(true);
+                    try {
+                      const targetId = application.app_number || application.id || application.application_id;
+                      const res = await api.put(`/applications/${targetId}/verification`, {
+                        status: 'rejected',
+                        final_status: 'Rejected',
+                        bank_remark: remark,
+                        decline_reason: remark,
+                        user_remark: remark,
+                        ops_remark: remark
+                      });
+                      if (res.data?.success) {
+                        alert('Application rejected with PAN remark successfully!');
+                        onClose();
+                        if (onRefresh) onRefresh();
+                      }
+                    } catch (err) {
+                      alert(err.response?.data?.message || 'Failed to reject PAN application');
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  style={{ background: '#EF4444', color: '#fff', border: 'none', padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <XCircle size={15} /> Reject PAN
+                </button>
+              </div>
             )}
             <button onClick={onClose} style={{ background: '#f1f5f9', border: 'none', color: '#64748b', cursor: 'pointer', padding: '6px', borderRadius: '50%' }}>
               <X size={20} />

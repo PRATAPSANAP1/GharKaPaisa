@@ -111,7 +111,7 @@ const requirePartner = async (req, res, next) => {
   try {
     const role = (req.user?.role || '').toUpperCase();
     const designation = (req.user?.designation || '').toUpperCase();
-    const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'];
+    const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER'];
     if (adminRoles.includes(role) || adminRoles.includes(designation)) return next();
     if (!req.partner && req.user) {
       const { rows: [p] } = await query(`SELECT id, kyc_status FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
@@ -131,7 +131,7 @@ const requireApprovedPartner = async (req, res, next) => {
   try {
     const role = (req.user?.role || '').toUpperCase();
     const designation = (req.user?.designation || '').toUpperCase();
-    const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'];
+    const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER'];
     if (adminRoles.includes(role) || adminRoles.includes(designation)) return next();
     if (!req.partner && req.user) {
       const { rows: [p] } = await query(`SELECT id, kyc_status FROM partner_profiles WHERE user_id = $1`, [req.user.id]);

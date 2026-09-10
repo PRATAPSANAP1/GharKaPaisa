@@ -240,9 +240,9 @@ export default function SuperAdminDashboard() {
       return setFormErr('Password must be at least 8 characters long');
     }
 
-    const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(form.designation);
+    const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER'].includes(form.designation);
     if (isOpHead && selectedCreateBankIds.length === 0) {
-      return setFormErr('At least one bank must be selected for Operational Head, Administrative Operator or Administrative Sales Executive designation');
+      return setFormErr('At least one bank must be selected for Operational Head, Administrative Operator, Administrative Sales Executive, or PAN Checker designation');
     }
 
     setFormLoading(true);
@@ -900,7 +900,7 @@ export default function SuperAdminDashboard() {
                   value={form.designation}
                   onChange={(e) => {
                     handleChange(e);
-                    if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive'].includes(e.target.value) && allBanks.length === 0) {
+                    if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker'].includes(e.target.value) && allBanks.length === 0) {
                       api.get('/banks').then(res => {
                         if (res.data && res.data.data) setAllBanks(res.data.data);
                       }).catch(err => console.error(err));
@@ -915,12 +915,13 @@ export default function SuperAdminDashboard() {
                   <option value="Operational Head">Operational Head</option>
                   <option value="Administrative Operator">Administrative Operator</option>
                   <option value="Administrative Sales Executive">Administrative Sales Executive</option>
+                  <option value="PAN Checker">PAN Checker</option>
                   <option value="Super Admin">Super Admin</option>
                 </select>
               </div>
 
-              {/* Operational Head / Administrative Operator / Administrative Sales Executive Bank Assignment Section */}
-              {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(form.designation)) && (
+              {/* Operational Head / Administrative Operator / Administrative Sales Executive / PAN Checker Bank Assignment Section */}
+              {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER'].includes(form.designation)) && (
                 <div style={{ gridColumn: "span 2", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "4px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                     <div>
@@ -1102,7 +1103,7 @@ export default function SuperAdminDashboard() {
                     onChange={e => {
                       const val = e.target.value;
                       setEditForm({ ...editForm, designation: val });
-                      if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive'].includes(val) && allBanks.length === 0) {
+                      if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker'].includes(val) && allBanks.length === 0) {
                         api.get('/banks').then(res => {
                           if (res.data && res.data.data) setAllBanks(res.data.data);
                         }).catch(err => console.error(err));
@@ -1114,6 +1115,7 @@ export default function SuperAdminDashboard() {
                     <option value="Operational Head">Operational Head</option>
                     <option value="Administrative Operator">Administrative Operator</option>
                     <option value="Administrative Sales Executive">Administrative Sales Executive</option>
+                    <option value="PAN Checker">PAN Checker</option>
                     <option value="Super Admin">Super Admin</option>
                   </select>
                 </div>
