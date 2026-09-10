@@ -3250,6 +3250,8 @@ const exportApplicationsCSV = async (req, res, next) => {
 const updateApplicationDetails = async (req, res, next) => {
   // Ensure verification & tracking columns exist on applications, leads, customers, physical_application_details tables outside of transaction
   try {
+    await query(`ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'operational_verified'`).catch(() => {});
+    await query(`ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'details_submitted'`).catch(() => {});
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address1 TEXT`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS address2 TEXT`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS landmark TEXT`);
@@ -3520,7 +3522,7 @@ const updateApplicationDetails = async (req, res, next) => {
         vkyc_url = COALESCE(NULLIF($3, ''), vkyc_url),
         salary_slip_url = COALESCE(NULLIF($4, ''), salary_slip_url),
         pan_card_url = COALESCE(NULLIF($5, ''), pan_card_url),
-        status = CASE WHEN $6::text IS NOT NULL AND $6::text != '' THEN $6::text ELSE status END,
+        status = CASE WHEN $6::text IS NOT NULL AND $6::text != '' AND EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'application_status' AND enumlabel = $6::text) THEN $6::text::application_status ELSE status END,
         remarks = COALESCE(NULLIF($7, ''), remarks),
         bank_id = COALESCE($8, bank_id),
         product_id = COALESCE($9, product_id),
