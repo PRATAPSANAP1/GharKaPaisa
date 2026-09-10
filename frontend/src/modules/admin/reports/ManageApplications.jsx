@@ -20,7 +20,8 @@ export default function ManageApplications() {
   const user = useAuthStore((state) => state.user);
   const userRole = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
-  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
+  const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
   const isOpsHead = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole) && !isOpsOperator;
   const isOpsHeadOrSuperAdmin = isOpsHead || isOpsOperator;
 
@@ -382,6 +383,12 @@ export default function ManageApplications() {
         </div>
       </div>
 
+      {isSalesExecUser && (
+        <div style={{ padding: '12px 16px', marginBottom: '20px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '10px', color: '#2563EB', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>⚡</span> Displaying Punching Process Applications Only (Administrative Sales Executive View)
+        </div>
+      )}
+
       {/* ── 2. TOP KPI SUMMARY CARDS ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
 
@@ -496,11 +503,12 @@ export default function ManageApplications() {
               onChange={(e) => setSearchField(e.target.value)}
               style={{
                 height: '40px', padding: '0 12px', borderRadius: '10px',
-                background: C.bgSecondary, border: `1px solid ${C.border}`,
+                background: C.card, border: `1px solid ${C.border}`,
                 color: C.text, fontSize: '12.5px', fontWeight: 700, cursor: 'pointer'
               }}
             >
               <option value="all">Search All Fields</option>
+              <option value="bank_app_no">Bank Application Number</option>
               <option value="name">Customer Name</option>
               <option value="mobile">Mobile Number</option>
               <option value="app_number">Application ID</option>
@@ -511,7 +519,7 @@ export default function ManageApplications() {
             <div style={{ flex: 1, minWidth: '220px', position: 'relative' }}>
               <input
                 style={{ ...S.input, paddingLeft: '38px', paddingRight: search ? '36px' : '12px', height: '40px', fontSize: '13px', borderRadius: '10px' }}
-                placeholder={`Search by ${searchField === 'name' ? 'customer name' : searchField === 'mobile' ? 'mobile number' : searchField === 'app_number' ? 'application ID' : searchField === 'pan' ? 'PAN card' : 'customer name, mobile, application ID, PAN'}...`}
+                placeholder={`Search by ${searchField === 'name' ? 'customer name' : searchField === 'mobile' ? 'mobile number' : searchField === 'app_number' ? 'application ID' : searchField === 'bank_app_no' ? 'bank application number' : searchField === 'pan' ? 'PAN card' : 'bank application number, customer name, mobile, application ID, PAN'}...`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -726,6 +734,11 @@ export default function ManageApplications() {
                         <div style={{ fontWeight: 800, color: C.teal, fontFamily: 'monospace', fontSize: '12.5px' }}>
                           {app.app_number || `APP${app.id}`}
                         </div>
+                        {(app.bank_application_number || app.bank_ref_number) && (
+                          <div style={{ fontSize: '11px', color: C.teal, fontWeight: 700, marginTop: '2px', fontFamily: 'monospace' }}>
+                            Bank No: {app.bank_application_number || app.bank_ref_number}
+                          </div>
+                        )}
                         <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
                           {formattedDate}
                         </div>

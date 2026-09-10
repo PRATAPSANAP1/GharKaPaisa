@@ -330,7 +330,7 @@ const listBankCardApplications = async (req, res, next) => {
     }
 
     if (search) {
-      whereClause += ` AND (combined.application_no ILIKE $${idx} OR combined.customer_name ILIKE $${idx} OR combined.customer_mobile ILIKE $${idx} OR combined.pan_number ILIKE $${idx})`;
+      whereClause += ` AND (combined.application_no ILIKE $${idx} OR combined.bank_application_number ILIKE $${idx} OR combined.customer_name ILIKE $${idx} OR combined.customer_mobile ILIKE $${idx} OR combined.pan_number ILIKE $${idx})`;
       values.push(`%${search.trim()}%`);
       idx++;
     }
@@ -339,6 +339,7 @@ const listBankCardApplications = async (req, res, next) => {
       SELECT 
         bca.id::text as id,
         bca.application_no,
+        COALESCE(NULLIF(bca.bank_application_number, ''), NULLIF(bca.bank_ref_number, ''), bca.application_no) as bank_application_number,
         bca.bank_id::text as bank_id,
         bca.credit_card_category,
         bca.customer_name,
@@ -367,6 +368,7 @@ const listBankCardApplications = async (req, res, next) => {
       SELECT 
         a.id::text as id,
         COALESCE(a.app_number, 'APP' || SUBSTRING(a.id::text, 1, 8)) as application_no,
+        COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number,
         a.bank_id::text as bank_id,
         COALESCE(p.name, 'Credit Card') as credit_card_category,
         COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
@@ -392,6 +394,7 @@ const listBankCardApplications = async (req, res, next) => {
       LEFT JOIN leads l ON a.lead_id = l.id
       LEFT JOIN customers c ON a.customer_id = c.id
       LEFT JOIN users u ON a.partner_id = u.id
+      LEFT JOIN physical_application_details pad ON pad.application_id = a.id
     `;
 
     const countQuery = `

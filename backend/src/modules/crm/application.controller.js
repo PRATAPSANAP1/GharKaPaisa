@@ -1405,7 +1405,13 @@ const listApplications = async (req, res, next) => {
     const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
 
     const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
+    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+    let salesExecFilterSQL = '';
+    if (isSalesExecUser) {
+      salesExecFilterSQL = ` AND (LOWER(combined.process_by) LIKE '%punching%' OR LOWER(combined.process_type) LIKE '%punching%')`;
+    }
+
     if (!isPartnerOrTeam && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
       if (abRows.length > 0) {
@@ -1454,8 +1460,8 @@ const listApplications = async (req, res, next) => {
           a.created_at,
           a.updated_at,
           COALESCE((SELECT COUNT(*) FROM application_timeline WHERE application_id = a.id), 1)::int as update_count,
-          COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, '')) as bank_application_number,
-          a.bank_ref_number,
+          COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number,
+          COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, ''), NULLIF(a.bank_application_number, ''), NULLIF(pad.bank_application_number, '')) as bank_ref_number,
           (to_jsonb(a)->>'ipa_stage') as ipa_stage,
           (to_jsonb(a)->>'kyc_stage') as kyc_stage,
           (to_jsonb(a)->>'card_approval_stage') as card_approval_stage,
@@ -1486,7 +1492,7 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
           COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
           c.email as customer_email,
-          c.pan_number,
+          COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number,
           COALESCE(l.city, c.city) as city,
           c.state,
           c.pincode,
@@ -1522,6 +1528,7 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN employees emp ON (emp.id = a.employee_id OR emp.user_id = a.submitted_by)
         LEFT JOIN users su ON su.id = a.submitted_by
         LEFT JOIN users oh ON oh.id = COALESCE(p.operation_head_id, b.operation_head_id)
+        LEFT JOIN physical_application_details pad ON pad.application_id = a.id
       ) combined
       ${partnerTeamScopeSQL}
         AND (
@@ -1537,7 +1544,7 @@ const listApplications = async (req, res, next) => {
         )
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
-        AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
+        AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
         AND ($9::text IS NULL OR combined.process_by = $9 OR combined.submitted_by::text = $9)
         AND ($10::uuid IS NULL OR combined.operation_head_id = $10::uuid)
         AND (
@@ -1564,6 +1571,7 @@ const listApplications = async (req, res, next) => {
         AND ($16::timestamp IS NULL OR combined.created_at >= $16::timestamp)
         AND ($17::timestamp IS NULL OR combined.created_at <= $17::timestamp)
         ${opHeadBankFilterSQL}
+        ${salesExecFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
@@ -1596,12 +1604,13 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category, a.created_at
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category, a.created_at
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN physical_application_details pad ON pad.application_id = a.id
       ) combined
       ${countScopeSQL}
          AND (
@@ -1617,7 +1626,7 @@ const listApplications = async (req, res, next) => {
         )
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
-        AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5))
+        AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
         AND ($6::text IS NULL OR combined.process_by = $6 OR combined.submitted_by::text = $6)
         AND ($7::uuid IS NULL OR combined.operation_head_id = $7::uuid)
         AND (
@@ -1644,6 +1653,7 @@ const listApplications = async (req, res, next) => {
         AND ($14::timestamp IS NULL OR combined.created_at >= $14::timestamp)
         AND ($15::timestamp IS NULL OR combined.created_at <= $15::timestamp)
         ${countOpHeadBankFilterSQL}
+        ${salesExecFilterSQL}
     `, countQueryParams);
 
     // Compute real-time canonical status counts directly from applications table

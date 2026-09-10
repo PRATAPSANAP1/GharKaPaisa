@@ -582,11 +582,28 @@ export default function ManageApplications() {
         <form onSubmit={handleSearchSubmit}>
           
           {/* Row 1: Search Bar + Filter Toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ flex: 1, position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <select
+              value={searchField}
+              onChange={(e) => setSearchField(e.target.value)}
+              style={{
+                height: '42px', padding: '0 12px', borderRadius: '10px',
+                background: C.bgSecondary, border: `1px solid ${C.border}`,
+                color: C.text, fontSize: '12.5px', fontWeight: 700, cursor: 'pointer'
+              }}
+            >
+              <option value="all">Search All Fields</option>
+              <option value="bank_app_no">Bank Application Number</option>
+              <option value="app_number">Application ID</option>
+              <option value="name">Customer Name</option>
+              <option value="mobile">Mobile Number</option>
+              <option value="pan">PAN Card</option>
+            </select>
+
+            <div style={{ flex: 1, minWidth: '220px', position: 'relative' }}>
               <input
                 style={{ ...S.input, paddingLeft: '38px', height: '42px', fontSize: '13.5px', borderRadius: '10px' }}
-                placeholder="Search by customer name, mobile, application ID, PAN..."
+                placeholder={searchField === 'bank_app_no' ? "Search by bank application number..." : searchField === 'name' ? "Search by customer name..." : searchField === 'mobile' ? "Search by mobile number..." : searchField === 'app_number' ? "Search by application ID..." : searchField === 'pan' ? "Search by PAN card..." : "Search by bank application number, customer name, mobile, application ID, PAN..."}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -805,6 +822,11 @@ export default function ManageApplications() {
                         <div style={{ fontWeight: 800, color: C.text, fontFamily: 'monospace', fontSize: '12px' }}>
                           {app.app_number || `APP${app.id}`}
                         </div>
+                        {(app.bank_application_number || app.bank_ref_number) && (
+                          <div style={{ fontSize: '11px', color: C.teal, fontWeight: 700, marginTop: '2px', fontFamily: 'monospace' }}>
+                            Bank No: {app.bank_application_number || app.bank_ref_number}
+                          </div>
+                        )}
                         <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
                           {app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                         </div>

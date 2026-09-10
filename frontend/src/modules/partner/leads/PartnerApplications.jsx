@@ -897,7 +897,7 @@ export default function PartnerApplications() {
         <div style={{ position: 'relative', flex: 1 }}>
           <Search size={14} color={textMuted} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search by customer name, mobile, app #, or bank..."
+            placeholder="Search by customer name, mobile, app #, bank application number, or bank..."
             style={{ ...selectStyle, paddingLeft: 36, width: '100%', boxSizing: 'border-box' }} />
         </div>
 
@@ -1058,6 +1058,11 @@ export default function PartnerApplications() {
                             </td>
                             <td style={{ padding: '12px 14px' }}>
                               <div style={{ fontWeight: 800, color: textPrimary }}>#{app.app_number}</div>
+                              {(app.bank_application_number || app.bank_ref_number) && (
+                                <div style={{ fontSize: 10, color: accent, fontWeight: 700, marginTop: 2, fontFamily: 'monospace' }}>
+                                  Bank No: {app.bank_application_number || app.bank_ref_number}
+                                </div>
+                              )}
                               <div style={{ fontSize: 11, color: textMuted }}>{app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}</div>
                             </td>
                             <td style={{ padding: '12px 14px' }}>
