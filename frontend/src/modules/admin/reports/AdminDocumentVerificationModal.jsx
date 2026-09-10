@@ -357,7 +357,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         payload = {
           ...payload,
           ipa_stage: ipaStage || 'None',
-          kyc_stage: kycStage || 'None',
+          kyc_stage: kycStage || vkycStage || 'None',
           income_details: incomeDetails || 'None',
           mail_status: mailStatus || 'None',
           card_approval_stage: cardApprovalStage || 'None',
@@ -367,7 +367,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           iqa_stage: iqaStage || 'None',
           bank_ref_number: bankRefNumber,
           bank_application_number: bankRefNumber,
-          vkyc_stage: vkycStage || 'None',
+          vkyc_status: kycStage || vkycStage || 'None',
+          vkyc_stage: vkycStage || kycStage || 'None',
           vkyc_url: vkycUrl,
           dispatch_status: dispatchStatus || 'None',
           user_remark: userRemark,
@@ -996,8 +997,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>5. VKYC STATUS</label>
                         <select
                           disabled={!canEditRemark}
-                          value={kycStage || 'None'}
-                          onChange={(e) => setKycStage(e.target.value)}
+                          value={kycStage || vkycStage || 'None'}
+                          onChange={(e) => {
+                            setKycStage(e.target.value);
+                            setVkycStage(e.target.value);
+                          }}
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                         >
                           <option value="None">None</option>
