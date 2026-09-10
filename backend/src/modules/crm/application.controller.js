@@ -3673,6 +3673,7 @@ const updateApplicationDetails = async (req, res, next) => {
 
     // Upsert physical_application_details record
     try {
+      await client.query('SAVEPOINT phys_sp');
       await client.query(`
         INSERT INTO physical_application_details (
           application_id,
@@ -3824,21 +3825,30 @@ const updateApplicationDetails = async (req, res, next) => {
         cleanStr(income_details || req.body.income_details),
         cleanStr(mail_status || req.body.mail_status)
       ]);
+      await client.query('RELEASE SAVEPOINT phys_sp');
     } catch (physErr) {
-      console.error('Failed to upsert physical_application_details:', physErr);
+      await client.query('ROLLBACK TO SAVEPOINT phys_sp').catch(() => {});
+      console.error('Failed to upsert physical_application_details:', physErr.message || physErr);
     }
 
     // 3. Log to timeline
-    await client.query(`
-      INSERT INTO application_timeline (application_id, status, activity, event_type, title, description, actor_type, actor_id)
-      VALUES ($1, $2, 'Application Details Updated', 'application_updated', 'Application Edit & Updated', $3, $4, $5)
-    `, [
-      app.id,
-      status || app.status,
-      `Application updated. App No: ${appNumToSave || 'N/A'}, VKYC: ${vkyc_status || 'N/A'}, Status: ${status || app.status}`,
-      ['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role) ? 'admin' : 'partner',
-      req.user ? req.user.id : null
-    ]).catch(() => { });
+    try {
+      await client.query('SAVEPOINT timeline_sp');
+      await client.query(`
+        INSERT INTO application_timeline (application_id, status, activity, event_type, title, description, actor_type, actor_id)
+        VALUES ($1, $2, 'Application Details Updated', 'application_updated', 'Application Edit & Updated', $3, $4, $5)
+      `, [
+        app.id,
+        status || app.status,
+        `Application updated. App No: ${appNumToSave || 'N/A'}, VKYC: ${vkyc_status || 'N/A'}, Status: ${status || app.status}`,
+        ['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role) ? 'admin' : 'partner',
+        req.user ? req.user.id : null
+      ]);
+      await client.query('RELEASE SAVEPOINT timeline_sp');
+    } catch (timeErr) {
+      await client.query('ROLLBACK TO SAVEPOINT timeline_sp').catch(() => {});
+      console.warn('Failed to insert application_timeline:', timeErr.message || timeErr);
+    }
 
     const appFileGenVal = cleanStr(app_file_generated || appfile_generated || req.body.app_file_generated || req.body.appfile_generated);
     const isAppFileYes = appFileGenVal && appFileGenVal.toLowerCase() === 'yes';
@@ -3848,6 +3858,7 @@ const updateApplicationDetails = async (req, res, next) => {
     if ((isAppFileYes || ['approved', 'super_admin_approved'].includes(String(finalTargetStatus).toLowerCase())) && app.commission_amount > 0 && app.partner_id) {
       if (app.commission_status !== 'approved') {
         try {
+          await client.query('SAVEPOINT comm_sp');
           await creditCommission(
             app.partner_id,
             app.id,
@@ -3858,15 +3869,30 @@ const updateApplicationDetails = async (req, res, next) => {
           );
           await processTeamOverrideCommission(app.id, app.partner_id, app.commission_amount);
           await client.query(`UPDATE applications SET commission_status = 'approved', approved_at = COALESCE(approved_at, NOW()) WHERE id = $1`, [app.id]);
+          await client.query('RELEASE SAVEPOINT comm_sp');
         } catch (commErr) {
-          logger.error('Failed to credit commission on status update:', commErr);
+          await client.query('ROLLBACK TO SAVEPOINT comm_sp').catch(() => {});
+          logger.error('Failed to credit commission on status update:', commErr.message || commErr);
         }
       }
     } else if (isAppFileNo || String(finalTargetStatus).toLowerCase() === 'rejected') {
-      await client.query(`UPDATE applications SET commission_status = 'cancelled' WHERE id = $1`, [app.id]);
+      try {
+        await client.query('SAVEPOINT comm_canc_sp');
+        await client.query(`UPDATE applications SET commission_status = 'cancelled' WHERE id = $1`, [app.id]);
+        await client.query('RELEASE SAVEPOINT comm_canc_sp');
+      } catch (_) {
+        await client.query('ROLLBACK TO SAVEPOINT comm_canc_sp').catch(() => {});
+      }
     }
 
-    await syncEmployeeIncentiveLifecycle(client, updatedApp, appFileGenVal, finalTargetStatus);
+    try {
+      await client.query('SAVEPOINT inc_sp');
+      await syncEmployeeIncentiveLifecycle(client, updatedApp, appFileGenVal, finalTargetStatus);
+      await client.query('RELEASE SAVEPOINT inc_sp');
+    } catch (incErr) {
+      await client.query('ROLLBACK TO SAVEPOINT inc_sp').catch(() => {});
+      logger.error('Failed to sync employee incentive lifecycle:', incErr.message || incErr);
+    }
 
     await client.query('COMMIT');
     return success(res, updatedApp, 'Application details updated successfully');
