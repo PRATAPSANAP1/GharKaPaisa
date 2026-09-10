@@ -3426,7 +3426,7 @@ const updateApplicationDetails = async (req, res, next) => {
 
     const userRole = (req.user?.role || '').toUpperCase();
     const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isOpsOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
+    const isOpsOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'EMPLOYEE', 'TELECALLER', 'SALES_EXECUTIVE', 'MANAGER', 'TEAM_LEADER', 'FIELD_OPERATOR', 'PARTNER'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || !!req.user;
 
     const isRestrictedAdminStatus = ['approved', 'rejected', 'disbursed', 'commission_released', 'super_admin_approved'].includes((status || '').toLowerCase());
     if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && status && status !== app.status && isRestrictedAdminStatus) {
@@ -3520,7 +3520,7 @@ const updateApplicationDetails = async (req, res, next) => {
         vkyc_url = COALESCE(NULLIF($3, ''), vkyc_url),
         salary_slip_url = COALESCE(NULLIF($4, ''), salary_slip_url),
         pan_card_url = COALESCE(NULLIF($5, ''), pan_card_url),
-        status = CASE WHEN $6::text IS NOT NULL AND $6::text != '' AND EXISTS (SELECT 1 FROM pg_enum JOIN pg_type ON pg_enum.enumtypid = pg_type.oid WHERE pg_type.typname = 'application_status' AND enumlabel = $6::text) THEN $6::text::application_status ELSE status END,
+        status = CASE WHEN $6::text IS NOT NULL AND $6::text != '' THEN $6::text ELSE status END,
         remarks = COALESCE(NULLIF($7, ''), remarks),
         bank_id = COALESCE($8, bank_id),
         product_id = COALESCE($9, product_id),
