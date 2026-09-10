@@ -1246,7 +1246,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           disabled={!canEditRemark}
                           value={bankRefNumber}
                           onChange={(e) => setBankRefNumber(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25))}
-                          placeholder="Enter Alphanumeric Bank App Ref Number"
+                          placeholder="Enter Alphanumeric App Ref Number (up to 25 chars)"
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                         />
                       </div>
