@@ -649,6 +649,8 @@ export default function ManageApplications() {
                   <option value="direct_link">Direct Link</option>
                   <option value="share_link">Share Link</option>
                   <option value="punch_only">Punch Only</option>
+                  <option value="physical_process">Physical Process</option>
+                  <option value="co_browsing">Co-Browsing (HDFC)</option>
                 </select>
               </div>
 

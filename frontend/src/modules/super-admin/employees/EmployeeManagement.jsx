@@ -1225,7 +1225,7 @@ export default function EmployeeManagement() {
                             {emp.full_name}
                           </div>
                           <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, marginTop: '2px' }}>
-                            ID: {emp.employee_id} • {emp.mobile_number}
+                            Code: {emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A')} • {emp.mobile_number}
                           </div>
                         </div>
                         <span 
@@ -1304,7 +1304,7 @@ export default function EmployeeManagement() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
                   <thead>
                     <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textMid, fontWeight: 700 }}>
-                      <th style={{ padding: '14px 20px' }}>EMP ID</th>
+                      <th style={{ padding: '14px 20px' }}>Employee Code</th>
                       <th style={{ padding: '14px 20px' }}>Employee Name</th>
                       <th style={{ padding: '14px 20px' }}>Designation</th>
                       <th style={{ padding: '14px 20px' }}>Manager / TL</th>
@@ -1320,7 +1320,7 @@ export default function EmployeeManagement() {
                       <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</td></tr>
                     ) : employees.map(emp => (
                       <tr key={emp.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                        <td style={{ padding: '14px 20px', fontWeight: 900, color: C.teal }}>{emp.employee_id}</td>
+                        <td style={{ padding: '14px 20px', fontWeight: 900, color: C.teal }}>{emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A')}</td>
                         <td style={{ padding: '14px 20px', fontWeight: 800, color: C.text }}>
                           {emp.full_name}
                           <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 400 }}>{emp.mobile_number}</div>
@@ -1727,7 +1727,7 @@ export default function EmployeeManagement() {
                               </div>
                               <div style={{ overflow: 'hidden' }}>
                                 <div style={{ fontSize: '13px', fontWeight: 900, whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{person.full_name}</div>
-                                <div style={{ fontSize: '10.5px', opacity: isSelected ? 0.9 : 0.7, fontWeight: 700 }}>{person.employee_id}</div>
+                                <div style={{ fontSize: '10.5px', opacity: isSelected ? 0.9 : 0.7, fontWeight: 700 }}>{person.employee_code || person.employee_id || person.emp_code || person.code || 'N/A'}</div>
                                 <div style={{ fontSize: '10.5px', fontWeight: 800, marginTop: '2px', opacity: isSelected ? 0.95 : 0.8 }}>
                                   {memberCount} Direct Members
                                 </div>
@@ -1770,7 +1770,7 @@ export default function EmployeeManagement() {
                                   {roleBadgeLabel}
                                 </span>
                               </div>
-                              <div style={{ fontSize: '11.5px', color: '#64748B', fontWeight: 700 }}>{currentMgr.employee_id}</div>
+                              <div style={{ fontSize: '11.5px', color: '#64748B', fontWeight: 700 }}>{currentMgr.employee_code || currentMgr.employee_id || currentMgr.emp_code || currentMgr.code || 'N/A'}</div>
                             </div>
                           </div>
                           <button
@@ -1905,7 +1905,7 @@ export default function EmployeeManagement() {
                                           <span style={{ background: childBadge.bg, color: childBadge.color, border: `1px solid ${childBadge.border}`, fontSize: '9px', fontWeight: 900, padding: '2px 8px', borderRadius: '10px', textTransform: 'uppercase', marginBottom: '6px' }}>
                                             {childBadge.label}
                                           </span>
-                                          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{child.employee_id}</div>
+                                          <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{child.employee_code || child.employee_id || child.emp_code || child.code || 'N/A'}</div>
                                           <div style={{ fontSize: '10px', color: '#94A3B8', marginTop: '2px' }}>{child.mobile_number || 'N/A'}</div>
 
                                           <button
@@ -1939,7 +1939,7 @@ export default function EmployeeManagement() {
                                                     {childBadge.label}
                                                   </span>
                                                 </div>
-                                                <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{child.employee_id}</div>
+                                                <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700 }}>{child.employee_code || child.employee_id || child.emp_code || child.code || 'N/A'}</div>
                                               </div>
                                             </div>
                                             <button
@@ -2176,7 +2176,7 @@ export default function EmployeeManagement() {
                   {employees.map(emp => (
                     <tr key={emp.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                       <td style={{ padding: '12px 16px', fontWeight: 800 }}>
-                        {emp.full_name} <span style={{ color: C.teal, fontWeight: 900 }}>({emp.employee_id})</span>
+                        {emp.full_name} <span style={{ color: C.teal, fontWeight: 900 }}>({emp.employee_code || emp.employee_id || emp.emp_code || emp.code || 'N/A'})</span>
                       </td>
                       <td style={{ padding: '12px 16px' }}>{emp.designation}</td>
                       <td style={{ padding: '12px 16px', fontWeight: 800 }}>{emp.active_links_count || 0} Products Assigned</td>
@@ -2202,7 +2202,7 @@ export default function EmployeeManagement() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
                 <div>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal, textTransform: 'uppercase' }}>Employee 360° Profile Inspector</span>
-                  <h2 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: C.text }}>{selectedEmp.full_name} ({selectedEmp.employee_id})</h2>
+                  <h2 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: C.text }}>{selectedEmp.full_name} ({selectedEmp.employee_code || selectedEmp.employee_id || selectedEmp.emp_code || selectedEmp.code || 'N/A'})</h2>
                 </div>
                 <button onClick={() => setSelectedEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontWeight: 900 }}>✕</button>
               </div>

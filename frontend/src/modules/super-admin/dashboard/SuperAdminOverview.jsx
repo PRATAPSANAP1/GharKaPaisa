@@ -251,6 +251,10 @@ export default function SuperAdminOverview() {
         return { label: 'Direct Bank', color: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC' };
       case 'physical_process':
         return { label: 'Physical Process', color: '#F59E0B', bg: '#FEF3C7', border: '#FDE68A' };
+      case 'co_browsing':
+      case 'co-browsing':
+      case 'card_assist':
+        return { label: 'Co-Browsing (HDFC)', color: '#E11D48', bg: '#FFE4E6', border: '#FECDD3' };
       default:
         return { label: proc || 'Partner Punch', color: '#6B7280', bg: '#F3F4F6', border: '#E5E7EB' };
     }
@@ -272,6 +276,7 @@ export default function SuperAdminOverview() {
     linkedShareApps: parseInt(overviewData?.applications?.linked_share_count ?? applicationsList.filter(a => a.process_type === 'linked_share').length ?? 0, 10),
     directBankApps: parseInt(overviewData?.applications?.direct_bank_count ?? applicationsList.filter(a => a.process_type === 'direct_bank').length ?? 0, 10),
     physicalProcessApps: parseInt(overviewData?.applications?.physical_process_count ?? applicationsList.filter(a => a.process_type === 'physical_process').length ?? 0, 10),
+    coBrowsingApps: parseInt(overviewData?.applications?.co_browsing_count ?? applicationsList.filter(a => ['co_browsing', 'co-browsing', 'card_assist'].includes(a.process_type) || !a.process_type).length ?? 0, 10),
     invalidProcessApps: parseInt(overviewData?.applications?.invalid_process_count ?? 0, 10),
 
     approvedApps: parseInt(overviewData?.applications?.approved ?? 0, 10),
@@ -291,7 +296,7 @@ export default function SuperAdminOverview() {
   };
 
   // Data Integrity Verification
-  const processSum = stats.leadPunchingApps + stats.linkedShareApps + stats.directBankApps + stats.physicalProcessApps;
+  const processSum = stats.leadPunchingApps + stats.linkedShareApps + stats.directBankApps + stats.physicalProcessApps + stats.coBrowsingApps;
   const isDataIntegrityMismatch = stats.totalApps !== processSum || stats.invalidProcessApps > 0;
 
 
@@ -606,6 +611,10 @@ export default function SuperAdminOverview() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
                   <span>Physical Process</span>
                   <strong style={{ color: '#F59E0B' }}>{stats.physicalProcessApps}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: C.bg, borderRadius: '8px', fontSize: '12px' }}>
+                  <span>Co-Browsing</span>
+                  <strong style={{ color: '#E11D48' }}>{stats.coBrowsingApps}</strong>
                 </div>
                 {stats.invalidProcessApps > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', background: '#FEF2F2', borderRadius: '8px', fontSize: '12px', color: '#EF4444' }}>

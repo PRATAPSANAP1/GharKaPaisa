@@ -73,7 +73,7 @@ export default function MyTeam() {
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
                 <thead>
                   <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textMid, fontWeight: 700 }}>
-                    <th style={{ padding: '14px 20px' }}>EMP ID</th>
+                    <th style={{ padding: '14px 20px' }}>Employee Code</th>
                     <th style={{ padding: '14px 20px' }}>Member Name</th>
                     <th style={{ padding: '14px 20px' }}>Contact</th>
                     <th style={{ padding: '14px 20px' }}>Role</th>
@@ -84,7 +84,7 @@ export default function MyTeam() {
                 <tbody>
                   {team.map(member => (
                     <tr key={member.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '14px 20px', fontWeight: 900, color: C.teal }}>{member.employee_id}</td>
+                      <td style={{ padding: '14px 20px', fontWeight: 900, color: C.teal }}>{member.employee_code || member.employee_id || member.emp_code || member.code || (member.id ? String(member.id).slice(0, 8) : 'N/A')}</td>
                       <td style={{ padding: '14px 20px', fontWeight: 700, color: C.text }}>{member.full_name}</td>
                       <td style={{ padding: '14px 20px', color: C.textMid }}>{member.mobile_number}</td>
                       <td style={{ padding: '14px 20px' }}>{member.designation}</td>

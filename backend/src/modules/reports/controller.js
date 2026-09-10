@@ -15,11 +15,12 @@ const getOverview = async (req, res, next) => {
     let sql = `
       SELECT
         COUNT(*) as total,
-        COUNT(*) FILTER (WHERE LOWER(COALESCE(process_type::text, 'lead_punching')) = 'lead_punching') as lead_punching_count,
-        COUNT(*) FILTER (WHERE LOWER(process_type::text) = 'linked_share') as linked_share_count,
-        COUNT(*) FILTER (WHERE LOWER(process_type::text) = 'direct_bank') as direct_bank_count,
+        COUNT(*) FILTER (WHERE LOWER(process_type::text) IN ('lead_punching', 'partner_punch')) as lead_punching_count,
+        COUNT(*) FILTER (WHERE LOWER(process_type::text) IN ('linked_share', 'link_sharing')) as linked_share_count,
+        COUNT(*) FILTER (WHERE LOWER(process_type::text) IN ('direct_bank', 'customer_sell')) as direct_bank_count,
         COUNT(*) FILTER (WHERE LOWER(process_type::text) = 'physical_process') as physical_process_count,
-        COUNT(*) FILTER (WHERE process_type IS NOT NULL AND LOWER(process_type::text) NOT IN ('lead_punching','linked_share','direct_bank','physical_process')) as invalid_process_count,
+        COUNT(*) FILTER (WHERE process_type IS NULL OR LOWER(process_type::text) IN ('co_browsing', 'co-browsing', 'card_assist', 'cobrowsing')) as co_browsing_count,
+        COUNT(*) FILTER (WHERE process_type IS NOT NULL AND LOWER(process_type::text) NOT IN ('lead_punching','partner_punch','linked_share','link_sharing','direct_bank','customer_sell','physical_process','co_browsing','co-browsing','card_assist','cobrowsing')) as invalid_process_count,
         COUNT(*) FILTER (WHERE LOWER(status::text) IN ('approved','disbursed','commission_released','commission_received')) as approved,
         COUNT(*) FILTER (WHERE LOWER(status::text) IN ('rejected','cancelled','declined')) as rejected,
         COUNT(*) FILTER (WHERE LOWER(status::text) IN ('pending','details_submitted','submitted','under_review','operational_verified')) as pending,
