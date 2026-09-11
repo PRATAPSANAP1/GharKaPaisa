@@ -1690,9 +1690,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                             />
                           </div>
 
-                          {/* 3. QUERYABLE REMARK */}
+                          {/* 3. CUREBAL REMARK */}
                           <div>
-                            <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. QUERYABLE REMARK</label>
+                            <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. CUREBAL REMARK</label>
                             <select
                               disabled={!canEditRemark}
                               value={queryableRemark || 'None'}
@@ -1709,7 +1709,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                             </select>
                           </div>
 
-                          {/* 4. DIGITAL QUERY DETAILS (WHEN QUERYABLE REMARK IS DIGITAL) */}
+                          {/* 4. DIGITAL QUERY DETAILS (WHEN CUREBAL REMARK IS DIGITAL) */}
                           {String(queryableRemark).toLowerCase() === 'digital' && (
                             <div style={{ gridColumn: '1 / -1', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '14px', marginTop: '4px' }}>
                               <div style={{ fontWeight: 800, color: '#1e40af', fontSize: '13px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1731,13 +1731,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                                 </div>
 
                                 <div>
-                                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#1e3a8a', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>QUERYABLE SALES REMARK</label>
+                                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#1e3a8a', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>CUREBAL SALES REMARK</label>
                                   <input
                                     type="text"
                                     disabled={!canEditRemark}
                                     value={queryableSalesRemark}
                                     onChange={(e) => setQueryableSalesRemark(e.target.value)}
-                                    placeholder="Enter Queryable Sales Remark"
+                                    placeholder="Enter Curebal Sales Remark"
                                     style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                                   />
                                 </div>
