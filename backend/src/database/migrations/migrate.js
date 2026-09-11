@@ -4608,7 +4608,10 @@ const migrate = async () => {
     logger.info('Running Task 29 Migration (Physical Application Details Token Column)...');
     await query(`
       ALTER TABLE physical_application_details 
-        ADD COLUMN IF NOT EXISTS token VARCHAR(255);
+        ADD COLUMN IF NOT EXISTS token VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no';
+      ALTER TABLE applications
+        ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no';
     `);
   } catch (task29Err) {
     logger.error('Failed to run Task 29 migration:', task29Err.message);
