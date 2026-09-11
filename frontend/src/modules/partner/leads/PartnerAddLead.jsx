@@ -776,9 +776,25 @@ export default function PartnerAddLead() {
                   `${selectedProd.bank_name || ''} ${selectedProd.name || ''}`.toUpperCase().includes('HDFC') ||
                   `${selectedProd.bank_name || ''} ${selectedProd.name || ''}`.toUpperCase().includes('TATA')
                 );
-                const opts = isHdfcSelected 
+                let opts = isHdfcSelected 
                   ? ALL_PROCESS_OPTIONS.filter(o => ['lead_punching', 'linked_share', 'direct_bank', 'co_browsing'].includes(o.id))
                   : ALL_PROCESS_OPTIONS.filter(o => ['lead_punching', 'linked_share', 'direct_bank', 'physical_process'].includes(o.id));
+
+                const userDesignation = String(user?.designation || user?.hierarchy_level || '').trim().toUpperCase();
+                const userRole = String(user?.role || '').trim().toUpperCase();
+                const isAdministrativeSalesExecutive = 
+                  userDesignation === 'ADMINISTRATIVE SALES EXECUTIVE' ||
+                  userDesignation === 'ADMINISTRATIVE_SALES_EXECUTIVE' ||
+                  userRole === 'ADMINISTRATIVE_SALES_EXECUTIVE';
+                const isPanChecker = 
+                  userDesignation === 'PAN CHECKER' ||
+                  userDesignation === 'PAN_CHECKER' ||
+                  userRole === 'PAN_CHECKER';
+
+                if (isAdministrativeSalesExecutive || isPanChecker) {
+                  opts = opts.filter(o => o.id === 'lead_punching');
+                }
+
                 return opts.map((opt) => {
                   const isSelected = processType === opt.id;
                   return (

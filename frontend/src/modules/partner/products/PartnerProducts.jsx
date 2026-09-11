@@ -1896,34 +1896,45 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                 )}
 
                 {/* 3. Process By (3 Modes) */}
-                <div>
-                  <label style={S.label}>3. Process By *</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
-                    
-                    {/* Mode 1: Lead punching only */}
-                    <label style={{
-                      display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
-                      border: `2px solid ${processType === 'lead_punching' ? C.primary : C.border}`,
-                      background: processType === 'lead_punching' ? `${C.primary}0D` : C.card,
-                      cursor: 'pointer', transition: 'all 0.2s'
-                    }}>
-                      <input
-                        type="radio"
-                        name="processType"
-                        value="lead_punching"
-                        checked={processType === 'lead_punching'}
-                        onChange={(e) => setProcessType(e.target.value)}
-                        style={{ marginTop: '2px', accentColor: C.primary }}
-                      />
-                      <div>
-                        <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
-                          1. Lead punching only
-                        </div>
-                        <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
-                          Records lead directly into your Partner CRM & Applications queue for internal processing.
-                        </div>
-                      </div>
-                    </label>
+                {(() => {
+                  const userDesig = String(user?.designation || user?.hierarchy_level || '').trim().toUpperCase();
+                  const userRole = String(user?.role || '').trim().toUpperCase();
+                  const isSalesExec = userDesig === 'ADMINISTRATIVE SALES EXECUTIVE' || userDesig === 'ADMINISTRATIVE_SALES_EXECUTIVE' || userRole === 'ADMINISTRATIVE_SALES_EXECUTIVE';
+                  const isPanChecker = userDesig === 'PAN CHECKER' || userDesig === 'PAN_CHECKER' || userRole === 'PAN_CHECKER';
+                  const isPunchingOnlyRole = isSalesExec || isPanChecker;
+
+                  return (
+                    <div>
+                      <label style={S.label}>3. Process By *</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+                        
+                        {/* Mode 1: Lead punching only */}
+                        <label style={{
+                          display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderRadius: '12px',
+                          border: `2px solid ${processType === 'lead_punching' ? C.primary : C.border}`,
+                          background: processType === 'lead_punching' ? `${C.primary}0D` : C.card,
+                          cursor: 'pointer', transition: 'all 0.2s'
+                        }}>
+                          <input
+                            type="radio"
+                            name="processType"
+                            value="lead_punching"
+                            checked={processType === 'lead_punching'}
+                            onChange={(e) => setProcessType(e.target.value)}
+                            style={{ marginTop: '2px', accentColor: C.primary }}
+                          />
+                          <div>
+                            <div style={{ fontSize: '13.5px', fontWeight: 800, color: C.text }}>
+                              1. Lead punching only
+                            </div>
+                            <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '2px' }}>
+                              Records lead directly into your Partner CRM & Applications queue for internal processing.
+                            </div>
+                          </div>
+                        </label>
+
+                        {!isPunchingOnlyRole && (
+                          <>
 
                     {/* Mode 2: Linked share */}
                     <label style={{
@@ -2028,9 +2039,12 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                         </div>
                       </label>
                     )}
-
-                  </div>
-                </div>
+                  </>
+                )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
               </div>
 

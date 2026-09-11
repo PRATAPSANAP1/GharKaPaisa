@@ -25,7 +25,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const getTabKey = (tab) => {
     if (tab === 'details' || tab === 'qd') return 'qd';
     if (tab === 'remark1' || tab === 'remark2' || tab === 'remark') return 'remark';
-    if (tab === 'bank' || tab === 'final') return 'final';
+    if (tab === 'bank' || tab === 'final') return 'final';11
     if (tab === 'timeline') return 'timeline';
     return 'qd';
   };

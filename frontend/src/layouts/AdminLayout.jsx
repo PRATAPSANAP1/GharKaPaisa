@@ -163,8 +163,8 @@ const AdminLayout = () => {
               <span>Dashboard</span>
             </NavLink>
 
-            {/* Full Admin Nav Items (Hidden for Backend admins) */}
-            {!isBackend && (
+            {/* Full Admin Nav Items */}
+            {isSuperAdmin && (
               <>
                 {/* Partners */}
                 <NavLink to="/admin/partners" style={navLinkStyle}>
@@ -177,13 +177,14 @@ const AdminLayout = () => {
                   <Icons.profile size={18} />
                   <span>Employees</span>
                 </NavLink>
-
-                {/* HR */}
-                <NavLink to="/hr" style={navLinkStyle}>
-                  <Icons.profile size={18} />
-                  <span>HR</span>
-                </NavLink>
               </>
+            )}
+
+            {isHR && (
+              <NavLink to="/hr" style={navLinkStyle}>
+                <Icons.profile size={18} />
+                <span>HR</span>
+              </NavLink>
             )}
 
             {/* CREDIT CARDS — Only Assigned Banks */}
@@ -270,8 +271,8 @@ const AdminLayout = () => {
               <span>Applications</span>
             </NavLink>
 
-            {/* Full Admin Nav Items (Hidden for Backend admins) */}
-            {!isBackend && (
+            {/* Additional Admin Nav Items */}
+            {!isBackend && !isSalesExec && !isPanChecker && (
               <>
                 {/* Customers */}
                 <NavLink to="/admin/leads" style={navLinkStyle}>
@@ -282,51 +283,59 @@ const AdminLayout = () => {
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
 
                 {/* BANKS MANAGEMENT */}
-                <NavLink to="/admin/banks" style={navLinkStyle}>
-                  <MdAccountBalance size={18} />
-                  <span>Banks</span>
-                </NavLink>
+                {isSuperAdmin && (
+                  <NavLink to="/admin/banks" style={navLinkStyle}>
+                    <MdAccountBalance size={18} />
+                    <span>Banks</span>
+                  </NavLink>
+                )}
 
                 {/* PRODUCTS MANAGEMENT */}
-                <div>
-                  <button onClick={() => setOpenProductsMenu(!openProductsMenu)} style={menuBtnStyle(openProductsMenu)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <MdShoppingBag size={18} />
-                      <span>Products</span>
-                    </div>
-                    {openProductsMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
-                  </button>
+                {isSuperAdmin && (
+                  <div>
+                    <button onClick={() => setOpenProductsMenu(!openProductsMenu)} style={menuBtnStyle(openProductsMenu)}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <MdShoppingBag size={18} />
+                        <span>Products</span>
+                      </div>
+                      {openProductsMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
+                    </button>
 
-                  {openProductsMenu && (
-                    <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-                      <NavLink to="/admin/products/credit_card" style={subLinkStyle}>Credit Cards</NavLink>
-                      <NavLink to="/admin/products/loans" style={subLinkStyle}>Loans</NavLink>
-                      <NavLink to="/admin/products/insurance" style={subLinkStyle}>Insurance</NavLink>
-                      <NavLink to="/admin/products/savings_account" style={subLinkStyle}>Savings Account</NavLink>
-                      <NavLink to="/admin/products/current_account" style={subLinkStyle}>Current Account</NavLink>
-                      <NavLink to="/admin/products/fixed_deposit" style={subLinkStyle}>Fixed Deposit</NavLink>
-                      <NavLink to="/admin/products/demat_account" style={subLinkStyle}>DEMAT</NavLink>
-                      <NavLink to="/admin/products/upi_credit" style={subLinkStyle}>UPI Credit</NavLink>
-                      <NavLink to="/admin/products/fastag" style={subLinkStyle}>FASTag</NavLink>
-                      <NavLink to="/admin/products/recharge" style={subLinkStyle}>Recharge & Bills</NavLink>
-                      <NavLink to="/admin/products/other" style={subLinkStyle}>Other Products</NavLink>
-                    </div>
-                  )}
-                </div>
+                    {openProductsMenu && (
+                      <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+                        <NavLink to="/admin/products/credit_card" style={subLinkStyle}>Credit Cards</NavLink>
+                        <NavLink to="/admin/products/loans" style={subLinkStyle}>Loans</NavLink>
+                        <NavLink to="/admin/products/insurance" style={subLinkStyle}>Insurance</NavLink>
+                        <NavLink to="/admin/products/savings_account" style={subLinkStyle}>Savings Account</NavLink>
+                        <NavLink to="/admin/products/current_account" style={subLinkStyle}>Current Account</NavLink>
+                        <NavLink to="/admin/products/fixed_deposit" style={subLinkStyle}>Fixed Deposit</NavLink>
+                        <NavLink to="/admin/products/demat_account" style={subLinkStyle}>DEMAT</NavLink>
+                        <NavLink to="/admin/products/upi_credit" style={subLinkStyle}>UPI Credit</NavLink>
+                        <NavLink to="/admin/products/fastag" style={subLinkStyle}>FASTag</NavLink>
+                        <NavLink to="/admin/products/recharge" style={subLinkStyle}>Recharge & Bills</NavLink>
+                        <NavLink to="/admin/products/other" style={subLinkStyle}>Other Products</NavLink>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '6px 0' }} />
 
                 {/* Wallet & Withdrawals */}
-                <NavLink to="/admin/withdrawals" style={navLinkStyle}>
-                  <Icons.wallet size={18} />
-                  <span>Wallet & Payouts</span>
-                </NavLink>
+                {(isSuperAdmin || (userRole === 'ADMIN' && !isOpHead)) && (
+                  <NavLink to="/admin/withdrawals" style={navLinkStyle}>
+                    <Icons.wallet size={18} />
+                    <span>Wallet & Payouts</span>
+                  </NavLink>
+                )}
 
                 {/* Commissions */}
-                <NavLink to="/admin/commissions" style={navLinkStyle}>
-                  <Icons.trending size={18} />
-                  <span>Commissions</span>
-                </NavLink>
+                {(isSuperAdmin || (userRole === 'ADMIN' && !isOpHead)) && (
+                  <NavLink to="/admin/commissions" style={navLinkStyle}>
+                    <Icons.trending size={18} />
+                    <span>Commissions</span>
+                  </NavLink>
+                )}
 
                 {/* Reports & Analytics */}
                 <NavLink to="/admin/reports" style={navLinkStyle}>
@@ -335,10 +344,12 @@ const AdminLayout = () => {
                 </NavLink>
 
                 {/* Settings */}
-                <NavLink to="/admin/sections" style={navLinkStyle}>
-                  <MdSettings size={18} />
-                  <span>Settings</span>
-                </NavLink>
+                {isSuperAdmin && (
+                  <NavLink to="/admin/sections" style={navLinkStyle}>
+                    <MdSettings size={18} />
+                    <span>Settings</span>
+                  </NavLink>
+                )}
               </>
             )}
           </>
