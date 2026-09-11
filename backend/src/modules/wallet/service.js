@@ -625,6 +625,22 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
 
     let txnIdToReturn = meta.txn_id || null;
 
+    // Unify decision gate with commission_decisions table if txn_id is provided
+    if (meta.txn_id) {
+      const { rows: [decisionRow] } = await client.query(`
+        INSERT INTO commission_decisions (commission_ledger_id, decision, decided_by, remarks)
+        VALUES ($1, 'RELEASED', $2, $3)
+        ON CONFLICT (commission_ledger_id) DO NOTHING
+        RETURNING *
+      `, [meta.txn_id, meta.processed_by || null, meta.description || 'Automated Hold Release']);
+
+      if (!decisionRow) {
+        if (isInternalTxn) await client.query('COMMIT');
+        logger.info(`releaseHold: Commission ledger ${meta.txn_id} already decided in commission_decisions gate. Skipping.`);
+        return { alreadyReleased: true, id: meta.txn_id, net_amount: numAmount, tds: 0 };
+      }
+    }
+
     // Append-Only Financial Event with Idempotency Guard (Zero UPDATE on historical rows)
     const refNum = meta.reference_id || (meta.txn_id ? String(meta.txn_id) : null);
 

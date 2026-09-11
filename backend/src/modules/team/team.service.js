@@ -955,13 +955,27 @@ async function processTeamOverrideCommission(applicationId, childPartnerId, base
       );
       if (existing.length > 0) continue;
 
-      // 1. Insert into team_commissions table
+      // Ensure DB unique index exists
       await query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS ux_team_commissions_app_parent_level 
+         ON team_commissions (application_id, parent_partner_id, level)`
+      ).catch(() => {});
+
+      // 1. Insert into team_commissions table with ON CONFLICT DO NOTHING
+      const { rows: insertedComm } = await query(
         `INSERT INTO team_commissions (
            parent_partner_id, child_partner_id, application_id, amount, level, status
-         ) VALUES ($1, $2, $3, $4, $5, 'paid')`,
+         ) VALUES ($1, $2, $3, $4, $5, 'paid')
+         ON CONFLICT (application_id, parent_partner_id, level) DO NOTHING
+         RETURNING id`,
         [parentPartnerId, childPartnerId, applicationId, overrideAmount, levelDepth]
       );
+
+      // If no row was inserted, skip to prevent double payout under concurrent calls
+      if (!insertedComm || insertedComm.length === 0) {
+        logger.info(`Skipping duplicate team override commission for app ${applicationId}, parent ${parentPartnerId}, level ${levelDepth}`);
+        continue;
+      }
 
       // 2. Credit parent partner's wallet
       await query(

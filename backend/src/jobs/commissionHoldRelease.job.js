@@ -23,10 +23,11 @@ const processCommissionHoldReleases = async () => {
   logger.info('Running Commission Hold Release Job...');
   try {
     await ensureCommissionReleaseDaysColumn();
-    // Find all wallet_ledger entries pending approval older than 7 days
+    // Find all wallet_ledger entries pending approval older than maturity days
     const { rows: pendingHolds } = await query(`
       SELECT l.id, l.partner_id, l.application_id, l.credit, l.transaction_type, l.created_at,
-             p.category::text as product_category
+             p.category::text as product_category,
+             COALESCE((to_jsonb(p)->>'commission_release_days')::int, CASE WHEN COALESCE(p.category::text, 'credit_card') IN ('credit_card', 'insurance', 'health_insurance', 'life_insurance', 'general_insurance') THEN 7 ELSE 30 END) as release_days
       FROM wallet_ledger l
       LEFT JOIN applications a ON a.id = l.application_id
       LEFT JOIN products p ON p.id = a.product_id
@@ -51,7 +52,7 @@ const processCommissionHoldReleases = async () => {
           txn_id: hold.id,
           application_id: hold.application_id,
           reference_type: 'automated_hold_release',
-          description: `Automated 7-day hold release for ${hold.product_category || 'commission'}`
+          description: `Automated ${hold.release_days || 7}-day hold release for ${hold.product_category || 'commission'}`
         });
         successCount++;
       } catch (err) {

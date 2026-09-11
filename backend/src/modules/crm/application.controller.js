@@ -3501,6 +3501,7 @@ const updateApplicationDetails = async (req, res, next) => {
 
     const userRole = (req.user?.role || '').toUpperCase();
     const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
     const isOpsOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'EMPLOYEE', 'TELECALLER', 'SALES_EXECUTIVE', 'MANAGER', 'TEAM_LEADER', 'FIELD_OPERATOR', 'PARTNER'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || !!req.user;
 
     const isRestrictedAdminStatus = ['approved', 'rejected', 'disbursed', 'commission_released', 'super_admin_approved'].includes((status || '').toLowerCase());
