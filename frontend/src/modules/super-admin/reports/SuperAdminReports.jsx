@@ -248,13 +248,14 @@ export default function SuperAdminReports() {
     }
   ];
 
-  // Top Performing Employees (Dynamic from backend)
+  // Top Performing Partners & Employees (Dynamic from backend)
   const topEmployeesList = Array.isArray(topPerformersData) && topPerformersData.length > 0
     ? topPerformersData.map((p, idx) => ({
-        id: p.partner_code || p.employee_id || `AG${10019 + idx}`,
+        id: p.partner_code || p.code || p.employee_id || `AG${10019 + idx}`,
         rank: idx + 1,
-        name: `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.name || p.full_name || 'Employee',
+        name: p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.name || 'Performer',
         role: p.designation || p.role || (idx % 2 === 0 ? 'Team Leader' : 'Telecaller'),
+        performerType: p.performer_type || (p.partner_code?.startsWith('AG') ? 'PARTNER' : 'EMPLOYEE'),
         avatarBg: ['#3B82F6', '#EC4899', '#8B5CF6', '#10B981', '#F59E0B'][idx % 5],
         applications: parseInt(p.total_apps || p.applications_count || 0, 10),
         approved: parseInt(p.approved || p.approved_count || 0, 10),
@@ -658,21 +659,21 @@ export default function SuperAdminReports() {
 
       </div>
 
-      {/* 5. 🏆 TOP PERFORMING EMPLOYEES TABLE */}
+      {/* 5. 🏆 TOP PERFORMING PARTNERS & EMPLOYEES TABLE */}
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
           <div>
             <h3 style={{ fontSize: '16px', fontWeight: 900, margin: 0, color: C.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <FaTrophy style={{ color: '#F59E0B' }} /> Top Performing Employees
+              <FaTrophy style={{ color: '#F59E0B' }} /> Top Performing Partners & Employees
             </h3>
-            <p style={{ fontSize: '12px', color: C.textMid, margin: '2px 0 0 0' }}>Leaderboard tracking conversions across Manager → TL → TC Hierarchy</p>
+            <p style={{ fontSize: '12px', color: C.textMid, margin: '2px 0 0 0' }}>Leaderboard tracking performance across Partners and Employee Hierarchy (Manager → TL → TC)</p>
           </div>
 
           <button 
-            onClick={() => setActiveReportModal(detailedReportsList[0])}
+            onClick={() => setActiveReportModal(detailedReportsList[1] || detailedReportsList[0])}
             style={{ background: 'transparent', border: 'none', color: C.teal, fontWeight: 800, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
           >
-            View All Employees Report <FaChevronRight size={10} />
+            View All Performance Reports <FaChevronRight size={10} />
           </button>
         </div>
 
@@ -681,11 +682,12 @@ export default function SuperAdminReports() {
             <thead>
               <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, textAlign: 'left', color: C.textMid, fontSize: '11px', textTransform: 'uppercase' }}>
                 <th style={{ padding: '10px 12px' }}>Rank</th>
-                <th style={{ padding: '10px 12px' }}>Employee</th>
-                <th style={{ padding: '10px 12px' }}>Role</th>
+                <th style={{ padding: '10px 12px' }}>Partner / Employee</th>
+                <th style={{ padding: '10px 12px' }}>Type</th>
+                <th style={{ padding: '10px 12px' }}>Role / Designation</th>
                 <th style={{ padding: '10px 12px', textAlign: 'center' }}>Applications</th>
                 <th style={{ padding: '10px 12px', textAlign: 'center' }}>Approved</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Incentives Earned</th>
+                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Incentives / Commission</th>
               </tr>
             </thead>
             <tbody>
@@ -704,6 +706,16 @@ export default function SuperAdminReports() {
                         <span style={{ fontSize: '10.5px', color: C.textMid, fontWeight: 700 }}>{e.id}</span>
                       </div>
                     </div>
+                  </td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <span style={{ 
+                      background: e.performerType === 'PARTNER' ? '#EFF6FF' : '#F0FDF4', 
+                      color: e.performerType === 'PARTNER' ? '#1D4ED8' : '#15803D',
+                      border: `1px solid ${e.performerType === 'PARTNER' ? '#BFDBFE' : '#BBF7D0'}`, 
+                      padding: '3px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800 
+                    }}>
+                      {e.performerType === 'PARTNER' ? 'Partner' : 'Employee'}
+                    </span>
                   </td>
                   <td style={{ padding: '10px 12px' }}>
                     <span style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>

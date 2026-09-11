@@ -159,25 +159,59 @@ const applicationsByProduct = async (req, res, next) => {
   }
 };
 
-// GET /reports/top-partners
+// GET /reports/top-partners — Combined Partner & Employee Performance
 const topPartners = async (req, res, next) => {
   try {
     const { limit = 10 } = req.query;
     const { rows } = await query(`
       SELECT 
-        COALESCE(ap.partner_code, emp.employee_id, 'AG' || SUBSTRING(ap.id::text, 1, 5)) as partner_code,
-        ap.first_name, 
-        ap.last_name,
-        COALESCE(emp.designation, u.designation, 'Team Leader') as designation,
-        COUNT(a.id) as total_apps,
-        COUNT(a.id) FILTER (WHERE LOWER(a.status::text) IN ('approved','disbursed','commission_released','commission_received','super_admin_approved')) as approved,
-        COALESCE(SUM(a.commission_amount) FILTER (WHERE LOWER(a.status::text) IN ('approved','disbursed','commission_released','commission_received','super_admin_approved')), 0) as commission_earned
-      FROM partner_profiles ap
-      LEFT JOIN users u ON u.id = ap.user_id
-      LEFT JOIN employees emp ON emp.user_id = u.id
-      LEFT JOIN applications a ON a.partner_id = ap.id OR a.employee_id = emp.id
-      WHERE (ap.kyc_status = 'approved' OR ap.kyc_status IS NULL OR u.status = 'active')
-      GROUP BY ap.id, ap.partner_code, ap.first_name, ap.last_name, emp.employee_id, emp.designation, u.designation
+        code as partner_code,
+        first_name,
+        last_name,
+        name as full_name,
+        performer_type,
+        designation,
+        total_apps,
+        approved,
+        commission_earned
+      FROM (
+        -- 1. Partners
+        SELECT 
+          ap.partner_code as code,
+          ap.first_name,
+          ap.last_name,
+          CONCAT(ap.first_name, ' ', ap.last_name) as name,
+          'PARTNER' as performer_type,
+          COALESCE(u.designation, 'Partner') as designation,
+          COUNT(a.id)::int as total_apps,
+          COUNT(a.id) FILTER (WHERE LOWER(COALESCE(a.status::text, '')) IN ('approved','disbursed','commission_released','commission_received','super_admin_approved'))::int as approved,
+          COALESCE(SUM(a.commission_amount) FILTER (WHERE LOWER(COALESCE(a.status::text, '')) IN ('approved','disbursed','commission_released','commission_received','super_admin_approved')), 0)::float as commission_earned
+        FROM partner_profiles ap
+        LEFT JOIN users u ON u.id = ap.user_id
+        LEFT JOIN applications a ON a.partner_id = ap.id
+        WHERE (ap.kyc_status = 'approved' OR ap.kyc_status IS NULL OR u.status = 'active')
+        GROUP BY ap.id, ap.partner_code, ap.first_name, ap.last_name, u.designation
+
+        UNION ALL
+
+        -- 2. Employees
+        SELECT 
+          e.employee_id as code,
+          SPLIT_PART(e.full_name, ' ', 1) as first_name,
+          SUBSTRING(e.full_name FROM POSITION(' ' IN e.full_name) + 1) as last_name,
+          e.full_name as name,
+          'EMPLOYEE' as performer_type,
+          COALESCE(e.designation, u.designation, 'Team Leader') as designation,
+          COUNT(a.id)::int as total_apps,
+          COUNT(a.id) FILTER (WHERE LOWER(COALESCE(a.status::text, '')) IN ('approved','disbursed','commission_released','commission_received','super_admin_approved'))::int as approved,
+          COALESCE(SUM(a.commission_amount) FILTER (WHERE LOWER(COALESCE(a.status::text, '')) IN ('approved','disbursed','commission_released','commission_received','super_admin_approved')), 0)::float as commission_earned
+        FROM employees e
+        LEFT JOIN users u ON u.id = e.user_id
+        LEFT JOIN applications a ON a.employee_id = e.id
+        WHERE (e.employee_status = 'ACTIVE' OR u.status = 'active' OR e.employee_status IS NULL)
+        AND (e.employee_id IS NULL OR e.employee_id NOT IN (SELECT partner_code FROM partner_profiles WHERE partner_code IS NOT NULL))
+        GROUP BY e.id, e.employee_id, e.full_name, e.designation, u.designation
+      ) combined_performers
       ORDER BY total_apps DESC, commission_earned DESC
       LIMIT $1
     `, [parseInt(limit)]);
