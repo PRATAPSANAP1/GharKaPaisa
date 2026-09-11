@@ -766,6 +766,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       if (!bankRemark) setBankRemark(selectedVal);
                       if (selectedVal === 'PAN OK' || selectedVal === 'NO RECORD FOUND') {
                         setPanCheck('yes');
+                      } else {
+                        setPanCheck('no');
                       }
                     }}
                     style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, background: '#fff' }}
@@ -776,17 +778,6 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         {opt.label}
                       </option>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>PAN CHECK *</label>
-                  <select
-                    value={panCheck}
-                    onChange={(e) => setPanCheck(e.target.value)}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800, background: '#fff' }}
-                  >
-                    <option value="no">No</option>
-                    <option value="yes">Yes</option>
                   </select>
                 </div>
                 <div>

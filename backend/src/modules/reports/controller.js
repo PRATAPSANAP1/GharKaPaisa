@@ -162,8 +162,28 @@ const applicationsByProduct = async (req, res, next) => {
 // GET /reports/top-partners — Combined Partner & Employee Performance
 const topPartners = async (req, res, next) => {
   try {
-    const { limit = 10 } = req.query;
-    const { rows } = await query(`
+    const { limit = 10, from_date, to_date, search } = req.query;
+
+    let dateFilterSql = '';
+    const params = [];
+    let pIdx = 1;
+
+    if (from_date && to_date) {
+      dateFilterSql = ` AND a.created_at BETWEEN $${pIdx++} AND $${pIdx++}`;
+      params.push(from_date, to_date + ' 23:59:59');
+    }
+
+    let searchSql = '';
+    if (search && String(search).trim()) {
+      searchSql = ` WHERE (LOWER(name) LIKE $${pIdx} OR LOWER(code) LIKE $${pIdx} OR LOWER(designation) LIKE $${pIdx})`;
+      params.push(`%${String(search).trim().toLowerCase()}%`);
+      pIdx++;
+    }
+
+    const limitVal = parseInt(limit, 10) || 100;
+    params.push(limitVal);
+
+    const querySql = `
       SELECT 
         code as partner_code,
         first_name,
@@ -188,7 +208,7 @@ const topPartners = async (req, res, next) => {
           COALESCE(SUM(a.commission_amount) FILTER (WHERE LOWER(COALESCE(a.status::text, '')) IN ('approved','disbursed','commission_released','commission_received','super_admin_approved')), 0)::float as commission_earned
         FROM partner_profiles ap
         LEFT JOIN users u ON u.id = ap.user_id
-        LEFT JOIN applications a ON a.partner_id = ap.id
+        LEFT JOIN applications a ON a.partner_id = ap.id ${dateFilterSql}
         WHERE (ap.kyc_status = 'approved' OR ap.kyc_status IS NULL OR u.status = 'active')
         GROUP BY ap.id, ap.partner_code, ap.first_name, ap.last_name, u.designation
 
@@ -207,14 +227,17 @@ const topPartners = async (req, res, next) => {
           COALESCE(SUM(a.commission_amount) FILTER (WHERE LOWER(COALESCE(a.status::text, '')) IN ('approved','disbursed','commission_released','commission_received','super_admin_approved')), 0)::float as commission_earned
         FROM employees e
         LEFT JOIN users u ON u.id = e.user_id
-        LEFT JOIN applications a ON a.employee_id = e.id
+        LEFT JOIN applications a ON a.employee_id = e.id ${dateFilterSql}
         WHERE (e.employee_status = 'ACTIVE' OR u.status = 'active' OR e.employee_status IS NULL)
         AND (e.employee_id IS NULL OR e.employee_id NOT IN (SELECT partner_code FROM partner_profiles WHERE partner_code IS NOT NULL))
         GROUP BY e.id, e.employee_id, e.full_name, e.designation, u.designation
       ) combined_performers
+      ${searchSql}
       ORDER BY total_apps DESC, commission_earned DESC
-      LIMIT $1
-    `, [parseInt(limit)]);
+      LIMIT $${pIdx}
+    `;
+
+    const { rows } = await query(querySql, params);
     return success(res, rows);
   } catch (err) {
     next(err);

@@ -31,8 +31,9 @@ export default function SuperAdminReports() {
   const [showExportModal, setShowExportModal] = useState(false);
 
   // Active Detailed Report Inspection State
+  const todayIsoStr = new Date().toISOString().split('T')[0];
   const [activeReportModal, setActiveReportModal] = useState(null); // null or { id, title, type, description }
-  const [modalFilterDates, setModalFilterDates] = useState({ from: "2026-08-01", to: "2026-08-31" });
+  const [modalFilterDates, setModalFilterDates] = useState({ from: "2026-08-01", to: todayIsoStr });
   const [modalSearchQuery, setModalSearchQuery] = useState("");
   const [modalStatusFilter, setModalStatusFilter] = useState("ALL");
 
@@ -59,7 +60,7 @@ export default function SuperAdminReports() {
         api.get(`/reports/overview${queryParams}`),
         api.get('/reports/applications-by-product'),
         api.get('/reports/daily-analytics?days=14'),
-        api.get('/reports/top-partners?limit=5')
+        api.get('/reports/top-partners?limit=10')
       ]);
 
       if (overviewRes.status === 'fulfilled' && overviewRes.value.data?.success) {
@@ -90,21 +91,39 @@ export default function SuperAdminReports() {
     setModalLoading(true);
     try {
       let endpoint = '/reports/applications';
-      if (reportType === 'EMPLOYEE') endpoint = '/employees';
+      if (reportType === 'EMPLOYEE') endpoint = '/reports/top-partners?limit=1000';
       else if (reportType === 'SALES_REPORT') endpoint = '/employees/sales-reports/super-admin';
       else if (reportType === 'INCENTIVE') endpoint = '/reports/commission';
       else if (reportType === 'PAYOUT') endpoint = '/reports/wallet';
       else if (reportType === 'PRODUCT') endpoint = '/reports/products';
       
-      const res = await api.get(`${endpoint}?from_date=${modalFilterDates.from}&to_date=${modalFilterDates.to}&search=${modalSearchQuery}&status=${modalStatusFilter}`);
-      if (res.data?.success && Array.isArray(res.data?.data)) {
-        setModalTableData(res.data.data);
+      const delimiter = endpoint.includes('?') ? '&' : '?';
+      const res = await api.get(`${endpoint}${delimiter}from_date=${modalFilterDates.from}&to_date=${modalFilterDates.to}&search=${encodeURIComponent(modalSearchQuery)}&status=${modalStatusFilter}`);
+      
+      let list = [];
+      const resData = res.data?.data;
+      if (Array.isArray(resData)) {
+        list = resData;
+      } else if (resData && typeof resData === 'object') {
+        if (Array.isArray(resData.employees)) list = resData.employees;
+        else if (Array.isArray(resData.applications)) list = resData.applications;
+        else if (Array.isArray(resData.reports)) list = resData.reports;
+        else if (Array.isArray(resData.rows)) list = resData.rows;
+        else if (Array.isArray(resData.data)) list = resData.data;
+      }
+
+      if (reportType === 'EMPLOYEE' && list.length === 0 && topPerformersData.length > 0) {
+        list = topPerformersData;
+      }
+
+      setModalTableData(list);
+    } catch (err) {
+      console.warn("Modal backend query fallback:", err);
+      if (reportType === 'EMPLOYEE' && topPerformersData.length > 0) {
+        setModalTableData(topPerformersData);
       } else {
         setModalTableData([]);
       }
-    } catch (err) {
-      console.warn("Modal backend query fallback:", err);
-      setModalTableData([]);
     } finally {
       setModalLoading(false);
     }
@@ -276,29 +295,55 @@ export default function SuperAdminReports() {
     { id: "channel_report", title: "Channel Report", description: "Acquisition breakdown across Punch Only, Share Link, Direct Link, Employee & Partner.", icon: <FaUserTie />, type: "CHANNEL" }
   ];
 
-  // Export Data to CSV function
-  const handleDownloadReportCSV = (reportTitle) => {
-    const filename = `${reportTitle.toLowerCase().replace(/\s+/g, '_')}_${modalFilterDates.from}_to_${modalFilterDates.to}.csv`;
+  // Export Data to CSV / Excel function
+  const handleDownloadReportCSV = (reportTitle, format = 'csv') => {
+    const ext = format === 'excel' ? 'xlsx' : 'csv';
+    const filename = `${reportTitle.toLowerCase().replace(/\s+/g, '_')}_${modalFilterDates.from}_to_${modalFilterDates.to}.${ext}`;
     const rowsToExport = modalTableData;
+    const isEmployeeType = activeReportModal?.type === 'EMPLOYEE';
+
+    const headers = isEmployeeType
+      ? ["Rank", "Code / ID", "Name", "Type", "Role / Designation", "Applications", "Approved", "Incentives Earned (INR)"]
+      : ["Record ID", "Employee / Ref", "Category / Product", "Status", "Amount", "Date"];
+
+    const dataRows = rowsToExport.map((r, idx) => {
+      if (isEmployeeType) {
+        const name = r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.name || 'Performer';
+        const code = r.partner_code || r.code || r.employee_id || `AG${10019 + idx}`;
+        const pType = r.performer_type || (code.startsWith('AG') ? 'PARTNER' : 'EMPLOYEE');
+        return [
+          idx + 1,
+          `"${code}"`,
+          `"${name.replace(/"/g, '""')}"`,
+          `"${pType}"`,
+          `"${r.designation || r.role || 'Team Leader'}"`,
+          parseInt(r.total_apps || r.applications_count || r.applications || 0, 10),
+          parseInt(r.approved || r.approved_count || 0, 10),
+          parseFloat(r.commission_earned || r.total_incentives || 0)
+        ];
+      }
+      return [
+        `"${r.app_number || r.id || `REC-${1001 + idx}`}"`,
+        `"${(r.customer_name || r.name || r.full_name || '').replace(/"/g, '""')}"`,
+        `"${(r.product_name || r.category || '').replace(/"/g, '""')}"`,
+        `"${(r.status || 'APPROVED').toUpperCase()}"`,
+        parseFloat(r.approved_amount || r.commission_amount || r.amount || 0),
+        `"${r.application_date ? new Date(r.application_date).toISOString().split('T')[0] : (r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])}"`
+      ];
+    });
 
     const sampleData = [
       ["Report Name", reportTitle],
       ["Date Range", `${modalFilterDates.from} to ${modalFilterDates.to}`],
       ["Generated On", new Date().toLocaleString()],
       [],
-      ["Record ID", "Employee / Ref", "Category", "Status", "Amount", "Date"],
-      ...rowsToExport.map(r => [
-        r.id || r.app_number || 'REC-100',
-        r.ref || r.customer_name || r.name || 'Employee Ref',
-        r.cat || r.product_name || 'Financial Product',
-        r.status || 'APPROVED',
-        `₹${r.amount || r.approved_amount || r.commission_amount || 0}`,
-        r.date || r.application_date || new Date().toISOString().split('T')[0]
-      ])
+      headers,
+      ...dataRows
     ];
 
     const csvContent = sampleData.map(e => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const mimeType = format === 'excel' ? 'application/vnd.ms-excel' : 'text/csv;charset=utf-8;';
+    const blob = new Blob([csvContent], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -819,10 +864,10 @@ export default function SuperAdminReports() {
                 {modalLoading ? 'Loading records...' : `Filtered Results (Showing ${modalTableData.length} Records)`}
               </span>
               <div style={{ display: 'flex', gap: '6px' }}>
-                <button onClick={() => handleDownloadReportCSV(activeReportModal.title)} style={{ background: '#059669', color: '#FFF', border: 'none', padding: '7px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <button onClick={() => handleDownloadReportCSV(activeReportModal.title, 'csv')} style={{ background: '#059669', color: '#FFF', border: 'none', padding: '7px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <FaFileCsv /> Download CSV
                 </button>
-                <button onClick={() => handleDownloadReportCSV(activeReportModal.title)} style={{ background: '#2563EB', color: '#FFF', border: 'none', padding: '7px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <button onClick={() => handleDownloadReportCSV(activeReportModal.title, 'excel')} style={{ background: '#2563EB', color: '#FFF', border: 'none', padding: '7px 12px', borderRadius: '8px', fontWeight: 800, fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <FaFileExcel /> Download Excel
                 </button>
               </div>
@@ -830,34 +875,109 @@ export default function SuperAdminReports() {
 
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                <thead>
-                  <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, textAlign: 'left', color: C.textMid, fontSize: '11px' }}>
-                    <th style={{ padding: '8px 10px' }}>RECORD ID</th>
-                    <th style={{ padding: '8px 10px' }}>EMPLOYEE / REF</th>
-                    <th style={{ padding: '8px 10px' }}>CATEGORY / PRODUCT</th>
-                    <th style={{ padding: '8px 10px' }}>STATUS</th>
-                    <th style={{ padding: '8px 10px', textAlign: 'right' }}>AMOUNT</th>
-                    <th style={{ padding: '8px 10px' }}>TIMESTAMP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {modalTableData.length > 0 ? modalTableData.map((r, i) => (
-                    <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '8px 10px', fontWeight: 800 }}>{r.app_number || r.id || `REC-${1001 + i}`}</td>
-                      <td style={{ padding: '8px 10px', fontWeight: 700 }}>{r.customer_name || r.name || r.full_name || 'Employee / Ref'}</td>
-                      <td style={{ padding: '8px 10px' }}>{r.product_name || r.category || 'Financial Product'}</td>
-                      <td style={{ padding: '8px 10px' }}><span style={{ color: r.status === 'REJECTED' ? '#EF4444' : '#10B981', fontWeight: 800 }}>{(r.status || 'APPROVED').toUpperCase()}</span></td>
-                      <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800 }}>₹{Number(r.approved_amount || r.commission_amount || r.amount || 0).toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '8px 10px', color: C.textMid }}>{r.application_date ? new Date(r.application_date).toLocaleDateString() : new Date().toLocaleDateString()}</td>
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
-                        {modalLoading ? 'Loading report data from database...' : 'No matching records found for the selected date range and filters.'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
+                {activeReportModal?.type === 'EMPLOYEE' ? (
+                  <>
+                    <thead>
+                      <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, textAlign: 'left', color: C.textMid, fontSize: '11px', textTransform: 'uppercase' }}>
+                        <th style={{ padding: '10px 12px' }}>Rank</th>
+                        <th style={{ padding: '10px 12px' }}>Partner / Employee</th>
+                        <th style={{ padding: '10px 12px' }}>Type</th>
+                        <th style={{ padding: '10px 12px' }}>Role / Designation</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center' }}>Applications</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center' }}>Approved</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>Incentives / Commission</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalTableData.length > 0 ? (
+                        modalTableData.map((e, idx) => {
+                          const name = e.full_name || `${e.first_name || ''} ${e.last_name || ''}`.trim() || e.name || 'Performer';
+                          const code = e.partner_code || e.code || e.employee_id || `AG${10019 + idx}`;
+                          const rank = idx + 1;
+                          const perfType = e.performer_type || (code.startsWith('AG') ? 'PARTNER' : 'EMPLOYEE');
+                          const avatarBg = ['#3B82F6', '#EC4899', '#8B5CF6', '#10B981', '#F59E0B'][idx % 5];
+                          const totalApps = parseInt(e.total_apps || e.applications_count || e.applications || 0, 10);
+                          const approvedApps = parseInt(e.approved || e.approved_count || 0, 10);
+                          const incentivesEarned = Number(e.commission_earned || e.total_incentives || 0).toLocaleString('en-IN');
+
+                          return (
+                            <tr key={code + idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                              <td style={{ padding: '10px 12px', fontWeight: 900 }}>
+                                {rank === 1 ? '🥇 1' : (rank === 2 ? '🥈 2' : (rank === 3 ? '🥉 3' : `#${rank}`))}
+                              </td>
+                              <td style={{ padding: '10px 12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: avatarBg, color: '#FFF', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+                                    {name.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <strong style={{ display: 'block', color: C.text }}>{name}</strong>
+                                    <span style={{ fontSize: '10.5px', color: C.textMid, fontWeight: 700 }}>{code}</span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={{ padding: '10px 12px' }}>
+                                <span style={{ 
+                                  background: perfType === 'PARTNER' ? '#EFF6FF' : '#F0FDF4', 
+                                  color: perfType === 'PARTNER' ? '#1D4ED8' : '#15803D',
+                                  border: `1px solid ${perfType === 'PARTNER' ? '#BFDBFE' : '#BBF7D0'}`, 
+                                  padding: '3px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 800 
+                                }}>
+                                  {perfType === 'PARTNER' ? 'Partner' : 'Employee'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '10px 12px' }}>
+                                <span style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
+                                  {e.designation || e.role || 'Team Leader'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 800 }}>{totalApps}</td>
+                              <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 800, color: '#10B981' }}>{approvedApps}</td>
+                              <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#059669' }}>₹{incentivesEarned}</td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
+                            {modalLoading ? 'Loading performance report data...' : 'No matching records found for the selected date range and filters.'}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </>
+                ) : (
+                  <>
+                    <thead>
+                      <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, textAlign: 'left', color: C.textMid, fontSize: '11px' }}>
+                        <th style={{ padding: '8px 10px' }}>RECORD ID</th>
+                        <th style={{ padding: '8px 10px' }}>EMPLOYEE / REF</th>
+                        <th style={{ padding: '8px 10px' }}>CATEGORY / PRODUCT</th>
+                        <th style={{ padding: '8px 10px' }}>STATUS</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'right' }}>AMOUNT</th>
+                        <th style={{ padding: '8px 10px' }}>TIMESTAMP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {modalTableData.length > 0 ? modalTableData.map((r, i) => (
+                        <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '8px 10px', fontWeight: 800 }}>{r.app_number || r.id || `REC-${1001 + i}`}</td>
+                          <td style={{ padding: '8px 10px', fontWeight: 700 }}>{r.customer_name || r.name || r.full_name || 'Employee / Ref'}</td>
+                          <td style={{ padding: '8px 10px' }}>{r.product_name || r.category || 'Financial Product'}</td>
+                          <td style={{ padding: '8px 10px' }}><span style={{ color: (r.status || '').toLowerCase().includes('reject') ? '#EF4444' : '#10B981', fontWeight: 800 }}>{(r.status || 'APPROVED').toUpperCase()}</span></td>
+                          <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 800 }}>₹{Number(r.approved_amount || r.commission_amount || r.amount || 0).toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '8px 10px', color: C.textMid }}>{r.application_date ? new Date(r.application_date).toLocaleDateString() : (r.created_at ? new Date(r.created_at).toLocaleDateString() : new Date().toLocaleDateString())}</td>
+                        </tr>
+                      )) : (
+                        <tr>
+                          <td colSpan={6} style={{ padding: '24px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
+                            {modalLoading ? 'Loading report data from database...' : 'No matching records found for the selected date range and filters.'}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </>
+                )}
               </table>
             </div>
 
