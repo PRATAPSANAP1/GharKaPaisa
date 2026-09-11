@@ -1504,6 +1504,8 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
     if (isApproved && isAppFileYes) {
       bm.app_file_yes_cards_count += 1;
       const cardSeq = bm.app_file_yes_cards_count;
+      app.approval_sequence = cardSeq;
+      app.bank_target = bm.target_count;
 
       if (bm.is_department && bm.target_count > 0) {
         // Target Quota Rule: First target_count cards receive 0 incentive (required for quota).
@@ -1518,6 +1520,8 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
       }
     } else {
       calculatedIncentive = 0;
+      app.approval_sequence = null;
+      app.bank_target = bm.target_count;
     }
 
     app.tx_amount = calculatedIncentive;

@@ -337,6 +337,7 @@ export default function MonthlyIncentiveReportView({ employeeId = null }) {
                       <th style={{ padding: '10px 16px' }}>Bank & Product</th>
                       <th style={{ padding: '10px 16px', textAlign: 'center' }}>App Status</th>
                       <th style={{ padding: '10px 16px', textAlign: 'center' }}>App File Generated</th>
+                      <th style={{ padding: '10px 16px', textAlign: 'center' }}>Approval Sequence</th>
                       <th style={{ padding: '10px 16px', textAlign: 'right' }}>Incentive</th>
                     </tr>
                   </thead>
@@ -378,18 +379,22 @@ export default function MonthlyIncentiveReportView({ employeeId = null }) {
                               {isFileYes ? 'YES' : (app.app_file_generated || 'NO')}
                             </span>
                           </td>
+                          <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                            {app.approval_sequence ? (
+                              <span style={{
+                                padding: '3px 8px', borderRadius: '10px', fontSize: '10.5px', fontWeight: 800,
+                                background: app.approval_sequence <= (app.bank_target || 0) ? '#3B82F615' : '#10B98115',
+                                color: app.approval_sequence <= (app.bank_target || 0) ? '#3B82F6' : '#10B981',
+                                border: `1px solid ${app.approval_sequence <= (app.bank_target || 0) ? '#3B82F630' : '#10B98130'}`
+                              }}>
+                                #{app.approval_sequence} {app.bank_target > 0 ? (app.approval_sequence <= app.bank_target ? `(Quota ${app.approval_sequence}/${app.bank_target})` : '(Eligible)') : ''}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '11px', color: C.textMid }}>-</span>
+                            )}
+                          </td>
                           <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 900, color: (parseFloat(app.tx_amount) || 0) > 0 ? '#10B981' : C.textMid }}>
                             {formatINR(app.tx_amount || 0)}
-                            {(parseFloat(app.tx_amount) || 0) === 0 && isFileYes && isApproved && (
-                              <span style={{ fontSize: '10px', color: '#3B82F6', fontWeight: 700, display: 'block' }}>
-                                (Target Quota Card)
-                              </span>
-                            )}
-                            {(!isFileYes || !isApproved) && (
-                              <span style={{ fontSize: '10px', color: '#F59E0B', fontWeight: 700, display: 'block' }}>
-                                (Pending Approval / File)
-                              </span>
-                            )}
                           </td>
                         </tr>
                       );
