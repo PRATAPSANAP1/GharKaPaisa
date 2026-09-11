@@ -12,6 +12,9 @@ import { useAuthStore } from '../../../app/store/authStore';
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { C, isDark } = useTheme();
+  const user = useAuthStore((state) => state.user);
+  const isSuperAdmin = (user?.role || '').toUpperCase() === 'SUPER_ADMIN';
+
   const [stats, setStats] = useState(null);
   const [trends, setTrends] = useState([]);
   const [topPartners, setTopPartners] = useState([]);
@@ -77,9 +80,6 @@ export default function AdminDashboard() {
   const partnerStats = stats?.Partners || stats?.partners || { total: 0, active: 0, pending_kyc: 0 };
   const leadStats = stats?.leads || { total_leads: 0, approved_leads: 0, rejected_leads: 0, pending_leads: 0, todays_leads: 0 };
   const withdrawalStats = stats?.withdrawal || { pending_withdrawals: 0, total_commission_paid: 0 };
-
-  const user = useAuthStore((state) => state.user);
-  const isSuperAdmin = (user?.role || '').toUpperCase() === 'SUPER_ADMIN';
 
   const allStatCards = [
     { label: "Pending Leads", val: leadStats.pending_leads || 0, sub: "Requires PAN/QD review", icon: <Clock size={22} />, color: "#f59e0b", bg: "#f59e0b15", path: "/admin/leads" },
