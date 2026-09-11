@@ -823,7 +823,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
             </div>
           )}
 
-          {/* Navigation Tabs (Stage Specific View + Audit Log based on button clicked) */}
+          {/* Navigation Tabs (Hidden for PAN Checker role) */}
+          {!isPanChecker && (
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
             
             {/* 1. QD Tab (Hidden for Digital processes) */}
@@ -918,8 +919,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
               <Clock size={14} /> Audit Log
             </button>
           </div>
+          )}
 
-          {/* ═════════ TAB 1: QD (QUALIFICATION DETAILS — EDITABLE BY PARTNER ONLY) ═════════ */}
+          {/* ═════════ TAB CONTENTS (Hidden for PAN Checker role) ═════════ */}
+          {!isPanChecker && (
+            <>
           {activeTab === 'qd' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px' }}>
@@ -2079,6 +2083,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                 )}
               </div>
             </div>
+          )}
+          </>
           )}
 
         </div>
