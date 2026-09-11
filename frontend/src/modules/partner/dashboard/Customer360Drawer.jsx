@@ -6,24 +6,65 @@ import {
   MdFolder, MdAssignment, MdSend, MdUploadFile, MdCheckCircle, MdHourglassEmpty
 } from 'react-icons/md';
 
-export default function Customer360Drawer({ customer, onClose }) {
+export default function Customer360Drawer({ customer, allLeads = [], onClose }) {
   const { t } = useTranslation();
   const { C, isDark } = useTheme();
   const [activeTab, setActiveTab] = useState('pipeline'); // 'pipeline' | 'documents' | 'history' | 'communication'
 
   if (!customer) return null;
 
-  const mockApplications = [
-    { id: 'APP-9014', bank: 'HDFC Bank', card: 'HDFC Millennia', status: 'Under Review', stage: 'Bank Verification', date: '02 Aug 2026', payout: '₹2,500' },
-    { id: 'APP-8812', bank: 'SBI Card', card: 'SBI SimplyCLICK', status: 'Approved', stage: 'Disbursed', date: '28 Jul 2026', payout: '₹2,200' },
-  ];
+  // Filter real applications for this customer
+  const customerApps = (() => {
+    if (Array.isArray(customer.applications) && customer.applications.length > 0) {
+      return customer.applications;
+    }
+    if (Array.isArray(allLeads) && allLeads.length > 0) {
+      const matched = allLeads.filter(lead => {
+        const leadName = (lead.customer_name || lead.name || '').toLowerCase();
+        const leadPhone = String(lead.customer_phone || lead.phone || '').replace(/[^0-9]/g, '');
+        const custName = (customer.name || customer.customer_name || '').toLowerCase();
+        const custPhone = String(customer.phone || customer.mobile || '').replace(/[^0-9]/g, '');
+        
+        return (custPhone && leadPhone && leadPhone.includes(custPhone)) || 
+               (custName && leadName && leadName === custName) ||
+               (customer.id && lead.id === customer.id) ||
+               (customer.application_id && lead.id === customer.application_id);
+      });
+      if (matched.length > 0) return matched;
+    }
+    // If specific item has bank/card info attached
+    if (customer.bank || customer.issue) {
+      return [{
+        id: customer.id || 'APP-LIVE',
+        bank_name: customer.bank || 'Partner Bank',
+        product_name: customer.product || customer.issue || 'Credit Card / Loan Lead',
+        status: customer.status || 'Under Review',
+        stage: customer.stage || 'Bank Processing',
+        commission_amount: customer.payout || customer.commission || 0
+      }];
+    }
+    return [];
+  })();
 
-  const mockDocuments = [
-    { name: 'PAN Card', status: 'Verified', uploadedDate: '01 Aug 2026' },
-    { name: 'Aadhaar Card', status: 'Verified', uploadedDate: '01 Aug 2026' },
-    { name: 'Salary Slip (3 Months)', status: 'Pending Upload', uploadedDate: null },
+  // Calculate total estimated payout from real applications
+  const estPayoutTotal = customerApps.reduce((acc, app) => {
+    const amt = parseFloat(app.commission_amount || app.payout || app.amount || 0);
+    return acc + (isNaN(amt) ? 0 : amt);
+  }, 0);
+
+  const displayPhone = customer.phone || customer.mobile || customer.customer_phone || 'N/A';
+  const displayIncome = customer.income || customer.monthly_salary || customer.monthly_income;
+
+  const defaultDocs = [
+    { name: 'PAN Card', status: customer.pan_verified ? 'Verified' : 'Action Required', uploadedDate: customer.created_at ? new Date(customer.created_at).toLocaleDateString() : null },
+    { name: 'Aadhaar Card', status: customer.aadhaar_verified ? 'Verified' : 'Action Required', uploadedDate: customer.created_at ? new Date(customer.created_at).toLocaleDateString() : null },
+    { name: 'Salary Slip / Income Proof', status: 'Pending Upload', uploadedDate: null },
     { name: 'Bank Statement (6 Months)', status: 'Pending Upload', uploadedDate: null },
   ];
+
+  const customerDocs = (Array.isArray(customer.documents) && customer.documents.length > 0)
+    ? customer.documents
+    : defaultDocs;
 
   return (
     <div style={{
@@ -51,7 +92,7 @@ export default function Customer360Drawer({ customer, onClose }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#FFF', fontSize: '20px', fontWeight: 900
             }}>
-              {customer.name ? customer.name.substring(0, 2).toUpperCase() : 'CU'}
+              {(customer.name || customer.customer_name || 'CU').substring(0, 2).toUpperCase()}
             </div>
 
             <div>
@@ -59,7 +100,7 @@ export default function Customer360Drawer({ customer, onClose }) {
                 {t('customer360.title', 'Customer 360° Profile')}
               </span>
               <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: '2px 0 0' }}>
-                {customer.name || t('customer360.defaultName', 'Customer Profile')}
+                {customer.name || customer.customer_name || t('customer360.defaultName', 'Customer Profile')}
               </h3>
             </div>
           </div>
@@ -81,19 +122,19 @@ export default function Customer360Drawer({ customer, onClose }) {
           <div>
             <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>{t('customer360.mobile', 'MOBILE')}</span>
             <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, marginTop: '2px' }}>
-              {customer.phone || '+91 98765 43210'}
+              {displayPhone}
             </div>
           </div>
           <div>
             <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>{t('customer360.monthlySalary', 'MONTHLY SALARY')}</span>
             <div style={{ fontSize: '13px', fontWeight: 800, color: '#10B981', marginTop: '2px' }}>
-              ₹{customer.income ? parseFloat(customer.income).toLocaleString('en-IN') : '45,000'}/{t('customer360.perMonth', 'mo')}
+              {displayIncome ? `₹${parseFloat(displayIncome).toLocaleString('en-IN')}/${t('customer360.perMonth', 'mo')}` : 'N/A'}
             </div>
           </div>
           <div>
             <span style={{ fontSize: '11px', fontWeight: 700, color: C.textMid }}>{t('customer360.estPayout', 'EST. PAYOUT')}</span>
             <div style={{ fontSize: '13px', fontWeight: 900, color: C.primary, marginTop: '2px' }}>
-              ₹4,700 {t('customer360.total', 'Total')}
+              ₹{estPayoutTotal.toLocaleString('en-IN')} {t('customer360.total', 'Total')}
             </div>
           </div>
         </div>
@@ -140,44 +181,59 @@ export default function Customer360Drawer({ customer, onClose }) {
                 {t('customer360.activePipelineHeader', 'Active Applications & Live Bank Pipeline')}
               </h4>
 
-              {mockApplications.map((app) => (
-                <div key={app.id} style={{
-                  background: isDark ? '#1E293B' : '#F8FAFC',
-                  borderRadius: '16px', padding: '16px',
-                  border: `1px solid ${C.border}`,
-                  display: 'flex', flexDirection: 'column', gap: '12px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <span style={{ fontSize: '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase' }}>
-                        {app.bank}
-                      </span>
-                      <h5 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '2px 0 0' }}>
-                        {app.card} (#{app.id})
-                      </h5>
-                    </div>
-
-                    <span style={{
-                      fontSize: '11.5px', fontWeight: 800, padding: '4px 10px', borderRadius: '10px',
-                      background: app.status === 'Approved' ? '#D1FAE5' : '#FEF3C7',
-                      color: app.status === 'Approved' ? '#065F46' : '#92400E'
-                    }}>
-                      {app.status === 'Approved' ? t('status.approved', 'Approved') : t('status.underReview', 'Under Review')}
-                    </span>
-                  </div>
-
-                  {/* STAGE TIMELINE BAR */}
-                  <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '10px 14px', borderRadius: '12px',
-                    background: isDark ? '#0F172A' : '#FFFFFF', border: `1px solid ${C.border}`,
-                    fontSize: '12px', color: C.textMid
-                  }}>
-                    <span>{t('customer360.stageLabel', 'Stage:')} <strong>{app.stage}</strong></span>
-                    <span style={{ fontWeight: 800, color: '#10B981' }}>{t('customer360.payoutLabel', 'Payout:')} {app.payout}</span>
-                  </div>
+              {customerApps.length === 0 ? (
+                <div style={{ padding: '30px', textAlign: 'center', color: C.textMid, fontSize: '13px' }}>
+                  No active applications recorded for this customer yet.
                 </div>
-              ))}
+              ) : (
+                customerApps.map((app, idx) => {
+                  const statusStr = app.status || 'Under Review';
+                  const isApproved = ['approved', 'disbursed', 'sanctioned'].includes(String(statusStr).toLowerCase());
+                  const bankName = app.bank_name || app.bank || 'Partner Bank';
+                  const productName = app.product_name || app.card || 'Credit Card / Loan';
+                  const appIdStr = app.app_number || app.application_number || app.id || `APP-${idx + 1}`;
+                  const payoutVal = parseFloat(app.commission_amount || app.payout || 0);
+
+                  return (
+                    <div key={appIdStr || idx} style={{
+                      background: isDark ? '#1E293B' : '#F8FAFC',
+                      borderRadius: '16px', padding: '16px',
+                      border: `1px solid ${C.border}`,
+                      display: 'flex', flexDirection: 'column', gap: '12px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <span style={{ fontSize: '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase' }}>
+                            {bankName}
+                          </span>
+                          <h5 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '2px 0 0' }}>
+                            {productName} (#{appIdStr})
+                          </h5>
+                        </div>
+
+                        <span style={{
+                          fontSize: '11.5px', fontWeight: 800, padding: '4px 10px', borderRadius: '10px',
+                          background: isApproved ? '#D1FAE5' : '#FEF3C7',
+                          color: isApproved ? '#065F46' : '#92400E'
+                        }}>
+                          {isApproved ? t('status.approved', 'Approved') : (statusStr.replace('_', ' ').toUpperCase())}
+                        </span>
+                      </div>
+
+                      {/* STAGE TIMELINE BAR */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        padding: '10px 14px', borderRadius: '12px',
+                        background: isDark ? '#0F172A' : '#FFFFFF', border: `1px solid ${C.border}`,
+                        fontSize: '12px', color: C.textMid
+                      }}>
+                        <span>{t('customer360.stageLabel', 'Stage:')} <strong>{app.stage || app.status || 'Verification'}</strong></span>
+                        <span style={{ fontWeight: 800, color: '#10B981' }}>{t('customer360.payoutLabel', 'Payout:')} ₹{payoutVal.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           )}
 
@@ -188,7 +244,7 @@ export default function Customer360Drawer({ customer, onClose }) {
                 {t('customer360.docsChecklistHeader', 'Verification Documents Checklist')}
               </h4>
 
-              {mockDocuments.map((doc, idx) => (
+              {customerDocs.map((doc, idx) => (
                 <div key={idx} style={{
                   background: isDark ? '#1E293B' : '#F8FAFC',
                   borderRadius: '14px', padding: '14px 16px',
@@ -203,10 +259,10 @@ export default function Customer360Drawer({ customer, onClose }) {
                     )}
                     <div>
                       <h5 style={{ fontSize: '14px', fontWeight: 800, color: C.text, margin: 0 }}>
-                        {doc.name}
+                        {doc.name || doc.document_type}
                       </h5>
                       <span style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 600 }}>
-                        {doc.status === 'Verified' ? `${t('customer360.uploadedOn', 'Uploaded')} ${doc.uploadedDate}` : t('customer360.actionRequired', 'Action Required')}
+                        {doc.status === 'Verified' ? `${t('customer360.uploadedOn', 'Uploaded')} ${doc.uploadedDate || 'Verified'}` : t('customer360.actionRequired', 'Action Required')}
                       </span>
                     </div>
                   </div>
@@ -234,7 +290,11 @@ export default function Customer360Drawer({ customer, onClose }) {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
                 <button
-                  onClick={() => window.open(`https://wa.me/${(customer.phone || '9876543210').replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(customer.name || 'Customer')},%20your%20credit%20card%20application%20is%20in%20progress.%20Please%20share%20pending%20documents.`)}
+                  onClick={() => {
+                    const phoneNum = (displayPhone !== 'N/A' ? displayPhone : '').replace(/[^0-9]/g, '');
+                    if (!phoneNum) return alert('No phone number available for WhatsApp message');
+                    window.open(`https://wa.me/91${phoneNum}?text=Hi%20${encodeURIComponent(customer.name || customer.customer_name || 'Customer')},%20your%20credit%20card%20application%20is%20in%20progress.%20Please%20share%20pending%20documents.`);
+                  }}
                   style={{
                     padding: '14px', borderRadius: '12px', border: 'none',
                     background: '#25D366', color: '#FFFFFF', fontWeight: 900, fontSize: '13px',
@@ -245,7 +305,10 @@ export default function Customer360Drawer({ customer, onClose }) {
                 </button>
 
                 <button
-                  onClick={() => window.open(`tel:${customer.phone || '+919876543210'}`)}
+                  onClick={() => {
+                    if (displayPhone === 'N/A') return alert('No phone number available to call');
+                    window.open(`tel:${displayPhone}`);
+                  }}
                   style={{
                     padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`,
                     background: isDark ? C.bgSecondary : '#F1F5F9', color: C.text, fontWeight: 900, fontSize: '13px',

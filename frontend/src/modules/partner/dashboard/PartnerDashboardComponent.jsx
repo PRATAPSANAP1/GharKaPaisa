@@ -971,6 +971,7 @@ export default function PartnerDashboardComponent({ partner }) {
       {selectedCustomer360 && (
         <Customer360Drawer
           customer={selectedCustomer360}
+          allLeads={allLeads}
           onClose={() => setSelectedCustomer360(null)}
         />
       )}

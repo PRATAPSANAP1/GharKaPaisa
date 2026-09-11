@@ -57,14 +57,20 @@ export default function PartnerActionableQueues({ onSelectCustomer, notification
             if ((title.includes('query') || title.includes('action') || title.includes('missing') || msg.includes('missing') || msg.includes('mismatch')) && queries.length < 5) {
               const appNo = n.reference_id ? `APP-${n.reference_id}` : 'APP-REQ';
               if (!queries.some(q => q.id === appNo)) {
+                // Attempt to match with existing apps list for rich context
+                const matchedApp = Array.isArray(apps) ? apps.find(a => 
+                  String(a.id) === String(n.reference_id) || 
+                  String(a.app_number || a.application_number) === String(n.reference_id)
+                ) : null;
+
                 queries.push({
                   id: appNo,
-                  customer: n.customer_name || 'Customer',
-                  phone: n.phone || '',
-                  bank: n.bank_name || 'Bank Partner',
+                  customer: n.customer_name || matchedApp?.customer_name || matchedApp?.name || 'Account Partner',
+                  phone: n.phone || matchedApp?.customer_phone || matchedApp?.phone || '',
+                  bank: n.bank_name || matchedApp?.bank_name || matchedApp?.bank_code || 'GharKaPaisa Support',
                   issue: n.title || n.message || 'Missing Document',
-                  slaRemaining: '6 hrs SLA',
-                  income: '50000'
+                  slaRemaining: n.sla_remaining || matchedApp?.sla_remaining || '6 hrs SLA',
+                  income: matchedApp?.income || ''
                 });
               }
             }
