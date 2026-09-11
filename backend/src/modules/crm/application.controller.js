@@ -53,7 +53,10 @@ const parseDobToIso = (raw) => {
 // Helper to log timeline actions with full audit metadata and timestamp
 const logTimeline = async (client, applicationId, status, activity, remarks, performedBy) => {
   try {
-    await client.query(`
+    const dbQuery = (client && typeof client.query === 'function')
+      ? client.query.bind(client)
+      : (typeof client === 'function' ? client : query);
+    await dbQuery(`
       INSERT INTO application_timeline (application_id, status, activity, event_type, title, description, remarks, actor_type, actor_id, performed_by, created_at)
       VALUES ($1, $2, $3, $2, $3, $4, $4, 'system', $5, $5, NOW())
     `, [applicationId, status, activity, remarks, performedBy]);
