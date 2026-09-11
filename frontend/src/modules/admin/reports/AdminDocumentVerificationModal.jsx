@@ -39,9 +39,14 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
   useEffect(() => {
     if (initialTab) {
-      setActiveTab(getTabKey(initialTab));
+      const targetKey = getTabKey(initialTab);
+      if (isSalesExecUser && targetKey === 'final') {
+        setActiveTab('remark');
+      } else {
+        setActiveTab(targetKey);
+      }
     }
-  }, [application?.id, initialTab]);
+  }, [application?.id, initialTab, isSalesExecUser]);
 
   // User Role & Permissions
   const user = useAuthStore((state) => state.user);

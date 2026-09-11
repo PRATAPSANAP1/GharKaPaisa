@@ -3817,6 +3817,7 @@ const updateApplicationDetails = async (req, res, next) => {
           card_approval_stage = COALESCE(NULLIF(EXCLUDED.card_approval_stage, ''), physical_application_details.card_approval_stage),
           vkyc_url = COALESCE(NULLIF(EXCLUDED.vkyc_url, ''), physical_application_details.vkyc_url),
           user_remark = COALESCE(NULLIF(EXCLUDED.user_remark, ''), physical_application_details.user_remark),
+          pan_check = COALESCE(NULLIF(EXCLUDED.pan_check, ''), physical_application_details.pan_check),
           updated_at = NOW()
       `, [
         mobile || customer_mobile || null,
