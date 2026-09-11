@@ -967,11 +967,12 @@ export default function PartnerDashboardComponent({ partner }) {
 
       </div>
 
-      {/* Customer 360 Drawer */}
+      {/* Customer / Employee 360 Drawer */}
       {selectedCustomer360 && (
         <Customer360Drawer
           customer={selectedCustomer360}
           allLeads={allLeads}
+          isEmployee={isEmployee}
           onClose={() => setSelectedCustomer360(null)}
         />
       )}

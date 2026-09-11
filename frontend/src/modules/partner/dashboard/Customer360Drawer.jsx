@@ -97,10 +97,10 @@ export default function Customer360Drawer({ customer, allLeads = [], onClose }) 
 
             <div>
               <span style={{ fontSize: '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                {t('customer360.title', 'Customer 360° Profile')}
+                {isEmployee ? 'Employee 360° Profile' : t('customer360.title', 'Customer 360° Profile')}
               </span>
               <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: '2px 0 0' }}>
-                {customer.name || customer.customer_name || t('customer360.defaultName', 'Customer Profile')}
+                {customer.name || customer.customer_name || (isEmployee ? 'Employee Profile' : t('customer360.defaultName', 'Customer Profile'))}
               </h3>
             </div>
           </div>
@@ -147,7 +147,7 @@ export default function Customer360Drawer({ customer, allLeads = [], onClose }) 
           {[
             { id: 'pipeline', label: t('customer360.tabPipeline', 'Pipeline Apps'), icon: MdAssignment },
             { id: 'documents', label: t('customer360.tabDocs', 'Doc Vault'), icon: MdFolder },
-            { id: 'communication', label: t('customer360.tabContact', 'Contact Customer'), icon: MdSend },
+            { id: 'communication', label: isEmployee ? 'Contact Member' : t('customer360.tabContact', 'Contact Customer'), icon: MdSend },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

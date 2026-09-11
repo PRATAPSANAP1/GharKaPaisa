@@ -48,13 +48,17 @@ export default function PartnerActionableQueues({ onSelectCustomer, notification
           });
         }
 
-        // Parse notifications for actionable items
+        // Parse notifications for actionable items (exclude generic system/KYC notifications)
         if (Array.isArray(notifs)) {
           notifs.forEach(n => {
             const title = (n.title || n.message || '').toLowerCase();
             const msg = (n.message || n.body || '').toLowerCase();
 
-            if ((title.includes('query') || title.includes('action') || title.includes('missing') || msg.includes('missing') || msg.includes('mismatch')) && queries.length < 5) {
+            // Ignore system/KYC/account level notifications for Urgent Bank Queries
+            const isAccountNotif = title.includes('kyc') || msg.includes('kyc') || title.includes('profile') || title.includes('password') || title.includes('welcome');
+            const isAppQuery = n.reference_type === 'application' || !!n.reference_id || title.includes('bank') || title.includes('underwriting') || title.includes('application');
+
+            if (!isAccountNotif && isAppQuery && (title.includes('query') || title.includes('action') || title.includes('missing') || msg.includes('missing') || msg.includes('mismatch')) && queries.length < 5) {
               const appNo = n.reference_id ? `APP-${n.reference_id}` : 'APP-REQ';
               if (!queries.some(q => q.id === appNo)) {
                 // Attempt to match with existing apps list for rich context
@@ -65,10 +69,10 @@ export default function PartnerActionableQueues({ onSelectCustomer, notification
 
                 queries.push({
                   id: appNo,
-                  customer: n.customer_name || matchedApp?.customer_name || matchedApp?.name || 'Account Partner',
+                  customer: n.customer_name || matchedApp?.customer_name || matchedApp?.name || 'Customer Lead',
                   phone: n.phone || matchedApp?.customer_phone || matchedApp?.phone || '',
-                  bank: n.bank_name || matchedApp?.bank_name || matchedApp?.bank_code || 'GharKaPaisa Support',
-                  issue: n.title || n.message || 'Missing Document',
+                  bank: n.bank_name || matchedApp?.bank_name || matchedApp?.bank_code || 'Bank Partner',
+                  issue: n.title || n.message || 'Action Required by Bank',
                   slaRemaining: n.sla_remaining || matchedApp?.sla_remaining || '6 hrs SLA',
                   income: matchedApp?.income || ''
                 });
