@@ -117,7 +117,7 @@ export default function ManageWallet() {
     setLoading(true);
     try {
       const queryParams = { 
-        limit: 100, 
+        limit: 500, 
         from_date: filters.fromDate, 
         to_date: filters.toDate 
       };
@@ -1138,7 +1138,21 @@ export default function ManageWallet() {
               >
                 <span>Approved & Released</span>
                 <span style={{ background: commissionSubTab === 'approved' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
-                  {ledgerEntries.filter(l => (l.type === 'Credited' || parseFloat(l.credit || 0) > 0 || l.transaction_type === 'COMMISSION_RELEASE') && ((l.status || '').toLowerCase().includes('approved') || (l.status || '').toLowerCase().includes('released'))).length}
+                  {ledgerEntries.filter(l => {
+                    const st = (l.status || '').toLowerCase();
+                    const tt = (l.transaction_type || '').toUpperCase();
+                    const desc = (l.description || '').toLowerCase();
+                    const amt = parseFloat(l.credit || l.amount || 0);
+
+                    if (st.includes('pending') || st.includes('reject')) return false;
+
+                    const isReleaseTxn = tt === 'COMMISSION_RELEASE' || tt === 'COMMISSION_RELEASED' || tt === 'COMMISSION_CREDIT';
+                    const isCreditTxn = (l.type === 'Credited' || amt > 0) && 
+                      (desc.includes('commission') || desc.includes('incentive') || desc.includes('release') || tt.includes('COMMISSION') || tt.includes('INCENTIVE'));
+                    const isValidStatus = st.includes('approved') || st.includes('released') || st.includes('completed') || st.includes('success') || st.includes('credited') || st.includes('settled') || st === '' || !st;
+
+                    return (isReleaseTxn || isCreditTxn) && (isReleaseTxn || isValidStatus);
+                  }).length}
                 </span>
               </button>
             </div>
@@ -1249,10 +1263,21 @@ export default function ManageWallet() {
                   </thead>
                   <tbody>
                     {(() => {
-                      const approvedList = ledgerEntries.filter(l => 
-                        (l.type === 'Credited' || parseFloat(l.credit || 0) > 0 || l.transaction_type === 'COMMISSION_RELEASE') && 
-                        ((l.status || '').toLowerCase().includes('approved') || (l.status || '').toLowerCase().includes('released'))
-                      );
+                      const approvedList = ledgerEntries.filter(l => {
+                        const st = (l.status || '').toLowerCase();
+                        const tt = (l.transaction_type || '').toUpperCase();
+                        const desc = (l.description || '').toLowerCase();
+                        const amt = parseFloat(l.credit || l.amount || 0);
+
+                        if (st.includes('pending') || st.includes('reject')) return false;
+
+                        const isReleaseTxn = tt === 'COMMISSION_RELEASE' || tt === 'COMMISSION_RELEASED' || tt === 'COMMISSION_CREDIT';
+                        const isCreditTxn = (l.type === 'Credited' || amt > 0) && 
+                          (desc.includes('commission') || desc.includes('incentive') || desc.includes('release') || tt.includes('COMMISSION') || tt.includes('INCENTIVE'));
+                        const isValidStatus = st.includes('approved') || st.includes('released') || st.includes('completed') || st.includes('success') || st.includes('credited') || st.includes('settled') || st === '' || !st;
+
+                        return (isReleaseTxn || isCreditTxn) && (isReleaseTxn || isValidStatus);
+                      });
 
                       if (approvedList.length === 0) {
                         return (
