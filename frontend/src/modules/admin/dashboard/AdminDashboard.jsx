@@ -87,7 +87,7 @@ export default function AdminDashboard() {
     { label: "Pending KYC", val: partnerStats.pending_kyc || 0, sub: "Partner documents pending", icon: <Shield size={22} />, color: "#8b5cf6", bg: "#8b5cf615", path: "/admin/partners", superAdminOnly: true },
     { label: "Pending Withdrawals", val: withdrawalStats.pending_withdrawals || 0, sub: "Wallet payouts requested", icon: <Wallet size={22} />, color: "#ef4444", bg: "#ef444415", path: "/admin/withdrawals", superAdminOnly: true },
     { label: "Total Partners", val: partnerStats.total || 0, sub: `${partnerStats.active || 0} Active Network`, icon: <Users size={22} />, color: "#10b981", bg: "#10b98115", path: "/admin/partners", superAdminOnly: true },
-    { label: "Total Applications", val: appStats.total || 0, sub: `${appStats.approved || 0} Approved Cases`, icon: <FileText size={22} />, color: "#06b6d4", bg: "#06b6d415", path: "/admin/applications" }
+    { label: "Total Applications", val: appStats.total || 0, sub: `${appStats.approved || 0} Approved Cases`, icon: <FileText size={22} />, color: "#06b6d4", bg: "#06b6d415", path: "/admin/applications", superAdminOnly: true }
   ];
 
   const statCards = allStatCards.filter(card => {
@@ -149,147 +149,150 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Day-Wise Analysis Section */}
-      <DailyAnalyticsSection />
+      {/* Day-Wise Analysis Section & Detailed Analytics (SUPER ADMIN ONLY) */}
+      {isSuperAdmin && (
+        <>
+          <DailyAnalyticsSection />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
-        
-        {/* Top Performing Partners Table */}
-        <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "24px", padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.04)" }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 900, color: textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Award size={18} color="#10b981" /> Top Performing Partners
-            </h3>
-          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
+            
+            {/* Top Performing Partners Table */}
+            <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "24px", padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.04)" }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                <h3 style={{ fontSize: "16px", fontWeight: 900, color: textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Award size={18} color="#10b981" /> Top Performing Partners
+                </h3>
+              </div>
 
-          {topPartners.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "32px", color: textMuted, fontSize: 13 }}>No active partner activity logged.</div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${border}`, color: textMuted, fontSize: "11px", textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    <th style={{ padding: "10px 8px" }}>Partner</th>
-                    <th style={{ padding: "10px 8px" }}>Code</th>
-                    <th style={{ padding: "10px 8px", textAlign: "right" }}>Cases</th>
-                    <th style={{ padding: "10px 8px", textAlign: "right" }}>Commission</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topPartners.map((p, idx) => (
-                    <tr key={idx} style={{ borderBottom: `1px solid ${border}` }}>
-                      <td style={{ padding: "12px 8px", fontWeight: 700, color: textPrimary }}>{p.first_name} {p.last_name}</td>
-                      <td style={{ padding: "12px 8px" }}>
-                        <span style={{ fontSize: 11, fontWeight: 800, color: '#3b82f6', background: '#3b82f615', padding: '3px 8px', borderRadius: 6 }}>
-                          {p.Partner_code || p.partner_code}
-                        </span>
-                      </td>
-                      <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: 600, color: textMuted }}>
-                        {p.total_apps} ({p.approved} apprd)
-                      </td>
-                      <td style={{ padding: "12px 8px", textAlign: "right", color: '#10b981', fontWeight: 900 }}>
-                        ₹{parseFloat(p.commission_earned || 0).toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {topPartners.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "32px", color: textMuted, fontSize: 13 }}>No active partner activity logged.</div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${border}`, color: textMuted, fontSize: "11px", textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        <th style={{ padding: "10px 8px" }}>Partner</th>
+                        <th style={{ padding: "10px 8px" }}>Code</th>
+                        <th style={{ padding: "10px 8px", textAlign: "right" }}>Cases</th>
+                        <th style={{ padding: "10px 8px", textAlign: "right" }}>Commission</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {topPartners.map((p, idx) => (
+                        <tr key={idx} style={{ borderBottom: `1px solid ${border}` }}>
+                          <td style={{ padding: "12px 8px", fontWeight: 700, color: textPrimary }}>{p.first_name} {p.last_name}</td>
+                          <td style={{ padding: "12px 8px" }}>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: '#3b82f6', background: '#3b82f615', padding: '3px 8px', borderRadius: 6 }}>
+                              {p.Partner_code || p.partner_code}
+                            </span>
+                          </td>
+                          <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: 600, color: textMuted }}>
+                            {p.total_apps} ({p.approved} apprd)
+                          </td>
+                          <td style={{ padding: "12px 8px", textAlign: "right", color: '#10b981', fontWeight: 900 }}>
+                            ₹{parseFloat(p.commission_earned || 0).toLocaleString("en-IN")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Applications by Product Table */}
-        <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "24px", padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.04)" }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 900, color: textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Layers size={18} color="#8b5cf6" /> Applications by Product
-            </h3>
-          </div>
+            {/* Applications by Product Table */}
+            <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "24px", padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.04)" }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+                <h3 style={{ fontSize: "16px", fontWeight: 900, color: textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Layers size={18} color="#8b5cf6" /> Applications by Product
+                </h3>
+              </div>
 
-          {productsData.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "32px", color: textMuted, fontSize: 13 }}>No product applications logged.</div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${border}`, color: textMuted, fontSize: "11px", textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    <th style={{ padding: "10px 8px" }}>Product</th>
-                    <th style={{ padding: "10px 8px" }}>Category</th>
-                    <th style={{ padding: "10px 8px", textAlign: "right" }}>Total</th>
-                    <th style={{ padding: "10px 8px", textAlign: "right" }}>Approved</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productsData.slice(0, 5).map((p, idx) => (
-                    <tr key={idx} style={{ borderBottom: `1px solid ${border}` }}>
-                      <td style={{ padding: "12px 8px", fontWeight: 700, color: textPrimary }}>
-                        {p.product_name} 
-                        {p.bank_code && <span style={{ fontSize: "10px", color: textMuted, background: isDark ? '#1a2744' : '#f1f5f9', padding: "2px 6px", borderRadius: "4px", marginLeft: "6px", fontWeight: 700 }}>{p.bank_code}</span>}
-                      </td>
-                      <td style={{ padding: "12px 8px", textTransform: "capitalize", color: textMuted }}>{p.category}</td>
-                      <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: 700 }}>{p.total}</td>
-                      <td style={{ padding: "12px 8px", textAlign: "right", color: '#10b981', fontWeight: 900 }}>{p.approved}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {productsData.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "32px", color: textMuted, fontSize: 13 }}>No product applications logged.</div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
+                    <thead>
+                      <tr style={{ borderBottom: `1px solid ${border}`, color: textMuted, fontSize: "11px", textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        <th style={{ padding: "10px 8px" }}>Product</th>
+                        <th style={{ padding: "10px 8px" }}>Category</th>
+                        <th style={{ padding: "10px 8px", textAlign: "right" }}>Total</th>
+                        <th style={{ padding: "10px 8px", textAlign: "right" }}>Approved</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {productsData.slice(0, 5).map((p, idx) => (
+                        <tr key={idx} style={{ borderBottom: `1px solid ${border}` }}>
+                          <td style={{ padding: "12px 8px", fontWeight: 700, color: textPrimary }}>
+                            {p.product_name} 
+                            {p.bank_code && <span style={{ fontSize: "10px", color: textMuted, background: isDark ? '#1a2744' : '#f1f5f9', padding: "2px 6px", borderRadius: "4px", marginLeft: "6px", fontWeight: 700 }}>{p.bank_code}</span>}
+                          </td>
+                          <td style={{ padding: "12px 8px", textTransform: "capitalize", color: textMuted }}>{p.category}</td>
+                          <td style={{ padding: "12px 8px", textAlign: "right", fontWeight: 700 }}>{p.total}</td>
+                          <td style={{ padding: "12px 8px", textAlign: "right", color: '#10b981', fontWeight: 900 }}>{p.approved}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Recently Registered Partners Table */}
-      <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "24px", padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.04)" }}>
-        <h3 style={{ fontSize: "16px", fontWeight: 900, color: textPrimary, margin: "0 0 18px 0" }}>Recently Registered Partners</h3>
-        {(!stats?.recent_partners || stats.recent_partners.length === 0) ? (
-          <div style={{ textAlign: "center", padding: "32px", color: textMuted, fontSize: 13 }}>No recently registered partners found.</div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${border}`, color: textMuted, fontSize: "11px", textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th style={{ padding: "12px 10px" }}>Partner Name</th>
-                  <th style={{ padding: "12px 10px" }}>Partner Code</th>
-                  <th style={{ padding: "12px 10px" }}>Contact Info</th>
-                  <th style={{ padding: "12px 10px" }}>Registered Date</th>
-                  <th style={{ padding: "12px 10px" }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.recent_partners.map((p, idx) => (
-                  <tr key={idx} style={{ borderBottom: `1px solid ${border}` }}>
-                    <td style={{ padding: "14px 10px", fontWeight: 800, color: textPrimary }}>{p.first_name} {p.last_name}</td>
-                    <td style={{ padding: "14px 10px" }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: '#3b82f6', background: '#3b82f615', padding: '4px 8px', borderRadius: 6 }}>
-                        {p.Partner_code || p.partner_code || '—'}
-                      </span>
-                    </td>
-                    <td style={{ padding: "14px 10px" }}>
-                      <div style={{ color: textPrimary, fontWeight: 600 }}>{p.email}</div>
-                      <div style={{ fontSize: "11px", color: textMuted }}>{p.mobile}</div>
-                    </td>
-                    <td style={{ padding: "14px 10px", color: textMuted, fontWeight: 600 }}>{new Date(p.created_at).toLocaleDateString()}</td>
-                    <td style={{ padding: "14px 10px" }}>
-                      <span style={{
-                        display: "inline-block",
-                        padding: "4px 12px",
-                        borderRadius: "20px",
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                        background: p.status === 'active' ? '#10b98115' : '#f59e0b15',
-                        color: p.status === 'active' ? '#10b981' : '#f59e0b'
-                      }}>
-                        {p.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
-        )}
-      </div>
+
+          {/* Recently Registered Partners Table */}
+          <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: "24px", padding: "24px", boxShadow: "0 10px 30px rgba(0,0,0,0.04)" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 900, color: textPrimary, margin: "0 0 18px 0" }}>Recently Registered Partners</h3>            {(!stats?.recent_partners || stats.recent_partners.length === 0) ? (
+              <div style={{ textAlign: "center", padding: "32px", color: textMuted, fontSize: 13 }}>No recently registered partners found.</div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${border}`, color: textMuted, fontSize: "11px", textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <th style={{ padding: "12px 10px" }}>Partner Name</th>
+                      <th style={{ padding: "12px 10px" }}>Partner Code</th>
+                      <th style={{ padding: "12px 10px" }}>Contact Info</th>
+                      <th style={{ padding: "12px 10px" }}>Registered Date</th>
+                      <th style={{ padding: "12px 10px" }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.recent_partners.map((p, idx) => (
+                      <tr key={idx} style={{ borderBottom: `1px solid ${border}` }}>
+                        <td style={{ padding: "14px 10px", fontWeight: 800, color: textPrimary }}>{p.first_name} {p.last_name}</td>
+                        <td style={{ padding: "14px 10px" }}>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: '#3b82f6', background: '#3b82f615', padding: '4px 8px', borderRadius: 6 }}>
+                            {p.Partner_code || p.partner_code || '—'}
+                          </span>
+                        </td>
+                        <td style={{ padding: "14px 10px" }}>
+                          <div style={{ color: textPrimary, fontWeight: 600 }}>{p.email}</div>
+                          <div style={{ fontSize: "11px", color: textMuted }}>{p.mobile}</div>
+                        </td>
+                        <td style={{ padding: "14px 10px", color: textMuted, fontWeight: 600 }}>{new Date(p.created_at).toLocaleDateString()}</td>
+                        <td style={{ padding: "14px 10px" }}>
+                          <span style={{
+                            display: "inline-block",
+                            padding: "4px 12px",
+                            borderRadius: "20px",
+                            fontSize: "11px",
+                            fontWeight: 800,
+                            textTransform: 'uppercase',
+                            background: p.status === 'active' ? '#10b98115' : '#f59e0b15',
+                            color: p.status === 'active' ? '#10b981' : '#f59e0b'
+                          }}>
+                            {p.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
     </div>
   );

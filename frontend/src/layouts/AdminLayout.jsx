@@ -187,76 +187,82 @@ const AdminLayout = () => {
             )}
 
             {/* CREDIT CARDS — Only Assigned Banks */}
-            <div>
-              <button onClick={() => setOpenCcMenu(!openCcMenu)} style={menuBtnStyle(openCcMenu)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Icons.creditCard size={18} />
-                  <span>Credit Cards</span>
-                </div>
-                {openCcMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
-              </button>
+            {!isPanChecker && (
+              <div>
+                <button onClick={() => setOpenCcMenu(!openCcMenu)} style={menuBtnStyle(openCcMenu)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Icons.creditCard size={18} />
+                    <span>Credit Cards</span>
+                  </div>
+                  {openCcMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
+                </button>
 
-              {openCcMenu && (
-                <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-                  {banks.map((bank) => {
-                    const slug = (bank.short_code || bank.name).toLowerCase().replace(/[^a-z0-9]/g, '');
-                    return (
-                      <NavLink key={bank.id} to={`/admin/credit-cards/${slug}/applications`} style={subLinkStyle}>
-                        {bank.name}
-                      </NavLink>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                {openCcMenu && (
+                  <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+                    {banks.map((bank) => {
+                      const slug = (bank.short_code || bank.name).toLowerCase().replace(/[^a-z0-9]/g, '');
+                      return (
+                        <NavLink key={bank.id} to={`/admin/credit-cards/${slug}/applications`} style={subLinkStyle}>
+                          {bank.name}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* LOANS — Only Assigned Banks */}
-            <div>
-              <button onClick={() => setOpenLoansMenu(!openLoansMenu)} style={menuBtnStyle(openLoansMenu)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Icons.wallet size={18} />
-                  <span>Loans</span>
-                </div>
-                {openLoansMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
-              </button>
+            {!isPanChecker && (
+              <div>
+                <button onClick={() => setOpenLoansMenu(!openLoansMenu)} style={menuBtnStyle(openLoansMenu)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Icons.wallet size={18} />
+                    <span>Loans</span>
+                  </div>
+                  {openLoansMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
+                </button>
 
-              {openLoansMenu && (
-                <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-                  {banks.map((bank) => {
-                    const slug = (bank.short_code || bank.name).toLowerCase().replace(/[^a-z0-9]/g, '');
-                    return (
-                      <NavLink key={bank.id} to={`/admin/loans/${slug}`} style={subLinkStyle}>
-                        {bank.name}
-                      </NavLink>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                {openLoansMenu && (
+                  <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+                    {banks.map((bank) => {
+                      const slug = (bank.short_code || bank.name).toLowerCase().replace(/[^a-z0-9]/g, '');
+                      return (
+                        <NavLink key={bank.id} to={`/admin/loans/${slug}`} style={subLinkStyle}>
+                          {bank.name}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* INSURANCE — Only Assigned Banks */}
-            <div>
-              <button onClick={() => setOpenInsuranceMenu(!openInsuranceMenu)} style={menuBtnStyle(openInsuranceMenu)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Icons.trending size={18} />
-                  <span>Insurance</span>
-                </div>
-                {openInsuranceMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
-              </button>
+            {!isPanChecker && (
+              <div>
+                <button onClick={() => setOpenInsuranceMenu(!openInsuranceMenu)} style={menuBtnStyle(openInsuranceMenu)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Icons.trending size={18} />
+                    <span>Insurance</span>
+                  </div>
+                  {openInsuranceMenu ? <MdExpandMore size={18} /> : <MdChevronRight size={18} />}
+                </button>
 
-              {openInsuranceMenu && (
-                <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
-                  {banks.map((bank) => {
-                    const slug = (bank.short_code || bank.name).toLowerCase().replace(/[^a-z0-9]/g, '');
-                    return (
-                      <NavLink key={bank.id} to={`/admin/insurance/${slug}`} style={subLinkStyle}>
-                        {bank.name}
-                      </NavLink>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                {openInsuranceMenu && (
+                  <div style={{ paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+                    {banks.map((bank) => {
+                      const slug = (bank.short_code || bank.name).toLowerCase().replace(/[^a-z0-9]/g, '');
+                      return (
+                        <NavLink key={bank.id} to={`/admin/insurance/${slug}`} style={subLinkStyle}>
+                          {bank.name}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Applications */}
             <NavLink to="/admin/applications" style={navLinkStyle}>
