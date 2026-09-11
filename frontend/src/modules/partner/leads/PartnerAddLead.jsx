@@ -975,15 +975,6 @@ export default function PartnerAddLead() {
                     ))}
                   </optgroup>
                 </select>
-                {negativeArea && negativeArea.toLowerCase().includes('yes') ? (
-                  <span style={{ fontSize: '11px', color: C.red, fontWeight: 700, marginTop: '4px', display: 'block' }}>
-                    ⚠️ Negative Area / S8 Pincode Detected ({getS8PincodeDetails(pincode)?.city || 'S8 Listed'}). Application will still proceed.
-                  </span>
-                ) : (
-                  <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700, marginTop: '4px', display: 'block' }}>
-                    ✓ Standard Area (Not S8 Negative). Application will proceed normally.
-                  </span>
-                )}
               </div>
             )}
           </div>

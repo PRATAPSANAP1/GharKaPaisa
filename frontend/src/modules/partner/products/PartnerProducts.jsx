@@ -1895,15 +1895,6 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                           ))}
                         </optgroup>
                       </select>
-                      {negativeArea && negativeArea.toLowerCase().includes('yes') ? (
-                        <span style={{ fontSize: '11.5px', color: C.red, fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          ⚠️ Negative Area / S8 Pincode Detected ({getS8PincodeDetails(pincode)?.city || 'S8 Listed'}). Application will still proceed.
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '11.5px', color: '#059669', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          ✓ Standard Area (Not S8 Negative). Application will proceed normally.
-                        </span>
-                      )}
                     </div>
                   </>
                 )}
