@@ -11,6 +11,7 @@ import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis, 
   CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell
 } from 'recharts';
+import { PAN_CHECK_REMARK_OPTIONS } from '../reports/AdminDocumentVerificationModal';
 
 const FINAL_STAGES = [
   'Customer Details',
@@ -700,14 +701,19 @@ export default function ManageBankCardApplications() {
                 </div>
 
                 <div>
-                  <label style={S.label}>PAN Check Comments</label>
-                  <textarea
-                    rows={2}
-                    placeholder="PAN check verification comments..."
-                    value={form.pan_check_comments}
+                  <label style={S.label}>PAN Check Remark</label>
+                  <select
+                    value={form.pan_check_comments || ''}
                     onChange={(e) => setForm({ ...form, pan_check_comments: e.target.value })}
-                    style={{ ...S.input }}
-                  />
+                    style={{ ...S.input, height: '42px', fontWeight: 700 }}
+                  >
+                    <option value="">Select PAN Check Remark</option>
+                    {PAN_CHECK_REMARK_OPTIONS.map((opt) => (
+                      <option key={opt.code} value={opt.code}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

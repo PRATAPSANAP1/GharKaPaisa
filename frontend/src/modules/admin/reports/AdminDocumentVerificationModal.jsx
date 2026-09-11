@@ -7,6 +7,37 @@ import {
   Share2, Copy, MessageSquare, Smartphone, Save, Sliders, Activity, Sparkles
 } from 'lucide-react';
 
+export const PAN_CHECK_REMARK_OPTIONS = [
+  { code: 'PAN OK', label: 'PAN OK - OK (Immediate)' },
+  { code: 'ALLREADY PROCESS', label: 'ALLREADY PROCESS - ALLREADY INPROCESS (One Month)' },
+  { code: 'NO RECORD FOUND', label: 'NO RECORD FOUND - OK (Immediate)' },
+  { code: 'S5', label: 'S5 - S5-SCORE REJECT (90 Days)' },
+  { code: 'RS5', label: 'RS5 - RS5-SCORE REFER (45 Days)' },
+  { code: 'CB4. PCB4', label: 'CB4. PCB4 - Income cut-off not met as per applicant age at generic stage (90 days)' },
+  { code: 'RT1', label: 'RT1 - RT1-CURRENT CARD BLOCKED (Never)' },
+  { code: 'DUXP', label: 'DUXP - DUXP (Duplicate Application) (One Month)' },
+  { code: 'DR4', label: 'DR4 (Never)' },
+  { code: 'PSE', label: 'PSE - Pre-Screening Error Mismatch KYC Data (Immediate)' },
+  { code: 'DR1', label: 'DR1 (90 days)' },
+  { code: 'P11', label: 'P11 - P11-BLUE COLLARED WORKER (Never)' },
+  { code: 'P15', label: 'P15 - P15-SALES REJECT (Immediate)' },
+  { code: 'NRR', label: 'NRR - NRR-NRR REJECT (90 days and change the address)' },
+  { code: 'FV15', label: 'FV15 - Customer Not interested (Immediate)' },
+  { code: 'FV16', label: 'FV16 - CMR NOT CONTACTABLE OR NO RESPONSE (Immediate)' },
+  { code: 'FV17', label: 'FV17 - FV17 CMR NOT CONTACTABLE OR NO RESPONSE (Immediate)' },
+  { code: 'FD1', label: 'FD1 - FD1-E-PHOTO NOT PROPERLY CAPTURED (Immediate)' },
+  { code: 'FD2', label: 'FD2 - FD2-FCU PHOTO DOC NOT READABLE (Immediate)' },
+  { code: 'F55', label: 'F55 - F55-DATABASE DEFAULTER (6 Month)' },
+  { code: 'F57', label: 'F57 - PAN Mismatch (Immediate)' },
+  { code: 'F77', label: 'F77 - F77 FRAUD SUSPECTED (Immediate)' },
+  { code: 'FV5', label: 'FV5 - Multiple calls customer not interested (45 days)' },
+  { code: 'FV6', label: 'FV6 - Incorrect Land line / Mobile Number (Immediate)' },
+  { code: 'V1', label: 'V1 - MISMATCH IN COMPANY NAME, DESIGNATION OR OFFICE ADD' },
+  { code: 'V2', label: 'V2 - MISMATCH IN RESI ADD' },
+  { code: 'V3', label: 'V3 - RESIDENCE ADD UNTRACEABLE' },
+  { code: 'V4', label: 'V4 - OFFICE ADD UNTRACEABLE' }
+];
+
 const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawApp, onClose, onRefresh, initialTab = 'qd', showAllTabs = false }) => {
   const application = rawApplication || rawApp || {};
 
@@ -25,7 +56,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const getTabKey = (tab) => {
     if (tab === 'details' || tab === 'qd') return 'qd';
     if (tab === 'remark1' || tab === 'remark2' || tab === 'remark') return 'remark';
-    if (tab === 'bank' || tab === 'final') return 'final';11
+    if (tab === 'bank' || tab === 'final') return 'final';
     if (tab === 'timeline') return 'timeline';
     return 'qd';
   };
@@ -726,14 +757,26 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>PAN REMARK</label>
-                  <input
-                    type="text"
-                    value={userRemark}
-                    onChange={(e) => setUserRemark(e.target.value)}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
-                    placeholder="Enter PAN Remark"
-                  />
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>PAN CHECK REMARK *</label>
+                  <select
+                    value={userRemark || ''}
+                    onChange={(e) => {
+                      const selectedVal = e.target.value;
+                      setUserRemark(selectedVal);
+                      if (!bankRemark) setBankRemark(selectedVal);
+                      if (selectedVal === 'PAN OK' || selectedVal === 'NO RECORD FOUND') {
+                        setPanCheck('yes');
+                      }
+                    }}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, background: '#fff' }}
+                  >
+                    <option value="">Select PAN Check Remark</option>
+                    {PAN_CHECK_REMARK_OPTIONS.map((opt) => (
+                      <option key={opt.code} value={opt.code}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>PAN CHECK *</label>
