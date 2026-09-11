@@ -6,7 +6,7 @@ import api from '../../../services/api';
 import { getBankApplyLink } from '../../home/components/CreditCards/cardLinkHelper';
 import { MdArrowBack, MdSend, MdContentCopy, MdShare, MdOpenInNew, MdCheckCircle, MdAssignment, MdLink, MdAccountBalance, MdVerifiedUser, MdRefresh } from 'react-icons/md';
 import { isSbiProductOrBank } from '../../../utils/sbiPincodeChecker';
-import PincodeAutoComplete, { isSbiPincodeValid, isS8Pincode, getS8PincodeDetails } from '../../../components/PincodeAutoComplete';
+import PincodeAutoComplete, { isSbiPincodeValid, isS8Pincode, getS8PincodeDetails, getAllS8Cities } from '../../../components/PincodeAutoComplete';
 
 const ALL_PROCESS_OPTIONS = [
   {
@@ -175,7 +175,8 @@ export default function PartnerAddLead() {
 
     if (isS8Pincode(clean)) {
       const details = getS8PincodeDetails(clean);
-      setNegativeArea(`Yes (${details?.city ? details.city + ' - ' : ''}S8 Area)`);
+      const cName = details?.city ? details.city.toUpperCase() : '';
+      setNegativeArea(cName ? `Yes (S8 Area - ${cName})` : 'Yes (S8 Area)');
     } else {
       setNegativeArea('No');
     }
@@ -947,7 +948,7 @@ export default function PartnerAddLead() {
 
             {isSbiSelected && (
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={S.label}>Negative Area</label>
+                <label style={S.label}>Negative Area (S8 Location Check)</label>
                 <select
                   value={negativeArea}
                   onChange={(e) => setNegativeArea(e.target.value)}
@@ -966,10 +967,21 @@ export default function PartnerAddLead() {
                   {negativeArea && !['No', 'Yes (S8 Area)'].includes(negativeArea) && (
                     <option value={negativeArea}>{negativeArea}</option>
                   )}
+                  <optgroup label="S8 Excel Negative Area Locations">
+                    {getAllS8Cities().map(cName => (
+                      <option key={cName} value={`Yes (S8 Area - ${cName})`}>
+                        Yes (S8 - {cName})
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
-                {negativeArea && negativeArea.toLowerCase().includes('yes') && (
+                {negativeArea && negativeArea.toLowerCase().includes('yes') ? (
                   <span style={{ fontSize: '11px', color: C.red, fontWeight: 700, marginTop: '4px', display: 'block' }}>
-                    ⚠️ Negative Area / S8 Pincode Detected ({getS8PincodeDetails(pincode)?.city || 'S8 Listed'}). Application can still be processed.
+                    ⚠️ Negative Area / S8 Pincode Detected ({getS8PincodeDetails(pincode)?.city || 'S8 Listed'}). Application will still proceed.
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700, marginTop: '4px', display: 'block' }}>
+                    ✓ Standard Area (Not S8 Negative). Application will proceed normally.
                   </span>
                 )}
               </div>

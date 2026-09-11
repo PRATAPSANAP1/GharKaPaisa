@@ -23,6 +23,11 @@ export const getS8PincodeDetails = (pincode) => {
   return s8PincodeMap[String(pincode).trim()] || null;
 };
 
+export const getAllS8Cities = () => {
+  const cities = new Set(Object.values(s8PincodeMap).map(item => item.city?.trim()?.toUpperCase()).filter(Boolean));
+  return Array.from(cities).sort();
+};
+
 export const getSbiPincodeCity = (pincode) => {
   if (!pincode) return '';
   const clean = String(pincode).trim();
