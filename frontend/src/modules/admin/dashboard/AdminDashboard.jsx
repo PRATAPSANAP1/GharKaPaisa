@@ -7,6 +7,7 @@ import {
   AlertCircle, RefreshCw, Shield, Layers, Award, ArrowUpRight, BarChart3
 } from 'lucide-react';
 import DailyAnalyticsSection from '../../../components/Admin/DailyAnalyticsSection';
+import { useAuthStore } from '../../../app/store/authStore';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -77,16 +78,23 @@ export default function AdminDashboard() {
   const leadStats = stats?.leads || { total_leads: 0, approved_leads: 0, rejected_leads: 0, pending_leads: 0, todays_leads: 0 };
   const withdrawalStats = stats?.withdrawal || { pending_withdrawals: 0, total_commission_paid: 0 };
 
-  const maxTrendVal = trends.length > 0 ? Math.max(...trends.map(t => parseInt(t.applications || 0))) : 10;
+  const user = useAuthStore((state) => state.user);
+  const isSuperAdmin = (user?.role || '').toUpperCase() === 'SUPER_ADMIN';
 
-  const statCards = [
+  const allStatCards = [
     { label: "Pending Leads", val: leadStats.pending_leads || 0, sub: "Requires PAN/QD review", icon: <Clock size={22} />, color: "#f59e0b", bg: "#f59e0b15", path: "/admin/leads" },
     { label: "Today's Leads", val: leadStats.todays_leads || 0, sub: "New entries logged today", icon: <TrendingUp size={22} />, color: "#3b82f6", bg: "#3b82f615", path: "/admin/leads" },
-    { label: "Pending KYC", val: partnerStats.pending_kyc || 0, sub: "Partner documents pending", icon: <Shield size={22} />, color: "#8b5cf6", bg: "#8b5cf615", path: "/admin/partners" },
-    { label: "Pending Withdrawals", val: withdrawalStats.pending_withdrawals || 0, sub: "Wallet payouts requested", icon: <Wallet size={22} />, color: "#ef4444", bg: "#ef444415", path: "/admin/withdrawals" },
-    { label: "Total Partners", val: partnerStats.total || 0, sub: `${partnerStats.active || 0} Active Network`, icon: <Users size={22} />, color: "#10b981", bg: "#10b98115", path: "/admin/partners" },
+    { label: "Pending KYC", val: partnerStats.pending_kyc || 0, sub: "Partner documents pending", icon: <Shield size={22} />, color: "#8b5cf6", bg: "#8b5cf615", path: "/admin/partners", superAdminOnly: true },
+    { label: "Pending Withdrawals", val: withdrawalStats.pending_withdrawals || 0, sub: "Wallet payouts requested", icon: <Wallet size={22} />, color: "#ef4444", bg: "#ef444415", path: "/admin/withdrawals", superAdminOnly: true },
+    { label: "Total Partners", val: partnerStats.total || 0, sub: `${partnerStats.active || 0} Active Network`, icon: <Users size={22} />, color: "#10b981", bg: "#10b98115", path: "/admin/partners", superAdminOnly: true },
     { label: "Total Applications", val: appStats.total || 0, sub: `${appStats.approved || 0} Approved Cases`, icon: <FileText size={22} />, color: "#06b6d4", bg: "#06b6d415", path: "/admin/applications" }
   ];
+
+  const statCards = allStatCards.filter(card => {
+    if (card.superAdminOnly && !isSuperAdmin) return false;
+    if (card.val === 0 || card.val === '0') return false;
+    return true;
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
