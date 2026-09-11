@@ -1195,7 +1195,14 @@ export default function ManageWallet() {
                                 {roleName}
                               </span>
                             </td>
-                            <td style={{ padding: '12px 8px', color: C.text, fontWeight: 600 }}>{c.product || c.product_name || 'Credit Card / Loan Disbursal'}</td>
+                            <td style={{ padding: '12px 8px', color: C.text }}>
+                              <div style={{ fontWeight: 800, color: C.teal }}>
+                                {c.product_name || c.product || 'Approved Credit Card'}
+                              </div>
+                              <div style={{ fontSize: '11px', color: C.textLight }}>
+                                {c.app_number ? `#${c.app_number.replace(/^#/, '')}` : (c.description || 'Approved Credit Card Commission')}
+                              </div>
+                            </td>
                             <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.green, fontSize: '13.5px' }}>+₹{amt.toLocaleString('en-IN')}</td>
                             <td style={{ padding: '12px 8px', textAlign: 'center' }}>
                               <span style={{ background: '#FEF3C7', color: '#D97706', padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>Pending Approval</span>
@@ -1269,7 +1276,14 @@ export default function ManageWallet() {
                               <div>{userName}</div>
                               <span style={{ fontSize: '10.5px', color: C.textLight }}>{c.partner_code || 'N/A'}</span>
                             </td>
-                            <td style={{ padding: '12px 8px', color: C.text, fontWeight: 600 }}>{c.product || c.description || 'Lead Incentive'}</td>
+                            <td style={{ padding: '12px 8px', color: C.text }}>
+                              <div style={{ fontWeight: 800, color: C.teal }}>
+                                {c.product_name || c.product || 'Approved Credit Card'}
+                              </div>
+                              <div style={{ fontSize: '11px', color: C.textLight }}>
+                                {c.app_number ? `#${c.app_number.replace(/^#/, '')}` : (c.description || 'Approved Credit Card Commission')}
+                              </div>
+                            </td>
                             <td style={{ padding: '12px 8px', color: C.textLight, fontSize: '11px' }}>
                               {new Date(approvedTimeStr).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
                             </td>

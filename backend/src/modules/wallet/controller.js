@@ -944,12 +944,16 @@ const getWalletLedger = async (req, res, next) => {
                COALESCE(ap.partner_code, 'PARTNER') as partner_code, 
                COALESCE(ap.first_name, u.full_name, 'Partner') as first_name, 
                COALESCE(ap.last_name, '') as last_name,
-               a.app_number, p.name as product_name
+               COALESCE(a.app_number, a2.app_number, wl.reference_number, 'N/A') as app_number, 
+               COALESCE(p.name, p2.name, 'Approved Credit Card') as product_name
         FROM wallet_ledger wl
         LEFT JOIN partner_profiles ap ON (ap.id = wl.partner_id OR ap.user_id = wl.partner_id)
         LEFT JOIN users u ON (u.id = wl.partner_id OR u.id = ap.user_id)
         LEFT JOIN applications a ON a.id = wl.application_id
         LEFT JOIN products p ON p.id = a.product_id
+        LEFT JOIN wallet_ledger wl_orig ON (wl_orig.id::text = wl.reference_number)
+        LEFT JOIN applications a2 ON (a2.id = wl_orig.application_id OR a2.id::text = wl.reference_number)
+        LEFT JOIN products p2 ON p2.id = a2.product_id
         ${where}
         ORDER BY wl.created_at DESC
         LIMIT $${idx++} OFFSET $${idx++}

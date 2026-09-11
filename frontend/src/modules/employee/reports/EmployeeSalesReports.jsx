@@ -286,7 +286,7 @@ export default function EmployeeSalesReports() {
               boxShadow: '0 4px 14px rgba(0,0,0,0.15)'
             }}
           >
-            <FaPlus /> + Create Sales Report
+            <FaPlus /> Create Sales Report
           </button>
         </div>
 
@@ -385,7 +385,7 @@ export default function EmployeeSalesReports() {
                     cursor: 'pointer'
                   }}
                 >
-                  + Submit First Sales Report
+                  <FaPlus style={{ marginRight: '6px' }} /> Submit First Sales Report
                 </button>
               </div>
             ) : (
@@ -573,7 +573,7 @@ export default function EmployeeSalesReports() {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px' }}>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '28px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 900, margin: 0, color: C.text }}>+ Create Daily Sales Report</h2>
+              <h2 style={{ fontSize: '20px', fontWeight: 900, margin: 0, color: C.text }}>Create Daily Sales Report</h2>
               <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', fontSize: '20px', color: C.textMid, cursor: 'pointer' }}>
                 <FaTimes />
               </button>
@@ -692,7 +692,7 @@ export default function EmployeeSalesReports() {
                     justifyContent: 'center'
                   }}
                 >
-                  <FaPlus /> + Add Another Bank
+                  <FaPlus /> Add Another Bank
                 </button>
               </div>
 

@@ -643,12 +643,13 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
 
     // Append-Only Financial Event with Idempotency Guard (Zero UPDATE on historical rows)
     const refNum = meta.reference_id || (meta.txn_id ? String(meta.txn_id) : null);
+    const appId = meta.application_id || null;
 
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_ledger (
-        wallet_id, partner_id, transaction_type, credit, debit, description, reference_number, status, created_by
+        wallet_id, partner_id, application_id, transaction_type, credit, debit, description, reference_number, status, created_by
       )
-      SELECT $1::uuid, $2::uuid, 'COMMISSION_RELEASE'::varchar, $3::numeric, 0, $4::text, $5::text, 'Released', $6::uuid
+      SELECT $1::uuid, $2::uuid, $7::uuid, 'COMMISSION_RELEASE'::varchar, $3::numeric, 0, $4::text, $5::text, 'Released', $6::uuid
       WHERE NOT EXISTS (
         SELECT 1 FROM wallet_ledger
         WHERE transaction_type::text = 'COMMISSION_RELEASE'
@@ -660,7 +661,8 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
       wallet.id, resolvedPartnerId, numAmount,
       meta.description || (meta.txn_id ? `Commission release for hold txn #${meta.txn_id}` : 'Commission release to available balance'),
       refNum,
-      meta.processed_by || null
+      meta.processed_by || null,
+      appId
     ]);
 
     if (!txn) {
