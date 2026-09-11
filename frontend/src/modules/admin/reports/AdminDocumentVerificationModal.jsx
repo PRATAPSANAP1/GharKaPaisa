@@ -126,6 +126,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [iqaStage, setIqaStage] = useState(sanitizeVal(application?.iqa_stage) || sanitizeVal(application?.physical_details?.iqa_stage));
   const [dispatchStatus, setDispatchStatus] = useState(sanitizeVal(application?.dispatch_status) || sanitizeVal(application?.physical_details?.dispatch_status));
   const [inProcessStage, setInProcessStage] = useState(sanitizeVal(application?.in_process_stage) || sanitizeVal(application?.physical_details?.in_process_stage) || 'None');
+  const [bankCurrentLeadStatus, setBankCurrentLeadStatus] = useState(sanitizeVal(application?.bank_current_lead_status) || sanitizeVal(application?.physical_details?.bank_current_lead_status) || sanitizeVal(application?.bank_lead_status) || 'None');
 
   // 3. Final Status & Bank Remarks State
   const [bankRemark, setBankRemark] = useState(sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark));
@@ -393,6 +394,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           vkyc_url: vkycUrl,
           dispatch_status: dispatchStatus || 'None',
           in_process_stage: inProcessStage || 'None',
+          bank_current_lead_status: bankCurrentLeadStatus || 'None',
+          bank_lead_status: bankCurrentLeadStatus || 'None',
           user_remark: userRemark,
           notes: userRemark,
           operational_remarks: userRemark
@@ -455,6 +458,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           operational_remarks: userRemark,
           final_status: finalStatus,
           in_process_stage: inProcessStage || 'None',
+          bank_current_lead_status: bankCurrentLeadStatus || 'None',
+          bank_lead_status: bankCurrentLeadStatus || 'None',
           app_file_generated: appFileGenerated,
           status: targetStatus
         };
@@ -1330,6 +1335,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                         >
                           <option value="None">None</option>
+                          <option value="Awaiting">Awaiting</option>
                           <option value="VKYC Link Send">VKYC Link Send</option>
                           <option value="VKYC Success">VKYC Success</option>
                           <option value="VKYC Pending">VKYC Pending</option>
@@ -1343,7 +1349,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="BIO Pending">BIO Pending</option>
                           <option value="KYC Link Not Working">KYC Link Not Working</option>
                           <option value="Error Occured">Error Occured</option>
-                          {kycStage && !['None', 'VKYC Link Send', 'VKYC Success', 'VKYC Pending', 'VKYC Failed', 'VKYC Expired', 'ID-COM Success', 'ID-COM Pending', 'ID-COM Failed', 'BIO Link Send', 'BIO Success', 'BIO Pending', 'KYC Link Not Working', 'Error Occured', ''].includes(kycStage) && (
+                          {kycStage && !['None', 'Awaiting', 'VKYC Link Send', 'VKYC Success', 'VKYC Pending', 'VKYC Failed', 'VKYC Expired', 'ID-COM Success', 'ID-COM Pending', 'ID-COM Failed', 'BIO Link Send', 'BIO Success', 'BIO Pending', 'KYC Link Not Working', 'Error Occured', ''].includes(kycStage) && (
                             <option value={kycStage}>{kycStage}</option>
                           )}
                         </select>
@@ -1475,6 +1481,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                         >
                           <option value="None">None</option>
+                          <option value="Awaiting">Awaiting</option>
                           <option value="VKYC Link Send">VKYC Link Send</option>
                           <option value="VKYC Success">VKYC Success</option>
                           <option value="VKYC Pending">VKYC Pending</option>
@@ -1488,7 +1495,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="BIO Pending">BIO Pending</option>
                           <option value="KYC Link Not Working">KYC Link Not Working</option>
                           <option value="Error Occured">Error Occured</option>
-                          {kycStage && !['None', 'VKYC Link Send', 'VKYC Success', 'VKYC Pending', 'VKYC Failed', 'VKYC Expired', 'ID-COM Success', 'ID-COM Pending', 'ID-COM Failed', 'BIO Link Send', 'BIO Success', 'BIO Pending', 'KYC Link Not Working', 'Error Occured', ''].includes(kycStage) && (
+                          {kycStage && !['None', 'Awaiting', 'VKYC Link Send', 'VKYC Success', 'VKYC Pending', 'VKYC Failed', 'VKYC Expired', 'ID-COM Success', 'ID-COM Pending', 'ID-COM Failed', 'BIO Link Send', 'BIO Success', 'BIO Pending', 'KYC Link Not Working', 'Error Occured', ''].includes(kycStage) && (
                             <option value={kycStage}>{kycStage}</option>
                           )}
                         </select>
@@ -1891,6 +1898,41 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       </select>
                     )}
                   </div>
+
+                  {/* 🏦 BANK CURRENT LEAD STATUS (ONLY FOR HDFC BANK & TATA CO-BRAND HDFC IN FINAL FORM) */}
+                  {(isHdfcBank || isTataCobrandHdfc) && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        BANK CURRENT LEAD STATUS
+                      </label>
+                      <select
+                        disabled={!canEditFinal}
+                        value={bankCurrentLeadStatus || 'None'}
+                        onChange={(e) => setBankCurrentLeadStatus(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                      >
+                        <option value="None">None</option>
+                        <option value="Final DAP API">Final DAP API</option>
+                        <option value="Submission Completed">Submission Completed</option>
+                        <option value="IPA Failed">IPA Failed</option>
+                        <option value="UI_STAGE_initial_consent">UI_STAGE_initial_consent</option>
+                        <option value="Demog Check Completed">Demog Check Completed</option>
+                        <option value="IPA Success">IPA Success</option>
+                        <option value="PAN Status Check Failed">PAN Status Check Failed</option>
+                        <option value="Dedupe Check Completed">Dedupe Check Completed</option>
+                        <option value="IDCOM Failed">IDCOM Failed</option>
+                        <option value="Employment Details Submission Failed">Employment Details Submission Failed</option>
+                        <option value="Demog Check Failed">Demog Check Failed</option>
+                        <option value="eKYC OTP Failed">eKYC OTP Failed</option>
+                        <option value="Other Details Submission">Other Details Submission</option>
+                        <option value="Failed">Failed</option>
+                        <option value="UI_STAGE_approved_offers">UI_STAGE_approved_offers</option>
+                        {bankCurrentLeadStatus && !['None', 'Final DAP API', 'Submission Completed', 'IPA Failed', 'UI_STAGE_initial_consent', 'Demog Check Completed', 'IPA Success', 'PAN Status Check Failed', 'Dedupe Check Completed', 'IDCOM Failed', 'Employment Details Submission Failed', 'Demog Check Failed', 'eKYC OTP Failed', 'Other Details Submission', 'Failed', 'UI_STAGE_approved_offers', ''].includes(bankCurrentLeadStatus) && (
+                          <option value={bankCurrentLeadStatus}>{bankCurrentLeadStatus}</option>
+                        )}
+                      </select>
+                    </div>
+                  )}
 
                   {/* 3. SBI IN PROCESS STAGE (Only for SBI applications) */}
                   {isSbi && (

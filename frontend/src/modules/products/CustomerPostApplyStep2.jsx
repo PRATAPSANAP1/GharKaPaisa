@@ -609,6 +609,7 @@ export default function CustomerPostApplyStep2() {
                     style={inputStyle}
                   >
                     <option value="None">None</option>
+                    <option value="Awaiting">Awaiting</option>
                     <option value="IDCOM Success">IDCOM Success</option>
                     <option value="IDCOM Failed">IDCOM Failed</option>
                     <option value="IDCOM Pending">IDCOM Pending</option>

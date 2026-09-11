@@ -4609,9 +4609,11 @@ const migrate = async () => {
     await query(`
       ALTER TABLE physical_application_details 
         ADD COLUMN IF NOT EXISTS token VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no';
+        ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no',
+        ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100);
       ALTER TABLE applications
-        ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no';
+        ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no',
+        ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100);
     `);
   } catch (task29Err) {
     logger.error('Failed to run Task 29 migration:', task29Err.message);
