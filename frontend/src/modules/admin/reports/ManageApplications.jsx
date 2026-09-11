@@ -390,11 +390,7 @@ export default function ManageApplications() {
         </div>
       )}
 
-      {isPanCheckerUser && (
-        <div style={{ padding: '12px 16px', marginBottom: '20px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '10px', color: '#059669', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>🔍</span> Displaying Pending SBI Bank Applications Only (PAN Checker Verification Panel)
-        </div>
-      )}
+
 
       {/* ── 2. TOP KPI SUMMARY CARDS ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
@@ -809,7 +805,7 @@ export default function ManageApplications() {
                               onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
                               style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 12px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
                             >
-                              <ShieldCheck size={13} /> PAN Check
+                              <ShieldCheck size={13} /> Review
                             </button>
                           ) : (
                             <>

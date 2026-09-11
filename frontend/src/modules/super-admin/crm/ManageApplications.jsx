@@ -894,7 +894,7 @@ export default function ManageApplications() {
                               onClick={() => setVerifyModalApp(app)}
                               style={{ padding: '6px 12px', borderRadius: '8px', background: '#2563eb', color: '#fff', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                             >
-                              <ShieldCheck size={14} /> PAN Check
+                              <ShieldCheck size={14} /> Review
                             </button>
                           ) : (
                             <>

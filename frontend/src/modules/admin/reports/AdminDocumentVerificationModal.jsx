@@ -527,7 +527,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
               </span>
             </div>
             <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
-              Customer: <strong>{customerName || application.customer_name || 'Customer'}</strong> | Mobile: {customerMobile || application.customer_mobile} | Bank: {application.bank_name || application.bank_code || 'Partner Bank'}
+              Customer: <strong>{customerName || application.customer_name || 'Customer'}</strong> | Mobile: {isPanChecker ? ((customerMobile || application.customer_mobile || application.mobile || '').length >= 6 ? `${(customerMobile || application.customer_mobile || application.mobile).slice(0, (customerMobile || application.customer_mobile || application.mobile).length - 6)}******` : '******') : (customerMobile || application.customer_mobile)} | Bank: {application.bank_name || application.bank_code || 'Partner Bank'}
             </p>
           </div>
 
