@@ -635,25 +635,34 @@ export default function PartnerApplications() {
       return;
     }
     let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
-    csvContent += 'Application / Lead ID,Customer Name,Customer Mobile,Email,PAN Number,City,State,Pincode,Submitted By / Member,Process Type,Product,Category,Bank,Application Status,Commission Status,Commission Amount,APPCODE Status,Soft Approval Status,IQA Stage,Bank Application Number,VKYC Stage,VKYC Link,Dispatch Status,Final Status,App File Generated,Bank Remark,Decline Reason,Eligible Re-QD,Approved Amount,Date\n';
+    csvContent += 'Application / Lead ID,Customer Name,Customer Mobile,Email,PAN Number,City,State,Pincode,Submitted By / Member,Process Type,Product,Category,Bank,Application Status,Commission Status,Commission Amount,APPCODE Status,Soft Approval Status,IQA Stage,Bank Application Number,VKYC Stage,VKYC Link,Dispatch Status,Bank Current Lead Status,Final Status,App File Generated,Bank Remark,Decline Reason,Eligible Re-QD,Approved Amount,Date\n';
 
     applications.forEach(a => {
       const proc = getProcessByBadge(a.process_by, a.process_type);
       const rawMob = a.customer_mobile || a.mobile || '';
       const mobVal = hideCustomerMobileInCsv ? 'REDACTED' : rawMob;
 
-      const appcodeStatus = a.appcode_status || 'N/A';
-      const softApprovalStatus = a.soft_approval_status || 'N/A';
-      const iqaStage = a.iqa_stage || 'N/A';
-      const bankAppNo = a.bank_application_number || a.bank_ref_number || 'N/A';
-      const vkycStage = a.vkyc_stage || a.vkyc_status || 'N/A';
-      const vkycLink = a.vkyc_url || 'N/A';
-      const dispatchStatus = a.dispatch_status || 'N/A';
-      const finalStatus = a.final_status || 'N/A';
-      const appFileGen = a.app_file_generated || 'N/A';
-      const bankRemark = String(a.bank_remark || 'N/A').replace(/"/g, '""');
-      const declineReason = String(a.decline_reason || 'N/A').replace(/"/g, '""');
-      const eligibleReqd = a.eligible_reqd || 'N/A';
+      const rawBankStr = (a.bank_name || a.bank_code || a.bank || '').toLowerCase();
+      const isSbiRec = rawBankStr.includes('sbi') || rawBankStr.includes('state bank');
+      const isHdfcRec = rawBankStr.includes('hdfc');
+
+      const appcodeStatus = isSbiRec ? (a.appcode_status || 'NA') : 'NA';
+      const softApprovalStatus = isSbiRec ? (a.soft_approval_status || 'NA') : 'NA';
+      const iqaStage = isSbiRec ? (a.iqa_stage || 'NA') : 'NA';
+      const dispatchStatus = isSbiRec ? (a.dispatch_status || 'NA') : 'NA';
+      const appFileGen = isSbiRec ? (a.app_file_generated || 'NA') : 'NA';
+
+      const bankCurrentLeadStatus = isHdfcRec ? (a.bank_current_lead_status || 'NA') : 'NA';
+
+      const bankAppNo = a.bank_application_number || a.bank_ref_number || 'NA';
+      const rawVkyc = a.vkyc_stage || a.vkyc_status || a.kyc_stage || '';
+      const vkycStage = (isSbiRec || isHdfcRec) ? (rawVkyc || 'NA') : (rawVkyc || 'NA');
+      const vkycLink = (a.vkyc_url && String(a.vkyc_url).trim() !== '' && String(a.vkyc_url).toUpperCase() !== 'N/A') ? a.vkyc_url : 'NA';
+      
+      const finalStatus = (a.final_status && String(a.final_status).trim() !== '' && String(a.final_status).toUpperCase() !== 'N/A') ? String(a.final_status).replace(/"/g, '""') : 'NA';
+      const bankRemark = (a.bank_remark && String(a.bank_remark).trim() !== '' && String(a.bank_remark).toUpperCase() !== 'N/A') ? String(a.bank_remark).replace(/"/g, '""') : 'NA';
+      const declineReason = (a.decline_reason && String(a.decline_reason).trim() !== '' && String(a.decline_reason).toUpperCase() !== 'N/A') ? String(a.decline_reason).replace(/"/g, '""') : 'NA';
+      const eligibleReqd = (a.eligible_reqd && String(a.eligible_reqd).trim() !== '' && String(a.eligible_reqd).toUpperCase() !== 'N/A') ? String(a.eligible_reqd).replace(/"/g, '""') : 'NA';
       const appAmt = a.approved_amount || 0;
 
       const row = [
@@ -680,6 +689,7 @@ export default function PartnerApplications() {
         `"${vkycStage.replace(/"/g, '""')}"`,
         `"${vkycLink.replace(/"/g, '""')}"`,
         `"${dispatchStatus.replace(/"/g, '""')}"`,
+        `"${bankCurrentLeadStatus.replace(/"/g, '""')}"`,
         `"${finalStatus.replace(/"/g, '""')}"`,
         `"${appFileGen.replace(/"/g, '""')}"`,
         `"${bankRemark}"`,

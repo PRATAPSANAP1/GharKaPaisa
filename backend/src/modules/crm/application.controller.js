@@ -3116,13 +3116,14 @@ const exportApplicationsCSV = async (req, res, next) => {
           a.commission_status::text,
           a.commission_amount,
           COALESCE(a.source, 'partner_punch') as process_by,
-          COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, '')) as bank_application_number,
+          COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number,
           a.appcode_status,
           a.soft_approval_status,
           a.iqa_stage,
           COALESCE(a.vkyc_stage, a.vkyc_status) as vkyc_stage,
           a.vkyc_url,
           a.dispatch_status,
+          COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status,
           a.final_status,
           a.app_file_generated,
           a.bank_remark,
@@ -3137,6 +3138,7 @@ const exportApplicationsCSV = async (req, res, next) => {
         LEFT JOIN customers c ON c.id = a.customer_id
         LEFT JOIN products p ON p.id = a.product_id
         LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN physical_application_details pad ON pad.application_id = a.id
         LEFT JOIN partner_profiles ap ON ap.id = a.partner_id
         LEFT JOIN users su ON su.id = a.submitted_by
 
@@ -3166,6 +3168,7 @@ const exportApplicationsCSV = async (req, res, next) => {
           NULL as vkyc_stage,
           NULL as vkyc_url,
           NULL as dispatch_status,
+          NULL as bank_current_lead_status,
           NULL as final_status,
           NULL as app_file_generated,
           NULL as bank_remark,
@@ -3212,6 +3215,7 @@ const exportApplicationsCSV = async (req, res, next) => {
       'VKYC Stage',
       'VKYC Link',
       'Dispatch Status',
+      'Bank Current Lead Status',
       'Final Status',
       'App File Generated',
       'Bank Remark',
@@ -3245,6 +3249,29 @@ const exportApplicationsCSV = async (req, res, next) => {
       const panVal = formatPanNumber(row.pan_number);
       const bankAppNoVal = formatBankAppNumber(row.bank_application_number, row.app_number);
 
+      const rawBankStr = (row.bank_name || '').toLowerCase();
+      const isSbiRec = rawBankStr.includes('sbi') || rawBankStr.includes('state bank');
+      const isHdfcRec = rawBankStr.includes('hdfc');
+
+      // SBI-exclusive remark & final form fields
+      const appcodeStatus = isSbiRec ? (row.appcode_status || 'NA') : 'NA';
+      const softApprovalStatus = isSbiRec ? (row.soft_approval_status || 'NA') : 'NA';
+      const iqaStage = isSbiRec ? (row.iqa_stage || 'NA') : 'NA';
+      const dispatchStatus = isSbiRec ? (row.dispatch_status || 'NA') : 'NA';
+      const appFileGen = isSbiRec ? (row.app_file_generated || 'NA') : 'NA';
+
+      // HDFC-exclusive remark & final form fields
+      const bankCurrentLeadStatus = isHdfcRec ? (row.bank_current_lead_status || 'NA') : 'NA';
+
+      const rawVkyc = row.vkyc_stage || '';
+      const vkycStage = (isSbiRec || isHdfcRec) ? (rawVkyc || 'NA') : (rawVkyc || 'NA');
+      const vkycLink = (row.vkyc_url && String(row.vkyc_url).trim() !== '' && String(row.vkyc_url).toUpperCase() !== 'N/A') ? row.vkyc_url : 'NA';
+      
+      const finalStatus = (row.final_status && String(row.final_status).trim() !== '' && String(row.final_status).toUpperCase() !== 'N/A') ? String(row.final_status).replace(/"/g, '""') : 'NA';
+      const bankRemark = (row.bank_remark && String(row.bank_remark).trim() !== '' && String(row.bank_remark).toUpperCase() !== 'N/A') ? String(row.bank_remark).replace(/"/g, '""') : 'NA';
+      const declineReason = (row.decline_reason && String(row.decline_reason).trim() !== '' && String(row.decline_reason).toUpperCase() !== 'N/A') ? String(row.decline_reason).replace(/"/g, '""') : 'NA';
+      const eligibleReqd = (row.eligible_reqd && String(row.eligible_reqd).trim() !== '' && String(row.eligible_reqd).toUpperCase() !== 'N/A') ? String(row.eligible_reqd).replace(/"/g, '""') : 'NA';
+
       csvLines.push([
         `"${(row.app_number || '').replace(/"/g, '""')}"`,
         `"${(row.customer_name || '').replace(/"/g, '""')}"`,
@@ -3262,18 +3289,19 @@ const exportApplicationsCSV = async (req, res, next) => {
         `"${(row.status || '').replace(/"/g, '""')}"`,
         `"${(row.commission_status || '').replace(/"/g, '""')}"`,
         `"₹${row.commission_amount || 0}"`,
-        `"${(row.appcode_status || '').replace(/"/g, '""')}"`,
-        `"${(row.soft_approval_status || '').replace(/"/g, '""')}"`,
-        `"${(row.iqa_stage || '').replace(/"/g, '""')}"`,
+        `"${appcodeStatus.replace(/"/g, '""')}"`,
+        `"${softApprovalStatus.replace(/"/g, '""')}"`,
+        `"${iqaStage.replace(/"/g, '""')}"`,
         `"${bankAppNoVal.replace(/"/g, '""')}"`,
-        `"${(row.vkyc_stage || '').replace(/"/g, '""')}"`,
-        `"${(row.vkyc_url || '').replace(/"/g, '""')}"`,
-        `"${(row.dispatch_status || '').replace(/"/g, '""')}"`,
-        `"${(row.final_status || '').replace(/"/g, '""')}"`,
-        `"${(row.app_file_generated || '').replace(/"/g, '""')}"`,
-        `"${(row.bank_remark || '').replace(/"/g, '""')}"`,
-        `"${(row.decline_reason || '').replace(/"/g, '""')}"`,
-        `"${(row.eligible_reqd || '').replace(/"/g, '""')}"`,
+        `"${vkycStage.replace(/"/g, '""')}"`,
+        `"${vkycLink.replace(/"/g, '""')}"`,
+        `"${dispatchStatus.replace(/"/g, '""')}"`,
+        `"${bankCurrentLeadStatus.replace(/"/g, '""')}"`,
+        `"${finalStatus.replace(/"/g, '""')}"`,
+        `"${appFileGen.replace(/"/g, '""')}"`,
+        `"${bankRemark}"`,
+        `"${declineReason}"`,
+        `"${eligibleReqd.replace(/"/g, '""')}"`,
         `"₹${row.approved_amount || 0}"`,
         `"${row.created_at ? new Date(row.created_at).toISOString() : ''}"`
       ].join(','));

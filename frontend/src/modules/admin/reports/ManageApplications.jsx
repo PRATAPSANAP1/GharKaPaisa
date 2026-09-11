@@ -21,7 +21,7 @@ export default function ManageApplications() {
   const userRole = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
   const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
-  const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+  const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
   const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
   const isOpsHead = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole) && !isOpsOperator;
   const isOpsHeadOrSuperAdmin = isOpsHead || isOpsOperator;
@@ -720,10 +720,10 @@ export default function ManageApplications() {
               <thead>
                 <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   <th style={{ padding: '14px 16px' }}>App ID &amp; Date</th>
-                  <th style={{ padding: '14px 16px' }}>Customer</th>
-                  <th style={{ padding: '14px 16px' }}>Source &amp; Process</th>
-                  <th style={{ padding: '14px 16px' }}>Product &amp; Bank</th>
-                  <th style={{ padding: '14px 16px' }}>Status &amp; Commission</th>
+                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Customer</th>}
+                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Source &amp; Process</th>}
+                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Product &amp; Bank</th>}
+                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Status &amp; Commission</th>}
                   <th style={{ padding: '14px 16px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -755,43 +755,51 @@ export default function ManageApplications() {
                       </td>
 
                       {/* Customer Info */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: C.bgSecondary, color: C.primary, fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}`, flexShrink: 0 }}>
-                            {getInitials(custName)}
+                      {!isPanCheckerUser && (
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: C.bgSecondary, color: C.primary, fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}`, flexShrink: 0 }}>
+                              {getInitials(custName)}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 800, color: C.text }}>{custName}</div>
+                              <div style={{ fontSize: '11px', color: C.textLight }}>{app.customer_mobile || app.mobile || 'No Mobile'}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div style={{ fontWeight: 800, color: C.text }}>{custName}</div>
-                            <div style={{ fontSize: '11px', color: C.textLight }}>{app.customer_mobile || app.mobile || 'No Mobile'}</div>
-                          </div>
-                        </div>
-                      </td>
+                        </td>
+                      )}
 
                       {/* Source & Process */}
-                      <td style={{ padding: '14px 16px' }}>
-                        {renderProcessBadge(app)}
-                      </td>
+                      {!isPanCheckerUser && (
+                        <td style={{ padding: '14px 16px' }}>
+                          {renderProcessBadge(app)}
+                        </td>
+                      )}
 
                       {/* Product & Bank */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <div style={{ fontWeight: 800, color: C.text }}>{app.bank_name || app.bank_code || 'Bank Partner'}</div>
-                        <div style={{ fontSize: '11px', color: C.textLight }}>{app.product_name || app.category || 'Financial Product'}</div>
-                      </td>
+                      {!isPanCheckerUser && (
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontWeight: 800, color: C.text }}>{app.bank_name || app.bank_code || 'Bank Partner'}</div>
+                          <div style={{ fontSize: '11px', color: C.textLight }}>{app.product_name || app.category || 'Financial Product'}</div>
+                        </td>
+                      )}
 
                       {/* Status & Commission */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <span style={{
-                            display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "10.5px", fontWeight: 800, textTransform: "uppercase", width: "fit-content",
-                            background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`
-                          }}>
-                            {badge.label}
-                          </span>
-                          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>
-                            Comm: <span style={{ color: app.commission_released || app.commission_status === 'processed' ? '#059669' : C.textMid }}>₹{parseFloat(app.commission_amount || 0).toLocaleString('en-IN')} ({app.commission_released || app.commission_status === 'processed' ? 'Released' : 'Pending'})</span>
+                      {!isPanCheckerUser && (
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span style={{
+                              display: "inline-block", padding: "3px 8px", borderRadius: "6px", fontSize: "10.5px", fontWeight: 800, textTransform: "uppercase", width: "fit-content",
+                              background: badge.bg, color: badge.color, border: `1px solid ${badge.border}`
+                            }}>
+                              {badge.label}
+                            </span>
+                            <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>
+                              Comm: <span style={{ color: app.commission_released || app.commission_status === 'processed' ? '#059669' : C.textMid }}>₹{parseFloat(app.commission_amount || 0).toLocaleString('en-IN')} ({app.commission_released || app.commission_status === 'processed' ? 'Released' : 'Pending'})</span>
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
+                      )}
 
                       {/* Actions */}
                       <td style={{ padding: '14px 16px', textAlign: 'right' }}>
