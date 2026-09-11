@@ -48,6 +48,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const role = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
   const isPanChecker = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+  const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
   const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
   const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
   const isOpsOrAdmin = isOpsHead || isOpsOperator;
@@ -58,15 +59,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
   const [currentStatus, setCurrentStatus] = useState(application?.status || 'details_submitted');
 
-  const isSuperAdminOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role);
+  const isSuperAdminOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isSalesExecUser;
   const isLockedStatus = ['approved', 'super_admin_approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed', 'rejected', 'cancelled'].includes(String(currentStatus || application?.status || '').toLowerCase()) && !isSuperAdminOrAdmin;
 
   // Role & Status Access Rules:
-  // Super Admin / Admin / Operations Head can edit all 3 forms even when application status is approved.
-  // For partners, approved applications remain locked.
   const canEditQd = !isLockedStatus;
   const canEditRemark = !isLockedStatus;
-  const canEditFinal = isSuperAdminOrAdmin || (!isPartner && !isLockedStatus);
+  const canEditFinal = !isSalesExecUser && (isSuperAdminOrAdmin || (!isPartner && !isLockedStatus));
 
   const sanitizeVal = (val) => {
     if (!val || val === 'null' || val === 'undefined') return '';
@@ -113,12 +112,19 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [mailStatus, setMailStatus] = useState(sanitizeVal(application?.mail_status) || sanitizeVal(application?.physical_details?.mail_status) || 'None');
   const [cardApprovalStage, setCardApprovalStage] = useState(sanitizeVal(application?.card_approval_stage) || sanitizeVal(application?.physical_details?.card_approval_stage) || 'None');
   const [digitalCardIssued, setDigitalCardIssued] = useState(sanitizeVal(application?.digital_card_issued) || sanitizeVal(application?.physical_details?.digital_card_issued) || 'None');
+  const [cardActivationStage, setCardActivationStage] = useState(sanitizeVal(application?.card_activation_stage) || sanitizeVal(application?.physical_details?.card_activation_stage) || 'None');
+  const [declineCode, setDeclineCode] = useState(sanitizeVal(application?.decline_code) || sanitizeVal(application?.physical_details?.decline_code) || '');
+  const [declineRemark, setDeclineRemark] = useState(sanitizeVal(application?.decline_remark) || sanitizeVal(application?.physical_details?.decline_remark) || '');
+  const [queryableRemark, setQueryableRemark] = useState(sanitizeVal(application?.queryable_remark) || sanitizeVal(application?.physical_details?.queryable_remark) || 'None');
+  const [queryableSalesRemark, setQueryableSalesRemark] = useState(sanitizeVal(application?.queryable_sales_remark) || sanitizeVal(application?.physical_details?.queryable_sales_remark) || '');
+  const [digitalRemark, setDigitalRemark] = useState(sanitizeVal(application?.digital_remark) || sanitizeVal(application?.physical_details?.digital_remark) || 'None');
 
   const [appcodeStatus, setAppcodeStatus] = useState(sanitizeVal(application?.appcode_status) || sanitizeVal(application?.physical_details?.appcode_status));
   const [softApprovalStatus, setSoftApprovalStatus] = useState(sanitizeVal(application?.soft_approval_status) || sanitizeVal(application?.physical_details?.soft_approval_status));
   const [vkycStage, setVkycStage] = useState(sanitizeVal(application?.vkyc_stage) || sanitizeVal(application?.vkyc_status) || sanitizeVal(application?.physical_details?.vkyc_stage));
   const [iqaStage, setIqaStage] = useState(sanitizeVal(application?.iqa_stage) || sanitizeVal(application?.physical_details?.iqa_stage));
   const [dispatchStatus, setDispatchStatus] = useState(sanitizeVal(application?.dispatch_status) || sanitizeVal(application?.physical_details?.dispatch_status));
+  const [inProcessStage, setInProcessStage] = useState(sanitizeVal(application?.in_process_stage) || sanitizeVal(application?.physical_details?.in_process_stage) || 'None');
 
   // 3. Final Status & Bank Remarks State
   const [bankRemark, setBankRemark] = useState(sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark));
@@ -299,6 +305,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           setMailStatus(sanitizeVal(app.mail_status) || sanitizeVal(pd.mail_status) || 'None');
           setCardApprovalStage(sanitizeVal(app.card_approval_stage) || sanitizeVal(pd.card_approval_stage) || 'None');
           setDigitalCardIssued(sanitizeVal(app.digital_card_issued) || sanitizeVal(pd.digital_card_issued) || 'None');
+          setCardActivationStage(sanitizeVal(app.card_activation_stage) || sanitizeVal(pd.card_activation_stage) || 'None');
+          setDeclineCode(sanitizeVal(app.decline_code) || sanitizeVal(pd.decline_code) || '');
+          setDeclineRemark(sanitizeVal(app.decline_remark) || sanitizeVal(pd.decline_remark) || '');
+          setQueryableRemark(sanitizeVal(app.queryable_remark) || sanitizeVal(pd.queryable_remark) || 'None');
+          setQueryableSalesRemark(sanitizeVal(app.queryable_sales_remark) || sanitizeVal(pd.queryable_sales_remark) || '');
+          setDigitalRemark(sanitizeVal(app.digital_remark) || sanitizeVal(pd.digital_remark) || 'None');
+          setInProcessStage(sanitizeVal(app.in_process_stage) || sanitizeVal(pd.in_process_stage) || 'None');
           if (realAppFileGenerated) setAppFileGenerated(realAppFileGenerated);
           if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
           if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
@@ -363,6 +376,12 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           mail_status: mailStatus || 'None',
           card_approval_stage: cardApprovalStage || 'None',
           digital_card_issued: digitalCardIssued || 'None',
+          card_activation_stage: cardActivationStage || 'None',
+          decline_code: declineCode || undefined,
+          decline_remark: declineRemark || undefined,
+          queryable_remark: queryableRemark || 'None',
+          queryable_sales_remark: queryableSalesRemark || undefined,
+          digital_remark: digitalRemark || 'None',
           appcode_status: appcodeStatus || 'None',
           soft_approval_status: softApprovalStatus || 'None',
           iqa_stage: iqaStage || 'None',
@@ -372,6 +391,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           vkyc_stage: vkycStage || kycStage || 'None',
           vkyc_url: vkycUrl,
           dispatch_status: dispatchStatus || 'None',
+          in_process_stage: inProcessStage || 'None',
           user_remark: userRemark,
           notes: userRemark,
           operational_remarks: userRemark
@@ -403,10 +423,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
             targetStatus = 'technical_error';
           }
         } else {
-          // Non-SBI logic (Uses digitalCardIssued for card approval check)
-          if (digitalCardIssued === 'Yes' || digitalCardIssued === 'yes') {
+          // Non-SBI logic (Uses digitalCardIssued or cardApprovalStage for card approval check)
+          if (digitalCardIssued === 'Yes' || digitalCardIssued === 'yes' || String(cardApprovalStage).toLowerCase().includes('approve')) {
             targetStatus = 'approved';
-          } else if (digitalCardIssued === 'No' || digitalCardIssued === 'no') {
+          } else if (digitalCardIssued === 'No' || digitalCardIssued === 'no' || String(cardApprovalStage).toLowerCase().includes('decline')) {
             targetStatus = 'rejected';
           } else if (finalStatus && (finalStatus.toLowerCase().includes('decline') || finalStatus.toLowerCase().includes('reject'))) {
             targetStatus = 'rejected';
@@ -421,12 +441,19 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           kyc_stage: kycStage,
           card_approval_stage: cardApprovalStage,
           digital_card_issued: digitalCardIssued,
+          card_activation_stage: cardActivationStage,
+          decline_code: declineCode,
+          decline_remark: declineRemark,
+          queryable_remark: queryableRemark,
+          queryable_sales_remark: queryableSalesRemark,
+          digital_remark: digitalRemark,
           bank_remark: bankRemark,
-          decline_reason: declineReason || bankRemark || userRemark,
+          decline_reason: declineReason || declineRemark || bankRemark || userRemark,
           user_remark: userRemark,
           notes: userRemark,
           operational_remarks: userRemark,
           final_status: finalStatus,
+          in_process_stage: inProcessStage || 'None',
           app_file_generated: appFileGenerated,
           status: targetStatus
         };
@@ -652,6 +679,125 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         {/* Modal Body Scrollable */}
         <div style={{ padding: isMobile ? '16px 16px 90px 16px' : '24px 24px 70px 24px', overflowY: 'auto', flex: 1 }}>
           
+          {/* PAN Checker Action & Review Panel */}
+          {isPanChecker && (
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+              <div style={{ fontWeight: 800, color: '#166534', fontSize: '14px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ShieldCheck size={18} /> PAN Checker Review & Submit
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>APPLICATION ID</label>
+                  <div style={{ fontSize: '13px', fontWeight: 800, fontFamily: 'monospace', color: '#1e293b' }}>
+                    {appNumber || application.app_number || application.id}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>PAN NUMBER</label>
+                  <input
+                    type="text"
+                    value={panNumber}
+                    onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800, fontFamily: 'monospace', textTransform: 'uppercase', background: '#fff' }}
+                    placeholder="PAN Number"
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>APPLICATION NUMBER (OPTIONAL)</label>
+                  <input
+                    type="text"
+                    value={bankRefNumber}
+                    onChange={(e) => setBankRefNumber(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: '#fff' }}
+                    placeholder="Enter Bank App No (Optional)"
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>PAN REMARK</label>
+                  <input
+                    type="text"
+                    value={userRemark}
+                    onChange={(e) => setUserRemark(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                    placeholder="Enter PAN Remark"
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>BANK REMARK</label>
+                  <input
+                    type="text"
+                    value={bankRemark}
+                    onChange={(e) => setBankRemark(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                    placeholder="Enter Bank Remark"
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  disabled={actionLoading}
+                  onClick={async () => {
+                    setActionLoading(true);
+                    try {
+                      const targetId = application.app_number || application.id || application.application_id;
+                      const res = await api.put(`/applications/${targetId}/verification`, {
+                        status: 'operational_verified',
+                        final_status: 'Operational Verified',
+                        bank_application_number: bankRefNumber || undefined,
+                        bank_ref_number: bankRefNumber || undefined,
+                        bank_remark: bankRemark || userRemark || 'PAN Verified OK',
+                        user_remark: userRemark || bankRemark || 'PAN Verified OK',
+                        ops_remark: userRemark || bankRemark || 'PAN Verified OK by PAN Checker'
+                      });
+                      if (res.data?.success) {
+                        alert('PAN Verification Submitted successfully! Application removed from active queue.');
+                        onClose();
+                        if (onRefresh) onRefresh();
+                      }
+                    } catch (err) {
+                      alert(err.response?.data?.message || 'Failed to verify PAN');
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  style={{ background: '#10B981', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <CheckCircle size={16} /> Submit & Verify PAN
+                </button>
+                <button
+                  disabled={actionLoading}
+                  onClick={async () => {
+                    const remark = bankRemark || userRemark || prompt('Enter Bank / Rejection Remark for this PAN:');
+                    if (!remark) return;
+                    setActionLoading(true);
+                    try {
+                      const targetId = application.app_number || application.id || application.application_id;
+                      const res = await api.put(`/applications/${targetId}/verification`, {
+                        status: 'rejected',
+                        final_status: 'Rejected',
+                        bank_remark: remark,
+                        decline_reason: remark,
+                        user_remark: remark,
+                        ops_remark: remark
+                      });
+                      if (res.data?.success) {
+                        alert('Application rejected with PAN remark successfully! Removed from active queue.');
+                        onClose();
+                        if (onRefresh) onRefresh();
+                      }
+                    } catch (err) {
+                      alert(err.response?.data?.message || 'Failed to reject PAN application');
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  style={{ background: '#EF4444', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <XCircle size={16} /> Reject PAN
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Navigation Tabs (Stage Specific View + Audit Log based on button clicked) */}
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
@@ -703,7 +849,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
             </button>
 
             {/* 3. Final Tab (Shown for all processes including Customer Apply & Direct Bank) */}
-            {(initialTabKey === 'final' || showAllTabs) && (
+            {!isSalesExecUser && (initialTabKey === 'final' || showAllTabs) && (
               <button
                 onClick={() => setActiveTab('final')}
                 style={{
@@ -1262,6 +1408,25 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                         />
                       </div>
+
+                      {/* 7. CARD APPROVAL */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>7. CARD APPROVAL</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={cardApprovalStage || 'None'}
+                          onChange={(e) => setCardApprovalStage(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Approved">Approved</option>
+                          <option value="Decline">Decline</option>
+                          <option value="In Process">In Process</option>
+                          {cardApprovalStage && !['None', 'Approved', 'Decline', 'In Process', ''].includes(cardApprovalStage) && (
+                            <option value={cardApprovalStage}>{cardApprovalStage}</option>
+                          )}
+                        </select>
+                      </div>
                     </>
                   ) : isTataCobrandHdfc ? (
                     /* 🆃 TATA CO-BRAND HDFC WORKFLOW */
@@ -1296,10 +1461,20 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                         >
                           <option value="None">None</option>
-                          <option value="Vkyc Complete">Vkyc Complete</option>
-                          <option value="Vkyc Pending">Vkyc Pending</option>
-                          <option value="Vkyc Failed">Vkyc Failed</option>
-                          {kycStage && !['None', 'Vkyc Complete', 'Vkyc Pending', 'Vkyc Failed', ''].includes(kycStage) && (
+                          <option value="VKYC Link Send">VKYC Link Send</option>
+                          <option value="VKYC Success">VKYC Success</option>
+                          <option value="VKYC Pending">VKYC Pending</option>
+                          <option value="VKYC Failed">VKYC Failed</option>
+                          <option value="VKYC Expired">VKYC Expired</option>
+                          <option value="ID-COM Success">ID-COM Success</option>
+                          <option value="ID-COM Pending">ID-COM Pending</option>
+                          <option value="ID-COM Failed">ID-COM Failed</option>
+                          <option value="BIO Link Send">BIO Link Send</option>
+                          <option value="BIO Success">BIO Success</option>
+                          <option value="BIO Pending">BIO Pending</option>
+                          <option value="KYC Link Not Working">KYC Link Not Working</option>
+                          <option value="Error Occured">Error Occured</option>
+                          {kycStage && !['None', 'VKYC Link Send', 'VKYC Success', 'VKYC Pending', 'VKYC Failed', 'VKYC Expired', 'ID-COM Success', 'ID-COM Pending', 'ID-COM Failed', 'BIO Link Send', 'BIO Success', 'BIO Pending', 'KYC Link Not Working', 'Error Occured', ''].includes(kycStage) && (
                             <option value={kycStage}>{kycStage}</option>
                           )}
                         </select>
@@ -1334,9 +1509,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         </div>
                       )}
 
-                      {/* 5. CARD APPROVAL STAGE */}
+                      {/* 5. CARD APPROVAL */}
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>5. CARD APPROVAL STAGE</label>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>5. CARD APPROVAL</label>
                         <select
                           disabled={!canEditRemark}
                           value={cardApprovalStage || 'None'}
@@ -1344,11 +1519,29 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
                         >
                           <option value="None">None</option>
-                          <option value="instant approved">instant approved</option>
-                          <option value="in process">in process</option>
-                          <option value="decline">decline</option>
-                          {cardApprovalStage && !['None', 'instant approved', 'in process', 'decline', ''].includes(cardApprovalStage) && (
+                          <option value="Approved">Approved</option>
+                          <option value="Decline">Decline</option>
+                          <option value="In Process">In Process</option>
+                          {cardApprovalStage && !['None', 'Approved', 'Decline', 'In Process', ''].includes(cardApprovalStage) && (
                             <option value={cardApprovalStage}>{cardApprovalStage}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* 6. DIGITAL CARD ISSUED */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>6. DIGITAL CARD ISSUED</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={digitalCardIssued || 'None'}
+                          onChange={(e) => setDigitalCardIssued(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                          {digitalCardIssued && !['None', 'Yes', 'No', 'yes', 'no', ''].includes(digitalCardIssued) && (
+                            <option value={digitalCardIssued}>{digitalCardIssued}</option>
                           )}
                         </select>
                       </div>
@@ -1409,6 +1602,137 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="decline">decline</option>
                         </select>
                       </div>
+                    </>
+                  )}
+
+                  {/* 🏦 HDFC CARD APPROVAL CONDITIONAL FIELDS (FOR ALL HDFC CARDS) */}
+                  {(isHdfcBank || isTataCobrandHdfc) && (
+                    <>
+                      {/* WHEN CARD APPROVAL IS APPROVED */}
+                      {String(cardApprovalStage || finalStatus || '').toLowerCase().includes('approve') && (
+                        <div>
+                          <label style={{ fontSize: '12px', fontWeight: 800, color: '#15803d', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>CARD ACTIVATION STAGE</label>
+                          <select
+                            disabled={!canEditRemark}
+                            value={cardActivationStage || 'None'}
+                            onChange={(e) => setCardActivationStage(e.target.value)}
+                            style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                          >
+                            <option value="None">None</option>
+                            <option value="Transaction active">Transaction active</option>
+                            <option value="V+ active">V+ active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Not Available">Not Available</option>
+                            {cardActivationStage && !['None', 'Transaction active', 'V+ active', 'Inactive', 'Not Available', ''].includes(cardActivationStage) && (
+                              <option value={cardActivationStage}>{cardActivationStage}</option>
+                            )}
+                          </select>
+                        </div>
+                      )}
+
+                      {/* WHEN CARD APPROVAL IS DECLINE */}
+                      {(String(cardApprovalStage || '').toLowerCase().includes('decline') || String(finalStatus || '').toLowerCase().includes('decline') || String(finalStatus || '').toLowerCase().includes('reject')) && (
+                        <>
+                          {/* 1. DECLINE CODE */}
+                          <div>
+                            <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. DECLINE CODE</label>
+                            <input
+                              type="text"
+                              disabled={!canEditRemark}
+                              value={declineCode}
+                              onChange={(e) => setDeclineCode(e.target.value)}
+                              placeholder="Enter Decline Code"
+                              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                            />
+                          </div>
+
+                          {/* 2. DECLINE REMARK */}
+                          <div>
+                            <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>2. DECLINE REMARK</label>
+                            <input
+                              type="text"
+                              disabled={!canEditRemark}
+                              value={declineRemark}
+                              onChange={(e) => setDeclineRemark(e.target.value)}
+                              placeholder="Enter Decline Remark"
+                              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                            />
+                          </div>
+
+                          {/* 3. QUERYABLE REMARK */}
+                          <div>
+                            <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. QUERYABLE REMARK</label>
+                            <select
+                              disabled={!canEditRemark}
+                              value={queryableRemark || 'None'}
+                              onChange={(e) => setQueryableRemark(e.target.value)}
+                              style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                            >
+                              <option value="None">None</option>
+                              <option value="Digital">Digital</option>
+                              <option value="Physical">Physical</option>
+                              <option value="Not Required">Not Required</option>
+                              {queryableRemark && !['None', 'Digital', 'Physical', 'Not Required', ''].includes(queryableRemark) && (
+                                <option value={queryableRemark}>{queryableRemark}</option>
+                              )}
+                            </select>
+                          </div>
+
+                          {/* 4. DIGITAL QUERY DETAILS (WHEN QUERYABLE REMARK IS DIGITAL) */}
+                          {String(queryableRemark).toLowerCase() === 'digital' && (
+                            <div style={{ gridColumn: '1 / -1', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '14px', marginTop: '4px' }}>
+                              <div style={{ fontWeight: 800, color: '#1e40af', fontSize: '13px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Sparkles size={16} /> Digital Journey Query Details
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', alignItems: 'end' }}>
+                                <div>
+                                  <button
+                                    type="button"
+                                    disabled={!canEditRemark}
+                                    onClick={() => {
+                                      setDigitalRemark('Completed');
+                                      alert('Digital journey marked as Completed!');
+                                    }}
+                                    style={{ background: '#2563eb', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '8px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', width: '100%', justifyContent: 'center' }}
+                                  >
+                                    <CheckCircle size={15} /> Complete Digital Journey
+                                  </button>
+                                </div>
+
+                                <div>
+                                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#1e3a8a', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>QUERYABLE SALES REMARK</label>
+                                  <input
+                                    type="text"
+                                    disabled={!canEditRemark}
+                                    value={queryableSalesRemark}
+                                    onChange={(e) => setQueryableSalesRemark(e.target.value)}
+                                    placeholder="Enter Queryable Sales Remark"
+                                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff' }}
+                                  />
+                                </div>
+
+                                <div>
+                                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#1e3a8a', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DIGITAL REMARK</label>
+                                  <select
+                                    disabled={!canEditRemark}
+                                    value={digitalRemark || 'None'}
+                                    onChange={(e) => setDigitalRemark(e.target.value)}
+                                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                                  >
+                                    <option value="None">None</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Incomplete">Incomplete</option>
+                                    <option value="In Process">In Process</option>
+                                    {digitalRemark && !['None', 'Completed', 'Incomplete', 'In Process', ''].includes(digitalRemark) && (
+                                      <option value={digitalRemark}>{digitalRemark}</option>
+                                    )}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </>
                   )}
 
@@ -1552,6 +1876,33 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         )}
                       </select>
                     )}
+                  </div>
+
+                  {/* 3. SBI IN PROCESS STAGE (Only for SBI applications) */}
+                  {isSbi && (
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                        IN PROCESS STAGE
+                      </label>
+                      <select
+                        disabled={!canEditFinal}
+                        value={inProcessStage || 'None'}
+                        onChange={(e) => setInProcessStage(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                      >
+                        <option value="None">None</option>
+                        <option value="Dip call pending">Dip call pending</option>
+                        <option value="Dip appcode pending">Dip appcode pending</option>
+                        <option value="Soft decision - approve">Soft decision - approve</option>
+                        <option value="Fte pending">Fte pending</option>
+                        <option value="WCP PROCESS">WCP PROCESS</option>
+                        <option value="Stp manual process">Stp manual process</option>
+                        {inProcessStage && !['None', 'Dip call pending', 'Dip appcode pending', 'Dip appcode panding', 'Soft decision - approve', 'Soft disision - approve', 'Fte pending', 'WCP PROCESS', 'Stp manual process', ''].includes(inProcessStage) && (
+                          <option value={inProcessStage}>{inProcessStage}</option>
+                        )}
+                      </select>
+                    </div>
+                  )}
 
                   {/* 3. SBI Rejection Reason (Only shown when App File Generated is No for SBI) */}
                   {isSbi && appFileGenerated === 'No' && (
@@ -1569,7 +1920,6 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       />
                     </div>
                   )}
-                  </div>
 
                   {/* 3. USER REMARK */}
                   <div style={{ gridColumn: '1 / -1' }}>

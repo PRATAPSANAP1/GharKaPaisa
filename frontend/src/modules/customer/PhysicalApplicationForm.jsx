@@ -313,7 +313,13 @@ export default function PhysicalApplicationForm() {
   };
 
   const handleChange = (field, val) => {
-    setForm(prev => ({ ...prev, [field]: field === 'dob' ? formatDobInput(val) : val }));
+    setForm(prev => {
+      const next = { ...prev, [field]: field === 'dob' ? formatDobInput(val) : val };
+      if (field === 'app_file_generated' && String(val).toLowerCase() === 'yes') {
+        next.final_status = 'Approve';
+      }
+      return next;
+    });
   };
 
   // Modern input styles using Theme Context C

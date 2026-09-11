@@ -6,7 +6,7 @@ import api from '../../../services/api';
 import { getBankApplyLink } from '../../home/components/CreditCards/cardLinkHelper';
 import { MdArrowBack, MdSend, MdContentCopy, MdShare, MdOpenInNew, MdCheckCircle, MdAssignment, MdLink, MdAccountBalance, MdVerifiedUser, MdRefresh } from 'react-icons/md';
 import { isSbiProductOrBank } from '../../../utils/sbiPincodeChecker';
-import PincodeAutoComplete, { isSbiPincodeValid } from '../../../components/PincodeAutoComplete';
+import PincodeAutoComplete, { isSbiPincodeValid, isS8Pincode, getS8PincodeDetails } from '../../../components/PincodeAutoComplete';
 
 const ALL_PROCESS_OPTIONS = [
   {
@@ -79,6 +79,7 @@ export default function PartnerAddLead() {
   const [monthlySalary, setMonthlySalary] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [pincode, setPincode] = useState('');
+  const [negativeArea, setNegativeArea] = useState('No');
   const [city, setCity] = useState('');
   const [stateName, setStateName] = useState('');
   const [businessType, setBusinessType] = useState('Micro-Enterprise');
@@ -170,6 +171,13 @@ export default function PartnerAddLead() {
       }
     } else {
       setErrors(prev => ({ ...prev, pincode: null }));
+    }
+
+    if (isS8Pincode(clean)) {
+      const details = getS8PincodeDetails(clean);
+      setNegativeArea(`Yes (${details?.city ? details.city + ' - ' : ''}S8 Area)`);
+    } else {
+      setNegativeArea('No');
     }
   };
 
@@ -269,6 +277,7 @@ export default function PartnerAddLead() {
         monthly_salary: monthlySalary ? parseFloat(monthlySalary) : 0,
         company_name: companyName.trim(),
         pincode: pincode.trim(),
+        negative_area: negativeArea,
         city: city.trim(),
         state: stateName.trim(),
         business_type: businessType,
@@ -919,6 +928,36 @@ export default function PartnerAddLead() {
                 C={C}
               />
             </div>
+
+            {isSbiSelected && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={S.label}>Negative Area</label>
+                <select
+                  value={negativeArea}
+                  onChange={(e) => setNegativeArea(e.target.value)}
+                  style={{
+                    ...S.input,
+                    height: '42px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    borderColor: negativeArea && negativeArea.toLowerCase().includes('yes') ? C.red : C.border,
+                    background: negativeArea && negativeArea.toLowerCase().includes('yes') ? `${C.red}0D` : C.card,
+                    color: negativeArea && negativeArea.toLowerCase().includes('yes') ? C.red : C.text
+                  }}
+                >
+                  <option value="No">No (Standard Area)</option>
+                  <option value="Yes (S8 Area)">Yes (S8 Negative Area)</option>
+                  {negativeArea && !['No', 'Yes (S8 Area)'].includes(negativeArea) && (
+                    <option value={negativeArea}>{negativeArea}</option>
+                  )}
+                </select>
+                {negativeArea && negativeArea.toLowerCase().includes('yes') && (
+                  <span style={{ fontSize: '11px', color: C.red, fontWeight: 700, marginTop: '4px', display: 'block' }}>
+                    ⚠️ Negative Area / S8 Pincode Detected ({getS8PincodeDetails(pincode)?.city || 'S8 Listed'}). Application can still be processed.
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ADDITIONAL FIELDS FOR LEAD PUNCHING */}

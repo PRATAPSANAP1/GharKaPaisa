@@ -1,18 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaMapMarkerAlt, FaCheckCircle, FaTimesCircle, FaSearch } from 'react-icons/fa';
 import sbiPincodeMap from '../data/sbi_pincodes_with_city.json';
+import s8PincodeMap from '../data/s8_pincodes_with_city.json';
 
 const sbiEntries = Object.entries(sbiPincodeMap); // [ ["756056", "BALESHWAR"], ... ]
 const sbiSet = new Set(Object.keys(sbiPincodeMap));
+const s8Set = new Set(Object.keys(s8PincodeMap));
 
 export const isSbiPincodeValid = (pincode) => {
   if (!pincode) return false;
-  return sbiSet.has(String(pincode).trim());
+  const clean = String(pincode).trim();
+  return sbiSet.has(clean) || s8Set.has(clean);
+};
+
+export const isS8Pincode = (pincode) => {
+  if (!pincode) return false;
+  return s8Set.has(String(pincode).trim());
+};
+
+export const getS8PincodeDetails = (pincode) => {
+  if (!pincode) return null;
+  return s8PincodeMap[String(pincode).trim()] || null;
 };
 
 export const getSbiPincodeCity = (pincode) => {
   if (!pincode) return '';
-  return sbiPincodeMap[String(pincode).trim()] || '';
+  const clean = String(pincode).trim();
+  return sbiPincodeMap[clean] || s8PincodeMap[clean]?.city || '';
 };
 
 export default function PincodeAutoComplete({

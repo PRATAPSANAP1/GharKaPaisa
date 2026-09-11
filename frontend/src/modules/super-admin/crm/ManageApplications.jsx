@@ -32,6 +32,8 @@ export default function ManageApplications() {
   const { C, isDark } = useTheme();
   const S = makeS(C);
   const user = useAuthStore((state) => state.user);
+  const userDesignation = (user?.designation || '').toUpperCase();
+  const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
   const navigate = useNavigate();
 
   const [searchParams] = useSearchParams();
@@ -63,6 +65,7 @@ export default function ManageApplications() {
 
   // ── FILTER STATES ──
   const [search, setSearch] = useState('');
+  const [searchField, setSearchField] = useState('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [dateRange, setDateRange] = useState('all');
   const [productFilter, setProductFilter] = useState('all');
@@ -225,6 +228,7 @@ export default function ManageApplications() {
 
   const clearAllFilters = () => {
     setSearch('');
+    setSearchField('all');
     setDateRange('all');
     setProductFilter('all');
     setBankFilter('all');
@@ -1132,12 +1136,14 @@ export default function ManageApplications() {
 
                     {/* Button 2: Ops Verify (Physical) / Bank Final Status (Digital) */}
                     {isDigital ? (
-                      <button
-                        onClick={() => openAuditModal(selectedApp, 'final')}
-                        style={{ padding: '8px 4px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
-                      >
-                        Bank Final Status
-                      </button>
+                      !isSalesExecUser && (
+                        <button
+                          onClick={() => openAuditModal(selectedApp, 'final')}
+                          style={{ padding: '8px 4px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}
+                        >
+                          Bank Final Status
+                        </button>
+                      )
                     ) : (
                       <button
                         onClick={() => handleUpdateStatus(selectedApp.id, 'operational_verified')}
@@ -1164,7 +1170,7 @@ export default function ManageApplications() {
                     </button>
 
                     {/* Button 5: Bank Final Status (Physical Only) */}
-                    {!isDigital && (
+                    {!isDigital && !isSalesExecUser && (
                       <button
                         onClick={() => openAuditModal(selectedApp, 'final')}
                         style={{ padding: '8px 4px', borderRadius: '8px', background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer', textAlign: 'center' }}

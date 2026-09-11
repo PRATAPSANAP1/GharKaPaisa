@@ -816,12 +816,14 @@ export default function ManageApplications() {
                           >
                             <FileEdit size={12} /> Remark
                           </button>
-                          <button
-                            onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }}
-                            style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                          >
-                            <Building2 size={12} /> Final
-                          </button>
+                          {!isSalesExecUser && (
+                            <button
+                              onClick={() => { setVerifyModalTab('final'); setVerifyModalApp(app); }}
+                              style={{ background: "#16a34a15", border: "1px solid #16a34a40", color: "#16a34a", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                            >
+                              <Building2 size={12} /> Final
+                            </button>
+                          )}
                         </div>
                       </td>
 

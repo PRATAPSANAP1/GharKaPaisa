@@ -17,7 +17,7 @@ import {
 import { FaBalanceScale } from 'react-icons/fa';
 import { getCardDetails } from '../../home/components/CreditCards/CardDetailsData';
 import { getBankApplyLink } from '../../home/components/CreditCards/cardLinkHelper';
-import PincodeAutoComplete, { isSbiPincodeValid } from '../../../components/PincodeAutoComplete';
+import PincodeAutoComplete, { isSbiPincodeValid, isS8Pincode, getS8PincodeDetails } from '../../../components/PincodeAutoComplete';
 
 const CATEGORIES = [
   { id: 'all', label: 'All Products' },
@@ -235,6 +235,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
   const [mobile, setMobile] = useState("");
   const [panNumber, setPanNumber] = useState("");
   const [pincode, setPincode] = useState("");
+  const [negativeArea, setNegativeArea] = useState("No");
   const [processType, setProcessType] = useState("lead_punching"); // 'lead_punching', 'linked_share', 'direct_bank'
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
@@ -299,6 +300,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
     setMobile("");
     setPanNumber("");
     setPincode("");
+    setNegativeArea("No");
     setProcessType("lead_punching");
     setFormErrors({});
   };
@@ -358,6 +360,7 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
         pan_number: panNumber.trim().toUpperCase() || undefined,
         pan: panNumber.trim().toUpperCase() || undefined,
         pincode: pincode.trim() || undefined,
+        negative_area: negativeArea,
         process_type: processType,
         agree_terms: true
       };
@@ -1835,13 +1838,59 @@ export default function PartnerProducts({ initialSearch = '', initialBank = '', 
                       <label style={S.label}>Enter Pincode *</label>
                       <PincodeAutoComplete
                         value={pincode}
-                        onChange={(val) => { setPincode(val); setFormErrors(prev => ({ ...prev, pincode: null })); }}
-                        onSelect={({ pincode: pin }) => { setPincode(pin); setFormErrors(prev => ({ ...prev, pincode: null })); }}
+                        onChange={(val) => {
+                          setPincode(val);
+                          setFormErrors(prev => ({ ...prev, pincode: null }));
+                          if (isS8Pincode(val)) {
+                            const details = getS8PincodeDetails(val);
+                            setNegativeArea(`Yes (${details?.city ? details.city + ' - ' : ''}S8 Area)`);
+                          } else {
+                            setNegativeArea('No');
+                          }
+                        }}
+                        onSelect={({ pincode: pin }) => {
+                          setPincode(pin);
+                          setFormErrors(prev => ({ ...prev, pincode: null }));
+                          if (isS8Pincode(pin)) {
+                            const details = getS8PincodeDetails(pin);
+                            setNegativeArea(`Yes (${details?.city ? details.city + ' - ' : ''}S8 Area)`);
+                          } else {
+                            setNegativeArea('No');
+                          }
+                        }}
                         isSbiOnly={true}
                         placeholder="Enter 6-digit Pincode"
                         error={formErrors.pincode}
                         C={C}
                       />
+                    </div>
+
+                    <div>
+                      <label style={S.label}>Negative Area</label>
+                      <select
+                        value={negativeArea}
+                        onChange={(e) => setNegativeArea(e.target.value)}
+                        style={{
+                          ...S.input,
+                          height: '44px',
+                          fontSize: '13.5px',
+                          fontWeight: 700,
+                          borderColor: negativeArea && negativeArea.toLowerCase().includes('yes') ? C.red : C.border,
+                          background: negativeArea && negativeArea.toLowerCase().includes('yes') ? `${C.red}0D` : C.card,
+                          color: negativeArea && negativeArea.toLowerCase().includes('yes') ? C.red : C.text
+                        }}
+                      >
+                        <option value="No">No (Standard Area)</option>
+                        <option value="Yes (S8 Area)">Yes (S8 Negative Area)</option>
+                        {negativeArea && !['No', 'Yes (S8 Area)'].includes(negativeArea) && (
+                          <option value={negativeArea}>{negativeArea}</option>
+                        )}
+                      </select>
+                      {negativeArea && negativeArea.toLowerCase().includes('yes') && (
+                        <span style={{ fontSize: '11.5px', color: C.red, fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          ⚠️ Negative Area / S8 Pincode Detected ({getS8PincodeDetails(pincode)?.city || 'S8 Listed'}). Application can still be processed.
+                        </span>
+                      )}
                     </div>
                   </>
                 )}

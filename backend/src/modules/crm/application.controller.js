@@ -779,7 +779,11 @@ const updateStatus = async (req, res, next) => {
     await client.query('BEGIN');
     const { id } = req.params;
     const { status, remarks = 'Status updated by administrative panel' } = req.body;
-    const isRejected = ['rejected', 'decline', 'declined', 'cancelled'].includes(String(status || '').toLowerCase());
+    const appFileGenVal = req.body.app_file_generated !== undefined ? req.body.app_file_generated : req.body.appfile_generated;
+    const isAppFileYes = appFileGenVal && String(appFileGenVal).trim().toLowerCase() === 'yes';
+
+    let targetStatus = isAppFileYes ? 'approved' : status;
+    const isRejected = ['rejected', 'decline', 'declined', 'cancelled'].includes(String(targetStatus || '').toLowerCase());
 
     let { rows: [app] } = await client.query(
       `SELECT * FROM applications 
@@ -808,35 +812,36 @@ const updateStatus = async (req, res, next) => {
 
     const userRole = (req.user?.role || '').toUpperCase();
     const restrictedForPartner = ['operational_verified', 'super_admin_approved', 'commission_processing', 'commission_released'];
-    if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && restrictedForPartner.includes(status)) {
+    if (['PARTNER', 'TEAM_MEMBER'].includes(userRole) && restrictedForPartner.includes(targetStatus)) {
       await client.query('ROLLBACK');
       return forbidden(res, 'Partners are not authorized to update application to operational or admin approval statuses.');
     }
 
     const restrictedForOpHead = ['super_admin_approved', 'commission_processing', 'commission_released'];
-    if (['EMPLOYEE', 'ADMIN'].includes(userRole) && restrictedForOpHead.includes(status) && userRole !== 'SUPER_ADMIN') {
+    if (['EMPLOYEE', 'ADMIN'].includes(userRole) && restrictedForOpHead.includes(targetStatus) && userRole !== 'SUPER_ADMIN') {
       await client.query('ROLLBACK');
       return forbidden(res, 'Super Admin authorization required for final approval and commission processing.');
     }
 
     let approvedAt = app.approved_at;
-    if ((status === 'approved' || status === 'super_admin_approved') && !app.approved_at) {
+    if ((targetStatus === 'approved' || targetStatus === 'super_admin_approved') && !app.approved_at) {
       approvedAt = new Date();
     }
 
-    const historyEntry = JSON.stringify({ status, at: new Date(), by: req.user.id, remarks });
+    const historyEntry = JSON.stringify({ status: targetStatus, at: new Date(), by: req.user.id, remarks });
     await client.query(`
       UPDATE applications SET
         status = $1,
         approved_at = $2,
         commission_status = CASE WHEN $5::boolean THEN 'cancelled' ELSE commission_status END,
         status_history = status_history || $3::jsonb,
+        app_file_generated = COALESCE($6, app_file_generated),
         updated_at = NOW()
       WHERE id = $4
-    `, [status, approvedAt, historyEntry, id, isRejected]);
+    `, [targetStatus, approvedAt, historyEntry, id, isRejected, appFileGenVal || null]);
 
     // ── Employee Incentive Engine Lifecycle Sync ────────────────────────────
-    await syncEmployeeIncentiveLifecycle(client, app, req.body.app_file_generated !== undefined ? req.body.app_file_generated : app.app_file_generated, status);
+    await syncEmployeeIncentiveLifecycle(client, app, appFileGenVal !== null ? appFileGenVal : app.app_file_generated, targetStatus);
 
     await logTimeline(client, id, status, `Transitioned to ${status.replace(/_/g, ' ').toUpperCase()}`, remarks, req.user.id);
     // Click status updates omitted
@@ -1415,9 +1420,9 @@ const listApplications = async (req, res, next) => {
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
     let panCheckerFilterSQL = '';
     if (isPanCheckerUser) {
-      panCheckerFilterSQL = ` AND (LOWER(combined.bank_code) = 'sbi' OR LOWER(combined.bank_name) LIKE '%sbi%' OR combined.bank_id IN (SELECT id FROM banks WHERE LOWER(short_code) = 'sbi' OR LOWER(name) LIKE '%sbi%'))`;
-      if (!validStatus) {
-        panCheckerFilterSQL += ` AND (combined.status IN ('pending', 'lead_created', 'details_submitted', 'submitted', 'new', 'draft', 'link_sent') AND (combined.bank_remark IS NULL OR combined.bank_remark = ''))`;
+      panCheckerFilterSQL = ` AND (LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR combined.bank_id IN (SELECT id FROM banks WHERE LOWER(short_code) = 'sbi' OR LOWER(name) LIKE '%sbi%'))`;
+      if (!validStatus || validStatus === 'all' || validStatus === 'pending') {
+        panCheckerFilterSQL += ` AND combined.status NOT IN ('operational_verified', 'approved', 'rejected', 'cancelled', 'disbursed', 'sanctioned') AND (combined.bank_remark IS NULL OR combined.bank_remark = '')`;
       }
     }
 
@@ -2198,8 +2203,13 @@ const updateBankProcessingStatus = async (req, res, next) => {
     const appFileGenVal = app_file_generated || appfile_generated || null;
     const bankAppNoVal = bank_application_number || bank_ref_number || null;
 
+    const isAppFileYes = appFileGenVal && String(appFileGenVal).trim().toLowerCase() === 'yes';
+
     const validStatuses = ['under_review', 'approved', 'rejected', 'disbursed', 'in_process', 'app_file_generated', 'decline', 'technical_error'];
-    const currentStatus = (status && validStatuses.includes(status)) ? status : 'under_review';
+    let currentStatus = (status && validStatuses.includes(status)) ? status : 'under_review';
+    if (isAppFileYes) {
+      currentStatus = 'approved';
+    }
 
     const parsedAmount = (approved_amount !== undefined && approved_amount !== '' && approved_amount !== null && !isNaN(approved_amount))
       ? parseFloat(approved_amount)
@@ -2226,7 +2236,8 @@ const updateBankProcessingStatus = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
         ADD COLUMN IF NOT EXISTS user_remark TEXT,
         ADD COLUMN IF NOT EXISTS notes TEXT,
-        ADD COLUMN IF NOT EXISTS operational_remarks TEXT
+        ADD COLUMN IF NOT EXISTS operational_remarks TEXT,
+        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50)
       `);
       await query(`
         ALTER TABLE physical_application_details 
@@ -2240,7 +2251,8 @@ const updateBankProcessingStatus = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS vkyc_url TEXT,
         ADD COLUMN IF NOT EXISTS user_remark TEXT,
         ADD COLUMN IF NOT EXISTS notes TEXT,
-        ADD COLUMN IF NOT EXISTS operational_remarks TEXT
+        ADD COLUMN IF NOT EXISTS operational_remarks TEXT,
+        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50)
       `);
     } catch (_) { }
 
@@ -2304,7 +2316,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
         await query(`
           INSERT INTO application_timeline (application_id, event_type, title, description, actor_type, actor_id)
           VALUES ($1, $2, $3, $4, 'admin', $5)
-        `, [id, currentStatus, `Bank Processing Update (${finalStatus || currentStatus.toUpperCase()})`, `Status & Form details updated. Remark: ${bank_remark || 'N/A'}`, req.user ? req.user.id : null]).catch(() => { });
+        `, [id, currentStatus, `Bank Processing Update (${final_status || currentStatus.toUpperCase()})`, `Status & Form details updated. Remark: ${bank_remark || 'N/A'}`, req.user ? req.user.id : null]).catch(() => { });
 
         return success(res, null, `Application status & Form details updated successfully`);
       }
@@ -2344,6 +2356,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
           digital_card_issued = COALESCE(NULLIF($25, 'None'), NULLIF($25, ''), digital_card_issued),
           income_details = COALESCE(NULLIF($26, 'None'), NULLIF($26, ''), income_details),
           mail_status = COALESCE(NULLIF($27, 'None'), NULLIF($27, ''), mail_status),
+          approved_at = CASE WHEN $1 = 'approved' AND approved_at IS NULL THEN NOW() ELSE approved_at END,
           updated_at = NOW()
       WHERE id = $28
     `, [
@@ -2359,8 +2372,8 @@ const updateBankProcessingStatus = async (req, res, next) => {
     try {
       await query(`
         INSERT INTO physical_application_details (
-          application_id, bank_application_number, bank_ref_number, vkyc_url, user_remark, ipa_stage, kyc_stage, card_approval_stage, digital_card_issued, income_details, mail_status, created_at, updated_at
-        ) VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+          application_id, bank_application_number, bank_ref_number, vkyc_url, user_remark, ipa_stage, kyc_stage, card_approval_stage, digital_card_issued, income_details, mail_status, app_file_generated, created_at, updated_at
+        ) VALUES ($1, $2, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
         ON CONFLICT (application_id) DO UPDATE SET
           bank_application_number = COALESCE(EXCLUDED.bank_application_number, physical_application_details.bank_application_number),
           bank_ref_number = COALESCE(EXCLUDED.bank_ref_number, physical_application_details.bank_ref_number),
@@ -2372,8 +2385,9 @@ const updateBankProcessingStatus = async (req, res, next) => {
           digital_card_issued = COALESCE(NULLIF(EXCLUDED.digital_card_issued, 'None'), NULLIF(EXCLUDED.digital_card_issued, ''), physical_application_details.digital_card_issued),
           income_details = COALESCE(NULLIF(EXCLUDED.income_details, 'None'), NULLIF(EXCLUDED.income_details, ''), physical_application_details.income_details),
           mail_status = COALESCE(NULLIF(EXCLUDED.mail_status, 'None'), NULLIF(EXCLUDED.mail_status, ''), physical_application_details.mail_status),
+          app_file_generated = COALESCE(EXCLUDED.app_file_generated, physical_application_details.app_file_generated),
           updated_at = NOW()
-      `, [id, bankAppNoVal, vkyc_url || null, userRemarkVal, ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null, income_details || null, mail_status || null]);
+      `, [id, bankAppNoVal, vkyc_url || null, userRemarkVal, ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null, income_details || null, mail_status || null, appFileGenVal]);
     } catch (_) { }
 
     const titleMap = {
@@ -4506,19 +4520,22 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
       dispatch_status,
       bank_remark,
       final_status,
+      app_file_generated,
+      appfile_generated,
       decline_reason,
       eligible_reqd
     } = req.body;
 
     const parsedDob = parseDobToIso(dob);
     const appId = tokenRec.application_id;
+    const appFileGenVal = app_file_generated || appfile_generated || null;
 
     await client.query(
       `INSERT INTO physical_application_details (
         application_id, aadhaar_linked_mobile, pan_name, dob, pan_number,
         mother_name, personal_email, company_name, designation, flat_no,
-        sub_area, landmark, pincode, company_address, bank_ref_number, bank_application_number, vkyc_url, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15, $16, NOW())
+        sub_area, landmark, pincode, company_address, bank_ref_number, bank_application_number, vkyc_url, app_file_generated, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15, $16, $17, NOW())
       ON CONFLICT (application_id) DO UPDATE SET
         aadhaar_linked_mobile = EXCLUDED.aadhaar_linked_mobile,
         pan_name = EXCLUDED.pan_name,
@@ -4536,20 +4553,29 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
         bank_ref_number = COALESCE(EXCLUDED.bank_ref_number, physical_application_details.bank_ref_number),
         bank_application_number = COALESCE(EXCLUDED.bank_application_number, physical_application_details.bank_application_number),
         vkyc_url = COALESCE(EXCLUDED.vkyc_url, physical_application_details.vkyc_url),
+        app_file_generated = COALESCE(EXCLUDED.app_file_generated, physical_application_details.app_file_generated),
         updated_at = NOW()`,
       [
         appId, aadhaar_linked_mobile || null, pan_name || null, parsedDob || null, pan_number || null,
         mother_name || null, personal_email || null, company_name || null, designation || null, flat_no || null,
-        sub_area || null, landmark || null, pincode || null, company_address || null, bank_ref_number || null, vkyc_url || null
+        sub_area || null, landmark || null, pincode || null, company_address || null, bank_ref_number || null, vkyc_url || null, appFileGenVal || null
       ]
     );
 
     const isOpsOrAdminUser = req.user && ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMIN_OPERATOR', 'OPERATOR'].includes((req.user.role || '').toUpperCase());
 
-    let mainStatus = 'operational_verified';
-    if (isOpsOrAdminUser && final_status) {
+    const isAppFileYes = appFileGenVal && String(appFileGenVal).trim().toLowerCase() === 'yes';
+
+    let mainStatus = null;
+    let finalStatusVal = final_status || null;
+
+    if (isAppFileYes) {
+      mainStatus = 'approved';
+      if (!finalStatusVal || finalStatusVal === 'None') finalStatusVal = 'Approve';
+    } else if (isOpsOrAdminUser && final_status) {
       const lowerFs = final_status.toLowerCase();
       if (lowerFs.includes('decline') || lowerFs.includes('rejected')) mainStatus = 'rejected';
+      else if (lowerFs.includes('approve')) mainStatus = 'approved';
       else mainStatus = 'operational_verified';
     } else {
       mainStatus = null;
@@ -4571,6 +4597,8 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
            final_status = COALESCE(NULLIF($10, ''), final_status),
            decline_reason = COALESCE(NULLIF($11, ''), decline_reason),
            eligible_reqd = COALESCE(NULLIF($12, ''), eligible_reqd),
+           app_file_generated = COALESCE(NULLIF($14, ''), app_file_generated),
+           approved_at = CASE WHEN $1 = 'approved' AND approved_at IS NULL THEN NOW() ELSE approved_at END,
            updated_at = NOW()
        WHERE id = $13`,
       [
@@ -4583,12 +4611,19 @@ const submitPhysicalApplicationByToken = async (req, res, next) => {
         iqa_stage || null,
         dispatch_status || null,
         bank_remark || null,
-        final_status || null,
+        finalStatusVal,
         decline_reason || null,
         eligible_reqd || null,
-        appId
+        appId,
+        appFileGenVal
       ]
     );
+
+    // Sync Employee Incentive Lifecycle
+    const { rows: [updatedAppObj] } = await client.query(`SELECT * FROM applications WHERE id = $1`, [appId]);
+    if (updatedAppObj) {
+      await syncEmployeeIncentiveLifecycle(client, updatedAppObj, appFileGenVal, mainStatus);
+    }
 
     if (tokenRec.customer_id) {
       await client.query(
