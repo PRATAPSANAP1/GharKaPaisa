@@ -866,7 +866,8 @@ router.get('/my-bonus-progress', async (req, res, next) => {
       const targetCount = parseInt(rule.target_count || 0);
       const bonusPerCard = parseFloat(rule.bonus_per_card || 0);
       const targetAchieved = targetCount > 0 && approvedCount >= targetCount;
-      const projectedBonus = approvedCount * bonusPerCard;
+      const bonusEligibleCount = Math.max(0, approvedCount - targetCount);
+      const projectedBonus = bonusEligibleCount * bonusPerCard;
       const totalEarnedBonus = targetAchieved ? projectedBonus : 0;
       const remainingCount = Math.max(0, targetCount - approvedCount);
       const remainingBonus = remainingCount * bonusPerCard;
@@ -1445,7 +1446,7 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
     WHERE (app.employee_id = $1 OR app.submitted_by IN (SELECT user_id FROM employees WHERE id = $1))
       AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) >= $2::date
       AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) <= $3::date
-    ORDER BY app.created_at DESC
+    ORDER BY app.created_at ASC
   `, [employeeId, startDateStr, endDateStr]);
 
   const bankMetricsMap = {};
@@ -1498,17 +1499,34 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
     if (isApproved) {
       bm.approved_cards_count += 1;
     }
+
+    let calculatedIncentive = 0;
     if (isApproved && isAppFileYes) {
       bm.app_file_yes_cards_count += 1;
+      const cardSeq = bm.app_file_yes_cards_count;
+
+      if (bm.is_department && bm.target_count > 0) {
+        // Target Quota Rule: First target_count cards receive 0 incentive (required for quota).
+        // Only cards exceeding target_count earn bonus_per_card!
+        if (cardSeq > bm.target_count) {
+          calculatedIncentive = app.tx_amount ? parseFloat(app.tx_amount) : (bm.bonus_per_card || parseFloat(app.default_incentive || 0));
+        } else {
+          calculatedIncentive = 0; // Target Quota Card
+        }
+      } else {
+        calculatedIncentive = app.tx_amount ? parseFloat(app.tx_amount) : (bm.bonus_per_card || parseFloat(app.default_incentive || 0));
+      }
+    } else {
+      calculatedIncentive = 0;
     }
 
-    const txAmt = app.tx_amount ? parseFloat(app.tx_amount) : (isApproved && isAppFileYes ? (bm.bonus_per_card || parseFloat(app.default_incentive || 0)) : 0);
-    bm.earned_incentive += txAmt;
+    app.tx_amount = calculatedIncentive;
+    bm.earned_incentive += calculatedIncentive;
 
     if (app.tx_status === 'COMPLETED') {
-      bm.released_incentive += txAmt;
-    } else if (app.tx_status && (app.tx_status.startsWith('HELD') || app.tx_status === 'PENDING')) {
-      bm.held_incentive += txAmt;
+      bm.released_incentive += calculatedIncentive;
+    } else if (calculatedIncentive > 0) {
+      bm.held_incentive += calculatedIncentive;
     }
   });
 

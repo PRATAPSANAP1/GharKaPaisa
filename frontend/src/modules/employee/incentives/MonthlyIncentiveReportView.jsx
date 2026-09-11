@@ -378,8 +378,18 @@ export default function MonthlyIncentiveReportView({ employeeId = null }) {
                               {isFileYes ? 'YES' : (app.app_file_generated || 'NO')}
                             </span>
                           </td>
-                          <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 900, color: isApproved && isFileYes ? '#10B981' : C.textMid }}>
-                            {formatINR(app.tx_amount || app.default_incentive)}
+                          <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 900, color: (parseFloat(app.tx_amount) || 0) > 0 ? '#10B981' : C.textMid }}>
+                            {formatINR(app.tx_amount || 0)}
+                            {(parseFloat(app.tx_amount) || 0) === 0 && isFileYes && isApproved && (
+                              <span style={{ fontSize: '10px', color: '#3B82F6', fontWeight: 700, display: 'block' }}>
+                                (Target Quota Card)
+                              </span>
+                            )}
+                            {(!isFileYes || !isApproved) && (
+                              <span style={{ fontSize: '10px', color: '#F59E0B', fontWeight: 700, display: 'block' }}>
+                                (Pending Approval / File)
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );
