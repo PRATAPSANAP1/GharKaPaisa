@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
-import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers, Eye, Download } from 'lucide-react';
+import { FileText, FileEdit, Building2, Clock, Search, CheckCircle2, Sparkles, XCircle, Layers, Eye, Download, ShieldCheck } from 'lucide-react';
 import {
   MdSearch, MdFilterList, MdDownload, MdAdd, MdHourglassEmpty, MdTrackChanges,
   MdCheckCircle, MdCancel, MdChevronLeft, MdChevronRight, MdClose, MdMoreVert,
