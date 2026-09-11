@@ -9,6 +9,18 @@ import {
 
 const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawApp, onClose, onRefresh, initialTab = 'qd', showAllTabs = false }) => {
   const application = rawApplication || rawApp || {};
+
+  // User Role & Permissions (Declared at top to avoid TDZ in hooks)
+  const user = useAuthStore((state) => state.user);
+  const role = (user?.role || '').toUpperCase();
+  const userDesignation = (user?.designation || '').toUpperCase();
+  const isPanChecker = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+  const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+  const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
+  const isOpsOrAdmin = isOpsHead || isOpsOperator;
+  const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
+
   // Normalize initialTab ('qd' | 'remark' | 'final' | 'timeline' | legacy aliases)
   const getTabKey = (tab) => {
     if (tab === 'details' || tab === 'qd') return 'qd';
@@ -47,17 +59,6 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
       }
     }
   }, [application?.id, initialTab, isSalesExecUser]);
-
-  // User Role & Permissions
-  const user = useAuthStore((state) => state.user);
-  const role = (user?.role || '').toUpperCase();
-  const userDesignation = (user?.designation || '').toUpperCase();
-  const isPanChecker = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
-  const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
-  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
-  const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
-  const isOpsOrAdmin = isOpsHead || isOpsOperator;
-  const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
 
   const isPunchLead = processTypeStr.includes('punch') || processTypeStr.includes('lead_punching') || processTypeStr.includes('punching');
   const isDigital = isLinkedShare || isDirectBank;
