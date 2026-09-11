@@ -1452,7 +1452,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="Approved">Approved</option>
                           <option value="Decline">Decline</option>
                           <option value="In Process">In Process</option>
-                          {cardApprovalStage && !['None', 'Approved', 'Decline', 'In Process', ''].includes(cardApprovalStage) && (
+                          <option value="Awaiting">Awaiting</option>
+                          {cardApprovalStage && !['None', 'Approved', 'Decline', 'In Process', 'Awaiting', ''].includes(cardApprovalStage) && (
                             <option value={cardApprovalStage}>{cardApprovalStage}</option>
                           )}
                         </select>
@@ -1553,7 +1554,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="Approved">Approved</option>
                           <option value="Decline">Decline</option>
                           <option value="In Process">In Process</option>
-                          {cardApprovalStage && !['None', 'Approved', 'Decline', 'In Process', ''].includes(cardApprovalStage) && (
+                          <option value="Awaiting">Awaiting</option>
+                          {cardApprovalStage && !['None', 'Approved', 'Decline', 'In Process', 'Awaiting', ''].includes(cardApprovalStage) && (
                             <option value={cardApprovalStage}>{cardApprovalStage}</option>
                           )}
                         </select>
@@ -1629,8 +1631,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         >
                           <option value="None">None</option>
                           <option value="instant approved">instant approved</option>
+                          <option value="Approved">Approved</option>
                           <option value="in process">in process</option>
                           <option value="decline">decline</option>
+                          <option value="Awaiting">Awaiting</option>
                         </select>
                       </div>
                     </>
