@@ -4,7 +4,7 @@ import { useAuthStore } from '../../../app/store/authStore';
 import { 
   X, CheckCircle, XCircle, Eye, Send, ShieldCheck, 
   Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft, Lock,
-  Share2, Copy, MessageSquare, Smartphone, Save, Sliders, Activity
+  Share2, Copy, MessageSquare, Smartphone, Save, Sliders, Activity, Sparkles
 } from 'lucide-react';
 
 const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawApp, onClose, onRefresh, initialTab = 'qd', showAllTabs = false }) => {
