@@ -162,6 +162,15 @@ router.post('/verify-otp', async (req, res, next) => {
       VALUES ($1, $2, $3, 'Employee Portal', $4)
     `, [employee.user_id, refreshTokenHash, expiresAt, req.ip]);
 
+    // Update last_login timestamp and log successful login history record
+    await query(`UPDATE users SET last_login = NOW() WHERE id = $1`, [employee.user_id]).catch(() => {});
+    try {
+      const security = require('../auth/security.service');
+      await security.loginRecord(employee.user_id, req, 'success');
+    } catch (secErr) {
+      // Non-blocking log failure fallback
+    }
+
     // Set Refresh Token Cookie
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie('refreshToken', refreshToken, {

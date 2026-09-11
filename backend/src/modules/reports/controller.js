@@ -561,18 +561,50 @@ const getDailyAnalytics = async (req, res, next) => {
           COUNT(*)::int AS new_applications,
           COUNT(*) FILTER (WHERE LOWER(status::text) IN ('approved','disbursed','commission_released','commission_received','super_admin_approved'))::int AS approved_applications
         FROM applications
-        WHERE created_at >= CURRENT_DATE - INTERVAL '1 day' * $1::int
+        WHERE created_at >= CURRENT_DATE - INTERVAL '1 day' * ($1::int + 2)
         GROUP BY created_at::date
       ),
       emp_logins_daily AS (
         SELECT 
-          last_login::date AS day_date,
-          COUNT(DISTINCT u.id)::int AS employee_logins
-        FROM users u
-        WHERE UPPER(u.role::text) IN ('EMPLOYEE', 'SALES_EXECUTIVE', 'FIELD_EXECUTIVE', 'HR')
-          AND u.last_login IS NOT NULL
-          AND u.last_login >= CURRENT_DATE - INTERVAL '1 day' * $1::int
-        GROUP BY u.last_login::date
+          login_date AS day_date,
+          COUNT(DISTINCT user_id)::int AS employee_logins
+        FROM (
+          -- 1. From login_history audit table
+          SELECT lh.user_id, lh.login_time::date AS login_date
+          FROM login_history lh
+          JOIN users u ON u.id = lh.user_id
+          WHERE (
+            UPPER(u.role::text) IN ('EMPLOYEE', 'SALES_EXECUTIVE', 'FIELD_EXECUTIVE', 'HR', 'TELECALLER', 'TEAM_LEADER', 'MANAGER', 'BRANCH_HEAD')
+            OR u.id IN (SELECT user_id FROM employees WHERE user_id IS NOT NULL)
+          )
+            AND LOWER(COALESCE(lh.status::text, 'success')) = 'success'
+            AND lh.login_time >= CURRENT_DATE - INTERVAL '1 day' * ($1::int + 2)
+
+          UNION
+
+          -- 2. From refresh_tokens session table
+          SELECT rt.user_id, rt.created_at::date AS login_date
+          FROM refresh_tokens rt
+          JOIN users u ON u.id = rt.user_id
+          WHERE (
+            UPPER(u.role::text) IN ('EMPLOYEE', 'SALES_EXECUTIVE', 'FIELD_EXECUTIVE', 'HR', 'TELECALLER', 'TEAM_LEADER', 'MANAGER', 'BRANCH_HEAD')
+            OR u.id IN (SELECT user_id FROM employees WHERE user_id IS NOT NULL)
+          )
+            AND rt.created_at >= CURRENT_DATE - INTERVAL '1 day' * ($1::int + 2)
+
+          UNION
+
+          -- 3. From users last_login timestamp
+          SELECT u.id AS user_id, u.last_login::date AS login_date
+          FROM users u
+          WHERE (
+            UPPER(u.role::text) IN ('EMPLOYEE', 'SALES_EXECUTIVE', 'FIELD_EXECUTIVE', 'HR', 'TELECALLER', 'TEAM_LEADER', 'MANAGER', 'BRANCH_HEAD')
+            OR u.id IN (SELECT user_id FROM employees WHERE user_id IS NOT NULL)
+          )
+            AND u.last_login IS NOT NULL
+            AND u.last_login >= CURRENT_DATE - INTERVAL '1 day' * ($1::int + 2)
+        ) combined_logins
+        GROUP BY login_date
       )
       SELECT 
         TO_CHAR(ds.day_date, 'YYYY-MM-DD') AS date_iso,
