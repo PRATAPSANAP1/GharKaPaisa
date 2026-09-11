@@ -87,6 +87,7 @@ const AdminLayout = () => {
   let banks = activeBanks.length > 0 ? activeBanks : DEFAULT_BANKS;
 
   const userRole = (user?.role || '').toUpperCase();
+  const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
   const isHR = userRole === 'HR' || location.pathname.startsWith('/hr');
   const userDesignation = user?.designation || '';
   const isOpHead = userDesignation === 'Operational Head' || userDesignation === 'OPERATIONAL_HEAD';
