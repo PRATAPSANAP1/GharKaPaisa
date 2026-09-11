@@ -88,6 +88,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [panNumber, setPanNumber] = useState(application?.pan_number || application?.pan || '');
   const [companyName, setCompanyName] = useState(application?.company_name || application?.employer_name || '');
   const [designation, setDesignation] = useState(application?.designation || application?.occupation || '');
+  const [panCheck, setPanCheck] = useState(application?.pan_check || 'no');
   const [address1, setAddress1] = useState(application?.address1 || application?.flat_no || application?.address || '');
   const [address2, setAddress2] = useState(application?.address2 || application?.sub_area || '');
   const [landmark, setLandmark] = useState(application?.landmark || '');
@@ -618,6 +619,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       const res = await api.put(`/applications/${targetId}/verification`, {
                         status: 'operational_verified',
                         final_status: 'Operational Verified',
+                        pan_check: 'yes',
                         bank_remark: bankRemark || 'PAN Verified OK',
                         user_remark: userRemark || 'PAN Verified OK',
                         ops_remark: 'PAN Verified OK by PAN Checker'
@@ -723,6 +725,17 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   />
                 </div>
                 <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>PAN CHECK *</label>
+                  <select
+                    value={panCheck}
+                    onChange={(e) => setPanCheck(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800, background: '#fff' }}
+                  >
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </select>
+                </div>
+                <div>
                   <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>BANK REMARK</label>
                   <input
                     type="text"
@@ -743,6 +756,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       const res = await api.put(`/applications/${targetId}/verification`, {
                         status: 'operational_verified',
                         final_status: 'Operational Verified',
+                        pan_check: 'yes',
                         bank_application_number: bankRefNumber || undefined,
                         bank_ref_number: bankRefNumber || undefined,
                         bank_remark: bankRemark || userRemark || 'PAN Verified OK',

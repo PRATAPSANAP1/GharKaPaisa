@@ -1420,10 +1420,7 @@ const listApplications = async (req, res, next) => {
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
     let panCheckerFilterSQL = '';
     if (isPanCheckerUser) {
-      panCheckerFilterSQL = ` AND (LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR combined.bank_id IN (SELECT id FROM banks WHERE LOWER(short_code) = 'sbi' OR LOWER(name) LIKE '%sbi%'))`;
-      if (!validStatus || validStatus === 'all' || validStatus === 'pending') {
-        panCheckerFilterSQL += ` AND combined.status NOT IN ('operational_verified', 'approved', 'rejected', 'cancelled', 'disbursed', 'sanctioned') AND (combined.bank_remark IS NULL OR combined.bank_remark = '')`;
-      }
+      panCheckerFilterSQL = ` AND (LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR combined.bank_id IN (SELECT id FROM banks WHERE LOWER(short_code) = 'sbi' OR LOWER(name) LIKE '%sbi%')) AND combined.status NOT IN ('approved', 'disbursed', 'sanctioned') AND (LOWER(COALESCE(combined.pan_check, 'no')) = 'no')`;
     }
 
     if (!isPartnerOrTeam && req.user?.id) {
@@ -1532,7 +1529,8 @@ const listApplications = async (req, res, next) => {
           a.product_id,
           p.bank_id,
           COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id,
-          oh.full_name as operation_head_name
+          oh.full_name as operation_head_name,
+          COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), 'no') as pan_check
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -1619,7 +1617,7 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(a.pan_check, ''), NULLIF(pad.pan_check, ''), 'no') as pan_check
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -3323,6 +3321,7 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS user_remark TEXT`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS notes TEXT`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no'`);
 
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS token VARCHAR(255)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS address1 TEXT`);
@@ -3413,7 +3412,8 @@ const updateApplicationDetails = async (req, res, next) => {
       income_details,
       mail_status,
       card_approval_stage,
-      digital_card_issued
+      digital_card_issued,
+      pan_check
     } = req.body;
 
     let { rows: [app] } = await client.query(
@@ -3595,6 +3595,7 @@ const updateApplicationDetails = async (req, res, next) => {
         mail_status = COALESCE(NULLIF($43, ''), mail_status),
         card_approval_stage = COALESCE(NULLIF($40, ''), card_approval_stage),
         digital_card_issued = COALESCE(NULLIF($41, ''), digital_card_issued),
+        pan_check = COALESCE(NULLIF($44, ''), pan_check),
         updated_at = NOW()
       WHERE id = $34
       RETURNING *
@@ -3641,7 +3642,8 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(card_approval_stage || req.body.card_approval_stage),
       cleanStr(digital_card_issued || req.body.digital_card_issued),
       cleanStr(income_details || req.body.income_details),
-      cleanStr(mail_status || req.body.mail_status)
+      cleanStr(mail_status || req.body.mail_status),
+      cleanStr(pan_check || (isPanCheckerUser ? 'yes' : null))
     ]);
 
     // 2. Update customer details if customer_id exists
