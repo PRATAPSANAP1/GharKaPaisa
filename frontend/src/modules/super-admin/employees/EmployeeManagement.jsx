@@ -61,6 +61,8 @@ export default function EmployeeManagement() {
   const [bonusRulesList, setBonusRulesList] = useState([]);
   const [loadingRules, setLoadingRules] = useState(false);
   const [savingRule, setSavingRule] = useState(false);
+  const [selectedBonusMonth, setSelectedBonusMonth] = useState('ALL');
+  const [bonusSearchTerm, setBonusSearchTerm] = useState('');
   const [bonusForm, setBonusForm] = useState({
     employee_id: '',
     bank_id: '',
@@ -2062,96 +2064,213 @@ export default function EmployeeManagement() {
         })()}
 
         {/* Manage Bonus & Targets Tab View */}
-        {activeTab === 'bonus' && (
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '450px', padding: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <FaCoins style={{ color: '#D97706' }} /> Employee Bonus & Department Target Manager
-                </h2>
-                <div style={{ fontSize: '12.5px', color: C.textMid, marginTop: '4px' }}>
-                  Assign period targets (e.g., 10 cards) & card bonus amounts for each employee and department
+        {activeTab === 'bonus' && (() => {
+          // Dynamic months list extracted from configured rules
+          const availableMonthsSet = new Set(
+            bonusRulesList.flatMap(r => [
+              r.start_date ? r.start_date.substring(0, 7) : null,
+              r.end_date ? r.end_date.substring(0, 7) : null
+            ]).filter(Boolean)
+          );
+          // Always ensure current month (e.g. 2026-09) is present
+          const currentMonthISO = new Date().toISOString().substring(0, 7);
+          availableMonthsSet.add(currentMonthISO);
+          const availableMonthsList = Array.from(availableMonthsSet).sort().reverse();
+
+          // Filter rules by month & search query
+          const displayRules = bonusRulesList.filter(rule => {
+            if (selectedBonusMonth !== 'ALL') {
+              const sM = rule.start_date ? rule.start_date.substring(0, 7) : '';
+              const eM = rule.end_date ? rule.end_date.substring(0, 7) : '';
+              if (sM !== selectedBonusMonth && eM !== selectedBonusMonth) return false;
+            }
+            if (bonusSearchTerm.trim()) {
+              const q = bonusSearchTerm.toLowerCase().trim();
+              const nameMatch = (rule.employee_name || '').toLowerCase().includes(q);
+              const codeMatch = (rule.emp_code || '').toLowerCase().includes(q);
+              const bankMatch = (rule.bank_name || '').toLowerCase().includes(q);
+              const desigMatch = (rule.employee_designation || '').toLowerCase().includes(q);
+              if (!nameMatch && !codeMatch && !bankMatch && !desigMatch) return false;
+            }
+            return true;
+          });
+
+          // Compute summary stats for the current filter view
+          const totalTargetsConfigured = displayRules.length;
+          const totalTargetCardsSum = displayRules.reduce((acc, r) => acc + parseInt(r.target_count || 0, 10), 0);
+          const totalApprovedCardsSum = displayRules.reduce((acc, r) => acc + parseInt(r.approved_count || 0, 10), 0);
+          const totalUnlockedBonusSum = displayRules.reduce((acc, r) => acc + (r.target_achieved ? parseFloat(r.earned_bonus || 0) : 0), 0);
+
+          return (
+            <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', minHeight: '450px', padding: '24px' }}>
+              
+              {/* Header & Main Action */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h2 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <FaCoins style={{ color: '#D97706' }} /> Employee Bonus & Department Target Manager
+                  </h2>
+                  <div style={{ fontSize: '12.5px', color: C.textMid, marginTop: '4px' }}>
+                    Assign monthly targets & card bonus rates across employees and departments
+                  </div>
+                </div>
+                <button 
+                  onClick={() => openBonusModal()} 
+                  style={{ 
+                    background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', 
+                    borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                    boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)' 
+                  }}
+                >
+                  <FaPlus /> Create Bonus Target
+                </button>
+              </div>
+
+              {/* Month Selector & Search Filter Bar */}
+              <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '14px 18px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', flex: 1, minWidth: '280px' }}>
+                  
+                  {/* Month Selection Dropdown */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '6px 12px' }}>
+                    <FaCalendarAlt style={{ color: C.teal, fontSize: '14px' }} />
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase' }}>Target Period / Month:</span>
+                    <select
+                      value={selectedBonusMonth}
+                      onChange={(e) => setSelectedBonusMonth(e.target.value)}
+                      style={{ background: 'transparent', border: 'none', color: C.text, fontWeight: 800, fontSize: '13px', cursor: 'pointer', outline: 'none' }}
+                    >
+                      <option value="ALL">All Target Months</option>
+                      {availableMonthsList.map(mIso => {
+                        const [yr, mo] = mIso.split('-');
+                        const dObj = new Date(parseInt(yr, 10), parseInt(mo, 10) - 1, 1);
+                        const label = dObj.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+                        return (
+                          <option key={mIso} value={mIso}>
+                            {label} ({mIso})
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  {/* Search Filter */}
+                  <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+                    <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textMid, fontSize: '12px' }} />
+                    <input 
+                      type="text" 
+                      placeholder="Search Employee, Code, Bank or Role..." 
+                      value={bonusSearchTerm}
+                      onChange={(e) => setBonusSearchTerm(e.target.value)}
+                      style={{ width: '100%', padding: '7px 12px 7px 34px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, outline: 'none', fontSize: '13px', fontWeight: 700 }}
+                    />
+                  </div>
+
+                </div>
+
+                {/* Period Summary Quick Badges */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ padding: '6px 12px', borderRadius: '10px', background: C.card, border: `1px solid ${C.border}`, fontSize: '12px', fontWeight: 800, color: C.text }}>
+                    Configured Targets: <strong style={{ color: C.teal }}>{totalTargetsConfigured}</strong>
+                  </span>
+                  <span style={{ padding: '6px 12px', borderRadius: '10px', background: C.card, border: `1px solid ${C.border}`, fontSize: '12px', fontWeight: 800, color: C.text }}>
+                    Cards: <strong style={{ color: C.teal }}>{totalApprovedCardsSum} / {totalTargetCardsSum}</strong>
+                  </span>
+                  <span style={{ padding: '6px 12px', borderRadius: '10px', background: '#10B98115', border: '1px solid #10B98130', fontSize: '12px', fontWeight: 900, color: '#10B981' }}>
+                    Unlocked Bonus: ₹{totalUnlockedBonusSum.toLocaleString('en-IN')}
+                  </span>
                 </div>
               </div>
-              <button 
-                onClick={() => openBonusModal()} 
-                style={{ 
-                  background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', 
-                  borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-                  boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)' 
-                }}
-              >
-                <FaPlus /> Create Bonus Target
-              </button>
-            </div>
 
-            {/* Configured Bonus Rules List */}
-            <div style={{ marginTop: '16px' }}>
-              {loadingRules ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading bonus rules...</div>
-              ) : bonusRulesList.length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: C.textMid, background: C.bgSecondary, borderRadius: '16px' }}>
-                  No bonus targets configured yet. Click "Create Bonus Target" to configure your first target & bonus rule.
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
-                  {bonusRulesList.map(rule => (
-                    <div key={rule.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '18px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                          <div style={{ fontSize: '15px', fontWeight: 900, color: C.text }}>{rule.employee_name}</div>
-                          <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>ID: {rule.emp_code} | {rule.employee_designation || 'TC'}</div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ padding: '4px 10px', borderRadius: '10px', background: `${C.teal}15`, color: C.teal, fontSize: '12px', fontWeight: 900 }}>
-                            {rule.bank_name}
-                          </span>
-                          <button onClick={() => handleDeleteBonusRule(rule.id)} style={{ background: '#EF444415', border: 'none', color: '#EF4444', padding: '6px', borderRadius: '8px', cursor: 'pointer' }} title="Delete Rule">
-                            <FaTrash />
-                          </button>
-                        </div>
-                      </div>
+              {/* Configured Bonus Rules Cards Grid */}
+              <div style={{ marginTop: '12px' }}>
+                {loadingRules ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>Loading bonus rules data...</div>
+                ) : displayRules.length === 0 ? (
+                  <div style={{ padding: '40px', textAlign: 'center', color: C.textMid, background: C.bgSecondary, borderRadius: '16px', border: `1px solid ${C.border}` }}>
+                    <FaInfoCircle style={{ fontSize: '24px', color: C.teal, marginBottom: '8px' }} />
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>No bonus targets found for the selected month or search filter.</div>
+                    <div style={{ fontSize: '12.5px', marginTop: '4px' }}>Click "Create Bonus Target" to set up a new target and period bonus for your employees.</div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
+                    {displayRules.map(rule => {
+                      const startDateFormatted = rule.start_date ? new Date(rule.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+                      const endDateFormatted = rule.end_date ? new Date(rule.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+                      const monthName = rule.start_date ? new Date(rule.start_date).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : '';
 
-                      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '13px', fontWeight: 800 }}>
-                          <span>Target Progress: <strong style={{ color: C.teal }}>{rule.approved_count} / {rule.target_count} Approved Cards</strong></span>
-                          {rule.target_achieved ? (
-                            <span style={{ padding: '3px 8px', borderRadius: '8px', background: '#10B98118', color: '#10B981', fontWeight: 900, fontSize: '12px' }}>
-                              ✓ Unlocked: ₹{Number(rule.earned_bonus || 0).toLocaleString('en-IN')}
-                            </span>
-                          ) : (
-                            <span style={{ padding: '3px 8px', borderRadius: '8px', background: '#F59E0B18', color: '#D97706', fontWeight: 800, fontSize: '12px' }}>
-                              🔒 Bonus Locked
-                            </span>
-                          )}
-                        </div>
+                      return (
+                        <div key={rule.id} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '18px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                          
+                          {/* Card Top Row: Employee & Bank Badge */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                              <div style={{ fontSize: '15px', fontWeight: 900, color: C.text }}>{rule.employee_name}</div>
+                              <div style={{ fontSize: '12px', color: C.teal, fontWeight: 800 }}>ID: {rule.emp_code} | {rule.employee_designation || 'TC'}</div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ padding: '4px 10px', borderRadius: '10px', background: `${C.teal}15`, color: C.teal, fontSize: '12px', fontWeight: 900 }}>
+                                {rule.bank_name}
+                              </span>
+                              <button onClick={() => handleDeleteBonusRule(rule.id)} style={{ background: '#EF444415', border: 'none', color: '#EF4444', padding: '6px', borderRadius: '8px', cursor: 'pointer' }} title="Delete Rule">
+                                <FaTrash />
+                              </button>
+                            </div>
+                          </div>
 
-                        <div style={{ width: '100%', background: C.bgSecondary, height: '12px', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px' }}>
-                          <div style={{ width: `${rule.progress_percentage}%`, background: rule.target_achieved ? '#10B981' : '#F59E0B', height: '100%', transition: 'width 0.4s ease' }} />
-                        </div>
+                          {/* Target Progress & Unlock Status */}
+                          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '13px', fontWeight: 800 }}>
+                              <span>Target Progress: <strong style={{ color: C.teal }}>{rule.approved_count} / {rule.target_count} Approved Cards</strong></span>
+                              {rule.target_achieved ? (
+                                <span style={{ padding: '3px 8px', borderRadius: '8px', background: '#10B98118', color: '#10B981', fontWeight: 900, fontSize: '12px' }}>
+                                  ✓ Unlocked: ₹{Number(rule.earned_bonus || 0).toLocaleString('en-IN')}
+                                </span>
+                              ) : (
+                                <span style={{ padding: '3px 8px', borderRadius: '8px', background: '#F59E0B18', color: '#D97706', fontWeight: 800, fontSize: '12px' }}>
+                                  🔒 Bonus Locked
+                                </span>
+                              )}
+                            </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: C.textMid, fontWeight: 700 }}>
-                          <span>
-                            {rule.target_achieved ? (
-                              <strong style={{ color: '#10B981' }}>Target Achieved (Unlocked for {rule.employee_name})</strong>
-                            ) : (
-                              <span style={{ color: '#D97706' }}>Needs {rule.remaining_count} more cards to unlock bonus</span>
+                            {/* Progress Bar */}
+                            <div style={{ width: '100%', background: C.bgSecondary, height: '12px', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px' }}>
+                              <div style={{ width: `${Math.min(rule.progress_percentage || 0, 100)}%`, background: rule.target_achieved ? '#10B981' : '#F59E0B', height: '100%', transition: 'width 0.4s ease' }} />
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: C.textMid, fontWeight: 700 }}>
+                              <span>
+                                {rule.target_achieved ? (
+                                  <strong style={{ color: '#10B981' }}>Target Achieved (Unlocked for {rule.employee_name})</strong>
+                                ) : (
+                                  <span style={{ color: '#D97706' }}>Needs {rule.remaining_count} more cards to unlock bonus</span>
+                                )}
+                              </span>
+                              <span>Bonus Rate: <strong>₹{rule.bonus_per_card} / Card</strong></span>
+                            </div>
+                          </div>
+
+                          {/* Active Period & Target Month */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: C.textMid, flexWrap: 'wrap', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <FaCalendarAlt style={{ color: C.teal }} /> Target Period: <strong>{startDateFormatted} – {endDateFormatted}</strong>
+                            </div>
+                            {monthName && (
+                              <span style={{ fontSize: '11px', fontWeight: 800, background: C.card, padding: '2px 8px', borderRadius: '6px', border: `1px solid ${C.border}`, color: C.textMid }}>
+                                {monthName}
+                              </span>
                             )}
-                          </span>
-                          <span>Bonus Rate: <strong>₹{rule.bonus_per_card} / Card</strong></span>
-                        </div>
-                      </div>
+                          </div>
 
-                      <div style={{ fontSize: '12px', color: C.textMid, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <FaCalendarAlt style={{ color: C.teal }} /> Active Period: <strong>{new Date(rule.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })} – {new Date(rule.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Product Links Tab View */}
         {activeTab === 'links' && (
