@@ -1094,7 +1094,7 @@ export default function EmployeeManagement() {
               boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)'
             }}
           >
-            <FaPlus /> + Add New Employee
+            <FaPlus /> Add New Employee
           </button>
         </div>
 
@@ -2081,7 +2081,7 @@ export default function EmployeeManagement() {
                   boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)' 
                 }}
               >
-                <FaPlus /> + Create Bonus Target
+                <FaPlus /> Create Bonus Target
               </button>
             </div>
 
@@ -2091,7 +2091,7 @@ export default function EmployeeManagement() {
                 <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading bonus rules...</div>
               ) : bonusRulesList.length === 0 ? (
                 <div style={{ padding: '40px', textAlign: 'center', color: C.textMid, background: C.bgSecondary, borderRadius: '16px' }}>
-                  No bonus targets configured yet. Click "+ Create Bonus Target" to configure your first target & bonus rule.
+                  No bonus targets configured yet. Click "Create Bonus Target" to configure your first target & bonus rule.
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>

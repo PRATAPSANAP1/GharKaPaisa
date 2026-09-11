@@ -297,61 +297,129 @@ export default function SuperAdminReports() {
 
   // Export Data to CSV / Excel function
   const handleDownloadReportCSV = (reportTitle, format = 'csv') => {
-    const ext = format === 'excel' ? 'xlsx' : 'csv';
+    const isExcel = format === 'excel';
+    const ext = isExcel ? 'xls' : 'csv';
     const filename = `${reportTitle.toLowerCase().replace(/\s+/g, '_')}_${modalFilterDates.from}_to_${modalFilterDates.to}.${ext}`;
     const rowsToExport = modalTableData;
     const isEmployeeType = activeReportModal?.type === 'EMPLOYEE';
 
     const headers = isEmployeeType
       ? ["Rank", "Code / ID", "Name", "Type", "Role / Designation", "Applications", "Approved", "Incentives Earned (INR)"]
-      : ["Record ID", "Employee / Ref", "Category / Product", "Status", "Amount", "Date"];
+      : ["Record ID", "Employee / Ref", "Category / Product", "Status", "Amount (INR)", "Date"];
 
-    const dataRows = rowsToExport.map((r, idx) => {
-      if (isEmployeeType) {
-        const name = r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.name || 'Performer';
-        const code = r.partner_code || r.code || r.employee_id || `AG${10019 + idx}`;
-        const pType = r.performer_type || (code.startsWith('AG') ? 'PARTNER' : 'EMPLOYEE');
+    if (isExcel) {
+      // Clean HTML/XML Spreadsheet for Microsoft Excel (.xls)
+      let tableHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">`;
+      tableHtml += `<head><meta charset="utf-8"/><style>
+        th { background-color: #1E293B; color: #FFFFFF; font-weight: bold; padding: 8px; border: 1px solid #CBD5E1; }
+        td { padding: 6px; border: 1px solid #CBD5E1; }
+        .meta { font-weight: bold; background-color: #F1F5F9; }
+      </style></head><body>`;
+      tableHtml += `<table>`;
+      tableHtml += `<tr><td class="meta">Report Name</td><td class="meta">${reportTitle}</td></tr>`;
+      tableHtml += `<tr><td class="meta">Date Range</td><td class="meta">${modalFilterDates.from} to ${modalFilterDates.to}</td></tr>`;
+      tableHtml += `<tr><td class="meta">Generated On</td><td class="meta">${new Date().toLocaleString()}</td></tr>`;
+      tableHtml += `<tr></tr>`;
+      tableHtml += `<tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+
+      rowsToExport.forEach((r, idx) => {
+        if (isEmployeeType) {
+          const name = r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.name || 'Performer';
+          const code = r.partner_code || r.code || r.employee_id || `AG${10019 + idx}`;
+          const pType = r.performer_type || (code.startsWith('AG') ? 'PARTNER' : 'EMPLOYEE');
+          const desig = r.designation || r.role || 'Team Leader';
+          const totalApps = parseInt(r.total_apps || r.applications_count || r.applications || 0, 10);
+          const approvedApps = parseInt(r.approved || r.approved_count || 0, 10);
+          const inc = parseFloat(r.commission_earned || r.total_incentives || 0);
+
+          tableHtml += `<tr>
+            <td>${idx + 1}</td>
+            <td>${code}</td>
+            <td>${name}</td>
+            <td>${pType}</td>
+            <td>${desig}</td>
+            <td>${totalApps}</td>
+            <td>${approvedApps}</td>
+            <td>${inc}</td>
+          </tr>`;
+        } else {
+          const recId = r.app_number || r.id || `REC-${1001 + idx}`;
+          const ref = r.customer_name || r.name || r.full_name || 'Employee / Ref';
+          const prod = r.product_name || r.category || 'Financial Product';
+          const status = (r.status || 'APPROVED').toUpperCase();
+          const amt = parseFloat(r.approved_amount || r.commission_amount || r.amount || 0);
+          const dt = r.application_date ? new Date(r.application_date).toISOString().split('T')[0] : (r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+
+          tableHtml += `<tr>
+            <td>${recId}</td>
+            <td>${ref}</td>
+            <td>${prod}</td>
+            <td>${status}</td>
+            <td>${amt}</td>
+            <td>${dt}</td>
+          </tr>`;
+        }
+      });
+
+      tableHtml += `</table></body></html>`;
+
+      const blob = new Blob(['\uFEFF' + tableHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else {
+      // Standard CSV Export with UTF-8 BOM
+      const dataRows = rowsToExport.map((r, idx) => {
+        if (isEmployeeType) {
+          const name = r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim() || r.name || 'Performer';
+          const code = r.partner_code || r.code || r.employee_id || `AG${10019 + idx}`;
+          const pType = r.performer_type || (code.startsWith('AG') ? 'PARTNER' : 'EMPLOYEE');
+          return [
+            idx + 1,
+            `"${code}"`,
+            `"${name.replace(/"/g, '""')}"`,
+            `"${pType}"`,
+            `"${r.designation || r.role || 'Team Leader'}"`,
+            parseInt(r.total_apps || r.applications_count || r.applications || 0, 10),
+            parseInt(r.approved || r.approved_count || 0, 10),
+            parseFloat(r.commission_earned || r.total_incentives || 0)
+          ];
+        }
         return [
-          idx + 1,
-          `"${code}"`,
-          `"${name.replace(/"/g, '""')}"`,
-          `"${pType}"`,
-          `"${r.designation || r.role || 'Team Leader'}"`,
-          parseInt(r.total_apps || r.applications_count || r.applications || 0, 10),
-          parseInt(r.approved || r.approved_count || 0, 10),
-          parseFloat(r.commission_earned || r.total_incentives || 0)
+          `"${r.app_number || r.id || `REC-${1001 + idx}`}"`,
+          `"${(r.customer_name || r.name || r.full_name || '').replace(/"/g, '""')}"`,
+          `"${(r.product_name || r.category || '').replace(/"/g, '""')}"`,
+          `"${(r.status || 'APPROVED').toUpperCase()}"`,
+          parseFloat(r.approved_amount || r.commission_amount || r.amount || 0),
+          `"${r.application_date ? new Date(r.application_date).toISOString().split('T')[0] : (r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])}"`
         ];
-      }
-      return [
-        `"${r.app_number || r.id || `REC-${1001 + idx}`}"`,
-        `"${(r.customer_name || r.name || r.full_name || '').replace(/"/g, '""')}"`,
-        `"${(r.product_name || r.category || '').replace(/"/g, '""')}"`,
-        `"${(r.status || 'APPROVED').toUpperCase()}"`,
-        parseFloat(r.approved_amount || r.commission_amount || r.amount || 0),
-        `"${r.application_date ? new Date(r.application_date).toISOString().split('T')[0] : (r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0])}"`
+      });
+
+      const sampleData = [
+        ["Report Name", reportTitle],
+        ["Date Range", `${modalFilterDates.from} to ${modalFilterDates.to}`],
+        ["Generated On", new Date().toLocaleString()],
+        [],
+        headers,
+        ...dataRows
       ];
-    });
 
-    const sampleData = [
-      ["Report Name", reportTitle],
-      ["Date Range", `${modalFilterDates.from} to ${modalFilterDates.to}`],
-      ["Generated On", new Date().toLocaleString()],
-      [],
-      headers,
-      ...dataRows
-    ];
-
-    const csvContent = sampleData.map(e => e.join(",")).join("\n");
-    const mimeType = format === 'excel' ? 'application/vnd.ms-excel' : 'text/csv;charset=utf-8;';
-    const blob = new Blob([csvContent], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+      const csvContent = sampleData.map(e => e.join(",")).join("\n");
+      const blob = new Blob(['\uFEFF' + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
   };
 
   // Format Date to DD/MM (e.g. 29/08, 01/09, 11/09)
