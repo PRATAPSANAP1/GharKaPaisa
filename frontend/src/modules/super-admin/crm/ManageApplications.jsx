@@ -3,6 +3,7 @@ import api from '../../../services/api';
 import { useTheme, makeS } from '../../../contexts/ThemeContext';
 import AdminDocumentVerificationModal from '../../admin/reports/AdminDocumentVerificationModal';
 import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
+import { ShieldCheck } from 'lucide-react';
 import { 
   MdSearch, MdFilterList, MdCheckCircle, MdBlock, 
   MdCompareArrows, MdHistory, MdFileDownload, MdClose,
@@ -32,8 +33,10 @@ export default function ManageApplications() {
   const { C, isDark } = useTheme();
   const S = makeS(C);
   const user = useAuthStore((state) => state.user);
+  const userRole = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
   const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+  const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
   const navigate = useNavigate();
 
   const [searchParams] = useSearchParams();
@@ -802,10 +805,10 @@ export default function ManageApplications() {
                     <input type="checkbox" onChange={toggleSelectAll} checked={selectedAppIds.length === applications.length && applications.length > 0} />
                   </th>
                   <th style={{ padding: '14px 16px' }}>App ID &amp; Date</th>
-                  <th style={{ padding: '14px 16px' }}>Customer</th>
-                  <th style={{ padding: '14px 16px' }}>Source &amp; Process</th>
-                  <th style={{ padding: '14px 16px' }}>Product &amp; Bank</th>
-                  <th style={{ padding: '14px 16px' }}>Status &amp; Commission</th>
+                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Customer</th>}
+                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Source &amp; Process</th>}
+                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Product &amp; Bank</th>}
+                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Status &amp; Commission</th>}
                   <th style={{ padding: '14px 16px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -842,59 +845,78 @@ export default function ManageApplications() {
                       </td>
 
                       {/* Customer Avatar & Metadata */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)', color: '#fff', fontWeight: 900, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            {initials}
+                      {!isPanCheckerUser && (
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)', color: '#fff', fontWeight: 900, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {initials}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 800, color: C.text }}>{custName}</div>
+                              <div style={{ fontSize: '11px', color: C.textLight }}>{app.customer_mobile || app.mobile || 'N/A'} • {app.city || 'N/A'}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div style={{ fontWeight: 800, color: C.text }}>{custName}</div>
-                            <div style={{ fontSize: '11px', color: C.textLight }}>{app.customer_mobile || app.mobile || 'N/A'} • {app.city || 'N/A'}</div>
-                          </div>
-                        </div>
-                      </td>
+                        </td>
+                      )}
 
                       {/* Source & Process */}
-                      <td style={{ padding: '14px 16px' }}>
-                        {renderProcessBadge(app)}
-                      </td>
+                      {!isPanCheckerUser && (
+                        <td style={{ padding: '14px 16px' }}>
+                          {renderProcessBadge(app)}
+                        </td>
+                      )}
 
                       {/* Product & Bank */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <div style={{ fontWeight: 800, color: C.text }}>{app.bank_name || 'Bank Partner'}</div>
-                        <div style={{ fontSize: '11px', color: C.textLight }}>{app.product_name || 'Financial Product'}</div>
-                      </td>
+                      {!isPanCheckerUser && (
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontWeight: 800, color: C.text }}>{app.bank_name || 'Bank Partner'}</div>
+                          <div style={{ fontSize: '11px', color: C.textLight }}>{app.product_name || 'Financial Product'}</div>
+                        </td>
+                      )}
 
                       {/* Separated Application Status & Commission Status */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <div>{renderAppStatusBadge(app.status)}</div>
-                          <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>
-                            Commission: <span style={{ color: app.commission_released ? '#059669' : C.textMid }}>₹{app.commission_amount || '0.00'} ({app.commission_released ? 'Released' : 'Pending'})</span>
+                      {!isPanCheckerUser && (
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <div>{renderAppStatusBadge(app.status)}</div>
+                            <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>
+                              Commission: <span style={{ color: app.commission_released ? '#059669' : C.textMid }}>₹{app.commission_amount || '0.00'} ({app.commission_released ? 'Released' : 'Pending'})</span>
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
+                      )}
 
-                      {/* Actions: Review Button + 3-Dots Menu */}
+                      {/* Actions: PAN Check OR Review Button + 3-Dots Menu */}
                       <td style={{ padding: '14px 16px', textAlign: 'right', position: 'relative' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                          <button
-                            onClick={() => handleOpen360Drawer(app, 'overview')}
-                            style={{ padding: '6px 12px', borderRadius: '8px', background: C.teal, color: '#fff', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer' }}
-                          >
-                            Review
-                          </button>
+                          {isPanCheckerUser ? (
+                            <button
+                              onClick={() => setVerifyModalApp(app)}
+                              style={{ padding: '6px 12px', borderRadius: '8px', background: '#2563eb', color: '#fff', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <ShieldCheck size={14} /> PAN Check
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleOpen360Drawer(app, 'overview')}
+                                style={{ padding: '6px 12px', borderRadius: '8px', background: C.teal, color: '#fff', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer' }}
+                              >
+                                Review
+                              </button>
 
-                          <button
-                            onClick={() => setActionMenuAppId(isMenuOpen ? null : app.id)}
-                            style={{ width: '32px', height: '32px', borderRadius: '8px', background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                          >
-                            <MdMoreVert size={18} />
-                          </button>
+                              <button
+                                onClick={() => setActionMenuAppId(isMenuOpen ? null : app.id)}
+                                style={{ width: '32px', height: '32px', borderRadius: '8px', background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                              >
+                                <MdMoreVert size={18} />
+                              </button>
+                            </>
+                          )}
                         </div>
 
                         {/* Action Menu Dropdown */}
-                        {isMenuOpen && (
+                        {!isPanCheckerUser && isMenuOpen && (
                           <div style={{ position: 'absolute', top: '48px', right: '16px', width: '180px', background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.18)', padding: '6px', zIndex: 100, textAlign: 'left' }}>
                             <button onClick={() => handleOpen360Drawer(app, 'overview')} style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: C.text, fontSize: '12px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <MdVisibility /> View 360° Details
