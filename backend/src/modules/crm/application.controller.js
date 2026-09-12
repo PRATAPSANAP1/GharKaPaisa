@@ -1341,7 +1341,13 @@ const ensureApplicationStageColumns = async () => {
       ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100),
       ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100),
       ADD COLUMN IF NOT EXISTS card_approval_stage VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100)
+      ADD COLUMN IF NOT EXISTS digital_card_issued VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS remark_status VARCHAR(20) DEFAULT 'PENDING',
+      ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS remark_updated_by UUID,
+      ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no',
+      ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100)
     `);
     stageColumnsEnsured = true;
   } catch (err) {
@@ -1362,6 +1368,10 @@ const listApplications = async (req, res, next) => {
       await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no'`).catch(() => {});
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100)`).catch(() => {});
       await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100)`).catch(() => {});
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_status VARCHAR(20) DEFAULT 'PENDING'`).catch(() => {});
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE`).catch(() => {});
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated_by UUID`).catch(() => {});
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ`).catch(() => {});
     } catch (_) {}
 
     const targetPartnerId = q_partner_id || partner_id;
@@ -1572,11 +1582,11 @@ const listApplications = async (req, res, next) => {
           oh.full_name as operation_head_name,
           COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(pad.pan_check, ''), 'no') as pan_check,
           COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status,
-          COALESCE(a.remark_status, 'PENDING') as remark_status,
+          COALESCE(NULLIF(to_jsonb(a)->>'remark_status', ''), 'PENDING') as remark_status,
           COALESCE(to_jsonb(a)->>'assigned_to', to_jsonb(pad)->>'assigned_to') as assigned_to,
-          a.remark_updated,
-          a.remark_updated_by,
-          a.remark_updated_at
+          COALESCE((to_jsonb(a)->>'remark_updated')::boolean, FALSE) as remark_updated,
+          (to_jsonb(a)->>'remark_updated_by')::uuid as remark_updated_by,
+          (to_jsonb(a)->>'remark_updated_at')::timestamptz as remark_updated_at
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -5098,6 +5108,7 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
 
 const getRemarkOperatorDashboard = async (req, res, next) => {
   try {
+    await ensureApplicationStageColumns();
     const userId = req.user.id;
     const { rows: bankRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [userId]);
     const assignedBankIds = bankRows.map(b => b.bank_id);
@@ -5114,7 +5125,7 @@ const getRemarkOperatorDashboard = async (req, res, next) => {
       FROM applications a
       JOIN products p ON p.id = a.product_id
       WHERE ${bankCondition}
-        AND COALESCE(a.remark_status, 'PENDING') = 'PENDING'
+        AND COALESCE(NULLIF(to_jsonb(a)->>'remark_status', ''), 'PENDING') = 'PENDING'
     `, params);
 
     const { rows: [completedRes] } = await query(`
@@ -5122,9 +5133,9 @@ const getRemarkOperatorDashboard = async (req, res, next) => {
       FROM applications a
       JOIN products p ON p.id = a.product_id
       WHERE ${bankCondition}
-        AND a.remark_status = 'COMPLETED'
-        AND (a.remark_updated_by = $1 OR $1 IS NULL)
-        AND DATE(a.remark_updated_at) = CURRENT_DATE
+        AND COALESCE(to_jsonb(a)->>'remark_status', '') = 'COMPLETED'
+        AND (to_jsonb(a)->>'remark_updated_by' = $1::text OR $1 IS NULL)
+        AND DATE(NULLIF(to_jsonb(a)->>'remark_updated_at', '')::timestamptz) = CURRENT_DATE
     `, [userId]);
 
     return success(res, {
