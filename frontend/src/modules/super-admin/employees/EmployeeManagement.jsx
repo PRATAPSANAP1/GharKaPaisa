@@ -19,7 +19,7 @@ export default function EmployeeManagement() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const [activeTab, setActiveTab] = useState('all'); // 'all', 'hierarchy', 'bonus'
+  const [activeTab, setActiveTab] = useState('new_requests'); // 'new_requests', 'processed_history', 'all', 'hierarchy', 'bonus'
   const [employees, setEmployees] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
   const [stats, setStats] = useState({});
@@ -1074,6 +1074,17 @@ export default function EmployeeManagement() {
   const tlsList = targetEmployeeList.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('team leader') || String(e.designation || '').toUpperCase() === 'TL' || e.hierarchy_level === 'TEAM_LEADER'));
   const tcsList = targetEmployeeList.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('tc') || String(e.designation || '').toLowerCase().includes('telecaller') || e.hierarchy_level === 'TC'));
 
+  const newRequestsList = targetEmployeeList.filter(e => 
+    e.activation_status !== 'APPROVED' || 
+    e.overall_verification_status !== 'VERIFIED' || 
+    (e.missing_documents && e.missing_documents.length > 0)
+  );
+
+  const processedHistoryList = targetEmployeeList.filter(e => 
+    e.activation_status === 'APPROVED' || 
+    e.overall_verification_status === 'VERIFIED'
+  );
+
   const getSortedSupervisorOptions = (roleKeyword, levelCode) => {
     const activeId = hierarchyModalEmp?.id;
     return targetEmployeeList
@@ -1141,6 +1152,8 @@ export default function EmployeeManagement() {
         {/* Navigation Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', borderBottom: `1px solid ${C.border}`, paddingBottom: '8px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {[
+            { id: 'new_requests', label: `New Requests (${newRequestsList.length})`, icon: <FaClock style={{ color: activeTab === 'new_requests' ? '#FFF' : '#F59E0B' }} /> },
+            { id: 'processed_history', label: `Processed & History (${processedHistoryList.length})`, icon: <FaCheckCircle style={{ color: activeTab === 'processed_history' ? '#FFF' : '#10B981' }} /> },
             { id: 'all', label: 'All Employees Directory', icon: <FaUsers /> },
             { id: 'hierarchy', label: 'Team Hierarchy Tree', icon: <FaSitemap /> },
             { id: 'bonus', label: 'Manage Bonus & Targets', icon: <FaCoins /> }
@@ -1160,6 +1173,230 @@ export default function EmployeeManagement() {
             </button>
           ))}
         </div>
+
+        {/* New Verification Requests View */}
+        {activeTab === 'new_requests' && (
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '20px', minHeight: '450px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h2 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FaClock style={{ color: '#F59E0B' }} /> Latest New Employee Verification Requests
+                </h2>
+                <span style={{ fontSize: '12.5px', color: C.textMid, fontWeight: 700 }}>
+                  Employees requiring KYC verification, document review, or activation approval.
+                </span>
+              </div>
+              <span style={{ background: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D', padding: '6px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: 900 }}>
+                Pending Review: {newRequestsList.length}
+              </span>
+            </div>
+
+            {newRequestsList.length === 0 ? (
+              <div style={{ padding: '60px 20px', textAlign: 'center', background: C.bgSecondary, borderRadius: '16px', border: `1px dashed ${C.border}` }}>
+                <FaCheckCircle style={{ fontSize: '40px', color: '#10B981', marginBottom: '12px' }} />
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: '0 0 6px 0' }}>All Caught Up!</h3>
+                <p style={{ fontSize: '13px', color: C.textMid, margin: 0 }}>There are no pending employee verification requests at this time.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                {newRequestsList.map(emp => {
+                  const underReviewDocs = emp.under_review_document_names || (emp.missing_documents || []).filter(d => String(d).includes('Under Review'));
+                  const missingDocs = (emp.missing_documents || []).filter(d => !String(d).includes('Under Review'));
+
+                  return (
+                    <div 
+                      key={emp.id}
+                      style={{
+                        background: C.card,
+                        border: '1px solid #FCD34D',
+                        borderRadius: '16px',
+                        padding: '16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justify: 'space-between',
+                        gap: '14px',
+                        boxShadow: '0 4px 12px rgba(245, 158, 11, 0.08)'
+                      }}
+                    >
+                      <div>
+                        {/* Header info */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                          <div>
+                            <div style={{ fontSize: '16px', fontWeight: 900, color: C.text }}>
+                              {emp.full_name}
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: 800, color: C.teal, marginTop: '2px' }}>
+                              Code: {emp.employee_code || emp.employee_id || emp.emp_code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A')} • {emp.mobile_number}
+                            </div>
+                          </div>
+                          <span style={{ background: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D', fontSize: '10.5px', fontWeight: 900, padding: '3px 8px', borderRadius: '8px' }}>
+                            NEW REQUEST
+                          </span>
+                        </div>
+
+                        {/* Details */}
+                        <div style={{ fontSize: '12px', color: C.textMid, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: C.bgSecondary, padding: '10px 12px', borderRadius: '10px', marginBottom: '10px' }}>
+                          <div><strong>Role:</strong> {emp.designation || 'N/A'}</div>
+                          <div><strong>Dept:</strong> {emp.department || 'Sales'}</div>
+                          <div><strong>Salary:</strong> ₹{emp.offered_salary || 'N/A'}</div>
+                          <div><strong>Joined:</strong> {emp.joining_date || 'N/A'}</div>
+                        </div>
+
+                        {/* Status items */}
+                        {underReviewDocs.length > 0 && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 800, color: '#1E40AF', marginBottom: '4px' }}>⏳ Submitted & Awaiting Review:</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                              {underReviewDocs.map((d, idx) => (
+                                <span key={idx} style={{ fontSize: '10.5px', fontWeight: 800, background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '2px 8px', borderRadius: '6px' }}>
+                                  ✓ {d}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {missingDocs.length > 0 && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 800, color: '#991B1B', marginBottom: '4px' }}>⚠️ Action Required (Missing):</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                              {missingDocs.map((d, idx) => (
+                                <span key={idx} style={{ fontSize: '10.5px', fontWeight: 800, background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FCA5A5', padding: '2px 8px', borderRadius: '6px' }}>
+                                  • {d}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action buttons */}
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', borderTop: `1px solid ${C.border}`, paddingTop: '10px' }}>
+                        <button
+                          onClick={() => handleKycVerify(emp.id, 'VERIFIED')}
+                          style={{
+                            flex: 1,
+                            padding: '8px 12px',
+                            background: '#10B981',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '10px',
+                            fontSize: '12px',
+                            fontWeight: 900,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <FaCheckCircle /> Quick Approve
+                        </button>
+                        <button
+                          onClick={() => handleOpen360View(emp)}
+                          style={{
+                            padding: '8px 12px',
+                            background: C.bgSecondary,
+                            color: C.text,
+                            border: `1px solid ${C.border}`,
+                            borderRadius: '10px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <FaEye /> 360° Profile
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Processed Employees & Verification History View */}
+        {activeTab === 'processed_history' && (
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '20px', minHeight: '450px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h2 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FaCheckCircle style={{ color: '#10B981' }} /> Processed Employees & Verification History
+                </h2>
+                <span style={{ fontSize: '12.5px', color: C.textMid, fontWeight: 700 }}>
+                  List of fully approved and verified employees with completed KYC onboarding records.
+                </span>
+              </div>
+              <span style={{ background: '#D1FAE5', color: '#065F46', border: '1px solid #6EE7B7', padding: '6px 14px', borderRadius: '12px', fontSize: '12.5px', fontWeight: 900 }}>
+                Verified Employees: {processedHistoryList.length}
+              </span>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: C.bgSecondary, color: C.textMid, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', borderRadius: '10px 0 0 10px' }}>Employee Code & Name</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left' }}>Role & Dept</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left' }}>Contact Info</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center' }}>KYC Status</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center' }}>Activation Status</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right', borderRadius: '0 10px 10px 0' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {processedHistoryList.map(emp => (
+                    <tr key={emp.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '14px 16px', fontWeight: 800 }}>
+                        <div style={{ fontSize: '14px', color: C.text }}>{emp.full_name}</div>
+                        <div style={{ fontSize: '11.5px', color: C.teal }}>Code: {emp.employee_code || emp.employee_id || emp.emp_code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A')}</div>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ fontWeight: 800 }}>{emp.designation || 'N/A'}</div>
+                        <div style={{ fontSize: '11.5px', color: C.textMid }}>{emp.department || 'Sales & Distribution'}</div>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div>📞 {emp.mobile_number}</div>
+                        <div style={{ fontSize: '11.5px', color: C.textMid }}>✉️ {emp.email_id || emp.email || 'N/A'}</div>
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                        <span style={{ background: '#D1FAE5', color: '#065F46', border: '1px solid #6EE7B7', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900 }}>
+                          ✓ VERIFIED
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                        <span style={{ background: '#D1FAE5', color: '#065F46', border: '1px solid #6EE7B7', padding: '4px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900 }}>
+                          ACTIVE
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                        <button
+                          onClick={() => handleOpen360View(emp)}
+                          style={{
+                            padding: '6px 12px',
+                            background: C.bgSecondary,
+                            color: C.text,
+                            border: `1px solid ${C.border}`,
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🔍 View 360°
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Directory Tab View */}
         {activeTab === 'all' && (

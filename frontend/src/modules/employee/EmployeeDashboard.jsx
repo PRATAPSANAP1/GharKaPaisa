@@ -216,7 +216,7 @@ export default function EmployeeDashboard() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                       <FaShieldAlt style={{ fontSize: '22px', color: '#2563EB' }} />
-                      <h3 style={{ fontSize: '18px', fontWeight 900, color: '#1E40AF', margin: 0 }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#1E40AF', margin: 0 }}>
                         ⏳ Verification Documents Submitted & Under Review
                       </h3>
                     </div>
