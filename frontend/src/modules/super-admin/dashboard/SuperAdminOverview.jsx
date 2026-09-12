@@ -20,6 +20,7 @@ import {
   Users
 } from 'lucide-react';
 import DailyAnalyticsSection from '../../../components/Admin/DailyAnalyticsSection';
+import LoadingLogo from '../../../components/Loader/LoadingLogo';
 
 const DEFAULT_WITHDRAWALS = [
   { id: 'WDR-2026-0887', user_name: 'Rohit Kumar', role: 'Team Leader', bank_name: 'HDFC Bank', account_number: '918237128911', ifsc_code: 'HDFC0001293', amount: 2480, status: 'Approved', requested_at: '2026-09-02T14:20:00' },
@@ -1497,7 +1498,7 @@ export default function SuperAdminOverview() {
 
             <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>📄 Customer Applications ({customerApps.length})</h4>
             {modalLoading ? (
-              <div style={{ padding: '20px', textAlign: 'center', color: C.textLight }}>Loading applications...</div>
+              <div style={{ padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><LoadingLogo message="Loading applications..." /></div>
             ) : customerApps.length === 0 ? (
               <div style={{ padding: '14px', background: C.bg, borderRadius: '10px', color: C.textLight, fontSize: '12px' }}>No active applications recorded for this customer.</div>
             ) : (
@@ -1612,7 +1613,7 @@ export default function SuperAdminOverview() {
 
             <h4 style={{ fontSize: '14px', fontWeight: 800, color: C.text, marginBottom: '10px' }}>📄 Applications by Team Member ({memberApps.length})</h4>
             {modalLoading ? (
-              <div style={{ padding: '20px', textAlign: 'center', color: C.textLight }}>Loading applications...</div>
+              <div style={{ padding: '20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><LoadingLogo message="Loading applications..." /></div>
             ) : memberApps.length === 0 ? (
               <div style={{ padding: '14px', background: C.bg, borderRadius: '10px', color: C.textLight, fontSize: '12px' }}>No applications logged under this team member.</div>
             ) : (

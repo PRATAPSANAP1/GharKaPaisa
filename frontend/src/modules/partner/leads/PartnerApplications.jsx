@@ -6,6 +6,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuthStore } from '../../../app/store/authStore';
 import AdminDocumentVerificationModal from '../../admin/reports/AdminDocumentVerificationModal';
 import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
+import LoadingLogo from '../../../components/Loader/LoadingLogo';
 import { 
   Search, Filter, Download, Upload, CheckCircle2, Clock, 
   XCircle, AlertCircle, Phone, MessageSquare, ArrowUpRight, 
@@ -944,9 +945,8 @@ export default function PartnerApplications() {
 
       {/* ── Unified Applications Table (Newest First) ── */}
       {isLoading ? (
-        <div style={{ borderRadius: 18, background: cardBg, border: `1px solid ${border}`, padding: '60px 20px', textAlign: 'center', color: textMuted }}>
-          <RefreshCw size={24} className="animate-spin" style={{ margin: '0 auto 12px', color: accent }} />
-          <p style={{ fontSize: 13, fontWeight: 700 }}>Loading applications...</p>
+        <div style={{ borderRadius: 18, background: cardBg, border: `1px solid ${border}`, padding: '60px 20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <LoadingLogo message="Loading applications..." />
         </div>
       ) : applications.length === 0 ? (
         <div style={{ borderRadius: 18, background: cardBg, border: `1px solid ${border}`, padding: '60px 20px', textAlign: 'center', color: textMuted }}>

@@ -44,6 +44,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   // User Role & Permissions (Declared at top to avoid TDZ in hooks)
   const user = useAuthStore((state) => state.user);
   const role = (user?.role || '').toUpperCase();
+  const userDesignation = (user?.designation || '').toUpperCase();
   const isPanChecker = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
   const isRemarkOperator = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
   const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);

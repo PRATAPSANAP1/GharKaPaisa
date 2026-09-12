@@ -11,6 +11,7 @@ import {
 import { FaFileAlt, FaSlidersH } from 'react-icons/fa';
 import AdminDocumentVerificationModal from './AdminDocumentVerificationModal';
 import ExportApplicationsModal from '../../../components/Admin/ExportApplicationsModal';
+import LoadingLogo from '../../../components/Loader/LoadingLogo';
 import { useAuthStore } from '../../../app/store/authStore';
 
 export default function ManageApplications() {
@@ -696,9 +697,8 @@ export default function ManageApplications() {
 
       <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', color: C.textLight }}>
-            <div className="animate-spin" style={{ width: '28px', height: '28px', border: `3px solid ${C.teal}`, borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 12px' }}></div>
-            Fetching applications...
+          <div style={{ padding: '60px 20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <LoadingLogo message="Loading applications..." />
           </div>
         ) : apps.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: C.textLight }}>

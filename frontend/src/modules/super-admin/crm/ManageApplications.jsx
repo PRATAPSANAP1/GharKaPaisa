@@ -20,6 +20,7 @@ import {
 
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../app/store/authStore';
+import LoadingLogo from '../../../components/Loader/LoadingLogo';
 
 // Get initials for Avatar badge
 const getInitials = (name) => {
@@ -790,8 +791,8 @@ export default function ManageApplications() {
       <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
         
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>
-            Loading applications data...
+          <div style={{ padding: '60px 20px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <LoadingLogo message="Loading applications..." />
           </div>
         ) : applications.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: C.textLight }}>
