@@ -11,6 +11,32 @@ const { logAction } = require('../admin/audit.service.js');
 const { processTeamOverrideCommission } = require('../team/team.service.js');
 const { getBankApplyLinkBackend } = require('./lead.controller');
 
+// Helper to safely ensure application_admin_assignments table exists
+const ensureAssignmentsTableExists = async () => {
+  try {
+    const { rows } = await query(`SELECT to_regclass('public.application_admin_assignments') as tbl_exists`);
+    if (rows[0] && rows[0].tbl_exists) return true;
+    await query(`
+      CREATE TABLE IF NOT EXISTS application_admin_assignments (
+        id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+        admin_user_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        assigned_by    UUID REFERENCES users(id),
+        assigned_at    TIMESTAMPTZ DEFAULT NOW(),
+        completed_at   TIMESTAMPTZ,
+        status         VARCHAR(20) DEFAULT 'PENDING',
+        created_at     TIMESTAMPTZ DEFAULT NOW(),
+        updated_at     TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(application_id, admin_user_id)
+      )
+    `);
+    return true;
+  } catch (err) {
+    logger.warn('application_admin_assignments table check/create warning:', err.message);
+    return false;
+  }
+};
+
 // Helper to parse DOB string formats (e.g. "03091994", "03-09-1994", "1994-09-03") to ISO Date YYYY-MM-DD
 const parseDobToIso = (raw) => {
   if (!raw || typeof raw !== 'string') return null;
@@ -1446,17 +1472,20 @@ const listApplications = async (req, res, next) => {
     const queryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, limit, offset, validUserId, validProcessBy, validOpHeadId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
     const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
 
+    const hasAaaTable = await ensureAssignmentsTableExists();
+
     const userDesignation = (req.user?.designation || '').toUpperCase();
     const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
     let salesExecFilterSQL = '';
     if (isSalesExecUser && req.user?.id) {
+      const aaaSubquery = hasAaaTable ? `OR EXISTS (SELECT 1 FROM application_admin_assignments aaa WHERE aaa.admin_user_id::text = '${req.user.id}' AND aaa.application_id::text = combined.id::text)` : '';
       salesExecFilterSQL = ` AND (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%punching%' OR combined.process_type::text = 'lead_punching')
       AND (
         combined.assigned_to::text = '${req.user.id}' 
         OR combined.submitted_by::text = '${req.user.id}' 
         OR combined.employee_id::text IN (SELECT id::text FROM employees WHERE user_id = '${req.user.id}')
-        OR EXISTS (SELECT 1 FROM application_admin_assignments aaa WHERE aaa.admin_user_id::text = '${req.user.id}' AND aaa.application_id::text = combined.id::text)
+        ${aaaSubquery}
       )`;
     }
 
@@ -1469,7 +1498,9 @@ const listApplications = async (req, res, next) => {
     const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
     let remarkOperatorFilterSQL = '';
     if (isRemarkOperatorUser && req.user?.id) {
-      remarkOperatorFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR EXISTS (SELECT 1 FROM application_admin_assignments WHERE admin_user_id = '${req.user.id}' AND application_id = combined.id)) AND COALESCE(combined.remark_status, 'PENDING') = 'PENDING' AND combined.id NOT IN (SELECT application_id FROM application_admin_assignments WHERE admin_user_id = '${req.user.id}' AND status = 'COMPLETED')`;
+      const remarkAaaExists = hasAaaTable ? `OR EXISTS (SELECT 1 FROM application_admin_assignments WHERE admin_user_id = '${req.user.id}' AND application_id = combined.id)` : '';
+      const remarkAaaCompleted = hasAaaTable ? `AND combined.id NOT IN (SELECT application_id FROM application_admin_assignments WHERE admin_user_id = '${req.user.id}' AND status = 'COMPLETED')` : '';
+      remarkOperatorFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') ${remarkAaaExists}) AND COALESCE(combined.remark_status, 'PENDING') = 'PENDING' ${remarkAaaCompleted}`;
     }
 
     if (!isPartnerOrTeam && req.user?.id) {

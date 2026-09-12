@@ -293,7 +293,10 @@ const listBankCardApplications = async (req, res, next) => {
     }
 
     if (isSalesExecUser && req.user?.id) {
-      whereClause += ` AND (combined.process_by = $${idx} OR (SELECT assigned_to::text FROM applications WHERE id::text = combined.id) = $${idx} OR EXISTS (SELECT 1 FROM application_admin_assignments aaa WHERE aaa.admin_user_id = $${idx}::uuid AND aaa.application_id::text = combined.id))`;
+      const { rows: aaaCheck } = await query(`SELECT to_regclass('public.application_admin_assignments') as tbl_exists`).catch(() => ({ rows: [] }));
+      const hasAaa = !!aaaCheck[0]?.tbl_exists;
+      const aaaCond = hasAaa ? `OR EXISTS (SELECT 1 FROM application_admin_assignments aaa WHERE aaa.admin_user_id = $${idx}::uuid AND aaa.application_id::text = combined.id)` : '';
+      whereClause += ` AND (combined.process_by = $${idx} OR (SELECT assigned_to::text FROM applications WHERE id::text = combined.id) = $${idx} ${aaaCond})`;
       values.push(String(req.user.id));
       idx++;
     }
