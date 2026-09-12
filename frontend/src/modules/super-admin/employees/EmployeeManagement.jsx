@@ -2529,164 +2529,117 @@ export default function EmployeeManagement() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', fontSize: '13px' }}>
                       
-                      {/* PAN Card Box */}
-                      <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>1. PAN Card</span>
-                            <span style={{
-                              fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px',
-                              background: emp360Data.kyc?.pan_status === 'VERIFIED' ? '#D1FAE5' : (emp360Data.kyc?.pan_status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7'),
-                              color: emp360Data.kyc?.pan_status === 'VERIFIED' ? '#065F46' : (emp360Data.kyc?.pan_status === 'REJECTED' ? '#991B1B' : '#92400E')
-                            }}>
-                              {emp360Data.kyc?.pan_status || (emp360Data.kyc?.pan_verified ? 'VERIFIED' : 'PENDING')}
-                            </span>
-                          </div>
-                          <strong style={{ fontSize: '14px', letterSpacing: '0.5px', display: 'block' }}>{emp360Data.kyc?.pan_number || emp360Data.joining_details?.pan_number || 'Not Submitted'}</strong>
-                          {emp360Data.kyc?.pan_rejection_reason && (
-                            <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '6px', background: '#FEF2F2', padding: '6px 8px', borderRadius: '6px', borderLeft: '3px solid #EF4444' }}>
-                              ⚠️ {emp360Data.kyc.pan_rejection_reason}
-                            </div>
-                          )}
-                          {emp360Data.kyc?.pan_document_url ? (
-                            <a href={emp360Data.kyc.pan_document_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', background: C.card, border: `1px solid ${C.border}`, padding: '6px 10px', borderRadius: '8px', color: C.teal, fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
-                              <FaFileAlt /> View Doc ↗
-                            </a>
-                          ) : (
-                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No PAN file attached</div>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
-                          <button onClick={() => handleDocVerify(selectedEmp.id, 'pan', 'VERIFIED')} style={{ flex: 1, background: '#10B981', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
-                            ✓ Approve
-                          </button>
-                          <button onClick={() => handleDocVerify(selectedEmp.id, 'pan', 'REJECTED')} style={{ flex: 1, background: '#EF4444', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
-                            ✕ Reject
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Aadhaar Card Box */}
-                      <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>2. Aadhaar Card</span>
-                            <span style={{
-                              fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px',
-                              background: emp360Data.kyc?.aadhaar_status === 'VERIFIED' ? '#D1FAE5' : (emp360Data.kyc?.aadhaar_status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7'),
-                              color: emp360Data.kyc?.aadhaar_status === 'VERIFIED' ? '#065F46' : (emp360Data.kyc?.aadhaar_status === 'REJECTED' ? '#991B1B' : '#92400E')
-                            }}>
-                              {emp360Data.kyc?.aadhaar_status || (emp360Data.kyc?.aadhaar_verified ? 'VERIFIED' : 'PENDING')}
-                            </span>
-                          </div>
-                          <strong style={{ fontSize: '14px', letterSpacing: '0.5px', display: 'block' }}>{emp360Data.kyc?.aadhaar_number || emp360Data.joining_details?.aadhaar_number || 'Not Submitted'}</strong>
-                          {emp360Data.kyc?.aadhaar_rejection_reason && (
-                            <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '6px', background: '#FEF2F2', padding: '6px 8px', borderRadius: '6px', borderLeft: '3px solid #EF4444' }}>
-                              ⚠️ {emp360Data.kyc.aadhaar_rejection_reason}
-                            </div>
-                          )}
-                          {emp360Data.kyc?.aadhaar_document_url ? (
-                            <a href={emp360Data.kyc.aadhaar_document_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', background: C.card, border: `1px solid ${C.border}`, padding: '6px 10px', borderRadius: '8px', color: C.teal, fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
-                              <FaFileAlt /> View Doc ↗
-                            </a>
-                          ) : (
-                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No Aadhaar file attached</div>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
-                          <button onClick={() => handleDocVerify(selectedEmp.id, 'aadhaar', 'VERIFIED')} style={{ flex: 1, background: '#10B981', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
-                            ✓ Approve
-                          </button>
-                          <button onClick={() => handleDocVerify(selectedEmp.id, 'aadhaar', 'REJECTED')} style={{ flex: 1, background: '#EF4444', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
-                            ✕ Reject
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Bank Proof Box */}
-                      <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>3. Bank Account Proof</span>
-                            <span style={{
-                              fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px',
-                              background: emp360Data.kyc?.bank_status === 'VERIFIED' ? '#D1FAE5' : (emp360Data.kyc?.bank_status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7'),
-                              color: emp360Data.kyc?.bank_status === 'VERIFIED' ? '#065F46' : (emp360Data.kyc?.bank_status === 'REJECTED' ? '#991B1B' : '#92400E')
-                            }}>
-                              {emp360Data.kyc?.bank_status || (emp360Data.kyc?.bank_verified ? 'VERIFIED' : 'PENDING')}
-                            </span>
-                          </div>
-                          <strong style={{ fontSize: '13px' }}>A/C: {emp360Data.kyc?.bank_account_number || emp360Data.joining_details?.bank_account_number || 'N/A'}</strong>
-                          <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>IFSC: {emp360Data.kyc?.ifsc_code || emp360Data.joining_details?.ifsc_code || 'N/A'}</div>
-                          {emp360Data.kyc?.bank_rejection_reason && (
-                            <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '6px', background: '#FEF2F2', padding: '6px 8px', borderRadius: '6px', borderLeft: '3px solid #EF4444' }}>
-                              ⚠️ {emp360Data.kyc.bank_rejection_reason}
-                            </div>
-                          )}
-                          {emp360Data.kyc?.bank_document_url ? (
-                            <a href={emp360Data.kyc.bank_document_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', background: C.card, border: `1px solid ${C.border}`, padding: '6px 10px', borderRadius: '8px', color: C.teal, fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
-                              <FaFileAlt /> View Doc ↗
-                            </a>
-                          ) : (
-                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No Bank file attached</div>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
-                          <button onClick={() => handleDocVerify(selectedEmp.id, 'bank', 'VERIFIED')} style={{ flex: 1, background: '#10B981', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
-                            ✓ Approve
-                          </button>
-                          <button onClick={() => handleDocVerify(selectedEmp.id, 'bank', 'REJECTED')} style={{ flex: 1, background: '#EF4444', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
-                            ✕ Reject
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Verification Video Box */}
+                      {/* Document Verification Cards Grid */}
                       {(() => {
-                        const vSt = emp360Data.terms?.verification_status || emp360Data.kyc?.video_status || selectedEmp?.video_status || (emp360Data.terms?.video_url ? 'UNDER_REVIEW' : 'PENDING');
-                        const isVideoVerified = vSt === 'VERIFIED' || vSt === 'APPROVED';
-                        const isVideoRejected = vSt === 'REJECTED';
-                        const isVideoUnderReview = vSt === 'UNDER_REVIEW' || vSt === 'SUBMITTED';
+                        const docsList = emp360Data.documents || [];
+                        const getDoc = (type) => docsList.find(d => String(d.type).toLowerCase() === String(type).toLowerCase());
 
-                        const badgeText = isVideoVerified ? 'VERIFIED' : (isVideoRejected ? 'REJECTED' : (isVideoUnderReview ? 'UNDER REVIEW' : 'PENDING'));
-                        const badgeBg = isVideoVerified ? '#D1FAE5' : (isVideoRejected ? '#FEE2E2' : (isVideoUnderReview ? '#FEF3C7' : '#F3F4F6'));
-                        const badgeColor = isVideoVerified ? '#065F46' : (isVideoRejected ? '#991B1B' : (isVideoUnderReview ? '#92400E' : '#6B7280'));
+                        const docConfig = [
+                          { type: 'photo', title: '1. Photograph', fallbackUrl: null, fallbackNum: null },
+                          { type: 'address_proof', title: '2. Address Proof', fallbackUrl: null, fallbackNum: null },
+                          { type: 'education_certificate', title: '3. Qualification Certificate', fallbackUrl: null, fallbackNum: null },
+                          { type: 'pan', title: '4. PAN Card', fallbackUrl: emp360Data.kyc?.pan_document_url, fallbackNum: emp360Data.kyc?.pan_number || emp360Data.joining_details?.pan_number },
+                          { type: 'aadhaar', title: '5. Aadhaar Card', fallbackUrl: emp360Data.kyc?.aadhaar_document_url, fallbackNum: emp360Data.kyc?.aadhaar_number || emp360Data.joining_details?.aadhaar_number },
+                          { type: 'bank_proof', title: '6. Bank Account Proof', fallbackUrl: emp360Data.kyc?.bank_document_url, fallbackNum: emp360Data.kyc?.bank_account_number ? `A/C: ${emp360Data.kyc.bank_account_number}` : null }
+                        ];
 
                         return (
-                          <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                            <div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>4. Verification Video</span>
-                                <span style={{
-                                  fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px',
-                                  background: badgeBg, color: badgeColor
-                                }}>
-                                  {badgeText}
-                                </span>
-                              </div>
-                              <strong style={{ fontSize: '13px' }}>{emp360Data.terms?.video_url ? '🎥 Recording Submitted' : 'Not Uploaded'}</strong>
-                              {(isVideoRejected && (emp360Data.kyc?.video_rejection_reason || emp360Data.terms?.verification_notes)) && (
-                                <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '6px', background: '#FEF2F2', padding: '6px 8px', borderRadius: '6px', borderLeft: '3px solid #EF4444' }}>
-                                  ⚠️ {emp360Data.kyc?.video_rejection_reason || emp360Data.terms?.verification_notes}
+                          <>
+                            {docConfig.map(cfg => {
+                              const doc = getDoc(cfg.type);
+                              const st = doc?.status || (cfg.type === 'pan' ? (emp360Data.kyc?.pan_status || (emp360Data.kyc?.pan_verified ? 'APPROVED' : 'PENDING')) : (cfg.type === 'aadhaar' ? (emp360Data.kyc?.aadhaar_status || (emp360Data.kyc?.aadhaar_verified ? 'APPROVED' : 'PENDING')) : (cfg.type === 'bank_proof' ? (emp360Data.kyc?.bank_status || (emp360Data.kyc?.bank_verified ? 'APPROVED' : 'PENDING')) : 'PENDING')));
+                              
+                              const isApproved = st === 'APPROVED' || st === 'VERIFIED';
+                              const isRejected = st === 'REJECTED';
+                              const isUnderReview = st === 'UNDER_REVIEW' || st === 'SUBMITTED';
+
+                              const badgeBg = isApproved ? '#D1FAE5' : (isRejected ? '#FEE2E2' : (isUnderReview ? '#FEF3C7' : '#F3F4F6'));
+                              const badgeColor = isApproved ? '#065F46' : (isRejected ? '#991B1B' : (isUnderReview ? '#92400E' : '#6B7280'));
+                              const badgeText = isApproved ? 'VERIFIED' : (isRejected ? 'REJECTED' : (isUnderReview ? 'UNDER REVIEW' : 'NOT UPLOADED'));
+                              const docUrl = doc?.url || cfg.fallbackUrl;
+                              const rejReason = doc?.reason || doc?.rejection_reason || (cfg.type === 'pan' ? emp360Data.kyc?.pan_rejection_reason : (cfg.type === 'aadhaar' ? emp360Data.kyc?.aadhaar_rejection_reason : (cfg.type === 'bank_proof' ? emp360Data.kyc?.bank_rejection_reason : null)));
+
+                              return (
+                                <div key={cfg.type} style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                  <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                      <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>{cfg.title}</span>
+                                      <span style={{ fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: badgeBg, color: badgeColor }}>
+                                        {badgeText}
+                                      </span>
+                                    </div>
+                                    {cfg.fallbackNum && <strong style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>{cfg.fallbackNum}</strong>}
+                                    {isRejected && rejReason && (
+                                      <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '6px', background: '#FEF2F2', padding: '6px 8px', borderRadius: '6px', borderLeft: '3px solid #EF4444' }}>
+                                        ⚠️ {rejReason}
+                                      </div>
+                                    )}
+                                    {docUrl ? (
+                                      <a href={docUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', background: C.card, border: `1px solid ${C.border}`, padding: '6px 10px', borderRadius: '8px', color: C.teal, fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
+                                        <FaFileAlt /> View Doc ↗
+                                      </a>
+                                    ) : (
+                                      <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No file attached</div>
+                                    )}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
+                                    <button onClick={() => handleDocVerify(selectedEmp.id, cfg.type, 'VERIFIED')} style={{ flex: 1, background: '#10B981', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
+                                      ✓ Approve
+                                    </button>
+                                    <button onClick={() => handleDocVerify(selectedEmp.id, cfg.type, 'REJECTED')} style={{ flex: 1, background: '#EF4444', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
+                                      ✕ Reject
+                                    </button>
+                                  </div>
                                 </div>
-                              )}
-                              {emp360Data.terms?.video_url ? (
-                                <a href={emp360Data.terms.video_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', background: C.teal, color: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
-                                  <FaVideo /> Play Video ↗
-                                </a>
-                              ) : (
-                                <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No video recording</div>
-                              )}
-                            </div>
-                            <div style={{ display: 'flex', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
-                              <button onClick={() => handleDocVerify(selectedEmp.id, 'video', 'VERIFIED')} style={{ flex: 1, background: '#10B981', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
-                                ✓ Approve
-                              </button>
-                              <button onClick={() => handleDocVerify(selectedEmp.id, 'video', 'REJECTED')} style={{ flex: 1, background: '#EF4444', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
-                                ✕ Reject
-                              </button>
-                            </div>
-                          </div>
+                              );
+                            })}
+
+                            {/* Verification Video Box */}
+                            {(() => {
+                              const vSt = emp360Data.terms?.verification_status || emp360Data.kyc?.video_status || selectedEmp?.video_status || (emp360Data.terms?.video_url ? 'UNDER_REVIEW' : 'PENDING');
+                              const isVideoVerified = vSt === 'VERIFIED' || vSt === 'APPROVED';
+                              const isVideoRejected = vSt === 'REJECTED';
+                              const isVideoUnderReview = vSt === 'UNDER_REVIEW' || vSt === 'SUBMITTED';
+
+                              const badgeText = isVideoVerified ? 'VERIFIED' : (isVideoRejected ? 'REJECTED' : (isVideoUnderReview ? 'UNDER REVIEW' : 'NOT UPLOADED'));
+                              const badgeBg = isVideoVerified ? '#D1FAE5' : (isVideoRejected ? '#FEE2E2' : (isVideoUnderReview ? '#FEF3C7' : '#F3F4F6'));
+                              const badgeColor = isVideoVerified ? '#065F46' : (isVideoRejected ? '#991B1B' : (isVideoUnderReview ? '#92400E' : '#6B7280'));
+
+                              return (
+                                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                  <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                      <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>7. Verification Video</span>
+                                      <span style={{ fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: badgeBg, color: badgeColor }}>
+                                        {badgeText}
+                                      </span>
+                                    </div>
+                                    <strong style={{ fontSize: '13px' }}>{emp360Data.terms?.video_url ? '🎥 Recording Submitted' : 'Not Uploaded'}</strong>
+                                    {(isVideoRejected && (emp360Data.kyc?.video_rejection_reason || emp360Data.terms?.verification_notes)) && (
+                                      <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '6px', background: '#FEF2F2', padding: '6px 8px', borderRadius: '6px', borderLeft: '3px solid #EF4444' }}>
+                                        ⚠️ {emp360Data.kyc?.video_rejection_reason || emp360Data.terms?.verification_notes}
+                                      </div>
+                                    )}
+                                    {emp360Data.terms?.video_url ? (
+                                      <a href={emp360Data.terms.video_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', background: C.teal, color: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
+                                        <FaVideo /> Play Video ↗
+                                      </a>
+                                    ) : (
+                                      <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No video recording</div>
+                                    )}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
+                                    <button onClick={() => handleDocVerify(selectedEmp.id, 'video', 'VERIFIED')} style={{ flex: 1, background: '#10B981', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
+                                      ✓ Approve
+                                    </button>
+                                    <button onClick={() => handleDocVerify(selectedEmp.id, 'video', 'REJECTED')} style={{ flex: 1, background: '#EF4444', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
+                                      ✕ Reject
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </>
                         );
                       })()}
 

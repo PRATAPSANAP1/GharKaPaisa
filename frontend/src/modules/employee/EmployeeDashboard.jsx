@@ -125,71 +125,142 @@ export default function EmployeeDashboard() {
           </div>
         </div>
 
-        {/* Dynamic Verification Pending Warning Banner */}
-        {!isOverallVerified && verState && (
-          <div style={{
-            background: '#FFFBEB',
-            border: '2px solid #F59E0B',
-            borderRadius: '24px',
-            padding: isMobile ? '20px' : '28px',
-            marginBottom: '24px',
-            boxShadow: '0 6px 24px rgba(245, 158, 11, 0.12)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: '20px' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                  <FaExclamationTriangle style={{ fontSize: '20px', color: '#D97706' }} />
-                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#92400E', margin: 0 }}>
-                    ⚠ Employee Verification Pending
-                  </h3>
-                </div>
-                <p style={{ fontSize: '13.5px', color: '#B45309', margin: '0 0 14px 0', lineHeight: 1.5 }}>
-                  Please complete your employee verification. The following documents and items require your immediate action:
-                </p>
+        {/* Dynamic Verification Banners */}
+        {!isOverallVerified && verState && (() => {
+          const missingItems = verState.missing_items || [];
+          const actionRequiredItems = missingItems.filter(item => 
+            item.status === 'NOT_UPLOADED' || item.status === 'NOT_COMPLETED' || item.status === 'REJECTED' || item.status === 'REQUIRES_UPDATE'
+          );
+          const underReviewItems = missingItems.filter(item => item.status === 'UNDER_REVIEW');
 
-                {verState.latest_reminder && (
-                  <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', color: '#78350F', fontWeight: 700, marginBottom: '14px' }}>
-                    🔔 <strong>Reminder Notification:</strong> "{verState.latest_reminder.message}"
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                  {verState.missing_items?.map((item, idx) => (
-                    <div key={idx} style={{ 
-                      fontSize: '13px', fontWeight: 800, 
-                      color: item.status === 'REJECTED' ? '#DC2626' : '#92400E',
-                      display: 'flex', alignItems: 'center', gap: '8px'
-                    }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.status === 'REJECTED' ? '#DC2626' : '#D97706' }} />
-                      {item.text}
+          // Case A: Items require immediate upload/fix from employee
+          if (actionRequiredItems.length > 0) {
+            return (
+              <div style={{
+                background: '#FFFBEB',
+                border: '2px solid #F59E0B',
+                borderRadius: '24px',
+                padding: isMobile ? '20px' : '28px',
+                marginBottom: '24px',
+                boxShadow: '0 6px 24px rgba(245, 158, 11, 0.12)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: '20px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <FaExclamationTriangle style={{ fontSize: '20px', color: '#D97706' }} />
+                      <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#92400E', margin: 0 }}>
+                        ⚠ Employee Verification Pending
+                      </h3>
                     </div>
-                  ))}
+                    <p style={{ fontSize: '13.5px', color: '#B45309', margin: '0 0 14px 0', lineHeight: 1.5 }}>
+                      Please complete your employee verification. The following documents and items require your immediate action:
+                    </p>
+
+                    {verState.latest_reminder && (
+                      <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', color: '#78350F', fontWeight: 700, marginBottom: '14px' }}>
+                        🔔 <strong>Reminder Notification:</strong> "{verState.latest_reminder.message}"
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                      {actionRequiredItems.map((item, idx) => (
+                        <div key={idx} style={{ 
+                          fontSize: '13px', fontWeight: 800, 
+                          color: item.status === 'REJECTED' ? '#DC2626' : '#92400E',
+                          display: 'flex', alignItems: 'center', gap: '8px'
+                        }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.status === 'REJECTED' ? '#DC2626' : '#D97706' }} />
+                          {item.text || item.label}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => navigate('/employee/verification')}
+                    style={{
+                      background: '#D97706',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '14px 28px',
+                      borderRadius: '14px',
+                      fontWeight: 900,
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(217, 119, 6, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Verify Now <FaArrowRight />
+                  </button>
                 </div>
               </div>
+            );
+          }
 
-              <button
-                onClick={() => navigate('/employee/verification')}
-                style={{
-                  background: '#D97706',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '14px 28px',
-                  borderRadius: '14px',
-                  fontWeight: 900,
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(217, 119, 6, 0.3)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                Verify Now <FaArrowRight />
-              </button>
-            </div>
-          </div>
-        )}
+          // Case B: Documents uploaded, pending admin review (no action required by employee)
+          if (underReviewItems.length > 0) {
+            return (
+              <div style={{
+                background: '#EFF6FF',
+                border: '2px solid #3B82F6',
+                borderRadius: '24px',
+                padding: isMobile ? '20px' : '28px',
+                marginBottom: '24px',
+                boxShadow: '0 6px 24px rgba(59, 130, 246, 0.12)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: '20px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <FaShieldAlt style={{ fontSize: '22px', color: '#2563EB' }} />
+                      <h3 style={{ fontSize: '18px', fontWeight 900, color: '#1E40AF', margin: 0 }}>
+                        ⏳ Verification Documents Submitted & Under Review
+                      </h3>
+                    </div>
+                    <p style={{ fontSize: '13.5px', color: '#1D4ED8', margin: '0 0 14px 0', lineHeight: 1.5 }}>
+                      Your uploaded documents and video verification have been received and are currently undergoing HR & Super Admin review. No further action is required from you at this time.
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {underReviewItems.map((item, idx) => (
+                        <div key={idx} style={{ fontSize: '13px', fontWeight: 800, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#2563EB' }} />
+                          ✓ {item.label || item.text} – Submitted & Under Review
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => navigate('/employee/verification')}
+                    style={{
+                      background: '#2563EB',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '14px',
+                      fontWeight: 900,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    View Status <FaArrowRight />
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          return null;
+        })()}
 
         {/* Verification Completed Card Banner */}
         {isOverallVerified && (

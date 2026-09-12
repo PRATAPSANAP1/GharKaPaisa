@@ -961,14 +961,24 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
       }
 
       await query(`
-        UPDATE employee_terms_acceptance 
-        SET verification_status = $2,
-            verification_notes = $3,
-            reviewed_by = $4,
-            reviewed_at = NOW(),
-            updated_at = NOW()
-        WHERE employee_id = $1
-      `, [id, video_status, video_rejection_reason, req.user.id]).catch(() => {});
+        INSERT INTO employee_terms_acceptance (
+          employee_id, terms_version, terms_content, accepted, accepted_at,
+          verification_status, verification_notes, verified_by, verified_at, updated_at
+        ) VALUES ($1, '1.0', 'GharKaPaisa Employee Terms & Conditions', true, NOW(), $2, $3, $4, NOW(), NOW())
+        ON CONFLICT (employee_id) DO UPDATE SET
+          verification_status = EXCLUDED.verification_status,
+          verification_notes = EXCLUDED.verification_notes,
+          verified_by = EXCLUDED.verified_by,
+          verified_at = NOW(),
+          updated_at = NOW()
+      `, [id, video_status, video_rejection_reason, req.user.id]).catch(e => logger.warn('Video terms update error:', e.message));
+
+      const vDocStatus = video_status === 'VERIFIED' ? 'APPROVED' : 'REJECTED';
+      await query(`
+        UPDATE employee_documents 
+        SET verification_status = $1, rejection_reason = $2, verified_by = $3, verified_at = NOW(), updated_at = NOW()
+        WHERE employee_id = $4 AND (LOWER(document_type) = 'terms_video' OR LOWER(document_type) = 'video' OR LOWER(document_type) = 'video_verification')
+      `, [vDocStatus, video_rejection_reason, req.user.id, id]).catch(() => {});
     }
 
     // Handle bulk overall decision fallback
@@ -2454,25 +2464,40 @@ router.post('/:id/verify-document', async (req, res, next) => {
       `, [empId, document_type, finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id]);
     }
 
-    // Sync legacy columns in employee_kyc if applicable
-    if (document_type === 'pan') {
+    // Sync legacy columns in employee_kyc and terms acceptance if applicable
+    const docTypeLower = document_type.toLowerCase();
+    if (docTypeLower === 'pan') {
       await query(`
         UPDATE employee_kyc 
         SET pan_status = $1, pan_verified = $2, pan_rejection_reason = $3 
         WHERE employee_id = $4
       `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
-    } else if (document_type === 'aadhaar') {
+    } else if (docTypeLower === 'aadhaar') {
       await query(`
         UPDATE employee_kyc 
         SET aadhaar_status = $1, aadhaar_verified = $2, aadhaar_rejection_reason = $3 
         WHERE employee_id = $4
       `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
-    } else if (document_type === 'bank_proof') {
+    } else if (docTypeLower === 'bank_proof') {
       await query(`
         UPDATE employee_kyc 
         SET bank_status = $1, bank_verified = $2, bank_rejection_reason = $3 
         WHERE employee_id = $4
       `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
+    } else if (['video', 'terms_video', 'video_verification'].includes(docTypeLower)) {
+      const vStatus = finalStatus === 'APPROVED' ? 'VERIFIED' : (finalStatus === 'REJECTED' ? 'REJECTED' : 'UNDER_REVIEW');
+      await query(`
+        INSERT INTO employee_terms_acceptance (
+          employee_id, terms_version, terms_content, accepted, accepted_at,
+          verification_status, verification_notes, verified_by, verified_at, updated_at
+        ) VALUES ($1, '1.0', 'GharKaPaisa Employee Terms & Conditions', true, NOW(), $2, $3, $4, NOW(), NOW())
+        ON CONFLICT (employee_id) DO UPDATE SET
+          verification_status = EXCLUDED.verification_status,
+          verification_notes = EXCLUDED.verification_notes,
+          verified_by = EXCLUDED.verified_by,
+          verified_at = NOW(),
+          updated_at = NOW()
+      `, [empId, vStatus, rejection_reason || null, req.user.id]).catch(() => {});
     }
 
     // Recalculate complete state
@@ -2508,11 +2533,26 @@ router.post('/:id/verify-section', async (req, res, next) => {
         WHERE employee_id = $4
       `, [uppercaseStatus === 'APPROVED' || uppercaseStatus === 'VERIFIED' ? 'APPROVED' : 'REJECTED', req.user.id, notes || null, empId]);
     } else if (section === 'video') {
+      const vStatus = uppercaseStatus === 'APPROVED' || uppercaseStatus === 'VERIFIED' ? 'VERIFIED' : 'REJECTED';
       await query(`
-        UPDATE employee_terms_acceptance
-        SET verification_status = $1, verification_notes = $2, verified_at = NOW()
-        WHERE employee_id = $3
-      `, [uppercaseStatus === 'APPROVED' || uppercaseStatus === 'VERIFIED' ? 'VERIFIED' : 'REJECTED', notes || null, empId]);
+        INSERT INTO employee_terms_acceptance (
+          employee_id, terms_version, terms_content, accepted, accepted_at,
+          verification_status, verification_notes, verified_by, verified_at, updated_at
+        ) VALUES ($1, '1.0', 'GharKaPaisa Employee Terms & Conditions', true, NOW(), $2, $3, $4, NOW(), NOW())
+        ON CONFLICT (employee_id) DO UPDATE SET
+          verification_status = EXCLUDED.verification_status,
+          verification_notes = EXCLUDED.verification_notes,
+          verified_by = EXCLUDED.verified_by,
+          verified_at = NOW(),
+          updated_at = NOW()
+      `, [empId, vStatus, notes || null, req.user.id]).catch(() => {});
+
+      const vDocStatus = vStatus === 'VERIFIED' ? 'APPROVED' : 'REJECTED';
+      await query(`
+        UPDATE employee_documents 
+        SET verification_status = $1, rejection_reason = $2, verified_by = $3, verified_at = NOW(), updated_at = NOW()
+        WHERE employee_id = $4 AND (LOWER(document_type) = 'terms_video' OR LOWER(document_type) = 'video' OR LOWER(document_type) = 'video_verification')
+      `, [vDocStatus, notes || null, req.user.id, empId]).catch(() => {});
     }
 
     const updatedState = await calculateEmployeeVerificationState(empId);

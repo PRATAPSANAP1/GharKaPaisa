@@ -182,6 +182,14 @@ async function calculateEmployeeVerificationState(employeeId) {
   `, [employeeId]);
   const terms = termsRes.rows[0] || null;
 
+  // Also check employee_documents for video
+  const videoDocRes = await query(`
+    SELECT * FROM employee_documents 
+    WHERE employee_id = $1 AND (LOWER(document_type) = 'terms_video' OR LOWER(document_type) = 'video' OR LOWER(document_type) = 'video_verification')
+    ORDER BY created_at DESC LIMIT 1
+  `, [employeeId]);
+  const videoDoc = videoDocRes.rows[0] || null;
+
   let videoStatus = 'NOT_COMPLETED'; // 'NOT_COMPLETED', 'UNDER_REVIEW', 'VERIFIED', 'REJECTED'
   let videoUrl = null;
   let videoNotes = null;
@@ -196,6 +204,21 @@ async function calculateEmployeeVerificationState(employeeId) {
     } else if (vSt === 'REJECTED') {
       videoStatus = 'REJECTED';
     } else if (terms.video_url) {
+      videoStatus = 'UNDER_REVIEW';
+    }
+  }
+
+  if (videoDoc) {
+    if (!videoUrl && videoDoc.document_url) {
+      videoUrl = await resolveS3Url(videoDoc.document_url);
+    }
+    const docSt = String(videoDoc.verification_status || '').toUpperCase();
+    if (docSt === 'APPROVED' || docSt === 'VERIFIED') {
+      videoStatus = 'VERIFIED';
+    } else if (docSt === 'REJECTED' && videoStatus !== 'VERIFIED') {
+      videoStatus = 'REJECTED';
+      videoNotes = videoDoc.rejection_reason || videoNotes;
+    } else if (videoDoc.document_url && videoStatus === 'NOT_COMPLETED') {
       videoStatus = 'UNDER_REVIEW';
     }
   }
@@ -274,30 +297,34 @@ async function sendVerificationReminder(employeeId, sentByUserId = null, customN
   const employee = empRes.rows[0];
 
   const state = await calculateEmployeeVerificationState(employeeId);
-  const missingTextList = state.missing_document_names;
+  const missingItems = state.missing_items || [];
 
-  if (missingTextList.length === 0) {
+  if (missingItems.length === 0) {
     return {
       success: false,
       message: 'Employee verification is already complete! No reminder sent.'
     };
   }
 
-  const defaultMsg = customNote || `Please complete your employee verification. Missing items: ${missingTextList.join(', ')}`;
+  // Format clean list of missing/pending document names
+  const cleanMissingNames = missingItems.map(item => item.label);
+  const detailedMissingList = missingItems.map(item => item.text);
+
+  const defaultMsg = customNote || `Please complete your employee verification. Missing/pending items requiring action: ${cleanMissingNames.join(', ')}`;
 
   // 1. Insert into employee_verification_reminders
   const { rows: [reminder] } = await query(`
     INSERT INTO employee_verification_reminders (employee_id, sent_by, message, missing_documents)
     VALUES ($1, $2, $3, $4::jsonb)
     RETURNING *
-  `, [employeeId, sentByUserId, defaultMsg, JSON.stringify(missingTextList)]);
+  `, [employeeId, sentByUserId, defaultMsg, JSON.stringify(cleanMissingNames)]);
 
   // 2. Dispatch in-app notification to employee
   if (employee.user_id) {
     await createNotification(
       employee.user_id,
-      '⚠ Employee Verification Required',
-      `Please complete your employee verification. Missing items: ${missingTextList.slice(0, 3).join(', ')}${missingTextList.length > 3 ? '...' : ''}`,
+      '⚠ Employee Verification Reminder',
+      `Reminder: Please complete your verification. Pending fields: ${cleanMissingNames.join(', ')}`,
       'warning',
       '/employee/verification',
       { category: 'kyc', priority: 'high' }
@@ -306,9 +333,9 @@ async function sendVerificationReminder(employeeId, sentByUserId = null, customN
 
   return {
     success: true,
-    message: `Reminder sent successfully to ${employee.full_name}`,
+    message: `Verification reminder sent to ${employee.full_name} for fields: ${cleanMissingNames.join(', ')}`,
     reminder,
-    missing_documents: missingTextList
+    missing_documents: cleanMissingNames
   };
 }
 
@@ -317,3 +344,4 @@ module.exports = {
   calculateEmployeeVerificationState,
   sendVerificationReminder
 };
+
