@@ -29,10 +29,11 @@ router.post('/:id/physical-link', requireApprovedPartnerOrAdmin, appCtrl.generat
 
 // Dashboards, Search, and Analytics
 router.get('/dashboard', requireApprovedPartnerOrAdmin, appCtrl.getApplicationsDashboard);
+router.get('/remark-operator/dashboard', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.getRemarkOperatorDashboard);
 router.get('/analytics', requireApprovedPartnerOrAdmin, appCtrl.getAnalytics);
 router.get('/search', requireApprovedPartnerOrAdmin, appCtrl.listApplications);
-router.get('/admin/applications', authorize('ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'PAN_CHECKER', 'PAN CHECKER'), appCtrl.listApplications);
-router.get('/super-admin/applications', authorize('SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'PAN_CHECKER', 'PAN CHECKER'), appCtrl.listApplications);
+router.get('/admin/applications', authorize('ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'REMARK_OPERATOR', 'REMARK OPERATOR'), appCtrl.listApplications);
+router.get('/super-admin/applications', authorize('SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'REMARK_OPERATOR', 'REMARK OPERATOR'), appCtrl.listApplications);
 
 // Bulk Operations & Export (must be before /:id routes)
 router.put('/bulk-status', requireApprovedPartnerOrAdmin, appCtrl.bulkUpdateStatus);
@@ -41,6 +42,9 @@ router.post('/import', requireApprovedPartnerOrAdmin, upload.single('file'), app
 router.get('/export/csv', requireApprovedPartnerOrAdmin, appCtrl.exportApplicationsCSV);
 
 // Sub-resource & lifecycle endpoints (MUST be defined before generic /:id)
+router.put('/:id/remark', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.updateRemarkOperatorApplication);
+router.patch('/:id/remark', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.updateRemarkOperatorApplication);
+router.post('/:id/remark', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.updateRemarkOperatorApplication);
 router.put('/:id/bank-status', requireApprovedPartnerOrAdmin, appCtrl.updateBankProcessingStatus);
 router.patch('/:id/bank-status', requireApprovedPartnerOrAdmin, appCtrl.updateBankProcessingStatus);
 router.post('/:id/bank-status', requireApprovedPartnerOrAdmin, appCtrl.updateBankProcessingStatus);

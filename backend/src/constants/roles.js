@@ -14,9 +14,20 @@ const isRole = (role, ...allowed) => {
   return allowed.map(normalizeRole).includes(normalized);
 };
 
+const DESIGNATIONS = {
+  OPERATIONAL_HEAD: 'Operational Head',
+  ADMINISTRATIVE_OPERATOR: 'Administrative Operator',
+  ADMINISTRATIVE_SALES_EXECUTIVE: 'Administrative Sales Executive',
+  PAN_CHECKER: 'PAN Checker',
+  REMARK_OPERATOR: 'Remark Operator',
+  SUPER_ADMIN: 'Super Admin',
+};
+
 module.exports = {
   ...ROLES,
   ROLES,
+  DESIGNATIONS,
   normalizeRole,
   isRole,
 };
+

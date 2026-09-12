@@ -93,9 +93,10 @@ const AdminLayout = () => {
   const isOpHead = userDesignation === 'Operational Head' || userDesignation === 'OPERATIONAL_HEAD';
   const isSalesExec = ['Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
   const isPanChecker = ['PAN Checker', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
-  const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+  const isRemarkOperator = ['Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
+  const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
   const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
-  if ((isOpHead || isBackend || assignedList.length > 0) && assignedList.length > 0) {
+  if ((isOpHead || isBackend || isRemarkOperator || isSalesExec || assignedList.length > 0) && assignedList.length > 0) {
     banks = assignedList.map(b => ({
       id: b.id,
       name: b.name || b.bank_name || b.short_code,
@@ -110,12 +111,18 @@ const AdminLayout = () => {
   const [openProductsMenu, setOpenProductsMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Close mobile menu on route change & restrict HR and Backend Operator navigation
+  // Close mobile menu on route change & restrict navigation based on role designation
   useEffect(() => {
     setMobileMenuOpen(false);
     if (isHR) {
       if (!location.pathname.startsWith('/hr')) {
         navigate('/hr/dashboard', { replace: true });
+      }
+    } else if (isRemarkOperator || isSalesExec) {
+      const allowedPaths = ['/admin/dashboard', '/admin/applications'];
+      const isAllowed = allowedPaths.some(p => location.pathname === p || location.pathname.startsWith(p));
+      if (!isAllowed) {
+        navigate('/admin/dashboard', { replace: true });
       }
     } else if (isBackend) {
       const allowedPaths = ['/admin/dashboard', '/admin/applications', '/admin/credit-cards', '/admin/loans', '/admin/insurance'];
@@ -124,7 +131,7 @@ const AdminLayout = () => {
         navigate('/admin/dashboard', { replace: true });
       }
     }
-  }, [location.pathname, isHR, isBackend, navigate]);
+  }, [location.pathname, isHR, isRemarkOperator, isSalesExec, isBackend, navigate]);
 
   const handleLogout = () => {
     logout();
@@ -142,7 +149,7 @@ const AdminLayout = () => {
             {t('adminLayout.title', 'GharKaPaisa')}
           </h2>
           <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {isHR ? 'HR Management Portal' : isPanChecker ? 'PAN Checker' : isSalesExec ? 'Administrative Sales Executive' : isBackend ? 'Administrative Operator' : 'Admin Operations Portal'}
+            {isHR ? 'HR Management Portal' : isRemarkOperator ? 'Remark Operator' : isPanChecker ? 'PAN Checker' : isSalesExec ? 'Administrative Sales Executive' : isBackend ? 'Administrative Operator' : 'Admin Operations Portal'}
           </span>
         </div>
       </div>
@@ -189,7 +196,7 @@ const AdminLayout = () => {
             )}
 
             {/* CREDIT CARDS — Only Assigned Banks */}
-            {!isPanChecker && (
+            {!isPanChecker && !isRemarkOperator && !isSalesExec && (
               <div>
                 <button onClick={() => setOpenCcMenu(!openCcMenu)} style={menuBtnStyle(openCcMenu)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -215,7 +222,7 @@ const AdminLayout = () => {
             )}
 
             {/* LOANS — Only Assigned Banks */}
-            {!isPanChecker && (
+            {!isPanChecker && !isRemarkOperator && !isSalesExec && (
               <div>
                 <button onClick={() => setOpenLoansMenu(!openLoansMenu)} style={menuBtnStyle(openLoansMenu)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -241,7 +248,7 @@ const AdminLayout = () => {
             )}
 
             {/* INSURANCE — Only Assigned Banks */}
-            {!isPanChecker && (
+            {!isPanChecker && !isRemarkOperator && !isSalesExec && (
               <div>
                 <button onClick={() => setOpenInsuranceMenu(!openInsuranceMenu)} style={menuBtnStyle(openInsuranceMenu)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -273,7 +280,7 @@ const AdminLayout = () => {
             </NavLink>
 
             {/* Additional Admin Nav Items */}
-            {!isBackend && !isSalesExec && !isPanChecker && (
+            {!isBackend && !isSalesExec && !isPanChecker && !isRemarkOperator && (
               <>
                 {/* Customers */}
                 <NavLink to="/admin/leads" style={navLinkStyle}>

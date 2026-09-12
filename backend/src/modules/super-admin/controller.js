@@ -226,6 +226,119 @@ const listAdmins = async (req, res, next) => {
   }
 };
 
+const updateAdmin = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { fullName, email, mobile, designation, status, password, bank_ids, bankIds } = req.body;
+
+    const targetBankIds = Array.isArray(bank_ids) ? bank_ids : (Array.isArray(bankIds) ? bankIds : null);
+
+    const { rows: [existing] } = await query(`SELECT id, role, designation FROM users WHERE id::text = $1 OR id = $1`, [id]);
+    if (!existing) {
+      return notFound(res, 'Administrator user not found.');
+    }
+
+    const updates = [];
+    const params = [];
+    let pIdx = 1;
+
+    if (fullName !== undefined) {
+      updates.push(`full_name = $${pIdx++}`);
+      params.push(fullName.trim());
+    }
+    if (email !== undefined) {
+      updates.push(`email = $${pIdx++}`);
+      params.push(email.trim().toLowerCase());
+    }
+    if (mobile !== undefined) {
+      updates.push(`mobile = $${pIdx++}`);
+      params.push(mobile.trim());
+    }
+    if (designation !== undefined) {
+      updates.push(`designation = $${pIdx++}`);
+      params.push(designation.trim());
+    }
+    if (status !== undefined) {
+      updates.push(`status = $${pIdx++}::user_status`);
+      params.push(status.trim().toLowerCase());
+    }
+    if (password && password.trim().length >= 6) {
+      const bcrypt = require('bcryptjs');
+      const hash = await bcrypt.hash(password.trim(), 10);
+      updates.push(`password_hash = $${pIdx++}`);
+      params.push(hash);
+    }
+
+    if (updates.length > 0) {
+      updates.push(`updated_at = NOW()`);
+      params.push(existing.id);
+      await query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${pIdx}`, params);
+    }
+
+    // Handle bank assignments
+    if (targetBankIds !== null) {
+      await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [existing.id]);
+      const currentDesig = designation !== undefined ? designation.trim() : existing.designation;
+      const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR'].includes(currentDesig);
+
+      for (const bId of targetBankIds) {
+        await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [existing.id, bId, req.user.id]);
+        if (!isRemarkOp) {
+          await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [existing.id, bId]);
+          await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [existing.id, bId]);
+        }
+      }
+    }
+
+    await logAction(req, 'UPDATE_USER', existing.id, { email, designation, bankIds: targetBankIds });
+
+    return success(res, { id: existing.id }, 'Administrator updated successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getAdminBanks = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await query(`
+      SELECT aba.bank_id as id, b.name, b.short_code, b.logo_url 
+      FROM admin_bank_assignments aba
+      JOIN banks b ON b.id = aba.bank_id
+      WHERE aba.admin_id::text = $1 OR aba.admin_id = $1
+    `, [id]);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateAdminBanks = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { bankIds, bank_ids } = req.body;
+    const targetBankIds = Array.isArray(bank_ids) ? bank_ids : (Array.isArray(bankIds) ? bankIds : []);
+
+    const { rows: [userRec] } = await query(`SELECT id, designation FROM users WHERE id::text = $1 OR id = $1`, [id]);
+    if (!userRec) return notFound(res, 'Admin not found');
+
+    await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [userRec.id]);
+    const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR'].includes(userRec.designation);
+
+    for (const bId of targetBankIds) {
+      await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [userRec.id, bId, req.user.id]);
+      if (!isRemarkOp) {
+        await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [userRec.id, bId]);
+        await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [userRec.id, bId]);
+      }
+    }
+
+    return success(res, { adminId: userRec.id, assignedBanks: targetBankIds }, 'Bank assignments updated successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 /**
  * POST /api/v1/superadmin/block-user
  * Suspend/unsuspend a user in the database and revoke Firebase session tokens if blocked.
@@ -1005,75 +1118,6 @@ const assignBankOperationHead = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-};
-
-const updateAdmin = async (req, res, next) => {
-  try {
-    const adminId = req.params.id;
-    const { fullName, email, mobile, department, designation, status, bank_ids, password } = req.body;
-    const desigUpper = String(designation || '').toUpperCase();
-    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'].includes(desigUpper);
-    const bankIds = Array.isArray(bank_ids) ? bank_ids : [];
-    if (isOpHead && bankIds.length === 0) {
-      return error(res, 'At least one assigned bank is required for Operational Head or Administrative Operator designation', 400);
-    }
-    const updates = [];
-    const values = [];
-    let idx = 1;
-    if (fullName) { updates.push(`full_name = $${idx++}`); values.push(fullName); }
-    if (email) { updates.push(`email = $${idx++}`); values.push(email); }
-    if (mobile) { updates.push(`mobile = $${idx++}`); values.push(mobile); }
-    if (department) { updates.push(`department = $${idx++}`); values.push(department); }
-    if (designation) { updates.push(`designation = $${idx++}`); values.push(designation); }
-    if (status) { updates.push(`status = $${idx++}::user_status`); values.push(status); }
-    if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      updates.push(`password_hash = $${idx++}`);
-      values.push(hashedPassword);
-    }
-    if (updates.length > 0) {
-      updates.push(`updated_at = NOW()`);
-      values.push(adminId);
-      await query(`UPDATE users SET ${updates.join(', ')} WHERE id = $${idx}`, values);
-    }
-    if (Array.isArray(bank_ids)) {
-      await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [adminId]);
-      for (const bId of bankIds) {
-        await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [adminId, bId, req.user.id]);
-        await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [adminId, bId]);
-        await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [adminId, bId]);
-      }
-    }
-    return success(res, { adminId, bank_ids: bankIds }, 'Admin user updated successfully.');
-  } catch (err) { next(err); }
-};
-
-const getAdminBanks = async (req, res, next) => {
-  try {
-    const adminId = req.params.id;
-    const { rows: banks } = await query(`SELECT b.id, b.name, b.short_code, b.short_code as code, b.logo_url, aba.created_at FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [adminId]);
-    return success(res, { bank_ids: banks.map(b => b.id), banks });
-  } catch (err) { next(err); }
-};
-
-const updateAdminBanks = async (req, res, next) => {
-  try {
-    const adminId = req.params.id;
-    const bankIds = Array.isArray(req.body.bank_ids) ? req.body.bank_ids : [];
-    const { rows: [adminUser] } = await query(`SELECT designation FROM users WHERE id = $1`, [adminId]);
-    const desigUpper = String(adminUser?.designation || '').toUpperCase();
-    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'].includes(desigUpper);
-    if (isOpHead && bankIds.length === 0) {
-      return error(res, 'At least one assigned bank is required for Operational Head or Administrative Operator designation', 400);
-    }
-    await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [adminId]);
-    for (const bId of bankIds) {
-      await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [adminId, bId, req.user.id]);
-      await query(`UPDATE banks SET operation_head_id = $1 WHERE id = $2`, [adminId, bId]);
-      await query(`UPDATE products SET operation_head_id = $1 WHERE bank_id = $2`, [adminId, bId]);
-    }
-    return success(res, { adminId, bank_ids: bankIds }, 'Admin bank assignments updated successfully.');
-  } catch (err) { next(err); }
 };
 
 const getPartnersCommissionOverview = async (req, res, next) => {

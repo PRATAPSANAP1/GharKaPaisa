@@ -598,6 +598,39 @@ const migrate = async () => {
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_id UUID REFERENCES banks(id) ON DELETE SET NULL`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50) DEFAULT 'pending'`);
   await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS application_number VARCHAR(50)`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_status VARCHAR(20) DEFAULT 'PENDING'`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated_by UUID REFERENCES users(id)`);
+  await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ`);
+
+  // ── Admin Bank Assignments ─────────────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS admin_bank_assignments (
+      id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      admin_id   UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      bank_id    UUID NOT NULL REFERENCES banks(id) ON DELETE CASCADE,
+      created_by UUID REFERENCES users(id),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      is_active  BOOLEAN DEFAULT TRUE,
+      UNIQUE(admin_id, bank_id)
+    )
+  `);
+
+  // ── Application Admin Assignments ──────────────────────────────
+  await query(`
+    CREATE TABLE IF NOT EXISTS application_admin_assignments (
+      id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+      admin_user_id  UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      assigned_by    UUID REFERENCES users(id),
+      assigned_at    TIMESTAMPTZ DEFAULT NOW(),
+      completed_at   TIMESTAMPTZ,
+      status         VARCHAR(20) DEFAULT 'PENDING',
+      created_at     TIMESTAMPTZ DEFAULT NOW(),
+      updated_at     TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(application_id, admin_user_id)
+    )
+  `);
 
   // Sync application_number with app_number if empty
   await query(`UPDATE applications SET application_number = app_number WHERE application_number IS NULL AND app_number IS NOT NULL`);
@@ -4029,6 +4062,9 @@ const migrate = async () => {
         CREATE INDEX IF NOT EXISTS idx_bcca_bank ON bank_card_applications(bank_id);
         CREATE INDEX IF NOT EXISTS idx_bcca_status ON bank_card_applications(final_stage);
         CREATE INDEX IF NOT EXISTS idx_bcca_pan ON bank_card_applications(pan_number);
+
+        ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100);
+        ALTER TABLE bank_card_applications ADD COLUMN IF NOT EXISTS bank_ref_number VARCHAR(100);
 
         CREATE TABLE IF NOT EXISTS bank_card_application_timeline (
           id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

@@ -44,8 +44,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   // User Role & Permissions (Declared at top to avoid TDZ in hooks)
   const user = useAuthStore((state) => state.user);
   const role = (user?.role || '').toUpperCase();
-  const userDesignation = (user?.designation || '').toUpperCase();
   const isPanChecker = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+  const isRemarkOperator = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
   const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
   const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
   const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
@@ -858,8 +858,165 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
             </div>
           )}
 
-          {/* Navigation Tabs (Hidden for PAN Checker role) */}
-          {!isPanChecker && (
+          {/* Remark Operator Action & Review Panel */}
+          {isRemarkOperator && (
+            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+              <div style={{ fontWeight: 800, color: '#0369a1', fontSize: '14px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ShieldCheck size={18} /> Remark Operator Review & Submit
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>APPLICATION ID</label>
+                  <div style={{ fontSize: '13px', fontWeight: 800, fontFamily: 'monospace', color: '#1e293b' }}>
+                    {appNumber || application.app_number || application.id}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>PAN NUMBER</label>
+                  <div style={{ fontSize: '13px', fontWeight: 800, fontFamily: 'monospace', color: '#1e293b' }}>
+                    {panNumber || application.pan_number || 'N/A'}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>BANK</label>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b' }}>
+                    {application.bank_name || 'N/A'}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>BANK REMARK *</label>
+                  <input
+                    type="text"
+                    value={bankRemark || ''}
+                    onChange={(e) => setBankRemark(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                    placeholder="Enter Bank Remark"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>USER REMARK / NOTES</label>
+                  <input
+                    type="text"
+                    value={userRemark || ''}
+                    onChange={(e) => setUserRemark(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                    placeholder="Enter Internal Notes"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>IPA STAGE</label>
+                  <select
+                    value={ipaStage || 'None'}
+                    onChange={(e) => setIpaStage(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                  >
+                    <option value="None">None</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Declined">Declined</option>
+                    <option value="Referred">Referred</option>
+                    <option value="Pending">Pending</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>VKYC STAGE</label>
+                  <select
+                    value={vkycStage || 'None'}
+                    onChange={(e) => setVkycStage(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                  >
+                    <option value="None">None</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Failed">Failed</option>
+                    <option value="Initiated">Initiated</option>
+                    <option value="Exempted">Exempted</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>DISPATCH STATUS</label>
+                  <select
+                    value={dispatchStatus || 'None'}
+                    onChange={(e) => setDispatchStatus(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                  >
+                    <option value="None">None</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Dispatched">Dispatched</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="In Transit">In Transit</option>
+                    <option value="Returned">Returned</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>APP FILE GENERATED</label>
+                  <select
+                    value={appFileGenerated || 'None'}
+                    onChange={(e) => setAppFileGenerated(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                  >
+                    <option value="None">None</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>DECLINE REASON</label>
+                  <input
+                    type="text"
+                    value={declineReason || ''}
+                    onChange={(e) => setDeclineReason(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                    placeholder="Enter Decline Reason (if declined)"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  disabled={actionLoading}
+                  onClick={async () => {
+                    setActionLoading(true);
+                    try {
+                      const targetId = application.id || application.app_number;
+                      const res = await api.put(`/applications/${targetId}/remark`, {
+                        bank_remark: bankRemark || undefined,
+                        user_remark: userRemark || undefined,
+                        notes: userRemark || undefined,
+                        ipa_stage: ipaStage !== 'None' ? ipaStage : undefined,
+                        vkyc_stage: vkycStage !== 'None' ? vkycStage : undefined,
+                        dispatch_status: dispatchStatus !== 'None' ? dispatchStatus : undefined,
+                        app_file_generated: appFileGenerated !== 'None' ? appFileGenerated : undefined,
+                        decline_reason: declineReason || undefined
+                      });
+                      if (res.data?.success) {
+                        alert('Remark updated successfully! Application marked as completed in queue.');
+                        onClose();
+                        if (onRefresh) onRefresh();
+                      }
+                    } catch (err) {
+                      alert(err.response?.data?.message || 'Failed to update remark');
+                    } finally {
+                      setActionLoading(false);
+                    }
+                  }}
+                  style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: '8px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <CheckCircle size={16} /> Save & Complete Remark
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Tabs (Hidden for PAN Checker & Remark Operator roles) */}
+          {!isPanChecker && !isRemarkOperator && (
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
             
             {/* 1. QD Tab (Hidden for Digital processes) */}

@@ -157,6 +157,12 @@ const updateStatusFields = async (req, res, next) => {
     const { rows: [existing] } = await query(`SELECT * FROM bank_card_applications WHERE id = $1`, [id]);
     if (!existing) return error(res, 'Bank card application not found', 404);
 
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+    if (isSalesExecUser && final_stage && ['approved', 'declined', 'rejected', 'disbursed', 'cancelled'].includes(final_stage.toLowerCase())) {
+      return error(res, 'Administrative Sales Executive is not authorized to perform final approval or rejection.', 403);
+    }
+
     const { rows: [updated] } = await query(
       `UPDATE bank_card_applications SET
         app_code_status = COALESCE($1, app_code_status),
@@ -274,6 +280,9 @@ const listBankCardApplications = async (req, res, next) => {
     let idx = 1;
 
     const userRole = (req.user?.role || '').toUpperCase();
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+
     if (userRole !== 'SUPER_ADMIN' && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
       if (abRows.length > 0) {
@@ -281,6 +290,12 @@ const listBankCardApplications = async (req, res, next) => {
         values.push(req.user.id);
         idx++;
       }
+    }
+
+    if (isSalesExecUser && req.user?.id) {
+      whereClause += ` AND (combined.process_by = $${idx} OR (SELECT assigned_to::text FROM applications WHERE id::text = combined.id) = $${idx} OR EXISTS (SELECT 1 FROM application_admin_assignments aaa WHERE aaa.admin_user_id = $${idx}::uuid AND aaa.application_id::text = combined.id))`;
+      values.push(String(req.user.id));
+      idx++;
     }
 
     if (bank_id && bank_id !== 'all') {
@@ -339,7 +354,7 @@ const listBankCardApplications = async (req, res, next) => {
       SELECT 
         bca.id::text as id,
         bca.application_no,
-        COALESCE(NULLIF(bca.bank_application_number, ''), NULLIF(bca.bank_ref_number, ''), bca.application_no) as bank_application_number,
+        COALESCE(NULLIF(to_jsonb(bca)->>'bank_application_number', ''), NULLIF(to_jsonb(bca)->>'bank_ref_number', ''), bca.application_no) as bank_application_number,
         bca.bank_id::text as bank_id,
         bca.credit_card_category,
         bca.customer_name,
@@ -439,6 +454,23 @@ const getBankCardApplicationById = async (req, res, next) => {
        WHERE bca.id::text = $1`,
       [id]
     );
+
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+    if (isSalesExecUser && req.user?.id) {
+      const isAssigned = application ? (
+        String(application.process_by) === String(req.user.id) ||
+        String(application.assigned_to) === String(req.user.id)
+      ) : false;
+      const { rows: assignCheck } = await query(
+        `SELECT 1 FROM application_admin_assignments WHERE admin_user_id = $1 AND application_id::text = $2`,
+        [req.user.id, id]
+      ).catch(() => ({ rows: [] }));
+
+      if (!isAssigned && assignCheck.length === 0) {
+        return error(res, 'Access denied. Administrative Sales Executive can only access assigned Punching Only applications.', 403);
+      }
+    }
 
     if (application) {
       const { rows: timeline } = await query(

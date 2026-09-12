@@ -826,6 +826,15 @@ const updateStatus = async (req, res, next) => {
       return forbidden(res, 'Super Admin authorization required for final approval and commission processing.');
     }
 
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    if (['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation)) {
+      const lowerStatus = String(targetStatus).toLowerCase();
+      if (['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_received', 'commission_released', 'rejected', 'declined', 'rejection', 'cancelled'].includes(lowerStatus)) {
+        await client.query('ROLLBACK');
+        return forbidden(res, 'Administrative Sales Executive is not authorized to perform final approval or rejection.');
+      }
+    }
+
     let approvedAt = app.approved_at;
     if ((targetStatus === 'approved' || targetStatus === 'super_admin_approved') && !app.approved_at) {
       approvedAt = new Date();
@@ -1094,6 +1103,10 @@ const getAnalytics = async (req, res, next) => {
 
 // Super Admin custom methods
 const approveApplication = async (req, res, next) => {
+  const userDesignation = (req.user?.designation || '').toUpperCase();
+  if (['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation)) {
+    return forbidden(res, 'Administrative Sales Executive is not authorized to perform final approval or rejection.');
+  }
   const { id, approved_amount } = req.body;
   if (!id) return error(res, 'ID is required', 400);
 
@@ -1155,6 +1168,10 @@ const approveApplication = async (req, res, next) => {
 };
 
 const rejectApplication = async (req, res, next) => {
+  const userDesignation = (req.user?.designation || '').toUpperCase();
+  if (['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation)) {
+    return forbidden(res, 'Administrative Sales Executive is not authorized to perform final approval or rejection.');
+  }
   const { id, reason } = req.body;
   if (!id) return error(res, 'ID is required', 400);
 
@@ -1420,17 +1437,29 @@ const listApplications = async (req, res, next) => {
     const countQueryParams = [validPartnerId, validStatus, validProductId, validBankId, validSearch, validProcessBy, validOpHeadId, validUserId, isPartnerOrTeam, validScope, validMemberId, validCategory, validCommissionStatus, validFromDate, validToDate];
 
     const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
     let salesExecFilterSQL = '';
-    if (isSalesExecUser) {
-      salesExecFilterSQL = ` AND (LOWER(combined.process_by) LIKE '%punching%' OR LOWER(combined.process_type) LIKE '%punching%')`;
+    if (isSalesExecUser && req.user?.id) {
+      salesExecFilterSQL = ` AND (LOWER(COALESCE(combined.process_type, combined.process_by, '')) LIKE '%punching%' OR combined.process_type = 'lead_punching')
+      AND (
+        combined.assigned_to = '${req.user.id}' 
+        OR combined.submitted_by = '${req.user.id}' 
+        OR combined.employee_id IN (SELECT id FROM employees WHERE user_id = '${req.user.id}')
+        OR EXISTS (SELECT 1 FROM application_admin_assignments aaa WHERE aaa.admin_user_id = '${req.user.id}' AND aaa.application_id = combined.id)
+      )`;
     }
 
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
     let panCheckerFilterSQL = '';
     if (isPanCheckerUser) {
       panCheckerFilterSQL = ` AND (LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR combined.bank_id IN (SELECT id FROM banks WHERE LOWER(short_code) = 'sbi' OR LOWER(name) LIKE '%sbi%')) AND combined.status NOT IN ('approved', 'disbursed', 'sanctioned') AND (LOWER(COALESCE(combined.pan_check, 'no')) = 'no')`;
+    }
+
+    const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
+    let remarkOperatorFilterSQL = '';
+    if (isRemarkOperatorUser && req.user?.id) {
+      remarkOperatorFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR EXISTS (SELECT 1 FROM application_admin_assignments WHERE admin_user_id = '${req.user.id}' AND application_id = combined.id)) AND COALESCE(combined.remark_status, 'PENDING') = 'PENDING' AND combined.id NOT IN (SELECT application_id FROM application_admin_assignments WHERE admin_user_id = '${req.user.id}' AND status = 'COMPLETED')`;
     }
 
     if (!isPartnerOrTeam && req.user?.id) {
@@ -1541,7 +1570,12 @@ const listApplications = async (req, res, next) => {
           COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id,
           oh.full_name as operation_head_name,
           COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(pad.pan_check, ''), 'no') as pan_check,
-          COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status
+          COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status,
+          COALESCE(a.remark_status, 'PENDING') as remark_status,
+          COALESCE(to_jsonb(a)->>'assigned_to', to_jsonb(pad)->>'assigned_to') as assigned_to,
+          a.remark_updated,
+          a.remark_updated_by,
+          a.remark_updated_at
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -1596,6 +1630,7 @@ const listApplications = async (req, res, next) => {
         ${opHeadBankFilterSQL}
         ${salesExecFilterSQL}
         ${panCheckerFilterSQL}
+        ${remarkOperatorFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
@@ -1911,6 +1946,33 @@ const getApplication = async (req, res, next) => {
       const { rows: [partner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (!partner || app.partner_id !== partner.id) {
         return forbidden(res, 'Access denied. You do not own this application.');
+      }
+    }
+
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+    if (isSalesExecUser && req.user?.id) {
+      const processType = String(app.process_type || app.source || app.process_by || '').toLowerCase();
+      const isPunching = processType.includes('punching') || processType === 'lead_punching';
+      
+      const isAssignedDirect = (
+        String(app.assigned_to) === String(req.user.id) ||
+        String(app.submitted_by) === String(req.user.id) ||
+        String(app.process_by) === String(req.user.id)
+      );
+
+      const { rows: assignCheck } = await query(
+        `SELECT 1 FROM application_admin_assignments WHERE admin_user_id = $1 AND application_id = $2`,
+        [req.user.id, app.id]
+      ).catch(() => ({ rows: [] }));
+      
+      const { rows: empCheck } = await query(
+        `SELECT 1 FROM employees WHERE user_id = $1 AND id = $2`,
+        [req.user.id, app.employee_id]
+      ).catch(() => ({ rows: [] }));
+
+      if (!isPunching || (!isAssignedDirect && assignCheck.length === 0 && empCheck.length === 0)) {
+        return forbidden(res, 'Access denied. Administrative Sales Executive can only access assigned Punching Only applications.');
       }
     }
 
@@ -4935,6 +4997,145 @@ const get360ApplicationTrace = async (req, res, next) => {
   }
 };
 
+const updateRemarkOperatorApplication = async (req, res, next) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+    const { id } = req.params;
+    const { bank_remark, user_remark, ipa_stage, vkyc_stage, vkyc_status, dispatch_status, app_file_generated, notes, decline_reason } = req.body;
+    const userId = req.user.id;
+
+    // Fetch application to verify bank assignment
+    const { rows: [app] } = await client.query(
+      `SELECT a.*, p.bank_id FROM applications a JOIN products p ON p.id = a.product_id WHERE a.id::text = $1 OR a.id = $1 FOR UPDATE`,
+      [id]
+    );
+
+    if (!app) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Application not found');
+    }
+
+    const userRole = (req.user?.role || '').toUpperCase();
+    if (userRole !== 'SUPER_ADMIN') {
+      const { rows: [bankAssigned] } = await client.query(
+        `SELECT 1 FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2`,
+        [userId, app.bank_id]
+      );
+      if (!bankAssigned) {
+        await client.query('ROLLBACK');
+        return forbidden(res, 'You are not assigned to handle applications for this bank.');
+      }
+    }
+
+    const effectiveUserRemark = user_remark || notes || null;
+    const effectiveVkycStage = vkyc_stage || vkyc_status || null;
+
+    // 1. Update applications table
+    await client.query(`
+      UPDATE applications 
+      SET bank_remark = COALESCE($1, bank_remark),
+          user_remark = COALESCE($2, user_remark),
+          vkyc_stage = COALESCE($3, vkyc_stage),
+          vkyc_status = COALESCE($3, vkyc_status),
+          dispatch_status = COALESCE($4, dispatch_status),
+          app_file_generated = COALESCE($5, app_file_generated),
+          notes = COALESCE($2, notes),
+          decline_reason = COALESCE($6, decline_reason),
+          remark_status = 'COMPLETED',
+          remark_updated = TRUE,
+          remark_updated_by = $7,
+          remark_updated_at = NOW(),
+          updated_at = NOW()
+      WHERE id = $8
+    `, [bank_remark || null, effectiveUserRemark, effectiveVkycStage, dispatch_status || null, app_file_generated || null, decline_reason || null, userId, app.id]);
+
+    // 2. Upsert physical_application_details table
+    await client.query(`
+      INSERT INTO physical_application_details (
+        application_id, bank_remark, user_remark, ipa_stage, vkyc_stage, dispatch_status, app_file_generated, decline_reason, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+      ON CONFLICT (application_id) DO UPDATE SET
+        bank_remark = COALESCE(EXCLUDED.bank_remark, physical_application_details.bank_remark),
+        user_remark = COALESCE(EXCLUDED.user_remark, physical_application_details.user_remark),
+        ipa_stage = COALESCE(NULLIF(EXCLUDED.ipa_stage, ''), physical_application_details.ipa_stage),
+        vkyc_stage = COALESCE(NULLIF(EXCLUDED.vkyc_stage, ''), physical_application_details.vkyc_stage),
+        dispatch_status = COALESCE(NULLIF(EXCLUDED.dispatch_status, ''), physical_application_details.dispatch_status),
+        app_file_generated = COALESCE(EXCLUDED.app_file_generated, physical_application_details.app_file_generated),
+        decline_reason = COALESCE(EXCLUDED.decline_reason, physical_application_details.decline_reason),
+        updated_at = NOW()
+    `, [app.id, bank_remark || null, effectiveUserRemark, ipa_stage || null, effectiveVkycStage, dispatch_status || null, app_file_generated || null, decline_reason || null]);
+
+    // 3. Update application_admin_assignments if exists
+    await client.query(`
+      UPDATE application_admin_assignments 
+      SET status = 'COMPLETED', completed_at = NOW(), updated_at = NOW()
+      WHERE application_id = $1 AND admin_user_id = $2
+    `, [app.id, userId]);
+
+    // 4. Log timeline
+    await logTimeline(client, app.id, 'remark_updated', 'Remark Operator Review', `Remark updated by Remark Operator. ${bank_remark ? 'Remark: ' + bank_remark : ''}`, userId);
+
+    // 5. Log action in audit_logs
+    await logAction(req, 'UPDATE_APPLICATION_REMARK', app.id, {
+      app_number: app.app_number,
+      bank_remark,
+      user_remark: effectiveUserRemark,
+      ipa_stage,
+      vkyc_stage: effectiveVkycStage
+    });
+
+    await client.query('COMMIT');
+    return success(res, { application_id: app.id, remark_status: 'COMPLETED' }, 'Remark updated successfully. Application marked as completed in queue.');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+};
+
+const getRemarkOperatorDashboard = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { rows: bankRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [userId]);
+    const assignedBankIds = bankRows.map(b => b.bank_id);
+
+    if (assignedBankIds.length === 0 && req.user.role !== 'SUPER_ADMIN') {
+      return success(res, { pending_count: 0, completed_today_count: 0, assigned_banks_count: 0 });
+    }
+
+    const bankCondition = req.user.role === 'SUPER_ADMIN' ? '1=1' : `p.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1)`;
+    const params = req.user.role === 'SUPER_ADMIN' ? [] : [userId];
+
+    const { rows: [pendingRes] } = await query(`
+      SELECT COUNT(*) as count 
+      FROM applications a
+      JOIN products p ON p.id = a.product_id
+      WHERE ${bankCondition}
+        AND COALESCE(a.remark_status, 'PENDING') = 'PENDING'
+    `, params);
+
+    const { rows: [completedRes] } = await query(`
+      SELECT COUNT(*) as count 
+      FROM applications a
+      JOIN products p ON p.id = a.product_id
+      WHERE ${bankCondition}
+        AND a.remark_status = 'COMPLETED'
+        AND (a.remark_updated_by = $1 OR $1 IS NULL)
+        AND DATE(a.remark_updated_at) = CURRENT_DATE
+    `, [userId]);
+
+    return success(res, {
+      pending_count: parseInt(pendingRes?.count || 0),
+      completed_today_count: parseInt(completedRes?.count || 0),
+      assigned_banks_count: assignedBankIds.length
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   submitApplication,
   submitPublicApplication,
@@ -4975,7 +5176,9 @@ module.exports = {
   deleteApplication,
   releaseCommission,
   holdCommission,
-  get360ApplicationTrace
+  get360ApplicationTrace,
+  updateRemarkOperatorApplication,
+  getRemarkOperatorDashboard
 };
 
 

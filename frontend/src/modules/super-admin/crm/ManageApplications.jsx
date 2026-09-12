@@ -37,6 +37,7 @@ export default function ManageApplications() {
   const userDesignation = (user?.designation || '').toUpperCase();
   const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
   const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
+  const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
   const navigate = useNavigate();
 
   const [searchParams] = useSearchParams();
@@ -805,10 +806,19 @@ export default function ManageApplications() {
                     <input type="checkbox" onChange={toggleSelectAll} checked={selectedAppIds.length === applications.length && applications.length > 0} />
                   </th>
                   <th style={{ padding: '14px 16px' }}>App ID &amp; Date</th>
-                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Customer</th>}
-                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Source &amp; Process</th>}
-                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Product &amp; Bank</th>}
-                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Status &amp; Commission</th>}
+                  {isRemarkOperatorUser ? (
+                    <>
+                      <th style={{ padding: '14px 16px' }}>PAN Number</th>
+                      <th style={{ padding: '14px 16px' }}>Bank</th>
+                    </>
+                  ) : !isPanCheckerUser && (
+                    <>
+                      <th style={{ padding: '14px 16px' }}>Customer</th>
+                      <th style={{ padding: '14px 16px' }}>Source &amp; Process</th>
+                      <th style={{ padding: '14px 16px' }}>Product &amp; Bank</th>
+                      <th style={{ padding: '14px 16px' }}>Status &amp; Commission</th>
+                    </>
+                  )}
                   <th style={{ padding: '14px 16px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -839,57 +849,68 @@ export default function ManageApplications() {
                         <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
                           {app.created_at ? new Date(app.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                         </div>
-                        <div style={{ marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 6px', borderRadius: '4px', background: '#FEF3C7', color: '#92400E', fontSize: '10.5px', fontWeight: 800 }}>
-                          <span>🔄 Updates: {app.update_count ?? 1}</span>
-                        </div>
                       </td>
 
-                      {/* Customer Avatar & Metadata */}
-                      {!isPanCheckerUser && (
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)', color: '#fff', fontWeight: 900, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              {initials}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: 800, color: C.text }}>{custName}</div>
-                              <div style={{ fontSize: '11px', color: C.textLight }}>{app.customer_mobile || app.mobile || 'N/A'} • {app.city || 'N/A'}</div>
-                            </div>
-                          </div>
-                        </td>
+                      {/* Remark Operator simplified view */}
+                      {isRemarkOperatorUser ? (
+                        <>
+                          <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontWeight: 800 }}>
+                            {app.pan_number || app.pan || 'N/A'}
+                          </td>
+                          <td style={{ padding: '14px 16px', fontWeight: 700 }}>
+                            {app.bank_name || 'Bank Partner'}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          {/* Customer Avatar & Metadata */}
+                          {!isPanCheckerUser && (
+                            <td style={{ padding: '14px 16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)', color: '#fff', fontWeight: 900, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                  {initials}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: 800, color: C.text }}>{custName}</div>
+                                  <div style={{ fontSize: '11px', color: C.textLight }}>{app.customer_mobile || app.mobile || 'N/A'} • {app.city || 'N/A'}</div>
+                                </div>
+                              </div>
+                            </td>
+                          )}
+
+                          {/* Source & Process */}
+                          {!isPanCheckerUser && (
+                            <td style={{ padding: '14px 16px' }}>
+                              {renderProcessBadge(app)}
+                            </td>
+                          )}
+
+                          {/* Product & Bank */}
+                          {!isPanCheckerUser && (
+                            <td style={{ padding: '14px 16px' }}>
+                              <div style={{ fontWeight: 800, color: C.text }}>{app.bank_name || 'Bank Partner'}</div>
+                              <div style={{ fontSize: '11px', color: C.textLight }}>{app.product_name || 'Financial Product'}</div>
+                            </td>
+                          )}
+
+                          {/* Separated Application Status & Commission Status */}
+                          {!isPanCheckerUser && (
+                            <td style={{ padding: '14px 16px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div>{renderAppStatusBadge(app.status)}</div>
+                                <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>
+                                  Commission: <span style={{ color: app.commission_released ? '#059669' : C.textMid }}>₹{app.commission_amount || '0.00'} ({app.commission_released ? 'Released' : 'Pending'})</span>
+                                </div>
+                              </div>
+                            </td>
+                          )}
+                        </>
                       )}
 
-                      {/* Source & Process */}
-                      {!isPanCheckerUser && (
-                        <td style={{ padding: '14px 16px' }}>
-                          {renderProcessBadge(app)}
-                        </td>
-                      )}
-
-                      {/* Product & Bank */}
-                      {!isPanCheckerUser && (
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ fontWeight: 800, color: C.text }}>{app.bank_name || 'Bank Partner'}</div>
-                          <div style={{ fontSize: '11px', color: C.textLight }}>{app.product_name || 'Financial Product'}</div>
-                        </td>
-                      )}
-
-                      {/* Separated Application Status & Commission Status */}
-                      {!isPanCheckerUser && (
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <div>{renderAppStatusBadge(app.status)}</div>
-                            <div style={{ fontSize: '11px', color: C.textLight, fontWeight: 700 }}>
-                              Commission: <span style={{ color: app.commission_released ? '#059669' : C.textMid }}>₹{app.commission_amount || '0.00'} ({app.commission_released ? 'Released' : 'Pending'})</span>
-                            </div>
-                          </div>
-                        </td>
-                      )}
-
-                      {/* Actions: PAN Check OR Review Button + 3-Dots Menu */}
+                      {/* Actions: PAN Check / Remark Review OR Review Button + 3-Dots Menu */}
                       <td style={{ padding: '14px 16px', textAlign: 'right', position: 'relative' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                          {isPanCheckerUser ? (
+                          {isPanCheckerUser || isRemarkOperatorUser ? (
                             <button
                               onClick={() => setVerifyModalApp(app)}
                               style={{ padding: '6px 12px', borderRadius: '8px', background: '#2563eb', color: '#fff', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
