@@ -233,7 +233,7 @@ const updateAdmin = async (req, res, next) => {
 
     const targetBankIds = Array.isArray(bank_ids) ? bank_ids : (Array.isArray(bankIds) ? bankIds : null);
 
-    const { rows: [existing] } = await query(`SELECT id, role, designation FROM users WHERE id::text = $1 OR id = $1`, [id]);
+    const { rows: [existing] } = await query(`SELECT id, role, designation FROM users WHERE id::text = $1`, [id]);
     if (!existing) {
       return notFound(res, 'Administrator user not found.');
     }
@@ -305,7 +305,7 @@ const getAdminBanks = async (req, res, next) => {
       SELECT aba.bank_id as id, b.name, b.short_code, b.logo_url 
       FROM admin_bank_assignments aba
       JOIN banks b ON b.id = aba.bank_id
-      WHERE aba.admin_id::text = $1 OR aba.admin_id = $1
+      WHERE aba.admin_id::text = $1
     `, [id]);
     return success(res, rows);
   } catch (err) {
@@ -319,7 +319,7 @@ const updateAdminBanks = async (req, res, next) => {
     const { bankIds, bank_ids } = req.body;
     const targetBankIds = Array.isArray(bank_ids) ? bank_ids : (Array.isArray(bankIds) ? bankIds : []);
 
-    const { rows: [userRec] } = await query(`SELECT id, designation FROM users WHERE id::text = $1 OR id = $1`, [id]);
+    const { rows: [userRec] } = await query(`SELECT id, designation FROM users WHERE id::text = $1`, [id]);
     if (!userRec) return notFound(res, 'Admin not found');
 
     await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [userRec.id]);
