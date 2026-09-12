@@ -4,6 +4,7 @@ import { getApiV1Url } from '../../config/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthStore } from '../../app/store/authStore';
 import { FiUser, FiSliders, FiBriefcase, FiFileText, FiAlertCircle } from 'react-icons/fi';
+import { getBankAppNumberConfig } from '../../utils/bankAppNumberUtils';
 
 export default function CustomerPostApplyStep2() {
   const { token } = useParams();
@@ -320,6 +321,11 @@ export default function CustomerPostApplyStep2() {
 
   const bankNameCombined = `${bankInfo?.bank_name || ''} ${bankInfo?.product_name || ''} ${bankInfo?.product?.name || ''} ${bankInfo?.product?.bank_name || ''}`.toUpperCase();
   const isTataHdfc = bankNameCombined.includes('TATA');
+  const bankAppConfig = getBankAppNumberConfig(
+    bankInfo?.bank_name || bankInfo?.product?.bank_name || '',
+    bankInfo?.product_name || bankInfo?.product?.name || '',
+    bankInfo?.bank_id || bankInfo?.product?.bank_id || ''
+  );
 
   return (
     <div style={{
@@ -626,22 +632,18 @@ export default function CustomerPostApplyStep2() {
 
                 {/* 3. Bank Application Number */}
                 <div>
-                  <label style={labelStyle}>3. Bank Application / Reference Number</label>
+                  <label style={labelStyle}>3. Bank Application Number ({bankAppConfig.bankName.toUpperCase()})</label>
                   <input
                     type="text"
-                    maxLength={isTataHdfc ? 25 : 13}
-                    placeholder={isTataHdfc ? "e.g. TATA123456789 / HDFC-APP-1002" : "Enter 13-digit Bank App Reference Number"}
+                    maxLength={bankAppConfig.maxLength}
+                    placeholder={bankAppConfig.placeholder}
                     value={appNumber}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (isTataHdfc) {
-                        setAppNumber(val.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25));
-                      } else {
-                        setAppNumber(val.replace(/\D/g, '').slice(0, 13));
-                      }
-                    }}
+                    onChange={(e) => setAppNumber(bankAppConfig.sanitize(e.target.value))}
                     style={{ ...inputStyle, fontFamily: 'monospace' }}
                   />
+                  <div style={{ fontSize: '11px', color: C.primary, marginTop: '4px', fontWeight: 600 }}>
+                    {bankAppConfig.hint}
+                  </div>
                 </div>
 
                 {/* 4. VKYC Link */}
@@ -744,14 +746,18 @@ export default function CustomerPostApplyStep2() {
 
                 {/* Order 4: Bank Application Number */}
                 <div>
-                  <label style={labelStyle}>Bank Application / Reference Number</label>
+                  <label style={labelStyle}>Bank Application Number ({bankAppConfig.bankName.toUpperCase()})</label>
                   <input
                     type="text"
-                    placeholder="e.g. SBI9842157 / HDFC-APP-1002"
+                    maxLength={bankAppConfig.maxLength}
+                    placeholder={bankAppConfig.placeholder}
                     value={appNumber}
-                    onChange={(e) => setAppNumber(e.target.value)}
+                    onChange={(e) => setAppNumber(bankAppConfig.sanitize(e.target.value))}
                     style={{ ...inputStyle, fontFamily: 'monospace' }}
                   />
+                  <div style={{ fontSize: '11px', color: C.primary, marginTop: '4px', fontWeight: 600 }}>
+                    {bankAppConfig.hint}
+                  </div>
                 </div>
 
                 {/* Order 5: VKYC Stage / Status */}

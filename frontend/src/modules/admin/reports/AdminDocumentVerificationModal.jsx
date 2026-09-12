@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import { useAuthStore } from '../../../app/store/authStore';
+import { getBankAppNumberConfig } from '../../../utils/bankAppNumberUtils';
 import { 
   X, CheckCircle, XCircle, Eye, Send, ShieldCheck, 
   Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft, Lock,
@@ -144,6 +145,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const isSbi = bankId === 'e7c2c604-139d-4fcf-a87c-695633535a02' || combinedBankText.includes('SBI') || combinedBankText.includes('STATE BANK');
   const isTataCobrandHdfc = bankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || combinedBankText.includes('TATA CO-BRAND HDFC') || combinedBankText.includes('TATA CO BRAND HDFC') || (combinedBankText.includes('TATA') && combinedBankText.includes('HDFC'));
   const isHdfcBank = (bankId === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' || (combinedBankText.includes('HDFC') && !combinedBankText.includes('TATA'))) && !isTataCobrandHdfc;
+  const bankAppConfig = getBankAppNumberConfig(
+    application?.bank_name || application?.bank?.name || application?.bank_code || '',
+    application?.product_name || application?.product?.name || '',
+    bankId
+  );
 
   const [ipaStage, setIpaStage] = useState(sanitizeVal(application?.ipa_stage) || sanitizeVal(application?.physical_details?.ipa_stage) || 'None');
   const [kycStage, setKycStage] = useState(sanitizeVal(application?.kyc_stage) || sanitizeVal(application?.physical_details?.kyc_stage) || 'None');
@@ -748,14 +754,18 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>APPLICATION NUMBER (OPTIONAL)</label>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>APPLICATION NUMBER ({bankAppConfig.bankName.toUpperCase()})</label>
                   <input
                     type="text"
+                    maxLength={bankAppConfig.maxLength}
                     value={bankRefNumber}
-                    onChange={(e) => setBankRefNumber(e.target.value)}
+                    onChange={(e) => setBankRefNumber(bankAppConfig.sanitize(e.target.value))}
                     style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: '#fff' }}
-                    placeholder="Enter Bank App No (Optional)"
+                    placeholder={bankAppConfig.placeholder}
                   />
+                  <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', fontWeight: 600 }}>
+                    {bankAppConfig.hint}
+                  </div>
                 </div>
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>PAN CHECK REMARK *</label>
@@ -1396,16 +1406,19 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
                       {/* 3. BANK APPLICATION NUMBER */}
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. BANK APPLICATION NUMBER</label>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. BANK APPLICATION NUMBER (SBI - 13 DIGITS)</label>
                         <input
                           type="text"
                           maxLength={13}
                           disabled={!canEditRemark}
                           value={bankRefNumber}
                           onChange={(e) => setBankRefNumber(e.target.value.replace(/\D/g, '').slice(0, 13))}
-                          placeholder="Enter 13-digit Bank App Reference Number"
+                          placeholder="e.g. 2925313102292 (13 numeric digits)"
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                         />
+                        <div style={{ fontSize: '11px', color: '#0284c7', marginTop: '4px', fontWeight: 600 }}>
+                          SBI Structure: Strictly 13 numeric digits
+                        </div>
                       </div>
 
                       {/* 4. VKYC LINK */}
@@ -1619,16 +1632,19 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
                       {/* 6. BANK APPLICATION NUMBER */}
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>6. BANK APPLICATION NUMBER</label>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>6. BANK APPLICATION NUMBER (HDFC - ALPHANUMERIC)</label>
                         <input
                           type="text"
                           maxLength={25}
                           disabled={!canEditRemark}
                           value={bankRefNumber}
                           onChange={(e) => setBankRefNumber(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25))}
-                          placeholder="Enter Alphanumeric Bank App Ref Number"
+                          placeholder="e.g. D26I1045139850YZ (Alphanumeric)"
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                         />
+                        <div style={{ fontSize: '11px', color: '#0284c7', marginTop: '4px', fontWeight: 600 }}>
+                          HDFC Structure: Uppercase Alphanumeric (letters and numbers)
+                        </div>
                       </div>
 
                       {/* 7. CARD APPROVAL */}
@@ -1706,16 +1722,19 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
                       {/* 3. BANK APPLICATION NUMBER */}
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. BANK APPLICATION NUMBER</label>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>3. BANK APPLICATION NUMBER (TATA HDFC - ALPHANUMERIC)</label>
                         <input
                           type="text"
                           maxLength={25}
                           disabled={!canEditRemark}
                           value={bankRefNumber}
                           onChange={(e) => setBankRefNumber(e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 25))}
-                          placeholder="Enter Alphanumeric App Ref Number (up to 25 chars)"
+                          placeholder="e.g. D26I1045139850YZ (Alphanumeric)"
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                         />
+                        <div style={{ fontSize: '11px', color: '#0284c7', marginTop: '4px', fontWeight: 600 }}>
+                          TATA HDFC Structure: Uppercase Alphanumeric (letters and numbers)
+                        </div>
                       </div>
 
                       {/* 4. VKYC LINK */}
@@ -1775,16 +1794,19 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     /* 🌐 GENERAL / FALLBACK BANK WORKFLOW */
                     <>
                       <div>
-                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>BANK APPLICATION NUMBER</label>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>BANK APPLICATION NUMBER ({bankAppConfig.bankName.toUpperCase()})</label>
                         <input
                           type="text"
-                          maxLength={13}
+                          maxLength={bankAppConfig.maxLength}
                           disabled={!canEditRemark}
                           value={bankRefNumber}
-                          onChange={(e) => setBankRefNumber(e.target.value.replace(/\D/g, '').slice(0, 13))}
-                          placeholder="Enter 13-digit Reference Number"
+                          onChange={(e) => setBankRefNumber(bankAppConfig.sanitize(e.target.value))}
+                          placeholder={bankAppConfig.placeholder}
                           style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', background: !canEditRemark ? '#f8fafc' : '#fff' }}
                         />
+                        <div style={{ fontSize: '11px', color: '#0284c7', marginTop: '4px', fontWeight: 600 }}>
+                          {bankAppConfig.hint}
+                        </div>
                       </div>
                       {!isPhysical && (
                         <div>

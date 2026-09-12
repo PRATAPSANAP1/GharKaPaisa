@@ -994,17 +994,102 @@ const updateStatus = async (req, res, next) => {
     // Trigger DLT SMS for application_status update
     try {
       const { sendApplicationStatusSms } = require('../../services/sms/sms.service');
-      const { rows: [custData] } = await query(`
-        SELECT c.mobile, c.full_name, p.name as product_name 
-        FROM applications a 
-        LEFT JOIN customers c ON c.id = a.customer_id 
-        LEFT JOIN products p ON p.id = a.product_id 
-        WHERE a.id = $1
-      `, [id]);
-      if (custData && custData.mobile) {
-        sendApplicationStatusSms(custData.mobile, custData.full_name, custData.product_name, status).catch(smsErr => {
-          logger.warn(`Failed to send application status SMS: ${smsErr.message}`);
-        });
+      const effectiveStatus = String(targetStatus || status || '').toLowerCase();
+      const isApprovedStatus = ['approved', 'super_admin_approved', 'sanctioned', 'disbursed'].includes(effectiveStatus);
+
+      if (isApprovedStatus) {
+        // Fetch partner and employee details associated with the application (DO NOT SEND TO CUSTOMER)
+        const { rows: [partyData] } = await query(`
+          SELECT 
+            a.id,
+            a.app_number,
+            a.commission_amount,
+            p.name as product_name,
+            -- Partner contact info
+            pp.mobile as partner_profile_mobile,
+            pu.mobile as partner_user_mobile,
+            pu.phone as partner_user_phone,
+            pu.id as partner_user_id,
+            COALESCE(NULLIF(TRIM(CONCAT(pp.first_name, ' ', COALESCE(pp.last_name, ''))), ''), pu.full_name, 'Partner') as partner_name,
+            -- Employee contact info
+            emp.mobile as employee_profile_mobile,
+            eu.mobile as employee_user_mobile,
+            eu.phone as employee_user_phone,
+            eu.id as employee_user_id,
+            COALESCE(NULLIF(emp.full_name, ''), eu.full_name, 'Employee') as employee_name,
+            -- Submitter contact info (fallback)
+            su.mobile as submitter_user_mobile,
+            su.phone as submitter_user_phone,
+            su.id as submitter_user_id,
+            su.full_name as submitter_user_name,
+            su.role as submitter_role
+          FROM applications a
+          LEFT JOIN products p ON p.id = a.product_id
+          LEFT JOIN partner_profiles pp ON pp.id = a.partner_id
+          LEFT JOIN users pu ON pu.id = pp.user_id
+          LEFT JOIN employees emp ON (emp.id = a.employee_id OR emp.user_id = a.submitted_by)
+          LEFT JOIN users eu ON eu.id = emp.user_id
+          LEFT JOIN users su ON su.id = a.submitted_by
+          WHERE a.id = $1
+        `, [app.id || id]);
+
+        if (partyData) {
+          const partnerMobile = partyData.partner_profile_mobile || partyData.partner_user_mobile || partyData.partner_user_phone || (partyData.submitter_role === 'PARTNER' ? (partyData.submitter_user_mobile || partyData.submitter_user_phone) : null);
+          const employeeMobile = partyData.employee_profile_mobile || partyData.employee_user_mobile || partyData.employee_user_phone || (['EMPLOYEE', 'STAFF', 'ADMIN'].includes(partyData.submitter_role) ? (partyData.submitter_user_mobile || partyData.submitter_user_phone) : null);
+
+          let smsSent = false;
+          // Send SMS to specific Partner if present
+          if (partnerMobile) {
+            sendApplicationStatusSms(partnerMobile, partyData.partner_name, partyData.product_name, targetStatus || status).catch(smsErr => {
+              logger.warn(`Failed to send application status SMS to partner: ${smsErr.message}`);
+            });
+            smsSent = true;
+          }
+          // Send SMS to specific Employee if present (and mobile is distinct)
+          if (employeeMobile && employeeMobile !== partnerMobile) {
+            sendApplicationStatusSms(employeeMobile, partyData.employee_name, partyData.product_name, targetStatus || status).catch(smsErr => {
+              logger.warn(`Failed to send application status SMS to employee: ${smsErr.message}`);
+            });
+            smsSent = true;
+          }
+          // Fallback if neither partner nor employee profile linked
+          if (!smsSent) {
+            const fallbackMobile = partyData.submitter_user_mobile || partyData.submitter_user_phone;
+            if (fallbackMobile) {
+              sendApplicationStatusSms(fallbackMobile, partyData.submitter_user_name || 'Agent', partyData.product_name, targetStatus || status).catch(smsErr => {
+                logger.warn(`Failed to send application status SMS to submitter: ${smsErr.message}`);
+              });
+            }
+          }
+
+          // If employee is assigned and has a user account, also send in-app notification
+          if (partyData.employee_user_id && partyData.employee_user_id !== partyData.partner_user_id) {
+            const { createNotification } = require('../notifications/service.js');
+            createNotification(
+              partyData.employee_user_id,
+              '🎉 Application Approved!',
+              `Application #${partyData.app_number} (${partyData.product_name || 'Product'}) has been approved!`,
+              'success',
+              '/admin/crm/applications'
+            ).catch(err => logger.warn('Failed in-app employee notify:', err.message));
+          }
+
+          logger.info(`Application ${id} status is ${targetStatus || status}. Sent SMS to partner/employee. Suppressed SMS to customer.`);
+        }
+      } else {
+        // Non-approved status updates: send to customer
+        const { rows: [custData] } = await query(`
+          SELECT c.mobile, c.full_name, p.name as product_name 
+          FROM applications a 
+          LEFT JOIN customers c ON c.id = a.customer_id 
+          LEFT JOIN products p ON p.id = a.product_id 
+          WHERE a.id = $1
+        `, [id]);
+        if (custData && custData.mobile) {
+          sendApplicationStatusSms(custData.mobile, custData.full_name, custData.product_name, status).catch(smsErr => {
+            logger.warn(`Failed to send application status SMS: ${smsErr.message}`);
+          });
+        }
       }
     } catch (smsErr) {
       logger.warn(`Application status SMS dispatch notice: ${smsErr.message}`);
