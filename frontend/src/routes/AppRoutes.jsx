@@ -35,6 +35,7 @@ import MyIncentives from '../modules/employee/incentives/MyIncentives';
 import EmployeeProfile from '../modules/employee/profile/EmployeeProfile';
 import EmployeeSettingsPortal from '../modules/employee/settings/EmployeeSettingsPortal';
 import EmployeeSalesReports from '../modules/employee/reports/EmployeeSalesReports';
+import EmployeeVerification from '../modules/employee/profile/EmployeeVerification';
 import PartnerLogin from '../modules/authentication/login/PartnerLogin';
 import PartnerRegister from '../modules/authentication/register/PartnerRegister';
 import VerifyEmail from '../modules/authentication/register/VerifyEmail';
@@ -279,6 +280,8 @@ const AppRoutes = () => {
             <Route path="/employee/joining-form" element={<JoiningForm />} />
             <Route path="/employee/terms" element={<TermsAcceptance />} />
             <Route path="/employee/kyc" element={<KYCSubmission />} />
+            <Route path="/employee/verification" element={<EmployeeVerification />} />
+            <Route path="/employee/verification-status" element={<EmployeeVerification />} />
             <Route path="/employee/credit-cards" element={<EmployeeCreditCards defaultCategory="credit_card" />} />
             <Route path="/employee/credit-cards/:bankSlug" element={<PartnerEntityDetail />} />
             <Route path="/employee/credit-cards/:bankSlug/:tab" element={<PartnerEntityDetail />} />

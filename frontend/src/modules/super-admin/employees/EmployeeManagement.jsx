@@ -813,12 +813,28 @@ export default function EmployeeManagement() {
 
   // Link Form
   const [productsList, setProductsList] = useState([]);
+  const [sendingReminder, setSendingReminder] = useState({});
   const [linkForm, setLinkForm] = useState({
     product_id: '',
     employee_referral_url: '',
     incentive_amount: '500',
     incentive_type: 'FIXED'
   });
+
+  const handleSendReminder = async (empId, empName) => {
+    setSendingReminder(prev => ({ ...prev, [empId]: true }));
+    try {
+      const res = await api.post(`/employees/${empId}/send-reminder`);
+      if (res.data?.success) {
+        alert(`✓ Verification reminder notification successfully sent to ${empName}!`);
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to send verification reminder');
+    } finally {
+      setSendingReminder(prev => ({ ...prev, [empId]: false }));
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -1309,9 +1325,9 @@ export default function EmployeeManagement() {
                       <th style={{ padding: '14px 20px' }}>Employee Code</th>
                       <th style={{ padding: '14px 20px' }}>Employee Name</th>
                       <th style={{ padding: '14px 20px' }}>Designation</th>
-                      <th style={{ padding: '14px 20px' }}>Manager / TL</th>
-                      <th style={{ padding: '14px 20px' }}>Onboarding</th>
-                      <th style={{ padding: '14px 20px' }}>Status</th>
+                      <th style={{ padding: '14px 20px' }}>KYC / Verification Status</th>
+                      <th style={{ padding: '14px 20px' }}>Missing Documents</th>
+                      <th style={{ padding: '14px 20px' }}>Account Status</th>
                       <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
@@ -1320,79 +1336,131 @@ export default function EmployeeManagement() {
                       <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading records...</td></tr>
                     ) : employees.length === 0 ? (
                       <tr><td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>No employees found matching criteria.</td></tr>
-                    ) : employees.map(emp => (
-                      <tr key={emp.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                        <td style={{ padding: '14px 20px', fontWeight: 900, color: C.teal }}>{emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A')}</td>
-                        <td style={{ padding: '14px 20px', fontWeight: 800, color: C.text }}>
-                          {emp.full_name}
-                          <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 400 }}>{emp.mobile_number}</div>
-                        </td>
-                        <td style={{ padding: '14px 20px', fontWeight: 800 }}>
-                          {emp.designation || (emp.hierarchy_level === 'BRANCH_HEAD' ? 'BRANCH HEAD' : emp.hierarchy_level === 'SENIOR_MANAGER' ? 'SENIOR MANAGER' : emp.hierarchy_level === 'MANAGER' ? 'MANAGER' : emp.hierarchy_level === 'TEAM_LEADER' ? 'TL' : 'TC')}
-                        </td>
-                        <td style={{ padding: '14px 20px', color: C.textMid }}>
-                          <div>{emp.manager_name ? `Mgr: ${emp.manager_name}` : 'Direct'}</div>
-                          {emp.team_leader_name && <div style={{ fontSize: '12px' }}>TL: {emp.team_leader_name}</div>}
-                        </td>
-                        <td style={{ padding: '14px 20px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ flex: 1, background: C.bgSecondary, height: '8px', borderRadius: '4px', overflow: 'hidden', minWidth: '60px' }}>
-                              <div style={{ width: `${emp.overall_progress || 35}%`, background: C.teal, height: '100%' }} />
-                            </div>
-                            <span style={{ fontSize: '12px', fontWeight: 700 }}>{emp.overall_progress || 35}%</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '14px 20px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
-                            <span 
-                              style={{ 
-                                padding: '3px 10px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 800,
-                                background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
-                                color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E'
-                              }}
-                            >
-                              {emp.activation_status === 'APPROVED' ? '● Active Account' : '● Pending Activation'}
-                            </span>
+                    ) : employees.map(emp => {
+                      const isVerified = emp.overall_verification_status === 'VERIFIED';
+                      const missingDocs = emp.missing_documents || [];
 
-                            {emp.activation_status !== 'APPROVED' && (
-                              <button
-                                onClick={() => handleKycVerify(emp.id, 'VERIFIED')}
-                                style={{
-                                  padding: '5px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800,
-                                  background: '#10B981', color: '#ffffff', border: 'none', cursor: 'pointer',
-                                  display: 'inline-flex', alignItems: 'center', gap: '4px'
+                      return (
+                        <tr key={emp.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '14px 20px', fontWeight: 900, color: C.teal }}>{emp.employee_code || emp.employee_id || emp.emp_code || emp.code || (emp.id ? String(emp.id).slice(0, 8) : 'N/A')}</td>
+                          <td style={{ padding: '14px 20px', fontWeight: 800, color: C.text }}>
+                            {emp.full_name}
+                            <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 400 }}>{emp.mobile_number}</div>
+                          </td>
+                          <td style={{ padding: '14px 20px', fontWeight: 800 }}>
+                            {emp.designation || (emp.hierarchy_level === 'BRANCH_HEAD' ? 'BRANCH HEAD' : emp.hierarchy_level === 'SENIOR_MANAGER' ? 'SENIOR MANAGER' : emp.hierarchy_level === 'MANAGER' ? 'MANAGER' : emp.hierarchy_level === 'TEAM_LEADER' ? 'TL' : 'TC')}
+                          </td>
+                          <td style={{ padding: '14px 20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                              <span 
+                                style={{ 
+                                  padding: '3px 10px', borderRadius: '8px', fontSize: '11px', fontWeight: 900,
+                                  background: isVerified ? '#D1FAE5' : '#FEF3C7',
+                                  color: isVerified ? '#065F46' : '#92400E',
+                                  border: `1px solid ${isVerified ? '#A7F3D0' : '#FDE68A'}`
                                 }}
-                                title="Approve KYC and activate employee account"
                               >
-                                <FaCheckCircle /> Approve KYC & Activate
-                              </button>
+                                {isVerified ? '● VERIFIED' : '● PENDING'}
+                              </span>
+                              <div style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 700 }}>
+                                Docs: <strong>{emp.documents_summary || '0/6'}</strong>
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: '14px 20px' }}>
+                            {isVerified || missingDocs.length === 0 ? (
+                              <span style={{ fontSize: '12px', color: '#059669', fontWeight: 700 }}>— None (Complete) —</span>
+                            ) : (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '200px' }}>
+                                {missingDocs.map((docName, idx) => (
+                                  <span key={idx} style={{
+                                    fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px',
+                                    background: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5'
+                                  }}>
+                                    {docName}
+                                  </span>
+                                ))}
+                              </div>
                             )}
-                          </div>
-                        </td>
-                        <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                          <button 
-                            onClick={() => setActionModalEmp(emp)}
-                            style={{ 
-                              background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, 
-                              color: '#ffffff', 
-                              border: 'none', 
-                              padding: '7px 14px', 
-                              borderRadius: '10px', 
-                              fontSize: '12.5px', 
-                              fontWeight: 800, 
-                              cursor: 'pointer', 
-                              display: 'inline-flex', 
-                              alignItems: 'center', 
-                              gap: '6px',
-                              boxShadow: '0 2px 8px rgba(13, 148, 136, 0.25)',
-                              transition: 'all 0.2s ease'
-                            }}
-                          >
-                            <FaEllipsisV /> Actions
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td style={{ padding: '14px 20px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                              <span 
+                                style={{ 
+                                  padding: '3px 10px', borderRadius: '10px', fontSize: '11.5px', fontWeight: 800,
+                                  background: emp.activation_status === 'APPROVED' ? '#D1FAE5' : '#FEF3C7',
+                                  color: emp.activation_status === 'APPROVED' ? '#065F46' : '#92400E'
+                                }}
+                              >
+                                {emp.activation_status === 'APPROVED' ? '● Active Account' : '● Pending Activation'}
+                              </span>
+
+                              {emp.activation_status !== 'APPROVED' && (
+                                <button
+                                  onClick={() => handleKycVerify(emp.id, 'VERIFIED')}
+                                  style={{
+                                    padding: '5px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800,
+                                    background: '#10B981', color: '#ffffff', border: 'none', cursor: 'pointer',
+                                    display: 'inline-flex', alignItems: 'center', gap: '4px'
+                                  }}
+                                  title="Approve KYC and activate employee account"
+                                >
+                                  <FaCheckCircle /> Approve KYC & Activate
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ padding: '14px 20px', textAlign: 'right' }}>
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                              {!isVerified && (
+                                <button
+                                  onClick={() => handleSendReminder(emp.id, emp.full_name)}
+                                  disabled={sendingReminder[emp.id]}
+                                  style={{
+                                    background: '#F59E0B',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    padding: '7px 12px',
+                                    borderRadius: '10px',
+                                    fontSize: '12px',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)'
+                                  }}
+                                  title="Send Verification Reminder Notification to Employee"
+                                >
+                                  🔔 {sendingReminder[emp.id] ? 'Sending...' : 'Reminder'}
+                                </button>
+                              )}
+
+                              <button 
+                                onClick={() => setActionModalEmp(emp)}
+                                style={{ 
+                                  background: `linear-gradient(135deg, ${C.teal} 0%, #0D9488 100%)`, 
+                                  color: '#ffffff', 
+                                  border: 'none', 
+                                  padding: '7px 14px', 
+                                  borderRadius: '10px', 
+                                  fontSize: '12.5px', 
+                                  fontWeight: 800, 
+                                  cursor: 'pointer', 
+                                  display: 'inline-flex', 
+                                  alignItems: 'center', 
+                                  gap: '6px',
+                                  boxShadow: '0 2px 8px rgba(13, 148, 136, 0.25)',
+                                  transition: 'all 0.2s ease'
+                                }}
+                              >
+                                <FaEllipsisV /> Actions
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

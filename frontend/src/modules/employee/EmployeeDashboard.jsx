@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../contexts/ThemeContext';
 import { 
-  FaFileAlt, FaVideo, FaIdCard, FaCheckCircle, FaSignOutAlt 
+  FaFileAlt, FaVideo, FaIdCard, FaCheckCircle, FaSignOutAlt,
+  FaExclamationTriangle, FaShieldAlt, FaArrowRight
 } from 'react-icons/fa';
 import axios from 'axios';
 import { getApiV1Url } from '../../config/api';
@@ -13,7 +14,7 @@ export default function EmployeeDashboard() {
   const navigate = useNavigate();
 
   const [employee, setEmployee] = useState(null);
-  const [kycData, setKycData] = useState(null);
+  const [verState, setVerState] = useState(null);
   const [checklist, setChecklist] = useState({});
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
@@ -37,7 +38,11 @@ export default function EmployeeDashboard() {
       const profileRes = await axios.get(`${getApiV1Url()}/employee/profile`);
       if (profileRes.data.success) {
         setEmployee(profileRes.data.data.employee);
-        setKycData(profileRes.data.data.kyc);
+      }
+
+      const verRes = await axios.get(`${getApiV1Url()}/employee/verification-status`);
+      if (verRes.data.success) {
+        setVerState(verRes.data.data);
       }
 
       const statusRes = await axios.get(`${getApiV1Url()}/employee/onboarding-status`);
@@ -70,8 +75,8 @@ export default function EmployeeDashboard() {
 
   const isApproved = employee?.activation_status === 'APPROVED' || employee?.employee_status === 'ACTIVE';
 
-  if (isApproved) {
-    // When approved, render identical Partner Dashboard content
+  if (isApproved && verState?.overall_status === 'VERIFIED') {
+    // When approved & verified, render Partner Dashboard
     const partnerAdapter = {
       ...employee,
       partner_id: employee?.id,
@@ -81,7 +86,7 @@ export default function EmployeeDashboard() {
     return <PartnerDashboardComponent partner={partnerAdapter} />;
   }
 
-  const isKycRejected = kycData?.kyc_status === 'REJECTED';
+  const isOverallVerified = verState?.overall_status === 'VERIFIED';
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: isMobile ? '16px 8px 60px' : '24px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
@@ -109,10 +114,10 @@ export default function EmployeeDashboard() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
             <span style={{ 
               padding: '6px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800,
-              background: isKycRejected ? '#FEE2E2' : '#FEF3C7',
-              color: isKycRejected ? '#991B1B' : '#92400E'
+              background: isOverallVerified ? '#D1FAE5' : '#FEF3C7',
+              color: isOverallVerified ? '#065F46' : '#92400E'
             }}>
-              ● {isKycRejected ? 'KYC Re-upload Required' : 'Onboarding Phase'}
+              ● {isOverallVerified ? 'Verified Employee' : 'Verification Required'}
             </span>
             <button onClick={handleLogout} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 14px', borderRadius: '10px', fontWeight: 700, fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <FaSignOutAlt /> Sign Out
@@ -120,53 +125,93 @@ export default function EmployeeDashboard() {
           </div>
         </div>
 
-        {/* KYC Rejection Warning Banner */}
-        {isKycRejected && (
+        {/* Dynamic Verification Pending Warning Banner */}
+        {!isOverallVerified && verState && (
           <div style={{
-            background: '#FEF2F2',
-            border: '2px solid #EF4444',
-            borderRadius: '20px',
-            padding: '20px 24px',
+            background: '#FFFBEB',
+            border: '2px solid #F59E0B',
+            borderRadius: '24px',
+            padding: isMobile ? '20px' : '28px',
+            marginBottom: '24px',
+            boxShadow: '0 6px 24px rgba(245, 158, 11, 0.12)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: '20px' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <FaExclamationTriangle style={{ fontSize: '20px', color: '#D97706' }} />
+                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#92400E', margin: 0 }}>
+                    ⚠ Employee Verification Pending
+                  </h3>
+                </div>
+                <p style={{ fontSize: '13.5px', color: '#B45309', margin: '0 0 14px 0', lineHeight: 1.5 }}>
+                  Please complete your employee verification. The following documents and items require your immediate action:
+                </p>
+
+                {verState.latest_reminder && (
+                  <div style={{ background: '#FEF3C7', border: '1px solid #FDE68A', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', color: '#78350F', fontWeight: 700, marginBottom: '14px' }}>
+                    🔔 <strong>Reminder Notification:</strong> "{verState.latest_reminder.message}"
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                  {verState.missing_items?.map((item, idx) => (
+                    <div key={idx} style={{ 
+                      fontSize: '13px', fontWeight: 800, 
+                      color: item.status === 'REJECTED' ? '#DC2626' : '#92400E',
+                      display: 'flex', alignItems: 'center', gap: '8px'
+                    }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.status === 'REJECTED' ? '#DC2626' : '#D97706' }} />
+                      {item.text}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={() => navigate('/employee/verification')}
+                style={{
+                  background: '#D97706',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '14px 28px',
+                  borderRadius: '14px',
+                  fontWeight: 900,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(217, 119, 6, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Verify Now <FaArrowRight />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Verification Completed Card Banner */}
+        {isOverallVerified && (
+          <div style={{
+            background: '#F0FDF4',
+            border: '2px solid #10B981',
+            borderRadius: '24px',
+            padding: '24px 32px',
             marginBottom: '24px',
             display: 'flex',
             alignItems: 'center',
-            justify: 'space-between',
-            gap: '16px',
-            flexWrap: 'wrap',
-            boxShadow: '0 4px 16px rgba(239,68,68,0.15)'
+            gap: '16px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0, fontWeight: 900 }}>
-                ⚠️
-              </div>
-              <div>
-                <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 900, color: '#991B1B' }}>
-                  Action Required: Employee KYC Verification Rejected
-                </h3>
-                <p style={{ margin: 0, fontSize: '13px', color: '#7F1D1D', lineHeight: 1.4 }}>
-                  {kycData?.review_notes ? `HR Feedback: "${kycData.review_notes}"` : 'Your uploaded KYC documents (PAN, Aadhaar, or Bank proof) were rejected by HR/Admin. Please re-upload correct documents to proceed.'}
-                </p>
-              </div>
+            <FaCheckCircle style={{ fontSize: '32px', color: '#059669' }} />
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#065F46', margin: '0 0 4px 0' }}>
+                ✅ Employee Verification Complete
+              </h3>
+              <p style={{ fontSize: '13.5px', color: '#047857', margin: 0 }}>
+                Your information, documents, and video verification have been successfully verified and approved.
+              </p>
             </div>
-            <button 
-              onClick={() => navigate('/employee/kyc')}
-              style={{
-                background: '#DC2626',
-                color: '#ffffff',
-                border: 'none',
-                padding: '12px 22px',
-                borderRadius: '12px',
-                fontWeight: 900,
-                fontSize: '13.5px',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(220,38,38,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <FaIdCard /> Re-upload KYC Documents ↗
-            </button>
           </div>
         )}
 
@@ -178,57 +223,53 @@ export default function EmployeeDashboard() {
               <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Complete all required onboarding steps to unlock full sales links & partner features</p>
             </div>
             <div style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: 900, color: C.teal }}>
-              {checklist?.overall_progress || 20}% Completed
+              {isOverallVerified ? '100% Completed' : `${checklist?.overall_progress || 60}% Completed`}
             </div>
           </div>
 
           {/* Progress Bar */}
           <div style={{ background: C.bgSecondary, height: '10px', borderRadius: '5px', overflow: 'hidden', marginBottom: '24px' }}>
-            <div style={{ width: `${checklist?.overall_progress || 20}%`, background: C.teal, height: '100%', transition: 'width 0.3s' }} />
+            <div style={{ width: isOverallVerified ? '100%' : `${checklist?.overall_progress || 60}%`, background: C.teal, height: '100%', transition: 'width 0.3s' }} />
           </div>
 
           {/* Steps Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-            <div onClick={() => navigate('/employee/joining-form')} style={{ background: C.bgSecondary, border: `1px solid ${checklist?.joining_form_completed ? C.teal : C.border}`, borderRadius: '16px', padding: '16px', cursor: 'pointer' }}>
+            <div onClick={() => navigate('/employee/verification')} style={{ background: C.bgSecondary, border: `1px solid ${checklist?.joining_form_completed ? C.teal : C.border}`, borderRadius: '16px', padding: '16px', cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <FaFileAlt style={{ color: checklist?.joining_form_completed ? C.teal : C.textMid, fontSize: '20px' }} />
-                {checklist?.joining_form_completed ? <FaCheckCircle style={{ color: C.teal }} /> : <span style={{ fontSize: '11px', fontWeight: 800, color: '#F59E0B' }}>Pending</span>}
+                <FaCheckCircle style={{ color: C.teal }} />
               </div>
-              <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>1. Joining Registration</h4>
-              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Personal & bank details form</p>
+              <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>1. Information</h4>
+              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Personal & bank details</p>
             </div>
 
-            <div onClick={() => navigate('/employee/terms')} style={{ background: C.bgSecondary, border: `1px solid ${checklist?.terms_completed ? C.teal : C.border}`, borderRadius: '16px', padding: '16px', cursor: 'pointer' }}>
+            <div onClick={() => navigate('/employee/verification')} style={{ background: C.bgSecondary, border: `1px solid ${verState?.documents_summary === '6/6' ? C.teal : C.border}`, borderRadius: '16px', padding: '16px', cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <FaVideo style={{ color: checklist?.terms_completed ? C.teal : C.textMid, fontSize: '20px' }} />
-                {checklist?.terms_completed ? <FaCheckCircle style={{ color: C.teal }} /> : <span style={{ fontSize: '11px', fontWeight: 800, color: '#F59E0B' }}>Pending</span>}
+                <FaIdCard style={{ color: verState?.documents_summary === '6/6' ? C.teal : C.textMid, fontSize: '20px' }} />
+                <span style={{ fontSize: '11px', fontWeight: 800, color: verState?.documents_summary === '6/6' ? C.teal : '#F59E0B' }}>
+                  {verState?.documents_summary || '0/6'}
+                </span>
               </div>
-              <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>2. Terms & Video</h4>
-              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Terms acceptance & verification video</p>
+              <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>2. Document Upload</h4>
+              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>PAN, Aadhaar, Bank & Photos</p>
             </div>
 
-            <div onClick={() => navigate('/employee/kyc')} style={{ background: C.bgSecondary, border: `2px solid ${isKycRejected ? '#EF4444' : (checklist?.kyc_verified ? C.teal : C.border)}`, borderRadius: '16px', padding: '16px', cursor: 'pointer' }}>
+            <div onClick={() => navigate('/employee/verification')} style={{ background: C.bgSecondary, border: `1px solid ${verState?.video_status === 'VERIFIED' ? C.teal : C.border}`, borderRadius: '16px', padding: '16px', cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <FaIdCard style={{ color: isKycRejected ? '#DC2626' : (checklist?.kyc_verified ? C.teal : C.textMid), fontSize: '20px' }} />
-                {isKycRejected ? (
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#DC2626', background: '#FEE2E2', padding: '2px 8px', borderRadius: '8px' }}>REJECTED - Re-upload</span>
-                ) : (
-                  checklist?.kyc_verified ? <FaCheckCircle style={{ color: C.teal }} /> : <span style={{ fontSize: '11px', fontWeight: 800, color: '#F59E0B' }}>Pending Review</span>
-                )}
+                <FaVideo style={{ color: verState?.video_status === 'VERIFIED' ? C.teal : C.textMid, fontSize: '20px' }} />
+                {verState?.video_status === 'VERIFIED' ? <FaCheckCircle style={{ color: C.teal }} /> : <span style={{ fontSize: '11px', fontWeight: 800, color: '#F59E0B' }}>{verState?.video_status || 'Pending'}</span>}
               </div>
-              <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>3. Document & KYC</h4>
-              <p style={{ fontSize: '12px', color: isKycRejected ? '#DC2626' : C.textMid, margin: 0, fontWeight: isKycRejected ? 700 : 400 }}>
-                {isKycRejected ? 'Click here to re-upload documents' : 'PAN, Aadhaar & Bank document submission'}
-              </p>
+              <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>3. Video Verification</h4>
+              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Teleprompter agreement video</p>
             </div>
 
-            <div style={{ background: C.bgSecondary, border: `1px solid ${checklist?.activated ? C.teal : C.border}`, borderRadius: '16px', padding: '16px' }}>
+            <div style={{ background: C.bgSecondary, border: `1px solid ${isOverallVerified ? C.teal : C.border}`, borderRadius: '16px', padding: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <FaCheckCircle style={{ color: checklist?.activated ? C.teal : C.textMid, fontSize: '20px' }} />
-                {checklist?.activated ? <FaCheckCircle style={{ color: C.teal }} /> : <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid }}>Under Review</span>}
+                <FaShieldAlt style={{ color: isOverallVerified ? C.teal : C.textMid, fontSize: '20px' }} />
+                {isOverallVerified ? <FaCheckCircle style={{ color: C.teal }} /> : <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid }}>Under Review</span>}
               </div>
-              <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>4. Admin Activation</h4>
-              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Final approval by Super Admin</p>
+              <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 4px 0', color: C.text }}>4. Overall Approval</h4>
+              <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Super Admin activation</p>
             </div>
           </div>
         </div>

@@ -5,6 +5,10 @@ const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 const roleCheck = require('../../middleware/authorization/role.middleware');
 const logger = require('../../config/logger');
 const { getSignedDownloadUrl } = require('../../services/aws/s3.service');
+const { 
+  calculateEmployeeVerificationState, 
+  sendVerificationReminder 
+} = require('./verification.service');
 
 // Helper to convert raw S3 URLs/Keys into presigned S3 download URLs
 const resolveS3Url = async (urlOrKey) => {
@@ -52,6 +56,17 @@ async function syncAndSeedEmployees() {
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(employee_id, bank_id)
+      )
+    `).catch(() => {});
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS employee_verification_reminders (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+        sent_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        message TEXT,
+        missing_documents JSONB,
+        created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `).catch(() => {});
 
@@ -429,9 +444,29 @@ router.get('/', async (req, res, next) => {
 
     const { rows } = await query(fullQueryStr, queryParams);
 
+    // Attach dynamic verification state for each employee
+    const enrichedRows = await Promise.all(rows.map(async (emp) => {
+      try {
+        const vState = await calculateEmployeeVerificationState(emp.id);
+        return {
+          ...emp,
+          overall_verification_status: vState.overall_status,
+          information_status: vState.information_status,
+          documents_summary: vState.documents_summary,
+          video_status: vState.video_status,
+          missing_documents: vState.missing_document_names,
+          missing_items: vState.missing_items,
+          approved_docs_count: vState.approved_docs_count,
+          total_docs_count: vState.total_docs_count
+        };
+      } catch (e) {
+        return emp;
+      }
+    }));
+
     res.json({
       success: true,
-      data: rows,
+      data: enrichedRows,
       total: totalRecords,
       page: pageNum,
       limit: limitNum,
@@ -2312,6 +2347,172 @@ router.get('/sales-reports/super-admin', async (req, res, next) => {
       employee_summary: empSummaryRes.rows,
       data: finalReports
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── Employee Verification & Reminder Endpoints ───────────────────────────────
+
+// GET /api/v1/employees/:id/verification — Get full employee verification state
+router.get('/:id/verification', async (req, res, next) => {
+  try {
+    const vState = await calculateEmployeeVerificationState(req.params.id);
+    
+    // Fetch reminder history
+    const remindersRes = await query(`
+      SELECT r.*, u.full_name as sent_by_name, u.email as sent_by_email
+      FROM employee_verification_reminders r
+      LEFT JOIN users u ON u.id = r.sent_by
+      WHERE r.employee_id = $1
+      ORDER BY r.created_at DESC
+    `, [req.params.id]);
+
+    res.json({
+      success: true,
+      data: {
+        ...vState,
+        reminders: remindersRes.rows
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/employees/:id/send-reminder — Trigger dynamic verification reminder
+router.post('/:id/send-reminder', async (req, res, next) => {
+  try {
+    const { custom_note } = req.body;
+    const result = await sendVerificationReminder(req.params.id, req.user.id, custom_note);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/v1/employees/:id/reminder-history — Get audit history of sent reminders
+router.get('/:id/reminder-history', async (req, res, next) => {
+  try {
+    const { rows } = await query(`
+      SELECT r.*, u.full_name as sent_by_name, u.email as sent_by_email
+      FROM employee_verification_reminders r
+      LEFT JOIN users u ON u.id = r.sent_by
+      WHERE r.employee_id = $1
+      ORDER BY r.created_at DESC
+    `, [req.params.id]);
+
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/employees/:id/verify-document — Approve or Reject a specific employee document
+router.post('/:id/verify-document', async (req, res, next) => {
+  try {
+    const { document_type, status, rejection_reason } = req.body;
+    const empId = req.params.id;
+
+    if (!document_type || !status) {
+      return res.status(400).json({ success: false, message: 'document_type and status are required' });
+    }
+
+    const uppercaseStatus = String(status).toUpperCase();
+    if (!['APPROVED', 'REJECTED', 'VERIFIED', 'PENDING'].includes(uppercaseStatus)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const finalStatus = uppercaseStatus === 'VERIFIED' ? 'APPROVED' : uppercaseStatus;
+
+    // Check if document exists in employee_documents
+    const existingDoc = await query(
+      `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) = LOWER($2) ORDER BY created_at DESC LIMIT 1`,
+      [empId, document_type]
+    );
+
+    if (existingDoc.rows.length > 0) {
+      await query(`
+        UPDATE employee_documents 
+        SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+        WHERE id = $4
+      `, [finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id, existingDoc.rows[0].id]);
+    } else {
+      await query(`
+        INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [empId, document_type, finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id]);
+    }
+
+    // Sync legacy columns in employee_kyc if applicable
+    if (document_type === 'pan') {
+      await query(`
+        UPDATE employee_kyc 
+        SET pan_status = $1, pan_verified = $2, pan_rejection_reason = $3 
+        WHERE employee_id = $4
+      `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
+    } else if (document_type === 'aadhaar') {
+      await query(`
+        UPDATE employee_kyc 
+        SET aadhaar_status = $1, aadhaar_verified = $2, aadhaar_rejection_reason = $3 
+        WHERE employee_id = $4
+      `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
+    } else if (document_type === 'bank_proof') {
+      await query(`
+        UPDATE employee_kyc 
+        SET bank_status = $1, bank_verified = $2, bank_rejection_reason = $3 
+        WHERE employee_id = $4
+      `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
+    }
+
+    // Recalculate complete state
+    const updatedState = await calculateEmployeeVerificationState(empId);
+
+    res.json({
+      success: true,
+      message: `Document ${document_type} ${finalStatus.toLowerCase()} successfully`,
+      data: updatedState
+    });
+
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/employees/:id/verify-section — Approve or Reject Information or Video Verification section
+router.post('/:id/verify-section', async (req, res, next) => {
+  try {
+    const { section, status, notes } = req.body; // section: 'information' | 'video'
+    const empId = req.params.id;
+
+    if (!section || !status) {
+      return res.status(400).json({ success: false, message: 'section and status are required' });
+    }
+
+    const uppercaseStatus = String(status).toUpperCase();
+
+    if (section === 'information') {
+      await query(`
+        UPDATE employee_joining_details
+        SET form_status = $1, reviewed_by = $2, reviewed_at = NOW(), rejection_reason = $3
+        WHERE employee_id = $4
+      `, [uppercaseStatus === 'APPROVED' || uppercaseStatus === 'VERIFIED' ? 'APPROVED' : 'REJECTED', req.user.id, notes || null, empId]);
+    } else if (section === 'video') {
+      await query(`
+        UPDATE employee_terms_acceptance
+        SET verification_status = $1, verification_notes = $2, verified_at = NOW()
+        WHERE employee_id = $3
+      `, [uppercaseStatus === 'APPROVED' || uppercaseStatus === 'VERIFIED' ? 'VERIFIED' : 'REJECTED', notes || null, empId]);
+    }
+
+    const updatedState = await calculateEmployeeVerificationState(empId);
+
+    res.json({
+      success: true,
+      message: `${section.toUpperCase()} verification updated successfully`,
+      data: updatedState
+    });
+
   } catch (err) {
     next(err);
   }

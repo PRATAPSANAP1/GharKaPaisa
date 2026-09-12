@@ -7,6 +7,7 @@ const logger = require('../../config/logger');
 const { uploadToS3 } = require('../../services/aws/s3.service');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+const { calculateEmployeeVerificationState } = require('../employee-management/verification.service');
 
 // ── Public Employee Authentication (OTP Flow) ──────────────────────────────
 
@@ -1590,6 +1591,111 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
     available_months: availableMonths
   };
 }
+
+// GET /api/v1/employee/verification-status — Get complete employee verification status
+router.get('/verification-status', async (req, res, next) => {
+  try {
+    const empId = req.employee.id;
+    const vState = await calculateEmployeeVerificationState(empId);
+
+    // Fetch latest reminder sent to this employee
+    const reminderRes = await query(
+      `SELECT * FROM employee_verification_reminders WHERE employee_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [empId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        ...vState,
+        latest_reminder: reminderRes.rows[0] || null
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/v1/employee/upload-document — Upload individual document with guard for approved docs
+router.post('/upload-document', upload.single('file'), async (req, res, next) => {
+  try {
+    const empId = req.employee.id;
+    const { document_type } = req.body;
+
+    if (!document_type || !req.file) {
+      return res.status(400).json({ success: false, message: 'document_type and file are required' });
+    }
+
+    const docTypeLower = String(document_type).toLowerCase().trim();
+
+    // 1. BACKEND GUARD: Check if this document is already APPROVED / VERIFIED
+    const vState = await calculateEmployeeVerificationState(empId);
+    const targetDoc = vState.documents.find(d => String(d.type).toLowerCase() === docTypeLower);
+
+    if (targetDoc && targetDoc.status === 'APPROVED') {
+      return res.status(400).json({
+        success: false,
+        message: `The ${targetDoc.label || document_type} has already been verified and approved. Editing approved documents is locked and not allowed.`
+      });
+    }
+
+    // 2. Upload file to S3
+    const s3Res = await uploadToS3(req.file.buffer, req.file.originalname, `employee-docs/${empId}`);
+
+    // 3. Upsert into employee_documents table
+    const existingDocRes = await query(
+      `SELECT id FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) = LOWER($2)`,
+      [empId, docTypeLower]
+    );
+
+    if (existingDocRes.rows.length > 0) {
+      await query(`
+        UPDATE employee_documents 
+        SET document_url = $1, document_key = $2, document_file_name = $3, 
+            verification_status = 'UNDER_REVIEW', rejection_reason = NULL, updated_at = NOW()
+        WHERE id = $4
+      `, [s3Res.url, s3Res.key, req.file.originalname, existingDocRes.rows[0].id]);
+    } else {
+      await query(`
+        INSERT INTO employee_documents (employee_id, document_type, document_url, document_key, document_file_name, verification_status)
+        VALUES ($1, $2, $3, $4, $5, 'UNDER_REVIEW')
+      `, [empId, docTypeLower, s3Res.url, s3Res.key, req.file.originalname]);
+    }
+
+    // Also update legacy employee_kyc if applicable
+    if (docTypeLower === 'pan') {
+      await query(`
+        UPDATE employee_kyc 
+        SET pan_document_url = $1, pan_document_key = $2, pan_status = 'UNDER_REVIEW', pan_verified = false, pan_rejection_reason = NULL 
+        WHERE employee_id = $3
+      `, [s3Res.url, s3Res.key, empId]).catch(() => {});
+    } else if (docTypeLower === 'aadhaar') {
+      await query(`
+        UPDATE employee_kyc 
+        SET aadhaar_document_url = $1, aadhaar_document_key = $2, aadhaar_status = 'UNDER_REVIEW', aadhaar_verified = false, aadhaar_rejection_reason = NULL 
+        WHERE employee_id = $3
+      `, [s3Res.url, s3Res.key, empId]).catch(() => {});
+    } else if (docTypeLower === 'bank_proof') {
+      await query(`
+        UPDATE employee_kyc 
+        SET bank_document_url = $1, bank_document_key = $2, bank_status = 'UNDER_REVIEW', bank_verified = false, bank_rejection_reason = NULL 
+        WHERE employee_id = $3
+      `, [s3Res.url, s3Res.key, empId]).catch(() => {});
+    }
+
+    // Recalculate complete state
+    const updatedState = await calculateEmployeeVerificationState(empId);
+
+    res.json({
+      success: true,
+      message: `Document ${document_type} uploaded successfully and sent for verification.`,
+      data: updatedState
+    });
+
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;
 module.exports.getMonthlyIncentiveReportData = getMonthlyIncentiveReportData;
