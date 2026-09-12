@@ -9,6 +9,8 @@ import {
 import axios from 'axios';
 import { getApiV1Url } from '../../../config/api';
 
+import LoadingLogo from '../../../components/Loader/LoadingLogo';
+
 export default function EmployeeVerification() {
   const { C } = useTheme();
   const navigate = useNavigate();
@@ -81,12 +83,7 @@ export default function EmployeeVerification() {
   };
 
   if (loading) {
-    return (
-      <div style={{ background: C.bg, minHeight: '100vh', padding: '60px 24px', textAlign: 'center', color: C.textMid, fontFamily: "'Inter', sans-serif" }}>
-        <FaSyncAlt className="spin" style={{ fontSize: '24px', color: C.teal, marginBottom: '12px' }} />
-        <div>Loading Employee Verification Portal...</div>
-      </div>
-    );
+    return <LoadingLogo fullScreen size={120} />;
   }
 
   const {
@@ -254,7 +251,7 @@ export default function EmployeeVerification() {
               </span>
             </div>
             <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>
-              {approved_docs_count === total_docs_count ? '✓ All 6 documents approved & locked' : `${total_docs_count - approved_docs_count} document(s) need attention`}
+              {approved_docs_count === total_docs_count ? '✓ All required documents approved & locked' : `${total_docs_count - approved_docs_count} document(s) need attention`}
             </p>
           </div>
 

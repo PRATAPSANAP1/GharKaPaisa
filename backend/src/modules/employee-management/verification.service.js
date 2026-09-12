@@ -30,10 +30,7 @@ const resolveS3Url = async (urlOrKey) => {
 const REQUIRED_DOC_TYPES = [
   { type: 'pan', label: 'PAN Card' },
   { type: 'aadhaar', label: 'Aadhaar Card' },
-  { type: 'bank_proof', label: 'Bank Account Proof' },
-  { type: 'photo', label: 'Photograph' },
-  { type: 'address_proof', label: 'Address Proof' },
-  { type: 'education_certificate', label: 'Qualification Certificate' }
+  { type: 'bank_proof', label: 'Bank Account Proof' }
 ];
 
 /**

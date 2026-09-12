@@ -1075,14 +1075,13 @@ export default function EmployeeManagement() {
   const tcsList = targetEmployeeList.filter(e => e.id !== hierarchyModalEmp?.id && (String(e.designation || '').toLowerCase().includes('tc') || String(e.designation || '').toLowerCase().includes('telecaller') || e.hierarchy_level === 'TC'));
 
   const newRequestsList = targetEmployeeList.filter(e => 
-    e.activation_status !== 'APPROVED' || 
-    e.overall_verification_status !== 'VERIFIED' || 
-    (e.missing_documents && e.missing_documents.length > 0)
+    String(e.activation_status || '').toUpperCase() !== 'APPROVED' &&
+    String(e.overall_verification_status || '').toUpperCase() !== 'VERIFIED'
   );
 
   const processedHistoryList = targetEmployeeList.filter(e => 
-    e.activation_status === 'APPROVED' || 
-    e.overall_verification_status === 'VERIFIED'
+    String(e.activation_status || '').toUpperCase() === 'APPROVED' ||
+    String(e.overall_verification_status || '').toUpperCase() === 'VERIFIED'
   );
 
   const getSortedSupervisorOptions = (roleKeyword, levelCode) => {
@@ -1243,7 +1242,7 @@ export default function EmployeeManagement() {
                         </div>
 
                         {/* Status items */}
-                        {underReviewDocs.length > 0 && (
+                        {underReviewDocs.length > 0 ? (
                           <div style={{ marginBottom: '8px' }}>
                             <div style={{ fontSize: '11px', fontWeight: 800, color: '#1E40AF', marginBottom: '4px' }}>⏳ Submitted & Awaiting Review:</div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
@@ -1254,18 +1253,11 @@ export default function EmployeeManagement() {
                               ))}
                             </div>
                           </div>
-                        )}
-
-                        {missingDocs.length > 0 && (
+                        ) : (
                           <div style={{ marginBottom: '8px' }}>
-                            <div style={{ fontSize: '11px', fontWeight: 800, color: '#991B1B', marginBottom: '4px' }}>⚠️ Action Required (Missing):</div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                              {missingDocs.map((d, idx) => (
-                                <span key={idx} style={{ fontSize: '10.5px', fontWeight: 800, background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FCA5A5', padding: '2px 8px', borderRadius: '6px' }}>
-                                  • {d}
-                                </span>
-                              ))}
-                            </div>
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#92400E', background: '#FEF3C7', border: '1px solid #FCD34D', padding: '4px 10px', borderRadius: '6px', display: 'inline-block' }}>
+                              📋 Onboarding Documents Pending Upload
+                            </span>
                           </div>
                         )}
                       </div>
