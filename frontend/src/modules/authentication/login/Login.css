@@ -824,15 +824,8 @@
 ========================================================= */
 
 @media (min-width: 1024px) {
-  html, body {
-    overflow: hidden !important;
-  }
-
   .login-page {
-    height: 100vh;
     min-height: 100vh;
-    max-height: 100vh;
-    overflow: hidden !important;
     display: flex;
     flex-direction: column;
   }
@@ -851,7 +844,6 @@
     grid-template-columns: minmax(440px, 500px) 1fr;
     gap: 24px;
     align-items: center;
-    overflow: hidden !important;
   }
 
   .login-card {
