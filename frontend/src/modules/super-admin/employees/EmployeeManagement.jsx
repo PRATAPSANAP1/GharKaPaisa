@@ -2373,62 +2373,94 @@ export default function EmployeeManagement() {
               ) : emp360Data && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   
-                  {/* Missing Documents & Verification Reminder Banner */}
+                  {/* Missing Documents & Submitted Documents Status Banners */}
                   {(() => {
                     const isVerified = selectedEmp.overall_verification_status === 'VERIFIED' || emp360Data.kyc?.kyc_status === 'VERIFIED';
-                    const missingDocs = selectedEmp.missing_documents || emp360Data.employee?.missing_documents || [];
+                    const allRawMissing = selectedEmp.missing_documents || emp360Data.employee?.missing_documents || [];
+                    
+                    const missingDocs = allRawMissing.filter(d => !String(d).includes('Under Review'));
+                    const underReviewDocs = emp360Data.employee?.under_review_document_names || allRawMissing.filter(d => String(d).includes('Under Review'));
 
-                    if (isVerified && missingDocs.length === 0) return null;
+                    if (isVerified) return null;
 
                     return (
-                      <div style={{ 
-                        background: '#FEF2F2', 
-                        border: '1px solid #FCA5A5', 
-                        borderRadius: '16px', 
-                        padding: '16px 20px', 
-                        display: 'flex', 
-                        justify: 'space-between', 
-                        alignItems: 'center', 
-                        flexWrap: 'wrap', 
-                        gap: '12px' 
-                      }}>
-                        <div>
-                          <div style={{ fontSize: '13.5px', fontWeight: 900, color: '#991B1B', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                            <FaExclamationCircle style={{ color: '#EF4444' }} /> Missing Verification Documents ({missingDocs.length})
-                          </div>
-                          {missingDocs.length > 0 ? (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                              {missingDocs.map((doc, idx) => (
-                                <span key={idx} style={{ fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '6px', background: '#FFFFFF', color: '#991B1B', border: '1px solid #FCA5A5' }}>
-                                  • {doc}
-                                </span>
-                              ))}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {/* Red Banner: Truly missing / rejected items */}
+                        {missingDocs.length > 0 && (
+                          <div style={{ 
+                            background: '#FEF2F2', 
+                            border: '1px solid #FCA5A5', 
+                            borderRadius: '16px', 
+                            padding: '16px 20px', 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            flexWrap: 'wrap', 
+                            gap: '12px' 
+                          }}>
+                            <div>
+                              <div style={{ fontSize: '13.5px', fontWeight: 900, color: '#991B1B', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                                <FaExclamationCircle style={{ color: '#EF4444' }} /> Missing Verification Documents ({missingDocs.length})
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {missingDocs.map((doc, idx) => (
+                                  <span key={idx} style={{ fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '6px', background: '#FFFFFF', color: '#991B1B', border: '1px solid #FCA5A5' }}>
+                                    • {doc}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
-                          ) : (
-                            <div style={{ fontSize: '12px', color: '#7F1D1D' }}>KYC verification and onboarding checklist details are pending admin review.</div>
-                          )}
-                        </div>
 
-                        <button
-                          onClick={() => handleSendReminder(selectedEmp.id, selectedEmp.full_name)}
-                          disabled={sendingReminder[selectedEmp.id]}
-                          style={{
-                            background: '#F59E0B',
-                            color: '#ffffff',
-                            border: 'none',
-                            padding: '8px 16px',
-                            borderRadius: '10px',
-                            fontSize: '12.5px',
-                            fontWeight: 900,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
-                          }}
-                        >
-                          🔔 {sendingReminder[selectedEmp.id] ? 'Sending...' : 'Send Verification Reminder'}
-                        </button>
+                            <button
+                              onClick={() => handleSendReminder(selectedEmp.id, selectedEmp.full_name)}
+                              disabled={sendingReminder[selectedEmp.id]}
+                              style={{
+                                background: '#F59E0B',
+                                color: '#ffffff',
+                                border: 'none',
+                                padding: '8px 16px',
+                                borderRadius: '10px',
+                                fontSize: '12.5px',
+                                fontWeight: 900,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
+                              }}
+                            >
+                              🔔 {sendingReminder[selectedEmp.id] ? 'Sending...' : 'Send Verification Reminder'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Blue Banner: Uploaded & Under Admin Review */}
+                        {underReviewDocs.length > 0 && (
+                          <div style={{ 
+                            background: '#EFF6FF', 
+                            border: '1px solid #93C5FD', 
+                            borderRadius: '16px', 
+                            padding: '14px 20px', 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            flexWrap: 'wrap', 
+                            gap: '12px' 
+                          }}>
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: 900, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                <FaShieldAlt style={{ color: '#2563EB' }} /> Documents Submitted & Pending Admin Review ({underReviewDocs.length})
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {underReviewDocs.map((doc, idx) => (
+                                  <span key={idx} style={{ fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '6px', background: '#FFFFFF', color: '#1E40AF', border: '1px solid #BFDBFE' }}>
+                                    ✓ {doc}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })()}

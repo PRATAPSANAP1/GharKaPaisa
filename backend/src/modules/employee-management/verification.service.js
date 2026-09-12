@@ -92,6 +92,7 @@ async function calculateEmployeeVerificationState(employeeId) {
   // Map each required document type
   const documents = [];
   const missingItems = [];
+  const underReviewItems = [];
   let approvedDocsCount = 0;
 
   for (const docDef of REQUIRED_DOC_TYPES) {
@@ -139,30 +140,28 @@ async function calculateEmployeeVerificationState(employeeId) {
 
     if (docStatus === 'APPROVED') {
       approvedDocsCount++;
+    } else if (docStatus === 'REJECTED') {
+      missingItems.push({
+        type: dType,
+        label: docDef.label,
+        status: 'REJECTED',
+        reason: rejectionReason || 'Document rejected during review',
+        text: `${docDef.label} – Rejected${rejectionReason ? ' (' + rejectionReason + ')' : ''}`
+      });
+    } else if (docStatus === 'UNDER_REVIEW') {
+      underReviewItems.push({
+        type: dType,
+        label: docDef.label,
+        status: 'UNDER_REVIEW',
+        text: `${docDef.label} – Under Review`
+      });
     } else {
-      if (docStatus === 'REJECTED') {
-        missingItems.push({
-          type: dType,
-          label: docDef.label,
-          status: 'REJECTED',
-          reason: rejectionReason || 'Document rejected during review',
-          text: `${docDef.label} – Rejected${rejectionReason ? ' (' + rejectionReason + ')' : ''}`
-        });
-      } else if (docStatus === 'UNDER_REVIEW') {
-        missingItems.push({
-          type: dType,
-          label: docDef.label,
-          status: 'UNDER_REVIEW',
-          text: `${docDef.label} – Under Review`
-        });
-      } else {
-        missingItems.push({
-          type: dType,
-          label: docDef.label,
-          status: 'NOT_UPLOADED',
-          text: `${docDef.label} – Not Uploaded`
-        });
-      }
+      missingItems.push({
+        type: dType,
+        label: docDef.label,
+        status: 'NOT_UPLOADED',
+        text: `${docDef.label} – Not Uploaded`
+      });
     }
 
     documents.push({
@@ -223,13 +222,20 @@ async function calculateEmployeeVerificationState(employeeId) {
     }
   }
 
-  if (videoStatus !== 'VERIFIED') {
+  if (videoStatus === 'UNDER_REVIEW') {
+    underReviewItems.push({
+      type: 'video',
+      label: 'Video Verification',
+      status: 'UNDER_REVIEW',
+      text: 'Video Verification – Under Review'
+    });
+  } else if (videoStatus === 'REJECTED' || videoStatus === 'NOT_COMPLETED') {
     missingItems.push({
       type: 'video',
       label: 'Video Verification',
       status: videoStatus,
       reason: videoNotes || null,
-      text: `Video Verification – ${videoStatus === 'UNDER_REVIEW' ? 'Under Review' : (videoStatus === 'REJECTED' ? 'Rejected' : 'Not Completed')}`
+      text: `Video Verification – ${videoStatus === 'REJECTED' ? 'Rejected' : 'Not Completed'}`
     });
   }
 
@@ -281,7 +287,9 @@ async function calculateEmployeeVerificationState(employeeId) {
     video_notes: videoNotes,
     documents,
     missing_items: missingItems,
+    under_review_items: underReviewItems,
     missing_document_names: missingItems.map(m => m.text),
+    under_review_document_names: underReviewItems.map(u => u.text),
     joining_details: joining
   };
 }
