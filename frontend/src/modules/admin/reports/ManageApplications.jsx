@@ -384,11 +384,7 @@ export default function ManageApplications() {
         </div>
       </div>
 
-      {isSalesExecUser && (
-        <div style={{ padding: '12px 16px', marginBottom: '20px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '10px', color: '#2563EB', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span>⚡</span> Displaying Punching Process Applications Only (Administrative Sales Executive View)
-        </div>
-      )}
+
 
 
 
