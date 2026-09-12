@@ -210,12 +210,13 @@ async function calculateEmployeeVerificationState(employeeId) {
     });
   }
 
-  if (infoStatus !== 'VERIFIED') {
+  // Do not include Personal Information - Pending Review in reminders/verification lists unless it explicitly requires update
+  if (infoStatus === 'REQUIRES_UPDATE') {
     missingItems.push({
       type: 'information',
       label: 'Personal Information',
       status: infoStatus,
-      text: `Personal Information – ${infoStatus === 'UNDER_REVIEW' ? 'Pending Review' : (infoStatus === 'REQUIRES_UPDATE' ? 'Requires Update' : 'Pending Verification')}`
+      text: `Personal Information – Requires Update`
     });
   }
 

@@ -959,6 +959,16 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
         video_verified = false;
         video_rejection_reason = video_reason || review_notes || 'Video verification unclear or invalid';
       }
+
+      await query(`
+        UPDATE employee_terms_acceptance 
+        SET verification_status = $2,
+            verification_notes = $3,
+            reviewed_by = $4,
+            reviewed_at = NOW(),
+            updated_at = NOW()
+        WHERE employee_id = $1
+      `, [id, video_status, video_rejection_reason, req.user.id]).catch(() => {});
     }
 
     // Handle bulk overall decision fallback

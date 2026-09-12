@@ -2642,41 +2642,53 @@ export default function EmployeeManagement() {
                       </div>
 
                       {/* Verification Video Box */}
-                      <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>4. Verification Video</span>
-                            <span style={{
-                              fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px',
-                              background: emp360Data.kyc?.video_status === 'VERIFIED' || emp360Data.checklist?.terms_completed ? '#D1FAE5' : (emp360Data.kyc?.video_status === 'REJECTED' ? '#FEE2E2' : '#FEF3C7'),
-                              color: emp360Data.kyc?.video_status === 'VERIFIED' || emp360Data.checklist?.terms_completed ? '#065F46' : (emp360Data.kyc?.video_status === 'REJECTED' ? '#991B1B' : '#92400E')
-                            }}>
-                              {emp360Data.kyc?.video_status || (emp360Data.checklist?.terms_completed ? 'VERIFIED' : (emp360Data.terms?.video_url ? 'SUBMITTED' : 'PENDING'))}
-                            </span>
-                          </div>
-                          <strong style={{ fontSize: '13px' }}>{emp360Data.terms?.video_url ? '🎥 Recording Submitted' : 'Not Uploaded'}</strong>
-                          {emp360Data.kyc?.video_rejection_reason && (
-                            <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '6px', background: '#FEF2F2', padding: '6px 8px', borderRadius: '6px', borderLeft: '3px solid #EF4444' }}>
-                              ⚠️ {emp360Data.kyc.video_rejection_reason}
+                      {(() => {
+                        const vSt = emp360Data.terms?.verification_status || emp360Data.kyc?.video_status || selectedEmp?.video_status || (emp360Data.terms?.video_url ? 'UNDER_REVIEW' : 'PENDING');
+                        const isVideoVerified = vSt === 'VERIFIED' || vSt === 'APPROVED';
+                        const isVideoRejected = vSt === 'REJECTED';
+                        const isVideoUnderReview = vSt === 'UNDER_REVIEW' || vSt === 'SUBMITTED';
+
+                        const badgeText = isVideoVerified ? 'VERIFIED' : (isVideoRejected ? 'REJECTED' : (isVideoUnderReview ? 'UNDER REVIEW' : 'PENDING'));
+                        const badgeBg = isVideoVerified ? '#D1FAE5' : (isVideoRejected ? '#FEE2E2' : (isVideoUnderReview ? '#FEF3C7' : '#F3F4F6'));
+                        const badgeColor = isVideoVerified ? '#065F46' : (isVideoRejected ? '#991B1B' : (isVideoUnderReview ? '#92400E' : '#6B7280'));
+
+                        return (
+                          <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                            <div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>4. Verification Video</span>
+                                <span style={{
+                                  fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px',
+                                  background: badgeBg, color: badgeColor
+                                }}>
+                                  {badgeText}
+                                </span>
+                              </div>
+                              <strong style={{ fontSize: '13px' }}>{emp360Data.terms?.video_url ? '🎥 Recording Submitted' : 'Not Uploaded'}</strong>
+                              {(isVideoRejected && (emp360Data.kyc?.video_rejection_reason || emp360Data.terms?.verification_notes)) && (
+                                <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '6px', background: '#FEF2F2', padding: '6px 8px', borderRadius: '6px', borderLeft: '3px solid #EF4444' }}>
+                                  ⚠️ {emp360Data.kyc?.video_rejection_reason || emp360Data.terms?.verification_notes}
+                                </div>
+                              )}
+                              {emp360Data.terms?.video_url ? (
+                                <a href={emp360Data.terms.video_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', background: C.teal, color: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
+                                  <FaVideo /> Play Video ↗
+                                </a>
+                              ) : (
+                                <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No video recording</div>
+                              )}
                             </div>
-                          )}
-                          {emp360Data.terms?.video_url ? (
-                            <a href={emp360Data.terms.video_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '8px', background: C.teal, color: '#fff', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, textDecoration: 'none' }}>
-                              <FaVideo /> Play Video ↗
-                            </a>
-                          ) : (
-                            <div style={{ fontSize: '11px', color: C.textMid, marginTop: '8px' }}>No video recording</div>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
-                          <button onClick={() => handleDocVerify(selectedEmp.id, 'video', 'VERIFIED')} style={{ flex: 1, background: '#10B981', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
-                            ✓ Approve
-                          </button>
-                          <button onClick={() => handleDocVerify(selectedEmp.id, 'video', 'REJECTED')} style={{ flex: 1, background: '#EF4444', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
-                            ✕ Reject
-                          </button>
-                        </div>
-                      </div>
+                            <div style={{ display: 'flex', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
+                              <button onClick={() => handleDocVerify(selectedEmp.id, 'video', 'VERIFIED')} style={{ flex: 1, background: '#10B981', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
+                                ✓ Approve
+                              </button>
+                              <button onClick={() => handleDocVerify(selectedEmp.id, 'video', 'REJECTED')} style={{ flex: 1, background: '#EF4444', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
+                                ✕ Reject
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                     </div>
 
