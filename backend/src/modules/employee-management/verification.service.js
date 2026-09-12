@@ -297,20 +297,24 @@ async function sendVerificationReminder(employeeId, sentByUserId = null, customN
   const employee = empRes.rows[0];
 
   const state = await calculateEmployeeVerificationState(employeeId);
-  const missingItems = state.missing_items || [];
+  const allMissing = state.missing_items || [];
 
-  if (missingItems.length === 0) {
+  // Exclude items that are already uploaded and under review — only ask for items requiring employee action!
+  const actionRequiredItems = allMissing.filter(item => 
+    item.status === 'NOT_UPLOADED' || item.status === 'NOT_COMPLETED' || item.status === 'REJECTED' || item.status === 'REQUIRES_UPDATE'
+  );
+
+  if (actionRequiredItems.length === 0) {
     return {
       success: false,
-      message: 'Employee verification is already complete! No reminder sent.'
+      message: 'All documents have been uploaded and are currently under review by HR / Super Admin. No reminder needed at this time.'
     };
   }
 
-  // Format clean list of missing/pending document names
-  const cleanMissingNames = missingItems.map(item => item.label);
-  const detailedMissingList = missingItems.map(item => item.text);
+  // Format clean list of missing/rejected document names requiring employee action
+  const cleanMissingNames = actionRequiredItems.map(item => item.label);
 
-  const defaultMsg = customNote || `Please complete your employee verification. Missing/pending items requiring action: ${cleanMissingNames.join(', ')}`;
+  const defaultMsg = customNote || `Please complete your employee verification. The following items require your immediate action: ${cleanMissingNames.join(', ')}`;
 
   // 1. Insert into employee_verification_reminders
   const { rows: [reminder] } = await query(`
