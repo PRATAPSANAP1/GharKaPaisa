@@ -2998,10 +2998,7 @@ export default function Home({ onNavigate }) {
             <span onClick={() => navigate("/cancellation-and-refund-policy")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Cancellation & Refund Policy</span>
           </div>
 
-          {/* Financial Disclaimer */}
-          <div style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "12px", padding: "14px 18px", marginBottom: "20px", fontSize: "12px", color: "rgba(255,255,255,0.7)", lineHeight: 1.6 }}>
-            <strong>Disclaimer:</strong> GharKaPaisa is not a bank or financial institution. Financial products are offered and approved by respective banks, NBFCs, insurers, and other participating financial institutions, subject to their eligibility criteria and terms.
-          </div>
+
 
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "16px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#ffffff", opacity: 0.7 }}>
             <span>© 2026 GharKaPaisa. All Rights Reserved.</span>
