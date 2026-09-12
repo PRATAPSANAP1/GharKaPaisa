@@ -1479,14 +1479,7 @@ const listApplications = async (req, res, next) => {
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
     let salesExecFilterSQL = '';
     if (isSalesExecUser && req.user?.id) {
-      const aaaSubquery = hasAaaTable ? `OR EXISTS (SELECT 1 FROM application_admin_assignments aaa WHERE aaa.admin_user_id::text = '${req.user.id}' AND aaa.application_id::text = combined.id::text)` : '';
-      salesExecFilterSQL = ` AND (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%punching%' OR combined.process_type::text = 'lead_punching')
-      AND (
-        combined.assigned_to::text = '${req.user.id}' 
-        OR combined.submitted_by::text = '${req.user.id}' 
-        OR combined.employee_id::text IN (SELECT id::text FROM employees WHERE user_id = '${req.user.id}')
-        ${aaaSubquery}
-      )`;
+      salesExecFilterSQL = ` AND (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%punching%' OR combined.process_type::text = 'lead_punching' OR combined.process_by::text = 'lead_punching')`;
     }
 
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
@@ -1995,25 +1988,8 @@ const getApplication = async (req, res, next) => {
     if (isSalesExecUser && req.user?.id) {
       const processType = String(app.process_type || app.source || app.process_by || '').toLowerCase();
       const isPunching = processType.includes('punching') || processType === 'lead_punching';
-      
-      const isAssignedDirect = (
-        String(app.assigned_to) === String(req.user.id) ||
-        String(app.submitted_by) === String(req.user.id) ||
-        String(app.process_by) === String(req.user.id)
-      );
-
-      const { rows: assignCheck } = await query(
-        `SELECT 1 FROM application_admin_assignments WHERE admin_user_id = $1 AND application_id = $2`,
-        [req.user.id, app.id]
-      ).catch(() => ({ rows: [] }));
-      
-      const { rows: empCheck } = await query(
-        `SELECT 1 FROM employees WHERE user_id = $1 AND id = $2`,
-        [req.user.id, app.employee_id]
-      ).catch(() => ({ rows: [] }));
-
-      if (!isPunching || (!isAssignedDirect && assignCheck.length === 0 && empCheck.length === 0)) {
-        return forbidden(res, 'Access denied. Administrative Sales Executive can only access assigned Punching Only applications.');
+      if (!isPunching) {
+        return forbidden(res, 'Access denied. Administrative Sales Executive can only access Punching Only applications.');
       }
     }
 
