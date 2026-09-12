@@ -1369,17 +1369,15 @@ export default function EmployeeManagement() {
                           </td>
                           <td style={{ padding: '14px 20px' }}>
                             {isVerified || missingDocs.length === 0 ? (
-                              <span style={{ fontSize: '12px', color: '#059669', fontWeight: 700 }}>— None (Complete) —</span>
+                              <span style={{ fontSize: '12px', color: '#059669', fontWeight: 800 }}>✓ All Submitted</span>
                             ) : (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '200px' }}>
-                                {missingDocs.map((docName, idx) => (
-                                  <span key={idx} style={{
-                                    fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px',
-                                    background: '#FEE2E2', color: '#991B1B', border: '1px solid #FCA5A5'
-                                  }}>
-                                    {docName}
-                                  </span>
-                                ))}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 900, color: '#DC2626' }}>
+                                  ⚠️ {missingDocs.length} Missing {missingDocs.length === 1 ? 'Doc' : 'Docs'}
+                                </span>
+                                <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>
+                                  (View in Actions)
+                                </span>
                               </div>
                             )}
                           </td>
@@ -1412,30 +1410,6 @@ export default function EmployeeManagement() {
                           </td>
                           <td style={{ padding: '14px 20px', textAlign: 'right' }}>
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                              {!isVerified && (
-                                <button
-                                  onClick={() => handleSendReminder(emp.id, emp.full_name)}
-                                  disabled={sendingReminder[emp.id]}
-                                  style={{
-                                    background: '#F59E0B',
-                                    color: '#ffffff',
-                                    border: 'none',
-                                    padding: '7px 12px',
-                                    borderRadius: '10px',
-                                    fontSize: '12px',
-                                    fontWeight: 800,
-                                    cursor: 'pointer',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '5px',
-                                    boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)'
-                                  }}
-                                  title="Send Verification Reminder Notification to Employee"
-                                >
-                                  🔔 {sendingReminder[emp.id] ? 'Sending...' : 'Reminder'}
-                                </button>
-                              )}
-
                               <button 
                                 onClick={() => setActionModalEmp(emp)}
                                 style={{ 
@@ -2398,6 +2372,66 @@ export default function EmployeeManagement() {
                 <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading 360 details...</div>
               ) : emp360Data && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  
+                  {/* Missing Documents & Verification Reminder Banner */}
+                  {(() => {
+                    const isVerified = selectedEmp.overall_verification_status === 'VERIFIED' || emp360Data.kyc?.kyc_status === 'VERIFIED';
+                    const missingDocs = selectedEmp.missing_documents || emp360Data.employee?.missing_documents || [];
+
+                    if (isVerified && missingDocs.length === 0) return null;
+
+                    return (
+                      <div style={{ 
+                        background: '#FEF2F2', 
+                        border: '1px solid #FCA5A5', 
+                        borderRadius: '16px', 
+                        padding: '16px 20px', 
+                        display: 'flex', 
+                        justify: 'space-between', 
+                        alignItems: 'center', 
+                        flexWrap: 'wrap', 
+                        gap: '12px' 
+                      }}>
+                        <div>
+                          <div style={{ fontSize: '13.5px', fontWeight: 900, color: '#991B1B', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                            <FaExclamationCircle style={{ color: '#EF4444' }} /> Missing Verification Documents ({missingDocs.length})
+                          </div>
+                          {missingDocs.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {missingDocs.map((doc, idx) => (
+                                <span key={idx} style={{ fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '6px', background: '#FFFFFF', color: '#991B1B', border: '1px solid #FCA5A5' }}>
+                                  • {doc}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '12px', color: '#7F1D1D' }}>KYC verification and onboarding checklist details are pending admin review.</div>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => handleSendReminder(selectedEmp.id, selectedEmp.full_name)}
+                          disabled={sendingReminder[selectedEmp.id]}
+                          style={{
+                            background: '#F59E0B',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '8px 16px',
+                            borderRadius: '10px',
+                            fontSize: '12.5px',
+                            fontWeight: 900,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)'
+                          }}
+                        >
+                          🔔 {sendingReminder[selectedEmp.id] ? 'Sending...' : 'Send Verification Reminder'}
+                        </button>
+                      </div>
+                    );
+                  })()}
                   
                   {/* Profile Summary Card */}
                   <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
@@ -3479,6 +3513,78 @@ export default function EmployeeManagement() {
                   </div>
                 </button>
               </div>
+
+              {/* Missing Documents & Verification Reminder Section */}
+              {(() => {
+                const isVerified = actionModalEmp.overall_verification_status === 'VERIFIED';
+                const missingDocs = actionModalEmp.missing_documents || [];
+
+                return (
+                  <div style={{ 
+                    marginTop: '16px', 
+                    background: isVerified ? '#ECFDF5' : '#FEF2F2', 
+                    border: `1px solid ${isVerified ? '#A7F3D0' : '#FCA5A5'}`, 
+                    borderRadius: '16px', 
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 900, color: isVerified ? '#065F46' : '#991B1B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {isVerified ? <FaCheckCircle style={{ color: '#10B981' }} /> : <FaExclamationCircle style={{ color: '#EF4444' }} />}
+                        {isVerified ? 'KYC & Verification Complete' : `Missing Documents (${missingDocs.length})`}
+                      </div>
+                      <span style={{
+                        padding: '3px 8px', borderRadius: '6px', fontSize: '10.5px', fontWeight: 900,
+                        background: isVerified ? '#D1FAE5' : '#FEE2E2',
+                        color: isVerified ? '#065F46' : '#991B1B'
+                      }}>
+                        {isVerified ? 'VERIFIED' : 'PENDING'}
+                      </span>
+                    </div>
+
+                    {!isVerified && missingDocs.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '2px' }}>
+                        {missingDocs.map((docName, idx) => (
+                          <span key={idx} style={{
+                            fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px',
+                            background: '#FFFFFF', color: '#991B1B', border: '1px solid #FCA5A5'
+                          }}>
+                            • {docName}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {!isVerified && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: `1px dashed ${isVerified ? '#A7F3D0' : '#FCA5A5'}`, paddingTop: '10px', marginTop: '4px' }}>
+                        <button
+                          onClick={() => handleSendReminder(actionModalEmp.id, actionModalEmp.full_name)}
+                          disabled={sendingReminder[actionModalEmp.id]}
+                          style={{
+                            background: '#F59E0B',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '8px 16px',
+                            borderRadius: '10px',
+                            fontSize: '12.5px',
+                            fontWeight: 900,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.35)'
+                          }}
+                          title="Send Verification Reminder Notification to Employee"
+                        >
+                          🔔 {sendingReminder[actionModalEmp.id] ? 'Sending Reminder...' : 'Send Verification Reminder'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div style={{ marginTop: '20px', textAlign: 'right' }}>
                 <button onClick={() => setActionModalEmp(null)} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '8px 18px', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
