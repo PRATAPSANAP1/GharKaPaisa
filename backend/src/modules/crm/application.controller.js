@@ -1546,7 +1546,6 @@ const listApplications = async (req, res, next) => {
           a.commission_paid_at,
           a.submitted_by,
           a.employee_id,
-          (to_jsonb(a)->>'assigned_to') as assigned_to,
           COALESCE(NULLIF(su.full_name, ''), NULLIF(TRIM(CONCAT(ap.first_name, ' ', COALESCE(ap.last_name, ''))), ''), su.email, 'Team Member') as submitted_by_name,
           COALESCE(a.process_type, a.source, 'lead_punching') as process_by,
           a.process_type,
