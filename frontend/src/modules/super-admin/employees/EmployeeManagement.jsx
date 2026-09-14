@@ -2807,12 +2807,9 @@ export default function EmployeeManagement() {
                         const getDoc = (type) => docsList.find(d => String(d.type).toLowerCase() === String(type).toLowerCase());
 
                         const docConfig = [
-                          { type: 'photo', title: '1. Photograph', fallbackUrl: null, fallbackNum: null },
-                          { type: 'address_proof', title: '2. Address Proof', fallbackUrl: null, fallbackNum: null },
-                          { type: 'education_certificate', title: '3. Qualification Certificate', fallbackUrl: null, fallbackNum: null },
-                          { type: 'pan', title: '4. PAN Card', fallbackUrl: emp360Data.kyc?.pan_document_url, fallbackNum: emp360Data.kyc?.pan_number || emp360Data.joining_details?.pan_number },
-                          { type: 'aadhaar', title: '5. Aadhaar Card', fallbackUrl: emp360Data.kyc?.aadhaar_document_url, fallbackNum: emp360Data.kyc?.aadhaar_number || emp360Data.joining_details?.aadhaar_number },
-                          { type: 'bank_proof', title: '6. Bank Account Proof', fallbackUrl: emp360Data.kyc?.bank_document_url, fallbackNum: emp360Data.kyc?.bank_account_number ? `A/C: ${emp360Data.kyc.bank_account_number}` : null }
+                          { type: 'pan', title: '1. PAN Card', fallbackUrl: emp360Data.kyc?.pan_document_url, fallbackNum: emp360Data.kyc?.pan_number || emp360Data.joining_details?.pan_number },
+                          { type: 'aadhaar', title: '2. Aadhaar Card', fallbackUrl: emp360Data.kyc?.aadhaar_document_url, fallbackNum: emp360Data.kyc?.aadhaar_number || emp360Data.joining_details?.aadhaar_number },
+                          { type: 'bank_proof', title: '3. Bank Account Proof', fallbackUrl: emp360Data.kyc?.bank_document_url, fallbackNum: emp360Data.kyc?.bank_account_number ? `A/C: ${emp360Data.kyc.bank_account_number}` : null }
                         ];
 
                         return (
@@ -2881,7 +2878,7 @@ export default function EmployeeManagement() {
                                 <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                   <div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                      <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>7. Verification Video</span>
+                                      <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>4. Verification Video</span>
                                       <span style={{ fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: badgeBg, color: badgeColor }}>
                                         {badgeText}
                                       </span>
