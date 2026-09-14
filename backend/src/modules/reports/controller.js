@@ -36,7 +36,7 @@ const getOverview = async (req, res, next) => {
       values.push(from_date, to_date + ' 23:59:59');
     }
 
-    const [apps, Partners, wallet, leads, withdrawal, banks, products, recentPartners, adminsRes, customersRes, teamRes] = await Promise.all([
+    const [apps, Partners, wallet, leads, withdrawal, banks, products, recentPartners, adminsRes, customersRes, teamRes, employeesRes] = await Promise.all([
       query(sql, values),
       isPartner ? Promise.resolve({rows:[{}]}) : query(`
         SELECT
@@ -92,7 +92,16 @@ const getOverview = async (req, res, next) => {
         SELECT COUNT(DISTINCT child_partner_id) as total_team FROM partner_team_relationships
       `).catch(async () => {
         return await query(`SELECT COUNT(*) as total_team FROM partner_profiles WHERE parent_partner_id IS NOT NULL`);
-      })
+      }),
+      isPartner ? Promise.resolve({rows:[{total_employees: 0, active_employees: 0}]}) : query(`
+        SELECT
+          COUNT(*) as total_employees,
+          COUNT(*) FILTER (WHERE LOWER(COALESCE(e.employee_status::text, '')) = 'active' OR LOWER(COALESCE(e.activation_status::text, '')) IN ('approved', 'active')) as active_employees
+        FROM employees e
+        LEFT JOIN users u ON u.id = e.user_id
+        WHERE (u.role IS NULL OR u.role = 'EMPLOYEE')
+          AND (e.designation NOT ILIKE '%HR%' AND e.designation NOT ILIKE '%Human Resource%')
+      `)
     ]);
 
     // calculate conversion rate & fallback statistics
@@ -102,6 +111,7 @@ const getOverview = async (req, res, next) => {
     const adminData = adminsRes?.rows?.[0] || {};
     const customerData = customersRes?.rows?.[0] || {};
     const teamData = teamRes?.rows?.[0] || {};
+    const employeeData = employeesRes?.rows?.[0] || { total_employees: 0, active_employees: 0 };
 
     const conversion_rate = appsData.total > 0 ? ((appsData.approved / appsData.total) * 100).toFixed(2) : 0;
 
@@ -118,6 +128,7 @@ const getOverview = async (req, res, next) => {
       customers: customerData,
       wallet: wallet.rows[0],
       team: teamData,
+      employees: employeeData,
       leads: {
         ...leadsData,
         total_leads: totalLeads,

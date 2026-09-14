@@ -956,6 +956,9 @@ export default function EmployeeManagement() {
       const res = await api.get(`/employees/${emp.id}`);
       if (res.data.success) {
         setEmp360Data(res.data.data);
+        if (res.data.data.employee) {
+          setSelectedEmp(prev => ({ ...prev, ...res.data.data.employee }));
+        }
       }
     } catch (err) {
       console.error('Error fetching 360 view:', err);

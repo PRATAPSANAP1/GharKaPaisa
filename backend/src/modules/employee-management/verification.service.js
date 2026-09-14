@@ -252,22 +252,44 @@ async function calculateEmployeeVerificationState(employeeId) {
   const isVideoVerified = videoStatus === 'VERIFIED';
   const isInfoVerified = infoStatus === 'VERIFIED';
 
-  const overallStatus = (isInfoVerified && isAllDocsApproved && isVideoVerified) ? 'VERIFIED' : 'PENDING';
+  const kycStatusInDb = kyc?.kyc_status ? String(kyc.kyc_status).toUpperCase() : null;
+
+  let overallStatus = 'PENDING';
+  if (kycStatusInDb === 'VERIFIED' || (isAllDocsApproved && isVideoVerified) || employee.activation_status === 'APPROVED') {
+    overallStatus = 'VERIFIED';
+  } else if (kycStatusInDb === 'REJECTED' || employee.activation_status === 'REJECTED') {
+    overallStatus = 'REJECTED';
+  } else if (approvedDocsCount > 0 || videoStatus === 'UNDER_REVIEW') {
+    overallStatus = 'UNDER_REVIEW';
+  }
 
   // Update employee record if changed
-  await query(`
-    UPDATE employees 
-    SET activation_status = CASE WHEN $2 = 'VERIFIED' THEN 'APPROVED' ELSE activation_status END,
-        employee_status = CASE WHEN $2 = 'VERIFIED' THEN 'ACTIVE' ELSE employee_status END
-    WHERE id = $1
-  `, [employeeId, overallStatus]).catch(() => {});
+  if (overallStatus === 'VERIFIED') {
+    await query(`
+      UPDATE employees 
+      SET activation_status = 'APPROVED', employee_status = 'ACTIVE'
+      WHERE id = $1
+    `, [employeeId]).catch(() => {});
+  } else if (overallStatus === 'REJECTED') {
+    await query(`
+      UPDATE employees 
+      SET activation_status = 'REJECTED'
+      WHERE id = $1
+    `, [employeeId]).catch(() => {});
+  }
 
   if (kyc) {
+    const finalCalculatedKyc = (kycStatusInDb === 'VERIFIED' || overallStatus === 'VERIFIED') 
+      ? 'VERIFIED' 
+      : (kycStatusInDb === 'REJECTED' || overallStatus === 'REJECTED' 
+          ? 'REJECTED' 
+          : (approvedDocsCount > 0 || videoStatus === 'UNDER_REVIEW' ? 'UNDER_REVIEW' : 'PENDING'));
+
     await query(`
       UPDATE employee_kyc 
       SET kyc_status = $2 
       WHERE id = $1
-    `, [kyc.id, overallStatus === 'VERIFIED' ? 'VERIFIED' : (approvedDocsCount > 0 ? 'UNDER_REVIEW' : 'PENDING')]).catch(() => {});
+    `, [kyc.id, finalCalculatedKyc]).catch(() => {});
   }
 
   return {

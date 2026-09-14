@@ -93,7 +93,7 @@ export default function SuperAdminOverview() {
         api.get('/applications', { params: { limit: 100 } }),
         api.get('/superadmin/admins'),
         api.get('/wallet/admin/razorpay/balance'),
-        api.get('/employees'),
+        api.get('/employees', { params: { limit: 10000 } }),
         api.get('/wallet/ledger', { params: { limit: 100 } }),
         api.get('/wallet/admin/withdrawals', { params: { limit: 100, status: 'all' } })
       ]);
@@ -264,7 +264,7 @@ export default function SuperAdminOverview() {
   // Metrics summary
   const stats = {
     employees: parseInt(overviewData?.employees?.total_employees ?? employeesList.length ?? 0, 10),
-    activeEmployees: parseInt(overviewData?.employees?.active_employees ?? employeesList.filter(e => (e.employee_status || e.activation_status || 'active').toLowerCase() === 'active').length ?? 0, 10),
+    activeEmployees: parseInt(overviewData?.employees?.active_employees ?? employeesList.filter(e => ['active', 'approved'].includes((e.employee_status || e.activation_status || '').toLowerCase())).length ?? 0, 10),
 
     customers: parseInt(overviewData?.customers?.total_customers ?? customersList.length ?? 0, 10),
     partners: parseInt(overviewData?.Partners?.total ?? partnersList.length ?? 0, 10),
