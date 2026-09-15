@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getSecureItem, setSecureItem, removeSecureItem } from '../services/storage.service';
 
 // Central single source of truth backend endpoint
-export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.oitstack.in/api/v1';
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.gharkapaisa.in/api/v1';
 
 // Global Event listener for working hours restriction
 let onWorkingHoursCallback = null;
