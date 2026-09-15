@@ -29,6 +29,7 @@ export default function RegisterScreen({ navigation }) {
   });
 
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (key, val) => {
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -36,12 +37,22 @@ export default function RegisterScreen({ navigation }) {
 
   const handleRegister = async () => {
     if (!form.first_name.trim() || !form.mobile.trim() || !form.email.trim() || !form.password) {
-      Alert.alert('Missing Fields', 'Please fill in all mandatory fields (Name, Mobile, Email, Password).');
+      Alert.alert('Missing Fields', 'Please fill in all mandatory fields (First Name, Mobile, Email, Password).');
       return;
     }
 
     if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) {
       Alert.alert('Invalid Mobile', 'Enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      Alert.alert('Invalid Email', 'Enter a valid email address.');
+      return;
+    }
+
+    if (form.password.length < 6) {
+      Alert.alert('Weak Password', 'Password must be at least 6 characters long.');
       return;
     }
 
@@ -63,11 +74,11 @@ export default function RegisterScreen({ navigation }) {
 
       if (res.data?.success || res.data?.status === 'success') {
         Alert.alert(
-          'Registration Successful!',
-          'Your partner account has been created. Please log in to complete your profile and KYC.',
+          'Account Created Successfully! 🎉',
+          'Your partner account has been created. Please log in to complete your profile & KYC.',
           [
             {
-              text: 'Proceed to Login',
+              text: 'Proceed to Log In',
               onPress: () => navigation.navigate('Login', { role: 'Partner' })
             }
           ]
@@ -76,8 +87,8 @@ export default function RegisterScreen({ navigation }) {
         Alert.alert('Registration Failed', res.data?.message || 'Failed to complete registration.');
       }
     } catch (err) {
-      console.error(err);
-      Alert.alert('Error', err.response?.data?.message || 'Registration failed. Mobile or Email may already exist.');
+      console.error('Registration error:', err);
+      Alert.alert('Registration Error', err.response?.data?.message || 'Failed to register. Mobile or Email may already exist.');
     } finally {
       setLoading(false);
     }
@@ -96,7 +107,7 @@ export default function RegisterScreen({ navigation }) {
           </TouchableOpacity>
 
           <Text style={styles.title}>Join as Partner</Text>
-          <Text style={styles.subtitle}>Create your free partner account and start earning</Text>
+          <Text style={styles.subtitle}>Create your free partner account and start earning commissions</Text>
 
           <View style={styles.row}>
             <View style={[styles.inputContainer, { flex: 1, marginRight: 8 }]}>
@@ -149,22 +160,30 @@ export default function RegisterScreen({ navigation }) {
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Minimum 6 characters"
-              placeholderTextColor="#94A3B8"
-              secureTextEntry
-              value={form.password}
-              onChangeText={(v) => handleChange('password', v)}
-            />
+            <View style={styles.passwordWrapper}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="Minimum 6 characters"
+                placeholderTextColor="#94A3B8"
+                secureTextEntry={!showPassword}
+                value={form.password}
+                onChangeText={(v) => handleChange('password', v)}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Text style={styles.eyeText}>{showPassword ? '👁️' : '🙈'}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.row}>
             <View style={[styles.inputContainer, { flex: 2, marginRight: 8 }]}>
-              <Text style={styles.label}>Company / Business</Text>
+              <Text style={styles.label}>Business / Firm Name</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Business name"
+                placeholder="Company or agency name"
                 placeholderTextColor="#94A3B8"
                 value={form.company_name}
                 onChangeText={(v) => handleChange('company_name', v)}
@@ -196,6 +215,10 @@ export default function RegisterScreen({ navigation }) {
             />
           </View>
 
+          <Text style={styles.termsNote}>
+            By creating an account, you agree to our <Text style={{ color: '#0d47a1', fontWeight: 'bold' }}>Terms of Service</Text> and <Text style={{ color: '#0d47a1', fontWeight: 'bold' }}>Privacy Policy</Text>.
+          </Text>
+
           <TouchableOpacity
             style={[styles.submitBtn, loading && styles.disabledBtn]}
             onPress={handleRegister}
@@ -223,12 +246,12 @@ export default function RegisterScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff' },
+  container: { flex: 1, backgroundColor: '#ffffff', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
   scroll: { padding: 24, paddingBottom: 40 },
-  backBtn: { marginBottom: 20, marginTop: 10 },
+  backBtn: { marginBottom: 20 },
   backText: { color: '#0d47a1', fontSize: 14, fontWeight: '700' },
-  title: { fontSize: 26, fontWeight: '800', color: '#1E293B', marginBottom: 6 },
-  subtitle: { fontSize: 13, color: '#64748B', marginBottom: 24 },
+  title: { fontSize: 26, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
+  subtitle: { fontSize: 13, color: '#64748B', marginBottom: 20 },
   row: { flexDirection: 'row' },
   inputContainer: { marginBottom: 16 },
   label: { fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 6 },
@@ -241,12 +264,29 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     backgroundColor: '#F8FAFC',
   },
+  passwordWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: 12,
+    padding: 4,
+  },
+  eyeText: {
+    fontSize: 16,
+  },
+  termsNote: {
+    fontSize: 11,
+    color: '#64748B',
+    marginBottom: 16,
+    lineHeight: 16,
+  },
   submitBtn: {
     backgroundColor: '#0d47a1',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginTop: 12,
     elevation: 3,
   },
   submitBtnText: { color: '#ffffff', fontSize: 16, fontWeight: '800' },

@@ -7,7 +7,9 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
-  Alert
+  Alert,
+  Linking,
+  Platform
 } from 'react-native';
 
 const LANGUAGES = [
@@ -23,10 +25,18 @@ export default function SettingsScreen({ route, navigation }) {
   const [selectedLang, setSelectedLang] = useState('en');
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Log out of your partner account?', [
+    Alert.alert('Sign Out', 'Are you sure you want to log out of your partner account?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Logout', style: 'destructive', onPress: () => navigation.replace('Home') }
     ]);
+  };
+
+  const handleOpenLink = (url, fallbackTitle) => {
+    if (url) {
+      Linking.openURL(url).catch(() => Alert.alert(fallbackTitle, 'Link opened in portal.'));
+    } else {
+      Alert.alert(fallbackTitle, 'Available on the production portal.');
+    }
   };
 
   return (
@@ -38,21 +48,24 @@ export default function SettingsScreen({ route, navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Account Settings</Text>
+        <Text style={styles.headerTitle}>Account & Settings</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* User Card */}
+        {/* User Profile Card */}
         <View style={styles.userCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{user?.first_name?.[0] || 'P'}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.userName}>{user?.first_name} {user?.last_name}</Text>
+            <Text style={styles.userName}>{user?.first_name || 'Partner'} {user?.last_name || ''}</Text>
             <Text style={styles.userSub}>{user?.email || 'partner@gharkapaisa.in'}</Text>
-            <Text style={styles.userCode}>Partner Code: {user?.partner_code || 'AG10024'}</Text>
+            {user?.mobile && (
+              <Text style={styles.userMobile}>+91 {user.mobile}</Text>
+            )}
+            <Text style={styles.userCode}>Partner Code: {user?.partner_code || 'GKP10024'}</Text>
           </View>
         </View>
 
@@ -74,21 +87,30 @@ export default function SettingsScreen({ route, navigation }) {
         {/* Help & Support */}
         <Text style={styles.sectionTitle}>Help & Legal</Text>
         <View style={styles.card}>
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => Linking.openURL('tel:18001234567').catch(() => Alert.alert('Support', 'Call 1800-123-4567'))}
+          >
             <Text style={styles.settingText}>📞 Contact Partner Support</Text>
             <Text style={styles.arrow}>➔</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => handleOpenLink('https://gharkapaisa.in/terms', 'Terms of Service')}
+          >
             <Text style={styles.settingText}>📜 Terms of Service</Text>
             <Text style={styles.arrow}>➔</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.settingRow}>
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => handleOpenLink('https://gharkapaisa.in/privacy', 'Privacy Policy')}
+          >
             <Text style={styles.settingText}>🔒 Privacy Policy</Text>
             <Text style={styles.arrow}>➔</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Sign Out */}
+        {/* Sign Out Button */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.logoutBtnText}>Sign Out of App</Text>
         </TouchableOpacity>
@@ -99,11 +121,11 @@ export default function SettingsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC' },
+  safe: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
   header: {
     backgroundColor: '#0d47a1',
     paddingHorizontal: 16,
-    paddingTop: 45,
+    paddingTop: 40,
     paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -117,6 +139,7 @@ const styles = StyleSheet.create({
   avatarText: { color: '#FFFFFF', fontSize: 20, fontWeight: '900' },
   userName: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
   userSub: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  userMobile: { fontSize: 12, color: '#475569', marginTop: 2 },
   userCode: { fontSize: 11, fontWeight: '700', color: '#0d47a1', marginTop: 4 },
   sectionTitle: { fontSize: 15, fontWeight: '800', color: '#0F172A', marginBottom: 10 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 20, overflow: 'hidden' },

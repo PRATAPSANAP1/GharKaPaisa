@@ -8,7 +8,9 @@ import {
   StatusBar,
   ScrollView,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  RefreshControl,
+  Platform
 } from 'react-native';
 import axios from 'axios';
 import { BASE_URL } from '../config/api';
@@ -17,39 +19,45 @@ export default function PartnerDashboardScreen({ route, navigation }) {
   const { user, token } = route.params || {};
   const [profile, setProfile] = useState(user || {});
   const [wallet, setWallet] = useState({ available_balance: 0, hold_balance: 0, total_earned: 0 });
-  const [stats, setStats] = useState({ total_leads: 0, pending_apps: 0, team_count: 0 });
+  const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const fetchDashboardData = async () => {
+    try {
+      // 1. Fetch Fresh User Profile
+      if (token) {
+        const meRes = await axios.get(`${BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => null);
+
+        if (meRes?.data?.user) {
+          setProfile(meRes.data.user);
+        }
+
+        // 2. Fetch Fresh Wallet Balance
+        const walletRes = await axios.get(`${BASE_URL}/wallet`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => null);
+
+        if (walletRes?.data?.data) {
+          setWallet(walletRes.data.data);
+        }
+      }
+    } catch (err) {
+      console.warn('Dashboard sync note:', err.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      // 1. Fetch Profile
-      const meRes = await axios.get(`${BASE_URL}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      }).catch(() => null);
-
-      if (meRes?.data?.user) {
-        setProfile(meRes.data.user);
-      }
-
-      // 2. Fetch Wallet
-      const walletRes = await axios.get(`${BASE_URL}/wallet`, {
-        headers: { Authorization: `Bearer ${token}` }
-      }).catch(() => null);
-
-      if (walletRes?.data?.data) {
-        setWallet(walletRes.data.data);
-      }
-
-    } catch (err) {
-      console.warn('Dashboard sync error:', err.message);
-    } finally {
-      setLoading(false);
-    }
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchDashboardData();
   };
 
   const handleLogout = () => {
@@ -66,7 +74,7 @@ export default function PartnerDashboardScreen({ route, navigation }) {
     <SafeAreaView style={styles.safe}>
       <StatusBar backgroundColor="#0d47a1" barStyle="light-content" />
 
-      {/* Header */}
+      {/* Cross-Platform Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.roleTag}>{profile?.role || 'PARTNER'}</Text>
@@ -80,8 +88,13 @@ export default function PartnerDashboardScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0d47a1']} />
+        }
+      >
         {/* KYC Verification Alert Banner */}
         {isKycPending && (
           <View style={styles.kycBanner}>
@@ -89,8 +102,8 @@ export default function PartnerDashboardScreen({ route, navigation }) {
               <Text style={styles.kycBannerTitle}>⚡ Complete KYC Verification</Text>
               <Text style={styles.kycBannerDesc}>
                 {kycStatus === 'pending'
-                  ? 'Your KYC documentation is under verification.'
-                  : 'Upload PAN, Bank Proof & Video to unlock full features.'}
+                  ? 'Your KYC documentation is under compliance review.'
+                  : 'Upload PAN Card, Bank Proof & Video to unlock full features.'}
               </Text>
             </View>
             <TouchableOpacity
@@ -137,7 +150,7 @@ export default function PartnerDashboardScreen({ route, navigation }) {
           >
             <Text style={styles.moduleIcon}>💳</Text>
             <Text style={styles.moduleTitle}>Products Catalog</Text>
-            <Text style={styles.moduleSub}>Credit Cards, Loans & Insurance</Text>
+            <Text style={styles.moduleSub}>Credit Cards, Loans & Insurance Links</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -146,7 +159,7 @@ export default function PartnerDashboardScreen({ route, navigation }) {
           >
             <Text style={styles.moduleIcon}>📋</Text>
             <Text style={styles.moduleTitle}>Applications</Text>
-            <Text style={styles.moduleSub}>Track My & Team Leads</Text>
+            <Text style={styles.moduleSub}>Track My & Team Lead Statuses</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -164,7 +177,7 @@ export default function PartnerDashboardScreen({ route, navigation }) {
           >
             <Text style={styles.moduleIcon}>🛡️</Text>
             <Text style={styles.moduleTitle}>KYC Verification</Text>
-            <Text style={styles.moduleSub}>Upload Documents & Video</Text>
+            <Text style={styles.moduleSub}>PAN, Bank Proof & Video Declaration</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -173,7 +186,7 @@ export default function PartnerDashboardScreen({ route, navigation }) {
           >
             <Text style={styles.moduleIcon}>💰</Text>
             <Text style={styles.moduleTitle}>Wallet & Payouts</Text>
-            <Text style={styles.moduleSub}>Withdraw Funds to Bank</Text>
+            <Text style={styles.moduleSub}>Instant Withdrawal to Bank</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -193,19 +206,19 @@ export default function PartnerDashboardScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC' },
+  safe: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
   header: {
     backgroundColor: '#0d47a1',
     paddingHorizontal: 20,
-    paddingTop: 45,
+    paddingTop: 40,
     paddingBottom: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
   },
-  roleTag: { color: '#93C5FD', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
+  roleTag: { color: '#93C5FD', fontSize: 10.5, fontWeight: '800', letterSpacing: 1 },
   welcomeText: { color: '#FFFFFF', fontSize: 19, fontWeight: '800', marginTop: 2 },
   codeText: { color: '#E2E8F0', fontSize: 12, fontWeight: '600', marginTop: 2 },
   logoutBtn: { backgroundColor: 'rgba(255,255,255,0.18)', paddingVertical: 6, paddingHorizontal: 14, borderRadius: 16 },

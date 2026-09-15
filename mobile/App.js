@@ -1,4 +1,5 @@
 import React from 'react';
+import { StatusBar, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -20,10 +21,16 @@ const Stack = createNativeStackNavigator();
 export default function App() {
   return (
     <NavigationContainer>
+      <StatusBar
+        barStyle={Platform.OS === 'ios' ? 'dark-content' : 'dark-content'}
+        backgroundColor="#ffffff"
+        translucent={false}
+      />
       <Stack.Navigator
         initialRouteName="Home"
         screenOptions={{
           headerShown: false,
+          animation: Platform.OS === 'ios' ? 'default' : 'slide_from_right',
           contentStyle: { backgroundColor: '#F8FAFC' }
         }}
       >

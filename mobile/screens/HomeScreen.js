@@ -2,92 +2,120 @@ import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   Image, SafeAreaView, StatusBar, ScrollView,
-  Dimensions, Modal, FlatList, Linking
+  Dimensions, Modal, FlatList, Linking, Platform,
+  TextInput, Alert
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-// Data Lists matching Web App
+// Data Lists matching Web & Mobile Platform
 const banners = [
-  { title: "Lifetime Free Credit Cards", desc: "No joining fee. No annual charges.", color: "#1a237e" },
-  { title: "Personal & Business Loans", desc: "Low interest rates from 10.5%.", color: "#004d40" },
-  { title: "Comprehensive Insurance", desc: "Protect your health, life, and motor.", color: "#3e2723" },
-  { title: "Smart EMI Offers", desc: "Convert big purchases to low-cost EMIs.", color: "#4a148c" }
+  { id: '1', title: "Lifetime Free Credit Cards", desc: "No joining fee. No annual charges.", color: "#1a237e", badge: "POPULAR" },
+  { id: '2', title: "Personal & Business Loans", desc: "Low interest rates starting from 10.5% p.a.", color: "#004d40", badge: "INSTANT DISBURSAL" },
+  { id: '3', title: "Comprehensive Insurance", desc: "Protect your health, life, and motor assets.", color: "#3e2723", badge: "TAX SAVER" },
+  { id: '4', title: "Smart EMI Offers", desc: "Convert big purchases to low-cost EMIs.", color: "#4a148c", badge: "ZERO DOWN PAYMENT" }
 ];
 
 const moneyTransferData = [
-  { label: "To Mobile", icon: "📱", desc: "Send money instantly", color: "#27ae60" },
-  { label: "Recharge", icon: "💸", desc: "Mobile, DTH, FASTag", color: "#2980b9" },
-  { label: "Electricity", icon: "⚡", desc: "Pay electricity bills", color: "#f39c12" },
-  { label: "Loan Repay", icon: "💰", desc: "EMI & Loan Payments", color: "#8e44ad" },
-  { label: "FASTag", icon: "🏷️", desc: "Recharge FASTag tag", color: "#3498db" }
+  { id: '1', label: "To Mobile", icon: "📱", desc: "Send money instantly", color: "#27ae60" },
+  { id: '2', label: "Recharge", icon: "💸", desc: "Mobile, DTH, FASTag", color: "#2980b9" },
+  { id: '3', label: "Electricity", icon: "⚡", desc: "Pay electricity bills", color: "#f39c12" },
+  { id: '4', label: "Loan Repay", icon: "💰", desc: "EMI & Loan Payments", color: "#8e44ad" },
+  { id: '5', label: "FASTag", icon: "🏷️", desc: "Recharge FASTag tag", color: "#3498db" },
+  { id: '6', label: "Gas Bill", icon: "🔥", desc: "Piped gas payment", color: "#e67e22" }
 ];
 
 const travelTransitData = [
-  { label: "Flight", icon: "✈️" },
-  { label: "Train", icon: "🚊" },
-  { label: "Bus", icon: "🚌" },
-  { label: "Hotels", icon: "🏨" }
+  { id: '1', label: "Flight", icon: "✈️" },
+  { id: '2', label: "Train", icon: "🚊" },
+  { id: '3', label: "Bus", icon: "🚌" },
+  { id: '4', label: "Hotels", icon: "🏨" },
+  { id: '5', label: "Metro", icon: "🚇" }
 ];
 
 const allLoansData = [
-  { label: "Personal Loan", icon: "🪙" },
-  { label: "Home Loan", icon: "🏠" },
-  { label: "Business Loan", icon: "🏢" },
-  { label: "Education Loan", icon: "🎓" },
-  { label: "Car Loan", icon: "🚗" },
-  { label: "Used Car Loan", icon: "🏎️" },
-  { label: "Instant Loan", icon: "📲" },
-  { label: "Loan Against Property (LAP)", icon: "🏢" },
-  { label: "Gold Loan", icon: "🪙" },
-  { label: "Loan Against Car", icon: "🚗" },
-  { label: "2 Wheeler Loan", icon: "🏍️" },
-  { label: "Loan Against Mutual Funds", icon: "📈" }
+  { id: '1', label: "Personal Loan", icon: "🪙", rate: "10.5%" },
+  { id: '2', label: "Home Loan", icon: "🏠", rate: "8.4%" },
+  { id: '3', label: "Business Loan", icon: "🏢", rate: "12.0%" },
+  { id: '4', label: "Education Loan", icon: "🎓", rate: "9.5%" },
+  { id: '5', label: "Car Loan", icon: "🚗", rate: "8.9%" },
+  { id: '6', label: "Used Car Loan", icon: "🏎️", rate: "11.2%" },
+  { id: '7', label: "Instant Loan", icon: "📲", rate: "14.0%" },
+  { id: '8', label: "Loan Against Property", icon: "🏙️", rate: "9.2%" },
+  { id: '9', label: "Gold Loan", icon: "🥇", rate: "7.9%" },
+  { id: '10', label: "Loan Against Car", icon: "🚘", rate: "10.8%" },
+  { id: '11', label: "2 Wheeler Loan", icon: "🏍️", rate: "11.5%" },
+  { id: '12', label: "Loan Against Mutual Funds", icon: "📈", rate: "10.0%" }
 ];
 
 const partnerBanks = [
-  { name: "HDFC Bank", rating: "★★★★★" },
-  { name: "SBI Bank", rating: "★★★★★" },
-  { name: "Axis Bank", rating: "★★★★☆" },
-  { name: "Bank of Baroda", rating: "★★★★☆" }
+  { id: '1', name: "HDFC Bank", rating: "★★★★★", code: "HDFC", color: "#004B87" },
+  { id: '2', name: "SBI Bank", rating: "★★★★★", code: "SBI", color: "#280071" },
+  { id: '3', name: "Axis Bank", rating: "★★★★☆", code: "AXIS", color: "#97144D" },
+  { id: '4', name: "ICICI Bank", rating: "★★★★☆", code: "ICICI", color: "#F37021" }
 ];
 
 const ltfCards = [
   { 
+    id: '1',
     name: "HDFC Pixel Go Credit Card", 
-    desc: "Digital-first customizable credit card",
+    desc: "Digital-first customizable credit card with instant app approval",
     link: "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb"
   },
   { 
+    id: '2',
     name: "HDFC Pixel Play Credit Card", 
-    desc: "Custom rewards on shopping and dining apps",
+    desc: "Custom rewards on shopping, dining & entertainment apps",
     link: "https://applyonline.hdfc.bank.in/cards/credit-cards.html?CHANNELSOURCE=ZETA&DSACode=XYOH&LGcode=&LCcode=DIGIX1&LC2=DIGIX1&SMcode=S54558#nbb"
   },
   { 
+    id: '3',
     name: "Axis Bank Neo Credit Card", 
-    desc: "Zomato, BookMyShow and utility discounts" 
+    desc: "Zomato 40% off, BookMyShow and utility discounts",
+    link: "https://axisbank.com"
   },
   { 
+    id: '4',
     name: "Axis Bank MY Zone Credit Card", 
-    desc: "Buy 1 Get 1 Free on movie tickets" 
+    desc: "Buy 1 Get 1 Free on movie tickets & complimentary airport lounges",
+    link: "https://axisbank.com"
   }
 ];
 
 export default function HomeScreen({ navigation }) {
   const [loansModalVisible, setLoansModalVisible] = useState(false);
+  const [loanSearch, setLoanSearch] = useState('');
 
-  // Split loans for 8-button layout: 7 loans + "See More" button
   const visibleLoans = allLoansData.slice(0, 7);
+  const filteredLoans = allLoansData.filter((l) =>
+    l.label.toLowerCase().includes(loanSearch.toLowerCase())
+  );
+
+  const openExternalLink = (url) => {
+    if (!url) return;
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) {
+          Linking.openURL(url);
+        } else {
+          Alert.alert("Notice", "Cannot open link on this device.");
+        }
+      })
+      .catch((err) => console.warn("Failed to open link:", err));
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
 
-      {/* Header */}
+      {/* Cross-Platform Header */}
       <View style={styles.navbar}>
         <View style={styles.navLeft}>
           <Image source={require('../assets/icon.png')} style={styles.logo} />
-          <Text style={styles.navTitle}>GharKaPaisa</Text>
+          <View style={{ marginLeft: 8 }}>
+            <Text style={styles.navTitle}>GharKaPaisa</Text>
+            <Text style={styles.navSub}>Financial Services Platform</Text>
+          </View>
         </View>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TouchableOpacity 
@@ -114,15 +142,16 @@ export default function HomeScreen({ navigation }) {
           showsHorizontalScrollIndicator={false}
           style={styles.bannerScroll}
         >
-          {banners.map((b, idx) => (
-            <View key={idx} style={[styles.bannerCard, { backgroundColor: b.color }]}>
+          {banners.map((b) => (
+            <View key={b.id} style={[styles.bannerCard, { backgroundColor: b.color }]}>
+              <View style={styles.bannerBadge}><Text style={styles.bannerBadgeText}>{b.badge}</Text></View>
               <Text style={styles.bannerTitle}>{b.title}</Text>
               <Text style={styles.bannerDesc}>{b.desc}</Text>
             </View>
           ))}
         </ScrollView>
 
-        {/* Money Transfer & Payments - Horizontal Scroll (Single Line) */}
+        {/* Money Transfer & Payments */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Money Transfer & Payments</Text>
           <ScrollView 
@@ -130,8 +159,12 @@ export default function HomeScreen({ navigation }) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalScroll}
           >
-            {moneyTransferData.map((item, idx) => (
-              <TouchableOpacity key={idx} style={styles.circleCard}>
+            {moneyTransferData.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.circleCard}
+                onPress={() => Alert.alert(item.label, `${item.desc} - Feature active in production portal.`)}
+              >
                 <Text style={styles.circleIcon}>{item.icon}</Text>
                 <Text style={styles.circleLabel}>{item.label}</Text>
               </TouchableOpacity>
@@ -139,7 +172,7 @@ export default function HomeScreen({ navigation }) {
           </ScrollView>
         </View>
 
-        {/* Travel & Transit - Horizontal Scroll (Single Line) */}
+        {/* Travel & Transit */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Travel & Transit</Text>
           <ScrollView 
@@ -147,8 +180,12 @@ export default function HomeScreen({ navigation }) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalScroll}
           >
-            {travelTransitData.map((item, idx) => (
-              <TouchableOpacity key={idx} style={styles.circleCard}>
+            {travelTransitData.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.circleCard}
+                onPress={() => Alert.alert(item.label, `Book ${item.label} tickets with extra partner cashbacks.`)}
+              >
                 <Text style={styles.circleIcon}>{item.icon}</Text>
                 <Text style={styles.circleLabel}>{item.label}</Text>
               </TouchableOpacity>
@@ -158,12 +195,22 @@ export default function HomeScreen({ navigation }) {
 
         {/* Loans - Grid Layout (Max 8 buttons) */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Loans</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Loans & Credit</Text>
+            <TouchableOpacity onPress={() => setLoansModalVisible(true)}>
+              <Text style={styles.viewAllText}>View All (12) →</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.grid}>
-            {visibleLoans.map((item, idx) => (
-              <TouchableOpacity key={idx} style={styles.gridCard}>
+            {visibleLoans.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.gridCard}
+                onPress={() => navigation.navigate('Login', { role: 'Partner' })}
+              >
                 <Text style={styles.gridIcon}>{item.icon}</Text>
                 <Text style={styles.gridLabel}>{item.label}</Text>
+                <Text style={styles.gridRate}>From {item.rate}</Text>
               </TouchableOpacity>
             ))}
             
@@ -182,9 +229,18 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Partner Bank</Text>
           <View style={styles.bankGrid}>
-            {partnerBanks.map((bank, idx) => (
-              <TouchableOpacity key={idx} style={styles.bankCard}>
-                <Text style={styles.bankName}>{bank.name}</Text>
+            {partnerBanks.map((bank) => (
+              <TouchableOpacity
+                key={bank.id}
+                style={styles.bankCard}
+                onPress={() => navigation.navigate('Login', { role: 'Partner' })}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={styles.bankName}>{bank.name}</Text>
+                  <View style={[styles.bankLogoBadge, { backgroundColor: bank.color }]}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900' }}>{bank.code}</Text>
+                  </View>
+                </View>
                 <Text style={styles.bankRating}>{bank.rating}</Text>
               </TouchableOpacity>
             ))}
@@ -193,26 +249,19 @@ export default function HomeScreen({ navigation }) {
 
         {/* Lifetime Free Credit Cards */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Lifetime Free Credit Cards</Text>
-          {ltfCards.map((card, idx) => (
+          <Text style={styles.sectionTitle}>Featured Lifetime Free Credit Cards</Text>
+          {ltfCards.map((card) => (
             <TouchableOpacity 
-              key={idx} 
+              key={card.id} 
               style={styles.cardItem}
-              disabled={!card.link}
-              onPress={() => {
-                if (card.link) {
-                  Linking.openURL(card.link).catch(err => console.warn("Failed to open URL:", err));
-                }
-              }}
+              onPress={() => openExternalLink(card.link)}
             >
               <View style={styles.cardMarker} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardItemTitle}>{card.name}</Text>
                 <Text style={styles.cardItemDesc}>{card.desc}</Text>
               </View>
-              {card.link && (
-                <Text style={{ color: '#0d47a1', fontWeight: 'bold', fontSize: 12, marginRight: 4 }}>Apply ➔</Text>
-              )}
+              <Text style={styles.applyArrow}>Apply ➔</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -229,23 +278,38 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>All Loans Options</Text>
+              <Text style={styles.modalTitle}>All Loan Options</Text>
               <TouchableOpacity 
                 style={styles.closeBtn} 
                 onPress={() => setLoansModalVisible(false)}
               >
-                <Text style={styles.closeText}>Close</Text>
+                <Text style={styles.closeText}>Close ✕</Text>
               </TouchableOpacity>
             </View>
 
+            <TextInput
+              style={styles.modalSearchInput}
+              placeholder="Search loan category..."
+              placeholderTextColor="#94A3B8"
+              value={loanSearch}
+              onChangeText={setLoanSearch}
+            />
+
             <FlatList
-              data={allLoansData}
+              data={filteredLoans}
               numColumns={3}
-              keyExtractor={(item, idx) => idx.toString()}
+              keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.modalGridCard}>
+                <TouchableOpacity
+                  style={styles.modalGridCard}
+                  onPress={() => {
+                    setLoansModalVisible(false);
+                    navigation.navigate('Login', { role: 'Partner' });
+                  }}
+                >
                   <Text style={styles.modalGridIcon}>{item.icon}</Text>
                   <Text style={styles.modalGridLabel} numberOfLines={2}>{item.label}</Text>
+                  <Text style={styles.modalGridRate}>ROI {item.rate}</Text>
                 </TouchableOpacity>
               )}
               contentContainerStyle={styles.modalList}
@@ -261,6 +325,7 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   navbar: {
     flexDirection: 'row',
@@ -271,73 +336,102 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     backgroundColor: '#fff',
-    elevation: 3,
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowRadius: 3,
   },
   navLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   logo: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 8,
     resizeMode: 'contain',
   },
   navTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: '#0d47a1',
-    marginLeft: 8,
+  },
+  navSub: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '600',
   },
   loginBtn: {
     backgroundColor: '#0d47a1',
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    borderRadius: 18,
   },
   loginBtnText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   scroll: {
     paddingBottom: 40,
   },
   bannerScroll: {
-    marginVertical: 16,
+    marginVertical: 14,
   },
   bannerCard: {
     width: width - 32,
-    height: 120,
+    height: 125,
     borderRadius: 16,
     padding: 16,
     justifyContent: 'center',
     marginLeft: 16,
     marginRight: 16,
   },
+  bannerBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  bannerBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
   bannerTitle: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '800',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   bannerDesc: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 12.5,
   },
   section: {
-    marginTop: 20,
+    marginTop: 18,
     paddingHorizontal: 16,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#333',
-    marginBottom: 12,
+    color: '#1E293B',
+    marginBottom: 10,
+  },
+  viewAllText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0d47a1',
   },
   horizontalScroll: {
     paddingRight: 16,
@@ -346,22 +440,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: 72,
-    marginRight: 16,
+    marginRight: 14,
   },
   circleIcon: {
-    fontSize: 26,
+    fontSize: 24,
     backgroundColor: '#e3f2fd',
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     textAlign: 'center',
-    lineHeight: 54,
+    lineHeight: 52,
     marginBottom: 6,
   },
   circleLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#555',
+    color: '#475569',
     textAlign: 'center',
   },
   grid: {
@@ -375,13 +469,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#eef1f6',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
     marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
     elevation: 1,
   },
   seeMoreCard: {
@@ -391,14 +481,20 @@ const styles = StyleSheet.create({
   },
   gridIcon: {
     fontSize: 22,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   gridLabel: {
     fontSize: 9.5,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#333',
     textAlign: 'center',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
+  },
+  gridRate: {
+    fontSize: 8.5,
+    color: '#059669',
+    fontWeight: '800',
+    marginTop: 2,
   },
   bankGrid: {
     flexDirection: 'row',
@@ -409,7 +505,7 @@ const styles = StyleSheet.create({
     width: (width - 40) / 2,
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
@@ -417,12 +513,17 @@ const styles = StyleSheet.create({
   bankName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#333',
+    color: '#0F172A',
+  },
+  bankLogoBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   bankRating: {
     color: '#f57c00',
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 6,
   },
   cardItem: {
     flexDirection: 'row',
@@ -432,24 +533,30 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#E2E8F0',
   },
   cardMarker: {
-    width: 6,
-    height: 32,
+    width: 5,
+    height: 34,
     borderRadius: 3,
-    backgroundColor: '#009688',
+    backgroundColor: '#0d47a1',
     marginRight: 12,
   },
   cardItemTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#333',
+    fontWeight: '800',
+    color: '#0F172A',
   },
   cardItemDesc: {
-    fontSize: 12,
-    color: '#777',
+    fontSize: 11.5,
+    color: '#64748B',
     marginTop: 2,
+  },
+  applyArrow: {
+    color: '#0d47a1',
+    fontWeight: '800',
+    fontSize: 12,
+    marginLeft: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -460,21 +567,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '80%',
+    maxHeight: '82%',
     paddingBottom: 40,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 18,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#333',
+    color: '#0F172A',
   },
   closeBtn: {
     padding: 6,
@@ -482,29 +589,46 @@ const styles = StyleSheet.create({
   closeText: {
     color: '#0d47a1',
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 14,
+  },
+  modalSearchInput: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 13,
+    color: '#0F172A',
   },
   modalList: {
-    padding: 16,
+    padding: 12,
   },
   modalGridCard: {
-    width: (width - 56) / 3,
+    width: (width - 48) / 3,
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
     margin: 4,
-    height: 90,
+    height: 95,
     justifyContent: 'center',
   },
   modalGridIcon: {
     fontSize: 24,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   modalGridLabel: {
     fontSize: 10.5,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: '#0F172A',
     textAlign: 'center',
+  },
+  modalGridRate: {
+    fontSize: 9,
+    color: '#059669',
+    fontWeight: '800',
+    marginTop: 2,
   },
 });

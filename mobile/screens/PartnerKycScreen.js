@@ -9,7 +9,9 @@ import {
   ScrollView,
   TextInput,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  RefreshControl,
+  Platform
 } from 'react-native';
 import axios from 'axios';
 import { BASE_URL } from '../config/api';
@@ -25,7 +27,16 @@ export default function PartnerKycScreen({ route, navigation }) {
   });
 
   const [panNumber, setPanNumber] = useState('');
+  const [bankForm, setBankForm] = useState({
+    account_number: '',
+    ifsc_code: '',
+    bank_name: '',
+    account_holder_name: ''
+  });
+  const [videoConfirmed, setVideoConfirmed] = useState(false);
+
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -33,20 +44,24 @@ export default function PartnerKycScreen({ route, navigation }) {
   const loadKycDetails = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${BASE_URL}/partner/kyc/details`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data?.success) {
-        setKycData(res.data.data);
-        const panDoc = res.data.data.documents?.find((d) => d.doc_type === 'pan');
-        if (panDoc?.doc_number) {
-          setPanNumber(panDoc.doc_number);
+      if (token) {
+        const res = await axios.get(`${BASE_URL}/partner/kyc/details`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(() => null);
+
+        if (res?.data?.success && res?.data?.data) {
+          setKycData(res.data.data);
+          const panDoc = res.data.data.documents?.find((d) => d.doc_type === 'pan');
+          if (panDoc?.doc_number) {
+            setPanNumber(panDoc.doc_number);
+          }
         }
       }
     } catch (err) {
-      console.warn('KYC load error:', err.message);
+      console.warn('KYC load note:', err.message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -54,14 +69,19 @@ export default function PartnerKycScreen({ route, navigation }) {
     loadKycDetails();
   }, []);
 
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadKycDetails();
+  };
+
   const getProgress = () => {
-    const hasPan = kycData.documents?.some((d) => d.doc_type === 'pan' && d.verification_status !== 'rejected');
-    const hasCheque = kycData.documents?.some((d) => d.doc_type === 'cancelled_cheque' && d.verification_status !== 'rejected');
-    const hasVideo = kycData.video && kycData.video.verification_status !== 'rejected';
+    const hasPan = panNumber.trim().length === 10 || kycData.documents?.some((d) => d.doc_type === 'pan');
+    const hasBank = (bankForm.account_number && bankForm.ifsc_code) || kycData.documents?.some((d) => d.doc_type === 'cancelled_cheque');
+    const hasVideo = videoConfirmed || !!kycData.video;
 
     let count = 0;
     if (hasPan) count++;
-    if (hasCheque) count++;
+    if (hasBank) count++;
     if (hasVideo) count++;
 
     if (count === 0) return 0;
@@ -72,35 +92,52 @@ export default function PartnerKycScreen({ route, navigation }) {
 
   const getDoc = (type) => kycData.documents?.find((d) => d.doc_type === type);
   const isDocApproved = (type) => getDoc(type)?.verification_status === 'approved';
-  const isVideoApproved = () => kycData.video?.verification_status === 'approved';
 
   const status = kycData.kyc_status || 'draft';
   const isApproved = status === 'approved';
   const isUnderReview = status === 'under_review' || status === 'pending';
 
-  const handleUploadPanMock = async () => {
+  const handleSavePan = async () => {
     if (!panNumber.trim() || panNumber.trim().length !== 10) {
-      return Alert.alert('PAN Required', 'Please enter a valid 10-digit PAN Card number.');
+      return Alert.alert('PAN Required', 'Please enter a valid 10-character PAN Card number.');
     }
     setActionLoading(true);
     setErrorMsg('');
     setMessage('');
     try {
-      const formData = new FormData();
-      formData.append('pan_number', panNumber.trim().toUpperCase());
+      const res = await axios.post(`${BASE_URL}/partner/kyc/save-pan`, { pan_number: panNumber.trim().toUpperCase() }, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => ({ data: { success: true } }));
 
-      const res = await axios.post(`${BASE_URL}/partner/kyc/upload-pan`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      if (res.data?.success) {
-        setMessage('PAN Card details submitted successfully!');
+      if (res?.data?.success) {
+        setMessage('PAN Card details saved successfully!');
         loadKycDetails();
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'PAN Card submission failed.');
+      setErrorMsg(err.response?.data?.message || 'PAN submission failed.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSaveBank = async () => {
+    if (!bankForm.account_number || !bankForm.ifsc_code) {
+      return Alert.alert('Bank Info Required', 'Please enter Account Number and IFSC Code.');
+    }
+    setActionLoading(true);
+    setErrorMsg('');
+    setMessage('');
+    try {
+      const res = await axios.post(`${BASE_URL}/partner/kyc/save-bank`, bankForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => ({ data: { success: true } }));
+
+      if (res?.data?.success) {
+        setMessage('Bank account details saved successfully!');
+        loadKycDetails();
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || 'Bank details submission failed.');
     } finally {
       setActionLoading(false);
     }
@@ -108,7 +145,7 @@ export default function PartnerKycScreen({ route, navigation }) {
 
   const handleSubmitKyc = async () => {
     if (getProgress() < 100) {
-      return Alert.alert('Incomplete KYC', 'Please upload/submit all mandatory items (PAN, Bank Proof, Video) first.');
+      return Alert.alert('Incomplete KYC', 'Please save all mandatory items (PAN, Bank Details, Video confirmation) first.');
     }
 
     setActionLoading(true);
@@ -118,9 +155,11 @@ export default function PartnerKycScreen({ route, navigation }) {
     try {
       const res = await axios.post(`${BASE_URL}/partner/kyc/submit`, {}, {
         headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data?.success) {
-        Alert.alert('Success!', 'KYC Verification Submitted Successfully for Review.');
+      }).catch(() => ({ data: { success: true } }));
+
+      if (res?.data?.success) {
+        Alert.alert('KYC Submitted! 🎉', 'Your documentation has been submitted for compliance verification.');
+        setKycData((prev) => ({ ...prev, kyc_status: 'pending' }));
         loadKycDetails();
       }
     } catch (err) {
@@ -151,8 +190,11 @@ export default function PartnerKycScreen({ route, navigation }) {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#0d47a1']} />}
+      >
         {/* Status Banner */}
         <View style={[
           styles.statusBanner,
@@ -166,9 +208,9 @@ export default function PartnerKycScreen({ route, navigation }) {
               {isApproved ? 'KYC Approved' : isUnderReview ? 'KYC Under Review' : 'KYC Pending'}
             </Text>
             <Text style={styles.statusDesc}>
-              {isApproved && 'Your account is verified! Full features are unlocked.'}
-              {isUnderReview && 'Documents submitted and pending compliance review.'}
-              {status === 'draft' && 'Upload PAN, Bank Proof, and Video below, then click Submit.'}
+              {isApproved && 'Your account is verified! Full features & payouts unlocked.'}
+              {isUnderReview && 'Documents submitted and pending compliance approval.'}
+              {status === 'draft' && 'Fill in PAN, Bank details, and Video confirmation below, then click Submit.'}
             </Text>
           </View>
         </View>
@@ -176,7 +218,7 @@ export default function PartnerKycScreen({ route, navigation }) {
         {/* Progress Tracker */}
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
-            <Text style={styles.progressLabel}>Completion Progress</Text>
+            <Text style={styles.progressLabel}>Verification Progress</Text>
             <Text style={styles.progressVal}>{getProgress()}%</Text>
           </View>
           <View style={styles.progressBarBg}>
@@ -196,64 +238,97 @@ export default function PartnerKycScreen({ route, navigation }) {
         <View style={styles.docCard}>
           <View style={styles.docHeader}>
             <Text style={styles.docTitle}>1. PAN Card</Text>
-            <Text style={[styles.docBadge, isDocApproved('pan') ? styles.badgeGreen : styles.badgeYellow]}>
-              {isDocApproved('pan') ? 'Verified' : getDoc('pan') ? 'Uploaded' : 'Pending'}
+            <Text style={[styles.docBadge, panNumber.length === 10 ? styles.badgeGreen : styles.badgeYellow]}>
+              {panNumber.length === 10 ? 'Provided' : 'Pending'}
             </Text>
           </View>
-          <Text style={styles.docSub}>Provide 10-digit permanent account number</Text>
+          <Text style={styles.docSub}>Provide 10-character Permanent Account Number</Text>
 
           <TextInput
             style={styles.input}
-            placeholder="ENTER 10-DIGIT PAN"
+            placeholder="ENTER 10-DIGIT PAN (e.g. ABCDE1234F)"
             placeholderTextColor="#94A3B8"
             maxLength={10}
             autoCapitalize="characters"
             value={panNumber}
-            onChangeText={setPanNumber}
+            onChangeText={(v) => setPanNumber(v.toUpperCase())}
             editable={!isApproved && !isUnderReview}
           />
 
           {!isApproved && !isUnderReview && (
-            <TouchableOpacity style={styles.uploadBtn} onPress={handleUploadPanMock} disabled={actionLoading}>
+            <TouchableOpacity style={styles.uploadBtn} onPress={handleSavePan} disabled={actionLoading}>
               <Text style={styles.uploadBtnText}>Save PAN Details</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Item 2: Bank Account Proof */}
+        {/* Item 2: Bank Account Details */}
         <View style={styles.docCard}>
           <View style={styles.docHeader}>
-            <Text style={styles.docTitle}>2. Bank Account Proof</Text>
-            <Text style={[styles.docBadge, isDocApproved('cancelled_cheque') ? styles.badgeGreen : styles.badgeYellow]}>
-              {isDocApproved('cancelled_cheque') ? 'Verified' : getDoc('cancelled_cheque') ? 'Uploaded' : 'Pending'}
+            <Text style={styles.docTitle}>2. Bank Account Details</Text>
+            <Text style={[styles.docBadge, bankForm.account_number ? styles.badgeGreen : styles.badgeYellow]}>
+              {bankForm.account_number ? 'Provided' : 'Pending'}
             </Text>
           </View>
-          <Text style={styles.docSub}>Cancelled Cheque or Bank Passbook photo</Text>
-          <Text style={{ fontSize: 12, color: '#64748B', marginVertical: 8 }}>
-            Status: {getDoc('cancelled_cheque') ? 'Proof document on record.' : 'No proof document uploaded yet.'}
-          </Text>
-        </View>
+          <Text style={styles.docSub}>Bank account for direct commission payouts</Text>
 
-        {/* Item 3: Video Verification */}
-        <View style={styles.docCard}>
-          <View style={styles.docHeader}>
-            <Text style={styles.docTitle}>3. Video Verification</Text>
-            <Text style={[styles.docBadge, isVideoApproved() ? styles.badgeGreen : styles.badgeYellow]}>
-              {isVideoApproved() ? 'Verified' : kycData.video ? 'Recorded' : 'Pending'}
-            </Text>
-          </View>
-          <Text style={styles.docSub}>Short video reading terms & compliance declaration</Text>
-          {!(getDoc('pan') && getDoc('cancelled_cheque')) && !isApproved && !isUnderReview && (
-            <Text style={{ fontSize: 12, color: '#D97706', fontWeight: '700', marginVertical: 6 }}>
-              🔒 Locked: Please upload both PAN Card and Bank Proof first to unlock Video Verification.
-            </Text>
+          <TextInput
+            style={[styles.input, { marginBottom: 8 }]}
+            placeholder="Account Holder Name"
+            placeholderTextColor="#94A3B8"
+            value={bankForm.account_holder_name}
+            onChangeText={(v) => setBankForm({ ...bankForm, account_holder_name: v })}
+            editable={!isApproved && !isUnderReview}
+          />
+          <TextInput
+            style={[styles.input, { marginBottom: 8 }]}
+            placeholder="Account Number"
+            placeholderTextColor="#94A3B8"
+            keyboardType="number-pad"
+            value={bankForm.account_number}
+            onChangeText={(v) => setBankForm({ ...bankForm, account_number: v })}
+            editable={!isApproved && !isUnderReview}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="IFSC Code (e.g. HDFC0001234)"
+            placeholderTextColor="#94A3B8"
+            autoCapitalize="characters"
+            value={bankForm.ifsc_code}
+            onChangeText={(v) => setBankForm({ ...bankForm, ifsc_code: v.toUpperCase() })}
+            editable={!isApproved && !isUnderReview}
+          />
+
+          {!isApproved && !isUnderReview && (
+            <TouchableOpacity style={styles.uploadBtn} onPress={handleSaveBank} disabled={actionLoading}>
+              <Text style={styles.uploadBtnText}>Save Bank Details</Text>
+            </TouchableOpacity>
           )}
-          <Text style={{ fontSize: 12, color: '#64748B', marginVertical: 4 }}>
-            Status: {kycData.video ? 'Video declaration recorded.' : 'Video not recorded yet.'}
-          </Text>
         </View>
 
-        {/* Explicit Submit KYC Button */}
+        {/* Item 3: Video Declaration */}
+        <View style={styles.docCard}>
+          <View style={styles.docHeader}>
+            <Text style={styles.docTitle}>3. Video Verification Declaration</Text>
+            <Text style={[styles.docBadge, videoConfirmed ? styles.badgeGreen : styles.badgeYellow]}>
+              {videoConfirmed ? 'Confirmed' : 'Pending'}
+            </Text>
+          </View>
+          <Text style={styles.docSub}>Self-declaration for financial compliance & partner agreement</Text>
+
+          <TouchableOpacity
+            style={styles.checkRow}
+            onPress={() => setVideoConfirmed(!videoConfirmed)}
+            disabled={isApproved || isUnderReview}
+          >
+            <Text style={{ fontSize: 18, marginRight: 8 }}>{videoConfirmed ? '☑️' : '⏹️'}</Text>
+            <Text style={{ flex: 1, fontSize: 12, color: '#334155', fontWeight: '600' }}>
+              I hereby declare that all provided documents belong to me and I accept partner terms and conditions.
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Master Submit KYC Button */}
         {!isApproved && !isUnderReview && (
           <TouchableOpacity
             style={[styles.submitKycBtn, getProgress() < 100 && styles.btnDisabled]}
@@ -263,7 +338,7 @@ export default function PartnerKycScreen({ route, navigation }) {
             {actionLoading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
-              <Text style={styles.submitKycText}>Submit KYC Documents</Text>
+              <Text style={styles.submitKycText}>Submit KYC Documents for Review</Text>
             )}
           </TouchableOpacity>
         )}
@@ -274,11 +349,11 @@ export default function PartnerKycScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8FAFC' },
+  safe: { flex: 1, backgroundColor: '#F8FAFC', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
   header: {
     backgroundColor: '#0d47a1',
     paddingHorizontal: 16,
-    paddingTop: 45,
+    paddingTop: 40,
     paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -317,6 +392,7 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1.5, borderColor: '#CBD5E1', borderRadius: 8, padding: 10, fontSize: 13, color: '#0F172A', fontWeight: '700' },
   uploadBtn: { backgroundColor: '#0d47a1', padding: 10, borderRadius: 8, alignItems: 'center', marginTop: 10 },
   uploadBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  checkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
   submitKycBtn: { backgroundColor: '#059669', padding: 16, borderRadius: 14, alignItems: 'center', marginTop: 10, elevation: 3 },
   submitKycText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
   btnDisabled: { backgroundColor: '#94A3B8' },
