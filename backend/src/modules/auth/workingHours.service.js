@@ -1,6 +1,59 @@
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
+let tablesInitialized = false;
+
+/**
+ * Self-healing helper: Ensure required working hours tables and default records exist.
+ */
+async function ensureWorkingHoursTables() {
+  if (tablesInitialized) return;
+  try {
+    await query(`
+      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+      CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+      CREATE TABLE IF NOT EXISTS admin_working_hours (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        designation VARCHAR(100),
+        start_time VARCHAR(10) DEFAULT '09:30 AM',
+        end_time VARCHAR(10) DEFAULT '08:00 PM',
+        timezone VARCHAR(50) DEFAULT 'Asia/Kolkata',
+        is_enabled BOOLEAN DEFAULT TRUE,
+        created_by UUID REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS admin_working_hour_extensions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        apply_to VARCHAR(20) DEFAULT 'SPECIFIC',
+        extension_date DATE NOT NULL,
+        original_end_time VARCHAR(10) DEFAULT '08:00 PM',
+        extended_end_time VARCHAR(10) NOT NULL,
+        reason TEXT,
+        created_by UUID REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_awhe_date_user ON admin_working_hour_extensions(extension_date, user_id);
+    `);
+
+    const { rows: existingGlobal } = await query(`SELECT id FROM admin_working_hours WHERE user_id IS NULL AND designation IS NULL LIMIT 1`);
+    if (existingGlobal.length === 0) {
+      await query(`
+        INSERT INTO admin_working_hours (user_id, designation, start_time, end_time, timezone, is_enabled)
+        VALUES (NULL, NULL, '09:30 AM', '08:00 PM', 'Asia/Kolkata', TRUE)
+      `);
+    }
+    tablesInitialized = true;
+  } catch (err) {
+    logger.error('Failed to auto-initialize admin working hours tables:', err.message);
+  }
+}
+
 /**
  * Convert time string (e.g. "09:30 AM", "08:00 PM", "20:00") into minutes past midnight (0..1439).
  */
@@ -81,6 +134,9 @@ async function checkUserWorkingHours(user) {
     const desigUpper = String(user.designation || '').toUpperCase();
     const restrictedRoles = ['ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'PAN CHECKER'];
     const isRestrictedTarget = restrictedRoles.some(r => roleUpper.includes(r) || desigUpper.includes(r) || r.includes(desigUpper));
+
+    // Ensure database tables exist automatically
+    await ensureWorkingHoursTables();
 
     // Get current Kolkata time info
     const { dateStr, currentMinutes } = getKolkataTimeInfo();
@@ -173,5 +229,6 @@ module.exports = {
   timeToMinutes,
   minutesToTimeStr,
   getKolkataTimeInfo,
-  checkUserWorkingHours
+  checkUserWorkingHours,
+  ensureWorkingHoursTables
 };

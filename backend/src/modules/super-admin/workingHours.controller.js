@@ -1,7 +1,7 @@
 const { query } = require('../../config/database');
 const { success, error, notFound } = require('../../utils/response/response');
 const { logAction } = require('../admin/audit.service');
-const { getKolkataTimeInfo, timeToMinutes } = require('../auth/workingHours.service');
+const { getKolkataTimeInfo, timeToMinutes, ensureWorkingHoursTables } = require('../auth/workingHours.service');
 const logger = require('../../config/logger');
 
 /**
@@ -10,6 +10,7 @@ const logger = require('../../config/logger');
  */
 const getWorkingHoursConfig = async (req, res, next) => {
   try {
+    await ensureWorkingHoursTables();
     const { dateStr } = getKolkataTimeInfo();
 
     // 1. Fetch global/default config
@@ -128,6 +129,7 @@ const getWorkingHoursConfig = async (req, res, next) => {
  */
 const updateWorkingHours = async (req, res, next) => {
   try {
+    await ensureWorkingHoursTables();
     const { userId, designation, startTime, endTime, isEnabled, isGlobal } = req.body;
 
     if (!startTime || !endTime) {
@@ -217,6 +219,7 @@ const updateWorkingHours = async (req, res, next) => {
  */
 const extendWorkingHours = async (req, res, next) => {
   try {
+    await ensureWorkingHoursTables();
     const { applyTo, userId, extensionDate, extendedEndTime, reason } = req.body;
 
     if (!extendedEndTime) {

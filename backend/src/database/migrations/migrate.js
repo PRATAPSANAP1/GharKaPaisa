@@ -4736,8 +4736,11 @@ const migrate = async () => {
   // ── Admin Working Hours Migration ──
   try {
     await query(`
+      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+      CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
       CREATE TABLE IF NOT EXISTS admin_working_hours (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         designation VARCHAR(100),
         start_time VARCHAR(10) DEFAULT '09:30 AM',
@@ -4750,7 +4753,7 @@ const migrate = async () => {
       );
 
       CREATE TABLE IF NOT EXISTS admin_working_hour_extensions (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
         apply_to VARCHAR(20) DEFAULT 'SPECIFIC',
         extension_date DATE NOT NULL,
