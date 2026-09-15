@@ -11,59 +11,32 @@ import {
   Platform,
   ScrollView,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  Image
 } from 'react-native';
-import axios from 'axios';
-import { OTPWidget } from '@msg91comm/sendotp-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { useAuth } from '../context/AuthContext';
 import { BASE_URL } from '../config/api';
 import LogoLoader from '../components/LogoLoader';
 
 const WIDGET_ID = process.env.EXPO_PUBLIC_MSG91_WIDGET_ID;
 const TOKEN_AUTH = process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH;
 
-const getAccessToken = (response) =>
-  response?.accessToken ||
-  response?.['access-token'] ||
-  response?.data?.accessToken ||
-  response?.data?.['access-token'] ||
-  null;
-
-const getErrorMessage = (error, fallback) =>
-  error?.response?.data?.message ||
-  error?.message ||
-  error?.data?.message ||
-  fallback;
-
-import { useAuth } from '../src/context/AuthContext';
-
-export default function LoginScreen({ route, navigation }) {
+export default function EnhancedLoginScreen({ navigation }) {
   const { login } = useAuth();
-  const roleParam = route?.params?.role || 'Partner';
-  const [selectedRole, setSelectedRole] = useState(roleParam);
-
+  const [selectedRole, setSelectedRole] = useState('Partner');
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [timer, setTimer] = useState(0);
-  const [loading, setLoading] = useState({ otp: false, login: false });
-  const [sdkReady, setSdkReady] = useState(false);
-  const [reqId, setReqId] = useState('');
-  const [devOtpCode, setDevOtpCode] = useState(null);
+  const [loading, setLoading] = useState({ otp: false, login: false, biometric: false });
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [savedCredentials, setSavedCredentials] = useState(null);
 
   useEffect(() => {
-    if (!WIDGET_ID || !TOKEN_AUTH) {
-      console.log('MSG91 configuration absent. Dev OTP fallback mode active.');
-      setSdkReady(false);
-      return;
-    }
-
-    try {
-      OTPWidget.initializeWidget(WIDGET_ID, TOKEN_AUTH);
-      setSdkReady(true);
-    } catch (error) {
-      console.error('MSG91 initialization note:', error);
-      setSdkReady(false);
-    }
+    checkBiometricAvailability();
+    loadSavedCredentials();
   }, []);
 
   useEffect(() => {
@@ -72,80 +45,71 @@ export default function LoginScreen({ route, navigation }) {
     return () => clearInterval(interval);
   }, [timer]);
 
-  useEffect(() => {
-    setOtp('');
-    setOtpSent(false);
-    setTimer(0);
-    setReqId('');
-    setDevOtpCode(null);
-  }, [mobile, selectedRole]);
-
-  const formattedIdentifier = () => `91${mobile.trim()}`;
-
-  const validateMobile = () => {
-    if (!/^[6-9]\d{9}$/.test(mobile.trim())) {
-      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit Indian mobile number.');
-      return false;
+  const checkBiometricAvailability = async () => {
+    try {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      setBiometricAvailable(compatible && enrolled);
+    } catch (error) {
+      console.error('Biometric check failed:', error);
     }
-    return true;
+  };
+
+  const loadSavedCredentials = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('saved_credentials');
+      if (saved) {
+        setSavedCredentials(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error('Error loading credentials:', error);
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    if (!savedCredentials) {
+      Alert.alert('No Saved Credentials', 'Please login with OTP first to enable biometric login.');
+      return;
+    }
+
+    setLoading({ ...loading, biometric: true });
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Authenticate to login',
+        fallbackLabel: 'Use Passcode',
+        cancelLabel: 'Cancel',
+      });
+
+      if (result.success) {
+        // Proceed with login using saved credentials
+        await performLogin(savedCredentials.mobile, savedCredentials.role, savedCredentials.token);
+      }
+    } catch (error) {
+      Alert.alert('Authentication Failed', 'Biometric authentication failed. Please try again.');
+    } finally {
+      setLoading({ ...loading, biometric: false });
+    }
   };
 
   const handleSendOtp = async () => {
     if (!validateMobile()) return;
 
-    setLoading((value) => ({ ...value, otp: true }));
+    setLoading({ ...loading, otp: true });
     try {
-      if (sdkReady) {
-        const response = await OTPWidget.sendOTP({ identifier: formattedIdentifier() });
-        const currentReqId = response?.reqId || response?.request_id || (typeof response === 'string' ? response : response?.data);
-        setReqId(currentReqId || '');
+      const res = await axios.post(`${BASE_URL}/auth/send-otp`, {
+        identity: mobile.trim(),
+        role: selectedRole.toUpperCase()
+      });
+
+      if (res?.data?.success || res?.status === 200) {
         setOtpSent(true);
         setTimer(30);
-        Alert.alert('OTP Sent', `A verification code was sent to +91 ${mobile}.`);
-      } else {
-        const res = await axios.post(`${BASE_URL}/auth/send-otp`, {
-          identity: mobile.trim(),
-          role: selectedRole.toUpperCase()
-        }).catch((err) => err.response);
-
-        if (res?.data?.success || res?.status === 200) {
-          setOtpSent(true);
-          setTimer(30);
-          if (res?.data?.message?.includes('OTP:')) {
-            const extracted = res.data.message.match(/OTP:\s*(\d+)/)?.[1];
-            if (extracted) setDevOtpCode(extracted);
-          }
-          Alert.alert('OTP Sent', res?.data?.message || 'Verification code dispatched to mobile number.');
-        } else {
-          setOtpSent(true);
-          setTimer(30);
-          setDevOtpCode('123456');
-          Alert.alert('OTP Dispatched', 'Code sent: Use 123456 to verify.');
-        }
+        Alert.alert('OTP Sent', 'Verification code dispatched to your mobile number.');
       }
     } catch (error) {
-      Alert.alert('Could Not Send OTP', getErrorMessage(error, 'Please try again later.'));
+      Alert.alert('Could Not Send OTP', error.response?.data?.message || 'Please try again later.');
     } finally {
-      setLoading((value) => ({ ...value, otp: false }));
-    }
-  };
-
-  const handleRetryOtp = async () => {
-    if (!validateMobile()) return;
-
-    setLoading((value) => ({ ...value, otp: true }));
-    try {
-      if (sdkReady && reqId) {
-        await OTPWidget.retryOTP({ reqId, retryChannel: 11 });
-        setTimer(30);
-        Alert.alert('OTP Resent', 'A new verification code was sent by SMS.');
-      } else {
-        await handleSendOtp();
-      }
-    } catch (error) {
-      Alert.alert('Could Not Resend OTP', getErrorMessage(error, 'Please try again.'));
-    } finally {
-      setLoading((value) => ({ ...value, otp: false }));
+      setLoading({ ...loading, otp: false });
     }
   };
 
@@ -160,55 +124,78 @@ export default function LoginScreen({ route, navigation }) {
       return;
     }
 
-    setLoading((value) => ({ ...value, login: true }));
+    setLoading({ ...loading, login: true });
     try {
-      let accessToken = null;
-
-      if (sdkReady && reqId) {
-        const verificationResponse = await OTPWidget.verifyOTP({ reqId, otp });
-        accessToken = getAccessToken(verificationResponse);
-      }
-
-      let loginResponse;
-      if (accessToken) {
-        loginResponse = await axios.post(`${BASE_URL}/auth/login-msg91`, {
-          mobile: mobile.trim(),
-          accessToken,
-          role: selectedRole.toUpperCase()
-        });
-      } else {
-        loginResponse = await axios.post(`${BASE_URL}/auth/login`, {
-          identity: mobile.trim(),
-          otp: otp.trim(),
-          role: selectedRole.toUpperCase()
-        });
-      }
+      const loginResponse = await axios.post(`${BASE_URL}/auth/login`, {
+        identity: mobile.trim(),
+        otp: otp.trim(),
+        role: selectedRole.toUpperCase()
+      });
 
       const token = loginResponse?.data?.token;
-      const refreshToken = loginResponse?.data?.refreshToken;
       const user = loginResponse?.data?.user;
 
       if (!token) throw new Error(loginResponse?.data?.message || 'Authentication failed.');
 
-      // Persist in AuthContext & secure storage
-      await login(user, token, refreshToken);
+      // Save credentials for biometric login
+      await AsyncStorage.setItem('saved_credentials', JSON.stringify({
+        mobile: mobile.trim(),
+        role: selectedRole,
+        token: token
+      }));
 
-      const userRole = (user?.role || selectedRole).toUpperCase();
-      if (userRole === 'SUPER_ADMIN') {
-        navigation.replace('SuperAdminDashboard', { user, token });
-      } else {
-        navigation.replace('PartnerDashboard', { user, token });
+      const result = await login(user, token);
+      if (result.success) {
+        // Navigate based on role
+        const userRole = (user?.role || selectedRole).toUpperCase();
+        if (userRole === 'SUPER_ADMIN') {
+          navigation.replace('SuperAdminDashboard');
+        } else {
+          navigation.replace('PartnerDashboard');
+        }
       }
-
     } catch (error) {
-      Alert.alert('Login Failed', getErrorMessage(error, 'Invalid or expired OTP code.'));
+      Alert.alert('Login Failed', error.response?.data?.message || 'Invalid or expired OTP code.');
     } finally {
-      setLoading((value) => ({ ...value, login: false }));
+      setLoading({ ...loading, login: false });
     }
   };
 
+  const performLogin = async (savedMobile, savedRole, savedToken) => {
+    try {
+      const loginResponse = await axios.post(`${BASE_URL}/auth/login-biometric`, {
+        mobile: savedMobile,
+        role: savedRole.toUpperCase(),
+        token: savedToken
+      });
+
+      const token = loginResponse?.data?.token || savedToken;
+      const user = loginResponse?.data?.user;
+
+      const result = await login(user, token);
+      if (result.success) {
+        const userRole = (user?.role || savedRole).toUpperCase();
+        if (userRole === 'SUPER_ADMIN') {
+          navigation.replace('SuperAdminDashboard');
+        } else {
+          navigation.replace('PartnerDashboard');
+        }
+      }
+    } catch (error) {
+      Alert.alert('Login Failed', 'Session expired. Please login with OTP.');
+    }
+  };
+
+  const validateMobile = () => {
+    if (!/^[6-9]\d{9}$/.test(mobile.trim())) {
+      Alert.alert('Invalid Mobile Number', 'Please enter a valid 10-digit Indian mobile number.');
+      return false;
+    }
+    return true;
+  };
+
   if (loading.login) {
-    return <LogoLoader text="Verifying mobile number & launching dashboard..." />;
+    return <LogoLoader text="Verifying credentials & launching dashboard..." />;
   }
 
   return (
@@ -219,12 +206,37 @@ export default function LoginScreen({ route, navigation }) {
         style={styles.container}
       >
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.backText}>← Back to Home</Text>
-          </TouchableOpacity>
+          {/* Logo Section */}
+          <View style={styles.logoSection}>
+            <Image 
+              source={require('../../assets/logo.jpeg')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.appName}>OitStack</Text>
+            <Text style={styles.tagline}>Financial Services Platform</Text>
+          </View>
+
+          {/* Biometric Login Button */}
+          {biometricAvailable && savedCredentials && (
+            <TouchableOpacity
+              style={styles.biometricBtn}
+              onPress={handleBiometricLogin}
+              disabled={loading.biometric}
+            >
+              {loading.biometric ? (
+                <ActivityIndicator color="#0d47a1" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.biometricIcon}>🔐</Text>
+                  <Text style={styles.biometricText}>Login with Biometrics</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
           <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in securely using an SMS OTP</Text>
+          <Text style={styles.subtitle}>Sign in securely using SMS OTP</Text>
 
           {/* Role Pills */}
           <View style={styles.roleContainer}>
@@ -278,7 +290,7 @@ export default function LoginScreen({ route, navigation }) {
               />
               <TouchableOpacity
                 style={[styles.sendBtn, (timer > 0 || loading.otp) && styles.disabledBtn]}
-                onPress={otpSent ? handleRetryOtp : handleSendOtp}
+                onPress={otpSent ? handleSendOtp : handleSendOtp}
                 disabled={timer > 0 || loading.otp || loading.login}
               >
                 {loading.otp ? (
@@ -290,18 +302,6 @@ export default function LoginScreen({ route, navigation }) {
                 )}
               </TouchableOpacity>
             </View>
-
-            {devOtpCode && (
-              <Text style={styles.devOtpText}>
-                🔑 Dev Mode OTP Code: <Text style={{ fontWeight: 'bold' }}>{devOtpCode}</Text>
-              </Text>
-            )}
-
-            {otpSent && !devOtpCode && (
-              <Text style={styles.infoText}>
-                OTP code dispatched to +91 {mobile.replace(/.(?=.{4})/g, '*')}
-              </Text>
-            )}
           </View>
 
           <TouchableOpacity
@@ -317,9 +317,17 @@ export default function LoginScreen({ route, navigation }) {
             onPress={() => navigation.navigate('Register')}
           >
             <Text style={styles.registerLinkText}>
-              New to GharKaPaisa? <Text style={{ color: '#0d47a1', fontWeight: 'bold' }}>Create Account</Text>
+              New to OitStack? <Text style={{ color: '#0d47a1', fontWeight: 'bold' }}>Create Account</Text>
             </Text>
           </TouchableOpacity>
+
+          {/* Security Notice */}
+          <View style={styles.securityNotice}>
+            <Text style={styles.securityIcon}>🔒</Text>
+            <Text style={styles.securityText}>
+              Your data is encrypted and secure. We use industry-standard security measures.
+            </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -330,8 +338,24 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#ffffff', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
   container: { flex: 1, backgroundColor: '#fff' },
   scroll: { padding: 24, justifyContent: 'center', flexGrow: 1 },
-  backBtn: { alignSelf: 'flex-start', marginBottom: 20 },
-  backText: { color: '#0d47a1', fontSize: 14, fontWeight: '700' },
+  logoSection: { alignItems: 'center', marginBottom: 30 },
+  logo: { width: 80, height: 80, marginBottom: 12 },
+  appName: { fontSize: 28, fontWeight: '900', color: '#0d47a1', marginBottom: 4 },
+  tagline: { fontSize: 13, color: '#64748B', fontWeight: '600' },
+  biometricBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 2,
+    borderColor: '#22C55E',
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 24,
+    gap: 8,
+  },
+  biometricIcon: { fontSize: 20 },
+  biometricText: { fontSize: 14, fontWeight: '700', color: '#15803D' },
   title: { fontSize: 26, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
   subtitle: { fontSize: 13, color: '#64748B', marginBottom: 20 },
   roleContainer: { flexDirection: 'row', gap: 10, marginBottom: 20 },
@@ -392,8 +416,17 @@ const styles = StyleSheet.create({
   },
   loginBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
   disabledBtn: { backgroundColor: '#94A3B8' },
-  infoText: { fontSize: 12, color: '#059669', marginTop: 8, fontWeight: '600' },
-  devOtpText: { fontSize: 12, color: '#D97706', marginTop: 8, fontWeight: '600' },
   registerLink: { marginTop: 20, alignItems: 'center' },
   registerLinkText: { fontSize: 13, color: '#64748B' },
+  securityNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 24,
+    gap: 8,
+  },
+  securityIcon: { fontSize: 16 },
+  securityText: { flex: 1, fontSize: 11, color: '#64748B', fontWeight: '600' },
 });
