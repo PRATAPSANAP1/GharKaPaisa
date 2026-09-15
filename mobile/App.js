@@ -16,6 +16,12 @@ import ApplicationsScreen from './screens/ApplicationsScreen';
 import TeamManagementScreen from './screens/TeamManagementScreen';
 import WalletScreen from './screens/WalletScreen';
 import SettingsScreen from './screens/SettingsScreen';
+import EmployeeDashboardScreen from './screens/EmployeeDashboardScreen';
+import CustomerTrackingScreen from './screens/CustomerTrackingScreen';
+import ChatbotScreen from './screens/ChatbotScreen';
+import NotificationsScreen from './screens/NotificationsScreen';
+import AuditLogsScreen from './screens/AuditLogsScreen';
+import ReportsScreen from './src/screens/ReportsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -45,6 +51,12 @@ function MainNavigator() {
           <Stack.Screen name="PartnerDashboard" component={PartnerDashboardScreen} />
           <Stack.Screen name="PartnerKyc" component={PartnerKycScreen} />
           <Stack.Screen name="SuperAdminDashboard" component={SuperAdminDashboardScreen} />
+          <Stack.Screen name="EmployeeDashboard" component={EmployeeDashboardScreen} />
+          <Stack.Screen name="CustomerTracking" component={CustomerTrackingScreen} />
+          <Stack.Screen name="Chatbot" component={ChatbotScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="AuditLogs" component={AuditLogsScreen} />
+          <Stack.Screen name="Reports" component={ReportsScreen} />
           <Stack.Screen name="Products" component={ProductsScreen} />
           <Stack.Screen name="Applications" component={ApplicationsScreen} />
           <Stack.Screen name="TeamManagement" component={TeamManagementScreen} />
