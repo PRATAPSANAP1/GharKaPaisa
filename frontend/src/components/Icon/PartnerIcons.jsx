@@ -40,6 +40,7 @@ export const Icons = {
   check: (props) => <Icon d="M20 6L9 17l-5-5" {...props} />,
   x: (props) => <Icon d={["M18 6L6 18", "M6 6l12 12"]} {...props} />,
   clock: (props) => <Icon d={["M12 2a10 10 0 100 20A10 10 0 0012 2z", "M12 6v6l4 2"]} {...props} />,
+  time: (props) => <Icon d={["M12 2a10 10 0 100 20A10 10 0 0012 2z", "M12 6v6l4 2"]} {...props} />,
   star: (props) => <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" {...props} />,
   menu: (props) => <Icon d={["M3 12h18", "M3 6h18", "M3 18h18"]} {...props} />,
   logout: (props) => <Icon d={["M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4", "M16 17l5-5-5-5", "M21 12H9"]} {...props} />,
