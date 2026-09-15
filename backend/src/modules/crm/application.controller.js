@@ -102,10 +102,6 @@ const submitApplication = async (req, res, next) => {
     const isStaff = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR'].includes(rawRole);
 
     try {
-      await client.query(`ALTER TABLE applications ALTER COLUMN partner_id DROP NOT NULL`);
-      await client.query(`ALTER TABLE leads ALTER COLUMN partner_id DROP NOT NULL`);
-    } catch (_) { }
-
     let PartnerId = req.body.partner_id || req.body.PartnerId || null;
 
     if (PartnerId) {
@@ -123,7 +119,8 @@ const submitApplication = async (req, res, next) => {
       if (p) {
         PartnerId = p.id;
       } else if (!isStaff) {
-        const partnerCode = 'AG' + String(Math.floor(10000 + Math.random() * 90000));
+        const { rows: [{ nextval: partnerSeq }] } = await client.query(`SELECT nextval('partner_code_seq')`);
+        const partnerCode = 'AG' + String(partnerSeq);
         const { rows: [newP] } = await client.query(`
           INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
           VALUES ($1, $2, $3, $4, 'active', 'pending')
@@ -340,34 +337,6 @@ const submitPublicApplication = async (req, res, next) => {
     const { rows: [sysUser] } = await client.query(`SELECT id FROM users WHERE role='SUPER_ADMIN' LIMIT 1`);
     const sysUserId = sysUser?.id || partnerUserId;
 
-    // Ensure columns exist on tables dynamically
-    try {
-      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
-      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS occupation VARCHAR(100)`);
-      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
-      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
-      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
-      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS monthly_income DECIMAL(15,2)`);
-      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS dob DATE`);
-      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS pan_number VARCHAR(15)`);
-      await client.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
-
-      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS pan_number VARCHAR(15)`);
-      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
-      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
-      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
-      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
-      await client.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS application_id UUID REFERENCES applications(id) ON DELETE SET NULL`);
-
-      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(15)`);
-      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS aadhaar_number VARCHAR(20)`);
-      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS state VARCHAR(100)`);
-      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)`);
-      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS company_name VARCHAR(255)`);
-      await client.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS city VARCHAR(100)`);
-      await client.query(`ALTER TYPE application_status ADD VALUE IF NOT EXISTS 'bank_form_submitted'`);
-    } catch (_) { }
-
     // Upsert customer
     let customerId;
     const { rows: [existingCust] } = await client.query(
@@ -441,7 +410,7 @@ const submitPublicApplication = async (req, res, next) => {
 
     await client.query('COMMIT');
 
-    const targetRedirectUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || 'https://gharkapaisa.in';
+    const targetRedirectUrl = product.partner_url || product.application_url || product.public_url || product.apply_url || product.redirect_url || 'https://oitstack.in';
 
     logger.info(`Public application ${appNumber} submitted routing to Partner ${partnerId}`);
     return created(res, {

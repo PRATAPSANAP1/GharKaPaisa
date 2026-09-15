@@ -95,6 +95,28 @@ const chatbotLimiter = rateLimit({
   message: { success: false, message: 'Rate limit exceeded for chatbot messages. Please wait a moment.' }
 });
 
+// Customer Tracking Limiter - 30 per 15 min per IP/Mobile
+const customerTrackingLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
+  message: { success: false, message: 'Too many tracking requests. Please wait a few minutes and try again.' }
+});
+
+// Document Upload Limiter - 20 per 15 min per IP/User
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
+  message: { success: false, message: 'Too many document uploads. Please wait a few minutes before trying again.' }
+});
+
 // Legacy alias — kept so any existing imports don't break
 const authLimiter = loginLimiter;
 const emailActionLimiter = sendOtpLimiter;
@@ -108,6 +130,8 @@ module.exports = {
   registerLimiter,
   forgotPasswordLimiter,
   chatbotLimiter,
+  customerTrackingLimiter,
+  uploadLimiter,
   // legacy aliases
   authLimiter,
   emailActionLimiter

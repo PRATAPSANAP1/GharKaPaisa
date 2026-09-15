@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 
-const SECRET_KEY = process.env.INVITE_SECRET_KEY || 'GharKaPaisa_Secure_Invite_Secret_2026';
+const SECRET_KEY = process.env.INVITE_SECRET_KEY || 'OitStack_Secure_Invite_Secret_2026';
 const ALGORITHM = 'aes-256-cbc';
 const KEY = crypto.createHash('sha256').update(SECRET_KEY).digest();
 

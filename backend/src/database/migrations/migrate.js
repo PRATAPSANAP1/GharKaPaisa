@@ -4781,6 +4781,17 @@ const migrate = async () => {
     logger.error('Admin Working Hours migration note:', whErr.message);
   }
 
+  // ── High Performance Composite Indexes ──────────────────────────
+  try {
+    await query(`CREATE INDEX IF NOT EXISTS idx_applications_app_num_status ON applications(app_number, status, created_at)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_applications_partner_status ON applications(partner_id, status, created_at)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_partner_profiles_parent_user ON partner_profiles(parent_partner_id, user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_customers_mobile ON customers(mobile)`);
+    logger.info('[Migration] High performance composite indexes verified.');
+  } catch (idxErr) {
+    logger.error('Composite index creation note:', idxErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }
