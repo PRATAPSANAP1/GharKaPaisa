@@ -4733,6 +4733,51 @@ const migrate = async () => {
     logger.warn('partner_id DROP NOT NULL migration note:', dropErr.message);
   }
 
+  // ── Admin Working Hours Migration ──
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS admin_working_hours (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        designation VARCHAR(100),
+        start_time VARCHAR(10) DEFAULT '09:30 AM',
+        end_time VARCHAR(10) DEFAULT '08:00 PM',
+        timezone VARCHAR(50) DEFAULT 'Asia/Kolkata',
+        is_enabled BOOLEAN DEFAULT TRUE,
+        created_by UUID REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS admin_working_hour_extensions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        apply_to VARCHAR(20) DEFAULT 'SPECIFIC',
+        extension_date DATE NOT NULL,
+        original_end_time VARCHAR(10) DEFAULT '08:00 PM',
+        extended_end_time VARCHAR(10) NOT NULL,
+        reason TEXT,
+        created_by UUID REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_awhe_date_user ON admin_working_hour_extensions(extension_date, user_id);
+    `);
+
+    // Ensure default global row exists if empty
+    const { rows: existingGlobal } = await query(`SELECT id FROM admin_working_hours WHERE user_id IS NULL AND designation IS NULL`);
+    if (existingGlobal.length === 0) {
+      await query(`
+        INSERT INTO admin_working_hours (user_id, designation, start_time, end_time, timezone, is_enabled)
+        VALUES (NULL, NULL, '09:30 AM', '08:00 PM', 'Asia/Kolkata', TRUE)
+      `);
+    }
+
+    logger.info('[Migration] Successfully initialized admin_working_hours and admin_working_hour_extensions tables.');
+  } catch (whErr) {
+    logger.error('Admin Working Hours migration note:', whErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

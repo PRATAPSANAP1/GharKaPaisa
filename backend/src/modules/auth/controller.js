@@ -196,6 +196,13 @@ const sendOtp = async (req, res, next) => {
       return error(res, 'No account found with this email or mobile number', 404);
     }
 
+    // Check Working Hours Restriction
+    const workingHoursService = require('./workingHours.service.js');
+    const workingHoursCheck = await workingHoursService.checkUserWorkingHours(user);
+    if (!workingHoursCheck.allowed) {
+      return error(res, workingHoursCheck.message, 403);
+    }
+
     const emailIdentity = user.email ? normalizeIdentity(user.email) : null;
 
     // Generate random 6-digit OTP
@@ -435,6 +442,13 @@ const login = async (req, res, next) => {
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator. Please contact support.', 403);
 
+    // Check Working Hours Restriction
+    const workingHoursService = require('./workingHours.service.js');
+    const workingHoursCheck = await workingHoursService.checkUserWorkingHours(user);
+    if (!workingHoursCheck.allowed) {
+      return error(res, workingHoursCheck.message, 403);
+    }
+
     // Validate OTP
     const otpHash = crypto.createHmac('sha256', OTP_PEPPER).update(otp).digest('hex');
     const { rows: [record] } = await query(`
@@ -551,6 +565,13 @@ const loginWithMsg91 = async (req, res, next) => {
     if (isLocked(user)) return error(res, 'Account is temporarily locked. Try again later.', 423);
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator. Please contact support.', 403);
+
+    // Check Working Hours Restriction
+    const workingHoursService = require('./workingHours.service.js');
+    const workingHoursCheck = await workingHoursService.checkUserWorkingHours(user);
+    if (!workingHoursCheck.allowed) {
+      return error(res, workingHoursCheck.message, 403);
+    }
 
     try {
       await verifyAccessToken({ accessToken, expectedMobile: mobile });
@@ -1097,6 +1118,13 @@ const loginPassword = async (req, res, next) => {
 
     if (user.status === 'suspended') return error(res, 'Your account has been suspended. Please contact support.', 403);
     if (user.status === 'blocked') return error(res, 'Your account has been blocked by the administrator. Please contact support.', 403);
+
+    // Check Working Hours Restriction BEFORE password verification
+    const workingHoursService = require('./workingHours.service.js');
+    const workingHoursCheck = await workingHoursService.checkUserWorkingHours(user);
+    if (!workingHoursCheck.allowed) {
+      return error(res, workingHoursCheck.message, 403);
+    }
 
     // Generate JWT (15-minute access token)
     const token = jwt.sign(

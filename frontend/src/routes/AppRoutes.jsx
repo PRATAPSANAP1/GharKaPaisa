@@ -97,6 +97,7 @@ import SuperAdminManageApplications from '../modules/super-admin/crm/ManageAppli
 import NotificationCenter from '../modules/notifications/NotificationCenter';
 import ManageAnnouncements from '../modules/super-admin/notifications/ManageAnnouncements';
 import AdminProfilePage from '../modules/super-admin/profile/AdminProfilePage';
+import AdminWorkingHours from '../modules/super-admin/working-hours/AdminWorkingHours';
 
 
 // Partner Pages
@@ -378,6 +379,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/reports/referral-analytics" element={<ReferralAnalyticsView />} />
             <Route path="/super-admin/audit" element={<AuditLogs />} />
             <Route path="/super-admin/audit-logs" element={<AuditLogs />} />
+            <Route path="/super-admin/working-hours" element={<AdminWorkingHours />} />
             <Route path="/super-admin/banners" element={<ManageBanners />} />
             <Route path="/super-admin/products/:categorySlug" element={<ManageAdminProducts />} />
             <Route path="/super-admin/products" element={<ManageAdminProducts />} />

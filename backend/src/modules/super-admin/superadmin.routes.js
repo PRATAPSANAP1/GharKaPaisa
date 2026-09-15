@@ -9,6 +9,7 @@ const appCtrl = require('../crm/application.controller.js');
 const notifCtrl = require('../notifications/controller.js');
 const productCtrl = require('../products/controller.js');
 const reportCtrl = require('../reports/controller.js');
+const workingHoursCtrl = require('./workingHours.controller.js');
 
 // Require authentication and super_admin authorization globally for this router
 router.use(jwtAuth);
@@ -29,6 +30,12 @@ router.post('/block-user', ctrl.blockUser);
 router.post('/update-partner-status', ctrl.updatePartnerStatus);
 router.get('/audit-logs', ctrl.getAuditLogs);
 router.get('/referral-analytics', ctrl.getReferralAnalytics);
+
+// Working Hours Management
+router.get('/working-hours', workingHoursCtrl.getWorkingHoursConfig);
+router.put('/working-hours', workingHoursCtrl.updateWorkingHours);
+router.post('/working-hours/extend', workingHoursCtrl.extendWorkingHours);
+router.get('/working-hours/extensions', workingHoursCtrl.getExtensionHistory);
 
 // Dynamic Product Link Management endpoints
 router.post('/products/link', linkCtrl.saveProductLink);
