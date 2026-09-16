@@ -2616,5 +2616,121 @@ router.post('/:id/verify-section', async (req, res, next) => {
   }
 });
 
+// POST /api/v1/employees/:id/kyc-verify — Super Admin bulk or document-level KYC verification
+router.post('/:id/kyc-verify', async (req, res, next) => {
+  try {
+    const empId = req.params.id;
+    const { kyc_status, review_notes, pan_action, pan_reason, aadhaar_action, aadhaar_reason, bank_proof_action, bank_proof_reason, video_action, video_reason } = req.body;
+
+    // 1. Bulk KYC verification (Approve All or Reject All)
+    if (kyc_status) {
+      const isApproved = String(kyc_status).toUpperCase() === 'VERIFIED' || String(kyc_status).toUpperCase() === 'APPROVED';
+      const statusVal = isApproved ? 'APPROVED' : 'REJECTED';
+      const kycVal = isApproved ? 'VERIFIED' : 'REJECTED';
+
+      // Update employee_kyc table
+      await query(`
+        UPDATE employee_kyc
+        SET kyc_status = $1,
+            pan_status = $1, pan_verified = $2, pan_rejection_reason = $3,
+            aadhaar_status = $1, aadhaar_verified = $2, aadhaar_rejection_reason = $3,
+            bank_status = $1, bank_verified = $2, bank_rejection_reason = $3,
+            updated_at = NOW()
+        WHERE employee_id = $4
+      `, [kycVal, isApproved, isApproved ? null : (review_notes || 'KYC rejected'), empId]).catch(() => {});
+
+      // Update employee_documents table
+      const docTypes = ['pan', 'aadhaar', 'bank_proof'];
+      for (const dType of docTypes) {
+        await query(`
+          INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, updated_at)
+          VALUES ($1, $2, $3, $4, $5, NOW())
+          ON CONFLICT DO NOTHING
+        `, [empId, dType, statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id]).catch(() => {});
+
+        await query(`
+          UPDATE employee_documents
+          SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+          WHERE employee_id = $4 AND LOWER(document_type) = LOWER($5)
+        `, [statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId, dType]).catch(() => {});
+      }
+
+      // Update video terms acceptance
+      await query(`
+        UPDATE employee_terms_acceptance
+        SET verification_status = $1, verification_notes = $2, verified_by = $3, updated_at = NOW()
+        WHERE employee_id = $4
+      `, [kycVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, empId]).catch(() => {});
+
+      // Update employee account status
+      await query(`
+        UPDATE employees
+        SET activation_status = $1, employee_status = $2
+        WHERE id = $3
+      `, [isApproved ? 'APPROVED' : 'REJECTED', isApproved ? 'ACTIVE' : 'ONBOARDING', empId]);
+    }
+
+    // 2. Individual document actions (pan_action, bank_proof_action, etc.)
+    const docActions = [
+      { type: 'pan', action: pan_action, reason: pan_reason },
+      { type: 'aadhaar', action: aadhaar_action, reason: aadhaar_reason },
+      { type: 'bank_proof', action: bank_proof_action, reason: bank_proof_reason },
+      { type: 'video', action: video_action, reason: video_reason }
+    ];
+
+    for (const item of docActions) {
+      if (item.action) {
+        const finalStatus = (String(item.action).toUpperCase() === 'VERIFIED' || String(item.action).toUpperCase() === 'APPROVED') ? 'APPROVED' : 'REJECTED';
+        const kycStatusVal = finalStatus === 'APPROVED' ? 'VERIFIED' : 'REJECTED';
+
+        // Check/update employee_documents
+        const existingDoc = await query(
+          `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) = LOWER($2) ORDER BY created_at DESC LIMIT 1`,
+          [empId, item.type]
+        );
+
+        if (existingDoc.rows.length > 0) {
+          await query(`
+            UPDATE employee_documents 
+            SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+            WHERE id = $4
+          `, [finalStatus, finalStatus === 'REJECTED' ? (item.reason || 'Document rejected') : null, req.user.id, existingDoc.rows[0].id]);
+        } else {
+          await query(`
+            INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by)
+            VALUES ($1, $2, $3, $4, $5)
+          `, [empId, item.type, finalStatus, finalStatus === 'REJECTED' ? (item.reason || 'Document rejected') : null, req.user.id]);
+        }
+
+        // Sync to legacy tables
+        if (item.type === 'pan') {
+          await query(`UPDATE employee_kyc SET pan_status = $1, pan_verified = $2, pan_rejection_reason = $3 WHERE employee_id = $4`,
+            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(() => {});
+        } else if (item.type === 'aadhaar') {
+          await query(`UPDATE employee_kyc SET aadhaar_status = $1, aadhaar_verified = $2, aadhaar_rejection_reason = $3 WHERE employee_id = $4`,
+            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(() => {});
+        } else if (item.type === 'bank_proof') {
+          await query(`UPDATE employee_kyc SET bank_status = $1, bank_verified = $2, bank_rejection_reason = $3 WHERE employee_id = $4`,
+            [kycStatusVal, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? item.reason : null, empId]).catch(() => {});
+        } else if (item.type === 'video') {
+          await query(`UPDATE employee_terms_acceptance SET verification_status = $1, verification_notes = $2, verified_by = $3 WHERE employee_id = $4`,
+            [kycStatusVal, item.reason || null, req.user.id, empId]).catch(() => {});
+        }
+      }
+    }
+
+    const updatedState = await calculateEmployeeVerificationState(empId);
+
+    res.json({
+      success: true,
+      message: 'Employee KYC verification status updated successfully',
+      data: updatedState
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
+
 

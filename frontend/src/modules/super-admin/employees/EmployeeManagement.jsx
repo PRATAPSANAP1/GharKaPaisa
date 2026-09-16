@@ -932,13 +932,16 @@ export default function EmployeeManagement() {
 
     try {
       const payload = {
+        document_type: docType,
+        status: action,
+        rejection_reason: reason ? reason.trim() : null,
         [`${docType}_action`]: action,
         [`${docType}_reason`]: reason ? reason.trim() : null
       };
 
-      const res = await api.post(`/employees/${empId}/kyc-verify`, payload);
+      const res = await api.post(`/employees/${empId}/verify-document`, payload);
       if (res.data.success) {
-        alert(`${docType.toUpperCase()} marked as ${action}`);
+        alert(`${docType.toUpperCase().replace('_', ' ')} marked as ${action}`);
         fetchData();
         if (selectedEmp && selectedEmp.id === empId) {
           handleOpen360View(selectedEmp);
