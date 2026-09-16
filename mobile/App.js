@@ -27,6 +27,9 @@ import CareersScreen from './screens/CareersScreen';
 import PolicyScreen from './screens/PolicyScreen';
 import CategoryProductsScreen from './screens/CategoryProductsScreen';
 import ProductDetailScreen from './screens/ProductDetailScreen';
+import PartnerResourcesScreen from './screens/PartnerResourcesScreen';
+import EmployeeToolsScreen from './screens/EmployeeToolsScreen';
+import HrDashboardScreen from './screens/HrDashboardScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -57,6 +60,9 @@ function MainNavigator() {
           <Stack.Screen name="Policy" component={PolicyScreen} />
           <Stack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
           <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+          <Stack.Screen name="PartnerResources" component={PartnerResourcesScreen} />
+          <Stack.Screen name="EmployeeTools" component={EmployeeToolsScreen} />
+          <Stack.Screen name="HrDashboard" component={HrDashboardScreen} />
           <Stack.Screen name="Dashboard" component={PartnerDashboardScreen} />
           <Stack.Screen name="PartnerDashboard" component={PartnerDashboardScreen} />
           <Stack.Screen name="PartnerKyc" component={PartnerKycScreen} />
