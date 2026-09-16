@@ -2493,18 +2493,34 @@ router.post('/:id/verify-document', async (req, res, next) => {
 
     const finalStatus = uppercaseStatus === 'VERIFIED' ? 'APPROVED' : uppercaseStatus;
 
+    const docTypeLower = document_type.toLowerCase();
+    const isVideoDoc = ['video', 'terms_video', 'video_verification'].includes(docTypeLower);
+
     // Check if document exists in employee_documents
-    const existingDoc = await query(
-      `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) = LOWER($2) ORDER BY created_at DESC LIMIT 1`,
-      [empId, document_type]
-    );
+    const existingDoc = isVideoDoc
+      ? await query(
+          `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) IN ('video', 'terms_video', 'video_verification') ORDER BY created_at DESC LIMIT 1`,
+          [empId]
+        )
+      : await query(
+          `SELECT * FROM employee_documents WHERE employee_id = $1 AND LOWER(document_type) = LOWER($2) ORDER BY created_at DESC LIMIT 1`,
+          [empId, document_type]
+        );
 
     if (existingDoc.rows.length > 0) {
-      await query(`
-        UPDATE employee_documents 
-        SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
-        WHERE id = $4
-      `, [finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id, existingDoc.rows[0].id]);
+      if (isVideoDoc) {
+        await query(`
+          UPDATE employee_documents 
+          SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+          WHERE employee_id = $4 AND LOWER(document_type) IN ('video', 'terms_video', 'video_verification')
+        `, [finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id, empId]);
+      } else {
+        await query(`
+          UPDATE employee_documents 
+          SET verification_status = $1, rejection_reason = $2, verified_by = $3, updated_at = NOW()
+          WHERE id = $4
+        `, [finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id, existingDoc.rows[0].id]);
+      }
     } else {
       await query(`
         INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url, document_key)
@@ -2513,7 +2529,6 @@ router.post('/:id/verify-document', async (req, res, next) => {
     }
 
     // Sync legacy columns in employee_kyc and terms acceptance if applicable
-    const docTypeLower = document_type.toLowerCase();
     if (docTypeLower === 'pan') {
       await query(`
         UPDATE employee_kyc 
@@ -2532,7 +2547,7 @@ router.post('/:id/verify-document', async (req, res, next) => {
         SET bank_status = $1, bank_verified = $2, bank_rejection_reason = $3 
         WHERE employee_id = $4
       `, [finalStatus === 'APPROVED' ? 'VERIFIED' : finalStatus, finalStatus === 'APPROVED', finalStatus === 'REJECTED' ? rejection_reason : null, empId]).catch(() => {});
-    } else if (['video', 'terms_video', 'video_verification'].includes(docTypeLower)) {
+    } else if (isVideoDoc) {
       const vStatus = finalStatus === 'APPROVED' ? 'VERIFIED' : (finalStatus === 'REJECTED' ? 'REJECTED' : 'UNDER_REVIEW');
       await query(`
         INSERT INTO employee_terms_acceptance (

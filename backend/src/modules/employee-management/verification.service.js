@@ -211,7 +211,7 @@ async function calculateEmployeeVerificationState(employeeId) {
     const docSt = String(videoDoc.verification_status || '').toUpperCase();
     if (docSt === 'APPROVED' || docSt === 'VERIFIED') {
       videoStatus = 'VERIFIED';
-    } else if (docSt === 'REJECTED' && videoStatus !== 'VERIFIED') {
+    } else if (docSt === 'REJECTED') {
       videoStatus = 'REJECTED';
       videoNotes = videoDoc.rejection_reason || videoNotes;
     } else if (videoDoc.document_url && videoStatus === 'NOT_COMPLETED') {
@@ -252,14 +252,12 @@ async function calculateEmployeeVerificationState(employeeId) {
   const isVideoVerified = videoStatus === 'VERIFIED';
   const isInfoVerified = infoStatus === 'VERIFIED';
 
-  const kycStatusInDb = kyc?.kyc_status ? String(kyc.kyc_status).toUpperCase() : null;
-
   let overallStatus = 'PENDING';
-  if (kycStatusInDb === 'VERIFIED' || (isAllDocsApproved && isVideoVerified) || employee.activation_status === 'APPROVED') {
+  if ((isAllDocsApproved && isVideoVerified) || employee.activation_status === 'APPROVED') {
     overallStatus = 'VERIFIED';
-  } else if (kycStatusInDb === 'REJECTED' || employee.activation_status === 'REJECTED') {
+  } else if (missingItems.some(i => i.status === 'REJECTED')) {
     overallStatus = 'REJECTED';
-  } else if (approvedDocsCount > 0 || videoStatus === 'UNDER_REVIEW') {
+  } else if (approvedDocsCount > 0 || videoStatus === 'UNDER_REVIEW' || underReviewItems.length > 0) {
     overallStatus = 'UNDER_REVIEW';
   }
 
@@ -276,20 +274,20 @@ async function calculateEmployeeVerificationState(employeeId) {
       SET activation_status = 'REJECTED'
       WHERE id = $1
     `, [employeeId]).catch(() => {});
+  } else if (overallStatus === 'UNDER_REVIEW') {
+    await query(`
+      UPDATE employees 
+      SET activation_status = 'PENDING'
+      WHERE id = $1
+    `, [employeeId]).catch(() => {});
   }
 
   if (kyc) {
-    const finalCalculatedKyc = (kycStatusInDb === 'VERIFIED' || overallStatus === 'VERIFIED') 
-      ? 'VERIFIED' 
-      : (kycStatusInDb === 'REJECTED' || overallStatus === 'REJECTED' 
-          ? 'REJECTED' 
-          : (approvedDocsCount > 0 || videoStatus === 'UNDER_REVIEW' ? 'UNDER_REVIEW' : 'PENDING'));
-
     await query(`
       UPDATE employee_kyc 
       SET kyc_status = $2 
       WHERE id = $1
-    `, [kyc.id, finalCalculatedKyc]).catch(() => {});
+    `, [kyc.id, overallStatus]).catch(() => {});
   }
 
   return {
