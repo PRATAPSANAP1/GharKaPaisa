@@ -2507,9 +2507,9 @@ router.post('/:id/verify-document', async (req, res, next) => {
       `, [finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id, existingDoc.rows[0].id]);
     } else {
       await query(`
-        INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url)
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `, [empId, document_type, finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id, 'upload document']);
+        INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url, document_key)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `, [empId, document_type, finalStatus, finalStatus === 'REJECTED' ? (rejection_reason || 'Document rejected') : null, req.user.id, 'upload document', `${document_type}_key`]);
     }
 
     // Sync legacy columns in employee_kyc and terms acceptance if applicable
@@ -2643,10 +2643,10 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
       const docTypes = ['pan', 'aadhaar', 'bank_proof'];
       for (const dType of docTypes) {
         await query(`
-          INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url, updated_at)
-          VALUES ($1, $2, $3, $4, $5, $6, NOW())
+          INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url, document_key, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
           ON CONFLICT DO NOTHING
-        `, [empId, dType, statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, 'upload document']).catch(() => {});
+        `, [empId, dType, statusVal, isApproved ? null : (review_notes || 'KYC rejected'), req.user.id, 'upload document', `${dType}_key`]).catch(() => {});
 
         await query(`
           UPDATE employee_documents
@@ -2697,9 +2697,9 @@ router.post('/:id/kyc-verify', async (req, res, next) => {
           `, [finalStatus, finalStatus === 'REJECTED' ? (item.reason || 'Document rejected') : null, req.user.id, existingDoc.rows[0].id]);
         } else {
           await query(`
-            INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url)
-            VALUES ($1, $2, $3, $4, $5, $6)
-          `, [empId, item.type, finalStatus, finalStatus === 'REJECTED' ? (item.reason || 'Document rejected') : null, req.user.id, 'upload document']);
+            INSERT INTO employee_documents (employee_id, document_type, verification_status, rejection_reason, verified_by, document_url, document_key)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+          `, [empId, item.type, finalStatus, finalStatus === 'REJECTED' ? (item.reason || 'Document rejected') : null, req.user.id, 'upload document', `${item.type}_key`]);
         }
 
         // Sync to legacy tables
