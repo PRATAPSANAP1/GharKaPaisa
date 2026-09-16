@@ -1584,7 +1584,7 @@ const listApplications = async (req, res, next) => {
     if (isRemarkOperatorUser && req.user?.id) {
       const remarkAaaExists = hasAaaTable ? `OR EXISTS (SELECT 1 FROM application_admin_assignments WHERE admin_user_id = '${req.user.id}' AND application_id = combined.id)` : '';
       const remarkAaaCompleted = hasAaaTable ? `AND combined.id NOT IN (SELECT application_id FROM application_admin_assignments WHERE admin_user_id = '${req.user.id}' AND status = 'COMPLETED')` : '';
-      remarkOperatorFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') ${remarkAaaExists}) AND COALESCE(combined.remark_status, 'PENDING') = 'PENDING' ${remarkAaaCompleted}`;
+      remarkOperatorFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') ${remarkAaaExists}) AND COALESCE(combined.remark_status, 'PENDING') = 'PENDING' ${remarkAaaCompleted} AND combined.status NOT IN ('rejected', 'declined', 'cancelled') AND COALESCE(combined.final_status, '') NOT IN ('Rejected', 'Declined') AND LOWER(COALESCE(combined.pan_check, '')) NOT IN ('rejected', 'decline', 'declined') AND LOWER(COALESCE(combined.bank_remark, '')) NOT LIKE '%pan%reject%'`;
     }
 
     if (!isPartnerOrTeam && req.user?.id) {
@@ -1842,6 +1842,7 @@ const listApplications = async (req, res, next) => {
         ${countOpHeadBankFilterSQL}
         ${salesExecFilterSQL}
         ${panCheckerFilterSQL}
+        ${remarkOperatorFilterSQL}
     `, countQueryParams);
 
     // Compute real-time canonical status counts directly from applications table
