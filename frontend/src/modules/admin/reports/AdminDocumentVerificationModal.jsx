@@ -1031,7 +1031,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
             
             {/* 1. QD Tab (Hidden for Digital processes) */}
-            {!isDigitalProcess && (initialTabKey === 'qd' || showAllTabs) && (
+            {(initialTabKey === 'qd' || showAllTabs || isDigitalProcess) && (
               <button
                 onClick={() => setActiveTab('qd')}
                 style={{
@@ -1050,7 +1050,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   gap: '6px'
                 }}
               >
-                <FileText size={14} /> QD (Quick Details) {!canEditQd && <Lock size={12} style={{ color: '#94a3b8' }} />}
+                <FileText size={14} /> {isDigitalProcess ? 'Edit Digital Info' : 'QD / Edit Customer Details'} {!canEditQd && <Lock size={12} style={{ color: '#94a3b8' }} />}
               </button>
             )}
 
@@ -1133,7 +1133,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#1e3a8a', margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <FileText size={16} /> QD (Customer Quick Details)
+                      <FileText size={16} /> {isDigitalProcess ? 'Edit Digital Info (Customer Details)' : 'QD (Customer Details / Form 1 / 2 / 3)'}
                     </h4>
                     {!canEditQd && (
                       <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '20px', background: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
