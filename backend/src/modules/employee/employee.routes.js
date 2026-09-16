@@ -6,7 +6,7 @@ const roleCheck = require('../../middleware/authorization/role.middleware');
 const logger = require('../../config/logger');
 const { uploadToS3 } = require('../../services/aws/s3.service');
 const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB limit for video & KYC uploads
 const { calculateEmployeeVerificationState } = require('../employee-management/verification.service');
 
 // ── Public Employee Authentication (OTP Flow) ──────────────────────────────
