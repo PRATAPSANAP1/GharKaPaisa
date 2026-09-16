@@ -134,69 +134,113 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         return;
       }
 
-      // Generate CSV
+      // Determine relevant bank names for assigned banks and exported applications
+      const userAssignedBanks = (user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || [])).map(b => (b.name || b.bank_name || b.short_code || '').toLowerCase());
+      const exportedBankNames = filtered.map(a => (a.bank_name || a.bank_code || a.bank || '').toLowerCase());
+      const allRelevantBanks = [...userAssignedBanks, ...exportedBankNames];
+
+      const hasSbi = allRelevantBanks.some(b => b.includes('sbi') || b.includes('state bank'));
+      const hasHdfc = allRelevantBanks.some(b => b.includes('hdfc') || b.includes('tata'));
+      const isSuperAdminOrGlobal = (userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN') && userAssignedBanks.length === 0;
+
+      // Generate CSV dynamically based on assigned/exported bank form fields
       let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
-      csvContent += 'Application No,Customer Name,Customer Mobile,Email,PAN Number,City,State,Pincode,Product Name,Bank Name,Process Type,Referrer / Code,Status,Commission Amount,APPCODE Status,Soft Approval Status,IQA Stage,Bank Application Number,VKYC Stage,VKYC Link,Dispatch Status,Bank Current Lead Status,Final Status,App File Generated,Bank Remark,Decline Reason,Eligible Re-QD,Approved Amount,Created Date\n';
 
-      filtered.forEach(a => {
-        const appNo = a.app_number || a.application_no || a.id || '';
-        const custName = a.customer_name || a.full_name || 'N/A';
-        const rawMobile = a.customer_mobile || a.mobile || 'N/A';
-        const custMobile = hideCustomerMobile ? 'REDACTED' : rawMobile;
-        const custEmail = a.customer_email || a.email || 'N/A';
-        
-        const rawPan = a.pan_number || a.pan || '';
-        let panNo = 'NA';
-        if (rawPan && String(rawPan).trim() !== '' && String(rawPan).toUpperCase() !== 'N/A' && String(rawPan).toUpperCase() !== 'NA') {
-          const strPan = String(rawPan).trim().toUpperCase();
-          if (hideCustomerMobile) {
-            panNo = strPan.length >= 6 ? 'XXXXXX' + strPan.slice(6) : 'XXXXXX';
-          } else {
-            panNo = strPan;
+      const colDefs = [
+        { header: 'Application No', getVal: a => a.app_number || a.application_no || a.id || '' },
+        { header: 'Customer Name', getVal: a => a.customer_name || a.full_name || 'N/A' },
+        { header: 'Customer Mobile', getVal: a => hideCustomerMobile ? 'REDACTED' : (a.customer_mobile || a.mobile || 'N/A') },
+        { header: 'Email', getVal: a => a.customer_email || a.email || 'N/A' },
+        { header: 'PAN Number', getVal: a => {
+            const rawPan = a.pan_number || a.pan || '';
+            if (!rawPan || String(rawPan).trim() === '' || String(rawPan).toUpperCase() === 'N/A' || String(rawPan).toUpperCase() === 'NA') return 'NA';
+            const strPan = String(rawPan).trim().toUpperCase();
+            return hideCustomerMobile ? (strPan.length >= 6 ? 'XXXXXX' + strPan.slice(6) : 'XXXXXX') : strPan;
           }
-        }
+        },
+        { header: 'City', getVal: a => a.city || 'N/A' },
+        { header: 'State', getVal: a => a.state || 'N/A' },
+        { header: 'Pincode', getVal: a => a.pincode || 'N/A' },
+        { header: 'Product Name', getVal: a => a.product_name || 'N/A' },
+        { header: 'Bank Name', getVal: a => a.bank_name || 'N/A' },
+        { header: 'Process Type', getVal: a => (a.process_type || a.process_by || 'Direct Link').replace(/_/g, ' ') },
+        { header: 'Referrer / Code', getVal: a => a.emp_code || a.Partner_code || a.partner_code || a.referrer_code || 'N/A' },
+        { header: 'Status', getVal: a => (a.status || 'pending').replace(/_/g, ' ') },
+        { header: 'Commission Amount', getVal: a => a.commission_amount || 0 }
+      ];
 
-        const city = a.city || 'N/A';
-        const state = a.state || 'N/A';
-        const pincode = a.pincode || 'N/A';
-        const prodName = a.product_name || 'N/A';
-        const bankName = a.bank_name || 'N/A';
-        const process = (a.process_type || a.process_by || 'Direct Link').replace(/_/g, ' ');
-        const refCode = a.emp_code || a.Partner_code || a.partner_code || a.referrer_code || 'N/A';
-        const status = (a.status || 'pending').replace(/_/g, ' ');
-        const comm = a.commission_amount || 0;
+      // SBI-exclusive bank form fields
+      if (hasSbi || isSuperAdminOrGlobal) {
+        colDefs.push(
+          { header: 'APPCODE Status', getVal: a => a.appcode_status || 'NA' },
+          { header: 'Soft Approval Status', getVal: a => a.soft_approval_status || 'NA' },
+          { header: 'IQA Stage', getVal: a => a.iqa_stage || 'NA' }
+        );
+      }
 
-        // Determine bank context for bank-specific remark/final form isolation
-        const rawBankStr = (a.bank_name || a.bank_code || a.bank || '').toLowerCase();
-        const isSbiRec = rawBankStr.includes('sbi') || rawBankStr.includes('state bank');
-        const isHdfcRec = rawBankStr.includes('hdfc');
+      // Bank Reference No & VKYC
+      colDefs.push(
+        { header: 'Bank Application Number', getVal: a => {
+            const raw = a.bank_application_number || a.bank_ref_number || '';
+            const sysAppNo = a.app_number || '';
+            return (!raw || String(raw).trim() === '' || String(raw).trim() === String(sysAppNo).trim() || String(raw).toUpperCase() === 'N/A' || String(raw).toUpperCase() === 'NA') ? 'NA' : String(raw).trim();
+          }
+        },
+        { header: 'VKYC Stage', getVal: a => a.vkyc_stage || a.kyc_stage || a.vkyc_status || 'NA' },
+        { header: 'VKYC Link', getVal: a => (a.vkyc_url && String(a.vkyc_url).trim() !== '' && String(a.vkyc_url).toUpperCase() !== 'N/A') ? a.vkyc_url : 'NA' }
+      );
 
-        // SBI-exclusive remark & final form fields
-        const appcodeStatus = isSbiRec ? (a.appcode_status || 'NA') : 'NA';
-        const softApprovalStatus = isSbiRec ? (a.soft_approval_status || 'NA') : 'NA';
-        const iqaStage = isSbiRec ? (a.iqa_stage || 'NA') : 'NA';
-        const dispatchStatus = isSbiRec ? (a.dispatch_status || 'NA') : 'NA';
-        const appFileGen = isSbiRec ? (a.app_file_generated || 'NA') : 'NA';
+      if (hasSbi || isSuperAdminOrGlobal) {
+        colDefs.push(
+          { header: 'Dispatch Status', getVal: a => a.dispatch_status || 'NA' }
+        );
+      }
 
-        // HDFC-exclusive remark & final form fields
-        const bankCurrentLeadStatus = isHdfcRec ? (a.bank_current_lead_status || 'NA') : 'NA';
+      // HDFC-exclusive bank form fields
+      if (hasHdfc || isSuperAdminOrGlobal) {
+        colDefs.push(
+          { header: 'Bank Current Lead Status', getVal: a => a.bank_current_lead_status || 'NA' }
+        );
+      }
 
-        const rawBankAppNo = a.bank_application_number || a.bank_ref_number || '';
-        const sysAppNo = a.app_number || '';
-        const bankAppNo = (!rawBankAppNo || String(rawBankAppNo).trim() === '' || String(rawBankAppNo).trim() === String(sysAppNo).trim() || String(rawBankAppNo).toUpperCase() === 'N/A' || String(rawBankAppNo).toUpperCase() === 'NA') ? 'NA' : String(rawBankAppNo).trim();
-        
-        const rawVkyc = a.vkyc_stage || a.kyc_stage || a.vkyc_status || '';
-        const vkycStage = (isSbiRec || isHdfcRec) ? (rawVkyc || 'NA') : (rawVkyc || 'NA');
-        const vkycLink = (a.vkyc_url && String(a.vkyc_url).trim() !== '' && String(a.vkyc_url).toUpperCase() !== 'N/A') ? a.vkyc_url : 'NA';
-        
-        const finalStatus = (a.final_status && String(a.final_status).trim() !== '' && String(a.final_status).toUpperCase() !== 'N/A') ? String(a.final_status).replace(/"/g, '""') : 'NA';
-        const bankRemark = (a.bank_remark && String(a.bank_remark).trim() !== '' && String(a.bank_remark).toUpperCase() !== 'N/A') ? String(a.bank_remark).replace(/"/g, '""') : 'NA';
-        const declineReason = (a.decline_reason && String(a.decline_reason).trim() !== '' && String(a.decline_reason).toUpperCase() !== 'N/A') ? String(a.decline_reason).replace(/"/g, '""') : 'NA';
-        const eligibleReqd = (a.eligible_reqd && String(a.eligible_reqd).trim() !== '' && String(a.eligible_reqd).toUpperCase() !== 'N/A') ? String(a.eligible_reqd).replace(/"/g, '""') : 'NA';
-        const appAmt = a.approved_amount || 0;
-        const date = a.created_at ? new Date(a.created_at).toLocaleDateString('en-IN') : 'N/A';
+      // Bank Final Status
+      colDefs.push(
+        { header: 'Final Status', getVal: a => (a.final_status && String(a.final_status).trim() !== '' && String(a.final_status).toUpperCase() !== 'N/A') ? String(a.final_status).replace(/"/g, '""') : 'NA' }
+      );
 
-        csvContent += `"${appNo}","${custName}","${custMobile}","${custEmail}","${panNo}","${city}","${state}","${pincode}","${prodName}","${bankName}","${process}","${refCode}","${status}","${comm}","${appcodeStatus}","${softApprovalStatus}","${iqaStage}","${bankAppNo}","${vkycStage}","${vkycLink}","${dispatchStatus}","${bankCurrentLeadStatus}","${finalStatus}","${appFileGen}","${bankRemark}","${declineReason}","${eligibleReqd}","${appAmt}","${date}"\n`;
+      if (hasSbi || isSuperAdminOrGlobal) {
+        colDefs.push(
+          { header: 'App File Generated', getVal: a => a.app_file_generated || 'NA' }
+        );
+      }
+
+      // Bank Remarks & Decline Reason
+      colDefs.push(
+        { header: 'Bank Remark', getVal: a => (a.bank_remark && String(a.bank_remark).trim() !== '' && String(a.bank_remark).toUpperCase() !== 'N/A') ? String(a.bank_remark).replace(/"/g, '""') : 'NA' },
+        { header: 'Decline Reason', getVal: a => (a.decline_reason && String(a.decline_reason).trim() !== '' && String(a.decline_reason).toUpperCase() !== 'N/A') ? String(a.decline_reason).replace(/"/g, '""') : 'NA' }
+      );
+
+      if (hasHdfc || isSuperAdminOrGlobal) {
+        colDefs.push(
+          { header: 'Eligible Re-QD', getVal: a => (a.eligible_reqd && String(a.eligible_reqd).trim() !== '' && String(a.eligible_reqd).toUpperCase() !== 'N/A') ? String(a.eligible_reqd).replace(/"/g, '""') : 'NA' }
+        );
+      }
+
+      colDefs.push(
+        { header: 'Approved Amount', getVal: a => a.approved_amount || 0 },
+        { header: 'Created Date', getVal: a => a.created_at ? new Date(a.created_at).toLocaleDateString('en-IN') : 'N/A' }
+      );
+
+      // Header row
+      csvContent += colDefs.map(c => c.header).join(',') + '\n';
+
+      // Application rows
+      filtered.forEach(a => {
+        const rowVals = colDefs.map(c => {
+          const val = c.getVal(a);
+          return `"${String(val).replace(/"/g, '""')}"`;
+        });
+        csvContent += rowVals.join(',') + '\n';
       });
 
       const encodedUri = encodeURI(csvContent);

@@ -635,71 +635,97 @@ export default function PartnerApplications() {
       alert('No application records found matching current filters to export.');
       return;
     }
+    const userAssignedBanks = (user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || [])).map(b => (b.name || b.bank_name || b.short_code || '').toLowerCase());
+    const exportedBankNames = applications.map(a => (a.bank_name || a.bank_code || a.bank || '').toLowerCase());
+    const allRelevantBanks = [...userAssignedBanks, ...exportedBankNames];
+
+    const hasSbi = allRelevantBanks.some(b => b.includes('sbi') || b.includes('state bank'));
+    const hasHdfc = allRelevantBanks.some(b => b.includes('hdfc') || b.includes('tata'));
+    const isSuperAdminOrGlobal = ((user?.role || '').toUpperCase() === 'SUPER_ADMIN' || (user?.role || '').toUpperCase() === 'SUPERADMIN') && userAssignedBanks.length === 0;
+
     let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
-    csvContent += 'Application / Lead ID,Customer Name,Customer Mobile,Email,PAN Number,City,State,Pincode,Submitted By / Member,Process Type,Product,Category,Bank,Application Status,Commission Status,Commission Amount,APPCODE Status,Soft Approval Status,IQA Stage,Bank Application Number,VKYC Stage,VKYC Link,Dispatch Status,Bank Current Lead Status,Final Status,App File Generated,Bank Remark,Decline Reason,Eligible Re-QD,Approved Amount,Date\n';
 
+    const colDefs = [
+      { header: 'Application / Lead ID', getVal: a => a.app_number || '' },
+      { header: 'Customer Name', getVal: a => a.customer_name || '' },
+      { header: 'Customer Mobile', getVal: a => hideCustomerMobileInCsv ? 'REDACTED' : (a.customer_mobile || a.mobile || '') },
+      { header: 'Email', getVal: a => a.customer_email || a.email || '' },
+      { header: 'PAN Number', getVal: a => a.pan_number || '' },
+      { header: 'City', getVal: a => a.city || '' },
+      { header: 'State', getVal: a => a.state || '' },
+      { header: 'Pincode', getVal: a => a.pincode || '' },
+      { header: 'Submitted By / Member', getVal: a => a.submitted_by_name || (a.partner_first_name ? `${a.partner_first_name} ${a.partner_last_name || ''}`.trim() : 'Partner') },
+      { header: 'Process Type', getVal: a => getProcessByBadge(a.process_by, a.process_type).label.replace(/[^\w\s]/gi, '').trim() },
+      { header: 'Product', getVal: a => a.product_name || '' },
+      { header: 'Category', getVal: a => a.category || '' },
+      { header: 'Bank', getVal: a => a.bank_name || '' },
+      { header: 'Application Status', getVal: a => a.status || '' },
+      { header: 'Commission Status', getVal: a => a.commission_status || '' },
+      { header: 'Commission Amount', getVal: a => `₹${a.commission_amount || 0}` }
+    ];
+
+    if (hasSbi || isSuperAdminOrGlobal) {
+      colDefs.push(
+        { header: 'APPCODE Status', getVal: a => a.appcode_status || 'NA' },
+        { header: 'Soft Approval Status', getVal: a => a.soft_approval_status || 'NA' },
+        { header: 'IQA Stage', getVal: a => a.iqa_stage || 'NA' }
+      );
+    }
+
+    colDefs.push(
+      { header: 'Bank Application Number', getVal: a => a.bank_application_number || a.bank_ref_number || 'NA' },
+      { header: 'VKYC Stage', getVal: a => a.vkyc_stage || a.vkyc_status || a.kyc_stage || 'NA' },
+      { header: 'VKYC Link', getVal: a => (a.vkyc_url && String(a.vkyc_url).trim() !== '' && String(a.vkyc_url).toUpperCase() !== 'N/A') ? a.vkyc_url : 'NA' }
+    );
+
+    if (hasSbi || isSuperAdminOrGlobal) {
+      colDefs.push(
+        { header: 'Dispatch Status', getVal: a => a.dispatch_status || 'NA' }
+      );
+    }
+
+    if (hasHdfc || isSuperAdminOrGlobal) {
+      colDefs.push(
+        { header: 'Bank Current Lead Status', getVal: a => a.bank_current_lead_status || 'NA' }
+      );
+    }
+
+    colDefs.push(
+      { header: 'Final Status', getVal: a => (a.final_status && String(a.final_status).trim() !== '' && String(a.final_status).toUpperCase() !== 'N/A') ? String(a.final_status).replace(/"/g, '""') : 'NA' }
+    );
+
+    if (hasSbi || isSuperAdminOrGlobal) {
+      colDefs.push(
+        { header: 'App File Generated', getVal: a => a.app_file_generated || 'NA' }
+      );
+    }
+
+    colDefs.push(
+      { header: 'Bank Remark', getVal: a => (a.bank_remark && String(a.bank_remark).trim() !== '' && String(a.bank_remark).toUpperCase() !== 'N/A') ? String(a.bank_remark).replace(/"/g, '""') : 'NA' },
+      { header: 'Decline Reason', getVal: a => (a.decline_reason && String(a.decline_reason).trim() !== '' && String(a.decline_reason).toUpperCase() !== 'N/A') ? String(a.decline_reason).replace(/"/g, '""') : 'NA' }
+    );
+
+    if (hasHdfc || isSuperAdminOrGlobal) {
+      colDefs.push(
+        { header: 'Eligible Re-QD', getVal: a => (a.eligible_reqd && String(a.eligible_reqd).trim() !== '' && String(a.eligible_reqd).toUpperCase() !== 'N/A') ? String(a.eligible_reqd).replace(/"/g, '""') : 'NA' }
+      );
+    }
+
+    colDefs.push(
+      { header: 'Approved Amount', getVal: a => `₹${a.approved_amount || 0}` },
+      { header: 'Date', getVal: a => a.created_at ? new Date(a.created_at).toLocaleDateString('en-IN') : 'N/A' }
+    );
+
+    // Header row
+    csvContent += colDefs.map(c => c.header).join(',') + '\n';
+
+    // Application rows
     applications.forEach(a => {
-      const proc = getProcessByBadge(a.process_by, a.process_type);
-      const rawMob = a.customer_mobile || a.mobile || '';
-      const mobVal = hideCustomerMobileInCsv ? 'REDACTED' : rawMob;
-
-      const rawBankStr = (a.bank_name || a.bank_code || a.bank || '').toLowerCase();
-      const isSbiRec = rawBankStr.includes('sbi') || rawBankStr.includes('state bank');
-      const isHdfcRec = rawBankStr.includes('hdfc');
-
-      const appcodeStatus = isSbiRec ? (a.appcode_status || 'NA') : 'NA';
-      const softApprovalStatus = isSbiRec ? (a.soft_approval_status || 'NA') : 'NA';
-      const iqaStage = isSbiRec ? (a.iqa_stage || 'NA') : 'NA';
-      const dispatchStatus = isSbiRec ? (a.dispatch_status || 'NA') : 'NA';
-      const appFileGen = isSbiRec ? (a.app_file_generated || 'NA') : 'NA';
-
-      const bankCurrentLeadStatus = isHdfcRec ? (a.bank_current_lead_status || 'NA') : 'NA';
-
-      const bankAppNo = a.bank_application_number || a.bank_ref_number || 'NA';
-      const rawVkyc = a.vkyc_stage || a.vkyc_status || a.kyc_stage || '';
-      const vkycStage = (isSbiRec || isHdfcRec) ? (rawVkyc || 'NA') : (rawVkyc || 'NA');
-      const vkycLink = (a.vkyc_url && String(a.vkyc_url).trim() !== '' && String(a.vkyc_url).toUpperCase() !== 'N/A') ? a.vkyc_url : 'NA';
-      
-      const finalStatus = (a.final_status && String(a.final_status).trim() !== '' && String(a.final_status).toUpperCase() !== 'N/A') ? String(a.final_status).replace(/"/g, '""') : 'NA';
-      const bankRemark = (a.bank_remark && String(a.bank_remark).trim() !== '' && String(a.bank_remark).toUpperCase() !== 'N/A') ? String(a.bank_remark).replace(/"/g, '""') : 'NA';
-      const declineReason = (a.decline_reason && String(a.decline_reason).trim() !== '' && String(a.decline_reason).toUpperCase() !== 'N/A') ? String(a.decline_reason).replace(/"/g, '""') : 'NA';
-      const eligibleReqd = (a.eligible_reqd && String(a.eligible_reqd).trim() !== '' && String(a.eligible_reqd).toUpperCase() !== 'N/A') ? String(a.eligible_reqd).replace(/"/g, '""') : 'NA';
-      const appAmt = a.approved_amount || 0;
-
-      const row = [
-        `"${a.app_number || ''}"`,
-        `"${(a.customer_name || '').replace(/"/g, '""')}"`,
-        `"${mobVal}"`,
-        `"${(a.customer_email || a.email || '').replace(/"/g, '""')}"`,
-        `"${(a.pan_number || '').replace(/"/g, '""')}"`,
-        `"${(a.city || '').replace(/"/g, '""')}"`,
-        `"${(a.state || '').replace(/"/g, '""')}"`,
-        `"${(a.pincode || '').replace(/"/g, '""')}"`,
-        `"${(a.submitted_by_name || (a.partner_first_name ? `${a.partner_first_name} ${a.partner_last_name || ''}`.trim() : 'Partner')).replace(/"/g, '""')}"`,
-        `"${proc.label.replace(/[^\w\s]/gi, '').trim()}"`,
-        `"${(a.product_name || '').replace(/"/g, '""')}"`,
-        `"${(a.category || '').replace(/"/g, '""')}"`,
-        `"${(a.bank_name || '').replace(/"/g, '""')}"`,
-        `"${(a.status || '').replace(/"/g, '""')}"`,
-        `"${(a.commission_status || '').replace(/"/g, '""')}"`,
-        `"₹${a.commission_amount || 0}"`,
-        `"${appcodeStatus.replace(/"/g, '""')}"`,
-        `"${softApprovalStatus.replace(/"/g, '""')}"`,
-        `"${iqaStage.replace(/"/g, '""')}"`,
-        `"${bankAppNo.replace(/"/g, '""')}"`,
-        `"${vkycStage.replace(/"/g, '""')}"`,
-        `"${vkycLink.replace(/"/g, '""')}"`,
-        `"${dispatchStatus.replace(/"/g, '""')}"`,
-        `"${bankCurrentLeadStatus.replace(/"/g, '""')}"`,
-        `"${finalStatus.replace(/"/g, '""')}"`,
-        `"${appFileGen.replace(/"/g, '""')}"`,
-        `"${bankRemark}"`,
-        `"${declineReason}"`,
-        `"${eligibleReqd.replace(/"/g, '""')}"`,
-        `"₹${appAmt}"`,
-        `"${new Date(a.created_at).toLocaleDateString('en-IN')}"`
-      ].join(',');
-      csvContent += row + '\n';
+      const rowVals = colDefs.map(c => {
+        const val = c.getVal(a);
+        return `"${String(val).replace(/"/g, '""')}"`;
+      });
+      csvContent += rowVals.join(',') + '\n';
     });
 
     const encodedUri = encodeURI(csvContent);
