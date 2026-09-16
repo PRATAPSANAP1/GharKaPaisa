@@ -52,7 +52,26 @@ const partnerBanks = [
   { id: '1', name: "HDFC Bank", rating: "★★★★★", code: "HDFC", color: "#004B87" },
   { id: '2', name: "SBI Bank", rating: "★★★★★", code: "SBI", color: "#280071" },
   { id: '3', name: "Axis Bank", rating: "★★★★☆", code: "AXIS", color: "#97144D" },
-  { id: '4', name: "ICICI Bank", rating: "★★★★☆", code: "ICICI", color: "#F37021" }
+  { id: '4', name: "ICICI Bank", rating: "★★★★☆", code: "ICICI", color: "#F37021" },
+  { id: '5', name: "Kotak Bank", rating: "★★★★☆", code: "KOTAK", color: "#EE1C25" },
+  { id: '6', name: "YES Bank", rating: "★★★★☆", code: "YES", color: "#004F9F" },
+  { id: '7', name: "Bank of Baroda", rating: "★★★★☆", code: "BOB", color: "#FF6600" }
+];
+
+const insuranceData = [
+  { id: '1', label: "Health Insurance", icon: "🩺", desc: "Cashless hospitalization & Tax Benefits u/s 80D" },
+  { id: '2', label: "Life Insurance", icon: "🛡️", desc: "Term plan coverage up to ₹1 Crore" },
+  { id: '3', label: "General Insurance", icon: "🚗", desc: "Motor, bike & commercial vehicle protection" },
+  { id: '4', label: "Loan Protection", icon: "🤝", desc: "Protect your active loan liabilities" }
+];
+
+const servicesData = [
+  { id: '1', label: "GST Returns", icon: "📄", desc: "Monthly & Annual GST compliance" },
+  { id: '2', label: "Company Reg.", icon: "🏢", desc: "Private Limited & LLP formation" },
+  { id: '3', label: "ITR Filing", icon: "🧮", desc: "Income tax return filing for Individuals & CA" },
+  { id: '4', label: "PF & ESIC", icon: "👥", desc: "Employee Provident Fund registration" },
+  { id: '5', label: "TDS Filing", icon: "💳", desc: "Quarterly TDS statement returns" },
+  { id: '6', label: "MSME Udyam", icon: "🏭", desc: "Government Udyam Certificate" }
 ];
 
 const ltfCards = [
@@ -79,6 +98,18 @@ const ltfCards = [
     name: "Axis Bank MY Zone Credit Card", 
     desc: "Buy 1 Get 1 Free on movie tickets & complimentary airport lounges",
     link: "https://axisbank.com"
+  },
+  {
+    id: '5',
+    name: "SBI Cashback Credit Card",
+    desc: "5% cashback on online shopping without merchant restrictions",
+    link: "https://sbicard.com"
+  },
+  {
+    id: '6',
+    name: "ICICI Platinum Chip Credit Card",
+    desc: "Zero annual fee, contactless payment and dining privileges",
+    link: "https://icicibank.com"
   }
 ];
 
@@ -113,7 +144,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.navLeft}>
           <Image source={require('../assets/icon.png')} style={styles.logo} />
           <View style={{ marginLeft: 8 }}>
-            <Text style={styles.navTitle}>GharKaPaisa</Text>
+            <Text style={styles.navTitle}>OitStack</Text>
             <Text style={styles.navSub}>Financial Services Platform</Text>
           </View>
         </View>
@@ -185,6 +216,48 @@ export default function HomeScreen({ navigation }) {
                 key={item.id}
                 style={styles.circleCard}
                 onPress={() => Alert.alert(item.label, `Book ${item.label} tickets with extra partner cashbacks.`)}
+              >
+                <Text style={styles.circleIcon}>{item.icon}</Text>
+                <Text style={styles.circleLabel}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Insurance & Protection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Insurance & Protection</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalScroll}
+          >
+            {insuranceData.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.circleCard}
+                onPress={() => Alert.alert(item.label, `${item.desc}`)}
+              >
+                <Text style={styles.circleIcon}>{item.icon}</Text>
+                <Text style={styles.circleLabel}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Business & Financial Services */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Business & Financial Services</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalScroll}
+          >
+            {servicesData.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.circleCard}
+                onPress={() => Alert.alert(item.label, `${item.desc}`)}
               >
                 <Text style={styles.circleIcon}>{item.icon}</Text>
                 <Text style={styles.circleLabel}>{item.label}</Text>
