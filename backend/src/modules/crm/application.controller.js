@@ -1570,21 +1570,22 @@ const listApplications = async (req, res, next) => {
 
     const hasAaaTable = await ensureAssignmentsTableExists();
 
+    const userRole = (req.user?.role || '').toUpperCase();
     const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
-    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
+    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userRole);
     let salesExecFilterSQL = '';
     if (isSalesExecUser && req.user?.id) {
-      salesExecFilterSQL = ` AND (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%punching%' OR combined.process_type::text = 'lead_punching' OR combined.process_by::text = 'lead_punching')`;
+      salesExecFilterSQL = ` AND (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%punch%' OR LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%manual%' OR combined.process_type::text = 'lead_punching' OR combined.process_by::text = 'lead_punching') AND NOT (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%share%' OR LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%link%')`;
     }
 
-    const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+    const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
     let panCheckerFilterSQL = '';
     if (isPanCheckerUser) {
       panCheckerFilterSQL = ` AND (LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR combined.bank_id IN (SELECT id FROM banks WHERE LOWER(short_code) = 'sbi' OR LOWER(name) LIKE '%sbi%')) AND combined.status NOT IN ('approved', 'disbursed', 'sanctioned') AND (LOWER(COALESCE(combined.pan_check, 'no')) = 'no')`;
     }
 
-    const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
+    const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
     let remarkOperatorFilterSQL = '';
     if (isRemarkOperatorUser && req.user?.id) {
       const remarkAaaExists = hasAaaTable ? `OR EXISTS (SELECT 1 FROM application_admin_assignments WHERE admin_user_id = '${req.user.id}' AND application_id = combined.id)` : '';
@@ -1595,8 +1596,13 @@ const listApplications = async (req, res, next) => {
     if (!isPartnerOrTeam && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
       if (abRows.length > 0) {
-        opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $18::uuid) OR combined.operation_head_id = $18::uuid)`;
-        countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $16::uuid) OR combined.operation_head_id = $16::uuid)`;
+        if (isSalesExecUser) {
+          opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $18::uuid))`;
+          countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $16::uuid))`;
+        } else {
+          opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $18::uuid) OR combined.operation_head_id = $18::uuid)`;
+          countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $16::uuid) OR combined.operation_head_id = $16::uuid)`;
+        }
         queryParams.push(req.user.id);
         countQueryParams.push(req.user.id);
       } else if (isOpHeadUser) {

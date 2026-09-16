@@ -21,7 +21,7 @@ export default function ManageApplications() {
   const user = useAuthStore((state) => state.user);
   const userRole = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
-  const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+  const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userRole);
   const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
   const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
   const isOpsHead = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole) && !isOpsOperator;
@@ -575,11 +575,16 @@ export default function ManageApplications() {
 
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Process Type</label>
-                <select style={{ ...S.input, height: '36px', fontSize: '12.5px' }} value={processTypeFilter} onChange={e => setProcessTypeFilter(e.target.value)}>
+                <select 
+                  style={{ ...S.input, height: '36px', fontSize: '12.5px' }} 
+                  value={isSalesExecUser ? 'punch_only' : processTypeFilter} 
+                  disabled={isSalesExecUser}
+                  onChange={e => setProcessTypeFilter(e.target.value)}
+                >
                   <option value="all">All Process Types</option>
                   <option value="punch_only">Lead Punching (Punch Only)</option>
-                  <option value="share_link">Link Sharing (Share Link)</option>
-                  <option value="direct_link">Direct Online</option>
+                  {!isSalesExecUser && <option value="share_link">Link Sharing (Share Link)</option>}
+                  {!isSalesExecUser && <option value="direct_link">Direct Online</option>}
                 </select>
               </div>
 
