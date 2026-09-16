@@ -3426,9 +3426,9 @@ const exportApplicationsCSV = async (req, res, next) => {
       const panVal = formatPanNumber(row.pan_number);
       const bankAppNoVal = formatBankAppNumber(row.bank_application_number, row.app_number);
 
-      const rawBankStr = (row.bank_name || '').toLowerCase();
-      const isSbiRec = rawBankStr.includes('sbi') || rawBankStr.includes('state bank');
-      const isHdfcRec = rawBankStr.includes('hdfc');
+      const rawBankStr = `${row.bank_name || ''} ${row.product_name || ''}`.toLowerCase();
+      const isSbiRec = rawBankStr.includes('sbi') || rawBankStr.includes('state bank') || (row.appcode_status && row.appcode_status !== 'NA') || (row.iqa_stage && row.iqa_stage !== 'NA') || (row.dispatch_status && row.dispatch_status !== 'NA');
+      const isHdfcRec = rawBankStr.includes('hdfc') || rawBankStr.includes('tata') || (row.bank_current_lead_status && row.bank_current_lead_status !== 'NA') || (row.eligible_reqd && row.eligible_reqd !== 'NA');
 
       // SBI-exclusive remark & final form fields
       const appcodeStatus = isSbiRec ? (row.appcode_status || 'NA') : 'NA';

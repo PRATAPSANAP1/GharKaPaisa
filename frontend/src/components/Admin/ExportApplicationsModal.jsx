@@ -142,15 +142,32 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         ...(Array.isArray(user?.assigned_bank_ids) ? user.assigned_bank_ids : [])
       ].map(b => typeof b === 'string' ? b.toLowerCase() : (b?.name || b?.bank_name || b?.short_code || b?.code || '').toLowerCase());
 
-      const exportedBankNames = filtered.map(a => (a.bank_name || a.bank_code || a.bank || a.product_name || '').toLowerCase());
+      const exportedBankNames = filtered.map(a => `${a.bank_name || ''} ${a.bank_code || ''} ${a.bank || ''} ${a.product_name || ''}`.toLowerCase());
       const allRelevantBanks = [...userAssignedBanks, ...exportedBankNames];
 
-      const hasSbi = allRelevantBanks.some(b => b.includes('sbi') || b.includes('state bank'));
-      const hasHdfc = allRelevantBanks.some(b => b.includes('hdfc') || b.includes('tata'));
-      const isSuperAdminOrGlobal = (userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN') && userAssignedBanks.length === 0;
+      const hasSbiData = filtered.some(a => 
+        (a.appcode_status && a.appcode_status !== 'NA') ||
+        (a.soft_approval_status && a.soft_approval_status !== 'NA') ||
+        (a.iqa_stage && a.iqa_stage !== 'NA') ||
+        (a.dispatch_status && a.dispatch_status !== 'NA') ||
+        (a.app_file_generated && a.app_file_generated !== 'NA') ||
+        a.physical_details?.appcode_status ||
+        a.physical_details?.soft_approval_status ||
+        a.physical_details?.iqa_stage ||
+        a.physical_details?.dispatch_status ||
+        a.physical_details?.app_file_generated
+      );
 
-      // Generate CSV dynamically based on assigned/exported bank form fields
-      let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
+      const hasHdfcData = filtered.some(a => 
+        (a.bank_current_lead_status && a.bank_current_lead_status !== 'NA') ||
+        (a.eligible_reqd && a.eligible_reqd !== 'NA') ||
+        a.physical_details?.bank_current_lead_status ||
+        a.physical_details?.eligible_reqd
+      );
+
+      const isSuperAdminOrGlobal = (userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN') && userAssignedBanks.length === 0;
+      const hasSbi = hasSbiData || isSuperAdminOrGlobal || allRelevantBanks.some(b => b.includes('sbi') || b.includes('state bank'));
+      const hasHdfc = hasHdfcData || isSuperAdminOrGlobal || allRelevantBanks.some(b => b.includes('hdfc') || b.includes('tata'));
 
       const colDefs = [
         { header: 'Application No', getVal: a => a.app_number || a.application_no || a.id || '' },
@@ -206,7 +223,7 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         );
       }
 
-      // HDFC-exclusive bank form fields
+      // HDFC / Tata HDFC bank form fields
       if (hasHdfc || isSuperAdminOrGlobal) {
         colDefs.push(
           { header: 'Bank Current Lead Status', getVal: a => a.bank_current_lead_status || a.physical_details?.bank_current_lead_status || 'NA' }
@@ -257,25 +274,27 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         { header: 'Created Date', getVal: a => a.created_at ? new Date(a.created_at).toLocaleDateString('en-IN') : 'N/A' }
       );
 
-      // Header row
-      csvContent += colDefs.map(c => c.header).join(',') + '\n';
+      // Generate CSV string with UTF-8 BOM
+      const csvLines = [colDefs.map(c => `"${c.header.replace(/"/g, '""')}"`).join(',')];
 
-      // Application rows
       filtered.forEach(a => {
         const rowVals = colDefs.map(c => {
           const val = c.getVal(a);
-          return `"${String(val).replace(/"/g, '""')}"`;
+          return `"${String(val ?? '').replace(/"/g, '""')}"`;
         });
-        csvContent += rowVals.join(',') + '\n';
+        csvLines.push(rowVals.join(','));
       });
 
-      const encodedUri = encodeURI(csvContent);
+      const csvString = '\uFEFF' + csvLines.join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
+      link.setAttribute('href', url);
       link.setAttribute('download', `applications_report_${period}_${fromDate}_to_${toDate}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
 
       onClose();
     } catch (err) {
