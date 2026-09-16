@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
+import LoadingLogo from '../../../components/Loader/LoadingLogo';
 import { 
   FaUsers, FaUserCheck, FaSitemap, FaLink, FaSearch, 
   FaPlus, FaCheckCircle, FaTimesCircle, FaEye, FaEdit, FaCheck, FaLock,
@@ -2612,7 +2613,12 @@ export default function EmployeeManagement() {
               </div>
 
               {loading360 ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: C.textMid }}>Loading 360 details...</div>
+                <div style={{ padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
+                  <LoadingLogo size={90} />
+                  <span style={{ fontSize: '13.5px', fontWeight: 800, color: C.teal, letterSpacing: '0.3px' }}>
+                    Loading 360° Employee Details...
+                  </span>
+                </div>
               ) : emp360Data && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   

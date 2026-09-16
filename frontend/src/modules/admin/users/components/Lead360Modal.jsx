@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../../services/api';
 import { useTheme, makeS } from '../../../../contexts/ThemeContext';
+import LoadingLogo from '../../../../components/Loader/LoadingLogo';
 import { 
   MdClose, MdPerson, MdCreditCard, MdDescription, MdTimeline, 
   MdNote, MdHistory, MdAccountBalanceWallet, MdCheckCircle,
@@ -327,8 +328,9 @@ export default function Lead360Modal({ leadId, onClose, onRefresh }) {
         {/* Modal Main Content Container */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '80px 20px', color: isDark ? '#94A3B8' : '#64748B' }}>
-              <div style={{ fontSize: '16px', fontWeight: 700 }}>Loading 360° Lead Profile...</div>
+            <div style={{ padding: '80px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
+              <LoadingLogo size={90} />
+              <span style={{ fontSize: '14px', fontWeight: 800, color: '#2563EB' }}>Loading 360° Lead Profile...</span>
             </div>
           ) : (
             <>

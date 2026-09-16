@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../../services/api';
 import { useTheme, makeS } from '../../../../contexts/ThemeContext';
+import LoadingLogo from '../../../../components/Loader/LoadingLogo';
 import { 
   MdClose, MdPerson, MdCreditCard, MdDescription, MdTimeline, 
   MdNote, MdAlarm, MdChat, MdHistory, MdAccountBalanceWallet,
@@ -406,7 +407,10 @@ export default function Customer360ProfileModal({ customerId, onClose, onRefresh
         {/* Tab Body Content Area */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: C.textLight }}>Loading 360° Profile...</div>
+            <div style={{ padding: '80px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
+              <LoadingLogo size={90} />
+              <span style={{ fontSize: '13.5px', fontWeight: 800, color: C.teal }}>Loading 360° Customer Profile...</span>
+            </div>
           ) : (
             <>
               {/* TAB 1: OVERVIEW */}
