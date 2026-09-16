@@ -144,7 +144,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.navLeft}>
           <Image source={require('../assets/icon.png')} style={styles.logo} />
           <View style={{ marginLeft: 8 }}>
-            <Text style={styles.navTitle}>OitStack</Text>
+            <Text style={styles.navTitle}>GharKaPaisa</Text>
             <Text style={styles.navSub}>Financial Services Platform</Text>
           </View>
         </View>
@@ -344,29 +344,70 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
 
-        {/* Public Pages Quick Footer Directory */}
-        <View style={{ marginTop: 24, marginHorizontal: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#E2E8F0' }}>
-          <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A', marginBottom: 12 }}>Platform Links & Legal</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Contact')}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>📞 Contact Us</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Careers')}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>💼 Careers & Hiring</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Policy', { policy: 'terms' })}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>📄 Terms & Conditions</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Policy', { policy: 'privacy' })}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>🔒 Privacy Policy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Policy', { policy: 'shipping' })}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>🚚 Shipping Policy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Policy', { policy: 'refund' })}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>💳 Refund Policy</Text>
-            </TouchableOpacity>
+        {/* Comprehensive App Footer */}
+        <View style={styles.footerContainer}>
+          {/* Brand Header */}
+          <View style={styles.footerBrandRow}>
+            <Image source={require('../assets/icon.png')} style={styles.footerLogo} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.footerBrandTitle}>GharKaPaisa</Text>
+              <Text style={styles.footerBrandTagline}>India's Premier Financial Services Platform</Text>
+            </View>
           </View>
+          <Text style={styles.footerDesc}>
+            Empowering partners & customers with instant personal loans, lifetime free credit cards, comprehensive insurance coverage, and zero-fee payouts.
+          </Text>
+
+          {/* Directory Links */}
+          <View style={styles.footerGrid}>
+            <View style={styles.footerCol}>
+              <Text style={styles.footerColTitle}>Financial Products</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { category: 'loans' })}>
+                <Text style={styles.footerLink}>🪙 Personal & Biz Loans</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { category: 'credit_cards' })}>
+                <Text style={styles.footerLink}>💳 Lifetime Free Cards</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { category: 'insurance' })}>
+                <Text style={styles.footerLink}>🩺 Health & Life Insurance</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { category: 'services' })}>
+                <Text style={styles.footerLink}>📄 Utility & GST Services</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.footerCol}>
+              <Text style={styles.footerColTitle}>Company & Legal</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Contact')}>
+                <Text style={styles.footerLink}>📞 Contact Support</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Careers')}>
+                <Text style={styles.footerLink}>💼 Careers & Hiring</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Policy', { policy: 'terms' })}>
+                <Text style={styles.footerLink}>📄 Terms & Conditions</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Policy', { policy: 'privacy' })}>
+                <Text style={styles.footerLink}>🔒 Privacy Policy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Policy', { policy: 'shipping' })}>
+                <Text style={styles.footerLink}>🚚 Shipping Policy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('Policy', { policy: 'refund' })}>
+                <Text style={styles.footerLink}>💳 Refund Policy</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Contact Strip */}
+          <View style={styles.footerContactBox}>
+            <Text style={styles.footerContactText}>📞 Helpline: +91 1800 123 4567  •  ✉️ support@gharkapaisa.in</Text>
+          </View>
+
+          {/* Copyright */}
+          <Text style={styles.copyrightText}>
+            © 2026 GharKaPaisa. All rights reserved. | Powered by GharKaPaisa
+          </Text>
         </View>
 
       </ScrollView>
@@ -420,6 +461,34 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
       </Modal>
+
+      {/* Bottom Quick Action Navigation Bar */}
+      <View style={styles.bottomQuickBar}>
+        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('Home')}>
+          <Text style={styles.quickBarIcon}>🏠</Text>
+          <Text style={[styles.quickBarText, styles.quickBarTextActive]}>Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.quickBarBtn} onPress={() => setLoansModalVisible(true)}>
+          <Text style={styles.quickBarIcon}>🪙</Text>
+          <Text style={styles.quickBarText}>Loans</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('CategoryProducts', { category: 'credit_cards' })}>
+          <Text style={styles.quickBarIcon}>💳</Text>
+          <Text style={styles.quickBarText}>Cards</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('CategoryProducts', { category: 'insurance' })}>
+          <Text style={styles.quickBarIcon}>🩺</Text>
+          <Text style={styles.quickBarText}>Insurance</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.quickBarBtn} onPress={() => navigation.navigate('Login', { role: 'Partner' })}>
+          <Text style={styles.quickBarIcon}>👤</Text>
+          <Text style={styles.quickBarText}>Account</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -733,5 +802,124 @@ const styles = StyleSheet.create({
     color: '#059669',
     fontWeight: '800',
     marginTop: 2,
+  },
+
+  // Footer Styles
+  footerContainer: {
+    marginTop: 28,
+    backgroundColor: '#0F172A',
+    padding: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 24,
+  },
+  footerBrandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  footerLogo: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  footerBrandTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  footerBrandTagline: {
+    fontSize: 11,
+    color: '#38BDF8',
+    fontWeight: '700',
+  },
+  footerDesc: {
+    fontSize: 12,
+    color: '#94A3B8',
+    lineHeight: 18,
+    marginBottom: 20,
+  },
+  footerGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    gap: 12,
+  },
+  footerCol: {
+    flex: 1,
+  },
+  footerColTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  footerLink: {
+    fontSize: 12,
+    color: '#CBD5E1',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  footerContactBox: {
+    backgroundColor: '#1E293B',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  footerContactText: {
+    fontSize: 11.5,
+    color: '#38BDF8',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  copyrightText: {
+    fontSize: 11,
+    color: '#64748B',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+
+  // Sticky Bottom Quick Navigation Bar Styles
+  bottomQuickBar: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 10,
+  },
+  quickBarBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justify: 'center',
+    paddingVertical: 2,
+  },
+  quickBarIcon: {
+    fontSize: 19,
+    marginBottom: 2,
+  },
+  quickBarText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  quickBarTextActive: {
+    color: '#0d47a1',
+    fontWeight: '800',
   },
 });

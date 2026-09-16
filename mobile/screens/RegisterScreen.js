@@ -23,6 +23,12 @@ const COMPANY_TYPES = [
   { label: 'Private Limited Company', value: 'pvt_ltd' }
 ];
 
+const POPULAR_BANKS = [
+  'HDFC Bank', 'State Bank of India', 'ICICI Bank', 'Axis Bank',
+  'Kotak Mahindra Bank', 'Punjab National Bank', 'Bank of Baroda', 'Canara Bank',
+  'Union Bank of India', 'IDFC First Bank', 'Yes Bank', 'IndusInd Bank'
+];
+
 const STEPS = ['Personal', 'Business', 'Bank', 'KYC'];
 
 export default function RegisterScreen({ navigation }) {
@@ -440,11 +446,25 @@ export default function RegisterScreen({ navigation }) {
                 <Text style={styles.label}>Bank Name *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. HDFC Bank / SBI"
+                  placeholder="Select below or type bank name (e.g. HDFC Bank)"
                   placeholderTextColor="#94A3B8"
                   value={form.bank_name}
                   onChangeText={(v) => handleChange('bank_name', v)}
                 />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginTop: 8, marginBottom: 6 }}>Popular Banks (Tap to select):</Text>
+                <View style={styles.pickerRow}>
+                  {POPULAR_BANKS.map((b) => (
+                    <TouchableOpacity
+                      key={b}
+                      style={[styles.pickerPill, form.bank_name === b && styles.pickerPillActive]}
+                      onPress={() => handleChange('bank_name', b)}
+                    >
+                      <Text style={[styles.pickerPillText, form.bank_name === b && styles.pickerPillTextActive]}>
+                        {b}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
 
               <View style={styles.inputContainer}>

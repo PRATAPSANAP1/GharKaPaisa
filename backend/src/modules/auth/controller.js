@@ -93,7 +93,7 @@ const getMe = async (req, res, next) => {
       user.account_number = 'XXXX' + decrypted.slice(-4);
     }
 
-    if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+    if (['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR'].includes(user.role)) {
       const { rows: assignedBanks } = await query(`
         SELECT b.id, b.name, b.short_code, b.short_code as code
         FROM admin_bank_assignments aba
@@ -503,7 +503,7 @@ const login = async (req, res, next) => {
             '/partner/dashboard';
 
     let permissions = null;
-    if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+    if (['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR'].includes(user.role)) {
       const { rows: assignedBanks } = await query(
         `SELECT b.id, b.name, b.short_code, b.short_code as code FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = $1`, [user.id]
       ).catch(() => ({ rows: [] }));

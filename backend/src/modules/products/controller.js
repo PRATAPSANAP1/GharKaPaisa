@@ -24,6 +24,13 @@ const listProducts = async (req, res, next) => {
     const values = [];
     let idx = 1;
 
+    const userDesignation = String(req.user?.designation || req.user?.hierarchy_level || '').trim().toUpperCase();
+    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+    if (isSalesExecUser && req.user?.id) {
+      where += ` AND (p.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $${idx++}))`;
+      values.push(req.user.id);
+    }
+
     if (is_active !== undefined && is_active !== 'all') {
       where += ` AND p.is_active = $${idx++}`;
       values.push(is_active === 'true' || is_active === true);
@@ -789,6 +796,19 @@ const bulkSetCommission = async (req, res, next) => {
 // GET /banks
 const listBanks = async (req, res, next) => {
   try {
+    const userDesignation = String(req.user?.designation || req.user?.hierarchy_level || '').trim().toUpperCase();
+    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+
+    if (isSalesExecUser && req.user?.id) {
+      const { rows } = await query(`
+        SELECT b.* FROM banks b
+        JOIN admin_bank_assignments aba ON aba.bank_id = b.id
+        WHERE aba.admin_id = $1 AND b.is_active = true
+        ORDER BY b.name
+      `, [req.user.id]);
+      return success(res, rows);
+    }
+
     const { rows } = await query(`SELECT * FROM banks WHERE is_active = true ORDER BY name`);
     return success(res, rows);
   } catch (err) {

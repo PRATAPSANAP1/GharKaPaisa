@@ -3002,7 +3002,7 @@ export default function Home({ onNavigate }) {
 
           <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "16px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#ffffff", opacity: 0.8 }}>
             <span>© 2026 GharKaPaisa. All Rights Reserved.</span>
-            <span style={{ fontWeight: 600, color: "#2DD4BF" }}>Developed by OITStack @2026</span>
+            <span style={{ fontWeight: 600, color: "#2DD4BF" }}>Powered by GharKaPaisa @2026</span>
           </div>
         </div>
 

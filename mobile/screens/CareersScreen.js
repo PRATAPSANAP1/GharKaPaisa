@@ -141,7 +141,7 @@ export default function CareersScreen({ navigation }) {
         {activeTab === 'openings' && (
           <View>
             <View style={styles.heroBox}>
-              <Text style={styles.heroTitle}>Join the OitStack Growth Team</Text>
+              <Text style={styles.heroTitle}>Join the GharKaPaisa Growth Team</Text>
               <Text style={styles.heroSub}>Build a rewarding career in financial services & fintech sales. Earn industry best fixed salary plus performance incentives.</Text>
             </View>
 

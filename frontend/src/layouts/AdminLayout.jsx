@@ -96,13 +96,15 @@ const AdminLayout = () => {
   const isRemarkOperator = ['Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
   const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
   const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
-  if ((isOpHead || isBackend || isRemarkOperator || isSalesExec || assignedList.length > 0) && assignedList.length > 0) {
+  if ((isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker || assignedList.length > 0) && assignedList.length > 0) {
     banks = assignedList.map(b => ({
       id: b.id,
       name: b.name || b.bank_name || b.short_code,
       short_code: b.short_code || b.code || b.name,
       logo: b.logo_url || b.logo
     }));
+  } else if (isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker) {
+    banks = [];
   }
 
   const [openCcMenu, setOpenCcMenu] = useState(false);

@@ -1,6 +1,6 @@
-# OitStack Mobile App
+# GharKaPaisa Mobile App
 
-A comprehensive React Native mobile application for the OitStack (formerly GharKaPaisa) financial services platform, supporting both iOS and Android devices.
+A comprehensive React Native mobile application for the GharKaPaisa financial services platform, supporting both iOS and Android devices.
 
 ## 🚀 Features
 
@@ -303,8 +303,8 @@ Required environment variables:
 
 ## 📄 License
 
-Proprietary - All rights reserved © 2026 OitStack
+Proprietary - All rights reserved © 2026 GharKaPaisa
 
 ## 👥 Support
 
-For support and issues, contact the development team at support@oitstack.com
+For support and issues, contact the team at support@gharkapaisa.in

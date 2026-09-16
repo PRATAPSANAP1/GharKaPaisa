@@ -378,8 +378,8 @@ export default function ProfileScreen({ navigation }) {
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={styles.appVersion}>OitStack Mobile v1.0.0</Text>
-          <Text style={styles.appCopyright}>© 2026 OitStack. All rights reserved.</Text>
+          <Text style={styles.appVersion}>GharKaPaisa Mobile v1.0.0</Text>
+          <Text style={styles.appCopyright}>© 2026 GharKaPaisa. All rights reserved.</Text>
         </View>
 
       </ScrollView>

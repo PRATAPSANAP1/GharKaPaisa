@@ -405,7 +405,7 @@ export default function VerifyEmail() {
             fontSize: 12,
             color: C.textLight,
           }}>
-            © {new Date().getFullYear()} OitStack · All rights reserved
+            © {new Date().getFullYear()} GharKaPaisa · All rights reserved
           </div>
         </div>
       </div>

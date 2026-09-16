@@ -14,3 +14,11 @@ documentation/
 *.docx
 *.pdf
 *.xlsx
+
+# Gradle & Build caches
+.gradle/
+**/.gradle/
+**/android/.gradle/
+**/android/app/build/
+**/android/build/
+.expo/

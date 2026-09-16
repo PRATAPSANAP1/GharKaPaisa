@@ -69,10 +69,10 @@ export default function PolicyScreen({ route, navigation }) {
             <Text style={styles.lastUpdated}>Last Updated: September 2026</Text>
 
             <Text style={styles.h2}>1. Acceptance of Terms</Text>
-            <Text style={styles.p}>By downloading, accessing, or using the OitStack / GharKaPaisa mobile application or website, you agree to be bound by these Terms and Conditions and our Privacy Policy.</Text>
+            <Text style={styles.p}>By downloading, accessing, or using the GharKaPaisa mobile application or website, you agree to be bound by these Terms and Conditions and our Privacy Policy.</Text>
 
             <Text style={styles.h2}>2. Platform & Financial Intermediary Role</Text>
-            <Text style={styles.p}>OitStack acts as a digital aggregator and technology facilitator connecting users with RBI-regulated Banks, Non-Banking Financial Companies (NBFCs), and Insurance Providers. We do not directly issue credit cards or disburse loans.</Text>
+            <Text style={styles.p}>GharKaPaisa acts as a digital aggregator and technology facilitator connecting users with RBI-regulated Banks, Non-Banking Financial Companies (NBFCs), and Insurance Providers. We do not directly issue credit cards or disburse loans.</Text>
 
             <Text style={styles.h2}>3. Partner Payouts & Commission Rules</Text>
             <Text style={styles.p}>Commission payouts for registered Partners and Employees are processed strictly based on verified card approvals or loan disbursals confirmed by partner financial institutions. Fraudulent or self-referral abuse will lead to immediate account termination.</Text>
@@ -92,7 +92,7 @@ export default function PolicyScreen({ route, navigation }) {
             <Text style={styles.p}>We collect personal information including full name, mobile number, email address, PAN number, Aadhaar number, bank account details, and device identifiers required to facilitate application processing and partner payouts.</Text>
 
             <Text style={styles.h2}>2. Data Security & Encryption</Text>
-            <Text style={styles.p}>All sensitive data transmitted between your device and OitStack servers is protected using 256-bit SSL encryption and stored securely in accordance with Indian IT Laws and RBI data privacy guidelines.</Text>
+            <Text style={styles.p}>All sensitive data transmitted between your device and GharKaPaisa servers is protected using 256-bit SSL encryption and stored securely in accordance with Indian IT Laws and RBI data privacy guidelines.</Text>
 
             <Text style={styles.h2}>3. Third-Party Sharing</Text>
             <Text style={styles.p}>Your application data is shared exclusively with your selected banking and financial institution partners (e.g. HDFC, SBI, Axis, ICICI) solely for processing your credit card or loan application.</Text>
@@ -106,7 +106,7 @@ export default function PolicyScreen({ route, navigation }) {
             <Text style={styles.lastUpdated}>Last Updated: September 2026</Text>
 
             <Text style={styles.h2}>1. Digital Fulfillment</Text>
-            <Text style={styles.p}>OitStack operates primarily as a digital financial portal. All application tracking, referral links, and partner marketing kits are delivered digitally and instantly via the mobile app and email.</Text>
+            <Text style={styles.p}>GharKaPaisa operates primarily as a digital financial portal. All application tracking, referral links, and partner marketing kits are delivered digitally and instantly via the mobile app and email.</Text>
 
             <Text style={styles.h2}>2. Physical Credit Card / Document Delivery</Text>
             <Text style={styles.p}>Approved physical credit cards, loan welcome letters, or bank cheque books are dispatched directly by the issuing bank/NBFC via insured courier services (Speed Post, BlueDart, DTDC) within 7-10 working days of final bank approval.</Text>
@@ -120,10 +120,10 @@ export default function PolicyScreen({ route, navigation }) {
             <Text style={styles.lastUpdated}>Last Updated: September 2026</Text>
 
             <Text style={styles.h2}>1. Zero Application Fees</Text>
-            <Text style={styles.p}>OitStack does NOT charge any upfront processing fees for applying for credit cards or personal loans. Applying through our platform is 100% free.</Text>
+            <Text style={styles.p}>GharKaPaisa does NOT charge any upfront processing fees for applying for credit cards or personal loans. Applying through our platform is 100% free.</Text>
 
             <Text style={styles.h2}>2. Application Cancellation</Text>
-            <Text style={styles.p}>Applicants can cancel an submitted application before document verification by contacting customer support at support@oitstack.com.</Text>
+            <Text style={styles.p}>Applicants can cancel an submitted application before document verification by contacting customer support at support@gharkapaisa.in.</Text>
 
             <Text style={styles.h2}>3. Wallet Withdrawal Adjustments</Text>
             <Text style={styles.p}>In cases where a bank revokes or flags a card disbursal due to fraud or customer cancellation within 30 days, the corresponding partner commission credit may be reversed from the partner wallet.</Text>

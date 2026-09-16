@@ -157,7 +157,7 @@ const sendOtpEmail = async (email, otp) => {
               <tr>
                 <td style="padding: 20px 40px 28px; border-top: 1px solid #edf2f7; text-align: center;">
                   <p style="margin:0; color:#a0aec0; font-size:11px;">
-                    &copy; ${new Date().getFullYear()} OitStack &middot; All rights reserved<br/>
+                    &copy; ${new Date().getFullYear()} GharKaPaisa &middot; All rights reserved<br/>
                     <a href="https://gharkapaisa.in" style="color:#0d9488; text-decoration:none;">gharkapaisa.in</a>
                   </p>
                 </td>
@@ -231,7 +231,7 @@ const sendVerificationEmail = async (email, verificationLink) => {
               <tr>
                 <td style="padding: 20px 40px 28px; border-top: 1px solid #edf2f7; text-align: center;">
                   <p style="margin:0; color:#a0aec0; font-size:11px;">
-                    &copy; ${new Date().getFullYear()} OitStack &middot; All rights reserved<br/>
+                    &copy; ${new Date().getFullYear()} GharKaPaisa &middot; All rights reserved<br/>
                     <a href="https://gharkapaisa.in" style="color:#0d9488; text-decoration:none;">gharkapaisa.in</a>
                   </p>
                 </td>
@@ -288,7 +288,7 @@ const sendKycStatusEmail = async (email, title, message) => {
               <tr>
                 <td style="padding: 20px 40px 28px; border-top: 1px solid #edf2f7; text-align: center;">
                   <p style="margin:0; color:#a0aec0; font-size:11px;">
-                    &copy; ${new Date().getFullYear()} OitStack &middot; All rights reserved<br/>
+                    &copy; ${new Date().getFullYear()} GharKaPaisa &middot; All rights reserved<br/>
                     <a href="https://gharkapaisa.in" style="color:#0d9488; text-decoration:none;">gharkapaisa.in</a>
                   </p>
                 </td>
@@ -397,7 +397,7 @@ const sendPartnerStatusUpdateEmail = async (email, firstName, lastName, accountS
               <tr>
                 <td style="padding: 20px 40px 28px; border-top: 1px solid #edf2f7; text-align: center;">
                   <p style="margin:0; color:#a0aec0; font-size:11px;">
-                    &copy; ${new Date().getFullYear()} OitStack &middot; All rights reserved<br/>
+                    &copy; ${new Date().getFullYear()} GharKaPaisa &middot; All rights reserved<br/>
                     <a href="https://gharkapaisa.in" style="color:#0d9488; text-decoration:none;">gharkapaisa.in</a>
                   </p>
                 </td>
@@ -466,7 +466,7 @@ const sendTeamInvitationEmail = async ({ email, firstName, inviterCode, tempPass
               <tr>
                 <td style="padding: 20px 40px 28px; border-top: 1px solid #edf2f7; text-align: center;">
                   <p style="margin:0; color:#a0aec0; font-size:11px;">
-                    &copy; ${new Date().getFullYear()} OitStack &middot; All rights reserved<br/>
+                    &copy; ${new Date().getFullYear()} GharKaPaisa &middot; All rights reserved<br/>
                     <a href="https://gharkapaisa.in" style="color:#0d9488; text-decoration:none;">gharkapaisa.in</a>
                   </p>
                 </td>
@@ -537,7 +537,7 @@ const sendEmployeeInvitationEmail = async ({ email, fullName, employeeId, tempPa
               <tr>
                 <td style="padding: 20px 40px 28px; border-top: 1px solid #edf2f7; text-align: center;">
                   <p style="margin:0; color:#a0aec0; font-size:11px;">
-                    &copy; ${new Date().getFullYear()} OitStack &middot; All rights reserved<br/>
+                    &copy; ${new Date().getFullYear()} GharKaPaisa &middot; All rights reserved<br/>
                     <a href="https://gharkapaisa.in" style="color:#0d9488; text-decoration:none;">gharkapaisa.in</a>
                   </p>
                 </td>
@@ -617,7 +617,7 @@ const sendCandidateAssignedToHrEmail = async ({ hrEmail, hrName, candidateName, 
               <tr>
                 <td style="padding: 20px 40px 28px; border-top: 1px solid #edf2f7; text-align: center;">
                   <p style="margin:0; color:#a0aec0; font-size:11px;">
-                    &copy; ${new Date().getFullYear()} OitStack &middot; All rights reserved<br/>
+                    &copy; ${new Date().getFullYear()} GharKaPaisa &middot; All rights reserved<br/>
                     <a href="https://gharkapaisa.in" style="color:#0d9488; text-decoration:none;">gharkapaisa.in</a>
                   </p>
                 </td>

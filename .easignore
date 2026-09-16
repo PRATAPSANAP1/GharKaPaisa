@@ -1,0 +1,11 @@
+# Ignore node_modules and build artifacts for EAS Build
+node_modules/
+.expo/
+dist/
+web-build/
+.gradle/
+**/.gradle/
+**/android/.gradle/
+**/android/app/build/
+**/android/build/
+*.lock

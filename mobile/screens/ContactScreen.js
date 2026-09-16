@@ -36,7 +36,7 @@ export default function ContactScreen({ navigation }) {
       const res = await axios.post(`${BASE_URL}/support/contact-enquiry`, form).catch(() => null);
       Alert.alert(
         'Enquiry Sent',
-        'Thank you for contacting OitStack. Our team will reach out to you within 24 business hours.',
+        'Thank you for contacting GharKaPaisa. Our team will reach out to you within 24 business hours.',
         [{ text: 'OK', onPress: () => navigation.goBack() }]
       );
     } catch (err) {
@@ -78,7 +78,7 @@ export default function ContactScreen({ navigation }) {
             <Text style={styles.contactIcon}>✉️</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.contactLabel}>Email Address</Text>
-              <Text style={styles.contactVal}>support@oitstack.com / info@gharkapaisa.in</Text>
+              <Text style={styles.contactVal}>support@gharkapaisa.in / info@gharkapaisa.in</Text>
             </View>
           </View>
 
@@ -86,7 +86,7 @@ export default function ContactScreen({ navigation }) {
             <Text style={styles.contactIcon}>🏢</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.contactLabel}>Corporate Headquarters</Text>
-              <Text style={styles.contactVal}>OitStack Tower, Financial District, Mumbai, MH - 400001</Text>
+              <Text style={styles.contactVal}>GharKaPaisa Tower, Financial District, Mumbai, MH - 400001</Text>
             </View>
           </View>
 

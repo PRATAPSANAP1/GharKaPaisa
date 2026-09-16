@@ -1594,6 +1594,9 @@ const listApplications = async (req, res, next) => {
         countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $16::uuid) OR combined.operation_head_id = $16::uuid)`;
         queryParams.push(req.user.id);
         countQueryParams.push(req.user.id);
+      } else if (isOpHeadUser) {
+        opHeadBankFilterSQL = ` AND 1=0`;
+        countOpHeadBankFilterSQL = ` AND 1=0`;
       }
     }
 

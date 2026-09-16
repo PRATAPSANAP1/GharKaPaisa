@@ -32,7 +32,7 @@ export default function PartnerResourcesScreen({ navigation }) {
   const handleShareAsset = async (asset) => {
     try {
       await Share.share({
-        message: `📢 *${asset.title}*\n\nApply for top credit cards & loans with instant approval: https://oitstack.com/apply/GKP_PARTNER\n\nDownload promotional banner: ${asset.link}`
+        message: `📢 *${asset.title}*\n\nApply for top credit cards & loans with instant approval: https://gharkapaisa.in/apply/GKP_PARTNER\n\nDownload promotional banner: ${asset.link}`
       });
     } catch (err) {
       Alert.alert('Shared', 'Asset link ready for sharing.');

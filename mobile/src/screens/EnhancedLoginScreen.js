@@ -213,7 +213,7 @@ export default function EnhancedLoginScreen({ navigation }) {
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={styles.appName}>OitStack</Text>
+            <Text style={styles.appName}>GharKaPaisa</Text>
             <Text style={styles.tagline}>Financial Services Platform</Text>
           </View>
 
