@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../../services/api';
 import { useAuthStore } from '../../../app/store/authStore';
 import { getBankAppNumberConfig } from '../../../utils/bankAppNumberUtils';
@@ -274,112 +274,105 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     }
   };
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchData = async () => {
-      if (!application?.id) return;
-      try {
-        setLoading(true);
-        const [appRes, timelineRes] = await Promise.all([
-          api.get(`/applications/${application.id}`).catch(() => null),
-          api.get(`/applications/${application.id}/timeline`).catch(() => ({ data: { data: [] } }))
-        ]);
+  const fetchData = useCallback(async () => {
+    if (!application?.id) return;
+    try {
+      setLoading(true);
+      const [appRes, timelineRes] = await Promise.all([
+        api.get(`/applications/${application.id}`).catch(() => null),
+        api.get(`/applications/${application.id}/timeline`).catch(() => ({ data: { data: [] } }))
+      ]);
 
-        if (!isMounted) return;
+      if (appRes?.data?.success && appRes.data.data) {
+        const app = appRes.data.data;
+        const cust = app.customer || {};
+        const pd = app.physical_details || {};
 
-        if (appRes?.data?.success && appRes.data.data) {
-          const app = appRes.data.data;
-          const cust = app.customer || {};
-          const pd = app.physical_details || {};
+        if (pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile) setCustomerMobile(pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile || app.mobile || '');
+        if (pd.pan_name || cust.full_name || app.customer_name) setCustomerName(pd.pan_name || cust.full_name || app.customer_name || app.full_name || '');
+        if (pd.dob || cust.dob || app.dob) setDob(pd.dob || cust.dob || app.dob || '');
+        if (pd.personal_email || cust.email || app.customer_email) setCustomerEmail(pd.personal_email || cust.email || app.customer_email || app.email || '');
+        if (pd.pan_number || cust.pan_number || app.pan_number) setPanNumber(pd.pan_number || cust.pan_number || app.pan_number || app.pan || '');
+        if (pd.company_name || app.company_name) setCompanyName(pd.company_name || app.company_name || app.employer_name || '');
+        if (pd.designation || app.designation) setDesignation(pd.designation || app.designation || app.occupation || '');
+        if (pd.address1 || pd.flat_no || app.address1 || app.address) setAddress1(pd.address1 || pd.flat_no || app.address1 || app.address || '');
+        if (pd.address2 || pd.sub_area || app.address2) setAddress2(pd.address2 || pd.sub_area || app.address2 || '');
+        if (pd.landmark || app.landmark) setLandmark(pd.landmark || app.landmark || '');
+        if (pd.pincode || app.pincode || cust.pincode) setPincode(pd.pincode || app.pincode || cust.pincode || '');
+        if (pd.city || app.city || cust.city) setCity(pd.city || app.city || cust.city || '');
+        if (pd.state || app.state || cust.state) setState(pd.state || app.state || cust.state || '');
+        if (pd.company_address || app.company_address) setCompanyAddress(pd.company_address || app.company_address || app.office_address || '');
+        if (pd.mother_name || app.mother_name) setMotherName(pd.mother_name || app.mother_name || '');
+        if (app.app_number) setAppNumber(app.app_number || app.application_no || '');
+        setBankRefNumber(resolveBankRefNo(
+          app.bank_application_number || app.bank_ref_number || pd.bank_application_number || pd.bank_ref_number,
+          app.app_number || application?.app_number
+        ));
+        if (app.vkyc_url || pd.vkyc_url) setVkycUrl(app.vkyc_url || pd.vkyc_url || '');
 
-          if (pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile) setCustomerMobile(pd.aadhaar_linked_mobile || cust.mobile || app.customer_mobile || app.mobile || '');
-          if (pd.pan_name || cust.full_name || app.customer_name) setCustomerName(pd.pan_name || cust.full_name || app.customer_name || app.full_name || '');
-          if (pd.dob || cust.dob || app.dob) setDob(pd.dob || cust.dob || app.dob || '');
-          if (pd.personal_email || cust.email || app.customer_email) setCustomerEmail(pd.personal_email || cust.email || app.customer_email || app.email || '');
-          if (pd.pan_number || cust.pan_number || app.pan_number) setPanNumber(pd.pan_number || cust.pan_number || app.pan_number || app.pan || '');
-          if (pd.company_name || app.company_name) setCompanyName(pd.company_name || app.company_name || app.employer_name || '');
-          if (pd.designation || app.designation) setDesignation(pd.designation || app.designation || app.occupation || '');
-          if (pd.address1 || pd.flat_no || app.address1 || app.address) setAddress1(pd.address1 || pd.flat_no || app.address1 || app.address || '');
-          if (pd.address2 || pd.sub_area || app.address2) setAddress2(pd.address2 || pd.sub_area || app.address2 || '');
-          if (pd.landmark || app.landmark) setLandmark(pd.landmark || app.landmark || '');
-          if (pd.pincode || app.pincode || cust.pincode) setPincode(pd.pincode || app.pincode || cust.pincode || '');
-          if (pd.city || app.city || cust.city) setCity(pd.city || app.city || cust.city || '');
-          if (pd.state || app.state || cust.state) setState(pd.state || app.state || cust.state || '');
-          if (pd.company_address || app.company_address) setCompanyAddress(pd.company_address || app.company_address || app.office_address || '');
-          if (pd.mother_name || app.mother_name) setMotherName(pd.mother_name || app.mother_name || '');
-          if (app.app_number) setAppNumber(app.app_number || app.application_no || '');
-          setBankRefNumber(resolveBankRefNo(
-            app.bank_application_number || app.bank_ref_number || pd.bank_application_number || pd.bank_ref_number,
-            app.app_number || application?.app_number
-          ));
-          if (app.vkyc_url || pd.vkyc_url) setVkycUrl(app.vkyc_url || pd.vkyc_url || '');
+        if (app.status) setCurrentStatus(app.status);
+        const realAppcode = sanitizeVal(app.appcode_status) || sanitizeVal(pd.appcode_status);
+        const realSoftApproval = sanitizeVal(app.soft_approval_status) || sanitizeVal(pd.soft_approval_status);
+        const realVkyc = sanitizeVal(app.vkyc_stage) || sanitizeVal(app.vkyc_status) || sanitizeVal(pd.vkyc_stage);
+        const realIqa = sanitizeVal(app.iqa_stage) || sanitizeVal(pd.iqa_stage);
+        const realDispatch = sanitizeVal(app.dispatch_status) || sanitizeVal(pd.dispatch_status);
+        const realFinal = sanitizeVal(app.final_status) || sanitizeVal(pd.final_status) || sanitizeVal(app.status) || 'In Process';
+        const realAppFileGenerated = sanitizeVal(app.app_file_generated) || sanitizeVal(app.appfile_generated) || sanitizeVal(pd.app_file_generated) || sanitizeVal(pd.appfile_generated);
+        const realRemark = sanitizeVal(app.bank_remark) || sanitizeVal(pd.bank_remark);
+        const realUserRemark = sanitizeVal(app.user_remark) || sanitizeVal(app.notes) || sanitizeVal(pd.user_remark) || sanitizeVal(pd.notes) || sanitizeVal(app.remarks) || '';
 
-          if (app.status) setCurrentStatus(app.status);
-          const realAppcode = sanitizeVal(app.appcode_status) || sanitizeVal(pd.appcode_status);
-          const realSoftApproval = sanitizeVal(app.soft_approval_status) || sanitizeVal(pd.soft_approval_status);
-          const realVkyc = sanitizeVal(app.vkyc_stage) || sanitizeVal(app.vkyc_status) || sanitizeVal(pd.vkyc_stage);
-          const realIqa = sanitizeVal(app.iqa_stage) || sanitizeVal(pd.iqa_stage);
-          const realDispatch = sanitizeVal(app.dispatch_status) || sanitizeVal(pd.dispatch_status);
-          const realFinal = sanitizeVal(app.final_status) || sanitizeVal(pd.final_status) || sanitizeVal(app.status) || 'In Process';
-          const realAppFileGenerated = sanitizeVal(app.app_file_generated) || sanitizeVal(app.appfile_generated) || sanitizeVal(pd.app_file_generated) || sanitizeVal(pd.appfile_generated);
-          const realRemark = sanitizeVal(app.bank_remark) || sanitizeVal(pd.bank_remark);
-          const realUserRemark = sanitizeVal(app.user_remark) || sanitizeVal(app.notes) || sanitizeVal(pd.user_remark) || sanitizeVal(pd.notes) || sanitizeVal(app.remarks) || '';
+        setRealData({
+          appcodeStatus: realAppcode,
+          softApprovalStatus: realSoftApproval,
+          vkycStage: realVkyc,
+          iqaStage: realIqa,
+          dispatchStatus: realDispatch,
+          finalStatus: realFinal,
+          appFileGenerated: realAppFileGenerated,
+          bankRemark: realRemark,
+          userRemark: realUserRemark
+        });
 
-          setRealData({
-            appcodeStatus: realAppcode,
-            softApprovalStatus: realSoftApproval,
-            vkycStage: realVkyc,
-            iqaStage: realIqa,
-            dispatchStatus: realDispatch,
-            finalStatus: realFinal,
-            appFileGenerated: realAppFileGenerated,
-            bankRemark: realRemark,
-            userRemark: realUserRemark
-          });
-
-          setAppcodeStatus(realAppcode);
-          setSoftApprovalStatus(realSoftApproval);
-          setVkycStage(realVkyc);
-          setIqaStage(realIqa);
-          setDispatchStatus(realDispatch);
-          setBankRemark(realRemark);
-          setUserRemark(realUserRemark);
-          setFinalStatus(realFinal);
-          setIpaStage(sanitizeVal(app.ipa_stage) || sanitizeVal(pd.ipa_stage) || 'None');
-          setKycStage(sanitizeVal(app.kyc_stage) || sanitizeVal(pd.kyc_stage) || 'None');
-          setIncomeDetails(sanitizeVal(app.income_details) || sanitizeVal(pd.income_details) || 'None');
-          setMailStatus(sanitizeVal(app.mail_status) || sanitizeVal(pd.mail_status) || 'None');
-          setCardApprovalStage(sanitizeVal(app.card_approval_stage) || sanitizeVal(pd.card_approval_stage) || 'None');
-          setDigitalCardIssued(sanitizeVal(app.digital_card_issued) || sanitizeVal(pd.digital_card_issued) || 'None');
-          setCardActivationStage(sanitizeVal(app.card_activation_stage) || sanitizeVal(pd.card_activation_stage) || 'None');
-          setDeclineCode(sanitizeVal(app.decline_code) || sanitizeVal(pd.decline_code) || '');
-          setDeclineRemark(sanitizeVal(app.decline_remark) || sanitizeVal(pd.decline_remark) || '');
-          setQueryableRemark(sanitizeVal(app.queryable_remark) || sanitizeVal(pd.queryable_remark) || 'None');
-          setQueryableSalesRemark(sanitizeVal(app.queryable_sales_remark) || sanitizeVal(pd.queryable_sales_remark) || '');
-          setDigitalRemark(sanitizeVal(app.digital_remark) || sanitizeVal(pd.digital_remark) || 'None');
-          setInProcessStage(sanitizeVal(app.in_process_stage) || sanitizeVal(pd.in_process_stage) || 'None');
-          if (realAppFileGenerated) setAppFileGenerated(realAppFileGenerated);
-          if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
-          if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
-          if (app.approved_amount || pd.approved_amount) setApprovedAmount(app.approved_amount || pd.approved_amount);
-        }
-
-        if (timelineRes?.data?.data) {
-          setTimeline(timelineRes.data.data);
-        }
-      } catch (err) {
-        if (isMounted) console.error('Error fetching verification details:', err);
-      } finally {
-        if (isMounted) setLoading(false);
+        setAppcodeStatus(realAppcode);
+        setSoftApprovalStatus(realSoftApproval);
+        setVkycStage(realVkyc);
+        setIqaStage(realIqa);
+        setDispatchStatus(realDispatch);
+        setBankRemark(realRemark);
+        setUserRemark(realUserRemark);
+        setFinalStatus(realFinal);
+        setIpaStage(sanitizeVal(app.ipa_stage) || sanitizeVal(pd.ipa_stage) || 'None');
+        setKycStage(sanitizeVal(app.kyc_stage) || sanitizeVal(pd.kyc_stage) || 'None');
+        setIncomeDetails(sanitizeVal(app.income_details) || sanitizeVal(pd.income_details) || 'None');
+        setMailStatus(sanitizeVal(app.mail_status) || sanitizeVal(pd.mail_status) || 'None');
+        setCardApprovalStage(sanitizeVal(app.card_approval_stage) || sanitizeVal(pd.card_approval_stage) || 'None');
+        setDigitalCardIssued(sanitizeVal(app.digital_card_issued) || sanitizeVal(pd.digital_card_issued) || 'None');
+        setCardActivationStage(sanitizeVal(app.card_activation_stage) || sanitizeVal(pd.card_activation_stage) || 'None');
+        setDeclineCode(sanitizeVal(app.decline_code) || sanitizeVal(pd.decline_code) || '');
+        setDeclineRemark(sanitizeVal(app.decline_remark) || sanitizeVal(pd.decline_remark) || '');
+        setQueryableRemark(sanitizeVal(app.queryable_remark) || sanitizeVal(pd.queryable_remark) || 'None');
+        setQueryableSalesRemark(sanitizeVal(app.queryable_sales_remark) || sanitizeVal(pd.queryable_sales_remark) || '');
+        setDigitalRemark(sanitizeVal(app.digital_remark) || sanitizeVal(pd.digital_remark) || 'None');
+        setInProcessStage(sanitizeVal(app.in_process_stage) || sanitizeVal(pd.in_process_stage) || 'None');
+        if (realAppFileGenerated) setAppFileGenerated(realAppFileGenerated);
+        if (app.decline_reason || pd.decline_reason) setDeclineReason(app.decline_reason || pd.decline_reason);
+        if (app.eligible_reqd || pd.eligible_reqd) setEligibleReQd(app.eligible_reqd || pd.eligible_reqd);
+        if (app.approved_amount || pd.approved_amount) setApprovedAmount(app.approved_amount || pd.approved_amount);
       }
-    };
 
-    fetchData();
-
-    return () => {
-      isMounted = false;
-    };
+      if (timelineRes?.data?.data) {
+        setTimeline(timelineRes.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching verification details:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [application?.id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSaveDetails = async (formType) => {
     setActionLoading(true);
@@ -512,7 +505,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
       const res = await api.put(`/applications/${application.id}/verification`, payload);
       if (res?.data?.success) {
         alert(`Application details saved successfully!`);
-        await fetchData();
+        try {
+          await fetchData();
+        } catch (_) {}
         if (onRefresh) onRefresh();
       }
     } catch (err) {
