@@ -1648,7 +1648,7 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, '')) as soft_approval_status,
           COALESCE(NULLIF(a.iqa_stage, ''), NULLIF(pad.iqa_stage, '')) as iqa_stage,
           COALESCE(NULLIF(a.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_stage, '')) as vkyc_stage,
-          COALESCE(NULLIF(a.vkyc_status, ''), NULLIF(pad.vkyc_status, '')) as vkyc_status,
+          COALESCE(NULLIF(a.vkyc_status, ''), NULLIF(a.vkyc_stage, ''), NULLIF(pad.vkyc_stage, '')) as vkyc_status,
           COALESCE(NULLIF(a.vkyc_url, ''), NULLIF(pad.vkyc_url, '')) as vkyc_url,
           COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status,
           COALESCE(NULLIF(a.bank_remark, ''), NULLIF(pad.bank_remark, '')) as bank_remark,
