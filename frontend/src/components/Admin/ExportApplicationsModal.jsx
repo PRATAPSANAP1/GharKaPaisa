@@ -135,8 +135,14 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
       }
 
       // Determine relevant bank names for assigned banks and exported applications
-      const userAssignedBanks = (user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || [])).map(b => (b.name || b.bank_name || b.short_code || '').toLowerCase());
-      const exportedBankNames = filtered.map(a => (a.bank_name || a.bank_code || a.bank || '').toLowerCase());
+      const userAssignedBanks = [
+        ...(Array.isArray(user?.assigned_banks) ? user.assigned_banks : []),
+        ...(Array.isArray(user?.permissions?.assigned_banks) ? user.permissions.assigned_banks : []),
+        ...(Array.isArray(user?.permissions?.bank_codes) ? user.permissions.bank_codes : []),
+        ...(Array.isArray(user?.assigned_bank_ids) ? user.assigned_bank_ids : [])
+      ].map(b => typeof b === 'string' ? b.toLowerCase() : (b?.name || b?.bank_name || b?.short_code || b?.code || '').toLowerCase());
+
+      const exportedBankNames = filtered.map(a => (a.bank_name || a.bank_code || a.bank || a.product_name || '').toLowerCase());
       const allRelevantBanks = [...userAssignedBanks, ...exportedBankNames];
 
       const hasSbi = allRelevantBanks.some(b => b.includes('sbi') || b.includes('state bank'));
@@ -172,62 +178,82 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
       // SBI-exclusive bank form fields
       if (hasSbi || isSuperAdminOrGlobal) {
         colDefs.push(
-          { header: 'APPCODE Status', getVal: a => a.appcode_status || 'NA' },
-          { header: 'Soft Approval Status', getVal: a => a.soft_approval_status || 'NA' },
-          { header: 'IQA Stage', getVal: a => a.iqa_stage || 'NA' }
+          { header: 'APPCODE Status', getVal: a => a.appcode_status || a.physical_details?.appcode_status || 'NA' },
+          { header: 'Soft Approval Status', getVal: a => a.soft_approval_status || a.physical_details?.soft_approval_status || 'NA' },
+          { header: 'IQA Stage', getVal: a => a.iqa_stage || a.physical_details?.iqa_stage || 'NA' }
         );
       }
 
       // Bank Reference No & VKYC
       colDefs.push(
         { header: 'Bank Application Number', getVal: a => {
-            const raw = a.bank_application_number || a.bank_ref_number || '';
+            const raw = a.bank_application_number || a.bank_ref_number || a.physical_details?.bank_application_number || a.physical_details?.bank_ref_number || '';
             const sysAppNo = a.app_number || '';
             return (!raw || String(raw).trim() === '' || String(raw).trim() === String(sysAppNo).trim() || String(raw).toUpperCase() === 'N/A' || String(raw).toUpperCase() === 'NA') ? 'NA' : String(raw).trim();
           }
         },
-        { header: 'VKYC Stage', getVal: a => a.vkyc_stage || a.kyc_stage || a.vkyc_status || 'NA' },
-        { header: 'VKYC Link', getVal: a => (a.vkyc_url && String(a.vkyc_url).trim() !== '' && String(a.vkyc_url).toUpperCase() !== 'N/A') ? a.vkyc_url : 'NA' }
+        { header: 'VKYC Stage', getVal: a => a.vkyc_stage || a.kyc_stage || a.vkyc_status || a.physical_details?.vkyc_stage || 'NA' },
+        { header: 'VKYC Link', getVal: a => {
+            const rawUrl = a.vkyc_url || a.physical_details?.vkyc_url || '';
+            return (rawUrl && String(rawUrl).trim() !== '' && String(rawUrl).toUpperCase() !== 'N/A') ? String(rawUrl).trim() : 'NA';
+          }
+        }
       );
 
       if (hasSbi || isSuperAdminOrGlobal) {
         colDefs.push(
-          { header: 'Dispatch Status', getVal: a => a.dispatch_status || 'NA' }
+          { header: 'Dispatch Status', getVal: a => a.dispatch_status || a.physical_details?.dispatch_status || 'NA' }
         );
       }
 
       // HDFC-exclusive bank form fields
       if (hasHdfc || isSuperAdminOrGlobal) {
         colDefs.push(
-          { header: 'Bank Current Lead Status', getVal: a => a.bank_current_lead_status || 'NA' }
+          { header: 'Bank Current Lead Status', getVal: a => a.bank_current_lead_status || a.physical_details?.bank_current_lead_status || 'NA' }
         );
       }
 
       // Bank Final Status
       colDefs.push(
-        { header: 'Final Status', getVal: a => (a.final_status && String(a.final_status).trim() !== '' && String(a.final_status).toUpperCase() !== 'N/A') ? String(a.final_status).replace(/"/g, '""') : 'NA' }
+        { header: 'Final Status', getVal: a => {
+            const raw = a.final_status || a.physical_details?.final_status || '';
+            return (raw && String(raw).trim() !== '' && String(raw).toUpperCase() !== 'N/A') ? String(raw).replace(/"/g, '""') : 'NA';
+          }
+        }
       );
 
       if (hasSbi || isSuperAdminOrGlobal) {
         colDefs.push(
-          { header: 'App File Generated', getVal: a => a.app_file_generated || 'NA' }
+          { header: 'App File Generated', getVal: a => a.app_file_generated || a.appfile_generated || a.physical_details?.app_file_generated || 'NA' }
         );
       }
 
       // Bank Remarks & Decline Reason
       colDefs.push(
-        { header: 'Bank Remark', getVal: a => (a.bank_remark && String(a.bank_remark).trim() !== '' && String(a.bank_remark).toUpperCase() !== 'N/A') ? String(a.bank_remark).replace(/"/g, '""') : 'NA' },
-        { header: 'Decline Reason', getVal: a => (a.decline_reason && String(a.decline_reason).trim() !== '' && String(a.decline_reason).toUpperCase() !== 'N/A') ? String(a.decline_reason).replace(/"/g, '""') : 'NA' }
+        { header: 'Bank Remark', getVal: a => {
+            const raw = a.bank_remark || a.physical_details?.bank_remark || '';
+            return (raw && String(raw).trim() !== '' && String(raw).toUpperCase() !== 'N/A') ? String(raw).replace(/"/g, '""') : 'NA';
+          }
+        },
+        { header: 'Decline Reason', getVal: a => {
+            const raw = a.decline_reason || a.physical_details?.decline_reason || '';
+            return (raw && String(raw).trim() !== '' && String(raw).toUpperCase() !== 'N/A') ? String(raw).replace(/"/g, '""') : 'NA';
+          }
+        }
       );
 
       if (hasHdfc || isSuperAdminOrGlobal) {
         colDefs.push(
-          { header: 'Eligible Re-QD', getVal: a => (a.eligible_reqd && String(a.eligible_reqd).trim() !== '' && String(a.eligible_reqd).toUpperCase() !== 'N/A') ? String(a.eligible_reqd).replace(/"/g, '""') : 'NA' }
+          { header: 'Eligible Re-QD', getVal: a => {
+              const raw = a.eligible_reqd || a.physical_details?.eligible_reqd || '';
+              return (raw && String(raw).trim() !== '' && String(raw).toUpperCase() !== 'N/A') ? String(raw).replace(/"/g, '""') : 'NA';
+            }
+          }
         );
       }
 
       colDefs.push(
-        { header: 'Approved Amount', getVal: a => a.approved_amount || 0 },
+        { header: 'Approved Amount', getVal: a => a.approved_amount || a.physical_details?.approved_amount || 0 },
         { header: 'Created Date', getVal: a => a.created_at ? new Date(a.created_at).toLocaleDateString('en-IN') : 'N/A' }
       );
 
