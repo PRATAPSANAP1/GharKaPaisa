@@ -101,7 +101,6 @@ const submitApplication = async (req, res, next) => {
     const rawRole = String(req.user?.role || '').toUpperCase().trim();
     const isStaff = ['ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'HR', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'ADMINISTRATIVE_OPERATOR'].includes(rawRole);
 
-    try {
     let PartnerId = req.body.partner_id || req.body.PartnerId || null;
 
     if (PartnerId) {
