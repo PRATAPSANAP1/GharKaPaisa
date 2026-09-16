@@ -1297,16 +1297,48 @@ const reassignApplication = async (req, res, next) => {
   try {
     await client.query('BEGIN');
 
+    // Resolve application by ID or app_number or lead_id
+    const { rows: [appRec] } = await client.query(
+      `SELECT id, lead_id FROM applications WHERE id::text = $1 OR app_number = $1 OR lead_id::text = $1 LIMIT 1`,
+      [id]
+    );
+    if (!appRec) {
+      await client.query('ROLLBACK');
+      return notFound(res, 'Application not found');
+    }
+    const targetAppId = appRec.id;
+
     let targetPartnerId = partner_id;
 
-    if (targetPartnerId === 'self') {
+    if (targetPartnerId === 'self' || targetPartnerId === 'me') {
       const { rows: [selfPartner] } = await client.query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
       if (selfPartner) {
         targetPartnerId = selfPartner.id;
+      } else {
+        // Auto-create partner profile for user if missing
+        const { rows: [{ nextval: partnerSeq }] } = await client.query(`SELECT nextval('partner_code_seq')`).catch(() => ({ rows: [{ nextval: Math.floor(10000 + Math.random() * 90000) }] }));
+        const partnerCode = 'AG' + String(partnerSeq);
+        const fullNameParts = (req.user.full_name || req.user.name || 'Staff User').split(' ');
+        const fName = fullNameParts[0] || 'Staff';
+        const lName = fullNameParts.slice(1).join(' ') || '';
+
+        const { rows: [newP] } = await client.query(`
+          INSERT INTO partner_profiles (user_id, partner_code, first_name, last_name, status, kyc_status)
+          VALUES ($1, $2, $3, $4, 'active', 'approved')
+          ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()
+          RETURNING id
+        `, [req.user.id, partnerCode, fName, lName]);
+
+        if (newP) {
+          targetPartnerId = newP.id;
+        } else {
+          await client.query('ROLLBACK');
+          return error(res, 'Could not resolve partner profile for logged-in user', 400);
+        }
       }
     }
 
-    if (targetPartnerId !== 'self' && !isUuid(targetPartnerId)) {
+    if (!isUuid(targetPartnerId)) {
       // Extract UUID if embedded inside string
       const uuidMatch = String(targetPartnerId).match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
       if (uuidMatch) {
@@ -1323,6 +1355,7 @@ const reassignApplication = async (req, res, next) => {
              OR (partner_code IS NOT NULL AND LOWER(partner_code) = LOWER($2))
              OR LOWER(CONCAT(first_name, ' ', last_name)) = LOWER($1) 
              OR LOWER(first_name) = LOWER($1)
+             OR user_id::text = $1
           LIMIT 1
         `, [cleanStr, code]);
 
@@ -1335,6 +1368,11 @@ const reassignApplication = async (req, res, next) => {
       }
     }
 
+    if (!isUuid(targetPartnerId)) {
+      await client.query('ROLLBACK');
+      return error(res, `Invalid partner ID format '${targetPartnerId}'`, 400);
+    }
+
     const { rows: [partner] } = await client.query(`SELECT id, first_name, last_name, partner_code FROM partner_profiles WHERE id = $1`, [targetPartnerId]);
     if (!partner) {
       await client.query('ROLLBACK');
@@ -1343,15 +1381,15 @@ const reassignApplication = async (req, res, next) => {
 
     await client.query(`
       UPDATE applications SET partner_id = $1, updated_at = NOW() WHERE id = $2
-    `, [partner.id, id]);
+    `, [partner.id, targetAppId]);
 
     await client.query(`
       UPDATE leads SET partner_id = $1, updated_at = NOW()
       WHERE id = $2 OR id IN (SELECT lead_id FROM applications WHERE id = $2 AND lead_id IS NOT NULL)
-    `, [partner.id, id]);
+    `, [partner.id, targetAppId]);
 
-    await logTimeline(client, id, 'submitted', 'Reassigned Partner', `Application reassigned to ${partner.first_name} ${partner.last_name || ''} (${partner.partner_code}).`, req.user.id);
-    await logAction(req, 'REASSIGN_APPLICATION', id, { target_partner: partner.id });
+    await logTimeline(client, targetAppId, 'submitted', 'Reassigned Partner', `Application reassigned to ${partner.first_name} ${partner.last_name || ''} (${partner.partner_code}).`, req.user.id);
+    await logAction(req, 'REASSIGN_APPLICATION', targetAppId, { target_partner: partner.id });
 
     await client.query('COMMIT');
     return success(res, {}, 'Application successfully reassigned.');

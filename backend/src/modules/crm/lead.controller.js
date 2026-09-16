@@ -10,6 +10,8 @@ const {
   triggerAutomaticCommissionPayout
 } = require('./lead.service.js');
 
+const isUuid = (str) => typeof str === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(str);
+
 /**
  * Enterprise Lead Orchestration Controller
  */
@@ -951,8 +953,21 @@ const addLeadNote = async (req, res, next) => {
 const assignLead = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { assigned_to, team } = req.body;
+    let { assigned_to, team } = req.body;
     if (!assigned_to) return error(res, 'Target staff user ID is required', 400);
+
+    if (assigned_to === 'self' || assigned_to === 'me') {
+      assigned_to = req.user.id;
+    }
+
+    if (!isUuid(assigned_to)) {
+      const uuidMatch = String(assigned_to).match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+      if (uuidMatch) {
+        assigned_to = uuidMatch[0];
+      } else {
+        return error(res, 'Invalid target user ID format', 400);
+      }
+    }
 
     const { rows: [assign] } = await query(`
       INSERT INTO lead_assignments (lead_id, assigned_to, team, assigned_by)
@@ -1012,18 +1027,39 @@ const updateLeadChecklist = async (req, res, next) => {
 // Bulk Assign Leads
 const bulkAssignLeads = async (req, res, next) => {
   try {
-    const { lead_ids, assigned_partner_id } = req.body;
+    let { lead_ids, assigned_partner_id } = req.body;
     if (!Array.isArray(lead_ids) || !assigned_partner_id) {
       return error(res, 'Lead IDs array and Assigned Partner ID are required', 400);
+    }
+
+    if (assigned_partner_id === 'self' || assigned_partner_id === 'me') {
+      const { rows: [selfPartner] } = await query(`SELECT id FROM partner_profiles WHERE user_id = $1`, [req.user.id]);
+      if (selfPartner) {
+        assigned_partner_id = selfPartner.id;
+      }
+    }
+
+    if (!isUuid(assigned_partner_id)) {
+      const uuidMatch = String(assigned_partner_id).match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+      if (uuidMatch) {
+        assigned_partner_id = uuidMatch[0];
+      } else {
+        return error(res, 'Invalid partner ID format', 400);
+      }
+    }
+
+    const validLeadIds = lead_ids.filter(id => isUuid(id));
+    if (validLeadIds.length === 0) {
+      return error(res, 'No valid lead UUIDs provided', 400);
     }
 
     await query(`
       UPDATE leads 
       SET partner_id = $1, updated_at = NOW()
       WHERE id = ANY($2::uuid[])
-    `, [assigned_partner_id, lead_ids]);
+    `, [assigned_partner_id, validLeadIds]);
 
-    return success(res, {}, `Successfully reassigned ${lead_ids.length} leads`);
+    return success(res, {}, `Successfully reassigned ${validLeadIds.length} leads`);
   } catch (err) {
     next(err);
   }
