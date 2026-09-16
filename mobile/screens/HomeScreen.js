@@ -236,7 +236,7 @@ export default function HomeScreen({ navigation }) {
               <TouchableOpacity
                 key={item.id}
                 style={styles.circleCard}
-                onPress={() => Alert.alert(item.label, `${item.desc}`)}
+                onPress={() => navigation.navigate('CategoryProducts', { category: 'insurance' })}
               >
                 <Text style={styles.circleIcon}>{item.icon}</Text>
                 <Text style={styles.circleLabel}>{item.label}</Text>
@@ -257,7 +257,7 @@ export default function HomeScreen({ navigation }) {
               <TouchableOpacity
                 key={item.id}
                 style={styles.circleCard}
-                onPress={() => Alert.alert(item.label, `${item.desc}`)}
+                onPress={() => navigation.navigate('CategoryProducts', { category: 'services' })}
               >
                 <Text style={styles.circleIcon}>{item.icon}</Text>
                 <Text style={styles.circleLabel}>{item.label}</Text>
@@ -270,7 +270,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Loans & Credit</Text>
-            <TouchableOpacity onPress={() => setLoansModalVisible(true)}>
+            <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { category: 'loans' })}>
               <Text style={styles.viewAllText}>View All (12) →</Text>
             </TouchableOpacity>
           </View>
@@ -279,7 +279,7 @@ export default function HomeScreen({ navigation }) {
               <TouchableOpacity
                 key={item.id}
                 style={styles.gridCard}
-                onPress={() => navigation.navigate('Login', { role: 'Partner' })}
+                onPress={() => navigation.navigate('CategoryProducts', { category: 'loans' })}
               >
                 <Text style={styles.gridIcon}>{item.icon}</Text>
                 <Text style={styles.gridLabel}>{item.label}</Text>
@@ -306,7 +306,7 @@ export default function HomeScreen({ navigation }) {
               <TouchableOpacity
                 key={bank.id}
                 style={styles.bankCard}
-                onPress={() => navigation.navigate('Login', { role: 'Partner' })}
+                onPress={() => navigation.navigate('CategoryProducts', { category: 'credit_cards', bankSlug: bank.code })}
               >
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={styles.bankName}>{bank.name}</Text>
@@ -322,7 +322,12 @@ export default function HomeScreen({ navigation }) {
 
         {/* Lifetime Free Credit Cards */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Featured Lifetime Free Credit Cards</Text>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Featured Lifetime Free Credit Cards</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('CategoryProducts', { category: 'ltf' })}>
+              <Text style={styles.viewAllText}>View All →</Text>
+            </TouchableOpacity>
+          </View>
           {ltfCards.map((card) => (
             <TouchableOpacity 
               key={card.id} 
@@ -337,6 +342,31 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.applyArrow}>Apply ➔</Text>
             </TouchableOpacity>
           ))}
+        </View>
+
+        {/* Public Pages Quick Footer Directory */}
+        <View style={{ marginTop: 24, marginHorizontal: 16, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#E2E8F0' }}>
+          <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A', marginBottom: 12 }}>Platform Links & Legal</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Contact')}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>📞 Contact Us</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Careers')}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>💼 Careers & Hiring</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Policy', { policy: 'terms' })}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>📄 Terms & Conditions</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Policy', { policy: 'privacy' })}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>🔒 Privacy Policy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Policy', { policy: 'shipping' })}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>🚚 Shipping Policy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ backgroundColor: '#F1F5F9', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 }} onPress={() => navigation.navigate('Policy', { policy: 'refund' })}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#0d47a1' }}>💳 Refund Policy</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
       </ScrollView>

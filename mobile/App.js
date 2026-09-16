@@ -22,6 +22,11 @@ import ChatbotScreen from './screens/ChatbotScreen';
 import NotificationsScreen from './screens/NotificationsScreen';
 import AuditLogsScreen from './screens/AuditLogsScreen';
 import ReportsScreen from './src/screens/ReportsScreen';
+import ContactScreen from './screens/ContactScreen';
+import CareersScreen from './screens/CareersScreen';
+import PolicyScreen from './screens/PolicyScreen';
+import CategoryProductsScreen from './screens/CategoryProductsScreen';
+import ProductDetailScreen from './screens/ProductDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -47,6 +52,11 @@ function MainNavigator() {
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Contact" component={ContactScreen} />
+          <Stack.Screen name="Careers" component={CareersScreen} />
+          <Stack.Screen name="Policy" component={PolicyScreen} />
+          <Stack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
+          <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
           <Stack.Screen name="Dashboard" component={PartnerDashboardScreen} />
           <Stack.Screen name="PartnerDashboard" component={PartnerDashboardScreen} />
           <Stack.Screen name="PartnerKyc" component={PartnerKycScreen} />
