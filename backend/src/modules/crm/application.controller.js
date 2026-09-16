@@ -830,8 +830,10 @@ const updateStatus = async (req, res, next) => {
     }
 
     let approvedAt = app.approved_at;
+    let approvedBy = app.approved_by;
     if ((targetStatus === 'approved' || targetStatus === 'super_admin_approved') && !app.approved_at) {
       approvedAt = new Date();
+      approvedBy = req.user.id;
     }
 
     const historyEntry = JSON.stringify({ status: targetStatus, at: new Date(), by: req.user.id, remarks });
@@ -839,12 +841,13 @@ const updateStatus = async (req, res, next) => {
       UPDATE applications SET
         status = $1,
         approved_at = $2,
+        approved_by = COALESCE(approved_by, $7),
         commission_status = CASE WHEN $5::boolean THEN 'cancelled' ELSE commission_status END,
         status_history = status_history || $3::jsonb,
         app_file_generated = COALESCE($6, app_file_generated),
         updated_at = NOW()
       WHERE id = $4
-    `, [targetStatus, approvedAt, historyEntry, id, isRejected, appFileGenVal || null]);
+    `, [targetStatus, approvedAt, historyEntry, id, isRejected, appFileGenVal || null, req.user.id]);
 
     // ── Employee Incentive Engine Lifecycle Sync ────────────────────────────
     await syncEmployeeIncentiveLifecycle(client, app, appFileGenVal !== null ? appFileGenVal : app.app_file_generated, targetStatus);
@@ -1210,12 +1213,13 @@ const approveApplication = async (req, res, next) => {
         status='approved', 
         approved_amount=COALESCE($1, approved_amount, loan_amount), 
         approved_at=NOW(), 
+        approved_by=COALESCE(approved_by, $3),
         commission_status='approved',
         commission_received_at=NOW(),
         commission_paid_at=NOW(),
         updated_at=NOW()
       WHERE id=$2
-    `, [approved_amount, app.id]);
+    `, [approved_amount, app.id, req.user.id]);
 
     // Split payout trigger
     const commValue = app.commission_amount || 0;
@@ -1464,7 +1468,8 @@ const ensureApplicationStageColumns = async () => {
       ADD COLUMN IF NOT EXISTS remark_updated_by UUID,
       ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ,
       ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no',
-      ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100)
+      ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS approved_by UUID
     `);
     stageColumnsEnsured = true;
   } catch (err) {
@@ -1660,6 +1665,16 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(a.eligible_reqd, ''), NULLIF(pad.eligible_reqd, '')) as eligible_reqd,
           a.submitted_at,
           a.approved_at,
+          a.approved_by,
+          COALESCE(
+            NULLIF(appu.employee_id, ''),
+            NULLIF(appemp.employee_id, ''),
+            NULLIF(appu.full_name, ''),
+            NULLIF(appu.email, ''),
+            appu.id::text
+          ) as approved_by_admin_id,
+          appu.full_name as approved_by_name,
+          COALESCE(NULLIF(appu.employee_id, ''), NULLIF(appemp.employee_id, '')) as approved_by_code,
           a.commission_received_at,
           a.commission_paid_at,
           a.submitted_by,
@@ -1714,6 +1729,21 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN users su ON su.id = a.submitted_by
         LEFT JOIN users oh ON oh.id = COALESCE(p.operation_head_id, b.operation_head_id)
         LEFT JOIN physical_application_details pad ON pad.application_id = a.id
+        LEFT JOIN users appu ON appu.id = COALESCE(
+          a.approved_by,
+          (
+            SELECT performed_by FROM application_timeline 
+            WHERE application_id = a.id AND (status IN ('approved', 'super_admin_approved', 'disbursed', 'sanctioned') OR event_type ILIKE '%approve%') 
+            ORDER BY created_at DESC LIMIT 1
+          ),
+          (
+            SELECT (elem->>'by')::uuid 
+            FROM jsonb_array_elements(a.status_history) elem 
+            WHERE elem->>'status' IN ('approved', 'super_admin_approved', 'disbursed', 'sanctioned') 
+            ORDER BY (elem->>'at') DESC LIMIT 1
+          )
+        )
+        LEFT JOIN employees appemp ON (appemp.user_id = appu.id OR appemp.id = appu.id)
       ) combined
       ${partnerTeamScopeSQL}
         AND (

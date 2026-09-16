@@ -169,18 +169,31 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
       const hasSbi = hasSbiData || isSuperAdminOrGlobal || allRelevantBanks.some(b => b.includes('sbi') || b.includes('state bank'));
       const hasHdfc = hasHdfcData || isSuperAdminOrGlobal || allRelevantBanks.some(b => b.includes('hdfc') || b.includes('tata'));
 
+      const isSuperAdminPanel = (userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN') || (typeof window !== 'undefined' && window.location.pathname.startsWith('/super-admin'));
+
+      const getApprovedByAdminId = (a) => {
+        const stat = String(a.status || '').toLowerCase();
+        const isAppr = ['approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received'].includes(stat) || a.approved_at;
+        if (!isAppr) return 'NA';
+        if (a.approved_by_admin_id && String(a.approved_by_admin_id).trim()) return String(a.approved_by_admin_id).trim();
+        if (a.approved_by_code && String(a.approved_by_code).trim()) return String(a.approved_by_code).trim();
+        if (a.approved_by_emp_code && String(a.approved_by_emp_code).trim()) return String(a.approved_by_emp_code).trim();
+        if (a.approved_by_name && String(a.approved_by_name).trim()) return String(a.approved_by_name).trim();
+        if (a.approved_by && String(a.approved_by).trim()) return String(a.approved_by).trim();
+
+        if (Array.isArray(a.status_history)) {
+          const apprEntry = a.status_history.find(h => ['approved', 'super_admin_approved', 'disbursed', 'sanctioned'].includes(String(h.status || '').toLowerCase()) && (h.by || h.user_id || h.admin_id));
+          if (apprEntry) {
+            return String(apprEntry.by || apprEntry.user_id || apprEntry.admin_id).trim();
+          }
+        }
+        return 'NA';
+      };
+
       const colDefs = [
         { header: 'Application No', getVal: a => a.app_number || a.application_no || a.id || '' },
         { header: 'Customer Name', getVal: a => a.customer_name || a.full_name || 'N/A' },
-        { header: 'Customer Mobile', getVal: a => hideCustomerMobile ? 'REDACTED' : (a.customer_mobile || a.mobile || 'N/A') },
         { header: 'Email', getVal: a => a.customer_email || a.email || 'N/A' },
-        { header: 'PAN Number', getVal: a => {
-            const rawPan = a.pan_number || a.pan || '';
-            if (!rawPan || String(rawPan).trim() === '' || String(rawPan).toUpperCase() === 'N/A' || String(rawPan).toUpperCase() === 'NA') return 'NA';
-            const strPan = String(rawPan).trim().toUpperCase();
-            return hideCustomerMobile ? (strPan.length >= 6 ? 'XXXXXX' + strPan.slice(6) : 'XXXXXX') : strPan;
-          }
-        },
         { header: 'City', getVal: a => a.city || 'N/A' },
         { header: 'State', getVal: a => a.state || 'N/A' },
         { header: 'Pincode', getVal: a => a.pincode || 'N/A' },
@@ -188,9 +201,19 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         { header: 'Bank Name', getVal: a => a.bank_name || 'N/A' },
         { header: 'Process Type', getVal: a => (a.process_type || a.process_by || 'Direct Link').replace(/_/g, ' ') },
         { header: 'Referrer / Code', getVal: a => a.emp_code || a.Partner_code || a.partner_code || a.referrer_code || 'N/A' },
-        { header: 'Status', getVal: a => (a.status || 'pending').replace(/_/g, ' ') },
-        { header: 'Commission Amount', getVal: a => a.commission_amount || 0 }
+        { header: 'Status', getVal: a => (a.status || 'pending').replace(/_/g, ' ') }
       ];
+
+      if (isSuperAdminPanel) {
+        colDefs.push({
+          header: 'Approved By Admin ID',
+          getVal: a => getApprovedByAdminId(a)
+        });
+      }
+
+      colDefs.push(
+        { header: 'Commission Amount', getVal: a => a.commission_amount || 0 }
+      );
 
       // SBI-exclusive bank form fields
       if (hasSbi || isSuperAdminOrGlobal) {
