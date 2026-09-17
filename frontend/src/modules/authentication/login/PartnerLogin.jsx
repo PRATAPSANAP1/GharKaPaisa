@@ -1090,6 +1090,7 @@ export default function PartnerLogin() {
               iconType="orange"
               title="24/7 Support"
               description={<>Dedicated help desk</>}
+              onClick={() => navigate("/contact")}
             />
 
             <FeatureCard
@@ -1296,9 +1297,13 @@ const SecurityIllustration = () => {
    FEATURE CARD COMPONENT
 ========================================================= */
 
-const FeatureCard = ({ icon, iconType, title, description }) => {
+const FeatureCard = ({ icon, iconType, title, description, onClick }) => {
   return (
-    <div className="feature-card">
+    <div
+      className={`feature-card ${onClick ? "clickable" : ""}`}
+      onClick={onClick}
+      style={onClick ? { cursor: "pointer" } : {}}
+    >
       <div className={`feature-icon ${iconType}`}>{icon}</div>
       <h3>{title}</h3>
       <p>{description}</p>

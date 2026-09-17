@@ -4,7 +4,10 @@ const ctrl = require('./support.controller.js');
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware.js');
 const roleCheck = require('../../middleware/authorization/role.middleware.js');
 
-// Protect all support ticket routes with JWT auth
+// Public contact form submission (no JWT auth required)
+router.post('/public-contact', ctrl.createPublicContactQuery);
+
+// Protect all other support ticket routes with JWT auth
 router.use(jwtAuth);
 
 // List tickets & create ticket

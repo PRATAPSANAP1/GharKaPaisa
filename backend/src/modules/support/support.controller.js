@@ -2,6 +2,43 @@ const { query } = require('../../config/database');
 const { success, created, error, notFound } = require('../../utils/response/response');
 const { logAction } = require('../admin/audit.service.js');
 
+// Create public support contact query (from Contact Us page)
+const createPublicContactQuery = async (req, res, next) => {
+  try {
+    const { fullName, mobile, description } = req.body;
+    if (!fullName || !mobile || !description) {
+      return error(res, 'Full Name, Mobile Number, and Description of Issue are required', 400);
+    }
+
+    if (!/^[6-9]\d{9}$/.test(String(mobile).trim())) {
+      return error(res, 'Please provide a valid 10-digit mobile number', 400);
+    }
+
+    // Insert into support_tickets table
+    const { rows: [ticket] } = await query(`
+      INSERT INTO support_tickets (customer_name, mobile, subject, description, category, priority, status)
+      VALUES ($1, $2, $3, $4, 'General Contact Query', 'medium', 'open')
+      RETURNING *
+    `, [fullName.trim(), mobile.trim(), `Support Query from ${fullName.trim()}`, description.trim()]);
+
+    // Dispatch email to support@gharkapaisa.in
+    try {
+      const { sendContactQueryEmail } = require('../../services/email/email.service');
+      sendContactQueryEmail({
+        fullName: fullName.trim(),
+        mobile: mobile.trim(),
+        description: description.trim()
+      }).catch(err => console.error('Failed to send contact query email:', err.message));
+    } catch (e) {
+      console.error('Email dispatch error:', e.message);
+    }
+
+    return created(res, ticket, 'Thank you! Your support query has been submitted.');
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Create a new support ticket (Partner)
 const createTicket = async (req, res, next) => {
   try {
@@ -43,10 +80,15 @@ const listTickets = async (req, res, next) => {
 
     if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') {
       ticketsQuery = `
-        SELECT t.*, pp.partner_code, pp.first_name, pp.last_name, u.email as partner_email
+        SELECT t.*,
+               COALESCE(NULLIF(t.customer_name, ''), pp.first_name, 'Contact Lead') as first_name,
+               COALESCE(pp.last_name, '') as last_name,
+               COALESCE(pp.partner_code, 'PUBLIC') as partner_code,
+               COALESCE(t.contact_email, u.email, 'support@gharkapaisa.in') as partner_email,
+               COALESCE(t.mobile, pp.mobile) as mobile
         FROM support_tickets t
-        JOIN partner_profiles pp ON pp.id = t.partner_id
-        JOIN users u ON u.id = pp.user_id
+        LEFT JOIN partner_profiles pp ON pp.id = t.partner_id
+        LEFT JOIN users u ON u.id = pp.user_id
         ORDER BY t.created_at DESC
       `;
     } else {
@@ -82,9 +124,14 @@ const getTicketDetail = async (req, res, next) => {
     const role = (req.user?.role || '').toUpperCase();
 
     const { rows: [ticket] } = await query(`
-      SELECT t.*, pp.partner_code, pp.first_name, pp.last_name
+      SELECT t.*,
+             COALESCE(NULLIF(t.customer_name, ''), pp.first_name, 'Contact Lead') as first_name,
+             COALESCE(pp.last_name, '') as last_name,
+             COALESCE(pp.partner_code, 'PUBLIC') as partner_code,
+             COALESCE(t.contact_email, u.email, 'support@gharkapaisa.in') as partner_email,
+             COALESCE(t.mobile, pp.mobile) as mobile
       FROM support_tickets t
-      JOIN partner_profiles pp ON pp.id = t.partner_id
+      LEFT JOIN partner_profiles pp ON pp.id = t.partner_id
       WHERE t.id = $1
     `, [id]);
 
@@ -190,6 +237,7 @@ const updateTicketStatus = async (req, res, next) => {
 };
 
 module.exports = {
+  createPublicContactQuery,
   createTicket,
   listTickets,
   getTicketDetail,

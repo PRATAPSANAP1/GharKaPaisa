@@ -210,6 +210,40 @@ export function HeroBannerCarousel({ C, navigate }) {
     fetchBanners();
   }, []);
 
+  const resolveBannerImage = (b) => {
+    if (!b) return offerBanner;
+    const rawUrl = typeof b === 'string' ? b : (b.image_url || b.image || '');
+    if (!rawUrl) return offerBanner;
+
+    // Direct local map lookup
+    if (localBannerMap[rawUrl]) return localBannerMap[rawUrl];
+
+    // Filename basename lookup in localBannerMap
+    const cleanUrl = rawUrl.trim();
+    const basename = cleanUrl.split('/').pop().split('\\').pop();
+    if (localBannerMap[basename]) return localBannerMap[basename];
+
+    // Decoded filename basename
+    try {
+      const decodedBasename = decodeURIComponent(basename);
+      if (localBannerMap[decodedBasename]) return localBannerMap[decodedBasename];
+    } catch (_) {}
+
+    // External HTTP URL
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      return cleanUrl;
+    }
+
+    // Relative backend upload URL
+    if (cleanUrl.startsWith('/')) {
+      const apiBase = getApiV1Url();
+      const origin = apiBase.replace(/\/api\/v1\/?$/, '');
+      return `${origin}${cleanUrl}`;
+    }
+
+    return offerBanner;
+  };
+
   const activeBannerList = (dynamicBanners && dynamicBanners.length > 0) ? dynamicBanners : defaultHomeBanners;
 
   const bannerSlides = activeBannerList.map((b, idx) => ({
@@ -217,7 +251,7 @@ export function HeroBannerCarousel({ C, navigate }) {
     title: b.title,
     subtitle: b.subtitle,
     btnText: b.btn_text,
-    image: localBannerMap[b.image_url] || (b.image_url && b.image_url.startsWith('http') ? b.image_url : offerBanner),
+    image: resolveBannerImage(b),
     link: b.click_url || "/credit-cards"
   }));
 

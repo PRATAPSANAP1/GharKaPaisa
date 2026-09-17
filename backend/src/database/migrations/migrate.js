@@ -2428,6 +2428,10 @@ const migrate = async () => {
     // 5. Support Tickets table updates
     await query(`
       ALTER TABLE support_tickets 
+      ALTER COLUMN partner_id DROP NOT NULL,
+      ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS mobile VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
       ADD COLUMN IF NOT EXISTS assigned_to UUID REFERENCES users(id) ON DELETE SET NULL,
       ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ,
       ADD COLUMN IF NOT EXISTS closed_by UUID REFERENCES users(id) ON DELETE SET NULL

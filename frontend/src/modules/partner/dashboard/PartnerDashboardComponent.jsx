@@ -59,10 +59,23 @@ const localBannerMap = {
 
 const resolveBannerImage = (url) => {
   if (!url) return offerBanner;
-  if (localBannerMap[url]) return localBannerMap[url];
-  const filename = (url || '').split('/').pop();
+  const rawUrl = typeof url === 'string' ? url : (url.image_url || url.image || '');
+  if (!rawUrl) return offerBanner;
+  if (localBannerMap[rawUrl]) return localBannerMap[rawUrl];
+  const cleanUrl = rawUrl.trim();
+  const filename = cleanUrl.split('/').pop().split('\\').pop();
   if (localBannerMap[filename]) return localBannerMap[filename];
-  return url;
+  try {
+    const decoded = decodeURIComponent(filename);
+    if (localBannerMap[decoded]) return localBannerMap[decoded];
+  } catch (_) {}
+  if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) return cleanUrl;
+  if (cleanUrl.startsWith('/')) {
+    const apiBase = getApiV1Url ? getApiV1Url() : '';
+    const origin = apiBase.replace(/\/api\/v1\/?$/, '');
+    return `${origin}${cleanUrl}`;
+  }
+  return offerBanner;
 };
 
 /* ---------- Reference UI Pure Styling Sub-Components ---------- */

@@ -2,15 +2,40 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../contexts/ThemeContext";
 import { FaArrowLeft, FaEnvelope, FaPhoneAlt, FaMapMarkerAlt, FaPaperPlane } from "react-icons/fa";
+import api from "../../services/api";
 
 export default function Contact() {
   const navigate = useNavigate();
   const { C, isDark } = useTheme();
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [formData, setFormData] = useState({
+    fullName: "",
+    mobile: "",
+    description: ""
+  });
 
-  const handleFormSubmit = (e) => {
+  const handleChange = (e) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
+    setErrorMsg("");
+    setLoading(true);
+    try {
+      const res = await api.post("/support/tickets/public-contact", formData);
+      if (res.data?.success) {
+        setSubmitted(true);
+      } else {
+        setErrorMsg(res.data?.message || "Failed to submit query");
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || "Failed to submit query. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -79,32 +104,67 @@ export default function Contact() {
           <div style={{ background: C.card, padding: "28px", borderRadius: "24px", border: `1px solid ${C.border}`, boxShadow: `0 4px 16px rgba(0,0,0,0.03)` }}>
             <h2 style={{ fontSize: "18px", fontWeight: 800, color: C.text, marginBottom: "16px", marginTop: 0 }}>Send Us a Message</h2>
 
+            {errorMsg && (
+              <div style={{ background: '#fee2e2', border: '1px solid #f87171', color: '#991b1b', borderRadius: '10px', padding: '10px 14px', fontSize: '13px', marginBottom: '14px' }}>
+                {errorMsg}
+              </div>
+            )}
+
             {submitted ? (
               <div style={{ background: isDark ? '#1e293b' : '#f0fdf4', border: `1px solid ${C.teal}40`, borderRadius: "14px", padding: "20px", textAlign: "center" }}>
                 <div style={{ fontSize: "16px", fontWeight: 800, color: C.teal, marginBottom: "6px" }}>Thank You!</div>
-                <p style={{ fontSize: "13px", color: C.textMid, margin: 0 }}>Your message has been received. Our support team will reach out to you shortly.</p>
+                <p style={{ fontSize: "13px", color: C.textMid, margin: 0 }}>Your message has been received and emailed to support@gharkapaisa.in. Our support team will reach out to you shortly.</p>
               </div>
             ) : (
               <form onSubmit={handleFormSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textMid, marginBottom: "4px" }}>Full Name *</label>
-                  <input required type="text" placeholder="Your Full Name" style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "13px", boxSizing: "border-box" }} />
+                  <input
+                    required
+                    type="text"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    placeholder="Your Full Name"
+                    style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "13px", boxSizing: "border-box" }}
+                  />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textMid, marginBottom: "4px" }}>Mobile Number *</label>
-                  <input required type="tel" placeholder="10-digit Mobile Number" style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "13px", boxSizing: "border-box" }} />
+                  <input
+                    required
+                    type="tel"
+                    name="mobile"
+                    value={formData.mobile}
+                    onChange={handleChange}
+                    placeholder="10-digit Mobile Number"
+                    style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "13px", boxSizing: "border-box" }}
+                  />
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: C.textMid, marginBottom: "4px" }}>Description of Issue *</label>
-                  <textarea required rows="4" placeholder="Describe your issue or query..." style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "13px", boxSizing: "border-box", resize: "vertical" }} />
+                  <textarea
+                    required
+                    rows="4"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    placeholder="Describe your issue or query..."
+                    style={{ width: "100%", padding: "10px 14px", borderRadius: "10px", border: `1px solid ${C.border}`, background: C.bg, color: C.text, fontSize: "13px", boxSizing: "border-box", resize: "vertical" }}
+                  />
                 </div>
-                <button type="submit" style={{ 
-                  marginTop: "6px", padding: "12px", borderRadius: "10px", border: "none", 
-                  background: C.teal, color: "#fff", fontSize: "14px", fontWeight: 700, 
-                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                  boxShadow: `0 4px 12px ${C.teal}40`
-                }}>
-                  <FaPaperPlane size={13} /> Submit Query
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{ 
+                    marginTop: "6px", padding: "12px", borderRadius: "10px", border: "none", 
+                    background: C.teal, color: "#fff", fontSize: "14px", fontWeight: 700, 
+                    cursor: loading ? "wait" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                    boxShadow: `0 4px 12px ${C.teal}40`,
+                    opacity: loading ? 0.7 : 1
+                  }}
+                >
+                  <FaPaperPlane size={13} /> {loading ? "Submitting..." : "Submit Query"}
                 </button>
               </form>
             )}

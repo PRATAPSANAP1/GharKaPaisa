@@ -638,6 +638,72 @@ const sendCandidateAssignedToHrEmail = async ({ hrEmail, hrName, candidateName, 
   });
 };
 
+const sendContactQueryEmail = async ({ fullName, mobile, description }) => {
+  const supportEmail = 'support@gharkapaisa.in';
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin:0; padding:0; background:#f4f7fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f7fa; padding: 40px 20px;">
+        <tr>
+          <td align="center">
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:540px; background:#ffffff; border-radius:16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow:hidden;">
+              
+              <!-- Header -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #0d9488, #0f766e); padding: 32px 40px; text-align: center;">
+                  <h1 style="margin:0; color:#ffffff; font-size:24px; font-weight:800; letter-spacing:-0.5px;">GharKaPaisa Support</h1>
+                  <p style="margin:6px 0 0 0; color:rgba(255,255,255,0.85); font-size:13px; font-weight:500;">New Website Support Contact Query</p>
+                </td>
+              </tr>
+
+              <!-- Body -->
+              <tr>
+                <td style="padding: 36px 40px 20px;">
+                  <h2 style="margin:0 0 12px 0; color:#1a202c; font-size:18px; font-weight:700;">New Query Received</h2>
+                  <p style="margin:0 0 20px 0; color:#4a5568; font-size:14px; line-height:1.6;">
+                    A customer has submitted a new support query from the GharKaPaisa <strong>Contact Us</strong> page.
+                  </p>
+                  
+                  <!-- Query Details Box -->
+                  <div style="background:#f8fafc; border: 1.5px dashed #0d9488; border-radius:12px; padding: 20px; margin: 24px 0;">
+                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #334155;"><strong>Full Name:</strong> <span style="color: #0f172a; font-weight: bold;">${fullName}</span></p>
+                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #334155;"><strong>Mobile Number:</strong> <span style="color: #0f172a; font-weight: bold;">${mobile}</span></p>
+                    <p style="margin: 0; font-size: 14px; color: #334155;"><strong>Description of Issue:</strong></p>
+                    <div style="margin-top: 6px; padding: 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; color: #1e293b; font-size: 13.5px; line-height: 1.5; white-space: pre-wrap;">${description}</div>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 20px 40px 28px; border-top: 1px solid #edf2f7; text-align: center;">
+                  <p style="margin:0; color:#a0aec0; font-size:11px;">
+                    &copy; ${new Date().getFullYear()} GharKaPaisa &middot; Support Desk<br/>
+                    <a href="https://gharkapaisa.in" style="color:#0d9488; text-decoration:none;">gharkapaisa.in</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: supportEmail,
+    subject: `[Contact Form] Support Query from ${fullName} (${mobile})`,
+    html,
+    text: `New Support Contact Query:\nFull Name: ${fullName}\nMobile: ${mobile}\nIssue: ${description}`
+  });
+};
+
 module.exports = {
   sendEmail,
   sendOtpEmail,
@@ -649,6 +715,7 @@ module.exports = {
   sendPartnerStatusUpdateEmail,
   sendTeamInvitationEmail,
   sendEmployeeInvitationEmail,
-  sendCandidateAssignedToHrEmail
+  sendCandidateAssignedToHrEmail,
+  sendContactQueryEmail
 };
 
