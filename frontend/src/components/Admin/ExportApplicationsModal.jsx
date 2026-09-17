@@ -193,7 +193,23 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
       const colDefs = [
         { header: 'Application No', getVal: a => a.app_number || a.application_no || a.id || '' },
         { header: 'Customer Name', getVal: a => a.customer_name || a.full_name || 'N/A' },
+        { header: 'Mobile Number', getVal: a => {
+            const rawMob = a.customer_mobile || a.mobile || a.phone || '';
+            if (!rawMob) return 'N/A';
+            return hideCustomerMobile ? maskMobileNumber(rawMob) : String(rawMob).trim();
+          }
+        },
         { header: 'Email', getVal: a => a.customer_email || a.email || 'N/A' },
+        { header: 'PAN Number', getVal: a => {
+            const rawPan = a.pan_number || a.pan || '';
+            if (!rawPan || String(rawPan).trim() === '' || String(rawPan).toUpperCase() === 'N/A' || String(rawPan).toUpperCase() === 'NA') return 'NA';
+            const cleanPan = String(rawPan).trim().toUpperCase();
+            if (isAdminOperator || isEmployeeRole) {
+              return cleanPan.length >= 6 ? 'XXXXXX' + cleanPan.slice(6) : 'XXXXXX';
+            }
+            return cleanPan;
+          }
+        },
         { header: 'City', getVal: a => a.city || 'N/A' },
         { header: 'State', getVal: a => a.state || 'N/A' },
         { header: 'Pincode', getVal: a => a.pincode || 'N/A' },

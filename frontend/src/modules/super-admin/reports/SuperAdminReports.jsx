@@ -305,7 +305,7 @@ export default function SuperAdminReports() {
 
     const headers = isEmployeeType
       ? ["Rank", "Code / ID", "Name", "Type", "Role / Designation", "Applications", "Approved", "Incentives Earned (INR)"]
-      : ["Record ID", "Employee / Ref", "Category / Product", "Status", "Amount (INR)", "Date"];
+      : ["Record ID", "Customer / Ref", "Mobile Number", "PAN Number", "Category / Product", "Status", "Amount (INR)", "Date"];
 
     if (isExcel) {
       // Clean HTML/XML Spreadsheet for Microsoft Excel (.xls)
@@ -344,7 +344,9 @@ export default function SuperAdminReports() {
           </tr>`;
         } else {
           const recId = r.app_number || r.id || `REC-${1001 + idx}`;
-          const ref = r.customer_name || r.name || r.full_name || 'Employee / Ref';
+          const ref = r.customer_name || r.name || r.full_name || 'Customer / Ref';
+          const mob = r.customer_mobile || r.mobile || 'NA';
+          const pan = r.pan_number || r.pan || 'NA';
           const prod = r.product_name || r.category || 'Financial Product';
           const status = (r.status || 'APPROVED').toUpperCase();
           const amt = parseFloat(r.approved_amount || r.commission_amount || r.amount || 0);
@@ -353,6 +355,8 @@ export default function SuperAdminReports() {
           tableHtml += `<tr>
             <td>${recId}</td>
             <td>${ref}</td>
+            <td>${mob}</td>
+            <td>${pan}</td>
             <td>${prod}</td>
             <td>${status}</td>
             <td>${amt}</td>
@@ -393,6 +397,8 @@ export default function SuperAdminReports() {
         return [
           `"${r.app_number || r.id || `REC-${1001 + idx}`}"`,
           `"${(r.customer_name || r.name || r.full_name || '').replace(/"/g, '""')}"`,
+          `"${r.customer_mobile || r.mobile || 'NA'}"`,
+          `"${r.pan_number || r.pan || 'NA'}"`,
           `"${(r.product_name || r.category || '').replace(/"/g, '""')}"`,
           `"${(r.status || 'APPROVED').toUpperCase()}"`,
           parseFloat(r.approved_amount || r.commission_amount || r.amount || 0),

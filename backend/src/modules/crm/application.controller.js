@@ -1575,8 +1575,9 @@ const listApplications = async (req, res, next) => {
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userRole);
     let salesExecFilterSQL = '';
     if (isSalesExecUser && req.user?.id) {
-      salesExecFilterSQL = ` AND (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%punch%' OR LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%manual%' OR combined.process_type::text = 'lead_punching' OR combined.process_by::text = 'lead_punching') AND NOT (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%share%' OR LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%link%')`;
+      salesExecFilterSQL = ` AND (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%punch%' OR LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%manual%' OR combined.process_type::text = 'lead_punching' OR combined.process_by::text = 'lead_punching') AND NOT (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%share%' OR LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%link%') AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a'))`;
     }
+
 
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
     let panCheckerFilterSQL = '';
@@ -1826,7 +1827,7 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(pad.pan_check, ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(pad.pan_check, ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -3314,9 +3315,9 @@ const exportApplicationsCSV = async (req, res, next) => {
         SELECT 
           a.app_number,
           COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name,
-          COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
+          COALESCE(NULLIF(a.mobile, ''), NULLIF(pad.mobile, ''), NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile,
           c.email as customer_email,
-          c.pan_number,
+          COALESCE(NULLIF(a.pan_number, ''), NULLIF(pad.pan_number, ''), NULLIF(l.pan_number, ''), c.pan_number) as pan_number,
           COALESCE(l.city, c.city) as city,
           c.state,
           c.pincode,
