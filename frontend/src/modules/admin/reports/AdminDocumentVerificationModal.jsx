@@ -1489,11 +1489,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="None">None</option>
                           <option value="Dispatch Pending">Dispatch Pending</option>
                           <option value="Dispatch Complete">Dispatch Complete</option>
-                          <option value="Dispatch Failed">Dispatch Failed</option>
+                          <option value="Dispatch Not Available">Dispatch Not Available</option>
                           <option value="E-Sign Pending">E-Sign Pending</option>
                           <option value="E-sign Complete">E-sign Complete</option>
                           <option value="RTB(Error)">RTB(Error)</option>
-                          {dispatchStatus && !['None', 'Dispatch Pending', 'Dispatch Complete', 'Dispatch Failed', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)', ''].includes(dispatchStatus) && (
+                          {dispatchStatus && !['None', 'Dispatch Pending', 'Dispatch Complete', 'Dispatch Not Available', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)', ''].includes(dispatchStatus) && (
                             <option value={dispatchStatus}>{dispatchStatus}</option>
                           )}
                         </select>
@@ -1619,9 +1619,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="None">None</option>
                           <option value="Dispatch Complete">Dispatch Complete</option>
                           <option value="Dispatch Pending">Dispatch Pending</option>
-                          <option value="Dispatch Failed">Dispatch Failed</option>
+                          <option value="Dispatch Not Available">Dispatch Not Available</option>
                           <option value="Dispatch Hold">Dispatch Hold</option>
-                          {dispatchStatus && !['None', 'Dispatch Complete', 'Dispatch Pending', 'Dispatch Failed', 'Dispatch Hold', ''].includes(dispatchStatus) && (
+                          {dispatchStatus && !['None', 'Dispatch Complete', 'Dispatch Pending', 'Dispatch Not Available', 'Dispatch Hold', ''].includes(dispatchStatus) && (
                             <option value={dispatchStatus}>{dispatchStatus}</option>
                           )}
                         </select>

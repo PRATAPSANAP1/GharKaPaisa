@@ -931,11 +931,11 @@ export default function PhysicalApplicationForm() {
                     <option value="None">None</option>
                     <option value="Dispatch Pending">Dispatch Pending</option>
                     <option value="Dispatch Complete">Dispatch Complete</option>
-                    <option value="Dispatch Failed">Dispatch Failed</option>
+                    <option value="Dispatch Not Available">Dispatch Not Available</option>
                     <option value="E-Sign Pending">E-Sign Pending</option>
                     <option value="E-sign Complete">E-sign Complete</option>
                     <option value="RTB(Error)">RTB(Error)</option>
-                    {form.dispatch_status && !['None', 'Dispatch Pending', 'Dispatch Complete', 'Dispatch Failed', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)'].includes(form.dispatch_status) && (
+                    {form.dispatch_status && !['None', 'Dispatch Pending', 'Dispatch Complete', 'Dispatch Not Available', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)'].includes(form.dispatch_status) && (
                       <option value={form.dispatch_status}>{form.dispatch_status}</option>
                     )}
                   </select>
