@@ -793,7 +793,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>REQUERY DATE</label>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>RE-QD DATE</label>
                   <input
                     type="date"
                     value={requeryDate}

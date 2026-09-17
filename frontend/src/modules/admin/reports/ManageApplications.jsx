@@ -750,7 +750,7 @@ export default function ManageApplications() {
                         )}
                         {app.requery_date && (
                           <div style={{ fontSize: '11px', color: '#6366f1', fontWeight: 800, marginTop: '2px' }}>
-                            📅 ReQuery: {new Date(app.requery_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            📅 Re-QD: {new Date(app.requery_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </div>
                         )}
                         <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
