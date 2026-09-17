@@ -1597,40 +1597,40 @@ const listApplications = async (req, res, next) => {
 
     const userDesignation = (req.user?.designation || '').toUpperCase();
     const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
-    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userRole);
+    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userRole);
     let salesExecFilterSQL = '';
     if (isSalesExecUser && req.user?.id) {
-      salesExecFilterSQL = ` AND (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%punch%' OR LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%manual%' OR combined.process_type::text = 'lead_punching' OR combined.process_by::text = 'lead_punching') AND NOT (LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%share%' OR LOWER(COALESCE(combined.process_type::text, combined.process_by::text, '')) LIKE '%link%') AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a'))`;
+      const bankAssignmentFilter = `(combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR EXISTS (SELECT 1 FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = '${req.user.id}' AND (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi')))`;
+      salesExecFilterSQL = ` AND ${bankAssignmentFilter} AND LOWER(COALESCE(combined.pan_check, 'no')) = 'yes' AND (COALESCE(combined.dispatch_status, '') <> '' AND LOWER(COALESCE(combined.dispatch_status, 'none')) NOT IN ('none', 'na', 'n/a'))`;
     }
-
 
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
     let panCheckerFilterSQL = '';
-    if (isPanCheckerUser) {
-      panCheckerFilterSQL = ` AND (LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%' OR combined.bank_id IN (SELECT id FROM banks WHERE LOWER(short_code) = 'sbi' OR LOWER(name) LIKE '%sbi%')) AND combined.status NOT IN ('approved', 'disbursed', 'sanctioned') AND (LOWER(COALESCE(combined.pan_check, 'no')) = 'no')`;
+    if (isPanCheckerUser && req.user?.id) {
+      const bankAssignmentFilter = `(combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR EXISTS (SELECT 1 FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = '${req.user.id}' AND (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi')) OR combined.bank_id IN (SELECT id FROM banks WHERE LOWER(short_code) = 'sbi' OR LOWER(name) LIKE '%sbi%'))`;
+      panCheckerFilterSQL = ` AND ${bankAssignmentFilter} AND combined.status NOT IN ('approved', 'disbursed', 'sanctioned') AND LOWER(COALESCE(combined.pan_check, 'no')) = 'no'`;
     }
 
     const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
     let remarkOperatorFilterSQL = '';
     if (isRemarkOperatorUser && req.user?.id) {
-      const remarkAaaExists = hasAaaTable ? `OR EXISTS (SELECT 1 FROM application_admin_assignments WHERE admin_user_id = '${req.user.id}' AND application_id = combined.id)` : '';
-      const remarkAaaCompleted = hasAaaTable ? `AND combined.id NOT IN (SELECT application_id FROM application_admin_assignments WHERE admin_user_id = '${req.user.id}' AND status = 'COMPLETED')` : '';
-      remarkOperatorFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') ${remarkAaaExists}) AND COALESCE(combined.remark_status, 'PENDING') = 'PENDING' ${remarkAaaCompleted} AND combined.status NOT IN ('rejected', 'declined', 'cancelled') AND COALESCE(combined.final_status, '') NOT IN ('Rejected', 'Declined') AND LOWER(COALESCE(combined.pan_check, '')) NOT IN ('rejected', 'decline', 'declined') AND LOWER(COALESCE(combined.bank_remark, '')) NOT LIKE '%pan%reject%'`;
+      const bankAssignmentFilter = `(combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR EXISTS (SELECT 1 FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = '${req.user.id}' AND (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi')))`;
+      remarkOperatorFilterSQL = ` AND ${bankAssignmentFilter} AND LOWER(COALESCE(combined.pan_check, 'no')) = 'yes' AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a')) AND combined.status NOT IN ('rejected', 'declined', 'cancelled') AND COALESCE(combined.final_status, '') NOT IN ('Rejected', 'Declined') AND LOWER(COALESCE(combined.bank_remark, '')) NOT LIKE '%pan%reject%'`;
     }
 
     if (!isPartnerOrTeam && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
       if (abRows.length > 0) {
-        if (isSalesExecUser) {
-          opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $18::uuid))`;
-          countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $16::uuid))`;
+        if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser) {
+          opHeadBankFilterSQL = ``;
+          countOpHeadBankFilterSQL = ``;
         } else {
           opHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $18::uuid) OR combined.operation_head_id = $18::uuid)`;
           countOpHeadBankFilterSQL = ` AND (combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $16::uuid) OR combined.operation_head_id = $16::uuid)`;
+          queryParams.push(req.user.id);
+          countQueryParams.push(req.user.id);
         }
-        queryParams.push(req.user.id);
-        countQueryParams.push(req.user.id);
-      } else if (isOpHeadUser) {
+      } else if (isOpHeadUser && !isPanCheckerUser && !isRemarkOperatorUser && !isSalesExecUser) {
         opHeadBankFilterSQL = ` AND 1=0`;
         countOpHeadBankFilterSQL = ` AND 1=0`;
       }
