@@ -125,15 +125,10 @@ async function checkUserWorkingHours(user) {
 
     const roleUpper = String(user.role || '').toUpperCase();
     
-    // 1. SUPER_ADMIN is always exempt
-    if (roleUpper === 'SUPER_ADMIN') {
+    // Working hours logic ONLY applies to role ADMIN. EMPLOYEE, PARTNER, TEAM_MEMBER, SUPER_ADMIN are exempt.
+    if (roleUpper !== 'ADMIN') {
       return { allowed: true, isExempt: true };
     }
-
-    // List of restricted roles/designations
-    const desigUpper = String(user.designation || '').toUpperCase();
-    const restrictedRoles = ['ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'PAN CHECKER'];
-    const isRestrictedTarget = restrictedRoles.some(r => roleUpper.includes(r) || desigUpper.includes(r) || r.includes(desigUpper));
 
     // Ensure database tables exist automatically
     await ensureWorkingHoursTables();

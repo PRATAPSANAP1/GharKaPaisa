@@ -17,7 +17,8 @@ const PUBLIC_ALLOWLIST = new Set([
   'support_email',
   'terms_url',
   'privacy_url',
-  'maintenance_mode'
+  'maintenance_mode',
+  'digital_journey_link'
 ]);
 
 // Public or global check to fetch settings (Filtered for public consumption)

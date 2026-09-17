@@ -50,8 +50,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const isRemarkOperator = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
   const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
   const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+  const isSuperAdminRole = ['SUPER_ADMIN', 'SUPER ADMIN'].includes(role) || ['SUPER_ADMIN', 'SUPER ADMIN'].includes(userDesignation);
   const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
-  const isOpsOrAdmin = isOpsHead || isOpsOperator;
+  const isOpsOrAdmin = isOpsHead || isOpsOperator || isSuperAdminRole;
   const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
 
   // Normalize initialTab ('qd' | 'remark' | 'final' | 'timeline' | legacy aliases)
@@ -80,6 +81,21 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Fetch system digital journey link from settings
+  useEffect(() => {
+    const fetchSystemDigitalLink = async () => {
+      try {
+        const res = await api.get('/settings');
+        if (res.data?.success && res.data.data?.digital_journey_link) {
+          setSystemDigitalJourneyLink(res.data.data.digital_journey_link);
+        }
+      } catch (err) {
+        console.error('Failed to fetch system digital journey link:', err);
+      }
+    };
+    fetchSystemDigitalLink();
   }, []);
 
   useEffect(() => {
@@ -143,6 +159,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [digitalJourneyUrl, setDigitalJourneyUrl] = useState(
     application?.digital_journey_url || application?.digital_link || application?.redirect_url || application?.product_url || application?.product?.partner_url || application?.product?.public_url || ''
   );
+  const [systemDigitalJourneyLink, setSystemDigitalJourneyLink] = useState('');
 
   // 2. Remark Form State (Appcode Status, Soft Approval, VKYC Stage, IQA Stage, Dispatch Status, TATA HDFC Stages)
   const bankId = application?.bank_id || application?.product?.bank_id || '';
@@ -180,6 +197,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   // 3. Final Status & Bank Remarks State
   const [bankRemark, setBankRemark] = useState(sanitizeVal(application?.bank_remark) || sanitizeVal(application?.physical_details?.bank_remark));
   const [userRemark, setUserRemark] = useState(sanitizeVal(application?.user_remark) || sanitizeVal(application?.notes) || '');
+  const [backendRemark, setBackendRemark] = useState(sanitizeVal(application?.backend_remark) || sanitizeVal(application?.physical_details?.backend_remark) || '');
   const [finalStatus, setFinalStatus] = useState(sanitizeVal(application?.final_status) || sanitizeVal(application?.physical_details?.final_status) || sanitizeVal(application?.status) || 'None');
   const [appFileGenerated, setAppFileGenerated] = useState(sanitizeVal(application?.app_file_generated) || sanitizeVal(application?.appfile_generated) || sanitizeVal(application?.physical_details?.app_file_generated) || 'None');
   const [declineReason, setDeclineReason] = useState(sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.decline_reason));
@@ -570,15 +588,22 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
               </span>
             </div>
             <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
-              Customer: <strong>{customerName || application.customer_name || 'Customer'}</strong> | Mobile: {isPanChecker ? ((customerMobile || application.customer_mobile || application.mobile || '').length >= 6 ? `${(customerMobile || application.customer_mobile || application.mobile).slice(0, (customerMobile || application.customer_mobile || application.mobile).length - 6)}******` : '******') : (customerMobile || application.customer_mobile)} | Bank: {application.bank_name || application.bank_code || 'Partner Bank'}
+              Customer: <strong>{customerName || application.customer_name || 'Customer'}</strong> | Mobile: {(isPanChecker || isRemarkOperator) ? ((customerMobile || application.customer_mobile || application.mobile || '').length >= 6 ? `${(customerMobile || application.customer_mobile || application.mobile).slice(0, (customerMobile || application.customer_mobile || application.mobile).length - 6)}******` : '******') : (customerMobile || application.customer_mobile)} | Bank: {application.bank_name || application.bank_code || 'Partner Bank'}
             </p>
+            {(isOpsOrAdmin || isSuperAdminOrAdmin) && (application.sales_operator_code || application.pan_checker_code || application.remark_operator_code) && (
+              <div style={{ display: 'flex', gap: '12px', fontSize: '11px', fontWeight: 700, color: '#475569', marginTop: '6px', background: '#f1f5f9', padding: '3px 10px', borderRadius: '6px' }}>
+                {application.sales_operator_code && <span>Sales Op Code: <strong style={{ color: '#2563eb' }}>{application.sales_operator_code}</strong></span>}
+                {application.pan_checker_code && <span>PAN Checker Code: <strong style={{ color: '#059669' }}>{application.pan_checker_code}</strong></span>}
+                {application.remark_operator_code && <span>Remark Op Code: <strong style={{ color: '#d97706' }}>{application.remark_operator_code}</strong></span>}
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => {
-                const link = digitalJourneyUrl || application?.digital_journey_url || application?.digital_link || application?.redirect_url || application?.product_url || application?.product?.partner_url || application?.product?.public_url;
+                const link = digitalJourneyUrl || application?.digital_journey_url || application?.digital_link || application?.redirect_url || application?.product_url || application?.product?.partner_url || application?.product?.public_url || systemDigitalJourneyLink;
                 if (link && link.trim() !== '') {
                   let targetUrl = link.trim();
                   if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
@@ -586,7 +611,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   }
                   window.open(targetUrl, '_blank', 'noopener,noreferrer');
                 } else {
-                  alert("No Digital Journey link assigned yet. Super Admin can configure the link using the 'Modify Link' field in application details.");
+                  alert("No Digital Journey link assigned yet. Super Admin can configure the default link in CMS settings.");
                 }
               }}
               style={{
@@ -1135,7 +1160,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
             </button>
 
             {/* 3. Final Tab (Shown for all processes including Customer Apply & Direct Bank) */}
-            {!isSalesExecUser && (initialTabKey === 'final' || showAllTabs) && (
+            {!isSalesExecUser && !isRemarkOperator && (initialTabKey === 'final' || showAllTabs) && (
               <button
                 onClick={() => setActiveTab('final')}
                 style={{
@@ -1373,24 +1398,41 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     />
                   </div>
 
-                  {/* Digital Complete Journey Link Modify Field */}
-                  <div style={{ gridColumn: '1 / -1', marginTop: '6px', padding: '12px', background: '#f0f9ff', borderRadius: '10px', border: '1px solid #bae6fd' }}>
-                    <label style={{ fontSize: '11px', color: '#0369a1', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                      <LinkIcon size={14} color="#0284c7" /> DIGITAL JOURNEY LINK (Modify Link)
-                    </label>
+                  {/* Digital Complete Journey Link Modify Field (Super Admin Managed) */}
+                  <div style={{ gridColumn: '1 / -1', marginTop: '6px', padding: '14px', background: '#f0f9ff', borderRadius: '10px', border: '1px solid #bae6fd' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <label style={{ fontSize: '11px', color: '#0369a1', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                        <LinkIcon size={14} color="#0284c7" /> DIGITAL JOURNEY LINK (Modify Link)
+                      </label>
+                      {isSuperAdminRole ? (
+                        <span style={{ fontSize: '10px', fontWeight: 800, background: '#0284c7', color: '#fff', padding: '2px 8px', borderRadius: '10px' }}>
+                          SUPER ADMIN EDITABLE
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '10px', fontWeight: 700, background: '#e2e8f0', color: '#475569', padding: '2px 8px', borderRadius: '10px' }}>
+                          SUPER ADMIN MANAGED
+                        </span>
+                      )}
+                    </div>
+                    {systemDigitalJourneyLink && (
+                      <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', fontStyle: 'italic' }}>
+                        System Default: {systemDigitalJourneyLink}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <input
                         type="url"
+                        disabled={!isSuperAdminRole && !isSuperAdminOrAdmin}
                         value={digitalJourneyUrl}
                         onChange={(e) => setDigitalJourneyUrl(e.target.value)}
-                        placeholder="Enter Digital Journey URL (e.g. https://bank.com/apply)"
-                        style={{ flex: 1, minWidth: '220px', padding: '10px 12px', borderRadius: '8px', border: '1px solid #7dd3fc', fontSize: '13px', fontWeight: 600, background: '#fff', color: '#0f172a' }}
+                        placeholder={isSuperAdminRole || isSuperAdminOrAdmin ? "Enter / Edit Digital Journey URL (e.g. https://bank.com/apply)" : "Only Super Admin can upload or edit Digital Journey link"}
+                        style={{ flex: 1, minWidth: '220px', padding: '10px 12px', borderRadius: '8px', border: '1px solid #7dd3fc', fontSize: '13px', fontWeight: 600, background: (!isSuperAdminRole && !isSuperAdminOrAdmin) ? '#f8fafc' : '#fff', color: '#0f172a' }}
                       />
-                      {digitalJourneyUrl && (
+                      {(digitalJourneyUrl || systemDigitalJourneyLink) && (
                         <button
                           type="button"
                           onClick={() => {
-                            let targetUrl = digitalJourneyUrl.trim();
+                            let targetUrl = (digitalJourneyUrl || systemDigitalJourneyLink).trim();
                             if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
                               targetUrl = 'https://' + targetUrl;
                             }
@@ -2092,6 +2134,30 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       placeholder="Enter user remark / notes for this application..."
                       rows={3}
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #93c5fd', fontSize: '13px', background: isLockedStatus ? '#f8fafc' : '#eff6ff', fontWeight: 600, color: '#1e3a8a' }}
+                    />
+                  </div>
+
+                  {/* BACKEND REMARK (ADMIN ROLES EDITABLE ONLY) */}
+                  <div style={{ gridColumn: '1 / -1', marginTop: '12px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#6b21a8', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
+                      <Lock size={14} color="#6b21a8" /> BACKEND REMARK (Admin Roles Only)
+                    </label>
+                    <textarea
+                      disabled={!isSuperAdminOrAdmin}
+                      value={backendRemark}
+                      onChange={(e) => setBackendRemark(e.target.value)}
+                      placeholder={isSuperAdminOrAdmin ? "Enter confidential backend remark..." : "Only Admin Roles can edit backend remark"}
+                      rows={2}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #d8b4fe',
+                        fontSize: '13px',
+                        background: !isSuperAdminOrAdmin ? '#f3e8ff' : '#faf5ff',
+                        fontWeight: 600,
+                        color: '#581c87'
+                      }}
                     />
                   </div>
                 </div>

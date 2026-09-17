@@ -308,6 +308,17 @@ export default function ExportApplicationsModal({ isOpen, onClose, defaultApplic
         );
       }
 
+      const isAuthorizedForOpCodesAndReQd = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS_HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'OPERATIONAL HEAD', 'OPERATIONAL_HEAD'].includes(userDesignation);
+
+      if (isAuthorizedForOpCodesAndReQd) {
+        colDefs.push(
+          { header: 'Re-QD Date', getVal: a => a.requery_date || a.re_query_date || a.physical_details?.requery_date || 'NA' },
+          { header: 'Sales Operator Code', getVal: a => a.sales_operator_code || a.physical_details?.sales_operator_code || 'NA' },
+          { header: 'PAN Checker Code', getVal: a => a.pan_checker_code || a.physical_details?.pan_checker_code || 'NA' },
+          { header: 'Remark Operator Code', getVal: a => a.remark_operator_code || a.physical_details?.remark_operator_code || 'NA' }
+        );
+      }
+
       colDefs.push(
         { header: 'Approved Amount', getVal: a => a.approved_amount || a.physical_details?.approved_amount || 0 },
         { header: 'Created Date', getVal: a => a.created_at ? new Date(a.created_at).toLocaleDateString('en-IN') : 'N/A' }

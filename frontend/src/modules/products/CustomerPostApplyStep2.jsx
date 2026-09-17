@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { getApiV1Url } from '../../config/api';
+import api from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuthStore } from '../../app/store/authStore';
 import { FiUser, FiSliders, FiBriefcase, FiFileText, FiAlertCircle } from 'react-icons/fi';
@@ -31,6 +32,7 @@ export default function CustomerPostApplyStep2() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const [systemDigitalJourneyLink, setSystemDigitalJourneyLink] = useState('');
 
   // Bank & Application Header Info
   const [bankInfo, setBankInfo] = useState(null);
@@ -102,6 +104,21 @@ export default function CustomerPostApplyStep2() {
       document.documentElement.style.overflow = '';
       document.documentElement.style.overflowY = '';
     };
+  }, []);
+
+  // Fetch system digital journey link from settings
+  useEffect(() => {
+    const fetchSystemDigitalLink = async () => {
+      try {
+        const res = await api.get('/settings');
+        if (res.data?.success && res.data.data?.digital_journey_link) {
+          setSystemDigitalJourneyLink(res.data.data.digital_journey_link);
+        }
+      } catch (err) {
+        console.error('Failed to fetch system digital journey link:', err);
+      }
+    };
+    fetchSystemDigitalLink();
   }, []);
 
   useEffect(() => {
@@ -353,7 +370,7 @@ export default function CustomerPostApplyStep2() {
       </div>
 
       {/* Complete Digital Journey Top Action Bar for Punch Only processes */}
-      {(isPunchOnly || partnerUrl) && (
+      {(isPunchOnly || partnerUrl || systemDigitalJourneyLink) && (
         <div style={{
           maxWidth: '720px',
           margin: '0 auto 24px',
@@ -382,7 +399,7 @@ export default function CustomerPostApplyStep2() {
           <button
             type="button"
             onClick={() => {
-              const url = partnerUrl || 'https://gharkapaisa.in';
+              const url = partnerUrl || systemDigitalJourneyLink || 'https://gharkapaisa.in';
               window.open(url, '_blank', 'noopener,noreferrer');
             }}
             style={{

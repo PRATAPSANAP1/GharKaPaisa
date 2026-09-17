@@ -138,6 +138,10 @@ export default function ManageSections() {
   const [footerCompanyCopyright, setFooterCompanyCopyright] = useState("");
   const [savingFooter, setSavingFooter] = useState(false);
 
+  // Digital Link States
+  const [digitalJourneyLink, setDigitalJourneyLink] = useState("");
+  const [savingDigitalLink, setSavingDigitalLink] = useState(false);
+
   const sectionsList = [
     { key: "section_visibility_money_transfer", cmsKey: "money_transfer", label: "Recharge & Bills", icon: <Icons.wallet size={20} />, description: "Displays fast money transfer and domestic payout service buttons." },
     { key: "section_visibility_attractive_cards", cmsKey: "attractive_cards", label: "Attractive Cards & Loans", icon: <Icons.creditCard size={20} />, description: "Highlighted list of top converting bank credit cards and loan offers." },
@@ -165,6 +169,7 @@ export default function ManageSections() {
         setFooterCompanyPhone(s.company_phone || "+91 99999 99999");
         setFooterCompanyAddress(s.company_address || "Sector 62, Noida, Uttar Pradesh, India");
         setFooterCompanyCopyright(s.company_copyright || "@2026 OIT_stack");
+        setDigitalJourneyLink(s.digital_journey_link || "");
       }
       if (cmsRes.data?.success) {
         setCmsSections(cmsRes.data.data);
@@ -206,6 +211,24 @@ export default function ManageSections() {
       alert("Failed to save footer settings.");
     } finally {
       setSavingFooter(false);
+    }
+  };
+
+  const handleSaveDigitalLinkSettings = async (e) => {
+    if (e) e.preventDefault();
+    setSavingDigitalLink(true);
+    try {
+      await api.post("/settings", { key: "digital_journey_link", value: digitalJourneyLink.trim() });
+      setSettings(prev => ({
+        ...prev,
+        digital_journey_link: digitalJourneyLink.trim()
+      }));
+      sessionStorage.removeItem('gkp_settings');
+      alert("Digital Journey Link saved successfully!");
+    } catch (err) {
+      alert("Failed to save digital journey link.");
+    } finally {
+      setSavingDigitalLink(false);
     }
   };
 
@@ -558,6 +581,55 @@ export default function ManageSections() {
               <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end" }}>
                 <button type="submit" disabled={savingFooter} style={{ ...S.btn("primary"), padding: "10px 24px" }}>
                   {savingFooter ? "Saving Settings..." : "Save Footer Configurations"}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Digital Journey Link Configuration */}
+          <div style={{ ...S.card, border: `1px solid ${C.border}`, boxShadow: "0 4px 12px rgba(0,0,0,0.02)", background: C.card }}>
+            <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, margin: "0 0 4px 0" }}>Digital Complete Journey Link Configuration</h3>
+            <p style={{ fontSize: "12.5px", color: C.textLight, margin: "0 0 20px 0" }}>Configure the default digital journey link that will be used across the platform for complete journey buttons</p>
+
+            <form onSubmit={handleSaveDigitalLinkSettings} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div>
+                <label style={S.label}>Digital Journey URL</label>
+                <input
+                  type="url"
+                  required
+                  style={S.input}
+                  value={digitalJourneyLink}
+                  onChange={e => setDigitalJourneyLink(e.target.value)}
+                  placeholder="e.g. https://bank.com/complete-journey"
+                />
+                <p style={{ fontSize: "11px", color: C.textLight, marginTop: "6px" }}>
+                  This link will be used as the default digital journey URL when no application-specific link is available
+                </p>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+                {digitalJourneyLink && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      let targetUrl = digitalJourneyLink.trim();
+                      if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                        targetUrl = 'https://' + targetUrl;
+                      }
+                      window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                    }}
+                    style={{
+                      ...S.btn("outline"),
+                      padding: "10px 20px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px"
+                    }}
+                  >
+Test Link ↗
+                  </button>
+                )}
+                <button type="submit" disabled={savingDigitalLink} style={{ ...S.btn("primary"), padding: "10px 24px" }}>
+                  {savingDigitalLink ? "Saving..." : "Save Digital Link"}
                 </button>
               </div>
             </form>

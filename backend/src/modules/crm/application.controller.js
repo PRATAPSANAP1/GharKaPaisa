@@ -1604,7 +1604,7 @@ const listApplications = async (req, res, next) => {
     const hasAaaTable = await ensureAssignmentsTableExists();
 
     const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
+    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userRole);
     let salesExecFilterSQL = '';
     if (isSalesExecUser && req.user?.id) {
@@ -1620,10 +1620,18 @@ const listApplications = async (req, res, next) => {
       panCheckerFilterSQL = ` AND ${bankAssignmentFilter} AND ((LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%') AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%') AND combined.status NOT IN ('approved', 'disbursed', 'sanctioned') AND LOWER(COALESCE(combined.pan_check, 'no')) = 'no'`;
     }
 
+    const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(userRole);
+    let qdOperatorFilterSQL = '';
+    if (isQdOperatorUser && req.user?.id) {
+      const sbiOnlyCondition = `((LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%') AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%')`;
+      const physicalProcessCondition = `LOWER(COALESCE(combined.process_by, combined.process_type, 'lead_punching')) IN ('lead_punching', 'punch_only', 'physical', 'manual')`;
+      qdOperatorFilterSQL = ` AND ${sbiOnlyCondition} AND ${physicalProcessCondition}`;
+    }
+
     const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
     let remarkOperatorFilterSQL = '';
     if (isRemarkOperatorUser && req.user?.id) {
-      const bankAssignmentFilter = `(combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR EXISTS (SELECT 1 FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = '${req.user.id}' AND (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi')))`;
+      const bankAssignmentFilter = `(combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}'))`;
       const panCheckCondition = `(((LOWER(COALESCE(combined.bank_code, '')) <> 'sbi' AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%sbi%') OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%') OR LOWER(COALESCE(combined.pan_check, 'no')) = 'yes')`;
       remarkOperatorFilterSQL = ` AND ${bankAssignmentFilter} AND ${panCheckCondition} AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a')) AND combined.status NOT IN ('rejected', 'declined', 'cancelled') AND LOWER(COALESCE(combined.bank_remark, '')) NOT LIKE '%pan%reject%'`;
     }
@@ -1631,7 +1639,7 @@ const listApplications = async (req, res, next) => {
     if (!isPartnerOrTeam && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
       if (abRows.length > 0) {
-        if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser) {
+        if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser) {
           opHeadBankFilterSQL = ``;
           countOpHeadBankFilterSQL = ``;
         } else {
@@ -1640,7 +1648,7 @@ const listApplications = async (req, res, next) => {
           queryParams.push(req.user.id);
           countQueryParams.push(req.user.id);
         }
-      } else if (isOpHeadUser && !isPanCheckerUser && !isRemarkOperatorUser && !isSalesExecUser) {
+      } else if (isOpHeadUser && !isPanCheckerUser && !isRemarkOperatorUser && !isSalesExecUser && !isQdOperatorUser) {
         opHeadBankFilterSQL = ` AND 1=0`;
         countOpHeadBankFilterSQL = ` AND 1=0`;
       }
@@ -1758,6 +1766,10 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
           COALESCE(NULLIF(to_jsonb(a)->>'remark_status', ''), 'PENDING') as remark_status,
           COALESCE(to_jsonb(a)->>'assigned_to', to_jsonb(pad)->>'assigned_to') as assigned_to,
+          COALESCE(NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', '')) as sales_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'pan_checker_code', ''), NULLIF(to_jsonb(pad)->>'pan_checker_code', '')) as pan_checker_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', '')) as remark_operator_code,
+          COALESCE(NULLIF(a.backend_remark, ''), NULLIF(pad.backend_remark, ''), NULLIF(to_jsonb(a)->>'backend_remark', ''), NULLIF(to_jsonb(pad)->>'backend_remark', '')) as backend_remark,
           COALESCE((to_jsonb(a)->>'remark_updated')::boolean, FALSE) as remark_updated,
           (to_jsonb(a)->>'remark_updated_by')::uuid as remark_updated_by,
           (to_jsonb(a)->>'remark_updated_at')::timestamptz as remark_updated_at
@@ -1830,6 +1842,7 @@ const listApplications = async (req, res, next) => {
         ${opHeadBankFilterSQL}
         ${salesExecFilterSQL}
         ${panCheckerFilterSQL}
+        ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
@@ -1914,6 +1927,7 @@ const listApplications = async (req, res, next) => {
         ${countOpHeadBankFilterSQL}
         ${salesExecFilterSQL}
         ${panCheckerFilterSQL}
+        ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
     `, countQueryParams);
 
@@ -3379,6 +3393,10 @@ const exportApplicationsCSV = async (req, res, next) => {
           COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
           COALESCE(NULLIF(a.eligible_reqd, ''), NULLIF(pad.eligible_reqd, '')) as eligible_reqd,
           COALESCE(a.approved_amount, pad.approved_amount) as approved_amount,
+          COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
+          COALESCE(NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', '')) as sales_operator_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'pan_checker_code', ''), NULLIF(to_jsonb(pad)->>'pan_checker_code', '')) as pan_checker_code,
+          COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', '')) as remark_operator_code,
           a.created_at,
           a.partner_id,
           a.submitted_by
@@ -3424,6 +3442,10 @@ const exportApplicationsCSV = async (req, res, next) => {
           NULL as decline_reason,
           NULL as eligible_reqd,
           NULL as approved_amount,
+          NULL as requery_date,
+          NULL as sales_operator_code,
+          NULL as pan_checker_code,
+          NULL as remark_operator_code,
           l.created_at,
           l.partner_id,
           COALESCE(l.created_by, c.created_by) as submitted_by
@@ -3439,6 +3461,8 @@ const exportApplicationsCSV = async (req, res, next) => {
       ORDER BY combined.created_at DESC
       LIMIT 10000
     `, params);
+
+    const isAuthorizedForOpCodesAndReQd = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS_HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'OPERATIONAL HEAD', 'OPERATIONAL_HEAD'].includes(userDesignation);
 
     const csvHeaders = [
       'App / Lead Number',
@@ -3470,9 +3494,15 @@ const exportApplicationsCSV = async (req, res, next) => {
       'Bank Remark',
       'Decline Reason',
       'Eligible Re-QD',
-      'Approved Amount',
-      'Date'
+      'Approved Amount'
     ];
+
+    if (isAuthorizedForOpCodesAndReQd) {
+      csvHeaders.push('Re-QD Date', 'Sales Operator Code', 'PAN Checker Code', 'Remark Operator Code');
+    }
+
+    csvHeaders.push('Date');
+
     const csvLines = [csvHeaders.join(',')];
 
     const formatPanNumber = (pan) => {
@@ -3521,7 +3551,7 @@ const exportApplicationsCSV = async (req, res, next) => {
       const declineReason = (row.decline_reason && String(row.decline_reason).trim() !== '' && String(row.decline_reason).toUpperCase() !== 'N/A') ? String(row.decline_reason).replace(/"/g, '""') : 'NA';
       const eligibleReqd = (row.eligible_reqd && String(row.eligible_reqd).trim() !== '' && String(row.eligible_reqd).toUpperCase() !== 'N/A') ? String(row.eligible_reqd).replace(/"/g, '""') : 'NA';
 
-      csvLines.push([
+      const rowValues = [
         `"${(row.app_number || '').replace(/"/g, '""')}"`,
         `"${(row.customer_name || '').replace(/"/g, '""')}"`,
         `"${mobVal}"`,
@@ -3551,9 +3581,26 @@ const exportApplicationsCSV = async (req, res, next) => {
         `"${bankRemark}"`,
         `"${declineReason}"`,
         `"${eligibleReqd.replace(/"/g, '""')}"`,
-        `"₹${row.approved_amount || 0}"`,
-        `"${row.created_at ? new Date(row.created_at).toISOString() : ''}"`
-      ].join(','));
+        `"₹${row.approved_amount || 0}"`
+      ];
+
+      if (isAuthorizedForOpCodesAndReQd) {
+        const reqdDateStr = row.requery_date ? new Date(row.requery_date).toISOString().split('T')[0] : 'NA';
+        const salesOpCode = row.sales_operator_code || 'NA';
+        const panCheckerOpCode = row.pan_checker_code || 'NA';
+        const remarkOpCode = row.remark_operator_code || 'NA';
+
+        rowValues.push(
+          `"${reqdDateStr.replace(/"/g, '""')}"`,
+          `"${salesOpCode.replace(/"/g, '""')}"`,
+          `"${panCheckerOpCode.replace(/"/g, '""')}"`,
+          `"${remarkOpCode.replace(/"/g, '""')}"`
+        );
+      }
+
+      rowValues.push(`"${row.created_at ? new Date(row.created_at).toISOString() : ''}"`);
+
+      csvLines.push(rowValues.join(','));
     }
 
     res.setHeader('Content-Type', 'text/csv');
@@ -3944,6 +3991,27 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(requery_date || re_query_date || req.body.requery_date || req.body.re_query_date),
       cleanStr(req.body.digital_journey_url || req.body.digital_link || req.body.redirect_url)
     ]);
+
+    const currentOpCode = req.user?.employee_id || req.user?.user_code || req.user?.employee_code || req.user?.emp_code || req.user?.full_name || req.user?.email || req.user?.id;
+    const isSalesExecUserLocal = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userRole);
+    const isPanCheckerUserLocal = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
+    const isRemarkOperatorUserLocal = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
+
+    let salesOpCodeToSave = isSalesExecUserLocal ? currentOpCode : null;
+    let panCheckerOpCodeToSave = isPanCheckerUserLocal ? currentOpCode : null;
+    let remarkOpCodeToSave = isRemarkOperatorUserLocal ? currentOpCode : null;
+    let backendRemarkToSave = (req.body.backend_remark !== undefined && ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD'].includes(userRole)) ? req.body.backend_remark : null;
+
+    if (salesOpCodeToSave || panCheckerOpCodeToSave || remarkOpCodeToSave || backendRemarkToSave) {
+      await client.query(`
+        UPDATE applications SET
+          sales_operator_code = COALESCE($1, sales_operator_code),
+          pan_checker_code = COALESCE($2, pan_checker_code),
+          remark_operator_code = COALESCE($3, remark_operator_code),
+          backend_remark = COALESCE($4, backend_remark)
+        WHERE id = $5
+      `, [salesOpCodeToSave, panCheckerOpCodeToSave, remarkOpCodeToSave, backendRemarkToSave, app.id]);
+    }
 
     // 2. Update customer details if customer_id exists
     if (app.customer_id) {
@@ -5224,6 +5292,8 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
 
     const effectiveUserRemark = user_remark || notes || null;
     const effectiveVkycStage = vkyc_stage || vkyc_status || null;
+    const currentOpCode = req.user?.employee_id || req.user?.user_code || req.user?.employee_code || req.user?.emp_code || req.user?.full_name || req.user?.email || req.user?.id;
+    const backendRemarkToSave = (req.body.backend_remark !== undefined && ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD'].includes(userRole)) ? req.body.backend_remark : null;
 
     // 1. Update applications table
     await client.query(`
@@ -5236,19 +5306,21 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
           app_file_generated = COALESCE($5, app_file_generated),
           notes = COALESCE($2, notes),
           decline_reason = COALESCE($6, decline_reason),
+          remark_operator_code = COALESCE($7, remark_operator_code),
+          backend_remark = COALESCE($8, backend_remark),
           remark_status = 'COMPLETED',
           remark_updated = TRUE,
-          remark_updated_by = $7,
+          remark_updated_by = $9,
           remark_updated_at = NOW(),
           updated_at = NOW()
-      WHERE id = $8
-    `, [bank_remark || null, effectiveUserRemark, effectiveVkycStage, dispatch_status || null, app_file_generated || null, decline_reason || null, userId, app.id]);
+      WHERE id = $10
+    `, [bank_remark || null, effectiveUserRemark, effectiveVkycStage, dispatch_status || null, app_file_generated || null, decline_reason || null, currentOpCode, backendRemarkToSave, userId, app.id]);
 
     // 2. Upsert physical_application_details table
     await client.query(`
       INSERT INTO physical_application_details (
-        application_id, bank_remark, user_remark, ipa_stage, vkyc_stage, dispatch_status, app_file_generated, decline_reason, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+        application_id, bank_remark, user_remark, ipa_stage, vkyc_stage, dispatch_status, app_file_generated, decline_reason, remark_operator_code, backend_remark, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
       ON CONFLICT (application_id) DO UPDATE SET
         bank_remark = COALESCE(EXCLUDED.bank_remark, physical_application_details.bank_remark),
         user_remark = COALESCE(EXCLUDED.user_remark, physical_application_details.user_remark),
@@ -5257,8 +5329,10 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
         dispatch_status = COALESCE(NULLIF(EXCLUDED.dispatch_status, ''), physical_application_details.dispatch_status),
         app_file_generated = COALESCE(EXCLUDED.app_file_generated, physical_application_details.app_file_generated),
         decline_reason = COALESCE(EXCLUDED.decline_reason, physical_application_details.decline_reason),
+        remark_operator_code = COALESCE(EXCLUDED.remark_operator_code, physical_application_details.remark_operator_code),
+        backend_remark = COALESCE(EXCLUDED.backend_remark, physical_application_details.backend_remark),
         updated_at = NOW()
-    `, [app.id, bank_remark || null, effectiveUserRemark, ipa_stage || null, effectiveVkycStage, dispatch_status || null, app_file_generated || null, decline_reason || null]);
+    `, [app.id, bank_remark || null, effectiveUserRemark, ipa_stage || null, effectiveVkycStage, dispatch_status || null, app_file_generated || null, decline_reason || null, currentOpCode, backendRemarkToSave]);
 
     // 3. Update application_admin_assignments if exists
     await client.query(`

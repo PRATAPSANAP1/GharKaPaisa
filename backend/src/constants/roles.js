@@ -20,6 +20,7 @@ const DESIGNATIONS = {
   ADMINISTRATIVE_SALES_EXECUTIVE: 'Administrative Sales Executive',
   PAN_CHECKER: 'PAN Checker',
   REMARK_OPERATOR: 'Remark Operator',
+  QD_OPERATOR: 'QD Operator',
   SUPER_ADMIN: 'Super Admin',
 };
 
