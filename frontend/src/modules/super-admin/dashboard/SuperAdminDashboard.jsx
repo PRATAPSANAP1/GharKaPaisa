@@ -83,12 +83,17 @@ export default function SuperAdminDashboard() {
       fullName: admin.fullName || admin.full_name || '',
       email: admin.email || '',
       mobile: admin.mobile || '',
-      designation: admin.designation || 'Operation Head',
+      designation: admin.designation || 'Operational Head',
       status: admin.status || 'active',
       bank_ids: bankIds,
       password: ''
     });
     setEditBankSearchQuery('');
+    if (allBanks.length === 0) {
+      api.get('/banks').then(res => {
+        if (res.data && res.data.data) setAllBanks(res.data.data);
+      }).catch(err => console.error(err));
+    }
     setShowEditModal(true);
   };
 
@@ -97,9 +102,9 @@ export default function SuperAdminDashboard() {
     if (!editForm.id) return;
     setSubmittingEdit(true);
     try {
-      const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND'].includes(editForm.designation);
+      const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(editForm.designation);
       if (isOpHead && editForm.bank_ids.length === 0) {
-        alert('Please select at least one assigned bank for Operational Head / Backend designation');
+        alert('Please select at least one assigned bank for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, or Remark Operator designation');
         setSubmittingEdit(false);
         return;
       }
@@ -917,7 +922,12 @@ export default function SuperAdminDashboard() {
                   <option value="Administrative Sales Executive">Administrative Sales Executive</option>
                   <option value="PAN Checker">PAN Checker</option>
                   <option value="Remark Operator">Remark Operator</option>
+                  <option value="Backend">Backend</option>
                   <option value="Super Admin">Super Admin</option>
+                  <option value="Senior Manager">Senior Manager</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Team Leader">Team Leader</option>
+                  <option value="Telecaller">Telecaller</option>
                 </select>
               </div>
 
@@ -1104,7 +1114,7 @@ export default function SuperAdminDashboard() {
                     onChange={e => {
                       const val = e.target.value;
                       setEditForm({ ...editForm, designation: val });
-                      if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker'].includes(val) && allBanks.length === 0) {
+                      if (['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(val) && allBanks.length === 0) {
                         api.get('/banks').then(res => {
                           if (res.data && res.data.data) setAllBanks(res.data.data);
                         }).catch(err => console.error(err));
@@ -1113,11 +1123,21 @@ export default function SuperAdminDashboard() {
                     style={{ width: "100%", padding: "10px 12px", border: "1px solid #D1D5DB", borderRadius: "8px", fontSize: "14px", outline: "none", boxSizing: "border-box" }}
                     required
                   >
+                    <option value="">Select Designation...</option>
                     <option value="Operational Head">Operational Head</option>
                     <option value="Administrative Operator">Administrative Operator</option>
                     <option value="Administrative Sales Executive">Administrative Sales Executive</option>
                     <option value="PAN Checker">PAN Checker</option>
+                    <option value="Remark Operator">Remark Operator</option>
+                    <option value="Backend">Backend</option>
                     <option value="Super Admin">Super Admin</option>
+                    <option value="Senior Manager">Senior Manager</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Team Leader">Team Leader</option>
+                    <option value="Telecaller">Telecaller</option>
+                    {editForm.designation && !['Operational Head', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'Backend', 'Super Admin', 'Senior Manager', 'Manager', 'Team Leader', 'Telecaller', ''].includes(editForm.designation) && (
+                      <option value={editForm.designation}>{editForm.designation}</option>
+                    )}
                   </select>
                 </div>
 
