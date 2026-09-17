@@ -213,7 +213,8 @@ const SuperAdminLayout = () => {
       isModifyGroup: true,
       items: [
         { path: '/super-admin/banners', label: 'Banners', icon: <Icons.gift size={16} /> },
-        { path: '/super-admin/sections', label: 'Homepage Sections', icon: <Icons.profile size={16} /> }
+        { path: '/super-admin/sections', label: 'Homepage Sections', icon: <Icons.profile size={16} /> },
+        { path: '/super-admin/sections', label: 'Digital Journey Link', icon: <Icons.wallet size={16} /> }
       ]
     },
     {
