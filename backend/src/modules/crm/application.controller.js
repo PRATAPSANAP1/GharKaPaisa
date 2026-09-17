@@ -1769,7 +1769,7 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(to_jsonb(a)->>'sales_operator_code', ''), NULLIF(to_jsonb(pad)->>'sales_operator_code', '')) as sales_operator_code,
           COALESCE(NULLIF(to_jsonb(a)->>'pan_checker_code', ''), NULLIF(to_jsonb(pad)->>'pan_checker_code', '')) as pan_checker_code,
           COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', '')) as remark_operator_code,
-          COALESCE(NULLIF(a.backend_remark, ''), NULLIF(pad.backend_remark, ''), NULLIF(to_jsonb(a)->>'backend_remark', ''), NULLIF(to_jsonb(pad)->>'backend_remark', '')) as backend_remark,
+          COALESCE(NULLIF(pad.backend_remark, ''), NULLIF(to_jsonb(a)->>'backend_remark', ''), NULLIF(to_jsonb(pad)->>'backend_remark', '')) as backend_remark,
           COALESCE((to_jsonb(a)->>'remark_updated')::boolean, FALSE) as remark_updated,
           (to_jsonb(a)->>'remark_updated_by')::uuid as remark_updated_by,
           (to_jsonb(a)->>'remark_updated_at')::timestamptz as remark_updated_at

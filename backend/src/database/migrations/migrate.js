@@ -403,6 +403,25 @@ const migrate = async () => {
     ADD COLUMN IF NOT EXISTS pincode VARCHAR(10),
     ADD COLUMN IF NOT EXISTS approved_amount DECIMAL(15,2);
 
+    ALTER TABLE applications 
+    ADD COLUMN IF NOT EXISTS backend_remark TEXT,
+    ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS requery_date TIMESTAMPTZ;
+
+    ALTER TABLE physical_application_details 
+    ADD COLUMN IF NOT EXISTS backend_remark TEXT,
+    ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS requery_date TIMESTAMPTZ;
+
+    ALTER TABLE support_tickets 
+    ADD COLUMN IF NOT EXISTS customer_name VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS mobile VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255);
+
     ALTER TABLE leads 
     ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50),
     ADD COLUMN IF NOT EXISTS vkyc_url TEXT,

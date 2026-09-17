@@ -81,11 +81,11 @@ const listTickets = async (req, res, next) => {
     if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'EMPLOYEE') {
       ticketsQuery = `
         SELECT t.*,
-               COALESCE(NULLIF(t.customer_name, ''), pp.first_name, 'Contact Lead') as first_name,
+               COALESCE(NULLIF(to_jsonb(t)->>'customer_name', ''), pp.first_name, 'Contact Lead') as first_name,
                COALESCE(pp.last_name, '') as last_name,
                COALESCE(pp.partner_code, 'PUBLIC') as partner_code,
-               COALESCE(t.contact_email, u.email, 'support@gharkapaisa.in') as partner_email,
-               COALESCE(t.mobile, pp.mobile) as mobile
+               COALESCE(NULLIF(to_jsonb(t)->>'contact_email', ''), u.email, 'support@gharkapaisa.in') as partner_email,
+               COALESCE(NULLIF(to_jsonb(t)->>'mobile', ''), pp.mobile) as mobile
         FROM support_tickets t
         LEFT JOIN partner_profiles pp ON pp.id = t.partner_id
         LEFT JOIN users u ON u.id = pp.user_id
@@ -125,11 +125,11 @@ const getTicketDetail = async (req, res, next) => {
 
     const { rows: [ticket] } = await query(`
       SELECT t.*,
-             COALESCE(NULLIF(t.customer_name, ''), pp.first_name, 'Contact Lead') as first_name,
+             COALESCE(NULLIF(to_jsonb(t)->>'customer_name', ''), pp.first_name, 'Contact Lead') as first_name,
              COALESCE(pp.last_name, '') as last_name,
              COALESCE(pp.partner_code, 'PUBLIC') as partner_code,
-             COALESCE(t.contact_email, u.email, 'support@gharkapaisa.in') as partner_email,
-             COALESCE(t.mobile, pp.mobile) as mobile
+             COALESCE(NULLIF(to_jsonb(t)->>'contact_email', ''), u.email, 'support@gharkapaisa.in') as partner_email,
+             COALESCE(NULLIF(to_jsonb(t)->>'mobile', ''), pp.mobile) as mobile
       FROM support_tickets t
       LEFT JOIN partner_profiles pp ON pp.id = t.partner_id
       WHERE t.id = $1
