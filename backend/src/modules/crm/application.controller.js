@@ -1609,21 +1609,23 @@ const listApplications = async (req, res, next) => {
     let salesExecFilterSQL = '';
     if (isSalesExecUser && req.user?.id) {
       const bankAssignmentFilter = `(combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR EXISTS (SELECT 1 FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = '${req.user.id}' AND (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi')))`;
-      salesExecFilterSQL = ` AND ${bankAssignmentFilter} AND LOWER(COALESCE(combined.pan_check, 'no')) = 'yes' AND (COALESCE(combined.dispatch_status, '') <> '' AND LOWER(COALESCE(combined.dispatch_status, 'none')) NOT IN ('none', 'na', 'n/a'))`;
+      const panCheckCondition = `((LOWER(COALESCE(combined.bank_code, '')) <> 'sbi' AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%sbi%') OR LOWER(COALESCE(combined.pan_check, 'no')) = 'yes')`;
+      salesExecFilterSQL = ` AND ${bankAssignmentFilter} AND ${panCheckCondition} AND (COALESCE(combined.dispatch_status, '') <> '' AND LOWER(COALESCE(combined.dispatch_status, 'none')) NOT IN ('none', 'na', 'n/a'))`;
     }
 
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
     let panCheckerFilterSQL = '';
     if (isPanCheckerUser && req.user?.id) {
       const bankAssignmentFilter = `(combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR EXISTS (SELECT 1 FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = '${req.user.id}' AND (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi')) OR combined.bank_id IN (SELECT id FROM banks WHERE LOWER(short_code) = 'sbi' OR LOWER(name) LIKE '%sbi%'))`;
-      panCheckerFilterSQL = ` AND ${bankAssignmentFilter} AND combined.status NOT IN ('approved', 'disbursed', 'sanctioned') AND LOWER(COALESCE(combined.pan_check, 'no')) = 'no'`;
+      panCheckerFilterSQL = ` AND ${bankAssignmentFilter} AND (LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%') AND combined.status NOT IN ('approved', 'disbursed', 'sanctioned') AND LOWER(COALESCE(combined.pan_check, 'no')) = 'no'`;
     }
 
     const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
     let remarkOperatorFilterSQL = '';
     if (isRemarkOperatorUser && req.user?.id) {
       const bankAssignmentFilter = `(combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR EXISTS (SELECT 1 FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = '${req.user.id}' AND (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi')))`;
-      remarkOperatorFilterSQL = ` AND ${bankAssignmentFilter} AND LOWER(COALESCE(combined.pan_check, 'no')) = 'yes' AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a')) AND combined.status NOT IN ('rejected', 'declined', 'cancelled') AND COALESCE(combined.final_status, '') NOT IN ('Rejected', 'Declined') AND LOWER(COALESCE(combined.bank_remark, '')) NOT LIKE '%pan%reject%'`;
+      const panCheckCondition = `((LOWER(COALESCE(combined.bank_code, '')) <> 'sbi' AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%sbi%') OR LOWER(COALESCE(combined.pan_check, 'no')) = 'yes')`;
+      remarkOperatorFilterSQL = ` AND ${bankAssignmentFilter} AND ${panCheckCondition} AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a')) AND combined.status NOT IN ('rejected', 'declined', 'cancelled') AND LOWER(COALESCE(combined.bank_remark, '')) NOT LIKE '%pan%reject%'`;
     }
 
     if (!isPartnerOrTeam && req.user?.id) {
