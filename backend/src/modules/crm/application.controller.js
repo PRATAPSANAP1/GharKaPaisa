@@ -1490,6 +1490,8 @@ const listApplications = async (req, res, next) => {
       await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no'`).catch(() => {});
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100)`).catch(() => {});
       await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100)`).catch(() => {});
+      await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS requery_date DATE`).catch(() => {});
+      await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS requery_date DATE`).catch(() => {});
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_status VARCHAR(20) DEFAULT 'PENDING'`).catch(() => {});
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE`).catch(() => {});
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated_by UUID`).catch(() => {});
@@ -1720,6 +1722,7 @@ const listApplications = async (req, res, next) => {
           oh.full_name as operation_head_name,
           COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(pad.pan_check, ''), 'no') as pan_check,
           COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status,
+          COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date,
           COALESCE(NULLIF(to_jsonb(a)->>'remark_status', ''), 'PENDING') as remark_status,
           COALESCE(to_jsonb(a)->>'assigned_to', to_jsonb(pad)->>'assigned_to') as assigned_to,
           COALESCE((to_jsonb(a)->>'remark_updated')::boolean, FALSE) as remark_updated,
@@ -1827,7 +1830,7 @@ const listApplications = async (req, res, next) => {
 
     const { rows: [{ count }] } = await query(`
       SELECT COUNT(*) FROM (
-        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(pad.pan_check, ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(pad.pan_check, ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
@@ -3571,6 +3574,7 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS notes TEXT`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no'`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS requery_date DATE`);
 
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS token VARCHAR(255)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS address1 TEXT`);
@@ -3601,6 +3605,7 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS user_remark TEXT`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS notes TEXT`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS requery_date DATE`);
   } catch (_) { }
 
   const client = await getClient();
@@ -3664,7 +3669,9 @@ const updateApplicationDetails = async (req, res, next) => {
       digital_card_issued,
       pan_check,
       bank_current_lead_status,
-      bank_lead_status
+      bank_lead_status,
+      requery_date,
+      re_query_date
     } = req.body;
 
     let { rows: [app] } = await client.query(
@@ -3849,6 +3856,7 @@ const updateApplicationDetails = async (req, res, next) => {
         digital_card_issued = COALESCE(NULLIF($41, ''), digital_card_issued),
         pan_check = COALESCE(NULLIF($44, ''), pan_check),
         bank_current_lead_status = COALESCE(NULLIF($45, ''), bank_current_lead_status),
+        requery_date = COALESCE(NULLIF($46, '')::date, requery_date),
         updated_at = NOW()
       WHERE id = $34
       RETURNING *
@@ -3897,7 +3905,8 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(income_details || req.body.income_details),
       cleanStr(mail_status || req.body.mail_status),
       cleanStr(pan_check || (isPanCheckerUser ? 'yes' : null)),
-      cleanStr(bank_current_lead_status || bank_lead_status || req.body.bank_current_lead_status || req.body.bank_lead_status)
+      cleanStr(bank_current_lead_status || bank_lead_status || req.body.bank_current_lead_status || req.body.bank_lead_status),
+      cleanStr(requery_date || re_query_date || req.body.requery_date || req.body.re_query_date)
     ]);
 
     // 2. Update customer details if customer_id exists
@@ -4060,6 +4069,7 @@ const updateApplicationDetails = async (req, res, next) => {
           vkyc_url = COALESCE(NULLIF(EXCLUDED.vkyc_url, ''), physical_application_details.vkyc_url),
           user_remark = COALESCE(NULLIF(EXCLUDED.user_remark, ''), physical_application_details.user_remark),
           pan_check = COALESCE(NULLIF(EXCLUDED.pan_check, ''), physical_application_details.pan_check),
+          requery_date = COALESCE(EXCLUDED.requery_date, physical_application_details.requery_date),
           updated_at = NOW()
       `, [
         mobile || customer_mobile || null,

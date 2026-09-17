@@ -126,8 +126,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [customerEmail, setCustomerEmail] = useState(application?.customer_email || application?.email || '');
   const [panNumber, setPanNumber] = useState(application?.pan_number || application?.pan || '');
   const [companyName, setCompanyName] = useState(application?.company_name || application?.employer_name || '');
-  const [designation, setDesignation] = useState(application?.designation || application?.occupation || '');
   const [panCheck, setPanCheck] = useState(application?.pan_check || 'no');
+  const [requeryDate, setRequeryDate] = useState(
+    application?.requery_date || application?.re_query_date ? String(application?.requery_date || application?.re_query_date).split('T')[0] : ''
+  );
   const [address1, setAddress1] = useState(application?.address1 || application?.flat_no || application?.address || '');
   const [address2, setAddress2] = useState(application?.address2 || application?.sub_area || '');
   const [landmark, setLandmark] = useState(application?.landmark || '');
@@ -304,6 +306,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
         if (pd.company_address || app.company_address) setCompanyAddress(pd.company_address || app.company_address || app.office_address || '');
         if (pd.mother_name || app.mother_name) setMotherName(pd.mother_name || app.mother_name || '');
         if (app.app_number) setAppNumber(app.app_number || app.application_no || '');
+        const realRequeryDate = app.requery_date || app.re_query_date || pd.requery_date || pd.re_query_date;
+        if (realRequeryDate) setRequeryDate(String(realRequeryDate).split('T')[0]);
         setBankRefNumber(resolveBankRefNo(
           app.bank_application_number || app.bank_ref_number || pd.bank_application_number || pd.bank_ref_number,
           app.app_number || application?.app_number
@@ -664,6 +668,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         status: 'operational_verified',
                         final_status: 'Operational Verified',
                         pan_check: 'yes',
+                        requery_date: requeryDate || undefined,
                         bank_remark: bankRemark || 'PAN Verified OK',
                         user_remark: userRemark || 'PAN Verified OK',
                         ops_remark: 'PAN Verified OK by PAN Checker'
@@ -694,6 +699,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       const res = await api.put(`/applications/${targetId}/verification`, {
                         status: 'rejected',
                         final_status: 'Rejected',
+                        requery_date: requeryDate || undefined,
                         bank_remark: remark,
                         decline_reason: remark,
                         user_remark: remark,
@@ -787,6 +793,15 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   </select>
                 </div>
                 <div>
+                  <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>REQUERY DATE</label>
+                  <input
+                    type="date"
+                    value={requeryDate}
+                    onChange={(e) => setRequeryDate(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 600, background: '#fff', color: '#1e293b' }}
+                  />
+                </div>
+                <div>
                   <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '4px' }}>BANK REMARK</label>
                   <input
                     type="text"
@@ -808,6 +823,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         status: 'operational_verified',
                         final_status: 'Operational Verified',
                         pan_check: 'yes',
+                        requery_date: requeryDate || undefined,
                         bank_application_number: bankRefNumber || undefined,
                         bank_ref_number: bankRefNumber || undefined,
                         bank_remark: bankRemark || userRemark || 'PAN Verified OK',
@@ -840,6 +856,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       const res = await api.put(`/applications/${targetId}/verification`, {
                         status: 'rejected',
                         final_status: 'Rejected',
+                        requery_date: requeryDate || undefined,
                         bank_remark: remark,
                         decline_reason: remark,
                         user_remark: remark,
