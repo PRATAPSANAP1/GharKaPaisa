@@ -3575,6 +3575,7 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no'`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS requery_date DATE`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS digital_journey_url TEXT`);
 
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS token VARCHAR(255)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS address1 TEXT`);
@@ -3857,6 +3858,7 @@ const updateApplicationDetails = async (req, res, next) => {
         pan_check = COALESCE(NULLIF($44, ''), pan_check),
         bank_current_lead_status = COALESCE(NULLIF($45, ''), bank_current_lead_status),
         requery_date = COALESCE(NULLIF($46, '')::date, requery_date),
+        digital_journey_url = COALESCE(NULLIF($47, ''), digital_journey_url),
         updated_at = NOW()
       WHERE id = $34
       RETURNING *
@@ -3906,7 +3908,8 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(mail_status || req.body.mail_status),
       cleanStr(pan_check || (isPanCheckerUser ? 'yes' : null)),
       cleanStr(bank_current_lead_status || bank_lead_status || req.body.bank_current_lead_status || req.body.bank_lead_status),
-      cleanStr(requery_date || re_query_date || req.body.requery_date || req.body.re_query_date)
+      cleanStr(requery_date || re_query_date || req.body.requery_date || req.body.re_query_date),
+      cleanStr(req.body.digital_journey_url || req.body.digital_link || req.body.redirect_url)
     ]);
 
     // 2. Update customer details if customer_id exists

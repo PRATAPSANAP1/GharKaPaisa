@@ -5,7 +5,7 @@ import { getBankAppNumberConfig } from '../../../utils/bankAppNumberUtils';
 import { 
   X, CheckCircle, XCircle, Eye, Send, ShieldCheck, 
   Building2, User, Clock, AlertTriangle, FileText, Check, ArrowRight, ArrowLeft, Lock,
-  Share2, Copy, MessageSquare, Smartphone, Save, Sliders, Activity, Sparkles
+  Share2, Copy, MessageSquare, Smartphone, Save, Sliders, Activity, Sparkles, ExternalLink, Link as LinkIcon
 } from 'lucide-react';
 
 export const PAN_CHECK_REMARK_OPTIONS = [
@@ -140,6 +140,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [motherName, setMotherName] = useState(application?.mother_name || '');
   const [appNumber, setAppNumber] = useState(application?.app_number || application?.application_no || '');
   const [vkycUrl, setVkycUrl] = useState(application?.vkyc_url || application?.vkyc_link || '');
+  const [digitalJourneyUrl, setDigitalJourneyUrl] = useState(
+    application?.digital_journey_url || application?.digital_link || application?.redirect_url || application?.product_url || application?.product?.partner_url || application?.product?.public_url || ''
+  );
 
   // 2. Remark Form State (Appcode Status, Soft Approval, VKYC Stage, IQA Stage, Dispatch Status, TATA HDFC Stages)
   const bankId = application?.bank_id || application?.product?.bank_id || '';
@@ -313,6 +316,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           app.app_number || application?.app_number
         ));
         if (app.vkyc_url || pd.vkyc_url) setVkycUrl(app.vkyc_url || pd.vkyc_url || '');
+        const realDigitalUrl = app.digital_journey_url || pd.digital_journey_url || app.digital_link || app.redirect_url || app.product_url || app.product?.partner_url || app.product?.public_url || '';
+        if (realDigitalUrl) setDigitalJourneyUrl(realDigitalUrl);
 
         if (app.status) setCurrentStatus(app.status);
         const realAppcode = sanitizeVal(app.appcode_status) || sanitizeVal(pd.appcode_status);
@@ -502,6 +507,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           bank_current_lead_status: bankCurrentLeadStatus || 'None',
           bank_lead_status: bankCurrentLeadStatus || 'None',
           app_file_generated: appFileGenerated,
+          digital_journey_url: digitalJourneyUrl || undefined,
           status: targetStatus
         };
       }
@@ -568,7 +574,40 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => {
+                const link = digitalJourneyUrl || application?.digital_journey_url || application?.digital_link || application?.redirect_url || application?.product_url || application?.product?.partner_url || application?.product?.public_url;
+                if (link && link.trim() !== '') {
+                  let targetUrl = link.trim();
+                  if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                    targetUrl = 'https://' + targetUrl;
+                  }
+                  window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                } else {
+                  alert("No Digital Journey link assigned yet. Super Admin can configure the link using the 'Modify Link' field in application details.");
+                }
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)'
+              }}
+              title="Open Digital Complete Journey Link"
+            >
+              <ExternalLink size={15} /> Digital Complete Journey
+            </button>
+
             {isOpsHead && currentStatus !== 'approved' && currentStatus !== 'super_admin_approved' && (
               <button
                 disabled={actionLoading}
@@ -1330,6 +1369,37 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       placeholder="Mother Name"
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditQd ? '#f8fafc' : '#fff' }}
                     />
+                  </div>
+
+                  {/* Digital Complete Journey Link Modify Field */}
+                  <div style={{ gridColumn: '1 / -1', marginTop: '6px', padding: '12px', background: '#f0f9ff', borderRadius: '10px', border: '1px solid #bae6fd' }}>
+                    <label style={{ fontSize: '11px', color: '#0369a1', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <LinkIcon size={14} color="#0284c7" /> DIGITAL JOURNEY LINK (Modify Link)
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <input
+                        type="url"
+                        value={digitalJourneyUrl}
+                        onChange={(e) => setDigitalJourneyUrl(e.target.value)}
+                        placeholder="Enter Digital Journey URL (e.g. https://bank.com/apply)"
+                        style={{ flex: 1, minWidth: '220px', padding: '10px 12px', borderRadius: '8px', border: '1px solid #7dd3fc', fontSize: '13px', fontWeight: 600, background: '#fff', color: '#0f172a' }}
+                      />
+                      {digitalJourneyUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            let targetUrl = digitalJourneyUrl.trim();
+                            if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                              targetUrl = 'https://' + targetUrl;
+                            }
+                            window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                          }}
+                          style={{ padding: '8px 14px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <ExternalLink size={13} /> Test Link
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                 </div>
