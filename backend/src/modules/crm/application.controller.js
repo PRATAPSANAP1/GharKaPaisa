@@ -1496,6 +1496,29 @@ const listApplications = async (req, res, next) => {
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated BOOLEAN DEFAULT FALSE`).catch(() => {});
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated_by UUID`).catch(() => {});
       await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ`).catch(() => {});
+      await query(`UPDATE applications SET app_number = REPLACE(app_number, 'GKPEMP', 'APP20260917') WHERE app_number LIKE 'GKPEMP%'`).catch(() => {});
+      await query(`
+        UPDATE applications
+        SET 
+          process_by = CASE
+            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%share%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%link%' THEN 'linked_share'
+            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%direct%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%bank%' THEN 'direct_bank'
+            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%physical%' THEN 'physical_process'
+            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%co_browsing%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%cobrowsing%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%assist%' THEN 'co_browsing'
+            ELSE 'lead_punching'
+          END,
+          process_type = CASE
+            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%share%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%link%' THEN 'linked_share'
+            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%direct%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%bank%' THEN 'direct_bank'
+            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%physical%' THEN 'physical_process'
+            WHEN LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%co_browsing%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%cobrowsing%' OR LOWER(COALESCE(process_type::text, process_by::text, '')) LIKE '%assist%' THEN 'co_browsing'
+            ELSE 'lead_punching'
+          END
+        WHERE process_by IN ('employee', 'partner', 'customer_self', 'partner_self') 
+           OR process_type IN ('employee_lead', 'partner_lead', 'customer_self')
+           OR process_by NOT IN ('lead_punching', 'linked_share', 'direct_bank', 'physical_process', 'co_browsing')
+           OR process_type NOT IN ('lead_punching', 'linked_share', 'direct_bank', 'physical_process', 'co_browsing')
+      `).catch(() => {});
     } catch (_) {}
 
     const targetPartnerId = q_partner_id || partner_id;

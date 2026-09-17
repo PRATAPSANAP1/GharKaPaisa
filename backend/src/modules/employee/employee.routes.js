@@ -987,7 +987,9 @@ router.post('/leads', async (req, res, next) => {
 
     // 3. Generate App Number
     const appSeq = await query(`SELECT nextval('app_number_seq') as seq`);
-    const app_number = `GKPEMP${appSeq.rows[0].seq}`;
+    const date = new Date();
+    const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
+    const app_number = `APP${datePart}${appSeq.rows[0].seq}`;
 
     // 4. Create Application record with employee attribution
     const { rows } = await query(
@@ -996,7 +998,7 @@ router.post('/leads', async (req, res, next) => {
         source_type, process_type, process_by, status, commission_amount
       ) VALUES (
         $1, $2, $3, '00000000-0000-0000-0000-000000000000', $4, $5, $6,
-        'EMPLOYEE', 'employee_lead', 'employee', 'submitted', $7
+        'EMPLOYEE', 'lead_punching', 'lead_punching', 'submitted', $7
       ) RETURNING *`,
       [app_number, customerId, product_id, req.user.id, empId, linkId, incentiveAmt]
     );

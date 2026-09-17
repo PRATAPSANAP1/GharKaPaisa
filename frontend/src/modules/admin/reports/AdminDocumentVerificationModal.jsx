@@ -1011,11 +1011,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     <option value="Dispatch Pending">Dispatch Pending</option>
                     <option value="Dispatch Complete">Dispatch Complete</option>
                     <option value="Dispatch Not Available">Dispatch Not Available</option>
+                    <option value="Digital Dispatch">Digital Dispatch</option>
+                    <option value="Physical Dispatch">Physical Dispatch</option>
                     <option value="Dispatch Hold">Dispatch Hold</option>
                     <option value="E-Sign Pending">E-Sign Pending</option>
                     <option value="E-sign Complete">E-sign Complete</option>
                     <option value="RTB(Error)">RTB(Error)</option>
-                    {dispatchStatus && !['None', 'Dispatch Pending', 'Dispatch Complete', 'Dispatch Not Available', 'Dispatch Hold', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)', 'Pending', 'Dispatched', 'Delivered', 'In Transit', 'Returned', ''].includes(dispatchStatus) && (
+                    {dispatchStatus && !['None', 'Dispatch Pending', 'Dispatch Complete', 'Dispatch Not Available', 'Digital Dispatch', 'Physical Dispatch', 'Dispatch Hold', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)', 'Pending', 'Dispatched', 'Delivered', 'In Transit', 'Returned', ''].includes(dispatchStatus) && (
                       <option value={dispatchStatus}>{dispatchStatus}</option>
                     )}
                   </select>
@@ -1582,10 +1584,12 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="Dispatch Pending">Dispatch Pending</option>
                           <option value="Dispatch Complete">Dispatch Complete</option>
                           <option value="Dispatch Not Available">Dispatch Not Available</option>
+                          <option value="Digital Dispatch">Digital Dispatch</option>
+                          <option value="Physical Dispatch">Physical Dispatch</option>
                           <option value="E-Sign Pending">E-Sign Pending</option>
                           <option value="E-sign Complete">E-sign Complete</option>
                           <option value="RTB(Error)">RTB(Error)</option>
-                          {dispatchStatus && !['None', 'Dispatch Pending', 'Dispatch Complete', 'Dispatch Not Available', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)', ''].includes(dispatchStatus) && (
+                          {dispatchStatus && !['None', 'Dispatch Pending', 'Dispatch Complete', 'Dispatch Not Available', 'Digital Dispatch', 'Physical Dispatch', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)', ''].includes(dispatchStatus) && (
                             <option value={dispatchStatus}>{dispatchStatus}</option>
                           )}
                         </select>
@@ -1712,8 +1716,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                           <option value="Dispatch Complete">Dispatch Complete</option>
                           <option value="Dispatch Pending">Dispatch Pending</option>
                           <option value="Dispatch Not Available">Dispatch Not Available</option>
+                          <option value="Digital Dispatch">Digital Dispatch</option>
+                          <option value="Physical Dispatch">Physical Dispatch</option>
                           <option value="Dispatch Hold">Dispatch Hold</option>
-                          {dispatchStatus && !['None', 'Dispatch Complete', 'Dispatch Pending', 'Dispatch Not Available', 'Dispatch Hold', ''].includes(dispatchStatus) && (
+                          {dispatchStatus && !['None', 'Dispatch Complete', 'Dispatch Pending', 'Dispatch Not Available', 'Digital Dispatch', 'Physical Dispatch', 'Dispatch Hold', ''].includes(dispatchStatus) && (
                             <option value={dispatchStatus}>{dispatchStatus}</option>
                           )}
                         </select>
