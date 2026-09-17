@@ -307,7 +307,19 @@ const creditHold = async (partnerId, amount, meta = {}, existingClient = null) =
 
     let productId = meta.product_id || null;
     let bankId = meta.bank_id || null;
-    const appId = meta.application_id || null;
+    let appId = meta.application_id || null;
+
+    if (!appId && meta.reference_id) {
+      const { rows: [foundApp] } = await client.query(
+        `SELECT id FROM applications WHERE id::text = $1::text OR app_number = $1::text LIMIT 1`,
+        [String(meta.reference_id)]
+      );
+      if (foundApp) appId = foundApp.id;
+    }
+
+    if (!appId) {
+      throw new Error(`Application ID (application_id) is required for commission transaction type "${txnType}".`);
+    }
 
     if (appId) {
       // ── Duplicate Credit Protection Guard ──────────────────────
@@ -643,7 +655,28 @@ const releaseHold = async (partnerId, amount, meta = {}, existingClient = null) 
 
     // Append-Only Financial Event with Idempotency Guard (Zero UPDATE on historical rows)
     const refNum = meta.reference_id || (meta.txn_id ? String(meta.txn_id) : null);
-    const appId = meta.application_id || null;
+    let appId = meta.application_id || null;
+
+    if (!appId && (meta.txn_id || refNum)) {
+      const targetRef = meta.txn_id || refNum;
+      const { rows: [prevLedger] } = await client.query(
+        `SELECT application_id FROM wallet_ledger WHERE (id::text = $1::text OR reference_number = $1::text) AND application_id IS NOT NULL LIMIT 1`,
+        [String(targetRef)]
+      );
+      if (prevLedger) appId = prevLedger.application_id;
+    }
+
+    if (!appId && refNum) {
+      const { rows: [foundApp] } = await client.query(
+        `SELECT id FROM applications WHERE id::text = $1::text OR app_number = $1::text LIMIT 1`,
+        [String(refNum)]
+      );
+      if (foundApp) appId = foundApp.id;
+    }
+
+    if (!appId) {
+      throw new Error(`Application ID (application_id) is required for commission release transaction.`);
+    }
 
     const { rows: [txn] } = await client.query(`
       INSERT INTO wallet_ledger (

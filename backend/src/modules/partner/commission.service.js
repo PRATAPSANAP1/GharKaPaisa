@@ -78,6 +78,7 @@ const releaseCommission = async (applicationId, adminUserId) => {
     
     // Release the hold from the wallet with idempotency check
     const relRes = await releaseHold(app.partner_id, app.commission_amount, {
+      application_id: app.id,
       reference_type: 'commission',
       reference_id: app.id,
       description: `Commission released for App ${app.app_number}`

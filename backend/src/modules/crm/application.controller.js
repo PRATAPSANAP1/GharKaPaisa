@@ -1519,6 +1519,14 @@ const listApplications = async (req, res, next) => {
            OR process_by NOT IN ('lead_punching', 'linked_share', 'direct_bank', 'physical_process', 'co_browsing')
            OR process_type NOT IN ('lead_punching', 'linked_share', 'direct_bank', 'physical_process', 'co_browsing')
       `).catch(() => {});
+      await query(`
+        UPDATE wallet_ledger wl
+        SET application_id = a.id
+        FROM applications a
+        WHERE wl.application_id IS NULL
+          AND (wl.transaction_type ILIKE '%commission%' OR wl.transaction_type IN ('PERSONAL_COMMISSION', 'TEAM_COMMISSION', 'REFERRAL_BONUS', 'OVERRIDE_COMMISSION', 'COMMISSION_RELEASE', 'REVERSAL'))
+          AND (wl.reference_number = a.id::text OR wl.reference_number = a.app_number)
+      `).catch(() => {});
     } catch (_) {}
 
     const targetPartnerId = q_partner_id || partner_id;
