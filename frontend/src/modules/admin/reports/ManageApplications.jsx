@@ -23,6 +23,7 @@ export default function ManageApplications() {
   const userDesignation = (user?.designation || '').toUpperCase();
   const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userRole);
   const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
+  const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
   const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
   const isOpsHead = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole) && !isOpsOperator;
   const isOpsHeadOrSuperAdmin = isOpsHead || isOpsOperator;
@@ -364,10 +365,10 @@ export default function ManageApplications() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.02em' }}>
-            Applications Management
+            {isPanCheckerUser ? 'PAN Checker Review Queue' : isRemarkOperatorUser ? 'Remark Operator Queue' : 'Applications Management'}
           </h2>
           <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
-            Track, verify, update and manage operations for all submitted customer applications.
+            {isPanCheckerUser ? 'Review and verify customer PAN details for assigned applications.' : isRemarkOperatorUser ? 'Review and update remarks for assigned bank applications.' : 'Track, verify, update and manage operations for all submitted customer applications.'}
           </p>
         </div>
 
@@ -390,108 +391,112 @@ export default function ManageApplications() {
 
 
       {/* ── 2. TOP KPI SUMMARY CARDS ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+      {!isPanCheckerUser && !isRemarkOperatorUser && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
 
-        {/* Total Applications */}
-        <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Total Applications</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(99, 102, 241, 0.1)', color: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FaFileAlt size={16} />
+          {/* Total Applications */}
+          <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Total Applications</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(99, 102, 241, 0.1)', color: '#6366F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FaFileAlt size={16} />
+              </div>
+            </div>
+            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.total.toLocaleString()}</span>
             </div>
           </div>
-          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.total.toLocaleString()}</span>
-          </div>
-        </div>
 
-        {/* Pending Review */}
-        <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Pending Review</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <MdHourglassEmpty size={18} />
+          {/* Pending Review */}
+          <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Pending Review</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MdHourglassEmpty size={18} />
+              </div>
+            </div>
+            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.pending}</span>
             </div>
           </div>
-          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.pending}</span>
-          </div>
-        </div>
 
-        {/* Under Review */}
-        <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Details Submitted</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <MdTrackChanges size={18} />
+          {/* Under Review */}
+          <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Details Submitted</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MdTrackChanges size={18} />
+              </div>
+            </div>
+            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.underReview}</span>
             </div>
           </div>
-          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.underReview}</span>
-          </div>
-        </div>
 
-        {/* Approved */}
-        <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Approved</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <MdCheckCircle size={18} />
+          {/* Approved */}
+          <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Approved</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MdCheckCircle size={18} />
+              </div>
+            </div>
+            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.approved}</span>
             </div>
           </div>
-          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.approved}</span>
-          </div>
-        </div>
 
-        {/* Rejected */}
-        <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Rejected</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <MdCancel size={18} />
+          {/* Rejected */}
+          <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Rejected</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <MdCancel size={18} />
+              </div>
+            </div>
+            <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.rejected}</span>
             </div>
           </div>
-          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.rejected}</span>
-          </div>
-        </div>
 
-      </div>
+        </div>
+      )}
 
       {/* ── 3. STATUS FILTER TABS ── */}
-      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '16px' }}>
-        {STATUS_TABS.map((tab) => {
-          const isActive = status === tab.id;
-          const count = tab.id === ''
-            ? (backendStatusCounts?.all !== undefined ? backendStatusCounts.all : (allCount || total))
-            : (backendStatusCounts ? (backendStatusCounts[tab.id] || 0) : (statusCounts[tab.id] || 0));
-          return (
-            <button
-              key={tab.id}
-              onClick={() => { setStatus(tab.id); setPage(1); }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '10px',
-                background: isActive ? tab.color : C.card,
-                color: isActive ? '#ffffff' : C.text,
-                border: `1px solid ${isActive ? tab.color : C.border}`,
-                fontWeight: 700, fontSize: '12.5px', cursor: 'pointer', whiteSpace: 'nowrap',
-                transition: 'all 0.2s ease',
-                boxShadow: isActive ? `0 4px 12px ${tab.color}35` : 'none'
-              }}
-            >
-              <span>{tab.label}</span>
-              <span style={{
-                background: isActive ? 'rgba(255,255,255,0.25)' : tab.bg,
-                color: isActive ? '#ffffff' : tab.color,
-                padding: '2px 7px', borderRadius: '20px', fontSize: '11px', fontWeight: 800
-              }}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {!isPanCheckerUser && !isRemarkOperatorUser && (
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '8px', marginBottom: '16px' }}>
+          {STATUS_TABS.map((tab) => {
+            const isActive = status === tab.id;
+            const count = tab.id === ''
+              ? (backendStatusCounts?.all !== undefined ? backendStatusCounts.all : (allCount || total))
+              : (backendStatusCounts ? (backendStatusCounts[tab.id] || 0) : (statusCounts[tab.id] || 0));
+            return (
+              <button
+                key={tab.id}
+                onClick={() => { setStatus(tab.id); setPage(1); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '10px',
+                  background: isActive ? tab.color : C.card,
+                  color: isActive ? '#ffffff' : C.text,
+                  border: `1px solid ${isActive ? tab.color : C.border}`,
+                  fontWeight: 700, fontSize: '12.5px', cursor: 'pointer', whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease',
+                  boxShadow: isActive ? `0 4px 12px ${tab.color}35` : 'none'
+                }}
+              >
+                <span>{tab.label}</span>
+                <span style={{
+                  background: isActive ? 'rgba(255,255,255,0.25)' : tab.bg,
+                  color: isActive ? '#ffffff' : tab.color,
+                  padding: '2px 7px', borderRadius: '20px', fontSize: '11px', fontWeight: 800
+                }}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── 4. SEARCH & FILTERS BAR ── */}
       <div style={{ background: C.card, borderRadius: '16px', padding: '16px', border: `1px solid ${C.border}`, marginBottom: '20px' }}>
