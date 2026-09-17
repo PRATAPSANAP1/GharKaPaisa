@@ -966,14 +966,19 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   <select
                     value={dispatchStatus || 'None'}
                     onChange={(e) => setDispatchStatus(e.target.value)}
-                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff' }}
+                    style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: 600 }}
                   >
                     <option value="None">None</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Dispatched">Dispatched</option>
-                    <option value="Delivered">Delivered</option>
-                    <option value="In Transit">In Transit</option>
-                    <option value="Returned">Returned</option>
+                    <option value="Dispatch Pending">Dispatch Pending</option>
+                    <option value="Dispatch Complete">Dispatch Complete</option>
+                    <option value="Dispatch Not Available">Dispatch Not Available</option>
+                    <option value="Dispatch Hold">Dispatch Hold</option>
+                    <option value="E-Sign Pending">E-Sign Pending</option>
+                    <option value="E-sign Complete">E-sign Complete</option>
+                    <option value="RTB(Error)">RTB(Error)</option>
+                    {dispatchStatus && !['None', 'Dispatch Pending', 'Dispatch Complete', 'Dispatch Not Available', 'Dispatch Hold', 'E-Sign Pending', 'E-sign Complete', 'RTB(Error)', 'Pending', 'Dispatched', 'Delivered', 'In Transit', 'Returned', ''].includes(dispatchStatus) && (
+                      <option value={dispatchStatus}>{dispatchStatus}</option>
+                    )}
                   </select>
                 </div>
 
