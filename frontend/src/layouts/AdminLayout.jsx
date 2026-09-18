@@ -92,18 +92,19 @@ const AdminLayout = () => {
   const userDesignation = user?.designation || '';
   const isOpHead = userDesignation === 'Operational Head' || userDesignation === 'OPERATIONAL_HEAD';
   const isSalesExec = ['Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
-  const isPanChecker = ['PAN Checker', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
-  const isRemarkOperator = ['Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
+  const isPanChecker = ['PAN Checker', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
+  const isRemarkOperator = ['Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
+  const isQdOperator = ['QD Checker', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(userRole);
   const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
   const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
-  if ((isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker || assignedList.length > 0) && assignedList.length > 0) {
+  if ((isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker || isQdOperator || assignedList.length > 0) && assignedList.length > 0) {
     banks = assignedList.map(b => ({
       id: b.id,
       name: b.name || b.bank_name || b.short_code,
       short_code: b.short_code || b.code || b.name,
       logo: b.logo_url || b.logo
     }));
-  } else if (isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker) {
+  } else if (isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker || isQdOperator) {
     banks = [];
   }
 
@@ -198,7 +199,7 @@ const AdminLayout = () => {
             )}
 
             {/* CREDIT CARDS — Only Assigned Banks */}
-            {!isPanChecker && !isRemarkOperator && !isSalesExec && (
+            {!isPanChecker && !isRemarkOperator && !isSalesExec && !isQdOperator && (
               <div>
                 <button onClick={() => setOpenCcMenu(!openCcMenu)} style={menuBtnStyle(openCcMenu)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -224,7 +225,7 @@ const AdminLayout = () => {
             )}
 
             {/* LOANS — Only Assigned Banks */}
-            {!isPanChecker && !isRemarkOperator && !isSalesExec && (
+            {!isPanChecker && !isRemarkOperator && !isSalesExec && !isQdOperator && (
               <div>
                 <button onClick={() => setOpenLoansMenu(!openLoansMenu)} style={menuBtnStyle(openLoansMenu)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -250,7 +251,7 @@ const AdminLayout = () => {
             )}
 
             {/* INSURANCE — Only Assigned Banks */}
-            {!isPanChecker && !isRemarkOperator && !isSalesExec && (
+            {!isPanChecker && !isRemarkOperator && !isSalesExec && !isQdOperator && (
               <div>
                 <button onClick={() => setOpenInsuranceMenu(!openInsuranceMenu)} style={menuBtnStyle(openInsuranceMenu)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

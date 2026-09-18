@@ -46,10 +46,11 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const user = useAuthStore((state) => state.user);
   const role = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
-  const isPanChecker = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
-  const isRemarkOperator = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
-  const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
-  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation);
+  const isPanChecker = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(role);
+  const isRemarkOperator = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(role);
+  const isQdOperator = ['QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(role);
+  const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(role);
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation);
   const isSuperAdminRole = ['SUPER_ADMIN', 'SUPER ADMIN'].includes(role) || ['SUPER_ADMIN', 'SUPER ADMIN'].includes(userDesignation);
   const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
   const isOpsOrAdmin = isOpsHead || isOpsOperator || isSuperAdminRole;
@@ -120,7 +121,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   // Role & Status Access Rules:
   const canEditQd = !isLockedStatus;
   const canEditRemark = !isLockedStatus;
-  const canEditFinal = !isSalesExecUser && (isSuperAdminOrAdmin || (!isPartner && !isLockedStatus));
+  const canEditFinal = !isSalesExecUser && !isQdOperator && (isSuperAdminOrAdmin || (!isPartner && !isLockedStatus));
 
   const sanitizeVal = (val) => {
     if (!val || val === 'null' || val === 'undefined') return '';

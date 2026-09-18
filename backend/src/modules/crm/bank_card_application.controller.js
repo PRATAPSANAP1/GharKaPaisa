@@ -281,7 +281,8 @@ const listBankCardApplications = async (req, res, next) => {
 
     const userRole = (req.user?.role || '').toUpperCase();
     const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
+    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userRole);
+    const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
 
     if (userRole !== 'SUPER_ADMIN' && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
@@ -293,7 +294,11 @@ const listBankCardApplications = async (req, res, next) => {
     }
 
     if (isSalesExecUser && req.user?.id) {
-      whereClause += ` AND (LOWER(COALESCE(combined.process_by, '')) LIKE '%punching%' OR combined.source_table = 'bank_card_applications' OR LOWER(COALESCE(combined.credit_card_category, '')) LIKE '%card%')`;
+      whereClause += ` AND (LOWER(COALESCE(combined.process_by, '')) IN ('lead_punching', 'punch_only', 'manual') OR LOWER(COALESCE(combined.process_by, '')) LIKE '%punch%') AND (COALESCE(combined.dispatch_stage, '') <> '' AND LOWER(COALESCE(combined.dispatch_stage, 'none')) NOT IN ('none', 'na', 'n/a'))`;
+    }
+
+    if (isRemarkOperatorUser && req.user?.id) {
+      whereClause += ` AND (COALESCE(combined.dispatch_stage, '') = '' OR LOWER(COALESCE(combined.dispatch_stage, 'none')) IN ('none', 'na', 'n/a'))`;
     }
 
     if (bank_id && bank_id !== 'all') {
@@ -390,8 +395,8 @@ const listBankCardApplications = async (req, res, next) => {
         COALESCE(a.status::text, 'Submitted') as final_stage,
         'Completed' as qd_status,
         'Verified' as income_status,
-        'In Transit' as dispatch_stage,
-        a.partner_id::text as process_by,
+        COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, ''), 'None') as dispatch_stage,
+        COALESCE(a.process_type, a.process_by, a.source, 'lead_punching') as process_by,
         COALESCE(u.full_name, u.email, COALESCE(a.process_type, a.source, 'Lead Punching')) as process_by_name,
         NULL as qd_executive_name,
         NULL as pan_check_executive_name,
