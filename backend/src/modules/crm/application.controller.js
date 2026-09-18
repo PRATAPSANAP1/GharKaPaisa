@@ -1469,8 +1469,19 @@ const ensureApplicationStageColumns = async () => {
       ADD COLUMN IF NOT EXISTS remark_updated_at TIMESTAMPTZ,
       ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no',
       ADD COLUMN IF NOT EXISTS bank_current_lead_status VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS approved_by UUID
+      ADD COLUMN IF NOT EXISTS approved_by UUID,
+      ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS backend_remark TEXT
     `);
+    await query(`
+      ALTER TABLE physical_application_details
+      ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS backend_remark TEXT
+    `).catch(() => {});
     stageColumnsEnsured = true;
   } catch (err) {
     // Ignore error if schema alter is locked or non-fatal
@@ -1608,9 +1619,36 @@ const listApplications = async (req, res, next) => {
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userRole);
     let salesExecFilterSQL = '';
     if (isSalesExecUser && req.user?.id) {
-      const bankAssignmentFilter = `(combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}') OR EXISTS (SELECT 1 FROM admin_bank_assignments aba JOIN banks b ON b.id = aba.bank_id WHERE aba.admin_id = '${req.user.id}' AND (LOWER(b.name) LIKE '%sbi%' OR LOWER(b.short_code) = 'sbi')))`;
+      const bankAssignmentFilter = `(
+        combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}')
+        OR EXISTS (
+          SELECT 1 FROM admin_bank_assignments aba 
+          JOIN banks b ON b.id = aba.bank_id 
+          WHERE aba.admin_id = '${req.user.id}' 
+          AND (
+            (LOWER(combined.bank_code) = LOWER(b.short_code))
+            OR (LOWER(combined.bank_name) = LOWER(b.name))
+            OR (
+              LOWER(b.name) LIKE '%sbi%' 
+              AND LOWER(b.name) NOT LIKE '%tata%' 
+              AND LOWER(combined.bank_name) LIKE '%sbi%' 
+              AND LOWER(combined.bank_name) NOT LIKE '%tata%' 
+              AND LOWER(combined.bank_code) NOT LIKE '%tata%'
+            )
+          )
+        )
+      )`;
+      const tataExclusionFilter = `NOT (
+        (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%')
+        AND NOT EXISTS (
+          SELECT 1 FROM admin_bank_assignments aba 
+          JOIN banks b ON b.id = aba.bank_id 
+          WHERE aba.admin_id = '${req.user.id}' 
+          AND (LOWER(b.name) LIKE '%tata%' OR LOWER(b.short_code) LIKE '%tata%')
+        )
+      )`;
       const panCheckCondition = `(((LOWER(COALESCE(combined.bank_code, '')) <> 'sbi' AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%sbi%') OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%') OR LOWER(COALESCE(combined.pan_check, 'no')) = 'yes')`;
-      salesExecFilterSQL = ` AND ${bankAssignmentFilter} AND ${panCheckCondition} AND (COALESCE(combined.dispatch_status, '') <> '' AND LOWER(COALESCE(combined.dispatch_status, 'none')) NOT IN ('none', 'na', 'n/a'))`;
+      salesExecFilterSQL = ` AND ${bankAssignmentFilter} AND ${tataExclusionFilter} AND ${panCheckCondition} AND (COALESCE(combined.dispatch_status, '') <> '' AND LOWER(COALESCE(combined.dispatch_status, 'none')) NOT IN ('none', 'na', 'n/a'))`;
     }
 
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
@@ -4003,6 +4041,13 @@ const updateApplicationDetails = async (req, res, next) => {
     let backendRemarkToSave = (req.body.backend_remark !== undefined && ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD'].includes(userRole)) ? req.body.backend_remark : null;
 
     if (salesOpCodeToSave || panCheckerOpCodeToSave || remarkOpCodeToSave || backendRemarkToSave) {
+      await client.query(`
+        ALTER TABLE applications 
+        ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS backend_remark TEXT
+      `).catch(() => {});
       await client.query(`
         UPDATE applications SET
           sales_operator_code = COALESCE($1, sales_operator_code),
