@@ -78,15 +78,17 @@ const migrateMessenger = async () => {
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
         file_name VARCHAR(255) NOT NULL,
-        file_url VARCHAR(500) NOT NULL,
+        file_url TEXT NOT NULL,
         file_type VARCHAR(100),
         file_size BIGINT,
-        storage_key VARCHAR(500),
+        storage_key TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
 
     await query(`ALTER TABLE message_attachments ALTER COLUMN file_size TYPE BIGINT USING file_size::bigint`).catch(() => {});
+    await query(`ALTER TABLE message_attachments ALTER COLUMN file_url TYPE TEXT`).catch(() => {});
+    await query(`ALTER TABLE message_attachments ALTER COLUMN storage_key TYPE TEXT`).catch(() => {});
     await query(`CREATE INDEX IF NOT EXISTS idx_message_attachments_msg_id ON message_attachments(message_id)`);
 
     // 5. Message Reads table

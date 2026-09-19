@@ -312,8 +312,18 @@ async function createAttachment({ message_id, file_name, file_url, file_type, fi
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *
   `;
-  const { rows } = await query(sql, [message_id, file_name, file_url, file_type || null, parsedSize, storage_key || null]);
-  return rows[0];
+  try {
+    const { rows } = await query(sql, [message_id, file_name, file_url, file_type || null, parsedSize, storage_key || null]);
+    return rows[0];
+  } catch (err) {
+    if (err.message && err.message.includes('too long')) {
+      await query(`ALTER TABLE message_attachments ALTER COLUMN file_url TYPE TEXT`).catch(() => {});
+      await query(`ALTER TABLE message_attachments ALTER COLUMN storage_key TYPE TEXT`).catch(() => {});
+      const { rows } = await query(sql, [message_id, file_name, file_url, file_type || null, parsedSize, storage_key || null]);
+      return rows[0];
+    }
+    throw err;
+  }
 }
 
 /**
