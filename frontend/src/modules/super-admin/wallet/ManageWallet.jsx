@@ -199,7 +199,12 @@ export default function ManageWallet() {
       setAdjForm({ partner_id: '', amount: '', txn_type: 'credit', description: '' });
       fetchAllDashboardData();
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to apply adjustment', 'error');
+      const serverMsg = err.response?.data?.message || err.message || '';
+      let displayMsg = serverMsg;
+      if (serverMsg.toLowerCase().includes('insufficient') || serverMsg.toLowerCase().includes('debit adjustment')) {
+        displayMsg = serverMsg.startsWith('Account has low balance') ? serverMsg : `Account has low balance. ${serverMsg}`;
+      }
+      showToast(displayMsg || 'Failed to apply adjustment', 'error');
     } finally {
       setActionLoading(false);
     }
@@ -376,24 +381,30 @@ export default function ManageWallet() {
   return (
     <div style={{ width: '100%', maxWidth: '100%', overflowX: 'hidden', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: isMobile ? '16px' : '20px', padding: isMobile ? '8px' : '0 0 50px 0', boxSizing: 'border-box' }}>
       
-      {/* ── TOAST NOTIFICATION BANNER ── */}
+      {/* ── TOAST NOTIFICATION BANNER (TOP RIGHT CORNER) ── */}
       {toastNotification && (
         <div style={{
-          padding: '12px 20px',
-          borderRadius: '10px',
+          position: 'fixed',
+          top: '24px',
+          right: '24px',
+          zIndex: 9999,
+          maxWidth: '420px',
+          padding: '14px 20px',
+          borderRadius: '12px',
           background: toastNotification.type === 'error' ? '#FEE2E2' : '#DCFCE7',
           color: toastNotification.type === 'error' ? '#991B1B' : '#166534',
-          border: `1px solid ${toastNotification.type === 'error' ? '#FCA5A5' : '#86EFAC'}`,
+          border: `1.5px solid ${toastNotification.type === 'error' ? '#FCA5A5' : '#86EFAC'}`,
           fontWeight: 700,
           fontSize: '13px',
           display: 'flex',
-          justify: 'space-between',
+          justifyContent: 'space-between',
           alignItems: 'center',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+          gap: '12px',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
           animation: 'fadeIn 0.3s ease-in-out'
         }}>
           <span>{toastNotification.message}</span>
-          <button onClick={() => setToastNotification(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 900, color: 'inherit' }}>✕</button>
+          <button onClick={() => setToastNotification(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 900, color: 'inherit', fontSize: '15px' }}>✕</button>
         </div>
       )}
 
@@ -1499,7 +1510,7 @@ export default function ManageWallet() {
                           </td>
                           <td style={{ padding: '10px', textAlign: 'right', fontWeight: 900, color: C.text, fontSize: '13.5px' }}>₹{parseFloat(p.balance || 0).toLocaleString('en-IN')}</td>
                           <td style={{ padding: '10px', textAlign: 'center' }}>
-                            <button onClick={() => { setAdjForm({ partner_id: p.name, amount: '', txn_type: 'credit', description: '' }); setManualAdjModal(true); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Adjust</button>
+                            <button onClick={() => { setAdjForm({ partner_id: p.partner_code || p.partner_id || p.id || p.name, amount: '', txn_type: 'credit', description: '' }); setManualAdjModal(true); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Adjust</button>
                           </td>
                         </tr>
                       );
@@ -1540,9 +1551,15 @@ export default function ManageWallet() {
                   {ledgerEntries.length === 0 ? (
                     <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No ledger entries found</td></tr>
                   ) : ledgerEntries.map(l => {
-                    const isCredit = l.type === 'Credited' || parseFloat(l.credit || 0) > 0;
+                    const creditNum = parseFloat(l.credit || 0);
+                    const debitNum = parseFloat(l.debit || 0);
+                    const amountNum = parseFloat(l.amount || 0);
+                    const typeStr = (l.transaction_type || l.type || '').toLowerCase();
+                    const isCredit = creditNum > 0 || typeStr.includes('credit') || typeStr.includes('release') || typeStr.includes('bonus');
                     const userName = l.user_name || (l.first_name ? `${l.first_name} ${l.last_name || ''}` : l.partner_code || 'User');
-                    const amt = parseFloat(l.credit || l.debit || l.amount || 0);
+                    const amt = isCredit ? creditNum : (debitNum > 0 ? debitNum : (amountNum > 0 ? amountNum : creditNum));
+                    const dateVal = l.created_at || l.requested_at || l.datetime || l.date_time || l.updated_at;
+                    const formattedDate = dateVal ? new Date(dateVal).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
                     return (
                       <tr key={l.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                         <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{l.id}</td>
@@ -1556,7 +1573,7 @@ export default function ManageWallet() {
                           {isCredit ? '+' : '-'}₹{amt.toLocaleString('en-IN')}
                         </td>
                         <td style={{ padding: '12px 8px', color: C.textLight }}>{l.description || 'Ledger Entry'}</td>
-                        <td style={{ padding: '12px 8px', color: C.textLight, fontSize: '11.5px' }}>{l.datetime || 'N/A'}</td>
+                        <td style={{ padding: '12px 8px', color: C.textLight, fontSize: '11.5px' }}>{formattedDate}</td>
                       </tr>
                     );
                   })}
@@ -2142,7 +2159,7 @@ export default function ManageWallet() {
                             </td>
                             <td style={{ padding: '14px 10px', textAlign: 'right', fontWeight: 900, color: C.text, fontSize: '16px' }}>₹{amt.toLocaleString('en-IN')}</td>
                             <td style={{ padding: '14px 10px', textAlign: 'center' }}>
-                              <button onClick={() => { setAdjForm({ partner_id: p.name, amount: '', txn_type: 'credit', description: '' }); setManualAdjModal(true); setActiveFullViewModal(null); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Adjust Balance</button>
+                              <button onClick={() => { setAdjForm({ partner_id: p.partner_code || p.partner_id || p.id || p.name, amount: '', txn_type: 'credit', description: '' }); setManualAdjModal(true); setActiveFullViewModal(null); }} style={{ background: C.teal, color: '#FFF', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>Adjust Balance</button>
                             </td>
                           </tr>
                         );
@@ -2180,9 +2197,15 @@ export default function ManageWallet() {
                       {filtered.length === 0 ? (
                         <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: C.textLight, fontWeight: 700 }}>No matching ledger entries found</td></tr>
                       ) : filtered.map(l => {
-                        const isCredit = l.type === 'Credited' || parseFloat(l.credit || 0) > 0;
+                        const creditNum = parseFloat(l.credit || 0);
+                        const debitNum = parseFloat(l.debit || 0);
+                        const amountNum = parseFloat(l.amount || 0);
+                        const typeStr = (l.transaction_type || l.type || '').toLowerCase();
+                        const isCredit = creditNum > 0 || typeStr.includes('credit') || typeStr.includes('release') || typeStr.includes('bonus');
                         const userName = l.user_name || (l.first_name ? `${l.first_name} ${l.last_name || ''}` : l.partner_code || 'User');
-                        const amt = parseFloat(l.credit || l.debit || l.amount || 0);
+                        const amt = isCredit ? creditNum : (debitNum > 0 ? debitNum : (amountNum > 0 ? amountNum : creditNum));
+                        const dateVal = l.created_at || l.requested_at || l.datetime || l.date_time || l.updated_at;
+                        const formattedDate = dateVal ? new Date(dateVal).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
                         return (
                           <tr key={l.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                             <td style={{ padding: '14px 10px', fontWeight: 900, color: C.teal, fontFamily: 'monospace' }}>{l.id}</td>
@@ -2196,7 +2219,7 @@ export default function ManageWallet() {
                               {isCredit ? '+' : '-'}₹{amt.toLocaleString('en-IN')}
                             </td>
                             <td style={{ padding: '14px 10px', color: C.text, fontSize: '12.5px' }}>{l.description || 'System Ledger Entry'}</td>
-                            <td style={{ padding: '14px 10px', color: C.textLight, fontSize: '12px' }}>{l.datetime || 'N/A'}</td>
+                            <td style={{ padding: '14px 10px', color: C.textLight, fontSize: '12px' }}>{formattedDate}</td>
                           </tr>
                         );
                       })}

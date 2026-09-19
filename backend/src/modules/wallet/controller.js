@@ -1753,7 +1753,8 @@ const getPartnersOverview = async (req, res, next) => {
         COALESCE(NULLIF(TRIM(CONCAT(ap.first_name, ' ', ap.last_name)), ''), ap.partner_code, u.full_name, 'Partner') as name,
         w.available_balance as balance,
         COALESCE(w.status, 'Active') as status,
-        ap.partner_code
+        ap.partner_code,
+        ap.id as partner_id
       FROM partner_wallets w
       JOIN partner_profiles ap ON ap.id = w.partner_id
       LEFT JOIN users u ON u.id = ap.user_id
@@ -1766,7 +1767,8 @@ const getPartnersOverview = async (req, res, next) => {
       balance: parseFloat(r.balance || 0),
       status: r.status || 'Active',
       color: colors[i % colors.length],
-      partner_code: r.partner_code
+      partner_code: r.partner_code,
+      partner_id: r.partner_id
     }));
 
     return success(res, formatted);

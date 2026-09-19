@@ -148,21 +148,21 @@ const syncWalletBalance = async (partnerId, client) => {
         COALESCE(SUM(CASE WHEN transaction_type = 'OVERRIDE_COMMISSION' THEN credit ELSE 0 END), 0.00)::numeric as override_earn
       FROM wallet_ledger 
       WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) 
-        AND status IN ('Released', 'Approved')
+        AND LOWER(status) IN ('released', 'approved', 'completed')
         AND transaction_type NOT IN ('WITHDRAWAL_CANCELLED', 'WITHDRAWAL_REJECTED')
     ),
     debit_stats AS (
       SELECT 
         COALESCE(SUM(debit), 0.00)::numeric as completed_debits
       FROM wallet_ledger 
-      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status IN ('Released', 'Approved')
+      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND LOWER(status) IN ('released', 'approved', 'completed')
     ),
     hold_stats AS (
       SELECT 
         COALESCE(SUM(credit), 0.00)::numeric as hold_bal,
         COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0.00)::numeric as team_pending
       FROM wallet_ledger 
-      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND status = 'Pending Approval'
+      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND LOWER(status) IN ('pending approval', 'pending')
     ),
     locked_stats AS (
       SELECT 
@@ -174,7 +174,7 @@ const syncWalletBalance = async (partnerId, client) => {
           SELECT 1 FROM wallet_ledger wl 
           WHERE wl.reference_number = w.id::text 
             AND wl.transaction_type = 'WITHDRAWAL_SETTLED'
-            AND wl.status IN ('Released', 'Approved')
+            AND LOWER(wl.status) IN ('released', 'approved', 'completed')
         )
     )
     UPDATE partner_wallets PW SET
@@ -1212,7 +1212,7 @@ const adminAdjustWallet = async (partnerId, amount, txnType, description, proces
 
     if (txnType === 'debit') {
       if (parseFloat(wallet.available_balance) < amount) {
-        throw new Error(`Insufficient available balance for debit adjustment. Available: ₹${wallet.available_balance}`);
+        throw new Error(`Account has low balance. Insufficient available balance for debit adjustment. Available: ₹${wallet.available_balance}`);
       }
     } else if (txnType !== 'credit') {
       throw new Error(`Invalid transaction type: ${txnType}`);
