@@ -4037,8 +4037,8 @@ const updateApplicationDetails = async (req, res, next) => {
 
     let salesOpCodeToSave = isSalesExecUserLocal ? currentOpCode : null;
     let panCheckerOpCodeToSave = isPanCheckerUserLocal ? currentOpCode : null;
-    let remarkOpCodeToSave = isRemarkOperatorUserLocal ? currentOpCode : null;
-    let backendRemarkToSave = (req.body.backend_remark !== undefined && ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD'].includes(userRole)) ? req.body.backend_remark : null;
+    const canSaveBackendRemark = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD'].includes(userRole) || ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD'].includes(userDesignation) || isSalesExecUserLocal;
+    let backendRemarkToSave = (req.body.backend_remark !== undefined && canSaveBackendRemark) ? req.body.backend_remark : null;
 
     if (salesOpCodeToSave || panCheckerOpCodeToSave || remarkOpCodeToSave || backendRemarkToSave) {
       await client.query(`
@@ -5338,7 +5338,9 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
     const effectiveUserRemark = user_remark || notes || null;
     const effectiveVkycStage = vkyc_stage || vkyc_status || null;
     const currentOpCode = req.user?.employee_id || req.user?.user_code || req.user?.employee_code || req.user?.emp_code || req.user?.full_name || req.user?.email || req.user?.id;
-    const backendRemarkToSave = (req.body.backend_remark !== undefined && ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD'].includes(userRole)) ? req.body.backend_remark : null;
+    const isSalesExecUserLocal = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userRole);
+    const canSaveBackendRemark = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD'].includes(userRole) || ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD'].includes(userDesignation) || isSalesExecUserLocal;
+    const backendRemarkToSave = (req.body.backend_remark !== undefined && canSaveBackendRemark) ? req.body.backend_remark : null;
 
     // 1. Update applications table
     await client.query(`

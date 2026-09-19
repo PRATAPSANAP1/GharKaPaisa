@@ -55,6 +55,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
   const isOpsOrAdmin = isOpsHead || isOpsOperator || isSuperAdminRole;
   const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
+  const canEditBackendRemark = isSuperAdminOrAdmin || isSalesExecUser || isOpsOrAdmin;
 
   // Normalize initialTab ('qd' | 'remark' | 'final' | 'timeline' | legacy aliases)
   const getTabKey = (tab) => {
@@ -408,7 +409,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     try {
       let payload = {
         user_remark: userRemark,
-        notes: userRemark
+        notes: userRemark,
+        backend_remark: backendRemark
       };
       if (formType === 'qd') {
         payload = {
@@ -2139,16 +2141,16 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     />
                   </div>
 
-                  {/* BACKEND REMARK (ADMIN ROLES EDITABLE ONLY) */}
+                  {/* BACKEND REMARK (ADMIN & SALES EXECUTIVE EDITABLE) */}
                   <div style={{ gridColumn: '1 / -1', marginTop: '12px' }}>
                     <label style={{ fontSize: '12px', fontWeight: 800, color: '#6b21a8', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', textTransform: 'uppercase' }}>
-                      <Lock size={14} color="#6b21a8" /> BACKEND REMARK (Admin Roles Only)
+                      <Lock size={14} color="#6b21a8" /> BACKEND REMARK (Admin Roles & Sales Executive)
                     </label>
                     <textarea
-                      disabled={!isSuperAdminOrAdmin}
+                      disabled={!canEditBackendRemark}
                       value={backendRemark}
                       onChange={(e) => setBackendRemark(e.target.value)}
-                      placeholder={isSuperAdminOrAdmin ? "Enter confidential backend remark..." : "Only Admin Roles can edit backend remark"}
+                      placeholder={canEditBackendRemark ? "Enter confidential backend remark..." : "Only Admin Roles & Administrative Sales Executive can edit backend remark"}
                       rows={2}
                       style={{
                         width: '100%',
@@ -2156,7 +2158,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                         borderRadius: '8px',
                         border: '1px solid #d8b4fe',
                         fontSize: '13px',
-                        background: !isSuperAdminOrAdmin ? '#f3e8ff' : '#faf5ff',
+                        background: !canEditBackendRemark ? '#f3e8ff' : '#faf5ff',
                         fontWeight: 600,
                         color: '#581c87'
                       }}
