@@ -406,7 +406,7 @@ export default function HomeScreen({ navigation }) {
 
           {/* Copyright */}
           <Text style={styles.copyrightText}>
-            © 2026 GharKaPaisa. All rights reserved. | Powered by GharKaPaisa
+            © 2026 GharKaPaisa. All rights reserved. | Powered by IOT_Stack
           </Text>
         </View>
 

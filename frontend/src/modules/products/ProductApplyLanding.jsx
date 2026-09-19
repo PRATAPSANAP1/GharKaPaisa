@@ -599,7 +599,7 @@ export default function ProductApplyLanding() {
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: '48px', paddingBottom: '32px' }}>
           <p style={{ fontSize: '12px', color: textSecondary }}>
-            Powered by <strong style={{ color: themeColor }}>GharKaPaisa</strong> • India's Financial Products Marketplace
+            Powered by <strong style={{ color: themeColor }}>IOT_Stack</strong> • India's Financial Products Marketplace
           </p>
         </div>
       </div>
