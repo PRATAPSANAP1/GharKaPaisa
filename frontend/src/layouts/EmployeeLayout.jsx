@@ -13,6 +13,7 @@ import Chatbot from '../components/Chatbot/Chatbot';
 import api from '../services/api';
 
 import EmployeeForcePasswordModal from '../modules/employee/components/EmployeeForcePasswordModal';
+import EmployeeMobileBottomNav from '../components/EmployeeMobileBottomNav';
 
 export default function EmployeeLayout() {
   const { user, logout } = useAuthStore();
@@ -115,6 +116,7 @@ export default function EmployeeLayout() {
     { path: '/employee/insurance', label: 'Insurance', icon: <FaShieldAlt /> },
     { path: '/employee/sales-reports', label: 'Sales Reports', icon: <FaFileAlt /> },
     { path: '/employee/applications', label: 'My Applications', icon: <FaFileAlt /> },
+    { path: '/employee/messenger', label: 'Messenger', icon: <FaFileAlt /> },
     { path: '/employee/incentives', label: 'My Incentives', icon: <FaGift /> },
     ...(isManagerOrTL ? [{ path: '/employee/team', label: 'My Team Architecture', icon: <FaUsers /> }] : []),
     { path: '/employee/settings', label: 'Settings & Preferences', icon: <FaCog /> }
@@ -628,6 +630,7 @@ export default function EmployeeLayout() {
       )}
 
       <EmployeeForcePasswordModal isOpen={!!user?.must_change_password} onClose={() => {}} />
+      <EmployeeMobileBottomNav />
       <Chatbot />
     </div>
   );

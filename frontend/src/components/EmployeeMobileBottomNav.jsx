@@ -5,11 +5,11 @@ import {
   HiOutlineSquares2X2, 
   HiOutlineDocumentText, 
   HiOutlinePlus, 
-  HiOutlineUsers, 
+  HiOutlineTrophy, 
   HiOutlineUser 
 } from 'react-icons/hi2';
 
-export default function PartnerMobileBottomNav() {
+export default function EmployeeMobileBottomNav() {
   const { C, isDark } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,13 +24,13 @@ export default function PartnerMobileBottomNav() {
   if (!isMobile) return null;
 
   const isActive = (path) => {
-    if (path === '/partner/dashboard') {
-      return location.pathname === '/partner/dashboard';
+    if (path === '/employee/dashboard') {
+      return location.pathname === '/employee/dashboard';
     }
     return location.pathname.startsWith(path);
   };
 
-  const activeColor = '#2563EB';
+  const activeColor = '#0F766E';
   const inactiveColor = isDark ? '#94A3B8' : '#64748B';
 
   return (
@@ -65,7 +65,7 @@ export default function PartnerMobileBottomNav() {
       >
         {/* 1. Dashboard */}
         <div
-          onClick={() => navigate('/partner/dashboard')}
+          onClick={() => navigate('/employee/dashboard')}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -75,17 +75,17 @@ export default function PartnerMobileBottomNav() {
             flex: 1
           }}
         >
-          <div style={{ color: isActive('/partner/dashboard') ? activeColor : inactiveColor }}>
+          <div style={{ color: isActive('/employee/dashboard') ? activeColor : inactiveColor }}>
             <HiOutlineSquares2X2 size={22} />
           </div>
-          <span style={{ fontSize: '11px', fontWeight: isActive('/partner/dashboard') ? 800 : 600, color: isActive('/partner/dashboard') ? activeColor : inactiveColor }}>
+          <span style={{ fontSize: '11px', fontWeight: isActive('/employee/dashboard') ? 800 : 600, color: isActive('/employee/dashboard') ? activeColor : inactiveColor }}>
             Dashboard
           </span>
         </div>
 
         {/* 2. Application */}
         <div
-          onClick={() => navigate('/partner/applications?scope=my')}
+          onClick={() => navigate('/employee/applications')}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -95,17 +95,17 @@ export default function PartnerMobileBottomNav() {
             flex: 1
           }}
         >
-          <div style={{ color: isActive('/partner/applications') ? activeColor : inactiveColor }}>
+          <div style={{ color: isActive('/employee/applications') ? activeColor : inactiveColor }}>
             <HiOutlineDocumentText size={22} />
           </div>
-          <span style={{ fontSize: '11px', fontWeight: isActive('/partner/applications') ? 800 : 600, color: isActive('/partner/applications') ? activeColor : inactiveColor }}>
+          <span style={{ fontSize: '11px', fontWeight: isActive('/employee/applications') ? 800 : 600, color: isActive('/employee/applications') ? activeColor : inactiveColor }}>
             Application
           </span>
         </div>
 
         {/* 3. CENTER ELEVATED CIRCLE BUTTON: Add Lead */}
         <div
-          onClick={() => navigate('/partner/sell-and-earn')}
+          onClick={() => navigate('/employee/credit-cards')}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -120,12 +120,12 @@ export default function PartnerMobileBottomNav() {
               width: '50px',
               height: '50px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+              background: 'linear-gradient(135deg, #0F766E, #0D9488)',
               border: `3px solid ${isDark ? '#1E293B' : '#FFFFFF'}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 6px 18px rgba(37,99,235,0.45)'
+              boxShadow: '0 6px 18px rgba(15,118,110,0.45)'
             }}
           >
             <HiOutlinePlus size={24} color="#FFFFFF" />
@@ -135,9 +135,9 @@ export default function PartnerMobileBottomNav() {
           </span>
         </div>
 
-        {/* 4. Team */}
+        {/* 4. Target */}
         <div
-          onClick={() => navigate('/partner/team')}
+          onClick={() => navigate('/employee/incentives')}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -147,17 +147,17 @@ export default function PartnerMobileBottomNav() {
             flex: 1
           }}
         >
-          <div style={{ color: isActive('/partner/team') ? activeColor : inactiveColor }}>
-            <HiOutlineUsers size={22} />
+          <div style={{ color: isActive('/employee/incentives') ? activeColor : inactiveColor }}>
+            <HiOutlineTrophy size={22} />
           </div>
-          <span style={{ fontSize: '11px', fontWeight: isActive('/partner/team') ? 800 : 600, color: isActive('/partner/team') ? activeColor : inactiveColor }}>
-            Team
+          <span style={{ fontSize: '11px', fontWeight: isActive('/employee/incentives') ? 800 : 600, color: isActive('/employee/incentives') ? activeColor : inactiveColor }}>
+            Target
           </span>
         </div>
 
         {/* 5. Profile */}
         <div
-          onClick={() => navigate('/partner/profile')}
+          onClick={() => navigate('/employee/profile')}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -167,10 +167,10 @@ export default function PartnerMobileBottomNav() {
             flex: 1
           }}
         >
-          <div style={{ color: isActive('/partner/profile') ? activeColor : inactiveColor }}>
+          <div style={{ color: isActive('/employee/profile') ? activeColor : inactiveColor }}>
             <HiOutlineUser size={22} />
           </div>
-          <span style={{ fontSize: '11px', fontWeight: isActive('/partner/profile') ? 800 : 600, color: isActive('/partner/profile') ? activeColor : inactiveColor }}>
+          <span style={{ fontSize: '11px', fontWeight: isActive('/employee/profile') ? 800 : 600, color: isActive('/employee/profile') ? activeColor : inactiveColor }}>
             Profile
           </span>
         </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar/Navbar';
 import Chatbot from '../components/Chatbot/Chatbot';
+import HomeMobileBottomNav from '../components/HomeMobileBottomNav';
 
 const PublicLayout = () => {
   const location = useLocation();
@@ -13,6 +14,7 @@ const PublicLayout = () => {
       {!isAuthPage && <Navbar />}
       <Outlet />
       <Chatbot />
+      {!isAuthPage && <HomeMobileBottomNav />}
     </>
   );
 };
