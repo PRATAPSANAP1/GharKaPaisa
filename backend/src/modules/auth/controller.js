@@ -1389,6 +1389,9 @@ const logout = async (req, res, next) => {
       const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
       await query(`UPDATE refresh_tokens SET revoked = true WHERE token_hash = $1`, [tokenHash]);
     }
+    if (req.user?.id) {
+      await query(`UPDATE users SET last_logout_at = NOW() WHERE id = $1`, [req.user.id]).catch(() => {});
+    }
     clearRefreshTokenCookie(res);
     return res.json({ success: true, message: 'Logged out successfully' });
   } catch (err) {

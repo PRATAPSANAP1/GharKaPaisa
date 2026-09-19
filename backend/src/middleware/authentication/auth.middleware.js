@@ -52,6 +52,10 @@ const syncUser = async (req, res, next) => {
     if (user.status === 'suspended') return forbidden(res, 'Account suspended. Contact support.');
     if (user.status === 'blocked') return forbidden(res, 'Account blocked. Contact support.');
 
+    // Update last_active_at timestamp (throttled to once per 30 seconds)
+    if (!user.last_active_at || (Date.now() - new Date(user.last_active_at).getTime() > 30000)) {
+      query(`UPDATE users SET last_active_at = NOW() WHERE id = $1`, [user.id]).catch(() => {});
+    }
 
     req.dbUser = { ...user };
     

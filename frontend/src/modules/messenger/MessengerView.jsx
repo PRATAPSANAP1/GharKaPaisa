@@ -270,6 +270,71 @@ export default function MessengerView({ initialAppId = null }) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const getUserStatusText = (userObj) => {
+    if (!userObj) return { text: 'Offline', isOnline: false };
+
+    const lastActive = userObj.last_active_at ? new Date(userObj.last_active_at).getTime() : null;
+    const lastLogout = userObj.last_logout_at ? new Date(userObj.last_logout_at).getTime() : null;
+    const lastLogin = userObj.last_login ? new Date(userObj.last_login).getTime() : null;
+
+    const now = Date.now();
+    const isRecentlyActive = Boolean(lastActive && (now - lastActive <= 180000));
+    const isLoggedOut = Boolean(lastLogout && lastActive && lastLogout >= lastActive);
+
+    if (isRecentlyActive && !isLoggedOut) {
+      return { text: 'Active now', isOnline: true };
+    }
+
+    let lastSeenTs = (lastLogout && (!lastActive || lastLogout >= lastActive)) ? lastLogout : (lastActive || lastLogin);
+    if (!lastSeenTs) {
+      return { text: 'Offline', isOnline: false };
+    }
+
+    const seenDate = new Date(lastSeenTs);
+    if (isNaN(seenDate.getTime())) return { text: 'Offline', isOnline: false };
+
+    const diffMs = Math.max(0, now - seenDate.getTime());
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    let timeStr = '';
+    if (diffMins < 1) {
+      timeStr = 'just now';
+    } else if (diffMins < 60) {
+      timeStr = `${diffMins}m ago`;
+    } else if (diffHours < 24) {
+      timeStr = `${diffHours}h ago`;
+    } else if (diffDays === 1) {
+      const hours = seenDate.getHours();
+      const minutes = String(seenDate.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const formattedHours = hours % 12 || 12;
+      timeStr = `yesterday at ${formattedHours}:${minutes} ${ampm}`;
+    } else {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const hours = seenDate.getHours();
+      const minutes = String(seenDate.getMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      const formattedHours = hours % 12 || 12;
+      timeStr = `${seenDate.getDate()} ${months[seenDate.getMonth()]} at ${formattedHours}:${minutes} ${ampm}`;
+    }
+
+    return { text: `Last seen ${timeStr}`, isOnline: false };
+  };
+
+  const getActiveConvStatus = (conv) => {
+    if (!conv) return { text: 'Offline', isOnline: false };
+    if (conv.conversation_type === 'GROUP') {
+      return { text: `${conv.participants?.length || 'Group'} members`, isOnline: true };
+    }
+    if (conv.conversation_type === 'APPLICATION') {
+      return { text: `Application Channel #${conv.application_number || ''}`, isOnline: true };
+    }
+    const targetUser = conv.other_participants?.[0] || conv.participants?.find(p => (p.user_id || p.id) !== user?.id);
+    return getUserStatusText(targetUser);
+  };
+
   const getConvTitle = (conv) => {
     if (conv.name) return conv.name;
     if (conv.other_participants && conv.other_participants.length > 0) {
@@ -424,7 +489,9 @@ export default function MessengerView({ initialAppId = null }) {
                       </div>
                       <span style={{
                         position: 'absolute', bottom: '2px', right: '2px', width: '10px', height: '10px',
-                        borderRadius: '50%', background: '#22C55E', border: '2px solid #FFFFFF'
+                        borderRadius: '50%',
+                        background: conv.conversation_type === 'DIRECT' && getUserStatusText(conv.other_participants?.[0]).isOnline ? '#22C55E' : '#94A3B8',
+                        border: '2px solid #FFFFFF'
                       }} />
                     </div>
 
@@ -503,7 +570,9 @@ export default function MessengerView({ initialAppId = null }) {
                     </div>
                     <span style={{
                       position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px',
-                      borderRadius: '50%', background: '#22C55E', border: '2px solid #FFFFFF'
+                      borderRadius: '50%',
+                      background: getActiveConvStatus(activeConv).isOnline ? '#22C55E' : '#94A3B8',
+                      border: '2px solid #FFFFFF'
                     }} />
                   </div>
 
@@ -512,8 +581,8 @@ export default function MessengerView({ initialAppId = null }) {
                       {getConvTitle(activeConv)}
                       {activeConv.is_pinned && <FaThumbtack size={11} color="#2563EB" title="Pinned Chat" />}
                     </h3>
-                    <span style={{ fontSize: '12px', color: '#22C55E', fontWeight: 600 }}>
-                      Active now
+                    <span style={{ fontSize: '12px', color: getActiveConvStatus(activeConv).isOnline ? '#22C55E' : '#64748B', fontWeight: 600 }}>
+                      {getActiveConvStatus(activeConv).text}
                     </span>
                   </div>
                 </div>

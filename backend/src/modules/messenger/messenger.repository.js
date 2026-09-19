@@ -74,7 +74,10 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
           'full_name', u.full_name,
           'role', u.role,
           'email', u.email,
-          'mobile', u.mobile
+          'mobile', u.mobile,
+          'last_active_at', u.last_active_at,
+          'last_logout_at', u.last_logout_at,
+          'last_login', u.last_login
         ))
         FROM conversation_participants cp2
         JOIN users u ON u.id = cp2.user_id
@@ -176,7 +179,7 @@ async function getConversationById(conversationId) {
  */
 async function getConversationParticipants(conversationId) {
   const sql = `
-    SELECT cp.*, u.full_name, u.email, u.mobile, u.role, u.department, u.designation
+    SELECT cp.*, u.full_name, u.email, u.mobile, u.role, u.department, u.designation, u.last_active_at, u.last_logout_at, u.last_login
     FROM conversation_participants cp
     JOIN users u ON u.id = cp.user_id
     WHERE cp.conversation_id = $1 AND cp.left_at IS NULL
@@ -406,6 +409,9 @@ async function getContactsForUser(userId, userRole, search = '') {
       u.role, 
       u.department, 
       u.designation,
+      u.last_active_at,
+      u.last_logout_at,
+      u.last_login,
       pp.partner_code
     FROM users u
     LEFT JOIN partner_profiles pp ON pp.user_id = u.id

@@ -9,6 +9,10 @@ const migrateMessenger = async () => {
   try {
     await query('BEGIN');
 
+    // Add user active tracking columns if not existing
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ DEFAULT NOW()`).catch(() => {});
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_logout_at TIMESTAMPTZ`).catch(() => {});
+
     // 1. Conversations table
     await query(`
       CREATE TABLE IF NOT EXISTS conversations (
