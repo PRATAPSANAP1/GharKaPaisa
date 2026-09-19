@@ -39,10 +39,13 @@ router.post('/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
 router.post('/webhooks/razorpay', walletCtrl.handleRazorpayWebhook);
 router.post('/partner/referral-click', partnerCtrl.invitePartnerClick);
 
+const contestRoute = require('../modules/contest/routes.js');
+
 // ── Public Homepage & Catalog Content (No auth required) ────────
 router.use('/public/products',  productRoute);
 router.use('/products',         productRoute);
 router.use('/banners',          bannerRoute);
+router.use('/contests',         contestRoute);
 router.use('/cms/sections',     cmsRouter);
 router.use('/services',         serviceRouter);
 router.use('/service-catalog',  serviceCatalogRouter);
@@ -104,9 +107,11 @@ router.use('/support/tickets',   supportRoute);
 router.use('/marketing/materials', marketingRoute);
 
 const teamRoute                             = require('../modules/team/team.routes.js');
+const messengerRoute                        = require('../modules/messenger/messenger.routes.js');
 
 // ── Referrals & Team Routes ──
 router.use('/team', teamRoute);
 router.use('/partner/team-dashboard', teamRoute);
+router.use('/messenger', messengerRoute);
 
 module.exports = router;

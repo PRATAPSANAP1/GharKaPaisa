@@ -209,16 +209,18 @@ const SuperAdminLayout = () => {
       ]
     },
     {
-      title: "MODIFY WEBSITE",
+      title: "MODIFY WEBSITE & PROMOTIONS",
       isModifyGroup: true,
       items: [
         { path: '/super-admin/banners', label: 'Banners', icon: <Icons.gift size={16} /> },
+        { path: '/super-admin/contests', label: 'Contest Manager', icon: <Icons.gift size={16} /> },
         { path: '/super-admin/sections', label: 'Homepage Sections', icon: <Icons.profile size={16} /> }
       ]
     },
     {
       title: "SYSTEM & REPORTS",
       items: [
+        { path: '/super-admin/messenger', label: 'Messenger', icon: <Icons.profile size={16} /> },
         { path: '/super-admin/announcements', label: 'Announcements Manager', icon: <Icons.gift size={16} /> },
         { path: '/super-admin/support', label: 'Support Tickets', icon: <Icons.profile size={16} /> },
         { path: '/super-admin/audit', label: 'Audit Logs', icon: <Icons.clock size={16} /> },

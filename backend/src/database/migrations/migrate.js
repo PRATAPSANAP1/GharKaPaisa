@@ -4815,6 +4815,22 @@ const migrate = async () => {
     logger.error('Composite index creation note:', idxErr.message);
   }
 
+  // ── Messenger Migration ──
+  try {
+    const migrateMessenger = require('./migrate_messenger.js');
+    await migrateMessenger();
+  } catch (mErr) {
+    logger.error('Messenger migration error note:', mErr.message);
+  }
+
+  // ── Contests Migration ──
+  try {
+    const migrateContests = require('./migrate_contests.js');
+    await migrateContests();
+  } catch (cErr) {
+    logger.error('Contests migration error note:', cErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

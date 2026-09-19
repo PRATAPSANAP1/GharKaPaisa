@@ -36,6 +36,8 @@ import EmployeeProfile from '../modules/employee/profile/EmployeeProfile';
 import EmployeeSettingsPortal from '../modules/employee/settings/EmployeeSettingsPortal';
 import EmployeeSalesReports from '../modules/employee/reports/EmployeeSalesReports';
 import EmployeeVerification from '../modules/employee/profile/EmployeeVerification';
+import EmployeeContests from '../modules/employee/contests/EmployeeContests';
+import ManageContests from '../modules/super-admin/contests/ManageContests';
 import PartnerLogin from '../modules/authentication/login/PartnerLogin';
 import PartnerRegister from '../modules/authentication/register/PartnerRegister';
 import VerifyEmail from '../modules/authentication/register/VerifyEmail';
@@ -49,6 +51,7 @@ import PublicCustomerUploadPage from '../modules/public/PublicCustomerUploadPage
 import PhysicalApplicationForm from '../modules/customer/PhysicalApplicationForm';
 import CustomerShareApplyForm from '../modules/customer/CustomerShareApplyForm';
 import CustomerTrackApplication from '../modules/customer/CustomerTrackApplication';
+import MessengerView from '../modules/messenger/MessengerView';
 
 // Services Pages
 import MoneyTransfer from '../modules/cms/MoneyTransfer';
@@ -267,6 +270,7 @@ const AppRoutes = () => {
             <Route path="/partner/training" element={<PartnerTraining />} />
             <Route path="/partner/reports" element={<PartnerReports />} />
             <Route path="/partner/notifications" element={<PartnerNotifications />} />
+            <Route path="/partner/messenger" element={<MessengerView />} />
             <Route path="/partner/settings" element={<SettingsPage />} />
           </Route>
         </Route>
@@ -301,7 +305,10 @@ const AppRoutes = () => {
             <Route path="/employee/applications" element={<EmployeeApplications />} />
             <Route path="/employee/team" element={<MyTeam />} />
             <Route path="/employee/incentives" element={<MyIncentives />} />
+            <Route path="/employee/contests" element={<EmployeeContests />} />
+            <Route path="/employee/contests/:id" element={<EmployeeContests />} />
             <Route path="/employee/profile" element={<EmployeeProfile />} />
+            <Route path="/employee/messenger" element={<MessengerView />} />
             <Route path="/employee/settings" element={<EmployeeSettingsPortal />} />
             <Route path="/employee/sales-reports" element={<EmployeeSalesReports />} />
           </Route>
@@ -356,8 +363,10 @@ const AppRoutes = () => {
             <Route path="/admin/reports" element={<SuperAdminReports />} />
             <Route path="/admin/sections" element={<ManageSections />} />
             <Route path="/admin/banners" element={<ManageBanners />} />
+            <Route path="/admin/contests" element={<ManageContests />} />
             <Route path="/admin/crm" element={<ManageApplications />} />
             <Route path="/admin/wallet" element={<ManageWallet />} />
+            <Route path="/admin/messenger" element={<MessengerView />} />
           </Route>
         </Route>
       </Route>
@@ -381,6 +390,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/audit-logs" element={<AuditLogs />} />
             <Route path="/super-admin/working-hours" element={<AdminWorkingHours />} />
             <Route path="/super-admin/banners" element={<ManageBanners />} />
+            <Route path="/super-admin/contests" element={<ManageContests />} />
             <Route path="/super-admin/products/:categorySlug" element={<ManageAdminProducts />} />
             <Route path="/super-admin/products" element={<ManageAdminProducts />} />
             <Route path="/super-admin/product-links" element={<ManageProductLinks />} />
@@ -395,6 +405,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/wallet-settlement" element={<ManageWallet />} />
             <Route path="/super-admin/notifications" element={<NotificationCenter />} />
             <Route path="/super-admin/announcements" element={<ManageAnnouncements />} />
+            <Route path="/super-admin/messenger" element={<MessengerView />} />
             <Route path="/super-admin/profile" element={<AdminProfilePage />} />
             <Route path="/super-admin/support" element={<ManageSupportTickets />} />
 

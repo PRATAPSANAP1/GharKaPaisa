@@ -6,7 +6,7 @@ import {
   FaChartPie, FaCreditCard, FaCoins, FaShieldAlt, FaFileAlt, FaUsers, 
   FaGift, FaUserCircle, FaCheckCircle, FaFileContract, FaCog,
   FaSignOutAlt, FaMoon, FaSun, FaBars, FaTimes, FaChevronDown,
-  FaUserPlus, FaHandshake, FaCopy, FaShareAlt
+  FaUserPlus, FaHandshake, FaCopy, FaShareAlt, FaTrophy
 } from 'react-icons/fa';
 import logo from '../assets/logos/logo.png';
 import Chatbot from '../components/Chatbot/Chatbot';
@@ -117,6 +117,7 @@ export default function EmployeeLayout() {
     { path: '/employee/sales-reports', label: 'Sales Reports', icon: <FaFileAlt /> },
     { path: '/employee/applications', label: 'My Applications', icon: <FaFileAlt /> },
     { path: '/employee/messenger', label: 'Messenger', icon: <FaFileAlt /> },
+    { path: '/employee/contests', label: 'Contests', icon: <FaTrophy /> },
     { path: '/employee/incentives', label: 'My Incentives', icon: <FaGift /> },
     ...(isManagerOrTL ? [{ path: '/employee/team', label: 'My Team Architecture', icon: <FaUsers /> }] : []),
     { path: '/employee/settings', label: 'Settings & Preferences', icon: <FaCog /> }

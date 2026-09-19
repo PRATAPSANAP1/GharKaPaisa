@@ -135,9 +135,9 @@ export default function EmployeeMobileBottomNav() {
           </span>
         </div>
 
-        {/* 4. Target */}
+        {/* 4. Contest */}
         <div
-          onClick={() => navigate('/employee/incentives')}
+          onClick={() => navigate('/employee/contests')}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -147,11 +147,11 @@ export default function EmployeeMobileBottomNav() {
             flex: 1
           }}
         >
-          <div style={{ color: isActive('/employee/incentives') ? activeColor : inactiveColor }}>
+          <div style={{ color: isActive('/employee/contests') ? activeColor : inactiveColor }}>
             <HiOutlineTrophy size={22} />
           </div>
-          <span style={{ fontSize: '11px', fontWeight: isActive('/employee/incentives') ? 800 : 600, color: isActive('/employee/incentives') ? activeColor : inactiveColor }}>
-            Target
+          <span style={{ fontSize: '11px', fontWeight: isActive('/employee/contests') ? 800 : 600, color: isActive('/employee/contests') ? activeColor : inactiveColor }}>
+            Contest
           </span>
         </div>
 
