@@ -4037,6 +4037,7 @@ const updateApplicationDetails = async (req, res, next) => {
 
     let salesOpCodeToSave = isSalesExecUserLocal ? currentOpCode : null;
     let panCheckerOpCodeToSave = isPanCheckerUserLocal ? currentOpCode : null;
+    let remarkOpCodeToSave = isRemarkOperatorUserLocal ? currentOpCode : null;
     const canSaveBackendRemark = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD'].includes(userRole) || ['SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD'].includes(userDesignation) || isSalesExecUserLocal;
     let backendRemarkToSave = (req.body.backend_remark !== undefined && canSaveBackendRemark) ? req.body.backend_remark : null;
 
