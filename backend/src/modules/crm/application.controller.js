@@ -1648,7 +1648,7 @@ const listApplications = async (req, res, next) => {
         )
       )`;
       const punchingOnlyCondition = `(LOWER(COALESCE(combined.process_by, combined.process_type, 'lead_punching')) IN ('lead_punching', 'punch_only', 'manual') OR LOWER(COALESCE(combined.process_by, combined.process_type, '')) LIKE '%punch%')`;
-      salesExecFilterSQL = ` AND ${bankAssignmentFilter} AND ${tataExclusionFilter} AND ${punchingOnlyCondition} AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a'))`;
+      salesExecFilterSQL = ` AND ${bankAssignmentFilter} AND ${tataExclusionFilter}`;
     }
 
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
@@ -2202,15 +2202,6 @@ const getApplication = async (req, res, next) => {
       }
     }
 
-    const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation);
-    if (isSalesExecUser && req.user?.id) {
-      const processType = String(app.process_type || app.source || app.process_by || '').toLowerCase();
-      const isPunching = processType.includes('punching') || processType === 'lead_punching';
-      if (!isPunching) {
-        return forbidden(res, 'Access denied. Administrative Sales Executive can only access Punching Only applications.');
-      }
-    }
 
     const notes = await getFilteredNotes(app.id, req.user.role);
     app.notes_list = notes;

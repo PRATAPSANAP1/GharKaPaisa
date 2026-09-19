@@ -293,9 +293,6 @@ const listBankCardApplications = async (req, res, next) => {
       }
     }
 
-    if (isSalesExecUser && req.user?.id) {
-      whereClause += ` AND (LOWER(COALESCE(combined.process_by, '')) IN ('lead_punching', 'punch_only', 'manual') OR LOWER(COALESCE(combined.process_by, '')) LIKE '%punch%') AND (COALESCE(combined.dispatch_stage, '') = '' OR LOWER(COALESCE(combined.dispatch_stage, 'none')) IN ('none', 'na', 'n/a'))`;
-    }
 
     if (isRemarkOperatorUser && req.user?.id) {
       whereClause += ` AND (COALESCE(combined.dispatch_stage, '') = '' OR LOWER(COALESCE(combined.dispatch_stage, 'none')) IN ('none', 'na', 'n/a'))`;

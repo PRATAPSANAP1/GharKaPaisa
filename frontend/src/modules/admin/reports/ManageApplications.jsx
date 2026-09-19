@@ -105,7 +105,7 @@ export default function ManageApplications() {
           limit,
           search: search.trim() || undefined,
           status: status || undefined,
-          process_by: isSalesExecUser ? 'lead_punching' : (processTypeFilter !== 'all' ? processTypeFilter : undefined),
+          process_by: processTypeFilter !== 'all' ? processTypeFilter : undefined,
         },
       });
       if (res.data?.success) {
@@ -584,14 +584,13 @@ export default function ManageApplications() {
                 <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Process Type</label>
                 <select 
                   style={{ ...S.input, height: '36px', fontSize: '12.5px' }} 
-                  value={isSalesExecUser ? 'punch_only' : processTypeFilter} 
-                  disabled={isSalesExecUser}
+                  value={processTypeFilter} 
                   onChange={e => setProcessTypeFilter(e.target.value)}
                 >
                   <option value="all">All Process Types</option>
                   <option value="punch_only">Lead Punching (Punch Only)</option>
-                  {!isSalesExecUser && <option value="share_link">Link Sharing (Share Link)</option>}
-                  {!isSalesExecUser && <option value="direct_link">Direct Online</option>}
+                  <option value="share_link">Link Sharing (Share Link)</option>
+                  <option value="direct_link">Direct Online</option>
                 </select>
               </div>
 
