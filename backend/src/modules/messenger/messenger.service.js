@@ -5,15 +5,49 @@ async function listConversations(userId, filter, search) {
   return await repo.getConversationsForUser(userId, filter, search);
 }
 
+async function isSameEmployeeHierarchy(userAId, userBId) {
+  const { rows } = await query(`
+    SELECT 1 FROM employees emp_a
+    LEFT JOIN employee_hierarchy eh_a ON eh_a.employee_id = emp_a.id
+    LEFT JOIN employees emp_b ON emp_b.user_id = $2
+    LEFT JOIN employee_hierarchy eh_b ON eh_b.employee_id = emp_b.id
+    WHERE emp_a.user_id = $1
+    AND (
+      (emp_a.department IS NOT NULL AND emp_b.department IS NOT NULL AND LOWER(emp_a.department) = LOWER(emp_b.department))
+      OR eh_b.manager_id = emp_a.id
+      OR eh_b.team_leader_id = emp_a.id
+      OR eh_a.manager_id = emp_b.id
+      OR eh_a.team_leader_id = emp_b.id
+      OR (eh_a.manager_id IS NOT NULL AND eh_a.manager_id = eh_b.manager_id)
+      OR (eh_a.team_leader_id IS NOT NULL AND eh_a.team_leader_id = eh_b.team_leader_id)
+    )
+  `, [userAId, userBId]);
+
+  return rows.length > 0;
+}
+
 async function startOrGetDirectChat(currentUserId, targetUserId) {
   if (currentUserId === targetUserId) {
     throw new Error('You cannot start a direct chat with yourself.');
   }
 
-  // Verify target user exists
+  // Verify users exist & check role hierarchy
+  const { rows: [currentUser] } = await query(`SELECT id, role FROM users WHERE id = $1`, [currentUserId]);
   const { rows: [targetUser] } = await query(`SELECT id, full_name, role FROM users WHERE id = $1`, [targetUserId]);
+
   if (!targetUser) {
     throw new Error('Target user not found.');
+  }
+
+  // Employee-to-employee direct messaging restriction
+  if (
+    (currentUser?.role || '').toUpperCase() === 'EMPLOYEE' &&
+    (targetUser?.role || '').toUpperCase() === 'EMPLOYEE'
+  ) {
+    const isHierarchyAllowed = await isSameEmployeeHierarchy(currentUserId, targetUserId);
+    if (!isHierarchyAllowed) {
+      throw new Error('Employees can only message other employees within the same team or hierarchy.');
+    }
   }
 
   // Check if conversation already exists
@@ -69,6 +103,23 @@ async function createGroup(currentUserId, { name, description, memberUserIds = [
     throw new Error('Group name is required.');
   }
 
+  const { rows: [currentUser] } = await query(`SELECT id, role FROM users WHERE id = $1`, [currentUserId]);
+  const isEmployeeRole = (currentUser?.role || '').toUpperCase() === 'EMPLOYEE';
+
+  const uniqueMemberIds = Array.from(new Set(memberUserIds.filter(id => id && id !== currentUserId)));
+
+  if (isEmployeeRole) {
+    for (const mId of uniqueMemberIds) {
+      const { rows: [mUser] } = await query(`SELECT id, role FROM users WHERE id = $1`, [mId]);
+      if (mUser && (mUser.role || '').toUpperCase() === 'EMPLOYEE') {
+        const isAllowed = await isSameEmployeeHierarchy(currentUserId, mId);
+        if (!isAllowed) {
+          throw new Error('Employees can only add team members within the same hierarchy to group chats.');
+        }
+      }
+    }
+  }
+
   const conv = await repo.createConversation({
     conversation_type: 'GROUP',
     name: name.trim(),
@@ -80,7 +131,6 @@ async function createGroup(currentUserId, { name, description, memberUserIds = [
   await repo.addParticipant({ conversation_id: conv.id, user_id: currentUserId, role: 'ADMIN' });
 
   // Add other members
-  const uniqueMemberIds = Array.from(new Set(memberUserIds.filter(id => id && id !== currentUserId)));
   for (const mId of uniqueMemberIds) {
     await repo.addParticipant({ conversation_id: conv.id, user_id: mId, role: 'MEMBER' });
   }

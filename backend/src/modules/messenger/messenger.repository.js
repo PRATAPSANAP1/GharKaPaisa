@@ -400,6 +400,33 @@ async function togglePin(conversationId, userId) {
 async function getContactsForUser(userId, userRole, search = '') {
   let searchPattern = `%${(search || '').trim()}%`;
   
+  const isEmployeeRole = (userRole || '').toUpperCase() === 'EMPLOYEE';
+
+  let employeeHierarchySQL = '';
+  if (isEmployeeRole) {
+    employeeHierarchySQL = `
+      AND (
+        UPPER(COALESCE(u.role, '')) != 'EMPLOYEE'
+        OR EXISTS (
+          SELECT 1 FROM employees emp_curr
+          LEFT JOIN employee_hierarchy eh_curr ON eh_curr.employee_id = emp_curr.id
+          LEFT JOIN employees emp_target ON emp_target.user_id = u.id
+          LEFT JOIN employee_hierarchy eh_target ON eh_target.employee_id = emp_target.id
+          WHERE emp_curr.user_id = $1
+          AND (
+            (emp_curr.department IS NOT NULL AND emp_target.department IS NOT NULL AND LOWER(emp_curr.department) = LOWER(emp_target.department))
+            OR eh_target.manager_id = emp_curr.id
+            OR eh_target.team_leader_id = emp_curr.id
+            OR eh_curr.manager_id = emp_target.id
+            OR eh_curr.team_leader_id = emp_target.id
+            OR (eh_curr.manager_id IS NOT NULL AND eh_curr.manager_id = eh_target.manager_id)
+            OR (eh_curr.team_leader_id IS NOT NULL AND eh_curr.team_leader_id = eh_target.team_leader_id)
+          )
+        )
+      )
+    `;
+  }
+
   const sql = `
     SELECT 
       u.id, 
@@ -417,6 +444,7 @@ async function getContactsForUser(userId, userRole, search = '') {
     LEFT JOIN partner_profiles pp ON pp.user_id = u.id
     WHERE u.id != $1 
       AND u.is_active = TRUE
+      ${employeeHierarchySQL}
       AND (
         u.full_name ILIKE $2 OR 
         u.email ILIKE $2 OR 
