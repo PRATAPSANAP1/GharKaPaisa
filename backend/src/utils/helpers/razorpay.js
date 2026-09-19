@@ -186,7 +186,7 @@ const getRazorpayBalance = async () => {
     logger.warn('Failed to calculate dynamic balance from DB:', err.message);
   }
 
-  const initialBaseBalance = 250000.00;
+  const initialBaseBalance = 0.00;
   const dynamicBalance = Math.max(0, initialBaseBalance + totalAddFunds - totalPayouts);
 
   return {

@@ -3,7 +3,8 @@ import {
   FaSearch, FaPaperclip, FaPaperPlane, FaSmile, FaUsers, 
   FaUser, FaFilePdf, FaFileAlt, FaCheckDouble, FaThumbtack, FaPlus, 
   FaTimes, FaPhone, FaVideo, FaEllipsisV, FaCircle, FaRedo,
-  FaFilter, FaArrowLeft, FaDownload, FaCheck, FaUserPlus, FaVolumeMute
+  FaFilter, FaArrowLeft, FaDownload, FaCheck, FaUserPlus, FaVolumeMute,
+  FaIdCard, FaCopy, FaEnvelope, FaUserCircle
 } from 'react-icons/fa';
 import api from '../../services/api';
 import { useAuthStore } from '../../app/store/authStore';
@@ -28,6 +29,39 @@ export default function MessengerView({ initialAppId = null }) {
   const [showChatSearch, setShowChatSearch] = useState(false);
   const [msgSearch, setMsgSearch] = useState('');
   const [callStatus, setCallStatus] = useState(null); // { type: 'voice' | 'video', active: true }
+
+  // User Profile Modal State
+  const [selectedProfileUser, setSelectedProfileUser] = useState(null);
+  const [copiedField, setCopiedField] = useState(null);
+
+  const openUserProfile = (targetObj) => {
+    if (!targetObj) return;
+    const isDirectUser = activeConv?.conversation_type === 'DIRECT' ? activeConv.other_participants?.[0] : null;
+    const source = targetObj.user_id || targetObj.sender_id || targetObj.full_name || targetObj.name ? targetObj : isDirectUser;
+    if (!source) return;
+
+    const normalized = {
+      id: source.id || source.user_id || source.sender_id,
+      full_name: source.full_name || source.name || source.sender_name || 'User Profile',
+      mobile: source.mobile || source.sender_mobile || source.phone || 'N/A',
+      email: source.email || source.sender_email || 'N/A',
+      code: source.partner_code || source.employee_code || source.sender_partner_code || source.sender_employee_code || source.user_code || source.code || 'N/A',
+      role: source.role || source.sender_role || 'Member',
+      department: source.department || null,
+      designation: source.designation || null,
+      last_active_at: source.last_active_at,
+      last_logout_at: source.last_logout_at,
+      last_login: source.last_login
+    };
+    setSelectedProfileUser(normalized);
+  };
+
+  const copyToClipboard = (text, fieldName) => {
+    if (!text || text === 'N/A') return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   // Contact list
   const [contacts, setContacts] = useState([]);
@@ -549,10 +583,14 @@ export default function MessengerView({ initialAppId = null }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.02)', position: 'relative', zIndex: 10
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div 
+                  onClick={() => openUserProfile(activeConv.other_participants?.[0] || { full_name: getConvTitle(activeConv) })}
+                  style={{ display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer' }}
+                  title="Click to view User Profile"
+                >
                   {isMobile && (
                     <button
-                      onClick={() => setMobileShowChat(false)}
+                      onClick={(e) => { e.stopPropagation(); setMobileShowChat(false); }}
                       style={{ background: 'transparent', border: 'none', color: '#475569', fontSize: '16px', cursor: 'pointer', marginRight: '4px' }}
                     >
                       <FaArrowLeft />
@@ -623,11 +661,18 @@ export default function MessengerView({ initialAppId = null }) {
                     <div style={{
                       position: 'absolute', top: '38px', right: 0, background: '#FFFFFF',
                       border: '1px solid #E2E8F0', borderRadius: '12px', padding: '8px 0',
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)', width: '180px', zIndex: 100
+                      boxShadow: '0 10px 25px rgba(0,0,0,0.1)', width: '190px', zIndex: 100
                     }}>
                       <div
+                        onClick={() => { openUserProfile(activeConv.other_participants?.[0] || { full_name: getConvTitle(activeConv) }); setShowMoreMenu(false); }}
+                        style={{ padding: '10px 16px', fontSize: '13px', color: '#1E293B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                      >
+                        <FaUserCircle size={14} color="#2563EB" />
+                        <span>View User Profile</span>
+                      </div>
+                      <div
                         onClick={handleTogglePin}
-                        style={{ padding: '10px 16px', fontSize: '13px', color: '#1E293B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', hover: { background: '#F8FAFC' } }}
+                        style={{ padding: '10px 16px', fontSize: '13px', color: '#1E293B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
                       >
                         <FaThumbtack size={12} color="#2563EB" />
                         <span>{activeConv.is_pinned ? 'Unpin Chat' : 'Pin Chat'}</span>
@@ -691,8 +736,12 @@ export default function MessengerView({ initialAppId = null }) {
                         }}
                       >
                         {!isMe && (
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', marginBottom: '3px', marginLeft: '4px' }}>
-                            {msg.sender_name || 'Member'}
+                          <span 
+                            onClick={() => openUserProfile(msg)}
+                            title="Click to view profile details"
+                            style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB', marginBottom: '3px', marginLeft: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <FaUserCircle size={11} /> {msg.sender_name || 'Member'}
                           </span>
                         )}
                         <div style={{
@@ -1034,6 +1083,159 @@ export default function MessengerView({ initialAppId = null }) {
           >
             End Call
           </button>
+        </div>
+      )}
+
+      {/* ── MODAL: USER PROFILE CARD (Name, Number, Partner/User Code) ── */}
+      {selectedProfileUser && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 99999
+        }}>
+          <div style={{
+            width: '420px', background: '#FFFFFF', borderRadius: '24px', overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #E2E8F0'
+          }}>
+            {/* Header Banner */}
+            <div style={{
+              background: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)',
+              padding: '24px', color: '#FFFFFF', position: 'relative', textAlign: 'center'
+            }}>
+              <button
+                onClick={() => setSelectedProfileUser(null)}
+                style={{
+                  position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.2)',
+                  border: 'none', color: '#FFFFFF', width: '32px', height: '32px', borderRadius: '50%',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px'
+                }}
+              >
+                ✕
+              </button>
+
+              <div style={{
+                width: '72px', height: '72px', borderRadius: '50%', background: '#FFFFFF',
+                color: '#2563EB', fontWeight: 900, fontSize: '28px', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.15)', border: '3px solid rgba(255,255,255,0.8)'
+              }}>
+                {(selectedProfileUser.full_name || 'U').charAt(0).toUpperCase()}
+              </div>
+
+              <h2 style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: 800, color: '#FFFFFF' }}>
+                {selectedProfileUser.full_name}
+              </h2>
+              
+              <span style={{
+                display: 'inline-block', background: 'rgba(255,255,255,0.2)', padding: '3px 12px',
+                borderRadius: '12px', fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px'
+              }}>
+                {selectedProfileUser.role || 'Member'}
+              </span>
+            </div>
+
+            {/* Content Details List */}
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+              {/* 1. Name */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #F1F5F9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FaUser size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Full Name</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>{selectedProfileUser.full_name}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Mobile Number */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #F1F5F9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FaPhone size={15} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Mobile Number</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>{selectedProfileUser.mobile}</div>
+                  </div>
+                </div>
+                {selectedProfileUser.mobile && selectedProfileUser.mobile !== 'N/A' && (
+                  <button
+                    onClick={() => copyToClipboard(selectedProfileUser.mobile, 'mobile')}
+                    style={{ background: 'transparent', border: 'none', color: copiedField === 'mobile' ? '#059669' : '#64748B', cursor: 'pointer', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <FaCopy size={13} /> {copiedField === 'mobile' ? 'Copied!' : 'Copy'}
+                  </button>
+                )}
+              </div>
+
+              {/* 3. User / Partner / Employee Code */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #F1F5F9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FaIdCard size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>User / Partner Code</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#D97706', letterSpacing: '0.5px' }}>{selectedProfileUser.code}</div>
+                  </div>
+                </div>
+                {selectedProfileUser.code && selectedProfileUser.code !== 'N/A' && (
+                  <button
+                    onClick={() => copyToClipboard(selectedProfileUser.code, 'code')}
+                    style={{ background: 'transparent', border: 'none', color: copiedField === 'code' ? '#D97706' : '#64748B', cursor: 'pointer', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <FaCopy size={13} /> {copiedField === 'code' ? 'Copied!' : 'Copy'}
+                  </button>
+                )}
+              </div>
+
+              {/* 4. Email */}
+              {selectedProfileUser.email && selectedProfileUser.email !== 'N/A' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: '#F8FAFC', borderRadius: '14px', border: '1px solid #F1F5F9' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#F3E8FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <FaEnvelope size={15} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Email Address</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#0F172A' }}>{selectedProfileUser.email}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Actions */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                {selectedProfileUser.id && selectedProfileUser.id !== user?.id && (
+                  <button
+                    onClick={() => {
+                      handleStartDirectChat(selectedProfileUser.id);
+                      setSelectedProfileUser(null);
+                    }}
+                    style={{
+                      flex: 1, padding: '12px', borderRadius: '14px', background: '#2563EB',
+                      color: '#FFFFFF', fontWeight: 700, border: 'none', cursor: 'pointer',
+                      fontSize: '14px', boxShadow: '0 4px 12px rgba(37,99,235,0.25)'
+                    }}
+                  >
+                    💬 Start Chat
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedProfileUser(null)}
+                  style={{
+                    padding: '12px 20px', borderRadius: '14px', background: '#F1F5F9',
+                    color: '#475569', fontWeight: 700, border: 'none', cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+
+            </div>
+          </div>
         </div>
       )}
 

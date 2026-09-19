@@ -205,6 +205,16 @@ export default function ManageWallet() {
         'Status': w.status || 'Pending',
         'Requested At': w.requested_at || w.created_at || ''
       }));
+    } else if (activeTabName === 'add_funds') {
+      dataToExport = addFundsReqs.map(f => ({
+        'Request ID': f.id,
+        'Amount': f.amount || 0,
+        'Payment Method': f.payment_method || '',
+        'Reference Number': f.reference_number || '',
+        'Notes': f.notes || '',
+        'Status': f.status || 'Pending',
+        'Requested At': f.created_at || ''
+      }));
     } else if (activeTabName === 'partners') {
       dataToExport = partnersOverview.map(p => ({
         'Partner Name': p.name || '',
@@ -222,7 +232,7 @@ export default function ManageWallet() {
         'Description': l.description || '',
         'Date': l.created_at || l.requested_at || ''
       }));
-    } else if (activeTabName === 'team') {
+    } else if (activeTabName === 'team' || activeTabName === 'team_commission') {
       dataToExport = (teamCommissions.transactions || []).map(t => ({
         'Transaction ID': t.id,
         'App Number': t.app_number || '',
@@ -404,39 +414,6 @@ export default function ManageWallet() {
     }
   };
 
-  const exportCSVReport = (datasetName = activeTab) => {
-    let dataToExport = [];
-    let filename = `wallet_${datasetName}_${new Date().toISOString().split('T')[0]}.csv`;
-
-    if (datasetName === 'withdrawals') dataToExport = withdrawals;
-    else if (datasetName === 'add_funds') dataToExport = addFundsReqs;
-    else if (datasetName === 'commissions') dataToExport = pendingCommissions;
-    else if (datasetName === 'partners') dataToExport = partnersOverview;
-    else if (datasetName === 'ledger') dataToExport = ledgerEntries;
-    else dataToExport = [reconciliation || {}];
-
-    if (!dataToExport || dataToExport.length === 0) {
-      return showToast('No data available to export in this category', 'error');
-    }
-
-    try {
-      showToast(`Exporting ${datasetName} report...`, 'success');
-      const headers = Object.keys(dataToExport[0]).join(',');
-      const rows = dataToExport.map(row =>
-        Object.values(row).map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(',')
-      );
-      const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers, ...rows].join('\n');
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      showToast('Export failed. Please try again.', 'error');
-    }
-  };
 
   const getStatusBadge = (status) => {
     const s = (status || '').toLowerCase();
@@ -619,14 +596,16 @@ export default function ManageWallet() {
           <div>
             <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
               ₹{(
-                razorpayBalance?.balance !== undefined && razorpayBalance?.balance !== null
-                  ? parseFloat(razorpayBalance.balance)
-                  : parseFloat(partnersOverview.reduce((sum, p) => sum + parseFloat(p.balance || 0), 0) || 0)
+                razorpayBalance?.available_balance !== undefined && razorpayBalance?.available_balance !== null
+                  ? parseFloat(razorpayBalance.available_balance)
+                  : razorpayBalance?.balance !== undefined && razorpayBalance?.balance !== null
+                    ? parseFloat(razorpayBalance.balance)
+                    : 0
               ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </h3>
             <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> 
-              RazorpayX Live Wallet Balance
+              {razorpayBalance?.is_simulated ? 'RazorpayX Simulated Balance' : 'RazorpayX Live Wallet Balance'}
             </span>
           </div>
         </div>

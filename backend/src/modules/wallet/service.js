@@ -147,7 +147,7 @@ const syncWalletBalance = async (partnerId, client) => {
         COALESCE(SUM(CASE WHEN transaction_type = 'REFERRAL_BONUS' THEN credit ELSE 0 END), 0.00)::numeric as ref_bonus,
         COALESCE(SUM(CASE WHEN transaction_type = 'OVERRIDE_COMMISSION' THEN credit ELSE 0 END), 0.00)::numeric as override_earn
       FROM wallet_ledger 
-      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) 
+      WHERE (partner_id = $1::uuid OR ($2::uuid IS NOT NULL AND partner_id = $2::uuid) OR wallet_id IN (SELECT id FROM partner_wallets WHERE partner_id = $1::uuid)) 
         AND LOWER(status) IN ('released', 'approved', 'completed')
         AND transaction_type NOT IN ('WITHDRAWAL_CANCELLED', 'WITHDRAWAL_REJECTED')
     ),
@@ -155,20 +155,20 @@ const syncWalletBalance = async (partnerId, client) => {
       SELECT 
         COALESCE(SUM(debit), 0.00)::numeric as completed_debits
       FROM wallet_ledger 
-      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND LOWER(status) IN ('released', 'approved', 'completed')
+      WHERE (partner_id = $1::uuid OR ($2::uuid IS NOT NULL AND partner_id = $2::uuid) OR wallet_id IN (SELECT id FROM partner_wallets WHERE partner_id = $1::uuid)) AND LOWER(status) IN ('released', 'approved', 'completed')
     ),
     hold_stats AS (
       SELECT 
         COALESCE(SUM(credit), 0.00)::numeric as hold_bal,
         COALESCE(SUM(CASE WHEN transaction_type = 'TEAM_COMMISSION' THEN credit ELSE 0 END), 0.00)::numeric as team_pending
       FROM wallet_ledger 
-      WHERE (partner_id = $1::uuid OR partner_id = $2::uuid) AND LOWER(status) IN ('pending approval', 'pending')
+      WHERE (partner_id = $1::uuid OR ($2::uuid IS NOT NULL AND partner_id = $2::uuid) OR wallet_id IN (SELECT id FROM partner_wallets WHERE partner_id = $1::uuid)) AND LOWER(status) IN ('pending approval', 'pending')
     ),
     locked_stats AS (
       SELECT 
         COALESCE(SUM(w.amount), 0.00)::numeric as locked_bal
       FROM wallet_withdrawals w
-      WHERE (w.partner_id = $1::uuid OR w.partner_id = $2::uuid) 
+      WHERE (w.partner_id = $1::uuid OR ($2::uuid IS NOT NULL AND w.partner_id = $2::uuid)) 
         AND w.status IN ('pending', 'approved', 'processing')
         AND NOT EXISTS (
           SELECT 1 FROM wallet_ledger wl 

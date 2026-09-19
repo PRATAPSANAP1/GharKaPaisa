@@ -75,12 +75,16 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
           'role', u.role,
           'email', u.email,
           'mobile', u.mobile,
+          'partner_code', pp.partner_code,
+          'employee_code', emp.employee_code,
           'last_active_at', u.last_active_at,
           'last_logout_at', u.last_logout_at,
           'last_login', u.last_login
         ))
         FROM conversation_participants cp2
         JOIN users u ON u.id = cp2.user_id
+        LEFT JOIN partner_profiles pp ON pp.user_id = u.id
+        LEFT JOIN employees emp ON emp.user_id = u.id
         WHERE cp2.conversation_id = c.id AND cp2.user_id != $1
       ) AS other_participants
     FROM conversation_participants cp
@@ -179,9 +183,12 @@ async function getConversationById(conversationId) {
  */
 async function getConversationParticipants(conversationId) {
   const sql = `
-    SELECT cp.*, u.full_name, u.email, u.mobile, u.role, u.department, u.designation, u.last_active_at, u.last_logout_at, u.last_login
+    SELECT cp.*, u.full_name, u.email, u.mobile, u.role, u.department, u.designation, u.last_active_at, u.last_logout_at, u.last_login,
+           pp.partner_code, emp.employee_code
     FROM conversation_participants cp
     JOIN users u ON u.id = cp.user_id
+    LEFT JOIN partner_profiles pp ON pp.user_id = u.id
+    LEFT JOIN employees emp ON emp.user_id = u.id
     WHERE cp.conversation_id = $1 AND cp.left_at IS NULL
   `;
   const { rows } = await query(sql, [conversationId]);
@@ -218,6 +225,10 @@ async function getMessages(conversationId, limit = 50, offset = 0) {
       m.created_at,
       u.full_name AS sender_name,
       u.role AS sender_role,
+      u.mobile AS sender_mobile,
+      u.email AS sender_email,
+      pp.partner_code AS sender_partner_code,
+      emp.employee_code AS sender_employee_code,
       (
         SELECT json_agg(json_build_object(
           'id', ma.id,
@@ -256,6 +267,8 @@ async function getMessages(conversationId, limit = 50, offset = 0) {
       ) AS is_read
     FROM messages m
     JOIN users u ON u.id = m.sender_id
+    LEFT JOIN partner_profiles pp ON pp.user_id = u.id
+    LEFT JOIN employees emp ON emp.user_id = u.id
     WHERE m.conversation_id = $1 AND m.deleted_at IS NULL
     ORDER BY m.created_at ASC
     LIMIT $2 OFFSET $3
@@ -439,9 +452,11 @@ async function getContactsForUser(userId, userRole, search = '') {
       u.last_active_at,
       u.last_logout_at,
       u.last_login,
-      pp.partner_code
+      pp.partner_code,
+      emp.employee_code
     FROM users u
     LEFT JOIN partner_profiles pp ON pp.user_id = u.id
+    LEFT JOIN employees emp ON emp.user_id = u.id
     WHERE u.id != $1 
       AND u.is_active = TRUE
       ${employeeHierarchySQL}
@@ -449,7 +464,8 @@ async function getContactsForUser(userId, userRole, search = '') {
         u.full_name ILIKE $2 OR 
         u.email ILIKE $2 OR 
         u.mobile ILIKE $2 OR 
-        pp.partner_code ILIKE $2
+        pp.partner_code ILIKE $2 OR
+        emp.employee_code ILIKE $2
       )
     ORDER BY u.full_name ASC
     LIMIT 30

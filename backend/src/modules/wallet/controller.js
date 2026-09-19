@@ -735,6 +735,7 @@ const getRazorpayAccountSummary = async (req, res, next) => {
       account_status: 'Connected',
       account_number: balData.account_number,
       available_balance: parseFloat(balData.balance || 0),
+      balance: parseFloat(balData.balance || 0),
       is_simulated: balData.is_simulated || false,
       currency: balData.currency || 'INR',
       partner_liability: parseFloat(liabilityRes.rows[0].total || 0),
@@ -1750,17 +1751,36 @@ const getPartnersOverview = async (req, res, next) => {
   try {
     const { rows } = await query(`
       SELECT 
-        COALESCE(NULLIF(TRIM(CONCAT(ap.first_name, ' ', ap.last_name)), ''), ap.partner_code, u.full_name, 'Partner') as name,
-        w.available_balance as balance,
-        COALESCE(w.status, 'Active') as status,
+        ap.id as partner_id,
         ap.partner_code,
-        ap.id as partner_id
-      FROM partner_wallets w
-      JOIN partner_profiles ap ON ap.id = w.partner_id
+        COALESCE(NULLIF(TRIM(CONCAT(ap.first_name, ' ', ap.last_name)), ''), ap.partner_code, u.full_name, 'Partner') as name,
+        COALESCE(w.status, 'Active') as status,
+        GREATEST(
+          0.00,
+          COALESCE(
+            (
+              SELECT 
+                COALESCE(SUM(credit), 0.00) - COALESCE(SUM(debit), 0.00)
+              FROM wallet_ledger wl 
+              WHERE (wl.partner_id = ap.id OR wl.partner_id = ap.user_id OR wl.wallet_id = w.id)
+                AND LOWER(wl.status) IN ('released', 'approved', 'completed')
+                AND wl.transaction_type NOT IN ('WITHDRAWAL_CANCELLED', 'WITHDRAWAL_REJECTED')
+            ), 
+            w.available_balance, 
+            0.00
+          )
+        )::numeric as balance
+      FROM partner_profiles ap
+      LEFT JOIN partner_wallets w ON w.partner_id = ap.id
       LEFT JOIN users u ON u.id = ap.user_id
-      ORDER BY w.available_balance DESC
+      ORDER BY balance DESC
     `);
     
+    // Asynchronously ensure partner_wallets available_balance is synchronized
+    rows.forEach(r => {
+      query(`UPDATE partner_wallets SET available_balance = $1, last_updated = NOW() WHERE partner_id = $2`, [r.balance, r.partner_id]).catch(() => {});
+    });
+
     const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#6366F1', '#14B8A6'];
     const formatted = rows.map((r, i) => ({
       name: r.name,
@@ -2126,7 +2146,6 @@ const reconcileAddFundsRequest = async (req, res, next) => {
 
 // ── Razorpay Webhook Handler (Payout Processed / Failed Reconciliation & Payment Idempotency) ─────
 const handleRazorpayWebhook = async (req, res, next) => {
-const handleRazorpayWebhook = async (req, res) => {
   try {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
     if (!webhookSecret) {
@@ -2472,90 +2491,6 @@ const handleRazorpayWebhook = async (req, res) => {
   } catch (err) {
     logger.error(`[RAZORPAY_WEBHOOK_ERROR] ${err.message}`, err);
     return error(res, err.message || 'Error processing Razorpay webhook', 500);
-  }
-};
-
-// Add Funds Controllers (Super Admin / Admin)
-const createAddFundsRequest = async (req, res, next) => {
-  try {
-    const { amount, payment_method, notes, reference_number } = req.body;
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return error(res, 'Valid amount is required');
-    }
-
-    try {
-      const { rows: [reqRow] } = await query(`
-        INSERT INTO wallet_fund_requests (
-          admin_id, amount, payment_method, notes, reference_number, status, created_at
-        ) VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
-        RETURNING *
-      `, [req.user.id, parsedAmount, payment_method || 'bank_transfer', notes || null, reference_number || null]);
-
-      return success(res, reqRow, 'Add funds request initiated successfully');
-    } catch (dbErr) {
-      await query(`
-        CREATE TABLE IF NOT EXISTS wallet_fund_requests (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          admin_id UUID,
-          amount NUMERIC(15,2) NOT NULL,
-          payment_method VARCHAR(50) DEFAULT 'bank_transfer',
-          notes TEXT,
-          reference_number VARCHAR(100),
-          status VARCHAR(50) DEFAULT 'pending',
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        );
-      `);
-      const { rows: [reqRow] } = await query(`
-        INSERT INTO wallet_fund_requests (
-          admin_id, amount, payment_method, notes, reference_number, status, created_at
-        ) VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
-        RETURNING *
-      `, [req.user.id, parsedAmount, payment_method || 'bank_transfer', notes || null, reference_number || null]);
-
-      return success(res, reqRow, 'Add funds request initiated successfully');
-    }
-  } catch (err) {
-    next(err);
-  }
-};
-
-const getAddFundsRequests = async (req, res, next) => {
-  try {
-    try {
-      const { rows } = await query(`
-        SELECT r.*, u.full_name as requested_by
-        FROM wallet_fund_requests r
-        LEFT JOIN users u ON u.id = r.admin_id
-        ORDER BY r.created_at DESC
-      `);
-      return success(res, rows);
-    } catch (tblErr) {
-      return success(res, []);
-    }
-  } catch (err) {
-    next(err);
-  }
-};
-
-const submitAddFundsUTR = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { reference_number } = req.body;
-    await query(`UPDATE wallet_fund_requests SET reference_number = $1, status = 'submitted' WHERE id = $2`, [reference_number, id]);
-    return success(res, {}, 'Reference UTR submitted');
-  } catch (err) {
-    next(err);
-  }
-};
-
-const reconcileAddFundsRequest = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    await query(`UPDATE wallet_fund_requests SET status = 'completed' WHERE id = $1`, [id]);
-    return success(res, {}, 'Add funds request reconciled');
-  } catch (err) {
-    next(err);
   }
 };
 
