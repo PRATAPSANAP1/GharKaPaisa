@@ -9,6 +9,10 @@ const notFoundHandler = (req, res) => {
 // Global error handler
 // eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
+  if (req.headers && req.headers.origin) {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   // Gracefully handle malformed URL encoding from bot/scanner probes
   if (err instanceof URIError || err.name === 'URIError' || err.message?.includes('Failed to decode param')) {
     logger.warn(`Malformed URI probe blocked: ${err.message}`, {

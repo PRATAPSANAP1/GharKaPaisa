@@ -44,7 +44,66 @@ if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 const app = express();
 app.set('trust proxy', 1);
 
-// ── Security Middleware ────────────────────────────────────────
+const envOrigins = (process.env.FRONTEND_URL || '').split(',').map(o => o.trim()).filter(Boolean);
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:4173",
+  "https://gharkapaisa.in",
+  "https://www.gharkapaisa.in",
+  "https://admin.gharkapaisa.in",
+  "https://api.gharkapaisa.in",
+  "https://ghar-ka-paisa.vercel.app",
+  "https://gharkapaisa.vercel.app",
+  ...envOrigins
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+    const normalizedOrigin = origin.trim().toLowerCase();
+    try {
+      const hostname = new URL(normalizedOrigin).hostname;
+      if (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === 'gharkapaisa.in' ||
+        hostname.endsWith('.gharkapaisa.in') ||
+        hostname.endsWith('.vercel.app')
+      ) {
+        return callback(null, true);
+      }
+    } catch (e) {}
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    logger.warn(`CORS blocked for origin: ${origin}`);
+    return callback(null, false);
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Device-Id',
+    'x-device-id',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
+  exposedHeaders: ['Content-Range', 'X-Content-Range', 'Authorization'],
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+
+// ── CORS & Security Middleware ─────────────────────────────────
+app.use(cors(corsOptions));
+app.options('(.*)', cors(corsOptions));
+
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   contentSecurityPolicy: {
@@ -61,49 +120,6 @@ app.use(helmet({
   },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
-
-const envOrigins = (process.env.FRONTEND_URL || '').split(',').map(o => o.trim()).filter(Boolean);
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:5173",
-  "https://gharkapaisa.in",
-  "https://www.gharkapaisa.in",
-  "https://admin.gharkapaisa.in",
-  "https://ghar-ka-paisa.vercel.app",
-  "https://gharkapaisa.vercel.app",
-  ...envOrigins
-];
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) {
-      return callback(null, true);
-    }
-    const normalizedOrigin = origin.trim();
-    try {
-      const hostname = new URL(normalizedOrigin).hostname;
-      const isDev = process.env.NODE_ENV !== 'production';
-      if (
-        (isDev && (hostname === 'localhost' || hostname === '127.0.0.1')) ||
-        hostname.endsWith('.gharkapaisa.in') ||
-        hostname === 'gharkapaisa.in'
-      ) {
-        return callback(null, true);
-      }
-    } catch (e) {}
-    if (allowedOrigins.includes(normalizedOrigin)) {
-      return callback(null, true);
-    }
-    return callback(null, false);
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Id', 'x-device-id', 'X-Requested-With', 'Accept'],
-  credentials: true,
-  optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 
 // Global rate limiter
 app.use(globalLimiter);
