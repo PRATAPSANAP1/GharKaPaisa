@@ -5,7 +5,7 @@ import { useAuthStore } from '../app/store/authStore';
 const getRoleDashboard = (user) => {
   const role = (user?.role || (typeof user === 'string' ? user : '')).toUpperCase();
   const designation = (user?.designation || '').toUpperCase();
-  if (['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(designation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(role)) {
+  if (['REMARK OPERATOR', 'REMARK_OPERATOR', 'QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(designation) || ['REMARK OPERATOR', 'REMARK_OPERATOR', 'QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(role)) {
     return '/admin/applications';
   }
   if (role === 'SUPER_ADMIN') return '/super-admin/overview';

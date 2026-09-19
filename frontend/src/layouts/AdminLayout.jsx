@@ -121,7 +121,7 @@ const AdminLayout = () => {
       if (!location.pathname.startsWith('/hr')) {
         navigate('/hr/dashboard', { replace: true });
       }
-    } else if (isRemarkOperator) {
+    } else if (isRemarkOperator || isQdOperator) {
       if (!location.pathname.startsWith('/admin/applications')) {
         navigate('/admin/applications', { replace: true });
       }
@@ -138,7 +138,7 @@ const AdminLayout = () => {
         navigate('/admin/dashboard', { replace: true });
       }
     }
-  }, [location.pathname, isHR, isRemarkOperator, isSalesExec, isBackend, navigate]);
+  }, [location.pathname, isHR, isRemarkOperator, isQdOperator, isSalesExec, isBackend, navigate]);
 
   const handleLogout = () => {
     logout();
@@ -172,8 +172,8 @@ const AdminLayout = () => {
           </>
         ) : (
           <>
-            {/* Dashboard (Available to all Admin Roles except Remark Operator) */}
-            {!isRemarkOperator && (
+            {/* Dashboard (Available to all Admin Roles except Remark Operator and QD Operator) */}
+            {!isRemarkOperator && !isQdOperator && (
               <NavLink to="/admin/dashboard" style={navLinkStyle}>
                 <Icons.dashboard size={18} />
                 <span>Dashboard</span>
@@ -288,8 +288,16 @@ const AdminLayout = () => {
               <span>Applications</span>
             </NavLink>
 
+            {/* Messenger */}
+            {!isRemarkOperator && !isQdOperator && (
+              <NavLink to="/admin/messenger" style={navLinkStyle}>
+                <Icons.profile size={18} />
+                <span>Messenger</span>
+              </NavLink>
+            )}
+
             {/* Additional Admin Nav Items */}
-            {!isBackend && !isSalesExec && !isPanChecker && !isRemarkOperator && (
+            {!isBackend && !isSalesExec && !isPanChecker && !isRemarkOperator && !isQdOperator && (
               <>
                 {/* Customers */}
                 <NavLink to="/admin/leads" style={navLinkStyle}>

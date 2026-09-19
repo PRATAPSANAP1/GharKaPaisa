@@ -24,7 +24,7 @@ export default function ManageApplications() {
   const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userRole);
   const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
   const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
-  const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(userRole);
+  const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userRole);
   const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR'].includes(userRole) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation);
   const isOpsHead = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD'].includes(userRole) && !isOpsOperator;
   const isOpsHeadOrSuperAdmin = isOpsHead || isOpsOperator;
@@ -723,10 +723,10 @@ export default function ManageApplications() {
               <thead>
                 <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textLight, fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   <th style={{ padding: '14px 16px' }}>App ID &amp; Date</th>
-                  {!isPanCheckerUser && !isRemarkOperatorUser && <th style={{ padding: '14px 16px' }}>Customer</th>}
-                  {!isPanCheckerUser && <th style={{ padding: '14px 16px' }}>Source &amp; Process</th>}
-                  {!isPanCheckerUser && !isRemarkOperatorUser && <th style={{ padding: '14px 16px' }}>Product &amp; Bank</th>}
-                  {!isPanCheckerUser && !isRemarkOperatorUser && <th style={{ padding: '14px 16px' }}>Status &amp; Commission</th>}
+                  {!isPanCheckerUser && !isRemarkOperatorUser && !isQdOperatorUser && <th style={{ padding: '14px 16px' }}>Customer</th>}
+                  {!isPanCheckerUser && !isQdOperatorUser && <th style={{ padding: '14px 16px' }}>Source &amp; Process</th>}
+                  {!isPanCheckerUser && !isRemarkOperatorUser && !isQdOperatorUser && <th style={{ padding: '14px 16px' }}>Product &amp; Bank</th>}
+                  {!isPanCheckerUser && !isRemarkOperatorUser && !isQdOperatorUser && <th style={{ padding: '14px 16px' }}>Status &amp; Commission</th>}
                   <th style={{ padding: '14px 16px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -763,7 +763,7 @@ export default function ManageApplications() {
                       </td>
 
                       {/* Customer Info */}
-                      {!isPanCheckerUser && !isRemarkOperatorUser && (
+                      {!isPanCheckerUser && !isRemarkOperatorUser && !isQdOperatorUser && (
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: C.bgSecondary, color: C.primary, fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${C.border}`, flexShrink: 0 }}>
@@ -778,14 +778,14 @@ export default function ManageApplications() {
                       )}
 
                       {/* Source & Process */}
-                      {!isPanCheckerUser && (
+                      {!isPanCheckerUser && !isQdOperatorUser && (
                         <td style={{ padding: '14px 16px' }}>
                           {renderProcessBadge(app)}
                         </td>
                       )}
 
                       {/* Product & Bank */}
-                      {!isPanCheckerUser && !isRemarkOperatorUser && (
+                      {!isPanCheckerUser && !isRemarkOperatorUser && !isQdOperatorUser && (
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ fontWeight: 800, color: C.text }}>{app.bank_name || app.bank_code || 'Bank Partner'}</div>
                           <div style={{ fontSize: '11px', color: C.textLight }}>{app.product_name || app.category || 'Financial Product'}</div>
@@ -793,7 +793,7 @@ export default function ManageApplications() {
                       )}
 
                       {/* Status & Commission */}
-                      {!isPanCheckerUser && !isRemarkOperatorUser && (
+                      {!isPanCheckerUser && !isRemarkOperatorUser && !isQdOperatorUser && (
                         <td style={{ padding: '14px 16px' }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             <span style={{
@@ -827,6 +827,23 @@ export default function ManageApplications() {
                             >
                               <FileEdit size={12} /> Remark Form
                             </button>
+                          ) : isQdOperatorUser ? (
+                            <>
+                              <button
+                                onClick={() => { setVerifyModalTab('qd'); setVerifyModalApp(app); }}
+                                style={{ background: "#2563eb15", border: "1px solid #2563eb40", color: "#2563eb", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                title="Open Quick Details (QD) Form"
+                              >
+                                <FileText size={12} /> QD
+                              </button>
+                              <button
+                                onClick={() => { setVerifyModalTab('remark'); setVerifyModalApp(app); }}
+                                style={{ background: "#ea580c15", border: "1px solid #ea580c40", color: "#ea580c", padding: "6px 10px", borderRadius: "6px", fontSize: "11.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: 'center', gap: "4px" }}
+                                title="Open Bank Remark Form"
+                              >
+                                <FileEdit size={12} /> Remark
+                              </button>
+                            </>
                           ) : (
                             <>
                               {isOpsHeadOrSuperAdmin && (
