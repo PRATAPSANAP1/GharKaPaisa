@@ -1666,9 +1666,20 @@ const listApplications = async (req, res, next) => {
     const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(userRole);
     let qdOperatorFilterSQL = '';
     if (isQdOperatorUser && req.user?.id) {
-      const sbiOnlyCondition = `((LOWER(COALESCE(combined.bank_code, '')) = 'sbi' OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%sbi%') AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%')`;
-      const physicalProcessCondition = `LOWER(COALESCE(combined.process_by, combined.process_type, 'lead_punching')) IN ('lead_punching', 'punch_only', 'physical', 'manual')`;
-      qdOperatorFilterSQL = ` AND ${sbiOnlyCondition} AND ${physicalProcessCondition}`;
+      const bankAssignmentFilter = `(
+        combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}')
+        OR EXISTS (
+          SELECT 1 FROM admin_bank_assignments aba 
+          JOIN banks b ON b.id = aba.bank_id 
+          WHERE aba.admin_id = '${req.user.id}' 
+          AND (
+            (LOWER(combined.bank_code) = LOWER(b.short_code))
+            OR (LOWER(combined.bank_name) = LOWER(b.name))
+          )
+        )
+      )`;
+      const dispatchFilter = ` AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a'))`;
+      qdOperatorFilterSQL = ` AND ${bankAssignmentFilter}${dispatchFilter}`;
     }
 
     const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);

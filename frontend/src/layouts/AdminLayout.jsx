@@ -285,7 +285,7 @@ const AdminLayout = () => {
             {/* Applications */}
             <NavLink to="/admin/applications" style={navLinkStyle}>
               <Icons.creditCard size={18} />
-              <span>Applications</span>
+              <span>{isQdOperator ? 'QD Operator' : isRemarkOperator ? 'Remark Operator' : isPanChecker ? 'PAN Checker' : 'Applications'}</span>
             </NavLink>
 
             {/* Messenger */}
