@@ -286,6 +286,7 @@ export function HeroBannerCarousel({ C, navigate }) {
 
   return (
     <div 
+      className="offer-banner"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       style={{
@@ -296,7 +297,6 @@ export function HeroBannerCarousel({ C, navigate }) {
         boxShadow: isDark ? 'none' : '0 8px 24px rgba(0,0,0,0.08)',
         border: `1px solid ${isDark ? C?.border : 'rgba(0,0,0,0.06)'}`,
         background: isDark ? C?.card : '#FFFFFF',
-        height: isMobile ? '160px' : '280px',
         marginBottom: isMobile ? '20px' : '28px'
       }}
     >

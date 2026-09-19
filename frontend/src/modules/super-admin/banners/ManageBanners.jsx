@@ -73,7 +73,7 @@ export default function ManageBanners() {
   
   const openAddModal = () => {
     setEditItem(null);
-    const defaultPlacement = activeTab === "all" ? "offer" : activeTab;
+    const defaultPlacement = activeTab === "all" ? "home" : activeTab;
     setForm({
       title: "",
       subtitle: "",
@@ -174,18 +174,18 @@ export default function ManageBanners() {
   // Calculate tab count indicators
   const getTabCount = (key) => {
     if (key === "all") return banners.length;
-    if (key === "offer") return banners.filter(b => b.target_page === "offer" || b.target_page === "home").length;
-    if (key === "team") return banners.filter(b => b.target_page === "team" || b.target_page === "partner").length;
-    if (key === "referral") return banners.filter(b => b.target_page === "referral" || b.target_page === "refer").length;
+    if (key === "home") return banners.filter(b => b.target_page === "home" || b.target_page === "offer" || b.target_page === "all" || !b.target_page).length;
+    if (key === "partner") return banners.filter(b => b.target_page === "partner" || b.target_page === "team" || b.target_page === "all" || !b.target_page).length;
+    if (key === "employee") return banners.filter(b => b.target_page === "employee" || b.target_page === "all" || !b.target_page).length;
     return 0;
   };
 
   // Filter Banners by Active Tab
   const filteredBanners = banners.filter(item => {
     if (activeTab === "all") return true;
-    if (activeTab === "offer") return item.target_page === "offer" || item.target_page === "home" || item.target_page === "all" || !item.target_page;
-    if (activeTab === "team") return item.target_page === "team" || item.target_page === "partner" || item.target_page === "all" || !item.target_page;
-    if (activeTab === "referral") return item.target_page === "referral" || item.target_page === "refer" || item.target_page === "all" || !item.target_page;
+    if (activeTab === "home") return item.target_page === "home" || item.target_page === "offer" || item.target_page === "all" || !item.target_page;
+    if (activeTab === "partner") return item.target_page === "partner" || item.target_page === "team" || item.target_page === "referral" || item.target_page === "all" || !item.target_page;
+    if (activeTab === "employee") return item.target_page === "employee" || item.target_page === "all" || !item.target_page;
     return item.target_page === activeTab || item.target_page === "all" || !item.target_page;
   });
 
@@ -196,7 +196,7 @@ export default function ManageBanners() {
       <div className="responsive-header" style={{ marginBottom: "20px", width: "100%" }}>
         <div>
           <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Banner Management</h2>
-          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Create and manage promotional banner slides for the Homepage and Partner Dashboard dynamically</p>
+          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Create and manage promotional banner slides for Home, Partner, and Employee panels dynamically</p>
         </div>
         <button
           onClick={openAddModal}
@@ -216,9 +216,10 @@ export default function ManageBanners() {
       {/* Placement Filter Tabs */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
         {[
-          { key: "all", label: "All Banners" },
-          { key: "offer", label: "Offer Banners (Home Page & Partner Top)" },
-          { key: "team", label: "Team & Referral Banners (Partner Dashboard)" }
+          { key: "all", label: "All Panels" },
+          { key: "home", label: "Home Panel" },
+          { key: "partner", label: "Partner Panel" },
+          { key: "employee", label: "Employee Panel" }
         ].map(tab => {
           const count = getTabCount(tab.key);
           return (
@@ -271,7 +272,7 @@ export default function ManageBanners() {
         </div>
       ) : filteredBanners.length === 0 ? (
         <div style={{ ...S.card, textAlign: "center", padding: "48px", color: C.textLight }}>
-          No banners found for this filter tab. Click 'Add Banner Slide' to create one!
+          No banners found for this panel filter. Click 'Add Banner Slide' to create one!
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
@@ -310,10 +311,10 @@ export default function ManageBanners() {
                       fontWeight: 800,
                       padding: "2px 6px",
                       borderRadius: "4px",
-                      background: (item.target_page === 'offer' || item.target_page === 'home') ? '#3B82F6' : (item.target_page === 'team' || item.target_page === 'partner') ? '#8B5CF6' : (item.target_page === 'referral' || item.target_page === 'refer') ? '#F59E0B' : '#10B981',
+                      background: (item.target_page === 'home' || item.target_page === 'offer') ? '#3B82F6' : (item.target_page === 'partner' || item.target_page === 'team') ? '#8B5CF6' : item.target_page === 'employee' ? '#EC4899' : '#10B981',
                       color: '#FFFFFF'
                     }}>
-                      {(item.target_page === 'offer' || item.target_page === 'home') ? 'Offer Banner' : (item.target_page === 'team' || item.target_page === 'partner') ? 'Team Banner' : (item.target_page === 'referral' || item.target_page === 'refer') ? 'Referral Banner' : 'All Pages (Offer, Team & Referral)'}
+                      {(item.target_page === 'home' || item.target_page === 'offer') ? 'Home Panel' : (item.target_page === 'partner' || item.target_page === 'team') ? 'Partner Panel' : item.target_page === 'employee' ? 'Employee Panel' : 'All Panels (Home, Partner & Employee)'}
                     </span>
                   </div>
                   <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{item.title}</h3>
@@ -393,7 +394,7 @@ export default function ManageBanners() {
                     onMouseEnter={e => e.currentTarget.style.background = `${C.red}20`}
                     onMouseLeave={e => e.currentTarget.style.background = `${C.red}10`}
                   >
-                    <Icons.x size={13} /> Delete
+                    <Icons.trash size={14} /> Delete
                   </button>
                 </div>
               </div>
@@ -429,17 +430,18 @@ export default function ManageBanners() {
             </h3>
 
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {/* Target Page Placement Option */}
+              {/* Target Panel Placement Option */}
               <div>
-                <label style={S.label}>Banner Category / Placement *</label>
+                <label style={S.label}>Target Panel (Which panel shows this banner) *</label>
                 <select
                   style={S.input}
                   value={form.target_page}
                   onChange={(e) => setForm({ ...form, target_page: e.target.value })}
                 >
-                  <option value="offer">Offer Banners (Home Page & Partner Top)</option>
-                  <option value="team">Team & Referral Banners (Partner Dashboard)</option>
-                  <option value="all">All Pages (Offer, Team & Referral)</option>
+                  <option value="home">Home Panel</option>
+                  <option value="partner">Partner Panel</option>
+                  <option value="employee">Employee Panel</option>
+                  <option value="all">All Panels (Home, Partner & Employee)</option>
                 </select>
               </div>
 

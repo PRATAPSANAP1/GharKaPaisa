@@ -10,9 +10,11 @@ const listBanners = async (req, res, next) => {
     let sql = `SELECT * FROM banners WHERE is_active = true`;
     const params = [];
 
-    if (pageFilter) {
+    if (pageFilter && pageFilter !== 'all') {
       if (pageFilter === 'team' || pageFilter === 'partner') {
         sql += ` AND (target_page = 'team' OR target_page = 'partner' OR target_page = 'all' OR target_page IS NULL)`;
+      } else if (pageFilter === 'employee') {
+        sql += ` AND (target_page = 'employee' OR target_page = 'all' OR target_page IS NULL)`;
       } else if (pageFilter === 'referral' || pageFilter === 'refer') {
         sql += ` AND (target_page = 'referral' OR target_page = 'refer' OR target_page = 'all' OR target_page IS NULL)`;
       } else if (pageFilter === 'offer' || pageFilter === 'home') {
@@ -45,6 +47,8 @@ const listAllBanners = async (req, res, next) => {
     if (pageFilter && pageFilter !== 'all') {
       if (pageFilter === 'team' || pageFilter === 'partner') {
         sql += ` WHERE (target_page = 'team' OR target_page = 'partner' OR target_page = 'all' OR target_page IS NULL)`;
+      } else if (pageFilter === 'employee') {
+        sql += ` WHERE (target_page = 'employee' OR target_page = 'all' OR target_page IS NULL)`;
       } else if (pageFilter === 'referral' || pageFilter === 'refer') {
         sql += ` WHERE (target_page = 'referral' OR target_page = 'refer' OR target_page = 'all' OR target_page IS NULL)`;
       } else if (pageFilter === 'offer' || pageFilter === 'home') {

@@ -90,7 +90,7 @@ html, body {
   }
 }
 
-/* Responsive form split row */
+/* Responsive split row */
 .responsive-split-row {
   display: flex;
   flex-direction: column;
@@ -100,6 +100,71 @@ html, body {
 @media (min-width: 640px) {
   .responsive-split-row {
     flex-direction: row !important;
+  }
+}
+
+/* Offer Banner Specification Styles */
+.offer-banner {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+  position: relative;
+  aspect-ratio: 16 / 7;
+  height: auto;
+}
+
+.offer-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Mobile small (~320px) */
+@media (max-width: 350px) {
+  .offer-banner {
+    aspect-ratio: 16 / 7;
+    max-height: 140px;
+  }
+}
+
+/* Mobile app (~360px) */
+@media (min-width: 351px) and (max-width: 380px) {
+  .offer-banner {
+    aspect-ratio: 16 / 7;
+    max-height: 158px;
+  }
+}
+
+/* Mobile large (~390px) */
+@media (min-width: 381px) and (max-width: 639px) {
+  .offer-banner {
+    aspect-ratio: 16 / 7;
+    max-height: 171px;
+  }
+}
+
+/* Tablet (~768px) */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .offer-banner {
+    aspect-ratio: 16 / 6;
+    max-height: 288px;
+  }
+}
+
+/* Desktop website (~1200px) */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .offer-banner {
+    aspect-ratio: 3 / 1;
+    max-height: 400px;
+  }
+}
+
+/* Desktop large (~1440px+) */
+@media (min-width: 1440px) {
+  .offer-banner {
+    aspect-ratio: 3.2 / 1;
+    max-height: 450px;
   }
 }
 

@@ -23,7 +23,7 @@ const defaultBanners = [
   }
 ];
 
-export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
+export default function PartnerBannerCarousel({ showOnlyRefer = false, targetPanel }) {
   const { C, isDark } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -33,17 +33,20 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
   const [isPaused, setIsPaused] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
+  const isEmployee = location.pathname.includes('/employee');
+  const panel = targetPanel || (isEmployee ? 'employee' : 'partner');
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Fetch dynamic Team/Partner/Referral banners from backend database
+  // Fetch dynamic Team/Partner/Employee/Referral banners from backend database
   useEffect(() => {
     const fetchTeamBanners = async () => {
       try {
-        const pageParam = showOnlyRefer ? 'referral' : 'team';
+        const pageParam = showOnlyRefer ? 'referral' : panel;
         const res = await api.get('/banners', { params: { page: pageParam } });
         if (res.data?.success && res.data.data && res.data.data.length > 0) {
           const mapped = res.data.data.map((b) => ({
@@ -52,18 +55,18 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
             title: b.title,
             subtitle: b.subtitle,
             btn_text: b.btn_text,
-            alt: b.title || 'Partner Banner',
-            link: b.click_url || (showOnlyRefer ? '/partner/team-network' : '/partner/team-network')
+            alt: b.title || 'Banner Slide',
+            link: b.click_url || '/credit-cards'
           }));
           setDynamicBanners(mapped);
         }
       } catch (err) {
-        console.warn('[PartnerBannerCarousel] Using fallback partner banners:', err);
+        console.warn('[PartnerBannerCarousel] Using fallback banners:', err);
       }
     };
 
     fetchTeamBanners();
-  }, [showOnlyRefer]);
+  }, [showOnlyRefer, panel]);
 
   // Determine active list of banners
   const activeBanners = dynamicBanners.length > 0
@@ -100,11 +103,11 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
     }
   };
 
-  const isEmployee = location.pathname.includes('/employee');
-  if (isEmployee || !activeBanners.length) return null;
+  if (!activeBanners.length) return null;
 
   return (
     <div
+      className="offer-banner"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       style={{
@@ -114,8 +117,7 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false }) {
         overflow: 'hidden',
         boxShadow: isDark ? 'none' : '0 8px 24px rgba(0,0,0,0.08)',
         border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`,
-        background: isDark ? C.card : '#FFFFFF',
-        height: isMobile ? '160px' : '280px'
+        background: isDark ? C.card : '#FFFFFF'
       }}
     >
       {/* Banner Slides Stack */}

@@ -44,6 +44,7 @@ const NAV_ITEMS = [
   { id: 'customers', path: '/partner/customers?view=my', label: 'Customers', icon: MdPeople },
   { id: 'team-network', path: '/partner/team', label: 'Manage Team', icon: MdGroup, partnerOnly: true },
   { id: 'reports', path: '/partner/reports', label: 'Reports', icon: MdBarChart, partnerOnly: true },
+  { id: 'messenger', path: '/partner/messenger', label: 'Messenger', icon: MdSupportAgent },
   { id: 'support', path: '/partner/support', label: 'Support', icon: MdSupportAgent },
   { id: 'settings', path: '/partner/settings', label: 'Settings', icon: MdSettings }
 ];

@@ -750,7 +750,7 @@ export default function PartnerLogin() {
               onClick={() => navigate("/")}
             >
               <Home size={20} />
-              <span>Home</span>
+              <span>{t("nav.home", "Home")}</span>
             </button>
 
             <LanguageSwitcher />
@@ -767,17 +767,17 @@ export default function PartnerLogin() {
             <div className="login-hero">
               <div>
                 <div className="welcome-badge">
-                  <span>Welcome Back! 👋</span>
+                  <span>{t("login.welcomeTitle", "Welcome Back! 👋")}</span>
                 </div>
 
                 <h1 className="login-title">
-                  Login to Your
+                  {t("login.loginToYour", "Login to Your")}
                   <br />
-                  <span>Account</span>
+                  <span>{t("login.account", "Account")}</span>
                 </h1>
 
                 <p className="login-description">
-                  Access your dashboard and manage your financial journey seamlessly
+                  {t("login.welcomeSubtitle", "Access your dashboard and manage your financial journey seamlessly")}
                 </p>
               </div>
 
@@ -796,7 +796,7 @@ export default function PartnerLogin() {
                 }}
               >
                 <Lock size={19} />
-                <span>Login with Password</span>
+                <span>{t("login.loginWithPassword", "Login with Password")}</span>
               </button>
 
               <button
@@ -808,7 +808,7 @@ export default function PartnerLogin() {
                 }}
               >
                 <Smartphone size={19} />
-                <span>Login with OTP</span>
+                <span>{t("login.loginWithOtp", "Login with OTP")}</span>
               </button>
             </div>
 
@@ -839,7 +839,7 @@ export default function PartnerLogin() {
               {!(loginType === "otp" && otpSent) && (
                 <div className="form-group">
                   <label className="form-label" htmlFor="emailOrMobile">
-                    Email or Mobile Number
+                    {t("partner.emailOrMobile", "Email or Mobile Number")}
                   </label>
 
                   <div className="input-wrapper">
@@ -855,7 +855,7 @@ export default function PartnerLogin() {
                       type="text"
                       value={formData.identity}
                       onChange={handleChange}
-                      placeholder="Enter email or mobile number"
+                      placeholder={t("partner.enterEmailOrMobile", "Enter email or mobile number")}
                       className="form-input"
                       autoComplete="username"
                     />
@@ -867,7 +867,7 @@ export default function PartnerLogin() {
               {loginType === "password" && (
                 <div className="form-group">
                   <label className="form-label" htmlFor="password">
-                    Password
+                    {t("partner.password", "Password")}
                   </label>
 
                   <div className="input-wrapper">
@@ -879,7 +879,7 @@ export default function PartnerLogin() {
                       type={showPassword ? "text" : "password"}
                       value={formData.password}
                       onChange={handleChange}
-                      placeholder="Enter your password"
+                      placeholder={t("partner.enterPassword", "Enter your password")}
                       className="form-input password-input"
                       autoComplete="current-password"
                     />
@@ -888,7 +888,7 @@ export default function PartnerLogin() {
                       type="button"
                       className="password-toggle"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={showPassword ? t("login.hidePassword", "Hide password") : t("login.showPassword", "Show password")}
                     >
                       {showPassword ? <EyeOff size={21} /> : <Eye size={21} />}
                     </button>
@@ -900,10 +900,10 @@ export default function PartnerLogin() {
               {loginType === "otp" && otpSent && (
                 <div style={{ marginTop: "12px", textAlign: "center" }}>
                   <label className="form-label" style={{ justifyContent: "center", marginBottom: "6px" }}>
-                    Enter 6-Digit OTP Code
+                    {t("partner.enterOtp", "Enter 6-Digit OTP Code")}
                   </label>
                   <p style={{ color: "#64748B", fontSize: "13px", margin: "0 0 16px" }}>
-                    We've sent a code to <strong style={{ color: "#0F172A" }}>{formData.identity}</strong>
+                    {t("login.weHaveSentCode", "We've sent a code to")} <strong style={{ color: "#0F172A" }}>{formData.identity}</strong>
                   </p>
 
                   <div
@@ -948,9 +948,11 @@ export default function PartnerLogin() {
                   </div>
 
                   <div style={{ fontSize: "13.5px", color: "#64748B" }}>
-                    Didn't receive the code?{" "}
+                    {t("login.didntReceiveCode", "Didn't receive the code?")}{" "}
                     {timer > 0 ? (
-                      <strong style={{ color: "#2563EB" }}>Resend in {timer}s</strong>
+                      <strong style={{ color: "#2563EB" }}>
+                        {t("login.resendIn", "Resend in {{timer}}s", { timer })}
+                      </strong>
                     ) : (
                       <button
                         type="button"
@@ -965,7 +967,7 @@ export default function PartnerLogin() {
                           textDecoration: "underline",
                         }}
                       >
-                        {loading.otp ? "Sending..." : "Resend OTP"}
+                        {loading.otp ? t("partner.sending", "Sending...") : t("login.resendOtp", "Resend OTP")}
                       </button>
                     )}
                   </div>
@@ -982,7 +984,7 @@ export default function PartnerLogin() {
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
                     />
-                    <span>Remember me</span>
+                    <span>{t("login.rememberMe", "Remember me")}</span>
                   </label>
 
                   <button
@@ -990,7 +992,7 @@ export default function PartnerLogin() {
                     className="forgot-password"
                     onClick={() => setShowForgotPasswordModal(true)}
                   >
-                    Forgot Password?
+                    {t("partner.forgotPassword", "Forgot Password?")}
                   </button>
                 </div>
               )}
@@ -1002,7 +1004,7 @@ export default function PartnerLogin() {
                     className="forgot-password"
                     onClick={() => setShowForgotMobileModal(true)}
                   >
-                    Forgot Mobile Number?
+                    {t("login.forgotMobile", "Forgot Mobile Number?")}
                   </button>
                 </div>
               )}
@@ -1020,11 +1022,11 @@ export default function PartnerLogin() {
                   <span>
                     {loginType === "password"
                       ? loading.login
-                        ? "Verifying Credentials..."
-                        : "Login to Account"
+                        ? t("partner.verifying", "Verifying Credentials...")
+                        : t("login.loginToAccount", "Login to Account")
                       : loading.otp
-                      ? "Sending Code..."
-                      : "Send OTP Code"}
+                      ? t("login.otpSending", "Sending Code...")
+                      : t("login.sendOtpCode", "Send OTP Code")}
                   </span>
 
                   <span className="login-submit-arrow">
@@ -1038,7 +1040,9 @@ export default function PartnerLogin() {
             <div className="security-message">
               <ShieldCheck size={20} />
               <span>
-                Your data is <strong>100% secure</strong> with 256-bit SSL encryption
+                {t("login.dataSecureText1", "Your data is ")}
+                <strong>{t("login.dataSecureText2", "100% secure")}</strong>
+                {t("login.dataSecureText3", " with 256-bit SSL encryption")}
               </span>
             </div>
           </div>
@@ -1049,8 +1053,8 @@ export default function PartnerLogin() {
           {/* ================= PARTNER SECTION ================= */}
           <section className="partner-section">
             <div className="partner-heading">
-              <h2>New to GharKaPaisa?</h2>
-              <p>Join thousands of financial partners earning zero-investment commissions</p>
+              <h2>{t("login.newToGharKaPaisa", "New to GharKaPaisa?")}</h2>
+              <p>{t("login.newSubtext", "Join thousands of financial partners earning zero-investment commissions")}</p>
             </div>
 
             <button
@@ -1063,9 +1067,9 @@ export default function PartnerLogin() {
               </div>
 
               <div className="partner-content">
-                <h3>Become a Partner</h3>
+                <h3>{t("login.becomePartnerTitle", "Become a Partner")}</h3>
                 <p>
-                  Grow your referral business and earn attractive direct payouts with instant wallet withdrawals
+                  {t("login.becomePartnerSubtext", "Grow your referral business and earn attractive direct payouts with instant wallet withdrawals")}
                 </p>
               </div>
 
@@ -1078,30 +1082,30 @@ export default function PartnerLogin() {
             <FeatureCard
               icon={<ShieldCheck size={24} />}
               iconType="green"
-              title="Secure & Safe"
-              description={<>Bank-grade encryption</>}
+              title={t("login.feature1Title", "Secure & Safe")}
+              description={<>{t("login.feature1Sub", "Bank-grade encryption")}</>}
             />
 
             <FeatureCard
               icon={<Zap size={24} />}
               iconType="blue"
-              title="Fast & Easy"
-              description={<>Instant dashboard access</>}
+              title={t("login.feature2Title", "Fast & Easy")}
+              description={<>{t("login.feature2Sub", "Instant dashboard access")}</>}
             />
 
             <FeatureCard
               icon={<Headphones size={24} />}
               iconType="orange"
-              title="24/7 Support"
-              description={<>Dedicated help desk</>}
+              title={t("login.feature3Title", "24/7 Support")}
+              description={<>{t("login.feature3Sub", "Dedicated help desk")}</>}
               onClick={() => navigate("/contact")}
             />
 
             <FeatureCard
               icon={<BadgeCheck size={24} />}
               iconType="green"
-              title="Trusted Platform"
-              description={<>100K+ partners</>}
+              title={t("login.feature4Title", "Trusted Platform")}
+              description={<>{t("login.feature4Sub", "100K+ partners")}</>}
             />
           </section>
 
@@ -1112,7 +1116,7 @@ export default function PartnerLogin() {
             onClick={() => navigate("/")}
           >
             <Home size={18} />
-            <span>Back to Home</span>
+            <span>{t("partner.backToHome", "Back to Home")}</span>
           </button>
         </div>
       </main>
@@ -1147,7 +1151,7 @@ export default function PartnerLogin() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0F172A", margin: 0 }}>
-                Reset Your Password
+                {t("login.resetPasswordTitle", "Reset Your Password")}
               </h3>
               <X
                 size={22}
@@ -1160,7 +1164,7 @@ export default function PartnerLogin() {
               <div style={{ textAlign: "center", padding: "12px 0" }}>
                 <Check size={48} color="#10B981" style={{ margin: "0 auto 12px" }} />
                 <p style={{ fontSize: "14.5px", color: "#334155", lineHeight: 1.5 }}>
-                  Password reset link has been sent to your email! Please check your inbox.
+                  {t("login.resetLinkSent", "Password reset link has been sent to your email! Please check your inbox.")}
                 </p>
                 <button
                   type="button"
@@ -1168,13 +1172,13 @@ export default function PartnerLogin() {
                   className="login-submit"
                   style={{ marginTop: "16px" }}
                 >
-                  Back to Login
+                  {t("login.backToLogin", "Back to Login")}
                 </button>
               </div>
             ) : (
               <form onSubmit={handleForgotPasswordSubmit}>
                 <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "16px" }}>
-                  Enter your registered email address below to receive password reset instructions.
+                  {t("login.resetInstructions", "Enter your registered email address below to receive password reset instructions.")}
                 </p>
 
                 {forgotError && (
@@ -1184,14 +1188,14 @@ export default function PartnerLogin() {
                 )}
 
                 <div className="form-group" style={{ marginBottom: "20px" }}>
-                  <label className="form-label">Email Address</label>
+                  <label className="form-label">{t("partner.emailAddress", "Email Address")}</label>
                   <div className="input-wrapper">
                     <Mail className="input-icon" size={20} />
                     <input
                       type="email"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      placeholder="your.email@domain.com"
+                      placeholder={t("partner.placeholders.email", "your.email@domain.com")}
                       className="form-input"
                     />
                   </div>
@@ -1202,7 +1206,7 @@ export default function PartnerLogin() {
                   disabled={forgotLoading}
                   className="login-submit"
                 >
-                  {forgotLoading ? "Sending Link..." : "Send Reset Link"}
+                  {forgotLoading ? t("login.sendingLink", "Sending Link...") : t("login.sendResetLink", "Send Reset Link")}
                 </button>
               </form>
             )}
@@ -1237,7 +1241,7 @@ export default function PartnerLogin() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0F172A", margin: 0 }}>
-                Recover Mobile Number
+                {t("login.recoverMobileTitle", "Recover Mobile Number")}
               </h3>
               <X
                 size={22}
@@ -1247,7 +1251,7 @@ export default function PartnerLogin() {
             </div>
 
             <p style={{ fontSize: "14px", color: "#64748B", marginBottom: "20px" }}>
-              If you forgot your registered mobile number, you can sign in using your email address and password or contact our support team.
+              {t("login.recoverMobileDesc", "If you forgot your registered mobile number, you can sign in using your email address and password or contact our support team.")}
             </p>
 
             <button
@@ -1258,7 +1262,7 @@ export default function PartnerLogin() {
                 setLoginType("password");
               }}
             >
-              Switch to Password Login
+              {t("login.switchToPasswordLogin", "Switch to Password Login")}
             </button>
           </div>
         </div>
