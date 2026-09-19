@@ -2023,6 +2023,7 @@ const listApplications = async (req, res, next) => {
         LEFT JOIN physical_application_details pad ON pad.application_id = a.id
       ) combined
       ${countScopeSQL}
+        AND ($2::text IS NULL OR 1=1)
         AND ($3::uuid IS NULL OR combined.product_id = $3)
         AND ($4::uuid IS NULL OR combined.bank_id = $4)
         AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
