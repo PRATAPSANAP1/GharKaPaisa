@@ -55,6 +55,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
   const isOpsOrAdmin = isOpsHead || isOpsOperator || isSuperAdminRole;
   const isPartner = ['PARTNER', 'TEAM_MEMBER'].includes(role) && !isOpsOrAdmin;
+  const isSuperAdminOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isSalesExecUser;
   const canEditBackendRemark = isSuperAdminOrAdmin || isSalesExecUser || isOpsOrAdmin;
 
   // Normalize initialTab ('qd' | 'remark' | 'final' | 'timeline' | legacy aliases)
@@ -116,7 +117,6 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
   const [currentStatus, setCurrentStatus] = useState(application?.status || 'details_submitted');
 
-  const isSuperAdminOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isSalesExecUser;
   const isLockedStatus = ['approved', 'super_admin_approved', 'sanctioned', 'commission_processing', 'commission_released', 'commission_received', 'disbursed', 'rejected', 'cancelled'].includes(String(currentStatus || application?.status || '').toLowerCase()) && !isSuperAdminOrAdmin;
 
   // Role & Status Access Rules:
