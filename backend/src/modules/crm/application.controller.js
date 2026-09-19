@@ -1667,14 +1667,40 @@ const listApplications = async (req, res, next) => {
     let qdOperatorFilterSQL = '';
     if (isQdOperatorUser && req.user?.id) {
       const bankAssignmentFilter = `(
-        combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}')
-        OR EXISTS (
-          SELECT 1 FROM admin_bank_assignments aba 
-          JOIN banks b ON b.id = aba.bank_id 
-          WHERE aba.admin_id = '${req.user.id}' 
-          AND (
-            (LOWER(combined.bank_code) = LOWER(b.short_code))
-            OR (LOWER(combined.bank_name) = LOWER(b.name))
+        (
+          combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}')
+          OR EXISTS (
+            SELECT 1 FROM admin_bank_assignments aba 
+            JOIN banks b ON b.id = aba.bank_id 
+            WHERE aba.admin_id = '${req.user.id}' 
+            AND (
+              (LOWER(combined.bank_code) = LOWER(b.short_code))
+              OR (LOWER(combined.bank_name) = LOWER(b.name))
+            )
+          )
+        )
+        AND NOT (
+          (LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%')
+          AND NOT EXISTS (
+            SELECT 1 FROM admin_bank_assignments aba 
+            JOIN banks b ON b.id = aba.bank_id 
+            WHERE aba.admin_id = '${req.user.id}' 
+            AND (LOWER(b.name) LIKE '%tata%' OR LOWER(b.short_code) LIKE '%tata%')
+          )
+        )
+        AND NOT (
+          (LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%tata%' AND LOWER(COALESCE(combined.bank_code, '')) NOT LIKE '%tata%')
+          AND NOT EXISTS (
+            SELECT 1 FROM admin_bank_assignments aba 
+            JOIN banks b ON b.id = aba.bank_id 
+            WHERE aba.admin_id = '${req.user.id}' 
+            AND (LOWER(b.name) NOT LIKE '%tata%' AND LOWER(b.short_code) NOT LIKE '%tata%')
+            AND (
+              (LOWER(combined.bank_name) LIKE '%sbi%' AND LOWER(b.name) LIKE '%sbi%')
+              OR (LOWER(combined.bank_name) LIKE '%hdfc%' AND LOWER(b.name) LIKE '%hdfc%')
+              OR (LOWER(combined.bank_code) LIKE '%sbi%' AND LOWER(b.short_code) LIKE '%sbi%')
+              OR (LOWER(combined.bank_code) LIKE '%hdfc%' AND LOWER(b.short_code) LIKE '%hdfc%')
+            )
           )
         )
       )`;
