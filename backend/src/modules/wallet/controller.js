@@ -2474,6 +2474,89 @@ const handleRazorpayWebhook = async (req, res) => {
     return error(res, err.message || 'Error processing Razorpay webhook', 500);
   }
 };
+
+// Add Funds Controllers (Super Admin / Admin)
+const createAddFundsRequest = async (req, res, next) => {
+  try {
+    const { amount, payment_method, notes, reference_number } = req.body;
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return error(res, 'Valid amount is required');
+    }
+
+    try {
+      const { rows: [reqRow] } = await query(`
+        INSERT INTO wallet_fund_requests (
+          admin_id, amount, payment_method, notes, reference_number, status, created_at
+        ) VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
+        RETURNING *
+      `, [req.user.id, parsedAmount, payment_method || 'bank_transfer', notes || null, reference_number || null]);
+
+      return success(res, reqRow, 'Add funds request initiated successfully');
+    } catch (dbErr) {
+      await query(`
+        CREATE TABLE IF NOT EXISTS wallet_fund_requests (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          admin_id UUID,
+          amount NUMERIC(15,2) NOT NULL,
+          payment_method VARCHAR(50) DEFAULT 'bank_transfer',
+          notes TEXT,
+          reference_number VARCHAR(100),
+          status VARCHAR(50) DEFAULT 'pending',
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+      `);
+      const { rows: [reqRow] } = await query(`
+        INSERT INTO wallet_fund_requests (
+          admin_id, amount, payment_method, notes, reference_number, status, created_at
+        ) VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
+        RETURNING *
+      `, [req.user.id, parsedAmount, payment_method || 'bank_transfer', notes || null, reference_number || null]);
+
+      return success(res, reqRow, 'Add funds request initiated successfully');
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+const getAddFundsRequests = async (req, res, next) => {
+  try {
+    try {
+      const { rows } = await query(`
+        SELECT r.*, u.full_name as requested_by
+        FROM wallet_fund_requests r
+        LEFT JOIN users u ON u.id = r.admin_id
+        ORDER BY r.created_at DESC
+      `);
+      return success(res, rows);
+    } catch (tblErr) {
+      return success(res, []);
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+const submitAddFundsUTR = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reference_number } = req.body;
+    await query(`UPDATE wallet_fund_requests SET reference_number = $1, status = 'submitted' WHERE id = $2`, [reference_number, id]);
+    return success(res, {}, 'Reference UTR submitted');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const reconcileAddFundsRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await query(`UPDATE wallet_fund_requests SET status = 'completed' WHERE id = $1`, [id]);
+    return success(res, {}, 'Add funds request reconciled');
+  } catch (err) {
+    next(err);
+  }
 };
 
 module.exports = {

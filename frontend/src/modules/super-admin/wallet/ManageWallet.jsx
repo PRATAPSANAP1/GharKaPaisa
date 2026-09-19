@@ -186,7 +186,81 @@ export default function ManageWallet() {
       fetchAllDashboardData();
     }, 30000);
     return () => clearInterval(timer);
-  }, []);
+  }, [filters.fromDate, filters.toDate]);
+
+  const exportCSVReport = (tab) => {
+    let dataToExport = [];
+    const activeTabName = tab || activeTab || 'wallet';
+    const filename = `wallet_${activeTabName}_report_${new Date().toISOString().split('T')[0]}.csv`;
+
+    if (activeTabName === 'withdrawals') {
+      dataToExport = withdrawals.map(w => ({
+        'Request ID': w.id,
+        'Partner Code': w.partner_code || '',
+        'Partner Name': `${w.first_name || ''} ${w.last_name || ''}`.trim() || w.user_name || 'Partner',
+        'Mobile': w.mobile || '',
+        'Amount': w.amount || 0,
+        'TDS Amount': w.tds_amount || 0,
+        'Net Amount': w.net_amount || w.amount || 0,
+        'Status': w.status || 'Pending',
+        'Requested At': w.requested_at || w.created_at || ''
+      }));
+    } else if (activeTabName === 'partners') {
+      dataToExport = partnersOverview.map(p => ({
+        'Partner Name': p.name || '',
+        'Partner Code': p.partner_code || '',
+        'Status': p.status || 'Active',
+        'Available Balance': p.balance || 0
+      }));
+    } else if (activeTabName === 'ledger') {
+      dataToExport = ledgerEntries.map(l => ({
+        'Transaction ID': l.id,
+        'User': l.user_name || `${l.first_name || ''} ${l.last_name || ''}`.trim() || l.partner_code || 'User',
+        'Type': (parseFloat(l.credit || 0) > 0 ? 'CREDITED' : 'DEBITED'),
+        'Credit': l.credit || 0,
+        'Debit': l.debit || 0,
+        'Description': l.description || '',
+        'Date': l.created_at || l.requested_at || ''
+      }));
+    } else if (activeTabName === 'team') {
+      dataToExport = (teamCommissions.transactions || []).map(t => ({
+        'Transaction ID': t.id,
+        'App Number': t.app_number || '',
+        'Child Partner': `${t.child_partner_name || ''} (${t.child_partner_code || ''})`,
+        'Parent Partner': `${t.parent_partner_name || ''} (${t.parent_partner_code || ''})`,
+        'Amount': t.amount || 0,
+        'Type': t.transaction_type || '',
+        'Status': t.status || ''
+      }));
+    } else {
+      dataToExport = pendingCommissions.map(c => ({
+        'Transaction ID': c.id,
+        'Partner': c.user_name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.partner_code || 'Partner',
+        'Amount': c.credit || c.amount || 0,
+        'Description': c.description || '',
+        'Date': c.created_at || ''
+      }));
+    }
+
+    if (dataToExport.length === 0) {
+      return showToast('No data available to export for the selected section.', 'error');
+    }
+
+    const headers = Object.keys(dataToExport[0]);
+    const csvRows = [
+      headers.join(','),
+      ...dataToExport.map(row => headers.map(header => JSON.stringify(row[header] ?? '')).join(','))
+    ];
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`Exported ${dataToExport.length} records to ${filename}`, 'success');
+  };
 
   const handleManualAdjustSubmit = async (e) => {
     e.preventDefault();
@@ -437,9 +511,13 @@ export default function ManageWallet() {
           </button>
 
           {/* Date Selector */}
-          <div style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
-            <MdCalendarToday size={15} style={{ color: C.teal }} /> <span>{filters.dateRange}</span>
-          </div>
+          <button
+            onClick={() => setShowFilterBar(!showFilterBar)}
+            style={{ background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 700, color: C.text, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)', cursor: 'pointer' }}
+          >
+            <MdCalendarToday size={15} style={{ color: C.teal }} />
+            <span>{filters.fromDate && filters.toDate ? `${filters.fromDate} to ${filters.toDate}` : (filters.dateRange || 'Select Date')}</span>
+          </button>
 
           {/* Filter Toggle Button */}
           <button
