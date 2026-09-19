@@ -76,7 +76,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
           'email', u.email,
           'mobile', u.mobile,
           'partner_code', pp.partner_code,
-          'employee_code', emp.employee_code,
+          'employee_code', emp.employee_id,
           'last_active_at', u.last_active_at,
           'last_logout_at', u.last_logout_at,
           'last_login', u.last_login
@@ -184,7 +184,7 @@ async function getConversationById(conversationId) {
 async function getConversationParticipants(conversationId) {
   const sql = `
     SELECT cp.*, u.full_name, u.email, u.mobile, u.role, u.department, u.designation, u.last_active_at, u.last_logout_at, u.last_login,
-           pp.partner_code, emp.employee_code
+           pp.partner_code, emp.employee_id AS employee_code
     FROM conversation_participants cp
     JOIN users u ON u.id = cp.user_id
     LEFT JOIN partner_profiles pp ON pp.user_id = u.id
@@ -228,7 +228,7 @@ async function getMessages(conversationId, limit = 50, offset = 0) {
       u.mobile AS sender_mobile,
       u.email AS sender_email,
       pp.partner_code AS sender_partner_code,
-      emp.employee_code AS sender_employee_code,
+      emp.employee_id AS sender_employee_code,
       (
         SELECT json_agg(json_build_object(
           'id', ma.id,
@@ -453,7 +453,7 @@ async function getContactsForUser(userId, userRole, search = '') {
       u.last_logout_at,
       u.last_login,
       pp.partner_code,
-      emp.employee_code
+      emp.employee_id AS employee_code
     FROM users u
     LEFT JOIN partner_profiles pp ON pp.user_id = u.id
     LEFT JOIN employees emp ON emp.user_id = u.id
@@ -465,7 +465,7 @@ async function getContactsForUser(userId, userRole, search = '') {
         u.email ILIKE $2 OR 
         u.mobile ILIKE $2 OR 
         pp.partner_code ILIKE $2 OR
-        emp.employee_code ILIKE $2
+        emp.employee_id ILIKE $2
       )
     ORDER BY u.full_name ASC
     LIMIT 30
