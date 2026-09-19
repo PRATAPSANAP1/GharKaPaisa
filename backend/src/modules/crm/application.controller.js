@@ -2011,12 +2011,53 @@ const listApplications = async (req, res, next) => {
         ${remarkOperatorFilterSQL}
     `, countQueryParams);
 
-    // Compute real-time canonical status counts directly from applications table
+    // Compute real-time canonical status counts scoped to user role & bank filters
     const { rows: statusCountsRows } = await query(`
-      SELECT status, COUNT(*)::int as count 
-      FROM applications 
-      GROUP BY status
-    `);
+      SELECT combined.status, COUNT(*)::int as count FROM (
+        SELECT a.id, a.partner_id, a.submitted_by, a.employee_id, (to_jsonb(a)->>'assigned_to') as assigned_to, a.process_type, a.status::text, a.commission_status::text, a.product_id, p.bank_id, a.app_number, COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_application_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_application_number, COALESCE(NULLIF(a.bank_ref_number, ''), NULLIF(pad.bank_ref_number, '')) as bank_ref_number, COALESCE(NULLIF(a.dispatch_status, ''), NULLIF(pad.dispatch_status, '')) as dispatch_status, COALESCE(NULLIF(a.pan_number, ''), NULLIF(c.pan_number, ''), NULLIF(l.pan_number, '')) as pan_number, COALESCE(NULLIF(l.customer_name, ''), NULLIF(c.full_name, ''), 'Customer') as customer_name, COALESCE(NULLIF(l.mobile, ''), NULLIF(l.customer_mobile, ''), c.mobile) as customer_mobile, COALESCE(a.process_type, a.source, 'lead_punching') as process_by, COALESCE(p.operation_head_id, b.operation_head_id) as operation_head_id, p.category::text as category, a.created_at, b.short_code as bank_code, b.name as bank_name, a.bank_remark, COALESCE(NULLIF(to_jsonb(a)->>'pan_check', ''), NULLIF(pad.pan_check, ''), 'no') as pan_check, COALESCE(NULLIF(to_jsonb(a)->>'bank_current_lead_status', ''), NULLIF(pad.bank_current_lead_status, ''), 'None') as bank_current_lead_status, COALESCE(NULLIF(to_jsonb(a)->>'requery_date', ''), NULLIF(to_jsonb(pad)->>'requery_date', '')) as requery_date
+        FROM applications a
+        LEFT JOIN leads l ON l.id = a.lead_id
+        LEFT JOIN customers c ON c.id = a.customer_id
+        LEFT JOIN products p ON p.id = a.product_id
+        LEFT JOIN banks b ON b.id = p.bank_id
+        LEFT JOIN physical_application_details pad ON pad.application_id = a.id
+      ) combined
+      ${countScopeSQL}
+        AND ($3::uuid IS NULL OR combined.product_id = $3)
+        AND ($4::uuid IS NULL OR combined.bank_id = $4)
+        AND ($5::text IS NULL OR (combined.app_number ILIKE $5 OR combined.customer_name ILIKE $5 OR combined.customer_mobile ILIKE $5 OR combined.bank_application_number ILIKE $5 OR combined.bank_ref_number ILIKE $5 OR combined.pan_number ILIKE $5))
+        AND ($6::text IS NULL OR combined.process_by = $6 OR combined.submitted_by::text = $6)
+        AND ($7::uuid IS NULL OR combined.operation_head_id = $7::uuid)
+        AND (
+          $10::text IS NULL OR $10::text = ''
+          OR ($10::text = 'my' AND (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
+          OR ($10::text = 'team' AND NOT (combined.submitted_by = $8::uuid OR (combined.partner_id = $1::uuid AND (combined.submitted_by IS NULL OR combined.submitted_by = $8::uuid))))
+        )
+        AND ($11::uuid IS NULL OR combined.submitted_by = $11::uuid OR combined.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $11::uuid OR id = $11::uuid))
+        AND (
+          $12::text IS NULL OR $12::text = '' OR $12::text = 'all'
+          OR ($12::text = 'credit_card' AND (LOWER(combined.category::text) LIKE '%credit%' OR LOWER(combined.category::text) LIKE '%card%'))
+          OR ($12::text = 'personal_loan' AND (LOWER(combined.category::text) LIKE '%personal%'))
+          OR ($12::text = 'business_loan' AND (LOWER(combined.category::text) LIKE '%business%'))
+          OR ($12::text = 'insurance' AND (LOWER(combined.category::text) LIKE '%insurance%'))
+          OR ($12::text = 'utility' AND (LOWER(combined.category::text) LIKE '%utilit%' OR LOWER(combined.category::text) LIKE '%recharge%'))
+          OR (LOWER(combined.category::text) = LOWER($12::text))
+        )
+        AND (
+          $13::text IS NULL OR $13::text = '' OR $13::text = 'all'
+          OR combined.commission_status = $13::text
+          OR ($13::text = 'released' AND combined.commission_status IN ('released', 'credited', 'paid', 'approved', 'commission_released'))
+          OR ($13::text = 'pending' AND combined.commission_status IN ('pending', 'unpaid', 'due', 'initiated'))
+        )
+        AND ($14::timestamp IS NULL OR combined.created_at >= $14::timestamp)
+        AND ($15::timestamp IS NULL OR combined.created_at <= $15::timestamp)
+        ${countOpHeadBankFilterSQL}
+        ${salesExecFilterSQL}
+        ${panCheckerFilterSQL}
+        ${qdOperatorFilterSQL}
+        ${remarkOperatorFilterSQL}
+      GROUP BY combined.status
+    `, countQueryParams);
     const statusCountsObj = {
       pending: 0,
       details_submitted: 0,
