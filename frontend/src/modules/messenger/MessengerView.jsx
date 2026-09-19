@@ -608,6 +608,11 @@ export default function MessengerView({ initialAppId = null }) {
                 ) : (
                   filteredMessages.map((msg) => {
                     const isMe = msg.sender_id === user?.id;
+                    const isReadByReceiver = Boolean(
+                      msg.is_read ||
+                      (Array.isArray(msg.reads) && msg.reads.some(r => r.user_id && r.user_id !== msg.sender_id))
+                    );
+
                     return (
                       <div
                         key={msg.id}
@@ -665,13 +670,19 @@ export default function MessengerView({ initialAppId = null }) {
                             </div>
                           )}
 
-                          {/* Timestamp & Double Blue Ticks */}
+                          {/* Timestamp & Double Ticks (Grey for sent, Blue when read by receiver) */}
                           <div style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
                             gap: '4px', marginTop: '4px', fontSize: '10.5px', color: '#64748B'
                           }}>
                             <span>{formatTime(msg.created_at)}</span>
-                            {isMe && <FaCheckDouble color="#2563EB" size={12} />}
+                            {isMe && (
+                              <FaCheckDouble
+                                color={isReadByReceiver ? '#2563EB' : '#94A3B8'}
+                                size={13}
+                                title={isReadByReceiver ? 'Read by recipient' : 'Sent'}
+                              />
+                            )}
                           </div>
                         </div>
                       </div>

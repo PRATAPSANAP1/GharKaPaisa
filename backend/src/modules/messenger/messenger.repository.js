@@ -244,7 +244,13 @@ async function getMessages(conversationId, limit = 50, offset = 0) {
         ))
         FROM message_reads mr
         WHERE mr.message_id = m.id
-      ) AS reads
+      ) AS reads,
+      (
+        EXISTS (
+          SELECT 1 FROM message_reads mr 
+          WHERE mr.message_id = m.id AND mr.user_id != m.sender_id
+        )
+      ) AS is_read
     FROM messages m
     JOIN users u ON u.id = m.sender_id
     WHERE m.conversation_id = $1 AND m.deleted_at IS NULL
