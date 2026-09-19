@@ -282,6 +282,7 @@ const listBankCardApplications = async (req, res, next) => {
     const userRole = (req.user?.role || '').toUpperCase();
     const userDesignation = (req.user?.designation || '').toUpperCase();
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userRole);
+    const isSalesExecOnlyUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userRole);
     const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
 
     if (userRole !== 'SUPER_ADMIN' && req.user?.id) {
@@ -293,6 +294,9 @@ const listBankCardApplications = async (req, res, next) => {
       }
     }
 
+    if (isSalesExecOnlyUser && req.user?.id) {
+      whereClause += ` AND (COALESCE(combined.dispatch_stage, '') = '' OR LOWER(COALESCE(combined.dispatch_stage, 'none')) IN ('none', 'na', 'n/a'))`;
+    }
 
     if (isRemarkOperatorUser && req.user?.id) {
       whereClause += ` AND (COALESCE(combined.dispatch_stage, '') = '' OR LOWER(COALESCE(combined.dispatch_stage, 'none')) IN ('none', 'na', 'n/a'))`;
