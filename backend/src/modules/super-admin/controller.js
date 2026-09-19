@@ -54,9 +54,9 @@ const createAdmin = async (req, res, next) => {
     // Check bank assignment requirement BEFORE user insert
     const bankIds = Array.isArray(req.body.bank_ids) ? req.body.bank_ids : (req.body.bank_id ? [req.body.bank_id] : []);
     const desigUpper = String(designation || '').toUpperCase();
-    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER'].includes(desigUpper);
+    const isOpHead = ['OPERATIONAL_HEAD', 'OPERATIONAL HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE', 'PAN_CHECKER', 'PAN CHECKER', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD_OPERATOR', 'QD OPERATOR'].includes(desigUpper);
     if (isOpHead && bankIds.length === 0) {
-      return error(res, 'At least one assigned bank is required for Operational Head, Administrative Operator, Administrative Sales Executive, or PAN Checker designation', 400);
+      return error(res, 'At least one assigned bank is required for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, Remark Operator, or QD Operator designation', 400);
     }
 
     // Generate unique employeeId in format YOH-SE9983, YOH-TL2324, YOH-MGR0985, YOH-HR0123
@@ -279,7 +279,7 @@ const updateAdmin = async (req, res, next) => {
     if (targetBankIds !== null) {
       await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [existing.id]);
       const currentDesig = designation !== undefined ? designation.trim() : existing.designation;
-      const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR'].includes(currentDesig);
+      const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD Operator', 'QD_OPERATOR', 'QD OPERATOR'].includes(currentDesig);
 
       for (const bId of targetBankIds) {
         await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [existing.id, bId, req.user.id]);
@@ -323,7 +323,7 @@ const updateAdminBanks = async (req, res, next) => {
     if (!userRec) return notFound(res, 'Admin not found');
 
     await query(`DELETE FROM admin_bank_assignments WHERE admin_id = $1`, [userRec.id]);
-    const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR'].includes(userRec.designation);
+    const isRemarkOp = ['Remark Operator', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD Operator', 'QD_OPERATOR', 'QD OPERATOR'].includes(userRec.designation);
 
     for (const bId of targetBankIds) {
       await query(`INSERT INTO admin_bank_assignments (admin_id, bank_id, created_by) VALUES ($1, $2, $3) ON CONFLICT (admin_id, bank_id) DO NOTHING`, [userRec.id, bId, req.user.id]);

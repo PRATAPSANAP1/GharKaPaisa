@@ -102,9 +102,9 @@ export default function SuperAdminDashboard() {
     if (!editForm.id) return;
     setSubmittingEdit(true);
     try {
-      const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(editForm.designation);
+      const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR'].includes(editForm.designation);
       if (isOpHead && editForm.bank_ids.length === 0) {
-        alert('Please select at least one assigned bank for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, or Remark Operator designation');
+        alert('Please select at least one assigned bank for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, Remark Operator, or QD Operator designation');
         setSubmittingEdit(false);
         return;
       }
@@ -245,9 +245,9 @@ export default function SuperAdminDashboard() {
       return setFormErr('Password must be at least 8 characters long');
     }
 
-    const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER'].includes(form.designation);
+    const isOpHead = ['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR'].includes(form.designation);
     if (isOpHead && selectedCreateBankIds.length === 0) {
-      return setFormErr('At least one bank must be selected for Operational Head, Administrative Operator, Administrative Sales Executive, or PAN Checker designation');
+      return setFormErr('At least one bank must be selected for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, Remark Operator, or QD Operator designation');
     }
 
     setFormLoading(true);
@@ -905,7 +905,7 @@ export default function SuperAdminDashboard() {
                   value={form.designation}
                   onChange={(e) => {
                     handleChange(e);
-                    if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'REMARK_OPERATOR'].includes(e.target.value) && allBanks.length === 0) {
+                    if (['Operational Head', 'Backend', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR'].includes(e.target.value) && allBanks.length === 0) {
                       api.get('/banks').then(res => {
                         if (res.data && res.data.data) setAllBanks(res.data.data);
                       }).catch(err => console.error(err));
@@ -922,6 +922,7 @@ export default function SuperAdminDashboard() {
                   <option value="Administrative Sales Executive">Administrative Sales Executive</option>
                   <option value="PAN Checker">PAN Checker</option>
                   <option value="Remark Operator">Remark Operator</option>
+                  <option value="QD Operator">QD Operator</option>
                   <option value="Backend">Backend</option>
                   <option value="Super Admin">Super Admin</option>
                   <option value="Senior Manager">Senior Manager</option>
@@ -931,8 +932,8 @@ export default function SuperAdminDashboard() {
                 </select>
               </div>
 
-              {/* Operational Head / Administrative Operator / Administrative Sales Executive / PAN Checker / Remark Operator Bank Assignment Section */}
-              {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(form.designation)) && (
+              {/* Operational Head / Administrative Operator / Administrative Sales Executive / PAN Checker / Remark Operator / QD Operator Bank Assignment Section */}
+              {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR'].includes(form.designation)) && (
                 <div style={{ gridColumn: "span 2", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "4px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                     <div>
@@ -1114,7 +1115,7 @@ export default function SuperAdminDashboard() {
                     onChange={e => {
                       const val = e.target.value;
                       setEditForm({ ...editForm, designation: val });
-                      if (['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(val) && allBanks.length === 0) {
+                      if (['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR'].includes(val) && allBanks.length === 0) {
                         api.get('/banks').then(res => {
                           if (res.data && res.data.data) setAllBanks(res.data.data);
                         }).catch(err => console.error(err));
@@ -1129,13 +1130,14 @@ export default function SuperAdminDashboard() {
                     <option value="Administrative Sales Executive">Administrative Sales Executive</option>
                     <option value="PAN Checker">PAN Checker</option>
                     <option value="Remark Operator">Remark Operator</option>
+                    <option value="QD Operator">QD Operator</option>
                     <option value="Backend">Backend</option>
                     <option value="Super Admin">Super Admin</option>
                     <option value="Senior Manager">Senior Manager</option>
                     <option value="Manager">Manager</option>
                     <option value="Team Leader">Team Leader</option>
                     <option value="Telecaller">Telecaller</option>
-                    {editForm.designation && !['Operational Head', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'Backend', 'Super Admin', 'Senior Manager', 'Manager', 'Team Leader', 'Telecaller', ''].includes(editForm.designation) && (
+                    {editForm.designation && !['Operational Head', 'Administrative Operator', 'Administrative Sales Executive', 'PAN Checker', 'Remark Operator', 'QD Operator', 'Backend', 'Super Admin', 'Senior Manager', 'Manager', 'Team Leader', 'Telecaller', ''].includes(editForm.designation) && (
                       <option value={editForm.designation}>{editForm.designation}</option>
                     )}
                   </select>
@@ -1168,8 +1170,8 @@ export default function SuperAdminDashboard() {
                   />
                 </div>
 
-                {/* Bank Assignments (If Operational Head, Administrative Operator, PAN Checker, or Remark Operator) */}
-                {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(editForm.designation)) && (
+                {/* Bank Assignments (If Operational Head, Administrative Operator, PAN Checker, Remark Operator, or QD Operator) */}
+                {(['Operational Head', 'OPERATIONAL_HEAD', 'Backend', 'BACKEND', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'Administrative Sales Executive', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN Checker', 'PAN CHECKER', 'PAN_CHECKER', 'Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR'].includes(editForm.designation)) && (
                   <div style={{ gridColumn: "span 2", background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginTop: "4px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                       <div>
