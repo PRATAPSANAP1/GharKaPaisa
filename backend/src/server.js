@@ -137,7 +137,7 @@ app.use((req, res, next) => {
 
 // ── Body Parsing ───────────────────────────────────────────────
 // Capture raw text for JSON payloads to handle malformed inputs
-app.use(express.text({ type: 'application/json', limit: '50kb' }));
+app.use(express.text({ type: 'application/json', limit: '50mb' }));
 
 // Middleware to clean and parse malformed JSON bodies
 app.use((req, res, next) => {
@@ -154,7 +154,7 @@ app.use((req, res, next) => {
 });
 
 // Parse URL‑encoded bodies and cookies
-app.use(express.urlencoded({ extended: true, limit: '50kb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 // ── Data Sanitization ──────────────────────────────────────────
