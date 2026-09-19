@@ -1,9 +1,23 @@
 const { query } = require('../../config/database');
+const logger = require('../../config/logger');
+
+let isTablesChecked = false;
+async function ensureMessengerTables() {
+  if (isTablesChecked) return;
+  try {
+    const migrateMessenger = require('../../database/migrations/migrate_messenger');
+    await migrateMessenger();
+    isTablesChecked = true;
+  } catch (err) {
+    logger.error('Auto ensure messenger tables note:', err.message);
+  }
+}
 
 /**
  * Get all conversations for a specific user with unread counts and last message details
  */
 async function getConversationsForUser(userId, filter = 'ALL', search = '') {
+  await ensureMessengerTables();
   let whereClause = `cp.user_id = $1 AND cp.left_at IS NULL`;
   const params = [userId];
 
@@ -81,6 +95,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
  * Find existing direct conversation between two users
  */
 async function findDirectConversation(user1Id, user2Id) {
+  await ensureMessengerTables();
   const sql = `
     SELECT c.* FROM conversations c
     JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
@@ -96,6 +111,7 @@ async function findDirectConversation(user1Id, user2Id) {
  * Find existing conversation linked to a specific application
  */
 async function findApplicationConversation(applicationId) {
+  await ensureMessengerTables();
   const sql = `
     SELECT c.* FROM conversations c
     WHERE c.application_id = $1 AND c.conversation_type = 'APPLICATION'
@@ -109,6 +125,7 @@ async function findApplicationConversation(applicationId) {
  * Create a new conversation record
  */
 async function createConversation({ conversation_type, name, description, avatar_url, application_id, created_by }) {
+  await ensureMessengerTables();
   const sql = `
     INSERT INTO conversations (conversation_type, name, description, avatar_url, application_id, created_by)
     VALUES ($1, $2, $3, $4, $5, $6)
@@ -309,6 +326,7 @@ async function markMessagesAsRead(conversationId, userId) {
  * Get total unread count for a user across all active conversations
  */
 async function getUnreadCount(userId) {
+  await ensureMessengerTables();
   const sql = `
     SELECT COUNT(*)::INT AS total_unread
     FROM messages m

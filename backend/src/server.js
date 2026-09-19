@@ -250,6 +250,14 @@ const startServer = async () => {
       logger.info('Skipping automatic startup migration in production (AUTO_MIGRATE != true).');
     }
 
+    // Always ensure messenger module tables exist on boot
+    try {
+      const migrateMessenger = require('./database/migrations/migrate_messenger.js');
+      await migrateMessenger();
+    } catch (mErr) {
+      logger.warn('Messenger auto migration note:', mErr.message);
+    }
+
     // Initialize scheduled CRON jobs
     const { initReportJobs } = require('./jobs/report.job.js');
     initReportJobs();
