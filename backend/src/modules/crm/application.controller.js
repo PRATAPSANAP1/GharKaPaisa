@@ -1647,9 +1647,8 @@ const listApplications = async (req, res, next) => {
           AND (LOWER(b.name) LIKE '%tata%' OR LOWER(b.short_code) LIKE '%tata%')
         )
       )`;
-      const panCheckCondition = `(((LOWER(COALESCE(combined.bank_code, '')) <> 'sbi' AND LOWER(COALESCE(combined.bank_name, '')) NOT LIKE '%sbi%') OR LOWER(COALESCE(combined.bank_name, '')) LIKE '%tata%' OR LOWER(COALESCE(combined.bank_code, '')) LIKE '%tata%') OR LOWER(COALESCE(combined.pan_check, 'no')) = 'yes')`;
       const punchingOnlyCondition = `(LOWER(COALESCE(combined.process_by, combined.process_type, 'lead_punching')) IN ('lead_punching', 'punch_only', 'manual') OR LOWER(COALESCE(combined.process_by, combined.process_type, '')) LIKE '%punch%')`;
-      salesExecFilterSQL = ` AND ${bankAssignmentFilter} AND ${tataExclusionFilter} AND ${panCheckCondition} AND ${punchingOnlyCondition} AND (COALESCE(combined.dispatch_status, '') <> '' AND LOWER(COALESCE(combined.dispatch_status, 'none')) NOT IN ('none', 'na', 'n/a'))`;
+      salesExecFilterSQL = ` AND ${bankAssignmentFilter} AND ${tataExclusionFilter} AND ${punchingOnlyCondition} AND (COALESCE(combined.dispatch_status, '') <> '' AND LOWER(COALESCE(combined.dispatch_status, 'none')) NOT IN ('none', 'na', 'n/a'))`;
     }
 
     const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);

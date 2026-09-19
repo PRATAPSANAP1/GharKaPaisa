@@ -143,6 +143,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [customerEmail, setCustomerEmail] = useState(application?.customer_email || application?.email || '');
   const [panNumber, setPanNumber] = useState(application?.pan_number || application?.pan || '');
   const [companyName, setCompanyName] = useState(application?.company_name || application?.employer_name || '');
+  const [designation, setDesignation] = useState(application?.designation || application?.occupation || application?.physical_details?.designation || '');
   const [panCheck, setPanCheck] = useState(application?.pan_check || 'no');
   const [requeryDate, setRequeryDate] = useState(
     application?.requery_date || application?.re_query_date ? String(application?.requery_date || application?.re_query_date).split('T')[0] : ''

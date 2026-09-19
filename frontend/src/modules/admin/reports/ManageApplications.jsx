@@ -105,6 +105,7 @@ export default function ManageApplications() {
           limit,
           search: search.trim() || undefined,
           status: status || undefined,
+          process_by: isSalesExecUser ? 'lead_punching' : (processTypeFilter !== 'all' ? processTypeFilter : undefined),
         },
       });
       if (res.data?.success) {
@@ -128,7 +129,7 @@ export default function ManageApplications() {
 
   useEffect(() => {
     fetchApplications();
-  }, [page, limit, status]);
+  }, [page, limit, status, processTypeFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
