@@ -80,12 +80,13 @@ const migrateMessenger = async () => {
         file_name VARCHAR(255) NOT NULL,
         file_url VARCHAR(500) NOT NULL,
         file_type VARCHAR(100),
-        file_size INTEGER,
+        file_size BIGINT,
         storage_key VARCHAR(500),
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
 
+    await query(`ALTER TABLE message_attachments ALTER COLUMN file_size TYPE BIGINT USING file_size::bigint`).catch(() => {});
     await query(`CREATE INDEX IF NOT EXISTS idx_message_attachments_msg_id ON message_attachments(message_id)`);
 
     // 5. Message Reads table

@@ -274,16 +274,39 @@ async function createMessage({ conversation_id, sender_id, message_type = 'TEXT'
   return rows[0];
 }
 
+function parseFileSizeToBytes(size) {
+  if (typeof size === 'number') {
+    return isNaN(size) ? 0 : Math.round(size);
+  }
+  if (!size) return 0;
+  const str = String(size).trim();
+  const cleanStr = str.replace(/,/g, '');
+  const match = cleanStr.match(/^([\d.]+)\s*([a-zA-Z]*)$/);
+  if (!match) {
+    const num = parseInt(cleanStr, 10);
+    return isNaN(num) ? 0 : num;
+  }
+  const num = parseFloat(match[1]);
+  if (isNaN(num)) return 0;
+  const unit = match[2].toLowerCase();
+  if (unit.startsWith('g')) return Math.round(num * 1024 * 1024 * 1024);
+  if (unit.startsWith('m')) return Math.round(num * 1024 * 1024);
+  if (unit.startsWith('k')) return Math.round(num * 1024);
+  return Math.round(num);
+}
+
 /**
  * Add attachment to message
  */
 async function createAttachment({ message_id, file_name, file_url, file_type, file_size, storage_key }) {
+  await ensureMessengerTables();
+  const parsedSize = parseFileSizeToBytes(file_size);
   const sql = `
     INSERT INTO message_attachments (message_id, file_name, file_url, file_type, file_size, storage_key)
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *
   `;
-  const { rows } = await query(sql, [message_id, file_name, file_url, file_type || null, file_size || 0, storage_key || null]);
+  const { rows } = await query(sql, [message_id, file_name, file_url, file_type || null, parsedSize, storage_key || null]);
   return rows[0];
 }
 
