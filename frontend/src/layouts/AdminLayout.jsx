@@ -121,7 +121,11 @@ const AdminLayout = () => {
       if (!location.pathname.startsWith('/hr')) {
         navigate('/hr/dashboard', { replace: true });
       }
-    } else if (isRemarkOperator || isSalesExec) {
+    } else if (isRemarkOperator) {
+      if (!location.pathname.startsWith('/admin/applications')) {
+        navigate('/admin/applications', { replace: true });
+      }
+    } else if (isSalesExec) {
       const allowedPaths = ['/admin/dashboard', '/admin/applications'];
       const isAllowed = allowedPaths.some(p => location.pathname === p || location.pathname.startsWith(p));
       if (!isAllowed) {
@@ -168,11 +172,13 @@ const AdminLayout = () => {
           </>
         ) : (
           <>
-            {/* Dashboard (Available to all Admin Roles including Administrative Operators) */}
-            <NavLink to="/admin/dashboard" style={navLinkStyle}>
-              <Icons.dashboard size={18} />
-              <span>Dashboard</span>
-            </NavLink>
+            {/* Dashboard (Available to all Admin Roles except Remark Operator) */}
+            {!isRemarkOperator && (
+              <NavLink to="/admin/dashboard" style={navLinkStyle}>
+                <Icons.dashboard size={18} />
+                <span>Dashboard</span>
+              </NavLink>
+            )}
 
             {/* Full Admin Nav Items */}
             {isSuperAdmin && (

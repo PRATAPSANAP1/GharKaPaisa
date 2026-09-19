@@ -122,8 +122,12 @@ function Toast({ message, type = "success", onClose }) {
   );
 }
 
-const getRoleDashboard = (userRole) => {
-  const role = (userRole || "").toUpperCase();
+const getRoleDashboard = (user) => {
+  const role = (user?.role || (typeof user === 'string' ? user : '')).toUpperCase();
+  const designation = (user?.designation || '').toUpperCase();
+  if (['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(designation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(role)) {
+    return '/admin/applications';
+  }
   if (role === "SUPER_ADMIN") return "/super-admin/overview";
   if (role === "ADMIN") return "/admin/dashboard";
   if (role === "HR") return "/hr/dashboard";
@@ -132,8 +136,8 @@ const getRoleDashboard = (userRole) => {
 };
 
 const resolveDestination = (profile, rawFromPath) => {
+  const defaultDashboard = getRoleDashboard(profile);
   const role = (profile?.role || "").toUpperCase();
-  const defaultDashboard = getRoleDashboard(role);
 
   if (
     !rawFromPath ||
@@ -172,7 +176,7 @@ export default function PartnerLogin() {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      const dest = getRoleDashboard(user.role);
+      const dest = getRoleDashboard(user);
       navigate(dest, { replace: true });
     }
   }, [isAuthenticated, user, navigate]);

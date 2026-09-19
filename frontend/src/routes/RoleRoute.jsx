@@ -2,8 +2,12 @@ import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../app/store/authStore';
 
-const getRoleDashboard = (userRole) => {
-  const role = (userRole || '').toUpperCase();
+const getRoleDashboard = (user) => {
+  const role = (user?.role || (typeof user === 'string' ? user : '')).toUpperCase();
+  const designation = (user?.designation || '').toUpperCase();
+  if (['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(designation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(role)) {
+    return '/admin/applications';
+  }
   if (role === 'SUPER_ADMIN') return '/super-admin/overview';
   if (role === 'ADMIN') return '/admin/dashboard';
   if (role === 'HR') return '/hr/dashboard';
@@ -15,7 +19,7 @@ const RoleRoute = ({ children, allowedRoles }) => {
   const user = useAuthStore((state) => state.user);
 
   if (!user || !allowedRoles.includes(user.role?.toUpperCase())) {
-    const dest = user ? getRoleDashboard(user.role) : '/login';
+    const dest = user ? getRoleDashboard(user) : '/login';
     return <Navigate to={dest} replace />;
   }
 
