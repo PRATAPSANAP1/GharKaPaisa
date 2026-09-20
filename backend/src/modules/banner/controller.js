@@ -1,11 +1,26 @@
-const { query } = require('../../config/database');
-const { uploadToS3, deleteFromS3, getCloudFrontUrl } = require('../../services/aws/s3.service.js');
-const { success, created, error, notFound } = require('../../utils/response/response');
-const logger = require('../../config/logger');
+let columnsChecked = false;
+const ensureBannerColumns = async () => {
+  if (columnsChecked) return;
+  try {
+    await query(`
+      ALTER TABLE banners 
+      ADD COLUMN IF NOT EXISTS target_page VARCHAR(255) DEFAULT 'all',
+      ADD COLUMN IF NOT EXISTS link_type VARCHAR(50) DEFAULT 'custom',
+      ADD COLUMN IF NOT EXISTS click_url VARCHAR(500) DEFAULT '/credit-cards',
+      ADD COLUMN IF NOT EXISTS click_url_home VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS click_url_partner VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS click_url_employee VARCHAR(500);
+    `);
+    columnsChecked = true;
+  } catch (err) {
+    logger.warn('Failed to auto-ensure banner columns:', err.message);
+  }
+};
 
 // GET /banners — List all active banners (public)
 const listBanners = async (req, res, next) => {
   try {
+    await ensureBannerColumns();
     const pageFilter = req.query.page || req.query.target_page;
     let sql = `SELECT * FROM banners WHERE is_active = true`;
     const params = [];
@@ -53,6 +68,7 @@ const listBanners = async (req, res, next) => {
 // GET /banners/all — List all banners including inactive ones (Admin/SuperAdmin)
 const listAllBanners = async (req, res, next) => {
   try {
+    await ensureBannerColumns();
     const pageFilter = req.query.page || req.query.target_page;
     let sql = `SELECT * FROM banners`;
     const params = [];
@@ -87,6 +103,7 @@ const listAllBanners = async (req, res, next) => {
 // POST /banners — Create a banner (SuperAdmin)
 const createBanner = async (req, res, next) => {
   try {
+    await ensureBannerColumns();
     const { 
       title, subtitle, btn_text, display_order, is_active, 
       link_type, click_url, target_page,
@@ -139,6 +156,7 @@ const createBanner = async (req, res, next) => {
 // PUT /banners/:id — Update a banner (SuperAdmin)
 const updateBanner = async (req, res, next) => {
   try {
+    await ensureBannerColumns();
     const { id } = req.params;
     const { 
       title, subtitle, btn_text, display_order, is_active, 
