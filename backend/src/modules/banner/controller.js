@@ -12,25 +12,38 @@ const listBanners = async (req, res, next) => {
 
     if (pageFilter && pageFilter !== 'all') {
       if (pageFilter === 'team' || pageFilter === 'partner') {
-        sql += ` AND (target_page = 'team' OR target_page = 'partner' OR target_page = 'all' OR target_page IS NULL)`;
+        sql += ` AND (target_page LIKE '%partner%' OR target_page LIKE '%team%' OR target_page = 'all' OR target_page IS NULL)`;
       } else if (pageFilter === 'employee') {
-        sql += ` AND (target_page = 'employee' OR target_page = 'all' OR target_page IS NULL)`;
+        sql += ` AND (target_page LIKE '%employee%' OR target_page = 'all' OR target_page IS NULL)`;
       } else if (pageFilter === 'referral' || pageFilter === 'refer') {
-        sql += ` AND (target_page = 'referral' OR target_page = 'refer' OR target_page = 'all' OR target_page IS NULL)`;
+        sql += ` AND (target_page LIKE '%referral%' OR target_page LIKE '%refer%' OR target_page = 'all' OR target_page IS NULL)`;
       } else if (pageFilter === 'offer' || pageFilter === 'home') {
-        sql += ` AND (target_page = 'offer' OR target_page = 'home' OR target_page = 'all' OR target_page IS NULL)`;
+        sql += ` AND (target_page LIKE '%home%' OR target_page LIKE '%offer%' OR target_page = 'all' OR target_page IS NULL)`;
       } else {
-        sql += ` AND (target_page = $1 OR target_page = 'all' OR target_page IS NULL)`;
-        params.push(pageFilter);
+        sql += ` AND (target_page LIKE $1 OR target_page = 'all' OR target_page IS NULL)`;
+        params.push(`%${pageFilter}%`);
       }
     }
 
     sql += ` ORDER BY display_order ASC, created_at DESC`;
     const { rows } = await query(sql, params);
-    const sanitizedRows = rows.map(b => ({
-      ...b,
-      image_url: getCloudFrontUrl(b.image_url)
-    }));
+    const sanitizedRows = rows.map(b => {
+      // Determine panel-specific click_url if available
+      let effectiveClickUrl = b.click_url;
+      if ((pageFilter === 'home' || pageFilter === 'offer') && b.click_url_home) {
+        effectiveClickUrl = b.click_url_home;
+      } else if ((pageFilter === 'partner' || pageFilter === 'team') && b.click_url_partner) {
+        effectiveClickUrl = b.click_url_partner;
+      } else if (pageFilter === 'employee' && b.click_url_employee) {
+        effectiveClickUrl = b.click_url_employee;
+      }
+
+      return {
+        ...b,
+        click_url: effectiveClickUrl || b.click_url || '/credit-cards',
+        image_url: getCloudFrontUrl(b.image_url)
+      };
+    });
     return success(res, sanitizedRows);
   } catch (err) {
     next(err);
@@ -46,16 +59,16 @@ const listAllBanners = async (req, res, next) => {
 
     if (pageFilter && pageFilter !== 'all') {
       if (pageFilter === 'team' || pageFilter === 'partner') {
-        sql += ` WHERE (target_page = 'team' OR target_page = 'partner' OR target_page = 'all' OR target_page IS NULL)`;
+        sql += ` WHERE (target_page LIKE '%partner%' OR target_page LIKE '%team%' OR target_page = 'all' OR target_page IS NULL)`;
       } else if (pageFilter === 'employee') {
-        sql += ` WHERE (target_page = 'employee' OR target_page = 'all' OR target_page IS NULL)`;
+        sql += ` WHERE (target_page LIKE '%employee%' OR target_page = 'all' OR target_page IS NULL)`;
       } else if (pageFilter === 'referral' || pageFilter === 'refer') {
-        sql += ` WHERE (target_page = 'referral' OR target_page = 'refer' OR target_page = 'all' OR target_page IS NULL)`;
+        sql += ` WHERE (target_page LIKE '%referral%' OR target_page LIKE '%refer%' OR target_page = 'all' OR target_page IS NULL)`;
       } else if (pageFilter === 'offer' || pageFilter === 'home') {
-        sql += ` WHERE (target_page = 'offer' OR target_page = 'home' OR target_page = 'all' OR target_page IS NULL)`;
+        sql += ` WHERE (target_page LIKE '%home%' OR target_page LIKE '%offer%' OR target_page = 'all' OR target_page IS NULL)`;
       } else {
-        sql += ` WHERE (target_page = $1 OR target_page = 'all' OR target_page IS NULL)`;
-        params.push(pageFilter);
+        sql += ` WHERE (target_page LIKE $1 OR target_page = 'all' OR target_page IS NULL)`;
+        params.push(`%${pageFilter}%`);
       }
     }
 
@@ -74,7 +87,11 @@ const listAllBanners = async (req, res, next) => {
 // POST /banners — Create a banner (SuperAdmin)
 const createBanner = async (req, res, next) => {
   try {
-    const { title, subtitle, btn_text, display_order, is_active, link_type, click_url, target_page } = req.body;
+    const { 
+      title, subtitle, btn_text, display_order, is_active, 
+      link_type, click_url, target_page,
+      click_url_home, click_url_partner, click_url_employee 
+    } = req.body;
     let image_url = req.body.image_url;
 
     // Check if a file is uploaded
@@ -92,8 +109,11 @@ const createBanner = async (req, res, next) => {
     }
 
     const { rows: [b] } = await query(
-      `INSERT INTO banners (title, subtitle, btn_text, image_url, display_order, is_active, link_type, click_url, target_page)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO banners (
+        title, subtitle, btn_text, image_url, display_order, is_active, 
+        link_type, click_url, target_page, click_url_home, click_url_partner, click_url_employee
+      )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         title, 
         subtitle || null, 
@@ -103,7 +123,10 @@ const createBanner = async (req, res, next) => {
         is_active === undefined ? true : (is_active === 'true' || is_active === true),
         link_type || 'custom',
         click_url || '/credit-cards',
-        target_page || 'all'
+        target_page || 'all',
+        click_url_home || null,
+        click_url_partner || null,
+        click_url_employee || null
       ]
     );
 
@@ -117,7 +140,11 @@ const createBanner = async (req, res, next) => {
 const updateBanner = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { title, subtitle, btn_text, display_order, is_active, link_type, click_url, target_page } = req.body;
+    const { 
+      title, subtitle, btn_text, display_order, is_active, 
+      link_type, click_url, target_page,
+      click_url_home, click_url_partner, click_url_employee 
+    } = req.body;
     let image_url = req.body.image_url;
 
     const { rows: [existing] } = await query(`SELECT * FROM banners WHERE id = $1`, [id]);
@@ -153,6 +180,9 @@ const updateBanner = async (req, res, next) => {
         link_type = COALESCE($8, link_type),
         click_url = COALESCE($9, click_url),
         target_page = COALESCE($10, target_page),
+        click_url_home = $11,
+        click_url_partner = $12,
+        click_url_employee = $13,
         updated_at = NOW()
       WHERE id = $7 RETURNING *`,
       [
@@ -165,7 +195,10 @@ const updateBanner = async (req, res, next) => {
         id,
         link_type || null,
         click_url || null,
-        target_page || existing.target_page || 'all'
+        target_page || existing.target_page || 'all',
+        click_url_home === undefined ? existing.click_url_home : (click_url_home || null),
+        click_url_partner === undefined ? existing.click_url_partner : (click_url_partner || null),
+        click_url_employee === undefined ? existing.click_url_employee : (click_url_employee || null)
       ]
     );
 

@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // d:\Internship\yohesa\frontend\src\modules\super-admin\banners\ManageBanners.jsx
-// Core Feature: Homepage & Partner Dashboard Slideshow Banners Administration
+// Core Feature: Multi-Panel Promotional Banner Administration (Home, Partner, Employee)
 // Roles: SuperAdmin (CRUD)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -8,6 +8,25 @@ import React, { useState, useEffect } from 'react';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 import { Icons } from "../../../components/Icon/PartnerIcons";
+
+// Local fallback banner images map
+import ltfBanner from "../../home/components/banner/lifetimefree card.png";
+import loanBanner from "../../home/components/banner/loan.png";
+import insuranceBanner from "../../home/components/banner/insurance.png";
+import emiBanner from "../../home/components/banner/smart emi.png";
+import emiNewBanner from "../../home/components/banner/emi.jpeg";
+import hdfcBanner from "../../home/components/banner/hdfc pixel card.png";
+import offerBanner from "../../home/components/banner/offerbanner.png";
+
+const localBannerMap = {
+  'lifetimefree card.png': ltfBanner,
+  'loan.png': loanBanner,
+  'insurance.png': insuranceBanner,
+  'smart emi.png': emiBanner,
+  'emi.jpeg': emiNewBanner,
+  'hdfc pixel card.png': hdfcBanner,
+  'offerbanner.png': offerBanner
+};
 
 export default function ManageBanners() {
   // ─── THEMING & STYLE TOKENS ────────────────────────────────────────────────
@@ -30,10 +49,19 @@ export default function ManageBanners() {
     image_url: "",
     display_order: 0,
     is_active: true,
-    link_type: "custom",
-    click_url: "/credit-cards",
-    target_page: "all" // 'all', 'home', 'partner'
+    target_panels: ['home', 'partner', 'employee'], // Multi-choice: ['home', 'partner', 'employee']
+    
+    // Panel specific redirect links & types
+    link_type_home: "page",
+    click_url_home: "/credit-cards",
+
+    link_type_partner: "page",
+    click_url_partner: "/partner/credit-cards",
+
+    link_type_employee: "page",
+    click_url_employee: "/employee/dashboard"
   });
+  
   const [imageFile, setImageFile] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -46,9 +74,26 @@ export default function ManageBanners() {
   const [cropOffsetY, setCropOffsetY] = useState(0);
   const [croppedPreview, setCroppedPreview] = useState(null);
 
+  // Helper to resolve image URL (Uploaded S3 / Backend static / Local asset / External)
+  const resolveBannerImage = (url) => {
+    if (!url) return offerBanner;
+    if (localBannerMap[url]) return localBannerMap[url];
+    
+    const basename = url.split('/').pop().split('\\').pop();
+    if (localBannerMap[basename]) return localBannerMap[basename];
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    if (url.startsWith('/')) {
+      const apiBase = api.defaults.baseURL || '';
+      const origin = apiBase.replace(/\/api\/v1\/?$/, '');
+      return `${origin}${url}`;
+    }
+    return url;
+  };
+
   // ─── API SIDE EFFECTS & HANDLERS ──────────────────────────────────────────
-  
-  // Fetch all banners from database (including disabled slides)
   const fetchBanners = async () => {
     setLoading(true);
     setErrorMsg("");
@@ -69,11 +114,22 @@ export default function ManageBanners() {
     fetchBanners();
   }, []);
 
+  // Parse target_page string into panels array
+  const parseTargetPanels = (targetPageStr) => {
+    if (!targetPageStr || targetPageStr === 'all') {
+      return ['home', 'partner', 'employee'];
+    }
+    const panels = [];
+    if (targetPageStr.includes('home') || targetPageStr.includes('offer')) panels.push('home');
+    if (targetPageStr.includes('partner') || targetPageStr.includes('team')) panels.push('partner');
+    if (targetPageStr.includes('employee')) panels.push('employee');
+    return panels.length > 0 ? panels : ['home', 'partner', 'employee'];
+  };
+
   // ─── MODAL TRIGGER CONTROLS ───────────────────────────────────────────────
-  
   const openAddModal = () => {
     setEditItem(null);
-    const defaultPlacement = activeTab === "all" ? "home" : activeTab;
+    const initialPanels = activeTab === "all" ? ['home', 'partner', 'employee'] : [activeTab];
     setForm({
       title: "",
       subtitle: "",
@@ -81,32 +137,66 @@ export default function ManageBanners() {
       image_url: "",
       display_order: banners.length + 1,
       is_active: true,
-      link_type: "custom",
-      click_url: "/credit-cards",
-      target_page: defaultPlacement
+      target_panels: initialPanels,
+      
+      link_type_home: "page",
+      click_url_home: "/credit-cards",
+      
+      link_type_partner: "page",
+      click_url_partner: "/partner/credit-cards",
+
+      link_type_employee: "page",
+      click_url_employee: "/employee/dashboard"
     });
     setImageFile(null);
+    setCroppedPreview(null);
     setModalOpen(true);
   };
 
   const openEditModal = (item) => {
     setEditItem(item);
+    const panels = parseTargetPanels(item.target_page);
+
     setForm({
-      title: item.title,
+      title: item.title || "",
       subtitle: item.subtitle || "",
       btn_text: item.btn_text || "",
-      image_url: item.image_url,
+      image_url: item.image_url || "",
       display_order: item.display_order || 0,
-      is_active: item.is_active,
-      link_type: item.link_type || "custom",
-      click_url: item.click_url || "/credit-cards",
-      target_page: item.target_page || "all"
+      is_active: item.is_active !== undefined ? item.is_active : true,
+      target_panels: panels,
+      
+      link_type_home: "page",
+      click_url_home: item.click_url_home || item.click_url || "/credit-cards",
+
+      link_type_partner: "page",
+      click_url_partner: item.click_url_partner || item.click_url || "/partner/credit-cards",
+
+      link_type_employee: "page",
+      click_url_employee: item.click_url_employee || item.click_url || "/employee/dashboard"
     });
     setImageFile(null);
+    setCroppedPreview(null);
     setModalOpen(true);
   };
 
-  // ─── ACTION MUTATIONS ──────────────────────────────────────────────────────
+  // Toggle Panel Selection Checkbox
+  const togglePanelSelection = (panelKey) => {
+    setForm(prev => {
+      const currentPanels = prev.target_panels;
+      let updated;
+      if (currentPanels.includes(panelKey)) {
+        if (currentPanels.length === 1) {
+          alert("At least one target panel must be selected.");
+          return prev;
+        }
+        updated = currentPanels.filter(p => p !== panelKey);
+      } else {
+        updated = [...currentPanels, panelKey];
+      }
+      return { ...prev, target_panels: updated };
+    });
+  };
 
   // Delete Banner Slide
   const handleDelete = async (id) => {
@@ -125,25 +215,42 @@ export default function ManageBanners() {
   // Create or Update Banner Slide
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.target_panels || form.target_panels.length === 0) {
+      alert("Please select at least one Target Panel.");
+      return;
+    }
     setSubmitting(true);
 
     try {
+      const targetPageValue = form.target_panels.length === 3 ? 'all' : form.target_panels.join(',');
+
       const formData = new FormData();
       formData.append("title", form.title);
       formData.append("subtitle", form.subtitle);
       formData.append("btn_text", form.btn_text);
       formData.append("display_order", form.display_order.toString());
       formData.append("is_active", form.is_active.toString());
-      formData.append("link_type", form.link_type);
-      formData.append("click_url", form.click_url);
-      formData.append("target_page", form.target_page);
+      formData.append("target_page", targetPageValue);
+
+      // Main fallback click_url
+      const primaryUrl = form.target_panels.includes('home')
+        ? form.click_url_home
+        : (form.target_panels.includes('partner') ? form.click_url_partner : form.click_url_employee);
+      
+      formData.append("click_url", primaryUrl || "/credit-cards");
+      formData.append("link_type", "custom");
+
+      // Panel Specific URLs
+      formData.append("click_url_home", form.target_panels.includes('home') ? form.click_url_home : '');
+      formData.append("click_url_partner", form.target_panels.includes('partner') ? form.click_url_partner : '');
+      formData.append("click_url_employee", form.target_panels.includes('employee') ? form.click_url_employee : '');
 
       if (imageFile) {
         formData.append("image", imageFile);
       } else if (form.image_url) {
         formData.append("image_url", form.image_url);
       } else if (!editItem) {
-        alert("Please upload an image file or provide an asset filename path.");
+        alert("Please upload an image file or provide an image asset URL.");
         setSubmitting(false);
         return;
       }
@@ -171,32 +278,32 @@ export default function ManageBanners() {
     }
   };
 
-  // Calculate tab count indicators
-  const getTabCount = (key) => {
-    if (key === "all") return banners.length;
-    if (key === "home") return banners.filter(b => b.target_page === "home" || b.target_page === "offer" || b.target_page === "all" || !b.target_page).length;
-    if (key === "partner") return banners.filter(b => b.target_page === "partner" || b.target_page === "team" || b.target_page === "all" || !b.target_page).length;
-    if (key === "employee") return banners.filter(b => b.target_page === "employee" || b.target_page === "all" || !b.target_page).length;
-    return 0;
+  // Tab Filtering & Counts
+  const isBannerInPanel = (item, panelKey) => {
+    if (!item.target_page || item.target_page === 'all') return true;
+    if (panelKey === 'home') return item.target_page.includes('home') || item.target_page.includes('offer');
+    if (panelKey === 'partner') return item.target_page.includes('partner') || item.target_page.includes('team');
+    if (panelKey === 'employee') return item.target_page.includes('employee');
+    return true;
   };
 
-  // Filter Banners by Active Tab
+  const getTabCount = (key) => {
+    if (key === "all") return banners.length;
+    return banners.filter(b => isBannerInPanel(b, key)).length;
+  };
+
   const filteredBanners = banners.filter(item => {
     if (activeTab === "all") return true;
-    if (activeTab === "home") return item.target_page === "home" || item.target_page === "offer" || item.target_page === "all" || !item.target_page;
-    if (activeTab === "partner") return item.target_page === "partner" || item.target_page === "team" || item.target_page === "referral" || item.target_page === "all" || !item.target_page;
-    if (activeTab === "employee") return item.target_page === "employee" || item.target_page === "all" || !item.target_page;
-    return item.target_page === activeTab || item.target_page === "all" || !item.target_page;
+    return isBannerInPanel(item, activeTab);
   });
 
-  // ─── RENDER BLOCKS ─────────────────────────────────────────────────────────
   return (
     <div>
       {/* ─── PAGE HEADER SECTION ─── */}
       <div className="responsive-header" style={{ marginBottom: "20px", width: "100%" }}>
         <div>
           <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Banner Management</h2>
-          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Create and manage promotional banner slides for Home, Partner, and Employee panels dynamically</p>
+          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Create and target promotional banners dynamically across Home, Partner, and Employee panels</p>
         </div>
         <button
           onClick={openAddModal}
@@ -257,7 +364,7 @@ export default function ManageBanners() {
         })}
       </div>
 
-      {/* Error alert wrapper */}
+      {/* Error Alert */}
       {errorMsg && (
         <div style={{ padding: "16px", background: `${C.red}10`, border: `1px solid ${C.red}30`, borderRadius: "12px", color: C.red, marginBottom: "16px" }}>
           {errorMsg}
@@ -275,131 +382,155 @@ export default function ManageBanners() {
           No banners found for this panel filter. Click 'Add Banner Slide' to create one!
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
-          {filteredBanners.map((item) => (
-            <div
-              key={item.id}
-              style={{
-                ...S.card,
-                padding: 0,
-                overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
-                border: `1px solid ${C.border}`,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
-                transition: "transform 0.2s"
-              }}
-            >
-              {/* Banner visual render simulation */}
-              <div style={{ height: "140px", background: C.bgSecondary, position: "relative", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <div style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: `linear-gradient(135deg, ${C.teal}33, ${C.green}22)`,
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "20px" }}>
+          {filteredBanners.map((item) => {
+            const panels = parseTargetPanels(item.target_page);
+            const bannerImgSrc = resolveBannerImage(item.image_url);
+
+            return (
+              <div
+                key={item.id}
+                style={{
+                  ...S.card,
+                  padding: 0,
+                  overflow: "hidden",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent: "center",
-                  padding: "16px",
-                  zIndex: 2
-                }}>
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "4px" }}>
-                    <span style={{ fontSize: "11px", fontWeight: 800, color: C.teal, textTransform: "uppercase", letterSpacing: "1px" }}>
-                      Order: {item.display_order}
-                    </span>
-                    <span style={{
-                      fontSize: "10px",
-                      fontWeight: 800,
-                      padding: "2px 6px",
-                      borderRadius: "4px",
-                      background: (item.target_page === 'home' || item.target_page === 'offer') ? '#3B82F6' : (item.target_page === 'partner' || item.target_page === 'team') ? '#8B5CF6' : item.target_page === 'employee' ? '#EC4899' : '#10B981',
-                      color: '#FFFFFF'
-                    }}>
-                      {(item.target_page === 'home' || item.target_page === 'offer') ? 'Home Panel' : (item.target_page === 'partner' || item.target_page === 'team') ? 'Partner Panel' : item.target_page === 'employee' ? 'Employee Panel' : 'All Panels (Home, Partner & Employee)'}
-                    </span>
+                  border: `1px solid ${C.border}`,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.04)",
+                  transition: "transform 0.2s"
+                }}
+              >
+                {/* Real Assigned Banner Image Preview */}
+                <div style={{ height: "160px", background: "#0F172A", position: "relative", overflow: "hidden" }}>
+                  <img
+                    src={bannerImgSrc}
+                    alt={item.title || 'Banner Slide'}
+                    onError={(e) => { e.currentTarget.src = offerBanner; }}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+
+                  {/* Gradient Overlay for Text Visibility */}
+                  <div style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: "linear-gradient(to top, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.2) 60%, transparent 100%)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "flex-end",
+                    padding: "14px",
+                    zIndex: 2
+                  }}>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "4px", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: "10px", fontWeight: 800, color: "#FFFFFF", background: C.teal, padding: "2px 6px", borderRadius: "4px" }}>
+                        Order: {item.display_order}
+                      </span>
+
+                      {/* Active Panel Pills */}
+                      {panels.map(pKey => (
+                        <span
+                          key={pKey}
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: 800,
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            background: pKey === 'home' ? '#2563EB' : pKey === 'partner' ? '#7C3AED' : '#DB2777',
+                            color: '#FFFFFF'
+                          }}
+                        >
+                          {pKey === 'home' ? 'Home' : pKey === 'partner' ? 'Partner' : 'Employee'}
+                        </span>
+                      ))}
+                    </div>
+
+                    <h3 style={{ fontSize: "15px", fontWeight: 800, color: "#FFFFFF", margin: 0 }}>{item.title}</h3>
+                    {item.subtitle && (
+                      <p style={{ fontSize: "11.5px", color: "rgba(255,255,255,0.85)", margin: "2px 0 0 0", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical" }}>
+                        {item.subtitle}
+                      </p>
+                    )}
                   </div>
-                  <h3 style={{ fontSize: "16px", fontWeight: 800, color: C.text, margin: 0 }}>{item.title}</h3>
-                  <p style={{ fontSize: "12px", color: C.textLight, margin: "4px 0 0 0", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                    {item.subtitle}
-                  </p>
-                  {item.btn_text && (
-                    <span style={{ display: "inline-block", alignSelf: "flex-start", marginTop: "10px", background: C.teal, color: "#fff", fontSize: "10px", fontWeight: 800, padding: "3px 10px", borderRadius: "5px" }}>
-                      {item.btn_text}
-                    </span>
-                  )}
-                </div>
-                
-                {/* Active/Inactive Badge */}
-                <span style={{
-                  position: "absolute",
-                  top: "10px",
-                  right: "10px",
-                  zIndex: 3,
-                  fontSize: "10px",
-                  fontWeight: 800,
-                  padding: "4px 8px",
-                  borderRadius: "6px",
-                  background: item.is_active ? `${C.green}15` : `${C.textLight}15`,
-                  color: item.is_active ? C.green : C.textLight
-                }}>
-                  {item.is_active ? "Active" : "Disabled"}
-                </span>
-              </div>
-
-              {/* Banner Details & Parameters */}
-              <div style={{ padding: "16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", background: C.card }}>
-                <div style={{ fontSize: "12px", color: C.textLight, wordBreak: "break-all", marginBottom: "16px" }}>
-                  <div><strong>Image Asset:</strong> <code>{item.image_url}</code></div>
-                  <div><strong>Redirect URL:</strong> <code>{item.click_url}</code></div>
+                  
+                  {/* Status Badge */}
+                  <span style={{
+                    position: "absolute",
+                    top: "10px",
+                    right: "10px",
+                    zIndex: 3,
+                    fontSize: "10px",
+                    fontWeight: 800,
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    background: item.is_active ? '#10B981' : '#64748B',
+                    color: '#FFFFFF'
+                  }}>
+                    {item.is_active ? "Active" : "Disabled"}
+                  </span>
                 </div>
 
-                {/* CRUD Action Buttons */}
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", borderTop: `1px solid ${C.border}50`, paddingTop: "12px" }}>
-                  <button
-                    onClick={() => openEditModal(item)}
-                    style={{
-                      background: "none",
-                      border: `1px solid ${C.border}`,
-                      color: C.text,
-                      borderRadius: "6px",
-                      padding: "6px 12px",
-                      fontSize: "12.5px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = C.teal}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = C.border}
-                  >
-                    <Icons.profile size={13} /> Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    style={{
-                      background: `${C.red}10`,
-                      border: "none",
-                      color: C.red,
-                      borderRadius: "6px",
-                      padding: "6px 12px",
-                      fontSize: "12.5px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = `${C.red}20`}
-                    onMouseLeave={e => e.currentTarget.style.background = `${C.red}10`}
-                  >
-                    <Icons.trash size={14} /> Delete
-                  </button>
+                {/* Banner Details & Target Panel URLs */}
+                <div style={{ padding: "16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", background: C.card }}>
+                  <div style={{ fontSize: "12px", color: C.textLight, display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+                    <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <strong style={{ color: C.text }}>Image Asset:</strong> <code style={{ fontSize: "11px" }}>{item.image_url || 'Uploaded File'}</code>
+                    </div>
+
+                    {/* Show target URLs for enabled panels */}
+                    {panels.includes('home') && (
+                      <div><strong style={{ color: '#2563EB' }}>Home URL:</strong> <code>{item.click_url_home || item.click_url || '/credit-cards'}</code></div>
+                    )}
+                    {panels.includes('partner') && (
+                      <div><strong style={{ color: '#7C3AED' }}>Partner URL:</strong> <code>{item.click_url_partner || item.click_url || '/partner/credit-cards'}</code></div>
+                    )}
+                    {panels.includes('employee') && (
+                      <div><strong style={{ color: '#DB2777' }}>Employee URL:</strong> <code>{item.click_url_employee || item.click_url || '/employee/dashboard'}</code></div>
+                    )}
+                  </div>
+
+                  {/* CRUD Actions */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", borderTop: `1px solid ${C.border}`, paddingTop: "12px" }}>
+                    <button
+                      onClick={() => openEditModal(item)}
+                      style={{
+                        background: "none",
+                        border: `1px solid ${C.border}`,
+                        color: C.text,
+                        borderRadius: "6px",
+                        padding: "6px 12px",
+                        fontSize: "12.5px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px"
+                      }}
+                    >
+                      <Icons.profile size={13} /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      style={{
+                        background: `${C.red}10`,
+                        border: "none",
+                        color: C.red,
+                        borderRadius: "6px",
+                        padding: "6px 12px",
+                        fontSize: "12.5px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px"
+                      }}
+                    >
+                      <Icons.trash size={14} /> Delete
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -408,7 +539,8 @@ export default function ManageBanners() {
         <div style={{
           position: "fixed",
           inset: 0,
-          background: "rgba(0,0,0,0.5)",
+          background: "rgba(0,0,0,0.6)",
+          backdropFilter: "blur(2px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -418,40 +550,70 @@ export default function ManageBanners() {
           <div style={{
             ...S.card,
             width: "100%",
-            maxWidth: "520px",
-            maxHeight: "90vh",
+            maxWidth: "560px",
+            maxHeight: "92vh",
             overflowY: "auto",
             padding: "24px",
-            boxShadow: "0 12px 36px rgba(0,0,0,0.15)",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
             position: "relative"
           }}>
             <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, margin: "0 0 16px 0" }}>
               {editItem ? "Edit Banner Slide" : "Add New Banner Slide"}
             </h3>
 
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {/* Target Panel Placement Option */}
-              <div>
-                <label style={S.label}>Target Panel (Which panel shows this banner) *</label>
-                <select
-                  style={S.input}
-                  value={form.target_page}
-                  onChange={(e) => setForm({ ...form, target_page: e.target.value })}
-                >
-                  <option value="home">Home Panel</option>
-                  <option value="partner">Partner Panel</option>
-                  <option value="employee">Employee Panel</option>
-                  <option value="all">All Panels (Home, Partner & Employee)</option>
-                </select>
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+              {/* 1. TARGET PANEL SELECTION (Multiple Choice Checkboxes) */}
+              <div style={{ background: C.bgSecondary, padding: "14px", borderRadius: "12px", border: `1px solid ${C.border}` }}>
+                <label style={{ ...S.label, marginBottom: "8px", display: "block" }}>
+                  Target Panel (Select which panels display this banner) *
+                </label>
+                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                  {[
+                    { key: "home", label: "Home Panel", color: "#2563EB" },
+                    { key: "partner", label: "Partner Panel", color: "#7C3AED" },
+                    { key: "employee", label: "Employee Panel", color: "#DB2777" }
+                  ].map(p => {
+                    const isChecked = form.target_panels.includes(p.key);
+                    return (
+                      <label
+                        key={p.key}
+                        onClick={() => togglePanelSelection(p.key)}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "8px 14px",
+                          borderRadius: "10px",
+                          border: `1.5px solid ${isChecked ? p.color : C.border}`,
+                          background: isChecked ? `${p.color}15` : C.card,
+                          color: isChecked ? p.color : C.text,
+                          fontWeight: 700,
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease"
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}} // Controlled by label click
+                          style={{ accentColor: p.color, width: "16px", height: "16px" }}
+                        />
+                        {p.label}
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Form Input fields */}
+              {/* 2. BANNER METADATA */}
               <div>
                 <label style={S.label}>Banner Title *</label>
                 <input
                   style={S.input}
                   required
-                  placeholder="e.g. Special Offers"
+                  placeholder="e.g. Lifetime Free Credit Cards"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                 />
@@ -461,18 +623,18 @@ export default function ManageBanners() {
                 <label style={S.label}>Subtitle / Promo Text</label>
                 <input
                   style={S.input}
-                  placeholder="e.g. Zero joining fees on premium cards"
+                  placeholder="e.g. Zero Joining Fee • Zero Annual Fee"
                   value={form.subtitle}
                   onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
                   <label style={S.label}>Button Text</label>
                   <input
                     style={S.input}
-                    placeholder="e.g. Apply Now"
+                    placeholder="e.g. Explore Now"
                     value={form.btn_text}
                     onChange={(e) => setForm({ ...form, btn_text: e.target.value })}
                   />
@@ -489,13 +651,13 @@ export default function ManageBanners() {
                 </div>
               </div>
 
-              {/* Image Picker Configuration with Interactive Crop Option */}
+              {/* 3. IMAGE CONFIGURATION */}
               <div>
-                <label style={S.label}>Image Configuration & Ratio Cropper</label>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: C.bgSecondary, padding: "12px", borderRadius: "10px", border: `1px solid ${C.border}` }}>
+                <label style={S.label}>Banner Image Assignment</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px", background: C.bgSecondary, padding: "14px", borderRadius: "12px", border: `1px solid ${C.border}` }}>
                   <div>
-                    <label style={{ fontSize: "11px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "4px" }}>
-                      Option A: Upload & Crop Image (Re-ratio for perfect fit)
+                    <label style={{ fontSize: "11.5px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "6px" }}>
+                      Option A: Upload & Crop Image File
                     </label>
                     <input
                       type="file"
@@ -511,109 +673,225 @@ export default function ManageBanners() {
                           reader.readAsDataURL(file);
                         }
                       }}
-                      style={{ fontSize: "12px", color: C.text }}
+                      style={{ fontSize: "12.5px", color: C.text }}
                     />
                   </div>
 
-                  {/* Cropped Image Status / Preview Thumbnail */}
+                  {/* Cropped Preview Indicator */}
                   {croppedPreview && (
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", background: C.card, padding: "8px", borderRadius: "8px", border: `1px dashed ${C.teal}` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", background: C.card, padding: "8px 12px", borderRadius: "8px", border: `1px dashed ${C.teal}` }}>
                       <img src={croppedPreview} alt="Cropped preview" style={{ width: "80px", height: "40px", objectFit: "cover", borderRadius: "4px" }} />
                       <div style={{ flex: 1 }}>
-                        <span style={{ fontSize: "11px", fontWeight: 800, color: C.teal, display: "block" }}>Cropped Image Ready</span>
+                        <span style={{ fontSize: "11px", fontWeight: 800, color: C.teal, display: "block" }}>Cropped Image Attached</span>
                         <span style={{ fontSize: "10px", color: C.textLight }}>Ratio: {cropRatio}</span>
                       </div>
                       <button
                         type="button"
                         onClick={() => setCropModalOpen(true)}
-                        style={{ background: C.teal, color: "#fff", border: "none", borderRadius: "6px", padding: "4px 8px", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
+                        style={{ background: C.teal, color: "#fff", border: "none", borderRadius: "6px", padding: "4px 10px", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
                       >
                         Recrop
                       </button>
                     </div>
                   )}
 
-                  <div style={{ textAlign: "center", fontSize: "11px", color: C.textLight, fontWeight: 700 }}>- OR -</div>
+                  <div style={{ textAlign: "center", fontSize: "11px", color: C.textLight, fontWeight: 800 }}>- OR -</div>
 
                   <div>
-                    <label style={{ fontSize: "11px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "4px" }}>
-                      Option B: Asset Filename / External URL
+                    <label style={{ fontSize: "11.5px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "4px" }}>
+                      Option B: Asset Filename or External URL
                     </label>
                     <input
-                      style={{ ...S.input, padding: "6px 10px", fontSize: "12.5px" }}
-                      placeholder="e.g. offerbanner.png, team.png, or https://..."
+                      style={{ ...S.input, padding: "8px 12px", fontSize: "12.5px" }}
+                      placeholder="e.g. lifetimefree card.png, loan.png, or https://domain.com/banner.jpg"
                       value={form.image_url}
                       disabled={!!imageFile}
                       onChange={(e) => setForm({ ...form, image_url: e.target.value })}
                     />
                   </div>
+
+                  {/* Live preview of image asset URL */}
+                  {form.image_url && !imageFile && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", background: C.card, padding: "8px 12px", borderRadius: "8px" }}>
+                      <img src={resolveBannerImage(form.image_url)} alt="Preview" style={{ width: "70px", height: "35px", objectFit: "cover", borderRadius: "4px" }} />
+                      <span style={{ fontSize: "11px", color: C.textLight, overflow: "hidden", textOverflow: "ellipsis" }}>{form.image_url}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Redirect Action Configuration */}
-              <div>
-                <label style={S.label}>Redirect Action *</label>
-                <div style={{ display: "flex", gap: "12px", marginBottom: "8px" }}>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: C.text, cursor: "pointer" }}>
-                    <input
-                      type="radio"
-                      name="link_type"
-                      checked={form.link_type === "page"}
-                      onChange={() => setForm({ ...form, link_type: "page", click_url: "/credit-cards" })}
-                    />
-                    Predefined Page
-                  </label>
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: C.text, cursor: "pointer" }}>
-                    <input
-                      type="radio"
-                      name="link_type"
-                      checked={form.link_type === "custom"}
-                      onChange={() => setForm({ ...form, link_type: "custom", click_url: "" })}
-                    />
-                    Custom URL/Link
-                  </label>
-                </div>
+              {/* 4. PER-PANEL REDIRECT URL & PAGE SELECTION */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px", background: C.bgSecondary, padding: "14px", borderRadius: "12px", border: `1px solid ${C.border}` }}>
+                <label style={{ ...S.label, margin: 0, fontWeight: 800, color: C.text }}>
+                  Panel Redirect Actions & Links
+                </label>
+                <p style={{ margin: "0 0 4px 0", fontSize: "11.5px", color: C.textLight }}>
+                  Specify which page or URL opens when clicked from each selected panel
+                </p>
 
-                {form.link_type === "page" ? (
-                  <select
-                    style={S.input}
-                    value={form.click_url}
-                    onChange={(e) => setForm({ ...form, click_url: e.target.value })}
-                  >
-                    <option value="/credit-cards">All Credit Cards</option>
-                    <option value="/loans">All Loans</option>
-                    <option value="/insurance">All Insurances</option>
-                    <option value="/credit-cards/hdfc-bank">HDFC Credit Cards</option>
-                    <option value="/attractive-cards-loans/smart-emi-card">Smart EMI Card</option>
-                    <option value="/credit-cards/lifetime-free-credit-cards-ltf">Lifetime Free Credit Cards</option>
-                    <option value="/partner/credit-cards">Partner Credit Cards</option>
-                    <option value="/partner/products?category=personal_loan">Partner Personal Loans</option>
-                  </select>
-                ) : (
-                  <input
-                    style={S.input}
-                    placeholder="e.g. /credit-cards/sbi-bank or custom URL"
-                    value={form.click_url}
-                    onChange={(e) => setForm({ ...form, click_url: e.target.value })}
-                  />
+                {/* Home Panel URL Selector */}
+                {form.target_panels.includes('home') && (
+                  <div style={{ background: C.card, padding: "12px", borderRadius: "10px", border: "1px solid #2563EB30" }}>
+                    <div style={{ fontSize: "12px", fontWeight: 800, color: "#2563EB", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      🌐 Home Panel Redirect Action
+                    </div>
+                    <div style={{ display: "flex", gap: "10px", marginBottom: "8px" }}>
+                      <label style={{ fontSize: "12px", color: C.text, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <input
+                          type="radio"
+                          name="link_type_home"
+                          checked={form.link_type_home === "page"}
+                          onChange={() => setForm({ ...form, link_type_home: "page", click_url_home: "/credit-cards" })}
+                        /> Predefined Page
+                      </label>
+                      <label style={{ fontSize: "12px", color: C.text, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <input
+                          type="radio"
+                          name="link_type_home"
+                          checked={form.link_type_home === "custom"}
+                          onChange={() => setForm({ ...form, link_type_home: "custom", click_url_home: "" })}
+                        /> Custom URL
+                      </label>
+                    </div>
+
+                    {form.link_type_home === "page" ? (
+                      <select
+                        style={S.input}
+                        value={form.click_url_home}
+                        onChange={(e) => setForm({ ...form, click_url_home: e.target.value })}
+                      >
+                        <option value="/credit-cards">All Credit Cards</option>
+                        <option value="/loans">All Loans</option>
+                        <option value="/insurance">All Insurance Plans</option>
+                        <option value="/attractive-cards-loans/lifetime-free-cards">Lifetime Free Credit Cards</option>
+                        <option value="/attractive-cards-loans/smart-emi-card">Smart EMI Card</option>
+                        <option value="/credit-cards/hdfc-bank">HDFC Credit Cards</option>
+                        <option value="/credit-cards/sbi-bank">SBI Credit Cards</option>
+                        <option value="/recharge">Mobile Recharge</option>
+                        <option value="/fastag">FASTag Recharge</option>
+                      </select>
+                    ) : (
+                      <input
+                        style={S.input}
+                        placeholder="e.g. /attractive-cards-loans/lifetime-free-cards"
+                        value={form.click_url_home}
+                        onChange={(e) => setForm({ ...form, click_url_home: e.target.value })}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Partner Panel URL Selector */}
+                {form.target_panels.includes('partner') && (
+                  <div style={{ background: C.card, padding: "12px", borderRadius: "10px", border: "1px solid #7C3AED30" }}>
+                    <div style={{ fontSize: "12px", fontWeight: 800, color: "#7C3AED", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      🤝 Partner Panel Redirect Action
+                    </div>
+                    <div style={{ display: "flex", gap: "10px", marginBottom: "8px" }}>
+                      <label style={{ fontSize: "12px", color: C.text, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <input
+                          type="radio"
+                          name="link_type_partner"
+                          checked={form.link_type_partner === "page"}
+                          onChange={() => setForm({ ...form, link_type_partner: "page", click_url_partner: "/partner/credit-cards" })}
+                        /> Predefined Page
+                      </label>
+                      <label style={{ fontSize: "12px", color: C.text, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <input
+                          type="radio"
+                          name="link_type_partner"
+                          checked={form.link_type_partner === "custom"}
+                          onChange={() => setForm({ ...form, link_type_partner: "custom", click_url_partner: "" })}
+                        /> Custom URL
+                      </label>
+                    </div>
+
+                    {form.link_type_partner === "page" ? (
+                      <select
+                        style={S.input}
+                        value={form.click_url_partner}
+                        onChange={(e) => setForm({ ...form, click_url_partner: e.target.value })}
+                      >
+                        <option value="/partner/credit-cards">Partner Credit Cards</option>
+                        <option value="/partner/products?category=personal_loan">Partner Personal Loans</option>
+                        <option value="/partner/team-network">Partner Team & Referral Network</option>
+                        <option value="/partner/wallet">Partner Wallet & Earnings</option>
+                        <option value="/partner/applications">Partner Applications</option>
+                      </select>
+                    ) : (
+                      <input
+                        style={S.input}
+                        placeholder="e.g. /partner/credit-cards"
+                        value={form.click_url_partner}
+                        onChange={(e) => setForm({ ...form, click_url_partner: e.target.value })}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Employee Panel URL Selector */}
+                {form.target_panels.includes('employee') && (
+                  <div style={{ background: C.card, padding: "12px", borderRadius: "10px", border: "1px solid #DB277730" }}>
+                    <div style={{ fontSize: "12px", fontWeight: 800, color: "#DB2777", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      👔 Employee Panel Redirect Action
+                    </div>
+                    <div style={{ display: "flex", gap: "10px", marginBottom: "8px" }}>
+                      <label style={{ fontSize: "12px", color: C.text, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <input
+                          type="radio"
+                          name="link_type_employee"
+                          checked={form.link_type_employee === "page"}
+                          onChange={() => setForm({ ...form, link_type_employee: "page", click_url_employee: "/employee/dashboard" })}
+                        /> Predefined Page
+                      </label>
+                      <label style={{ fontSize: "12px", color: C.text, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <input
+                          type="radio"
+                          name="link_type_employee"
+                          checked={form.link_type_employee === "custom"}
+                          onChange={() => setForm({ ...form, link_type_employee: "custom", click_url_employee: "" })}
+                        /> Custom URL
+                      </label>
+                    </div>
+
+                    {form.link_type_employee === "page" ? (
+                      <select
+                        style={S.input}
+                        value={form.click_url_employee}
+                        onChange={(e) => setForm({ ...form, click_url_employee: e.target.value })}
+                      >
+                        <option value="/employee/dashboard">Employee Dashboard</option>
+                        <option value="/employee/applications">Employee Applications</option>
+                        <option value="/employee/leads">Employee Leads Pool</option>
+                        <option value="/employee/attendance">Attendance & Tasks</option>
+                      </select>
+                    ) : (
+                      <input
+                        style={S.input}
+                        placeholder="e.g. /employee/dashboard"
+                        value={form.click_url_employee}
+                        onChange={(e) => setForm({ ...form, click_url_employee: e.target.value })}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Status visibility check */}
+              {/* 5. VISIBILITY CHECKBOX */}
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <input
                   type="checkbox"
                   id="is_active_chk"
                   checked={form.is_active}
                   onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
-                  style={{ cursor: "pointer" }}
+                  style={{ cursor: "pointer", width: "16px", height: "16px" }}
                 />
                 <label htmlFor="is_active_chk" style={{ fontSize: "13px", fontWeight: 700, color: C.text, cursor: "pointer" }}>
                   Active and Visible in Slideshow
                 </label>
               </div>
 
-              {/* Modal controls */}
+              {/* Modal Actions */}
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px" }}>
                 <button
                   type="button"
@@ -673,10 +951,10 @@ export default function ManageBanners() {
               <label style={{ fontSize: "11px", fontWeight: 800, color: C.textLight, display: "block", marginBottom: "6px" }}>ASPECT RATIO PRESET</label>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 {[
-                  { label: "3:1 Hero Banner", ratio: "3:1", w: 1200, h: 400 },
-                  { label: "16:9 Wide Banner", ratio: "16:9", w: 1200, h: 675 },
-                  { label: "4:3 Card Banner", ratio: "4:3", w: 800, h: 600 },
-                  { label: "1:1 Square", ratio: "1:1", w: 600, h: 600 }
+                  { label: "3:1 Hero Banner", ratio: "3:1" },
+                  { label: "16:9 Wide Banner", ratio: "16:9" },
+                  { label: "4:3 Card Banner", ratio: "4:3" },
+                  { label: "1:1 Square", ratio: "1:1" }
                 ].map(item => (
                   <button
                     key={item.ratio}
@@ -784,7 +1062,6 @@ export default function ManageBanners() {
               <button
                 type="button"
                 onClick={() => {
-                  // Trigger Canvas Cropper export button programmatically via event
                   const cropBtn = document.getElementById('apply_canvas_crop_btn');
                   if (cropBtn) cropBtn.click();
                 }}
@@ -813,7 +1090,6 @@ function CanvasCropper({ imgSrc, ratio, zoom, offsetX, offsetY, onCropDone }) {
     img.crossOrigin = 'anonymous';
 
     img.onload = () => {
-      // Determine canvas width and height based on ratio preset
       let targetW = 1200;
       let targetH = 400;
       if (ratio === '16:9') { targetW = 1200; targetH = 675; }
