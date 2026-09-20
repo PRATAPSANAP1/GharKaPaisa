@@ -1,3 +1,8 @@
+const { query } = require('../../config/database');
+const { uploadToS3, deleteFromS3, getCloudFrontUrl } = require('../../services/aws/s3.service.js');
+const { success, created, error, notFound } = require('../../utils/response/response');
+const logger = require('../../config/logger');
+
 let columnsChecked = false;
 const ensureBannerColumns = async () => {
   if (columnsChecked) return;
@@ -9,7 +14,8 @@ const ensureBannerColumns = async () => {
       ADD COLUMN IF NOT EXISTS click_url VARCHAR(500) DEFAULT '/credit-cards',
       ADD COLUMN IF NOT EXISTS click_url_home VARCHAR(500),
       ADD COLUMN IF NOT EXISTS click_url_partner VARCHAR(500),
-      ADD COLUMN IF NOT EXISTS click_url_employee VARCHAR(500);
+      ADD COLUMN IF NOT EXISTS click_url_employee VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS click_url_referral VARCHAR(500);
     `);
     columnsChecked = true;
   } catch (err) {
@@ -51,6 +57,8 @@ const listBanners = async (req, res, next) => {
         effectiveClickUrl = b.click_url_partner;
       } else if (pageFilter === 'employee' && b.click_url_employee) {
         effectiveClickUrl = b.click_url_employee;
+      } else if ((pageFilter === 'referral' || pageFilter === 'refer') && b.click_url_referral) {
+        effectiveClickUrl = b.click_url_referral;
       }
 
       return {
@@ -107,7 +115,7 @@ const createBanner = async (req, res, next) => {
     const { 
       title, subtitle, btn_text, display_order, is_active, 
       link_type, click_url, target_page,
-      click_url_home, click_url_partner, click_url_employee 
+      click_url_home, click_url_partner, click_url_employee, click_url_referral 
     } = req.body;
     let image_url = req.body.image_url;
 
@@ -128,9 +136,9 @@ const createBanner = async (req, res, next) => {
     const { rows: [b] } = await query(
       `INSERT INTO banners (
         title, subtitle, btn_text, image_url, display_order, is_active, 
-        link_type, click_url, target_page, click_url_home, click_url_partner, click_url_employee
+        link_type, click_url, target_page, click_url_home, click_url_partner, click_url_employee, click_url_referral
       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
       [
         title, 
         subtitle || null, 
@@ -143,7 +151,8 @@ const createBanner = async (req, res, next) => {
         target_page || 'all',
         click_url_home || null,
         click_url_partner || null,
-        click_url_employee || null
+        click_url_employee || null,
+        click_url_referral || null
       ]
     );
 
@@ -161,7 +170,7 @@ const updateBanner = async (req, res, next) => {
     const { 
       title, subtitle, btn_text, display_order, is_active, 
       link_type, click_url, target_page,
-      click_url_home, click_url_partner, click_url_employee 
+      click_url_home, click_url_partner, click_url_employee, click_url_referral 
     } = req.body;
     let image_url = req.body.image_url;
 
@@ -201,6 +210,7 @@ const updateBanner = async (req, res, next) => {
         click_url_home = $11,
         click_url_partner = $12,
         click_url_employee = $13,
+        click_url_referral = $14,
         updated_at = NOW()
       WHERE id = $7 RETURNING *`,
       [
@@ -216,7 +226,8 @@ const updateBanner = async (req, res, next) => {
         target_page || existing.target_page || 'all',
         click_url_home === undefined ? existing.click_url_home : (click_url_home || null),
         click_url_partner === undefined ? existing.click_url_partner : (click_url_partner || null),
-        click_url_employee === undefined ? existing.click_url_employee : (click_url_employee || null)
+        click_url_employee === undefined ? existing.click_url_employee : (click_url_employee || null),
+        click_url_referral === undefined ? existing.click_url_referral : (click_url_referral || null)
       ]
     );
 

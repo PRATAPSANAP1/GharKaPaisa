@@ -49,7 +49,7 @@ export default function ManageBanners() {
     image_url: "",
     display_order: 0,
     is_active: true,
-    target_panels: ['home', 'partner', 'employee'], // Multi-choice: ['home', 'partner', 'employee']
+    target_panels: ['home', 'partner', 'referral', 'employee'], // Multi-choice: ['home', 'partner', 'referral', 'employee']
     
     // Panel specific redirect links & types
     link_type_home: "page",
@@ -57,6 +57,9 @@ export default function ManageBanners() {
 
     link_type_partner: "page",
     click_url_partner: "/partner/credit-cards",
+
+    link_type_referral: "page",
+    click_url_referral: "/partner/team-network",
 
     link_type_employee: "page",
     click_url_employee: "/employee/dashboard"
@@ -117,19 +120,20 @@ export default function ManageBanners() {
   // Parse target_page string into panels array
   const parseTargetPanels = (targetPageStr) => {
     if (!targetPageStr || targetPageStr === 'all') {
-      return ['home', 'partner', 'employee'];
+      return ['home', 'partner', 'referral', 'employee'];
     }
     const panels = [];
     if (targetPageStr.includes('home') || targetPageStr.includes('offer')) panels.push('home');
     if (targetPageStr.includes('partner') || targetPageStr.includes('team')) panels.push('partner');
+    if (targetPageStr.includes('referral') || targetPageStr.includes('refer')) panels.push('referral');
     if (targetPageStr.includes('employee')) panels.push('employee');
-    return panels.length > 0 ? panels : ['home', 'partner', 'employee'];
+    return panels.length > 0 ? panels : ['home', 'partner', 'referral', 'employee'];
   };
 
   // ─── MODAL TRIGGER CONTROLS ───────────────────────────────────────────────
   const openAddModal = () => {
     setEditItem(null);
-    const initialPanels = activeTab === "all" ? ['home', 'partner', 'employee'] : [activeTab];
+    const initialPanels = activeTab === "all" ? ['home', 'partner', 'referral', 'employee'] : [activeTab];
     setForm({
       title: "",
       subtitle: "",
@@ -144,6 +148,9 @@ export default function ManageBanners() {
       
       link_type_partner: "page",
       click_url_partner: "/partner/credit-cards",
+
+      link_type_referral: "page",
+      click_url_referral: "/partner/team-network",
 
       link_type_employee: "page",
       click_url_employee: "/employee/dashboard"
@@ -171,6 +178,9 @@ export default function ManageBanners() {
 
       link_type_partner: "page",
       click_url_partner: item.click_url_partner || item.click_url || "/partner/credit-cards",
+
+      link_type_referral: "page",
+      click_url_referral: item.click_url_referral || item.click_url || "/partner/team-network",
 
       link_type_employee: "page",
       click_url_employee: item.click_url_employee || item.click_url || "/employee/dashboard"
@@ -222,7 +232,7 @@ export default function ManageBanners() {
     setSubmitting(true);
 
     try {
-      const targetPageValue = form.target_panels.length === 3 ? 'all' : form.target_panels.join(',');
+      const targetPageValue = form.target_panels.length === 4 ? 'all' : form.target_panels.join(',');
 
       const formData = new FormData();
       formData.append("title", form.title);
@@ -235,7 +245,9 @@ export default function ManageBanners() {
       // Main fallback click_url
       const primaryUrl = form.target_panels.includes('home')
         ? form.click_url_home
-        : (form.target_panels.includes('partner') ? form.click_url_partner : form.click_url_employee);
+        : (form.target_panels.includes('partner') 
+            ? form.click_url_partner 
+            : (form.target_panels.includes('referral') ? form.click_url_referral : form.click_url_employee));
       
       formData.append("click_url", primaryUrl || "/credit-cards");
       formData.append("link_type", "custom");
@@ -243,6 +255,7 @@ export default function ManageBanners() {
       // Panel Specific URLs
       formData.append("click_url_home", form.target_panels.includes('home') ? form.click_url_home : '');
       formData.append("click_url_partner", form.target_panels.includes('partner') ? form.click_url_partner : '');
+      formData.append("click_url_referral", form.target_panels.includes('referral') ? form.click_url_referral : '');
       formData.append("click_url_employee", form.target_panels.includes('employee') ? form.click_url_employee : '');
 
       if (imageFile) {
@@ -283,6 +296,7 @@ export default function ManageBanners() {
     if (!item.target_page || item.target_page === 'all') return true;
     if (panelKey === 'home') return item.target_page.includes('home') || item.target_page.includes('offer');
     if (panelKey === 'partner') return item.target_page.includes('partner') || item.target_page.includes('team');
+    if (panelKey === 'referral') return item.target_page.includes('referral') || item.target_page.includes('refer');
     if (panelKey === 'employee') return item.target_page.includes('employee');
     return true;
   };
@@ -303,7 +317,7 @@ export default function ManageBanners() {
       <div className="responsive-header" style={{ marginBottom: "20px", width: "100%" }}>
         <div>
           <h2 style={{ fontSize: "24px", fontWeight: 800, color: C.text, margin: 0 }}>Banner Management</h2>
-          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Create and target promotional banners dynamically across Home, Partner, and Employee panels</p>
+          <p style={{ fontSize: "13px", color: C.textLight, margin: "4px 0 0 0" }}>Create and target promotional banners dynamically across Home, Partner, Team & Referral, and Employee panels</p>
         </div>
         <button
           onClick={openAddModal}
@@ -326,6 +340,7 @@ export default function ManageBanners() {
           { key: "all", label: "All Panels" },
           { key: "home", label: "Home Panel" },
           { key: "partner", label: "Partner Panel" },
+          { key: "referral", label: "Team & Referral" },
           { key: "employee", label: "Employee Panel" }
         ].map(tab => {
           const count = getTabCount(tab.key);
@@ -571,7 +586,8 @@ export default function ManageBanners() {
                 <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                   {[
                     { key: "home", label: "Home Panel", color: "#2563EB" },
-                    { key: "partner", label: "Partner Panel", color: "#7C3AED" },
+                    { key: "partner", label: "Partner Dashboard", color: "#7C3AED" },
+                    { key: "referral", label: "Team & Referral Banners", color: "#059669" },
                     { key: "employee", label: "Employee Panel", color: "#DB2777" }
                   ].map(p => {
                     const isChecked = form.target_panels.includes(p.key);
@@ -785,7 +801,7 @@ export default function ManageBanners() {
                 {form.target_panels.includes('partner') && (
                   <div style={{ background: C.card, padding: "12px", borderRadius: "10px", border: "1px solid #7C3AED30" }}>
                     <div style={{ fontSize: "12px", fontWeight: 800, color: "#7C3AED", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
-                      🤝 Partner Panel Redirect Action
+                      🤝 Partner Dashboard Redirect Action
                     </div>
                     <div style={{ display: "flex", gap: "10px", marginBottom: "8px" }}>
                       <label style={{ fontSize: "12px", color: C.text, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
@@ -814,7 +830,7 @@ export default function ManageBanners() {
                       >
                         <option value="/partner/credit-cards">Partner Credit Cards</option>
                         <option value="/partner/products?category=personal_loan">Partner Personal Loans</option>
-                        <option value="/partner/team-network">Partner Team & Referral Network</option>
+                        <option value="/partner/team-network">Partner Team Network</option>
                         <option value="/partner/wallet">Partner Wallet & Earnings</option>
                         <option value="/partner/applications">Partner Applications</option>
                       </select>
@@ -824,6 +840,53 @@ export default function ManageBanners() {
                         placeholder="e.g. /partner/credit-cards"
                         value={form.click_url_partner}
                         onChange={(e) => setForm({ ...form, click_url_partner: e.target.value })}
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* Team & Referral Network Banner URL Selector */}
+                {form.target_panels.includes('referral') && (
+                  <div style={{ background: C.card, padding: "12px", borderRadius: "10px", border: "1px solid #05966930" }}>
+                    <div style={{ fontSize: "12px", fontWeight: 800, color: "#059669", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" }}>
+                      👥 Team & Referral Banner Redirect Action
+                    </div>
+                    <div style={{ display: "flex", gap: "10px", marginBottom: "8px" }}>
+                      <label style={{ fontSize: "12px", color: C.text, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <input
+                          type="radio"
+                          name="link_type_referral"
+                          checked={form.link_type_referral === "page"}
+                          onChange={() => setForm({ ...form, link_type_referral: "page", click_url_referral: "/partner/team-network" })}
+                        /> Predefined Page
+                      </label>
+                      <label style={{ fontSize: "12px", color: C.text, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        <input
+                          type="radio"
+                          name="link_type_referral"
+                          checked={form.link_type_referral === "custom"}
+                          onChange={() => setForm({ ...form, link_type_referral: "custom", click_url_referral: "" })}
+                        /> Custom URL
+                      </label>
+                    </div>
+
+                    {form.link_type_referral === "page" ? (
+                      <select
+                        style={S.input}
+                        value={form.click_url_referral}
+                        onChange={(e) => setForm({ ...form, click_url_referral: e.target.value })}
+                      >
+                        <option value="/partner/team-network">Partner Team & Referral Network</option>
+                        <option value="/partner/wallet">Partner Wallet & Payouts</option>
+                        <option value="/partner/credit-cards">Partner Credit Cards</option>
+                        <option value="/partner/referral">Referral Program Details</option>
+                      </select>
+                    ) : (
+                      <input
+                        style={S.input}
+                        placeholder="e.g. /partner/team-network"
+                        value={form.click_url_referral}
+                        onChange={(e) => setForm({ ...form, click_url_referral: e.target.value })}
                       />
                     )}
                   </div>

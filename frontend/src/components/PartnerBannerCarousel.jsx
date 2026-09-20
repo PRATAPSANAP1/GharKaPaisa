@@ -107,15 +107,15 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false, targetPan
 
   return (
     <div
-      className="offer-banner"
+      className="partner-team-banner"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       style={{
         width: '100%',
         position: 'relative',
-        borderRadius: '20px',
+        borderRadius: isMobile ? '12px' : '16px',
         overflow: 'hidden',
-        boxShadow: isDark ? 'none' : '0 8px 24px rgba(0,0,0,0.08)',
+        boxShadow: isDark ? 'none' : '0 6px 18px rgba(0,0,0,0.06)',
         border: `1px solid ${isDark ? C.border : 'rgba(0,0,0,0.06)'}`,
         background: isDark ? C.card : '#FFFFFF'
       }}
@@ -163,34 +163,34 @@ export default function PartnerBannerCarousel({ showOnlyRefer = false, targetPan
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  padding: '16px 20px',
-                  background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)',
+                  padding: isMobile ? '8px 12px' : '12px 18px',
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 70%, transparent 100%)',
                   color: '#ffffff',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '4px',
+                  gap: '2px',
                   zIndex: 2
                 }}
               >
-                <h3 style={{ margin: 0, fontSize: isMobile ? '13px' : '16px', fontWeight: 800, color: '#ffffff' }}>
+                <h3 style={{ margin: 0, fontSize: isMobile ? '12px' : '15px', fontWeight: 800, color: '#ffffff' }}>
                   {banner.title}
                 </h3>
                 {banner.subtitle && (
-                  <p style={{ margin: 0, fontSize: isMobile ? '11px' : '12px', color: 'rgba(255,255,255,0.9)' }}>
+                  <p style={{ margin: 0, fontSize: isMobile ? '10px' : '11.5px', color: 'rgba(255,255,255,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
                     {banner.subtitle}
                   </p>
                 )}
                 {banner.btn_text && (
                   <button
                     style={{
-                      marginTop: '6px',
+                      marginTop: '4px',
                       alignSelf: 'flex-start',
-                      padding: '5px 14px',
-                      borderRadius: '8px',
+                      padding: isMobile ? '3px 10px' : '5px 14px',
+                      borderRadius: '6px',
                       background: C.primary || '#6E3FD6',
                       color: '#ffffff',
                       fontWeight: 700,
-                      fontSize: '11px',
+                      fontSize: isMobile ? '10px' : '11px',
                       border: 'none',
                       cursor: 'pointer'
                     }}
