@@ -385,13 +385,13 @@ export default function MessengerView({ initialAppId = null }) {
   return (
     <div style={{
       display: 'flex',
-      height: 'calc(100vh - 90px)',
+      height: isMobile ? 'calc(100vh - 65px)' : 'calc(100vh - 90px)',
       background: '#F8FAFC',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      borderRadius: '16px',
+      borderRadius: isMobile ? '0px' : '16px',
       overflow: 'hidden',
-      border: '1px solid #E2E8F0',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+      border: isMobile ? 'none' : '1px solid #E2E8F0',
+      boxShadow: isMobile ? 'none' : '0 4px 20px rgba(0,0,0,0.06)',
       position: 'relative'
     }}>
 
@@ -399,13 +399,13 @@ export default function MessengerView({ initialAppId = null }) {
       {(!isMobile || !mobileShowChat) && (
         <div style={{
           width: isMobile ? '100%' : '360px',
-          borderRight: '1px solid #E2E8F0',
+          borderRight: isMobile ? 'none' : '1px solid #E2E8F0',
           display: 'flex',
           flexDirection: 'column',
           background: '#FFFFFF'
         }}>
           {/* Top Search Header */}
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #F1F5F9' }}>
+          <div style={{ padding: isMobile ? '12px 14px' : '16px 20px', borderBottom: '1px solid #F1F5F9' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>Messages</h2>
               <div style={{ display: 'flex', gap: '6px' }}>
@@ -505,21 +505,21 @@ export default function MessengerView({ initialAppId = null }) {
                     key={conv.id}
                     onClick={() => handleSelectConv(conv)}
                     style={{
-                      padding: '14px 20px', borderBottom: '1px solid #F8FAFC',
+                      padding: isMobile ? '12px 14px' : '14px 20px', borderBottom: '1px solid #F8FAFC',
                       background: isSelected ? '#EFF6FF' : 'transparent',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '14px',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '14px',
                       transition: 'background 0.15s ease'
                     }}
                   >
                     {/* User / Group Avatar */}
                     <div style={{ position: 'relative' }}>
                       <div style={{
-                        width: '46px', height: '46px', borderRadius: '50%',
+                        width: isMobile ? '40px' : '46px', height: isMobile ? '40px' : '46px', borderRadius: '50%',
                         background: conv.conversation_type === 'GROUP' ? '#3B82F6' : conv.conversation_type === 'APPLICATION' ? '#F59E0B' : '#0EA5E9',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontWeight: 700, color: '#fff', fontSize: '17px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                        fontWeight: 700, color: '#fff', fontSize: isMobile ? '15px' : '17px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
                       }}>
-                        {conv.conversation_type === 'GROUP' ? <FaUsers size={20} /> : conv.conversation_type === 'APPLICATION' ? <FaFileAlt size={18} /> : title.charAt(0).toUpperCase()}
+                        {conv.conversation_type === 'GROUP' ? <FaUsers size={isMobile ? 17 : 20} /> : conv.conversation_type === 'APPLICATION' ? <FaFileAlt size={isMobile ? 15 : 18} /> : title.charAt(0).toUpperCase()}
                       </div>
                       <span style={{
                         position: 'absolute', bottom: '2px', right: '2px', width: '10px', height: '10px',
@@ -533,8 +533,8 @@ export default function MessengerView({ initialAppId = null }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                         <h4 style={{
-                          margin: 0, fontSize: '14.5px', fontWeight: 700, color: '#0F172A',
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px',
+                          margin: 0, fontSize: isMobile ? '13.5px' : '14.5px', fontWeight: 700, color: '#0F172A',
+                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: isMobile ? '130px' : '160px',
                           display: 'flex', alignItems: 'center', gap: '6px'
                         }}>
                           {conv.is_pinned && <FaThumbtack size={10} color="#2563EB" />}
@@ -548,7 +548,7 @@ export default function MessengerView({ initialAppId = null }) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <p style={{
                           margin: 0, fontSize: '12.5px', color: '#64748B', whiteSpace: 'nowrap',
-                          overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px'
+                          overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: isMobile ? '160px' : '170px'
                         }}>
                           {conv.last_message_text || 'No messages yet'}
                         </p>
@@ -579,81 +579,85 @@ export default function MessengerView({ initialAppId = null }) {
             <>
               {/* Chat Header */}
               <div style={{
-                padding: '14px 24px', background: '#FFFFFF', borderBottom: '1px solid #E2E8F0',
+                padding: isMobile ? '10px 14px' : '14px 24px', background: '#FFFFFF', borderBottom: '1px solid #E2E8F0',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 boxShadow: '0 2px 10px rgba(0,0,0,0.02)', position: 'relative', zIndex: 10
               }}>
                 <div 
                   onClick={() => openUserProfile(activeConv.other_participants?.[0] || { full_name: getConvTitle(activeConv) })}
-                  style={{ display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '14px', cursor: 'pointer', minWidth: 0 }}
                   title="Click to view User Profile"
                 >
                   {isMobile && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setMobileShowChat(false); }}
-                      style={{ background: 'transparent', border: 'none', color: '#475569', fontSize: '16px', cursor: 'pointer', marginRight: '4px' }}
+                      style={{ background: 'transparent', border: 'none', color: '#475569', fontSize: '16px', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
                     >
                       <FaArrowLeft />
                     </button>
                   )}
 
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
                     <div style={{
-                      width: '42px', height: '42px', borderRadius: '50%',
+                      width: isMobile ? '36px' : '42px', height: isMobile ? '36px' : '42px', borderRadius: '50%',
                       background: activeConv.conversation_type === 'GROUP' ? '#3B82F6' : '#0EA5E9',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 700, color: '#fff', fontSize: '17px'
+                      fontWeight: 700, color: '#fff', fontSize: isMobile ? '15px' : '17px'
                     }}>
-                      {activeConv.conversation_type === 'GROUP' ? <FaUsers size={20} /> : getConvTitle(activeConv).charAt(0).toUpperCase()}
+                      {activeConv.conversation_type === 'GROUP' ? <FaUsers size={isMobile ? 17 : 20} /> : getConvTitle(activeConv).charAt(0).toUpperCase()}
                     </div>
                     <span style={{
-                      position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px',
+                      position: 'absolute', bottom: 0, right: 0, width: '9px', height: '9px',
                       borderRadius: '50%',
                       background: getActiveConvStatus(activeConv).isOnline ? '#22C55E' : '#94A3B8',
                       border: '2px solid #FFFFFF'
                     }} />
                   </div>
 
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '15.5px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <h3 style={{ margin: 0, fontSize: isMobile ? '14px' : '15.5px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: isMobile ? '120px' : '220px' }}>
                       {getConvTitle(activeConv)}
-                      {activeConv.is_pinned && <FaThumbtack size={11} color="#2563EB" title="Pinned Chat" />}
+                      {activeConv.is_pinned && <FaThumbtack size={10} color="#2563EB" title="Pinned Chat" />}
                     </h3>
-                    <span style={{ fontSize: '12px', color: getActiveConvStatus(activeConv).isOnline ? '#22C55E' : '#64748B', fontWeight: 600 }}>
+                    <span style={{ fontSize: isMobile ? '11px' : '12px', color: getActiveConvStatus(activeConv).isOnline ? '#22C55E' : '#64748B', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', maxWidth: isMobile ? '120px' : '220px' }}>
                       {getActiveConvStatus(activeConv).text}
                     </span>
                   </div>
                 </div>
 
                 {/* Top Action Buttons */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', color: '#64748B', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '14px', color: '#64748B', position: 'relative' }}>
                   <button
                     onClick={() => setShowChatSearch(prev => !prev)}
                     title="Search Messages"
                     style={{ background: 'transparent', border: 'none', color: showChatSearch ? '#2563EB' : '#64748B', cursor: 'pointer', padding: '6px' }}
                   >
-                    <FaSearch size={16} />
+                    <FaSearch size={isMobile ? 14 : 16} />
                   </button>
-                  <button
-                    onClick={() => setCallStatus({ type: 'voice', active: true })}
-                    title="Voice Call"
-                    style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer', padding: '6px' }}
-                  >
-                    <FaPhone size={15} />
-                  </button>
-                  <button
-                    onClick={() => setCallStatus({ type: 'video', active: true })}
-                    title="Video Call"
-                    style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer', padding: '6px' }}
-                  >
-                    <FaVideo size={16} />
-                  </button>
+                  {!isMobile && (
+                    <>
+                      <button
+                        onClick={() => setCallStatus({ type: 'voice', active: true })}
+                        title="Voice Call"
+                        style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer', padding: '6px' }}
+                      >
+                        <FaPhone size={15} />
+                      </button>
+                      <button
+                        onClick={() => setCallStatus({ type: 'video', active: true })}
+                        title="Video Call"
+                        style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer', padding: '6px' }}
+                      >
+                        <FaVideo size={16} />
+                      </button>
+                    </>
+                  )}
                   <button
                     onClick={() => setShowMoreMenu(prev => !prev)}
                     title="More Options"
                     style={{ background: 'transparent', border: 'none', color: showMoreMenu ? '#2563EB' : '#64748B', cursor: 'pointer', padding: '6px' }}
                   >
-                    <FaEllipsisV size={15} />
+                    <FaEllipsisV size={isMobile ? 14 : 15} />
                   </button>
 
                   {/* Dropdown Options Menu */}
@@ -670,6 +674,24 @@ export default function MessengerView({ initialAppId = null }) {
                         <FaUserCircle size={14} color="#2563EB" />
                         <span>View User Profile</span>
                       </div>
+                      {isMobile && (
+                        <>
+                          <div
+                            onClick={() => { setCallStatus({ type: 'voice', active: true }); setShowMoreMenu(false); }}
+                            style={{ padding: '10px 16px', fontSize: '13px', color: '#1E293B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                          >
+                            <FaPhone size={13} color="#2563EB" />
+                            <span>Voice Call</span>
+                          </div>
+                          <div
+                            onClick={() => { setCallStatus({ type: 'video', active: true }); setShowMoreMenu(false); }}
+                            style={{ padding: '10px 16px', fontSize: '13px', color: '#1E293B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                          >
+                            <FaVideo size={13} color="#2563EB" />
+                            <span>Video Call</span>
+                          </div>
+                        </>
+                      )}
                       <div
                         onClick={handleTogglePin}
                         style={{ padding: '10px 16px', fontSize: '13px', color: '#1E293B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
@@ -691,7 +713,7 @@ export default function MessengerView({ initialAppId = null }) {
 
               {/* Inline Search Bar */}
               {showChatSearch && (
-                <div style={{ padding: '10px 24px', background: '#EFF6FF', borderBottom: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ padding: isMobile ? '8px 14px' : '10px 24px', background: '#EFF6FF', borderBottom: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <FaSearch color="#2563EB" size={13} />
                   <input
                     type="text"
@@ -707,7 +729,7 @@ export default function MessengerView({ initialAppId = null }) {
               )}
 
               {/* Chat Messages Body */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '14px 12px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {loadingMsgs ? (
                   <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', marginTop: '40px' }}>
                     Loading conversation...
@@ -745,13 +767,13 @@ export default function MessengerView({ initialAppId = null }) {
                           </span>
                         )}
                         <div style={{
-                          maxWidth: '65%', padding: '12px 18px',
+                          maxWidth: isMobile ? '85%' : '65%', padding: isMobile ? '10px 14px' : '12px 18px',
                           borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                           background: isMe ? '#DBEAFE' : '#FFFFFF',
                           border: isMe ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
                           color: '#1E293B',
                           boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                          fontSize: '14px', lineHeight: 1.5
+                          fontSize: isMobile ? '13.5px' : '14px', lineHeight: 1.5
                         }}>
                           {msg.message_text && <div>{msg.message_text}</div>}
 
@@ -812,7 +834,7 @@ export default function MessengerView({ initialAppId = null }) {
 
               {/* Pending Attachments Chip Bar */}
               {attachments.length > 0 && (
-                <div style={{ padding: '8px 24px', background: '#EFF6FF', borderTop: '1px solid #BFDBFE', display: 'flex', gap: '8px', overflowX: 'auto' }}>
+                <div style={{ padding: '8px 16px', background: '#EFF6FF', borderTop: '1px solid #BFDBFE', display: 'flex', gap: '8px', overflowX: 'auto' }}>
                   {attachments.map((att, idx) => (
                     <div key={idx} style={{ padding: '6px 12px', background: '#FFFFFF', border: '1px solid #93C5FD', borderRadius: '16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: '#1E3A8A' }}>
                       <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{att.file_name}</span>
@@ -825,8 +847,8 @@ export default function MessengerView({ initialAppId = null }) {
               {/* Emoji Picker Popup Overlay */}
               {showEmojiPicker && (
                 <div style={{
-                  position: 'absolute', bottom: '70px', left: '24px', background: '#FFFFFF',
-                  border: '1px solid #CBD5E1', borderRadius: '16px', padding: '12px',
+                  position: 'absolute', bottom: isMobile ? '60px' : '70px', left: isMobile ? '10px' : '24px', right: isMobile ? '10px' : 'auto',
+                  background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '16px', padding: '12px',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.12)', display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)',
                   gap: '8px', zIndex: 100
                 }}>
@@ -847,8 +869,8 @@ export default function MessengerView({ initialAppId = null }) {
               <form
                 onSubmit={handleSendMessage}
                 style={{
-                  padding: '16px 24px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0',
-                  display: 'flex', alignItems: 'center', gap: '12px'
+                  padding: isMobile ? '10px 12px' : '16px 24px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0',
+                  display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px'
                 }}
               >
                 <button
@@ -930,10 +952,10 @@ export default function MessengerView({ initialAppId = null }) {
       {showNewChatModal && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: isMobile ? '16px' : '24px'
         }}>
           <div style={{
-            width: '420px', background: '#FFFFFF', borderRadius: '20px', padding: '24px',
+            width: isMobile ? '100%' : '420px', maxWidth: '440px', background: '#FFFFFF', borderRadius: '20px', padding: isMobile ? '18px' : '24px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -952,7 +974,7 @@ export default function MessengerView({ initialAppId = null }) {
               }}
             />
 
-            <div style={{ maxHeight: '260px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ maxHeight: isMobile ? '50vh' : '260px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {contacts.map(c => (
                 <div
                   key={c.id}
@@ -979,10 +1001,10 @@ export default function MessengerView({ initialAppId = null }) {
       {showGroupModal && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: isMobile ? '16px' : '24px'
         }}>
           <div style={{
-            width: '460px', background: '#FFFFFF', borderRadius: '20px', padding: '24px',
+            width: isMobile ? '100%' : '460px', maxWidth: '480px', background: '#FFFFFF', borderRadius: '20px', padding: isMobile ? '18px' : '24px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -1030,7 +1052,7 @@ export default function MessengerView({ initialAppId = null }) {
               }}
             />
 
-            <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '18px' }}>
+            <div style={{ maxHeight: isMobile ? '35vh' : '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '18px' }}>
               {contacts.map(c => {
                 const isSelected = selectedContactIds.includes(c.id);
                 return (
@@ -1070,13 +1092,13 @@ export default function MessengerView({ initialAppId = null }) {
       {callStatus?.active && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.85)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10000, color: '#FFFFFF'
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10000, color: '#FFFFFF', padding: '20px'
         }}>
           <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', marginBottom: '20px' }}>
             {callStatus.type === 'video' ? <FaVideo /> : <FaPhone />}
           </div>
-          <h3 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 800 }}>Calling {getConvTitle(activeConv)}...</h3>
-          <p style={{ margin: '0 0 30px', fontSize: '14px', color: '#94A3B8' }}>Establishing secure end-to-end encrypted {callStatus.type} connection</p>
+          <h3 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 800, textAlign: 'center' }}>Calling {getConvTitle(activeConv)}...</h3>
+          <p style={{ margin: '0 0 30px', fontSize: '14px', color: '#94A3B8', textAlign: 'center' }}>Establishing secure end-to-end encrypted {callStatus.type} connection</p>
           <button
             onClick={() => setCallStatus(null)}
             style={{ padding: '12px 30px', borderRadius: '24px', background: '#EF4444', color: '#FFFFFF', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '15px' }}
@@ -1091,11 +1113,11 @@ export default function MessengerView({ initialAppId = null }) {
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)',
           backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', zIndex: 99999
+          justifyContent: 'center', zIndex: 99999, padding: isMobile ? '16px' : '24px'
         }}>
           <div style={{
-            width: '420px', background: '#FFFFFF', borderRadius: '24px', overflow: 'hidden',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #E2E8F0'
+            width: isMobile ? '100%' : '420px', maxWidth: '440px', background: '#FFFFFF', borderRadius: '24px', overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #E2E8F0', maxHeight: '92vh', display: 'flex', flexDirection: 'column'
           }}>
             {/* Header Banner */}
             <div style={{
