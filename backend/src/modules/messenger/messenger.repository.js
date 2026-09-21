@@ -543,6 +543,16 @@ async function getContactsForUser(userId, userRole, search = '', limit = 30, off
   return rows;
 }
 
+async function deleteConversationForUser(conversationId, userId) {
+  const sql = `
+    UPDATE conversation_participants
+    SET left_at = NOW()
+    WHERE conversation_id = $1 AND user_id = $2
+  `;
+  const result = await query(sql, [conversationId, userId]);
+  return result.rowCount > 0;
+}
+
 module.exports = {
   getConversationsForUser,
   findDirectConversation,
@@ -559,5 +569,6 @@ module.exports = {
   markMessagesAsRead,
   getUnreadCount,
   togglePin,
-  getContactsForUser
+  getContactsForUser,
+  deleteConversationForUser
 };

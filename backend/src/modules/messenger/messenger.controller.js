@@ -188,6 +188,17 @@ async function adminGetUserMessages(req, res, next) {
   }
 }
 
+async function deleteConversation(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const result = await service.deleteUserConversation(id, userId);
+    return success(res, { deleted: result }, 'Conversation deleted successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getConversations,
   createDirectChat,
@@ -202,5 +213,6 @@ module.exports = {
   togglePin,
   adminSearchUsers,
   adminGetUserConversations,
-  adminGetUserMessages
+  adminGetUserMessages,
+  deleteConversation
 };

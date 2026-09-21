@@ -21,6 +21,7 @@ router.get('/conversations/:id', controller.getConversation);
 router.get('/conversations/:id/messages', controller.getMessages);
 router.post('/conversations/:id/read', controller.markRead);
 router.post('/conversations/:id/pin', controller.togglePin);
+router.delete('/conversations/:id', messengerLimiter, controller.deleteConversation);
 
 router.post('/messages', messengerLimiter, controller.sendMessage);
 router.get('/unread-count', controller.getUnreadCount);

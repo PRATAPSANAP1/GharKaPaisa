@@ -351,6 +351,14 @@ async function getAdminAuditMessages(conversationId) {
   }));
 }
 
+async function deleteUserConversation(conversationId, userId) {
+  const isPart = await repo.isParticipant(conversationId, userId);
+  if (!isPart) {
+    throw new Error('Access denied. You are not a participant of this conversation.');
+  }
+  return await repo.deleteConversationForUser(conversationId, userId);
+}
+
 module.exports = {
   maskSensitiveData,
   listConversations,
@@ -366,5 +374,6 @@ module.exports = {
   togglePinConversation,
   searchUsersForAdminAudit,
   getAdminAuditConversations,
-  getAdminAuditMessages
+  getAdminAuditMessages,
+  deleteUserConversation
 };

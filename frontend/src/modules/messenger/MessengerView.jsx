@@ -4,7 +4,7 @@ import {
   FaUser, FaFilePdf, FaFileAlt, FaCheckDouble, FaThumbtack, FaPlus, 
   FaTimes, FaPhone, FaVideo, FaEllipsisV, FaCircle, FaRedo,
   FaFilter, FaArrowLeft, FaDownload, FaCheck, FaUserPlus, FaVolumeMute,
-  FaIdCard, FaCopy, FaEnvelope, FaUserCircle
+  FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt
 } from 'react-icons/fa';
 import api from '../../services/api';
 import { useAuthStore } from '../../app/store/authStore';
@@ -350,6 +350,25 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     }
   };
 
+  const handleDeleteConversation = async () => {
+    if (!activeConv) return;
+    const titleName = getConvTitle(activeConv);
+    if (!window.confirm(`Are you sure you want to delete conversation with ${titleName}? It will be removed from your chat list.`)) {
+      return;
+    }
+    try {
+      const res = await api.delete(`/messenger/conversations/${activeConv.id}`);
+      if (res.data?.success) {
+        setActiveConv(null);
+        setMessages([]);
+        setShowMoreMenu(false);
+        fetchConversations(false);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete conversation.');
+    }
+  };
+
   const toggleSelectContact = (id) => {
     setSelectedContactIds(prev => 
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
@@ -431,14 +450,21 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     if (!conv) return 'Chat';
     const isCurrentAdmin = (user?.role || '').toUpperCase() === 'ADMIN';
 
-    if (conv.name) {
-      if (isCurrentAdmin && conv.conversation_type === 'DIRECT') {
-        const otherP = conv.other_participants?.[0];
-        if (otherP && (otherP.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+    // For DIRECT conversations, ALWAYS resolve the counterpart / target participant's name!
+    if (conv.conversation_type === 'DIRECT') {
+      const otherP = conv.other_participants?.[0] || conv.participants?.find(p => (p.user_id || p.id) !== user?.id);
+      if (otherP) {
+        if (isCurrentAdmin && (otherP.role || '').toUpperCase() !== 'SUPER_ADMIN') {
           const code = otherP.partner_code || otherP.employee_code || `USR-${(otherP.user_id || otherP.id || '').slice(0, 6).toUpperCase()}`;
           return `Assigned Member (${code})`;
         }
+        return (otherP.full_name && otherP.full_name !== 'User Profile')
+          ? otherP.full_name
+          : (otherP.name || (otherP.first_name ? `${otherP.first_name} ${otherP.last_name || ''}`.trim() : '') || otherP.email || 'Direct Chat');
       }
+    }
+
+    if (conv.name) {
       return conv.name;
     }
 
@@ -784,6 +810,13 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       >
                         <FaVolumeMute size={13} color="#64748B" />
                         <span>Mute Notifications</span>
+                      </div>
+                      <div
+                        onClick={handleDeleteConversation}
+                        style={{ padding: '10px 16px', fontSize: '13px', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid #F1F5F9' }}
+                      >
+                        <FaTrashAlt size={12} color="#DC2626" />
+                        <span style={{ fontWeight: 600 }}>Delete Conversation</span>
                       </div>
                     </div>
                   )}
