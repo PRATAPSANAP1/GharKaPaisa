@@ -321,7 +321,7 @@ export default function ManageAnnouncements() {
             onClick={openCreateModal}
             style={{ ...S.btn('primary'), display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 18px', fontWeight: 700 }}
           >
-            <MdAnnouncement size={18} /> + New Announcement
+            <MdAnnouncement size={18} /> New Announcement
           </button>
         </div>
       </div>
@@ -818,7 +818,7 @@ export default function ManageAnnouncements() {
             </button>
 
             <h3 style={{ fontSize: '20px', fontWeight: 850, color: C.text, margin: '0 0 20px' }}>
-              {formMode === 'create' ? '+ Create New Announcement' : 'Edit Announcement'}
+              {formMode === 'create' ? 'Create New Announcement' : 'Edit Announcement'}
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
