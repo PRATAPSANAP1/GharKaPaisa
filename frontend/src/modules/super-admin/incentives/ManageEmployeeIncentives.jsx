@@ -23,7 +23,7 @@ export default function ManageEmployeeIncentives() {
   }, []);
 
   // Tab View Switcher State
-  const [activeTab, setActiveTab] = useState('history'); // 'history' or 'analytics'
+  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' (records) or 'history' (monthly audit)
 
   // State Management
   const [loading, setLoading] = useState(true);
@@ -258,19 +258,6 @@ export default function ManageEmployeeIncentives() {
           {/* View Switcher Tabs */}
           <div style={{ display: 'flex', gap: '6px', background: C.bgSecondary, padding: '4px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
             <button
-              onClick={() => setActiveTab('history')}
-              style={{
-                padding: '8px 16px', borderRadius: '9px', border: 'none',
-                background: activeTab === 'history' ? C.teal : 'transparent',
-                color: activeTab === 'history' ? '#FFF' : C.textMid,
-                fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'inline-flex', alignItems: 'center', gap: '6px'
-              }}
-            >
-              <FaCalendarAlt /> Historical Incentive Audit
-            </button>
-            <button
               onClick={() => setActiveTab('analytics')}
               style={{
                 padding: '8px 16px', borderRadius: '9px', border: 'none',
@@ -281,7 +268,20 @@ export default function ManageEmployeeIncentives() {
                 display: 'inline-flex', alignItems: 'center', gap: '6px'
               }}
             >
-              <FaChartLine /> Live Analytics & Ledger
+              <FaCoins /> Employee Incentive Records & Ledger
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              style={{
+                padding: '8px 16px', borderRadius: '9px', border: 'none',
+                background: activeTab === 'history' ? C.teal : 'transparent',
+                color: activeTab === 'history' ? '#FFF' : C.textMid,
+                fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'inline-flex', alignItems: 'center', gap: '6px'
+              }}
+            >
+              <FaCalendarAlt /> Historical Monthly Audit
             </button>
           </div>
         </div>
