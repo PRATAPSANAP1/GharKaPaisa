@@ -942,7 +942,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 <form
                   onSubmit={handleSendMessage}
                   style={{
-                    padding: isMobile ? '10px 12px' : '16px 24px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0',
+                    padding: isMobile ? '10px 12px 16px' : '16px 24px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0',
                     display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px'
                   }}
                 >

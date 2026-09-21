@@ -356,7 +356,67 @@ export default function Chatbot() {
     ]);
   };
 
+  // Draggable position state (resets to default bottom-right on page reload)
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
+  const hasMovedRef = useRef(false);
+
+  const handleDragStart = (e) => {
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    dragStartRef.current = {
+      startX: clientX,
+      startY: clientY,
+      initialX: position.x,
+      initialY: position.y
+    };
+  };
+
+  useEffect(() => {
+    const handleDragMove = (e) => {
+      if (!isDraggingRef.current) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      const deltaX = clientX - dragStartRef.current.startX;
+      const deltaY = clientY - dragStartRef.current.startY;
+
+      if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+        hasMovedRef.current = true;
+      }
+
+      setPosition({
+        x: dragStartRef.current.initialX + deltaX,
+        y: dragStartRef.current.initialY + deltaY
+      });
+    };
+
+    const handleDragEnd = () => {
+      isDraggingRef.current = false;
+    };
+
+    window.addEventListener('mousemove', handleDragMove);
+    window.addEventListener('mouseup', handleDragEnd);
+    window.addEventListener('touchmove', handleDragMove, { passive: false });
+    window.addEventListener('touchend', handleDragEnd);
+
+    return () => {
+      window.removeEventListener('mousemove', handleDragMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchmove', handleDragMove);
+      window.removeEventListener('touchend', handleDragEnd);
+    };
+  }, [position]);
+
   const toggleChat = () => {
+    if (hasMovedRef.current) {
+      hasMovedRef.current = false;
+      return;
+    }
     setIsOpen(!isOpen);
     if (!isOpen) {
       setHasNewMessage(false);
@@ -367,6 +427,8 @@ export default function Chatbot() {
     <div 
       className="gkp-chatbot-container" 
       style={{ 
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        transition: isDraggingRef.current ? 'none' : 'transform 0.1s ease-out',
         '--theme-primary': C.primary, 
         '--theme-primary-dark': C.primaryDark || C.primary,
         '--theme-glow': `${C.primary}30`,
@@ -381,6 +443,8 @@ export default function Chatbot() {
       {!isOpen && (
         <ChatbotButton 
           onClick={toggleChat} 
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
           hasNewMessage={hasNewMessage} 
           C={C} 
         />
