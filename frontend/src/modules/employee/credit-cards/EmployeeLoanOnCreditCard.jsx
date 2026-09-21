@@ -307,13 +307,13 @@ export default function EmployeeLoanOnCreditCard() {
             }}
           >
             <FaCalculator size={14} />
-            <span>EMI Calculator</span>
+            <span>Loan Calculator</span>
             <span style={{ fontSize: '10px' }}>{showCalculator ? '▲' : '▼'}</span>
           </button>
         </div>
       </div>
 
-      {/* ── 2. CONDITIONAL EMI CALCULATOR ── */}
+      {/* ── 2. CONDITIONAL LOAN CALCULATOR ── */}
       {showCalculator && (
         <div style={{
           background: isDark ? '#1E293B' : '#FFFFFF',
@@ -327,7 +327,7 @@ export default function EmployeeLoanOnCreditCard() {
               <FaCalculator size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>Card Loan Eligibility & EMI Calculator</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>Card Loan Eligibility & Loan Calculator</h3>
               <p style={{ fontSize: '12.5px', color: C.textMid, margin: 0 }}>Calculate exact monthly EMI installments and total interest payable for customers.</p>
             </div>
           </div>

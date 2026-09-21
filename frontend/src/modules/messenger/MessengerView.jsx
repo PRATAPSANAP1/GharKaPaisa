@@ -4,7 +4,7 @@ import {
   FaUser, FaFilePdf, FaFileAlt, FaCheckDouble, FaThumbtack, FaPlus, 
   FaTimes, FaPhone, FaVideo, FaEllipsisV, FaCircle, FaRedo,
   FaFilter, FaArrowLeft, FaDownload, FaCheck, FaUserPlus, FaVolumeMute,
-  FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt
+  FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt, FaLock
 } from 'react-icons/fa';
 import api from '../../services/api';
 import { useAuthStore } from '../../app/store/authStore';
