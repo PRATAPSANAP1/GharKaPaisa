@@ -241,7 +241,7 @@ const saveSettings = async (req, res, next) => {
 async function resolveAnnouncementTargetUsers(audienceType, targetRole, targetUserIds = []) {
   try {
     if (Array.isArray(targetUserIds) && targetUserIds.length > 0) {
-      const { rows } = await query(`SELECT id FROM users WHERE id = ANY($1::uuid[])`, [targetUserIds]);
+      const { rows } = await query(`SELECT id FROM users WHERE id = ANY($1::uuid[]) AND is_active = true`, [targetUserIds]);
       return rows.map(r => r.id);
     }
 
@@ -251,19 +251,19 @@ async function resolveAnnouncementTargetUsers(audienceType, targetRole, targetUs
       const { rows } = await query(`SELECT id FROM users WHERE is_active = true`);
       return rows.map(r => r.id);
     } else if (type === 'PARTNERS' || type === 'PARTNER') {
-      const { rows } = await query(`SELECT id FROM users WHERE role = 'PARTNER' AND is_active = true`);
+      const { rows } = await query(`SELECT id FROM users WHERE UPPER(role::text) = 'PARTNER' AND is_active = true`);
       return rows.map(r => r.id);
     } else if (type === 'EMPLOYEES' || type === 'EMPLOYEE') {
-      const { rows } = await query(`SELECT id FROM users WHERE role IN ('EMPLOYEE','ADMIN','HR','SUPER_ADMIN') AND is_active = true`);
+      const { rows } = await query(`SELECT id FROM users WHERE UPPER(role::text) IN ('EMPLOYEE','ADMIN','HR','SUPER_ADMIN') AND is_active = true`);
       return rows.map(r => r.id);
     } else if (type === 'MANAGERS' || type === 'MANAGER') {
-      const { rows } = await query(`SELECT id FROM users WHERE (designation ILIKE '%manager%' OR role = 'ADMIN') AND is_active = true`);
+      const { rows } = await query(`SELECT id FROM users WHERE (UPPER(COALESCE(designation::text, '')) LIKE '%MANAGER%' OR UPPER(role::text) IN ('ADMIN', 'SUPER_ADMIN')) AND is_active = true`);
       return rows.map(r => r.id);
     } else if (type === 'TEAM_LEADERS' || type === 'TL' || type === 'TEAM_LEADER') {
-      const { rows } = await query(`SELECT id FROM users WHERE (designation ILIKE '%leader%' OR designation ILIKE '%tl%') AND is_active = true`);
+      const { rows } = await query(`SELECT id FROM users WHERE (UPPER(COALESCE(designation::text, '')) LIKE '%LEADER%' OR UPPER(COALESCE(designation::text, '')) LIKE '%TL%' OR UPPER(role::text) = 'TEAM_LEADER') AND is_active = true`);
       return rows.map(r => r.id);
     } else if (type === 'TELECALLERS' || type === 'TC' || type === 'TELECALLER') {
-      const { rows } = await query(`SELECT id FROM users WHERE (designation ILIKE '%telecaller%' OR designation ILIKE '%tc%') AND is_active = true`);
+      const { rows } = await query(`SELECT id FROM users WHERE (UPPER(COALESCE(designation::text, '')) LIKE '%TELECALLER%' OR UPPER(COALESCE(designation::text, '')) LIKE '%TC%' OR UPPER(role::text) = 'TELECALLER') AND is_active = true`);
       return rows.map(r => r.id);
     } else {
       const { rows } = await query(`SELECT id FROM users WHERE is_active = true`);
@@ -300,10 +300,10 @@ async function ensureSeedAnnouncements() {
 const getAnnouncements = async (req, res, next) => {
   try {
     await ensureSeedAnnouncements();
-    const userRole = (req.user?.role || 'CUSTOMER').toLowerCase();
+    const currentRole = (req.user?.role || 'CUSTOMER').toLowerCase();
 
     // If superadmin requesting all announcements for management
-    if (['super_admin', 'admin'].includes(userRole) && (req.query.admin === 'true' || req.originalUrl?.includes('/superadmin'))) {
+    if (['super_admin', 'admin'].includes(currentRole) && (req.query.admin === 'true' || req.originalUrl?.includes('/superadmin'))) {
       const { search, status, audience, priority, date_from, date_to } = req.query;
       let where = `WHERE 1=1`;
       const values = [];
@@ -371,16 +371,28 @@ const getAnnouncements = async (req, res, next) => {
     }
 
     // User-facing announcements feed
+    const userRole = (req.user?.role || '').toUpperCase();
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+
     const { rows } = await query(`
-      SELECT a.*, 
+      SELECT DISTINCT a.*, 
         (ar.read_at IS NOT NULL) as is_read,
         (ar.acknowledged_at IS NOT NULL) as is_acknowledged
       FROM announcements a
       LEFT JOIN announcement_recipients ar ON ar.announcement_id = a.id AND ar.user_id = $1
       WHERE (LOWER(a.status) IN ('publish', 'published'))
         AND (a.expires_at IS NULL OR a.expires_at >= NOW())
+        AND (
+          ar.user_id = $1
+          OR UPPER(COALESCE(a.audience_type, a.target_role, 'ALL_USERS')) IN ('ALL_USERS', 'ALL')
+          OR ($2 = 'PARTNER' AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('PARTNERS', 'PARTNER'))
+          OR ($2 IN ('EMPLOYEE', 'ADMIN', 'SUPER_ADMIN') AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('EMPLOYEES', 'EMPLOYEE'))
+          OR ($3 LIKE '%MANAGER%' AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('MANAGERS', 'MANAGER'))
+          OR (($3 LIKE '%LEADER%' OR $3 LIKE '%TL%') AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('TEAM_LEADERS', 'TL', 'TEAM_LEADER'))
+          OR (($3 LIKE '%TELECALLER%' OR $3 LIKE '%TC%') AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('TELECALLERS', 'TC', 'TELECALLER'))
+        )
       ORDER BY a.created_at DESC
-    `, [req.user.id]);
+    `, [req.user.id, userRole, userDesignation]);
 
     return success(res, rows);
   } catch (err) {

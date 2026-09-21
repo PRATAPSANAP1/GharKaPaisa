@@ -122,17 +122,19 @@ const AdminLayout = () => {
         navigate('/hr/dashboard', { replace: true });
       }
     } else if (isRemarkOperator || isQdOperator) {
-      if (!location.pathname.startsWith('/admin/applications')) {
+      const allowedPaths = ['/admin/applications', '/admin/messenger'];
+      const isAllowed = allowedPaths.some(p => location.pathname.startsWith(p));
+      if (!isAllowed) {
         navigate('/admin/applications', { replace: true });
       }
     } else if (isSalesExec) {
-      const allowedPaths = ['/admin/dashboard', '/admin/applications'];
+      const allowedPaths = ['/admin/dashboard', '/admin/applications', '/admin/messenger'];
       const isAllowed = allowedPaths.some(p => location.pathname === p || location.pathname.startsWith(p));
       if (!isAllowed) {
         navigate('/admin/dashboard', { replace: true });
       }
     } else if (isBackend) {
-      const allowedPaths = ['/admin/dashboard', '/admin/applications', '/admin/credit-cards', '/admin/loans', '/admin/insurance'];
+      const allowedPaths = ['/admin/dashboard', '/admin/applications', '/admin/credit-cards', '/admin/loans', '/admin/insurance', '/admin/messenger'];
       const isAllowed = allowedPaths.some(p => location.pathname.startsWith(p));
       if (!isAllowed) {
         navigate('/admin/dashboard', { replace: true });

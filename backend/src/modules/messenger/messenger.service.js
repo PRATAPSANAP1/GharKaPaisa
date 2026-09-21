@@ -267,11 +267,11 @@ async function postMessage(senderId, { conversation_id, message_type = 'TEXT', m
     for (const p of participants) {
       if (p.user_id && p.user_id !== senderId) {
         const recipientRole = (p.role || '').toUpperCase();
-        let link = '/messenger';
+        let link = '/admin/messenger';
         if (recipientRole === 'SUPER_ADMIN') link = '/super-admin/messenger';
-        else if (recipientRole === 'ADMIN') link = '/admin/messenger';
-        else if (recipientRole === 'EMPLOYEE') link = '/employee/messenger';
-        else if (recipientRole === 'PARTNER') link = '/partner/messenger';
+        else if (['ADMIN', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'REMARK_OPERATOR', 'QD_OPERATOR', 'PAN_CHECKER'].includes(recipientRole)) link = '/admin/messenger';
+        else if (['EMPLOYEE', 'TELECALLER', 'TEAM_LEADER'].includes(recipientRole)) link = '/employee/messenger';
+        else if (['PARTNER', 'TEAM_MEMBER'].includes(recipientRole)) link = '/partner/messenger';
 
         await createNotification(
           p.user_id,

@@ -132,6 +132,15 @@ import ManageBankCardApplications from '../modules/admin/credit-cards/ManageBank
 import ManageAdminProducts from '../modules/super-admin/cms/ManageAdminProducts';
 import ManageSupportTickets from '../modules/super-admin/support/ManageSupportTickets';
 
+const SmartMessengerRedirect = () => {
+  const user = useAuthStore((state) => state.user);
+  const role = (user?.role || '').toUpperCase();
+  if (role === 'SUPER_ADMIN') return <Navigate to="/super-admin/messenger" replace />;
+  if (['PARTNER', 'TEAM_MEMBER'].includes(role)) return <Navigate to="/partner/messenger" replace />;
+  if (['EMPLOYEE', 'TELECALLER', 'TEAM_LEADER'].includes(role)) return <Navigate to="/employee/messenger" replace />;
+  return <Navigate to="/admin/messenger" replace />;
+};
+
 const AppRoutes = () => {
   const isInitializing = useAuthStore((state) => state.isInitializing);
 
@@ -225,6 +234,11 @@ const AppRoutes = () => {
       <Route path="/customer-upload/:token" element={<PublicCustomerUploadPage />} />
       <Route path="/customer/upload-details/:token" element={<PublicCustomerUploadPage />} />
       <Route path="/customer/application/:token" element={<CustomerUploadPortal />} />
+
+      {/* Smart Messenger Fallback Route */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/messenger" element={<SmartMessengerRedirect />} />
+      </Route>
 
       {/* Partner Protected Routes */}
       <Route element={<ProtectedRoute />}>
