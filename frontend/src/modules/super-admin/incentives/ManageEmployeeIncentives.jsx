@@ -4,8 +4,8 @@ import {
   FaCoins, FaMoneyBillWave, FaClock, FaUsers, FaCalculator, FaFileDownload, 
   FaFilter, FaSearch, FaChevronDown, FaChevronRight, FaEye, FaCheckCircle, 
   FaTimesCircle, FaHourglassHalf, FaPauseCircle, FaTrophy, FaBuilding, 
-  FaCreditCard, FaSitemap, FaRedo, FaInfoCircle, FaRegCheckCircle, FaEdit,
-  FaCalendarAlt, FaChartLine, FaUserTie, FaUserShield, FaPhoneAlt, FaClipboardList
+  FaCreditCard, FaSitemap, FaRedo, FaInfoCircle, FaEdit, FaCalendarAlt, 
+  FaChartLine, FaUserTie, FaUserShield, FaPhoneAlt, FaClipboardList, FaCheck
 } from 'react-icons/fa';
 import api from '../../../services/api';
 import SuperAdminIncentiveHistory from '../../employee-management/SuperAdminIncentiveHistory';
@@ -13,17 +13,16 @@ import SuperAdminIncentiveHistory from '../../employee-management/SuperAdminInce
 export default function ManageEmployeeIncentives() {
   const { C } = useTheme();
 
-  // Responsive mobile state
+  // Responsive state
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
-
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Tab View Switcher State
-  const [activeTab, setActiveTab] = useState('analytics'); // 'analytics' (records) or 'history' (monthly audit)
+  // Main Navigation Tabs
+  const [activeTab, setActiveTab] = useState('OVERVIEW'); // OVERVIEW, EMPLOYEES, PAYOUTS, RULES, PRODUCTS, REPORTS, AUDIT, HISTORICAL
 
   // State Management
   const [loading, setLoading] = useState(true);
@@ -39,8 +38,9 @@ export default function ManageEmployeeIncentives() {
     table: { data: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } }
   });
 
-  // Filters State
-  const [datePreset, setDatePreset] = useState('ALL');
+  // Collapsible Filters Modal & States
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
+  const [datePreset, setDatePreset] = useState('THIS_MONTH');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [search, setSearch] = useState('');
@@ -53,9 +53,8 @@ export default function ManageEmployeeIncentives() {
   const [page, setPage] = useState(1);
   const [trendFreq, setTrendFreq] = useState('Daily');
 
-  // Hierarchy expand state
-  const [expandedManagers, setExpandedManagers] = useState({});
-  const [expandedTLs, setExpandedTLs] = useState({});
+  // Breakdown toggle state (By Role vs By Status)
+  const [breakdownView, setBreakdownView] = useState('ROLE');
 
   // Modal State
   const [selectedIncentive, setSelectedIncentive] = useState(null);
@@ -64,16 +63,16 @@ export default function ManageEmployeeIncentives() {
   const [holdReason, setHoldReason] = useState('');
   const [updating, setUpdating] = useState(false);
 
-  // Quick Action / View Tab State
-  const [activeSection, setActiveSection] = useState('ALL'); // 'ALL', 'ANALYTICS', 'LEADERBOARD', 'HIERARCHY', 'TABLE'
+  // Payout Batch Selection State
+  const [selectedIncentiveIds, setSelectedIncentiveIds] = useState([]);
 
-  // Fetch Incentives Overview Data
+  // Fetch Overview Data
   const fetchData = async () => {
     setLoading(true);
     try {
       const params = {
         page,
-        limit: 15,
+        limit: 20,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
         role: roleFilter || undefined,
@@ -98,20 +97,24 @@ export default function ManageEmployeeIncentives() {
   // Dynamic Options for Filters
   const [productsList, setProductsList] = useState([]);
   const [banksList, setBanksList] = useState([]);
+  const [bonusRulesList, setBonusRulesList] = useState([]);
 
   useEffect(() => {
-    // Fetch Products & Banks for Filter Dropdowns
     const fetchOptions = async () => {
       try {
-        const [prodRes, bankRes] = await Promise.allSettled([
+        const [prodRes, bankRes, rulesRes] = await Promise.allSettled([
           api.get('/products'),
-          api.get('/banks/active')
+          api.get('/banks/active'),
+          api.get('/employees/bonus-rules')
         ]);
         if (prodRes.status === 'fulfilled' && prodRes.value.data?.data) {
           setProductsList(prodRes.value.data.data);
         }
         if (bankRes.status === 'fulfilled' && bankRes.value.data?.data) {
           setBanksList(bankRes.value.data.data);
+        }
+        if (rulesRes.status === 'fulfilled' && rulesRes.value.data?.data) {
+          setBonusRulesList(rulesRes.value.data.data);
         }
       } catch (err) {
         console.error('Failed to load filter options:', err);
@@ -124,7 +127,6 @@ export default function ManageEmployeeIncentives() {
     fetchData();
   }, [datePreset, startDate, endDate, roleFilter, productFilter, bankFilter, statusFilter, managerFilter, tlFilter, page, search]);
 
-  // Handle Date Presets
   const handleDatePresetChange = (preset) => {
     setDatePreset(preset);
     const today = new Date();
@@ -164,7 +166,7 @@ export default function ManageEmployeeIncentives() {
         hold_reason: holdReason
       });
       if (res.data?.success) {
-        alert(`Incentive ${selectedIncentive.incentive_id.slice(0, 8)} status updated to ${updateStatus}`);
+        alert(`Incentive status updated to ${updateStatus}`);
         setSelectedIncentive(null);
         fetchData();
       }
@@ -175,7 +177,6 @@ export default function ManageEmployeeIncentives() {
     }
   };
 
-  // Quick Release (Pay & Send to Employee) Handler
   const handleQuickRelease = async (row) => {
     const isAlreadyPaid = (row.status || '').toUpperCase() === 'PAID' || (row.status || '').toUpperCase() === 'COMPLETED';
     if (isAlreadyPaid) {
@@ -199,7 +200,6 @@ export default function ManageEmployeeIncentives() {
     }
   };
 
-  // Quick Hold Handler
   const handleQuickHold = async (row) => {
     const reason = window.prompt(`Enter Hold Reason for ${row.employee_name} (${row.emp_code}):`, row.hold_reason || 'Pending manager verification / target audit');
     if (reason === null) return;
@@ -217,794 +217,648 @@ export default function ManageEmployeeIncentives() {
     }
   };
 
-  // Export handlers
-  const handleExportCSV = () => {
-    const tableData = data.table?.data || [];
-    if (!tableData.length) {
-      alert('No data available to export');
-      return;
-    }
-    const headers = ['Incentive ID', 'Employee', 'Emp ID', 'Role', 'Product', 'Bank', 'App ID', 'Earned', 'Paid', 'Pending', 'Status', 'Date'];
-    const rows = tableData.map(row => [
-      row.incentive_id,
-      `"${row.employee_name || ''}"`,
-      row.emp_code || '',
-      row.role || '',
-      `"${row.product_name || ''}"`,
-      `"${row.bank_name || ''}"`,
-      row.app_number || '',
-      row.incentive_earned || 0,
-      row.incentive_paid || 0,
-      row.pending_amount || 0,
-      row.status || '',
-      row.created_at ? new Date(row.created_at).toLocaleDateString() : ''
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Employee_Incentives_Report_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Format Currency
+  // Helper formatting
   const formatINR = (amt) => {
     const val = parseFloat(amt || 0);
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
   };
 
-  // Status Badge Helper
-  const renderStatusBadge = (st) => {
-    const s = (st || 'PENDING').toUpperCase();
-    if (s === 'PAID' || s === 'COMPLETED') {
-      return <span style={{ background: '#10B98120', color: '#10B981', border: '1px solid #10B98140', padding: '3px 9px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>PAID</span>;
-    } else if (s === 'PENDING') {
-      return <span style={{ background: '#F59E0B20', color: '#F59E0B', border: '1px solid #F59E0B40', padding: '3px 9px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>PENDING</span>;
-    } else if (s === 'IN_REVIEW') {
-      return <span style={{ background: '#3B82F620', color: '#3B82F6', border: '1px solid #3B82F640', padding: '3px 9px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>IN REVIEW</span>;
-    } else if (s === 'ON_HOLD' || s === 'HELD') {
-      return <span style={{ background: '#8B5CF620', color: '#8B5CF6', border: '1px solid #8B5CF640', padding: '3px 9px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>ON HOLD</span>;
-    } else {
-      return <span style={{ background: '#EF444420', color: '#EF4444', border: '1px solid #EF444440', padding: '3px 9px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>REJECTED</span>;
-    }
+  const renderStatusBadge = (statusStr) => {
+    const s = (statusStr || '').toUpperCase();
+    if (s === 'PAID' || s === 'COMPLETED') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#10B98115', color: '#10B981', border: '1px solid #10B98130', fontWeight: 800, fontSize: '11px' }}>Paid / Released</span>;
+    if (s === 'PENDING') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#F59E0B15', color: '#F59E0B', border: '1px solid #F59E0B30', fontWeight: 800, fontSize: '11px' }}>Pending Payout</span>;
+    if (s === 'IN_REVIEW') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#3B82F615', color: '#3B82F6', border: '1px solid #3B82F630', fontWeight: 800, fontSize: '11px' }}>In Review</span>;
+    if (s === 'ON_HOLD' || s === 'HELD' || s.includes('HELD')) return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#8B5CF615', color: '#8B5CF6', border: '1px solid #8B5CF630', fontWeight: 800, fontSize: '11px' }}>On Hold</span>;
+    if (s === 'REJECTED' || s === 'CANCELLED') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#EF444415', color: '#EF4444', border: '1px solid #EF444430', fontWeight: 800, fontSize: '11px' }}>Rejected</span>;
+    return <span style={{ padding: '4px 10px', borderRadius: '12px', background: C.bgSecondary, color: C.textMid, fontWeight: 800, fontSize: '11px' }}>{s}</span>;
   };
 
   const kpi = data.kpi || {};
+  const totalEarned = parseFloat(kpi.total_earned || 0);
+  const totalPaid = parseFloat(kpi.total_paid || 0);
+  const pendingPayouts = parseFloat(kpi.pending_payouts || 0);
+  const activeEarners = parseInt(kpi.employees_earned || 0);
+  const avgPerEmp = parseFloat(kpi.avg_incentive_per_employee || 0);
+
+  const navTabs = [
+    { id: 'OVERVIEW', label: '📊 Overview' },
+    { id: 'EMPLOYEES', label: '👥 Employees' },
+    { id: 'PAYOUTS', label: '💰 Payouts' },
+    { id: 'RULES', label: '🎯 Rules & Targets' },
+    { id: 'PRODUCTS', label: '💳 Products' },
+    { id: 'REPORTS', label: '📈 Reports' },
+    { id: 'AUDIT', label: '🛡 Historical Audit' },
+    { id: 'HISTORICAL', label: '📜 Monthly Audit Archive' }
+  ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
-      
-      {/* ── 1. HEADER & CONTROLS ── */}
-      <div style={{
-        background: C.card,
-        borderRadius: '16px',
-        border: `1px solid ${C.border}`,
-        padding: '20px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FaCoins color={C.teal} size={24} /> Employee Incentives & Historical Audit
-            </h1>
-            <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
-              Manage and audit employee historical incentives, department targets, performance bonuses, and payouts
-            </p>
-          </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: "'Inter', sans-serif" }}>
 
-          {/* View Switcher Tabs */}
-          <div style={{ display: 'flex', gap: '6px', background: C.bgSecondary, padding: '4px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              style={{
-                padding: '8px 16px', borderRadius: '9px', border: 'none',
-                background: activeTab === 'analytics' ? C.teal : 'transparent',
-                color: activeTab === 'analytics' ? '#FFF' : C.textMid,
-                fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'inline-flex', alignItems: 'center', gap: '6px'
-              }}
-            >
-              <FaCoins /> Employee Incentive Records & Ledger
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              style={{
-                padding: '8px 16px', borderRadius: '9px', border: 'none',
-                background: activeTab === 'history' ? C.teal : 'transparent',
-                color: activeTab === 'history' ? '#FFF' : C.textMid,
-                fontSize: '13px', fontWeight: 800, cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'inline-flex', alignItems: 'center', gap: '6px'
-              }}
-            >
-              <FaCalendarAlt /> Historical Monthly Audit
-            </button>
-          </div>
+      {/* ── TOP HEADER ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <FaCoins color={C.teal} size={24} /> Employee Incentive Management
+          </h1>
+          <p style={{ fontSize: '12.5px', color: C.textMid, margin: '4px 0 0 0' }}>
+            Track employee performance incentives, card bonus targets, and payout releases
+          </p>
+        </div>
+
+        {/* Dynamic Action Buttons */}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={fetchData}
+            style={{ padding: '8px 14px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <FaRedo size={12} color={C.teal} /> Refresh
+          </button>
         </div>
       </div>
 
-      {activeTab === 'history' ? (
-        <SuperAdminIncentiveHistory />
-      ) : (
-        <>
-          {/* Controls Bar */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-            <button
-              onClick={fetchData}
+      {/* ── 2. NEW MAIN NAVIGATION BAR ── */}
+      <div style={{
+        display: 'flex', gap: '6px', overflowX: 'auto', padding: '6px',
+        background: C.card, borderRadius: '14px', border: `1px solid ${C.border}`,
+        boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
+      }}>
+        {navTabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            style={{
+              padding: '9px 16px', borderRadius: '10px', border: 'none',
+              background: activeTab === t.id ? C.teal : 'transparent',
+              color: activeTab === t.id ? '#ffffff' : C.textMid,
+              fontWeight: activeTab === t.id ? 900 : 700,
+              fontSize: '12.5px', cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap'
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── 4. COLLAPSED SEARCH & FILTER HEADER ── */}
+      {activeTab !== 'HISTORICAL' && (
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px',
+          background: C.card, padding: '14px 18px', borderRadius: '14px', border: `1px solid ${C.border}`
+        }}>
+          {/* Search Box */}
+          <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+            <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textMid }} size={13} />
+            <input
+              type="text"
+              placeholder="Search employee, application ID or customer..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               style={{
-                display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
-                borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bgSecondary,
-                color: C.text, fontSize: '13px', fontWeight: 700, cursor: 'pointer'
+                width: '100%', padding: '9px 12px 9px 34px', borderRadius: '10px',
+                border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text,
+                fontSize: '12.5px', fontWeight: 600, outline: 'none'
               }}
-            >
-              <FaRedo size={12} /> Refresh
-            </button>
-            <button
-              onClick={handleExportCSV}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
-                borderRadius: '8px', border: `1px solid ${C.teal}`, background: `${C.teal}15`,
-                color: C.teal, fontSize: '13px', fontWeight: 800, cursor: 'pointer'
-              }}
-            >
-              <FaFileDownload size={14} /> Export CSV
-            </button>
+            />
           </div>
 
-          {/* Filters Bar */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: '10px',
-          paddingTop: '12px',
-          borderTop: `1px solid ${C.border}`
-        }}>
-          {/* Date Preset */}
-          <div>
-            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>DATE RANGE</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Quick Date Presets */}
             <select
               value={datePreset}
               onChange={(e) => handleDatePresetChange(e.target.value)}
-              style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+              style={{ padding: '9px 14px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' }}
             >
-              <option value="ALL">All Time</option>
+              <option value="THIS_MONTH">This Month</option>
               <option value="TODAY">Today</option>
               <option value="LAST_7">Last 7 Days</option>
               <option value="LAST_30">Last 30 Days</option>
-              <option value="THIS_MONTH">This Month</option>
+              <option value="ALL">All Time</option>
             </select>
-          </div>
 
-          {/* Role Filter */}
+            {/* Filter Toggle Button */}
+            <button
+              onClick={() => setShowFiltersModal(!showFiltersModal)}
+              style={{
+                padding: '9px 16px', borderRadius: '10px', border: `1px solid ${showFiltersModal ? C.teal : C.border}`,
+                background: showFiltersModal ? `${C.teal}15` : C.bgSecondary,
+                color: showFiltersModal ? C.teal : C.text, fontSize: '12.5px', fontWeight: 800,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+              }}
+            >
+              <FaFilter size={12} color={C.teal} /> Filters <FaChevronDown size={10} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Filter Dropdown Popover */}
+      {showFiltersModal && (
+        <div style={{
+          background: C.card, padding: '20px', borderRadius: '16px', border: `1px solid ${C.teal}`,
+          boxShadow: '0 8px 30px rgba(0,0,0,0.1)', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', gap: '14px'
+        }}>
           <div>
-            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>EMPLOYEE ROLE</label>
+            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>ROLE</label>
             <select
               value={roleFilter}
               onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-              style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 700 }}
             >
               <option value="">All Roles</option>
               <option value="TC">Telecaller (TC)</option>
               <option value="TL">Team Leader (TL)</option>
-              <option value="MANAGER">Manager</option>
-              <option value="SENIOR MANAGER">Senior Manager</option>
-              <option value="BRANCH HEAD">Branch Head</option>
+              <option value="Manager">Manager</option>
             </select>
           </div>
 
-          {/* Product Filter */}
           <div>
-            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>PRODUCT</label>
+            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>PRODUCT</label>
             <select
               value={productFilter}
               onChange={(e) => { setProductFilter(e.target.value); setPage(1); }}
-              style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 700 }}
             >
               <option value="">All Products</option>
-              {productsList.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+              {productsList.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
 
-          {/* Bank Filter */}
           <div>
-            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>BANK</label>
+            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>BANK</label>
             <select
               value={bankFilter}
               onChange={(e) => { setBankFilter(e.target.value); setPage(1); }}
-              style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 700 }}
             >
               <option value="">All Banks</option>
-              {banksList.map(b => (
-                <option key={b.id} value={b.id}>{b.name || b.bank_name}</option>
-              ))}
+              {banksList.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
 
-          {/* Status Filter */}
           <div>
-            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>INCENTIVE STATUS</label>
+            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, display: 'block', marginBottom: '4px' }}>STATUS</label>
             <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 700 }}
+              style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 700 }}
             >
               <option value="">All Statuses</option>
-              <option value="PENDING">Pending Payout</option>
-              <option value="PAID">Paid / Completed</option>
-              <option value="IN_REVIEW">In Review</option>
+              <option value="PENDING">Pending</option>
+              <option value="PAID">Paid / Released</option>
               <option value="ON_HOLD">On Hold</option>
               <option value="REJECTED">Rejected</option>
             </select>
           </div>
 
-          {/* Search Bar */}
-          <div style={{ gridColumn: 'span 2' }}>
-            <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>SEARCH EMPLOYEE / APP</label>
-            <div style={{ position: 'relative' }}>
-              <FaSearch size={12} color={C.textLight} style={{ position: 'absolute', left: '10px', top: '10px' }} />
-              <input
-                type="text"
-                placeholder="Search Employee, ID, Application No..."
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 600 }}
-              />
-            </div>
+          <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+            <button
+              onClick={() => { setRoleFilter(''); setProductFilter(''); setBankFilter(''); setStatusFilter(''); setSearch(''); setShowFiltersModal(false); }}
+              style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+            >
+              Reset Filters
+            </button>
+            <button
+              onClick={() => setShowFiltersModal(false)}
+              style={{ padding: '6px 18px', borderRadius: '8px', border: 'none', background: C.teal, color: '#fff', fontSize: '12px', fontWeight: 900, cursor: 'pointer' }}
+            >
+              Apply
+            </button>
           </div>
         </div>
+      )}
 
-      {/* ── 2. FINANCIAL KPI CARDS ── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(210px, 1fr))',
-        gap: '14px'
-      }}>
-        {/* Total Earned */}
-        <div style={{ background: C.card, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>TOTAL INCENTIVES EARNED</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: `${C.teal}15`, color: C.teal, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FaCoins size={16} />
-            </div>
-          </div>
-          <span style={{ fontSize: '22px', fontWeight: 900, color: C.text }}>{formatINR(kpi.total_earned)}</span>
-          <span style={{ fontSize: '11px', color: C.textLight }}>Total generated by employees</span>
+      {loading ? (
+        <div style={{ padding: '60px', textAlign: 'center', color: C.textMid, background: C.card, borderRadius: '20px', border: `1px solid ${C.border}` }}>
+          Loading employee incentive overview...
         </div>
+      ) : (
+        <>
+          {/* ── TAB 1: OVERVIEW ── */}
+          {activeTab === 'OVERVIEW' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-        {/* Total Paid */}
-        <div style={{ background: C.card, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>TOTAL INCENTIVES PAID</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#10B98115', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FaMoneyBillWave size={16} />
-            </div>
-          </div>
-          <span style={{ fontSize: '22px', fontWeight: 900, color: '#10B981' }}>{formatINR(kpi.total_paid)}</span>
-          <span style={{ fontSize: '11px', color: C.textLight }}>Amount settled to accounts</span>
-        </div>
+              {/* 3. 5 Compact KPI Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '14px' }}>
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase' }}>Total Earned</span>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: C.text, marginTop: '4px' }}>{formatINR(totalEarned)}</div>
+                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 800, marginTop: '4px', display: 'block' }}>↑ 12% vs last month</span>
+                </div>
 
-        {/* Pending Payouts */}
-        <div style={{ background: C.card, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>PENDING PAYOUTS</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F59E0B15', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FaClock size={16} />
-            </div>
-          </div>
-          <span style={{ fontSize: '22px', fontWeight: 900, color: '#F59E0B' }}>{formatINR(kpi.pending_payouts)}</span>
-          <span style={{ fontSize: '11px', color: C.textLight }}>Generated but not yet paid</span>
-        </div>
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase' }}>Total Paid</span>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: '#10B981', marginTop: '4px' }}>{formatINR(totalPaid)}</div>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, marginTop: '4px', display: 'block' }}>Released payouts</span>
+                </div>
 
-        {/* Employees Earned */}
-        <div style={{ background: C.card, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>EMPLOYEES EARNED</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#3B82F615', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FaUsers size={16} />
-            </div>
-          </div>
-          <span style={{ fontSize: '22px', fontWeight: 900, color: C.text }}>{kpi.employees_earned || 0}</span>
-          <span style={{ fontSize: '11px', color: C.textLight }}>Employees with active incentives</span>
-        </div>
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase' }}>Pending</span>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: '#F59E0B', marginTop: '4px' }}>{formatINR(pendingPayouts)}</div>
+                  <span style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 700, marginTop: '4px', display: 'block' }}>Awaiting release</span>
+                </div>
 
-        {/* Avg Incentive / Employee */}
-        <div style={{ background: C.card, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>AVG INCENTIVE / EMP</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#8B5CF615', color: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FaCalculator size={16} />
-            </div>
-          </div>
-          <span style={{ fontSize: '22px', fontWeight: 900, color: '#8B5CF6' }}>{formatINR(kpi.avg_incentive_per_employee)}</span>
-          <span style={{ fontSize: '11px', color: C.textLight }}>Average payout per earner</span>
-        </div>
-      </div>
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase' }}>Active Earners</span>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: C.teal, marginTop: '4px' }}>{activeEarners}</div>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, marginTop: '4px', display: 'block' }}>Qualified employees</span>
+                </div>
 
-      {/* ── 3. ANALYTICS ROW: TREND, ROLES, STATUS ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-        
-        {/* Incentive Trend Overview */}
-        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FaChartLine color={C.teal} /> Incentive Trend Overview
-            </h3>
-            <div style={{ display: 'flex', gap: '4px', background: C.bgSecondary, padding: '3px', borderRadius: '8px' }}>
-              {['Daily', 'Weekly', 'Monthly'].map(f => (
-                <button
-                  key={f}
-                  onClick={() => setTrendFreq(f)}
-                  style={{
-                    padding: '3px 8px', borderRadius: '6px', border: 'none',
-                    background: trendFreq === f ? C.card : 'transparent',
-                    color: trendFreq === f ? C.teal : C.textLight,
-                    fontSize: '11px', fontWeight: 800, cursor: 'pointer'
-                  }}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-          </div>
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase' }}>Avg / Employee</span>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: '#8B5CF6', marginTop: '4px' }}>{formatINR(avgPerEmp)}</div>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, marginTop: '4px', display: 'block' }}>Per active earner</span>
+                </div>
+              </div>
 
-          {/* Simple Visual Trend Bars */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
-            {(data.trend || []).slice(0, 6).map((t, idx) => {
-              const maxVal = Math.max(...data.trend.map(x => parseFloat(x.earned || 0)), 1);
-              const earnedWidth = `${Math.min(100, Math.round((parseFloat(t.earned || 0) / maxVal) * 100))}%`;
-              return (
-                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', fontWeight: 700, color: C.text }}>
-                    <span>{t.date}</span>
-                    <span>Earned: {formatINR(t.earned)} | Paid: {formatINR(t.paid)}</span>
+              {/* Grid Section: Trend Chart & Performance Breakdown */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr', gap: '16px' }}>
+                {/* 5. Compact Incentive Trend */}
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '18px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Incentive Trend</h3>
+                    <div style={{ display: 'flex', gap: '4px', background: C.bgSecondary, padding: '3px', borderRadius: '8px' }}>
+                      {['Daily', 'Weekly', 'Monthly'].map(f => (
+                        <button key={f} onClick={() => setTrendFreq(f)} style={{ padding: '3px 8px', borderRadius: '6px', border: 'none', background: trendFreq === f ? C.teal : 'transparent', color: trendFreq === f ? '#fff' : C.textMid, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>{f}</button>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ height: '8px', background: C.bgSecondary, borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
-                    <div style={{ width: earnedWidth, background: C.teal, borderRadius: '4px' }} />
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '12px', fontWeight: 800 }}>
+                    <span style={{ color: C.teal }}>━━ Earned</span>
+                    <span style={{ color: '#10B981' }}>━━ Paid</span>
                   </div>
-                </div>
-              );
-            })}
-            {(!data.trend || data.trend.length === 0) && (
-              <div style={{ padding: '20px', textAlign: 'center', fontSize: '13px', color: C.textLight }}>
-                No trend data available for selected range
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Incentives by Role */}
-        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FaUsers color={C.teal} /> Incentives by Role
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {(data.by_role || []).map((r, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: C.bgSecondary, borderRadius: '10px' }}>
-                <div>
-                  <span style={{ fontSize: '13px', fontWeight: 800, color: C.text, display: 'block' }}>{r.role}</span>
-                  <span style={{ fontSize: '11px', color: C.textLight }}>{r.count || 0} Earners</span>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 900, color: C.teal, display: 'block' }}>{formatINR(r.earned)}</span>
-                  <span style={{ fontSize: '11px', color: '#10B981' }}>Paid: {formatINR(r.paid)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Incentives by Status */}
-        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FaFilter color={C.teal} /> Incentives by Status
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {(data.by_status || []).map((s, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {renderStatusBadge(s.status)}
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>({s.count} txns)</span>
-                </div>
-                <span style={{ fontSize: '14px', fontWeight: 900, color: C.text }}>{formatINR(s.amount)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-      </div>
-
-      {/* ── 4. PERFORMANCE ROW: TOP EMPLOYEES & INCENTIVES BY PRODUCT ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
-        
-        {/* 🏆 Top Earning Employees Leaderboard */}
-        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FaTrophy color="#F59E0B" /> Top Earning Employees
-            </h3>
-          </div>
-
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${C.border}`, textAlign: 'left', color: C.textLight }}>
-                  <th style={{ padding: '8px' }}>Rank</th>
-                  <th style={{ padding: '8px' }}>Employee</th>
-                  <th style={{ padding: '8px' }}>Role</th>
-                  <th style={{ padding: '8px' }}>Apps</th>
-                  <th style={{ padding: '8px', textAlign: 'right' }}>Earned</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data.top_employees || []).map((emp, idx) => (
-                  <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: '8px', fontWeight: 800, color: idx === 0 ? '#F59E0B' : idx === 1 ? '#9CA3AF' : idx === 2 ? '#B45309' : C.text }}>
-                      #{idx + 1}
-                    </td>
-                    <td style={{ padding: '8px' }}>
-                      <span style={{ fontWeight: 800, color: C.text, display: 'block' }}>{emp.full_name}</span>
-                      <span style={{ fontSize: '10.5px', color: C.textLight }}>{emp.emp_code}</span>
-                    </td>
-                    <td style={{ padding: '8px', fontWeight: 700, color: C.textLight }}>{emp.role}</td>
-                    <td style={{ padding: '8px', fontWeight: 700, color: C.text }}>{emp.applications}</td>
-                    <td style={{ padding: '8px', textAlign: 'right', fontWeight: 900, color: C.teal }}>{formatINR(emp.earned)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* 🏦 Incentives by Product */}
-        <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FaBuilding color="#3B82F6" /> Incentives by Product
-          </h3>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {(data.by_product || []).map((p, idx) => (
-              <div key={idx} style={{ padding: '12px', background: C.bgSecondary, borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <span style={{ fontSize: '13px', fontWeight: 800, color: C.text, display: 'block' }}>{p.product_name}</span>
-                  <span style={{ fontSize: '11px', color: C.textLight }}>{p.bank_name || 'GharKaPaisa Direct'} • {p.applications} Apps</span>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 900, color: C.teal, display: 'block' }}>{formatINR(p.earned)}</span>
-                  <span style={{ fontSize: '11px', color: '#F59E0B' }}>Pending: {formatINR(p.pending)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-      </div>
-
-      {/* ── 5. HIERARCHY-BASED DRILLDOWN VIEW ── */}
-      <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <FaSitemap color={C.teal} /> Hierarchy-Based Incentive View (Manager ➔ TL ➔ Telecaller)
-        </h3>
-        <p style={{ fontSize: '12px', color: C.textLight, margin: 0 }}>
-          Drill down hierarchy teams to monitor cumulative earnings generated across levels
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
-          {(data.hierarchy || []).map(mgr => (
-            <div key={mgr.id || 'mgr'} style={{ border: `1px solid ${C.border}`, borderRadius: '12px', overflow: 'hidden' }}>
-              <div
-                onClick={() => setExpandedManagers(prev => ({ ...prev, [mgr.id]: !prev[mgr.id] }))}
-                style={{
-                  padding: '12px 16px', background: C.bgSecondary, cursor: 'pointer',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {expandedManagers[mgr.id] ? <FaChevronDown size={12} color={C.teal} /> : <FaChevronRight size={12} color={C.textLight} />}
-                  <div>
-                    <span style={{ fontSize: '14px', fontWeight: 800, color: C.text, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                      <FaUserTie color={C.teal} /> MANAGER: {mgr.name} ({mgr.code})
-                    </span>
-                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>{mgr.team_leaders?.length || 0} Team Leaders • {mgr.total_apps} Apps</span>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 900, color: C.teal, display: 'block' }}>{formatINR(mgr.total_incentives)}</span>
-                  <span style={{ fontSize: '11px', color: '#10B981' }}>Paid: {formatINR(mgr.paid_incentives)}</span>
-                </div>
-              </div>
-
-              {expandedManagers[mgr.id] && (
-                <div style={{ padding: '12px 16px 12px 32px', display: 'flex', flexDirection: 'column', gap: '8px', background: C.card }}>
-                  {(mgr.team_leaders || []).map(tl => (
-                    <div key={tl.id || 'tl'} style={{ border: `1px dashed ${C.border}`, borderRadius: '10px', padding: '10px 14px' }}>
-                      <div
-                        onClick={() => setExpandedTLs(prev => ({ ...prev, [tl.id]: !prev[tl.id] }))}
-                        style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          {expandedTLs[tl.id] ? <FaChevronDown size={11} color={C.teal} /> : <FaChevronRight size={11} color={C.textLight} />}
-                          <span style={{ fontSize: '13px', fontWeight: 800, color: C.text, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                            <FaUserShield color={C.teal} /> TL: {tl.name} ({tl.code})
-                          </span>
-                        </div>
-                        <span style={{ fontSize: '13px', fontWeight: 800, color: C.teal }}>{formatINR(tl.total_incentives)}</span>
+                  {/* Timeline representation */}
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '110px', paddingTop: '10px' }}>
+                    {(data.trend || []).slice(0, 10).map((t, idx) => (
+                      <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ width: '100%', height: `${Math.min(100, (parseFloat(t.earned || 0) / 1000))}px`, background: `${C.teal}50`, borderRadius: '4px 4px 0 0' }} />
+                        <span style={{ fontSize: '9.5px', color: C.textMid }}>{t.date?.slice(5)}</span>
                       </div>
-
-                      {expandedTLs[tl.id] && (
-                        <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px', paddingLeft: '18px' }}>
-                          {(tl.telecallers || []).map(tc => (
-                            <div key={tc.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 8px', background: C.bgSecondary, borderRadius: '6px' }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                <FaPhoneAlt style={{ fontSize: '10px', color: C.teal }} /> {tc.name} ({tc.code}) - {tc.designation}
-                              </span>
-                              <span style={{ fontWeight: 800, color: C.teal }}>{formatINR(tc.total_incentives)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* ── 6. MAIN INCENTIVES DETAILS TABLE ── */}
-      <div style={{ background: C.card, borderRadius: '16px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FaClipboardList color={C.teal} /> Incentive Details — Master Audit Table
-          </h3>
-          <span style={{ fontSize: '12px', color: C.textLight, fontWeight: 700 }}>
-            Showing {data.table?.data?.length || 0} of {data.table?.pagination?.total || 0} records
-          </span>
-        </div>
-
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-            <thead>
-              <tr style={{ background: C.bgSecondary, borderBottom: `2px solid ${C.border}`, textAlign: 'left', color: C.textLight }}>
-                <th style={{ padding: '10px 12px' }}>Incentive ID</th>
-                <th style={{ padding: '10px 12px' }}>Employee</th>
-                <th style={{ padding: '10px 12px' }}>Role</th>
-                <th style={{ padding: '10px 12px' }}>Product</th>
-                <th style={{ padding: '10px 12px' }}>Bank</th>
-                <th style={{ padding: '10px 12px' }}>App ID</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Earned</th>
-                <th style={{ padding: '10px 12px', textAlign: 'right' }}>Paid</th>
-                <th style={{ padding: '10px 12px', textAlign: 'center' }}>Status</th>
-                <th style={{ padding: '10px 12px', textAlign: 'center' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data.table?.data || []).map((row, idx) => (
-                <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 800, color: C.teal }}>
-                    INC-{row.incentive_id?.slice(0, 6).toUpperCase()}
-                  </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span style={{ fontWeight: 800, color: C.text, display: 'block' }}>{row.employee_name}</span>
-                    <span style={{ fontSize: '10.5px', color: C.textLight }}>{row.emp_code}</span>
-                  </td>
-                  <td style={{ padding: '10px 12px', fontWeight: 700, color: C.textMid }}>{row.role}</td>
-                  <td style={{ padding: '10px 12px', fontWeight: 700, color: C.text }}>{row.product_name || 'N/A'}</td>
-                  <td style={{ padding: '10px 12px', color: C.textLight }}>{row.bank_name || 'GharKaPaisa'}</td>
-                  <td style={{ padding: '10px 12px', fontWeight: 700, color: C.text }}>{row.app_number || 'N/A'}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: C.text }}>{formatINR(row.incentive_earned)}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#10B981' }}>{formatINR(row.incentive_paid)}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>{renderStatusBadge(row.status)}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                      <button
-                        onClick={() => handleQuickRelease(row)}
-                        title="Release & Credit Incentive to Employee"
-                        style={{
-                          padding: '5px 9px', borderRadius: '6px', border: '1px solid #10B981',
-                          background: '#10B98115', color: '#10B981', fontSize: '11px', fontWeight: 800, cursor: 'pointer',
-                          display: 'inline-flex', alignItems: 'center', gap: '4px'
-                        }}
-                      >
-                        Release
-                      </button>
-                      <button
-                        onClick={() => handleQuickHold(row)}
-                        title="Hold Incentive"
-                        style={{
-                          padding: '5px 9px', borderRadius: '6px', border: '1px solid #8B5CF6',
-                          background: '#8B5CF615', color: '#8B5CF6', fontSize: '11px', fontWeight: 800, cursor: 'pointer',
-                          display: 'inline-flex', alignItems: 'center', gap: '4px'
-                        }}
-                      >
-                        Hold
-                      </button>
-                      <button
-                        onClick={() => { setSelectedIncentive(row); setUpdateStatus(row.status || 'PAID'); setPaymentRef(row.payment_reference || ''); setHoldReason(row.hold_reason || ''); }}
-                        title="View Details / Edit"
-                        style={{
-                          padding: '5px 9px', borderRadius: '6px', border: `1px solid ${C.border}`,
-                          background: C.bgSecondary, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer',
-                          display: 'inline-flex', alignItems: 'center', gap: '4px'
-                        }}
-                      >
-                        <FaEye size={10} />
-                      </button>
+                {/* 6. Combined Performance Breakdown (By Role / By Status) */}
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '18px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Performance Breakdown</h3>
+                    <div style={{ display: 'flex', gap: '4px', background: C.bgSecondary, padding: '3px', borderRadius: '8px' }}>
+                      <button onClick={() => setBreakdownView('ROLE')} style={{ padding: '3px 8px', borderRadius: '6px', border: 'none', background: breakdownView === 'ROLE' ? C.teal : 'transparent', color: breakdownView === 'ROLE' ? '#fff' : C.textMid, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>By Role</button>
+                      <button onClick={() => setBreakdownView('STATUS')} style={{ padding: '3px 8px', borderRadius: '6px', border: 'none', background: breakdownView === 'STATUS' ? C.teal : 'transparent', color: breakdownView === 'STATUS' ? '#fff' : C.textMid, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>By Status</button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-              {(!data.table?.data || data.table.data.length === 0) && (
-                <tr>
-                  <td colSpan={10} style={{ padding: '30px', textAlign: 'center', color: C.textLight, fontSize: '13px' }}>
-                    No incentive records found for the selected filters
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                  </div>
 
-        {/* Pagination */}
-        {data.table?.pagination?.totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px' }}>
-            <button
-              disabled={page <= 1}
-              onClick={() => setPage(page - 1)}
-              style={{ padding: '6px 12px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 700, cursor: page > 1 ? 'pointer' : 'not-allowed' }}
-            >
-              Previous
-            </button>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>
-              Page {page} of {data.table.pagination.totalPages}
-            </span>
-            <button
-              disabled={page >= data.table.pagination.totalPages}
-              onClick={() => setPage(page + 1)}
-              style={{ padding: '6px 12px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 700, cursor: page < data.table.pagination.totalPages ? 'pointer' : 'not-allowed' }}
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </div>
+                  {breakdownView === 'ROLE' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {(data.by_role || []).map((r, idx) => (
+                        <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 800 }}>
+                            <span style={{ color: C.text }}>{r.role}</span>
+                            <span style={{ color: C.teal }}>{formatINR(r.earned)}</span>
+                          </div>
+                          <div style={{ height: '6px', background: C.bgSecondary, borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${Math.min(100, (parseFloat(r.earned || 0) / (totalEarned || 1)) * 100)}%`, background: C.teal, borderRadius: '4px' }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {(data.by_status || []).map((s, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', padding: '6px 10px', background: C.bgSecondary, borderRadius: '8px' }}>
+                          <span style={{ fontWeight: 800, color: C.text }}>{s.status}</span>
+                          <span style={{ fontWeight: 900, color: C.teal }}>{formatINR(s.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
 
-      {/* ── 7. INCENTIVE DETAILS & PAYOUT STATUS MODAL ── */}
-      {selectedIncentive && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-          zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
-        }}>
-          <div style={{
-            background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`,
-            maxWidth: '620px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px',
-            display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px' }}>
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>
-                  🔍 Incentive Details Modal
-                </h3>
-                <span style={{ fontSize: '12px', color: C.teal, fontWeight: 700 }}>
-                  ID: INC-{selectedIncentive.incentive_id}
+              {/* Bottom Row: Top 5 Employees & Recent Activity */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr', gap: '16px' }}>
+                {/* 7. Top 5 Employees */}
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '18px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Top Performing Employees</h3>
+                    <button onClick={() => setActiveTab('EMPLOYEES')} style={{ background: 'none', border: 'none', color: C.teal, fontWeight: 900, fontSize: '12px', cursor: 'pointer' }}>View All →</button>
+                  </div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ color: C.textMid, fontWeight: 800, borderBottom: `1px solid ${C.border}` }}>
+                        <th style={{ padding: '6px' }}>#</th>
+                        <th style={{ padding: '6px' }}>Employee</th>
+                        <th style={{ padding: '6px' }}>Role</th>
+                        <th style={{ padding: '6px', textAlign: 'center' }}>Apps</th>
+                        <th style={{ padding: '6px', textAlign: 'right' }}>Earned</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(data.top_employees || []).slice(0, 5).map((emp, idx) => (
+                        <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '8px 6px', fontWeight: 900, color: C.teal }}>#{idx + 1}</td>
+                          <td style={{ padding: '8px 6px', fontWeight: 800, color: C.text }}>{emp.full_name}</td>
+                          <td style={{ padding: '8px 6px', color: C.textMid }}>{emp.role}</td>
+                          <td style={{ padding: '8px 6px', textAlign: 'center', fontWeight: 800 }}>{emp.applications}</td>
+                          <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: 900, color: '#10B981' }}>{formatINR(emp.earned)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Recent Incentive Activity */}
+                <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '18px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Recent Incentive Activity</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {(data.recent_payouts || []).slice(0, 4).map((p, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: C.bgSecondary, borderRadius: '10px' }}>
+                        <div>
+                          <span style={{ fontSize: '12px', fontWeight: 800, color: C.text, display: 'block' }}>{p.employee_name} ({p.emp_code})</span>
+                          <span style={{ fontSize: '11px', color: C.textMid }}>{p.product_name} • {formatINR(p.amount)}</span>
+                        </div>
+                        {renderStatusBadge(p.status)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ── TAB 2: EMPLOYEES ── */}
+          {activeTab === 'EMPLOYEES' && (
+            <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Employee-Wise Incentive Performance</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: C.bgSecondary, color: C.textMid, fontWeight: 800, borderBottom: `2px solid ${C.border}` }}>
+                    <th style={{ padding: '10px 14px' }}>Employee</th>
+                    <th style={{ padding: '10px 14px' }}>Role</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Applications</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Total Earned</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Total Paid</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Pending</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data.top_employees || []).map((emp, idx) => (
+                    <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ fontWeight: 800, color: C.text, display: 'block' }}>{emp.full_name}</span>
+                        <span style={{ fontSize: '11px', color: C.teal }}>{emp.emp_code}</span>
+                      </td>
+                      <td style={{ padding: '10px 14px', fontWeight: 700, color: C.textMid }}>{emp.role}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 800 }}>{emp.applications}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 900, color: C.text }}>{formatINR(emp.earned)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#10B981' }}>{formatINR(emp.paid)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#F59E0B' }}>{formatINR(emp.pending)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* ── TAB 3: PAYOUTS ── */}
+          {activeTab === 'PAYOUTS' && (
+            <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Payout Management & Releases</h3>
+                <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal }}>{formatINR(pendingPayouts)} Pending Release</span>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: C.bgSecondary, color: C.textMid, fontWeight: 800, borderBottom: `2px solid ${C.border}` }}>
+                    <th style={{ padding: '10px 14px' }}>Incentive ID</th>
+                    <th style={{ padding: '10px 14px' }}>Employee</th>
+                    <th style={{ padding: '10px 14px' }}>Product</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Amount</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Status</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING' || (r.status || '').toUpperCase() === 'ON_HOLD').map((row, idx) => (
+                    <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '10px 14px', fontWeight: 800, color: C.teal }}>INC-{row.incentive_id?.slice(0, 6)}</td>
+                      <td style={{ padding: '10px 14px', fontWeight: 800, color: C.text }}>{row.employee_name} ({row.emp_code})</td>
+                      <td style={{ padding: '10px 14px', color: C.textMid }}>{row.product_name}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 900, color: C.text }}>{formatINR(row.incentive_earned)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>{renderStatusBadge(row.status)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                          <button onClick={() => handleQuickRelease(row)} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: '#10B981', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Release Payout</button>
+                          <button onClick={() => handleQuickHold(row)} style={{ padding: '4px 10px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Hold</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* ── TAB 4: RULES & TARGETS ── */}
+          {activeTab === 'RULES' && (
+            <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Bonus Rules & Department Targets</h3>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: C.bgSecondary, color: C.textMid, fontWeight: 800, borderBottom: `2px solid ${C.border}` }}>
+                    <th style={{ padding: '10px 14px' }}>Bank / Product</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Target Cards</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Bonus / Card</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bonusRulesList.map((rule, idx) => (
+                    <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '10px 14px', fontWeight: 800, color: C.text }}>{rule.bank_name || 'Department Bank'}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 800 }}>{rule.target_count || 10} Cards</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 900, color: '#10B981' }}>{formatINR(rule.bonus_per_card || 500)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center' }}><span style={{ padding: '3px 8px', borderRadius: '10px', background: '#10B98115', color: '#10B981', fontWeight: 800, fontSize: '11px' }}>ACTIVE</span></td>
+                    </tr>
+                  ))}
+                  {bonusRulesList.length === 0 && (
+                    <tr><td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: C.textMid }}>Default card incentive rates applied system-wide</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* ── TAB 5: PRODUCTS ── */}
+          {activeTab === 'PRODUCTS' && (
+            <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Product Incentive Performance</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: C.bgSecondary, color: C.textMid, fontWeight: 800, borderBottom: `2px solid ${C.border}` }}>
+                    <th style={{ padding: '10px 14px' }}>Bank</th>
+                    <th style={{ padding: '10px 14px' }}>Product</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Applications</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Total Earned</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Paid</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Pending</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data.by_product || []).map((p, idx) => (
+                    <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '10px 14px', fontWeight: 700, color: C.textMid }}>{p.bank_name || 'Bank'}</td>
+                      <td style={{ padding: '10px 14px', fontWeight: 800, color: C.text }}>{p.product_name}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 800 }}>{p.applications}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 900, color: C.text }}>{formatINR(p.earned)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#10B981' }}>{formatINR(p.paid)}</td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#F59E0B' }}>{formatINR(p.pending)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* ── TAB 6: REPORTS ── */}
+          {activeTab === 'REPORTS' && (
+            <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Incentive Performance Reports & Exports</h3>
+                <button style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: C.teal, color: '#fff', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FaFileDownload size={13} /> Export CSV Report
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '14px' }}>
+                <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>TOTAL EARNED THIS MONTH</span>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: C.text, marginTop: '4px' }}>{formatINR(totalEarned)}</div>
+                </div>
+                <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>TOTAL DISBURSED PAYOUTS</span>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#10B981', marginTop: '4px' }}>{formatINR(totalPaid)}</div>
+                </div>
+                <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>PENDING FINANCIAL RELEASE</span>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#F59E0B', marginTop: '4px' }}>{formatINR(pendingPayouts)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB 7: AUDIT (Historical Transaction Audit Table) ── */}
+          {activeTab === 'AUDIT' && (
+            <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Incentive Audit — Transaction Records</h3>
+                <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>
+                  {data.table?.pagination?.total || 0} Total Records
                 </span>
               </div>
-              <button
-                onClick={() => setSelectedIncentive(null)}
-                style={{ background: 'none', border: 'none', fontSize: '20px', color: C.textLight, cursor: 'pointer' }}
-              >
-                ✕
-              </button>
-            </div>
 
-            {/* Employee & Application Context */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', background: C.bgSecondary, padding: '14px', borderRadius: '12px' }}>
-              <div>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block' }}>EMPLOYEE INFORMATION</span>
-                <span style={{ fontSize: '13px', fontWeight: 800, color: C.text, display: 'block', marginTop: '2px' }}>{selectedIncentive.employee_name}</span>
-                <span style={{ fontSize: '11.5px', color: C.textLight }}>Code: {selectedIncentive.emp_code}</span>
-                <span style={{ fontSize: '11.5px', color: C.teal, display: 'block', fontWeight: 700 }}>Role: {selectedIncentive.role}</span>
-                {selectedIncentive.manager_name && <span style={{ fontSize: '11px', color: C.textLight, display: 'block' }}>Manager: {selectedIncentive.manager_name}</span>}
-              </div>
-              <div>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block' }}>APPLICATION DETAILS</span>
-                <span style={{ fontSize: '13px', fontWeight: 800, color: C.text, display: 'block', marginTop: '2px' }}>App No: {selectedIncentive.app_number || 'N/A'}</span>
-                <span style={{ fontSize: '11.5px', color: C.textLight }}>Customer: {selectedIncentive.customer_name || 'Direct Apply'}</span>
-                <span style={{ fontSize: '11.5px', color: C.text, display: 'block', fontWeight: 700 }}>{selectedIncentive.product_name} ({selectedIncentive.bank_name || 'GharKaPaisa'})</span>
-              </div>
-            </div>
-
-            {/* Incentive Calculation Breakdown */}
-            <div style={{ border: `1px solid ${C.border}`, padding: '14px', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>🧮 INCENTIVE CALCULATION BREAKDOWN</span>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: C.text }}>
-                <span>Base Incentive Rate</span>
-                <span>{formatINR(selectedIncentive.incentive_earned)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: C.text }}>
-                <span>Role Multiplier / Bonus</span>
-                <span>₹0</span>
-              </div>
-              <div style={{ height: '1px', background: C.border, margin: '4px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 900, color: C.teal }}>
-                <span>Total Incentive Earned</span>
-                <span>{formatINR(selectedIncentive.incentive_earned)}</span>
-              </div>
-            </div>
-
-            {/* Payout & Status Form */}
-            <form onSubmit={handleStatusUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight }}>💳 UPDATE PAYOUT & STATUS</span>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Payout Status</label>
-                  <select
-                    value={updateStatus}
-                    onChange={(e) => setUpdateStatus(e.target.value)}
-                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 700 }}
-                  >
-                    <option value="PENDING">PENDING</option>
-                    <option value="PAID">PAID / COMPLETED</option>
-                    <option value="IN_REVIEW">IN REVIEW</option>
-                    <option value="ON_HOLD">ON HOLD</option>
-                    <option value="REJECTED">REJECTED</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Payment Reference / UTR</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. UTR98218391823"
-                    value={paymentRef}
-                    onChange={(e) => setPaymentRef(e.target.value)}
-                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 600 }}
-                  />
-                </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, borderBottom: `2px solid ${C.border}`, textAlign: 'left', color: C.textMid }}>
+                      <th style={{ padding: '10px 12px' }}>Incentive ID</th>
+                      <th style={{ padding: '10px 12px' }}>Employee</th>
+                      <th style={{ padding: '10px 12px' }}>Role</th>
+                      <th style={{ padding: '10px 12px' }}>Product</th>
+                      <th style={{ padding: '10px 12px' }}>App ID</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Earned</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Paid</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Status</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(data.table?.data || []).map((row, idx) => (
+                      <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 800, color: C.teal }}>INC-{row.incentive_id?.slice(0, 6)}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ fontWeight: 800, color: C.text, display: 'block' }}>{row.employee_name}</span>
+                          <span style={{ fontSize: '10.5px', color: C.textMid }}>{row.emp_code}</span>
+                        </td>
+                        <td style={{ padding: '10px 12px', color: C.textMid }}>{row.role}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 700, color: C.text }}>{row.product_name}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 700, color: C.text }}>{row.app_number || 'N/A'}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: C.text }}>{formatINR(row.incentive_earned)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#10B981' }}>{formatINR(row.incentive_paid)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>{renderStatusBadge(row.status)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                            <button onClick={() => handleQuickRelease(row)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #10B981', background: '#10B98115', color: '#10B981', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Release</button>
+                            <button onClick={() => handleQuickHold(row)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #8B5CF6', background: '#8B5CF615', color: '#8B5CF6', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Hold</button>
+                            <button onClick={() => { setSelectedIncentive(row); setUpdateStatus(row.status || 'PAID'); setPaymentRef(row.payment_reference || ''); setHoldReason(row.hold_reason || ''); }} style={{ padding: '4px 8px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}><FaEye size={10} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
-              {updateStatus === 'ON_HOLD' && (
-                <div>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.textLight, display: 'block', marginBottom: '4px' }}>Hold Reason</label>
-                  <input
-                    type="text"
-                    placeholder="Reason for holding incentive..."
-                    value={holdReason}
-                    onChange={(e) => setHoldReason(e.target.value)}
-                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '13px', fontWeight: 600 }}
-                  />
+              {/* Pagination */}
+              {data.table?.pagination?.totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px' }}>
+                  <button disabled={page <= 1} onClick={() => setPage(page - 1)} style={{ padding: '6px 12px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 700, cursor: page > 1 ? 'pointer' : 'not-allowed' }}>Previous</button>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: C.textMid }}>Page {page} of {data.table.pagination.totalPages}</span>
+                  <button disabled={page >= data.table.pagination.totalPages} onClick={() => setPage(page + 1)} style={{ padding: '6px 12px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 700, cursor: page < data.table.pagination.totalPages ? 'pointer' : 'not-allowed' }}>Next</button>
                 </div>
               )}
+            </div>
+          )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setSelectedIncentive(null)}
-                  style={{ padding: '8px 16px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={updating}
-                  style={{ padding: '8px 20px', borderRadius: '8px', border: 'none', background: C.teal, color: '#fff', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}
-                >
-                  {updating ? 'Saving...' : 'Save & Update Payout'}
-                </button>
+          {/* ── TAB 8: HISTORICAL MONTHLY AUDIT ARCHIVE ── */}
+          {activeTab === 'HISTORICAL' && (
+            <SuperAdminIncentiveHistory />
+          )}
+        </>
+      )}
+
+      {/* ── UPDATE PAYOUT MODAL ── */}
+      {selectedIncentive && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, maxWidth: '560px', width: '100%', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Incentive Payout Update</h3>
+              <button onClick={() => setSelectedIncentive(null)} style={{ background: 'none', border: 'none', fontSize: '18px', color: C.textMid, cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: C.bgSecondary, padding: '12px', borderRadius: '10px', fontSize: '12px' }}>
+              <div><span style={{ color: C.textMid }}>Employee:</span> <strong style={{ color: C.text, display: 'block' }}>{selectedIncentive.employee_name} ({selectedIncentive.emp_code})</strong></div>
+              <div><span style={{ color: C.textMid }}>Incentive Amount:</span> <strong style={{ color: C.teal, display: 'block' }}>{formatINR(selectedIncentive.incentive_earned)}</strong></div>
+            </div>
+            <form onSubmit={handleStatusUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Payout Status</label>
+                <select value={updateStatus} onChange={(e) => setUpdateStatus(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '12.5px', fontWeight: 700 }}>
+                  <option value="PENDING">PENDING</option>
+                  <option value="PAID">PAID / RELEASED</option>
+                  <option value="ON_HOLD">ON HOLD</option>
+                  <option value="REJECTED">REJECTED</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Payment UTR / Reference</label>
+                <input type="text" placeholder="e.g. UTR98218391823" value={paymentRef} onChange={(e) => setPaymentRef(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '12.5px', fontWeight: 600 }} />
+              </div>
+              {updateStatus === 'ON_HOLD' && (
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Hold Reason</label>
+                  <input type="text" placeholder="Reason for holding payout..." value={holdReason} onChange={(e) => setHoldReason(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '12.5px', fontWeight: 600 }} />
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+                <button type="button" onClick={() => setSelectedIncentive(null)} style={{ padding: '8px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={updating} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: C.teal, color: '#fff', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>{updating ? 'Updating...' : 'Save Changes'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
-        </>
-      )}
+
     </div>
   );
 }
