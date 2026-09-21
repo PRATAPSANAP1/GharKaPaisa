@@ -1445,6 +1445,12 @@ router.get('/incentives/overview', async (req, res, next) => {
     let whereConditions = [];
     let params = [];
 
+    // Strictly show incentives for approved applications only (exclude rejected/pending-app leads)
+    whereConditions.push(`(
+      a.id IS NULL OR LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received', 'operational_verified', 'app file generated (approved)')
+    )`);
+    whereConditions.push(`UPPER(it.status::text) NOT IN ('REJECTED', 'CANCELLED')`);
+
     if (startDate) {
       params.push(startDate);
       whereConditions.push(`it.created_at >= $${params.length}`);
