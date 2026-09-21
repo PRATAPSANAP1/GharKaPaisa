@@ -175,6 +175,48 @@ export default function ManageEmployeeIncentives() {
     }
   };
 
+  // Quick Release (Pay & Send to Employee) Handler
+  const handleQuickRelease = async (row) => {
+    const isAlreadyPaid = (row.status || '').toUpperCase() === 'PAID' || (row.status || '').toUpperCase() === 'COMPLETED';
+    if (isAlreadyPaid) {
+      alert('This incentive has already been released and paid to the employee.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to RELEASE and CREDIT incentive ${formatINR(row.incentive_earned)} to ${row.employee_name} (${row.emp_code})?`)) return;
+    try {
+      const refNo = `REL-${Date.now().toString(36).toUpperCase()}`;
+      const res = await api.post(`/employees/incentives/${row.incentive_id}/update-status`, {
+        status: 'PAID',
+        payment_reference: refNo,
+        payment_method: 'BANK_TRANSFER'
+      });
+      if (res.data?.success) {
+        alert(`SUCCESS: Incentive ${formatINR(row.incentive_earned)} released and credited to ${row.employee_name}!`);
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to release incentive');
+    }
+  };
+
+  // Quick Hold Handler
+  const handleQuickHold = async (row) => {
+    const reason = window.prompt(`Enter Hold Reason for ${row.employee_name} (${row.emp_code}):`, row.hold_reason || 'Pending manager verification / target audit');
+    if (reason === null) return;
+    try {
+      const res = await api.post(`/employees/incentives/${row.incentive_id}/update-status`, {
+        status: 'ON_HOLD',
+        hold_reason: reason
+      });
+      if (res.data?.success) {
+        alert(`Incentive placed ON HOLD for ${row.employee_name}.`);
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to hold incentive');
+    }
+  };
+
   // Export handlers
   const handleExportCSV = () => {
     const tableData = data.table?.data || [];
@@ -762,15 +804,41 @@ export default function ManageEmployeeIncentives() {
                   <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#10B981' }}>{formatINR(row.incentive_paid)}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'center' }}>{renderStatusBadge(row.status)}</td>
                   <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <button
-                      onClick={() => { setSelectedIncentive(row); setUpdateStatus(row.status || 'PAID'); setPaymentRef(row.payment_reference || ''); setHoldReason(row.hold_reason || ''); }}
-                      style={{
-                        padding: '5px 10px', borderRadius: '6px', border: `1px solid ${C.teal}`,
-                        background: `${C.teal}10`, color: C.teal, fontSize: '11px', fontWeight: 800, cursor: 'pointer'
-                      }}
-                    >
-                      <FaEye size={10} style={{ marginRight: '4px' }} /> View
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                      <button
+                        onClick={() => handleQuickRelease(row)}
+                        title="Release & Credit Incentive to Employee"
+                        style={{
+                          padding: '5px 9px', borderRadius: '6px', border: '1px solid #10B981',
+                          background: '#10B98115', color: '#10B981', fontSize: '11px', fontWeight: 800, cursor: 'pointer',
+                          display: 'inline-flex', alignItems: 'center', gap: '4px'
+                        }}
+                      >
+                        Release
+                      </button>
+                      <button
+                        onClick={() => handleQuickHold(row)}
+                        title="Hold Incentive"
+                        style={{
+                          padding: '5px 9px', borderRadius: '6px', border: '1px solid #8B5CF6',
+                          background: '#8B5CF615', color: '#8B5CF6', fontSize: '11px', fontWeight: 800, cursor: 'pointer',
+                          display: 'inline-flex', alignItems: 'center', gap: '4px'
+                        }}
+                      >
+                        Hold
+                      </button>
+                      <button
+                        onClick={() => { setSelectedIncentive(row); setUpdateStatus(row.status || 'PAID'); setPaymentRef(row.payment_reference || ''); setHoldReason(row.hold_reason || ''); }}
+                        title="View Details / Edit"
+                        style={{
+                          padding: '5px 9px', borderRadius: '6px', border: `1px solid ${C.border}`,
+                          background: C.bgSecondary, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer',
+                          display: 'inline-flex', alignItems: 'center', gap: '4px'
+                        }}
+                      >
+                        <FaEye size={10} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
