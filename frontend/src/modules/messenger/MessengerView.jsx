@@ -854,7 +854,26 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     <span>{msgSearch ? 'Try a different keyword' : 'Type your message in the box below.'}</span>
                   </div>
                 ) : (
-                  filteredMessages.map((msg) => {
+                  <>
+                    <div style={{
+                      margin: '0 auto 8px auto',
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      background: '#FEF2F2',
+                      border: '1px solid #FCA5A5',
+                      color: '#991B1B',
+                      fontSize: '11.5px',
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                    }}>
+                      <FaLock size={11} color="#DC2626" />
+                      <span>Messages & attachments automatically delete everywhere after 48 hours</span>
+                    </div>
+
+                    {filteredMessages.map((msg) => {
                     const isMe = msg.sender_id === user?.id;
                     const isReadByReceiver = Boolean(
                       msg.is_read ||
@@ -940,6 +959,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       </div>
                     );
                   })
+                }</>
                 )}
                 <div ref={messagesEndRef} />
               </div>

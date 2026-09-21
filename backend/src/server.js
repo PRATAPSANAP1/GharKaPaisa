@@ -302,6 +302,18 @@ const startServer = async () => {
       };
       runCommissionRelease();
       setInterval(runCommissionRelease, 6 * 60 * 60 * 1000);
+
+      // Initialize 48-Hour Messenger Message & File Purge Job timer (runs every 15 minutes and on startup)
+      const runMessengerPurge = async () => {
+        try {
+          const { purgeExpiredMessengerMessages } = require('./jobs/messengerPurge.job.js');
+          await purgeExpiredMessengerMessages();
+        } catch (err) {
+          logger.error('Messenger 48-Hour Purge Job error:', err.message);
+        }
+      };
+      runMessengerPurge();
+      setInterval(runMessengerPurge, 15 * 60 * 1000);
     });
   } catch (err) {
     logger.error('Failed to start server due to database connectivity issue:', err);

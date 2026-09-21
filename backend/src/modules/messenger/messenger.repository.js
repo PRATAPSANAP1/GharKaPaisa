@@ -32,7 +32,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
     whereClause += ` AND (
       SELECT COUNT(*) FROM messages m
       LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
-      WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL
+      WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
     ) > 0`;
   }
 
@@ -49,8 +49,8 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
       c.description,
       c.avatar_url,
       c.application_id,
-      c.last_message_id,
-      c.last_message_text,
+      CASE WHEN c.last_message_at >= NOW() - INTERVAL '48 hours' THEN c.last_message_id ELSE NULL END AS last_message_id,
+      CASE WHEN c.last_message_at >= NOW() - INTERVAL '48 hours' THEN c.last_message_text ELSE NULL END AS last_message_text,
       c.last_message_at,
       c.created_at,
       c.updated_at,
@@ -65,7 +65,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
         SELECT COUNT(*) 
         FROM messages m
         LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
-        WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL
+        WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
       )::INT AS unread_count,
       (
         SELECT json_agg(json_build_object(
@@ -265,7 +265,7 @@ async function getMessages(conversationId, limit = 50, offset = 0) {
     JOIN users u ON u.id = m.sender_id
     LEFT JOIN partner_profiles pp ON pp.user_id = u.id
     LEFT JOIN employees emp ON emp.user_id = u.id
-    WHERE m.conversation_id = $1 AND m.deleted_at IS NULL
+    WHERE m.conversation_id = $1 AND m.deleted_at IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
     ORDER BY m.created_at ASC
     LIMIT $2 OFFSET $3
   `;
@@ -360,7 +360,7 @@ async function markMessagesAsRead(conversationId, userId) {
     INSERT INTO message_reads (message_id, user_id)
     SELECT m.id, $2
     FROM messages m
-    WHERE m.conversation_id = $1 AND m.sender_id != $2
+    WHERE m.conversation_id = $1 AND m.sender_id != $2 AND m.created_at >= NOW() - INTERVAL '48 hours'
     ON CONFLICT (message_id, user_id) DO NOTHING
   `;
   await query(sql, [conversationId, userId]);
@@ -381,7 +381,7 @@ async function getUnreadCount(userId) {
     FROM messages m
     JOIN conversation_participants cp ON cp.conversation_id = m.conversation_id AND cp.user_id = $1 AND cp.left_at IS NULL
     LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
-    WHERE m.sender_id != $1 AND mr.id IS NULL
+    WHERE m.sender_id != $1 AND mr.id IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
   `;
   const { rows } = await query(sql, [userId]);
   return rows[0]?.total_unread || 0;
