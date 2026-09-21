@@ -71,7 +71,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       id: source.id || source.user_id || source.sender_id,
       full_name: (isCurrentAdmin && !isTargetSuperAdmin)
         ? `Assigned Member (${codeVal})`
-        : (source.full_name || source.name || source.sender_name || 'User Profile'),
+        : ((source.full_name && source.full_name !== 'User Profile') ? source.full_name : (source.name || source.sender_name || (source.first_name ? `${source.first_name} ${source.last_name || ''}`.trim() : '') || source.email || 'User Profile')),
       mobile: (isCurrentAdmin && !isTargetSuperAdmin) ? '[Protected]' : (source.mobile || source.sender_mobile || source.phone || 'N/A'),
       email: (isCurrentAdmin && !isTargetSuperAdmin) ? '[Protected]' : (source.email || source.sender_email || 'N/A'),
       code: codeVal,
