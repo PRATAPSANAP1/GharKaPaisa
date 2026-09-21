@@ -292,19 +292,13 @@ export default function ManageAnnouncements() {
       {/* HEADER SECTION */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '24px', fontWeight: 800, margin: 0, color: C.text }}>Announcements</h2>
-            <span style={{ fontSize: '12px', fontWeight: 700, background: `${C.primary}15`, color: C.primary, padding: '4px 10px', borderRadius: '20px' }}>Live Dynamic Console</span>
-          </div>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '6px 0 0' }}>
-            Create, manage and broadcast announcements to employees, partners and teams with real-time database tracking
-          </p>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, margin: 0, color: C.text }}>Announcements</h2>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <button 
             onClick={loadAnnouncementsData}
-            title="Refresh Dynamic Data"
+            title="Refresh Data"
             style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', background: C.cardBg }}
           >
             <MdRefresh size={18} /> Refresh
@@ -416,10 +410,8 @@ export default function ManageAnnouncements() {
       {/* NAVIGATION CONSOLE TABS */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
         {[
-          { id: 'announcements', label: 'Recent Announcements', icon: <MdAnnouncement size={18} /> },
-          { id: 'analytics', label: 'Audience & Reach Analytics', icon: <MdAnalytics size={18} /> },
-          { id: 'broadcast', label: 'Direct Broadcast Alert', icon: <MdSend size={18} /> },
-          { id: 'templates', label: 'Templates & System Delivery', icon: <MdHistory size={18} /> }
+          { id: 'announcements', label: 'Announcements', icon: <MdAnnouncement size={18} /> },
+          { id: 'broadcast', label: 'Direct Broadcast Alert', icon: <MdSend size={18} /> }
         ].map(tab => {
           const active = activeTab === tab.id;
           return (
