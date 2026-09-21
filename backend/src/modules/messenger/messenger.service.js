@@ -1,8 +1,39 @@
 const repo = require('./messenger.repository');
 const { query } = require('../../config/database');
 
-async function listConversations(userId, filter, search) {
-  return await repo.getConversationsForUser(userId, filter, search);
+/**
+ * Mask sensitive data in message text:
+ * - Mobile Numbers: mask last 6 digits with ****** (e.g., 9876543210 -> 9876******)
+ * - PAN Card: mask last 6 characters with ****** (e.g., ABCDE1234F -> ABCD******)
+ */
+function maskSensitiveData(text) {
+  if (!text || typeof text !== 'string') return text;
+
+  // 1. Mask PAN Card (5 letters + 4 digits + 1 letter -> ABCD******)
+  let masked = text.replace(/\b([A-Za-z]{5}[0-9]{4}[A-Za-z]{1})\b/gi, (match) => {
+    return match.slice(0, 4) + '******';
+  });
+
+  // 2. Mask +91 / 91 12-digit Indian mobile numbers (e.g. +919876543210 -> +919876******)
+  masked = masked.replace(/(\+?91[\s-]?)?([6-9]\d{3})(\d{6})\b/g, (match, countryCode, prefix, lastSix) => {
+    const code = countryCode || '';
+    return `${code}${prefix}******`;
+  });
+
+  // 3. Mask standalone 10 to 12 digit phone number blocks
+  masked = masked.replace(/\b([0-9]{4,6})([0-9]{6})\b/g, (match, prefix, lastSix) => {
+    return `${prefix}******`;
+  });
+
+  return masked;
+}
+
+async function listConversations(userId, filter, search, userRole) {
+  const convs = await repo.getConversationsForUser(userId, filter, search);
+  return convs.map(c => ({
+    ...c,
+    last_message_text: maskSensitiveData(c.last_message_text)
+  }));
 }
 
 async function isSameEmployeeHierarchy(userAId, userBId) {
@@ -39,14 +70,58 @@ async function startOrGetDirectChat(currentUserId, targetUserId) {
     throw new Error('Target user not found.');
   }
 
-  // Employee-to-employee direct messaging restriction
-  if (
-    (currentUser?.role || '').toUpperCase() === 'EMPLOYEE' &&
-    (targetUser?.role || '').toUpperCase() === 'EMPLOYEE'
-  ) {
-    const isHierarchyAllowed = await isSameEmployeeHierarchy(currentUserId, targetUserId);
-    if (!isHierarchyAllowed) {
-      throw new Error('Employees can only message other employees within the same team or hierarchy.');
+  const currentRole = (currentUser?.role || '').toUpperCase();
+  const targetRole = (targetUser?.role || '').toUpperCase();
+
+  // Employee restriction: can only message Super Admin or employee hierarchy members
+  if (currentRole === 'EMPLOYEE') {
+    if (targetRole !== 'SUPER_ADMIN') {
+      if (targetRole !== 'EMPLOYEE') {
+        throw new Error('Employees can only message Super Admin or team members within their hierarchy.');
+      }
+      const isAllowed = await isSameEmployeeHierarchy(currentUserId, targetUserId);
+      if (!isAllowed) {
+        throw new Error('Employees can only message team members within their hierarchy.');
+      }
+    }
+  }
+
+  // Partner restriction: team members can only talk to parent & super admin; main partners to team & super admin
+  if (currentRole === 'PARTNER') {
+    if (targetRole !== 'SUPER_ADMIN') {
+      const { rows: [pProfile] } = await query(`SELECT id, parent_partner_id FROM partner_profiles WHERE user_id = $1`, [currentUserId]);
+      if (pProfile && pProfile.parent_partner_id) {
+        const { rows: [parentP] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [pProfile.parent_partner_id]);
+        if (parentP?.user_id !== targetUserId) {
+          throw new Error('Team members can only message their parent partner or Super Admin.');
+        }
+      } else if (pProfile) {
+        const { rows: [targetP] } = await query(`SELECT parent_partner_id FROM partner_profiles WHERE user_id = $1`, [targetUserId]);
+        if (targetP?.parent_partner_id !== pProfile.id) {
+          throw new Error('Partners can only message their assigned team members or Super Admin.');
+        }
+      }
+    }
+  }
+
+  // Admin restriction: can only talk to Super Admin or assigned members
+  if (currentRole === 'ADMIN') {
+    if (targetRole !== 'SUPER_ADMIN') {
+      const { rows: assignedCheck } = await query(`
+        SELECT 1 FROM admin_user_assignments WHERE admin_id = $1 AND assigned_user_id = $2
+        UNION
+        SELECT 1 FROM application_admin_assignments aaa
+        JOIN applications app ON app.id = aaa.application_id
+        WHERE aaa.admin_user_id = $1 AND (app.submitted_by = $2 OR app.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $2))
+        UNION
+        SELECT 1 FROM admin_bank_assignments aba
+        JOIN applications app ON app.bank_id = aba.bank_id
+        WHERE aba.admin_id = $1 AND (app.submitted_by = $2 OR app.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $2))
+      `, [currentUserId, targetUserId]);
+
+      if (assignedCheck.length === 0) {
+        throw new Error('Admins can only message Super Admin or assigned members.');
+      }
     }
   }
 
@@ -66,7 +141,6 @@ async function startOrGetDirectChat(currentUserId, targetUserId) {
 }
 
 async function startOrGetApplicationChat(currentUserId, applicationId) {
-  // Check if application exists
   const { rows: [app] } = await query(
     `SELECT a.id, a.app_number, a.status, c.full_name AS customer_name
      FROM applications a
@@ -89,7 +163,6 @@ async function startOrGetApplicationChat(currentUserId, applicationId) {
     });
   }
 
-  // Ensure current user is participant
   const isPart = await repo.isParticipant(conv.id, currentUserId);
   if (!isPart) {
     await repo.addParticipant({ conversation_id: conv.id, user_id: currentUserId, role: 'MEMBER' });
@@ -103,22 +176,7 @@ async function createGroup(currentUserId, { name, description, memberUserIds = [
     throw new Error('Group name is required.');
   }
 
-  const { rows: [currentUser] } = await query(`SELECT id, role FROM users WHERE id = $1`, [currentUserId]);
-  const isEmployeeRole = (currentUser?.role || '').toUpperCase() === 'EMPLOYEE';
-
   const uniqueMemberIds = Array.from(new Set(memberUserIds.filter(id => id && id !== currentUserId)));
-
-  if (isEmployeeRole) {
-    for (const mId of uniqueMemberIds) {
-      const { rows: [mUser] } = await query(`SELECT id, role FROM users WHERE id = $1`, [mId]);
-      if (mUser && (mUser.role || '').toUpperCase() === 'EMPLOYEE') {
-        const isAllowed = await isSameEmployeeHierarchy(currentUserId, mId);
-        if (!isAllowed) {
-          throw new Error('Employees can only add team members within the same hierarchy to group chats.');
-        }
-      }
-    }
-  }
 
   const conv = await repo.createConversation({
     conversation_type: 'GROUP',
@@ -127,10 +185,8 @@ async function createGroup(currentUserId, { name, description, memberUserIds = [
     created_by: currentUserId
   });
 
-  // Add creator as ADMIN
   await repo.addParticipant({ conversation_id: conv.id, user_id: currentUserId, role: 'ADMIN' });
 
-  // Add other members
   for (const mId of uniqueMemberIds) {
     await repo.addParticipant({ conversation_id: conv.id, user_id: mId, role: 'MEMBER' });
   }
@@ -153,9 +209,13 @@ async function getMessages(conversationId, userId, limit = 50, offset = 0) {
   if (!isPart) {
     throw new Error('Access denied to this conversation.');
   }
-  // Auto mark read when fetching messages
   await repo.markMessagesAsRead(conversationId, userId);
-  return await repo.getMessages(conversationId, limit, offset);
+  const messages = await repo.getMessages(conversationId, limit, offset);
+
+  return messages.map(m => ({
+    ...m,
+    message_text: maskSensitiveData(m.message_text)
+  }));
 }
 
 async function postMessage(senderId, { conversation_id, message_type = 'TEXT', message_text, reply_to_message_id, attachments = [] }) {
@@ -168,11 +228,14 @@ async function postMessage(senderId, { conversation_id, message_type = 'TEXT', m
     throw new Error('Cannot send empty message.');
   }
 
+  // Automatically mask sensitive phone numbers and PAN numbers
+  const maskedText = maskSensitiveData(message_text || '');
+
   const message = await repo.createMessage({
     conversation_id,
     sender_id: senderId,
     message_type,
-    message_text: message_text || '',
+    message_text: maskedText,
     reply_to_message_id
   });
 
@@ -189,7 +252,7 @@ async function postMessage(senderId, { conversation_id, message_type = 'TEXT', m
     }
   }
 
-  const snippet = message_text || (attachments.length > 0 ? `📷 [${attachments.length} File Attachment]` : '');
+  const snippet = maskedText || (attachments.length > 0 ? `📷 [${attachments.length} File Attachment]` : '');
   await repo.updateConversationLastMessage(conversation_id, message.id, snippet);
   await repo.markMessagesAsRead(conversation_id, senderId);
 
@@ -214,7 +277,49 @@ async function togglePinConversation(conversationId, userId) {
   return { conversation_id: conversationId, is_pinned: isPinned };
 }
 
+// ── Super Admin Read-Only Audit Functions ──
+async function searchUsersForAdminAudit(searchTerm) {
+  const pattern = `%${(searchTerm || '').trim()}%`;
+  const sql = `
+    SELECT 
+      u.id, u.full_name, u.email, u.mobile, u.role,
+      pp.partner_code, emp.employee_id AS employee_code
+    FROM users u
+    LEFT JOIN partner_profiles pp ON pp.user_id = u.id
+    LEFT JOIN employees emp ON emp.user_id = u.id
+    WHERE u.is_active = TRUE
+      AND (
+        u.full_name ILIKE $1 OR 
+        u.email ILIKE $1 OR 
+        u.mobile ILIKE $1 OR 
+        pp.partner_code ILIKE $1 OR
+        emp.employee_id ILIKE $1
+      )
+    ORDER BY u.full_name ASC
+    LIMIT 20
+  `;
+  const { rows } = await query(sql, [pattern]);
+  return rows;
+}
+
+async function getAdminAuditConversations(targetUserId) {
+  const convs = await repo.getConversationsForUser(targetUserId, 'ALL', '');
+  return convs.map(c => ({
+    ...c,
+    last_message_text: maskSensitiveData(c.last_message_text)
+  }));
+}
+
+async function getAdminAuditMessages(conversationId) {
+  const messages = await repo.getMessages(conversationId, 100, 0);
+  return messages.map(m => ({
+    ...m,
+    message_text: maskSensitiveData(m.message_text)
+  }));
+}
+
 module.exports = {
+  maskSensitiveData,
   listConversations,
   startOrGetDirectChat,
   startOrGetApplicationChat,
@@ -225,5 +330,8 @@ module.exports = {
   markConversationAsRead,
   getUserUnreadCount,
   getContacts,
-  togglePinConversation
+  togglePinConversation,
+  searchUsersForAdminAudit,
+  getAdminAuditConversations,
+  getAdminAuditMessages
 };

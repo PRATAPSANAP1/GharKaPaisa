@@ -6,7 +6,7 @@ async function getConversations(req, res, next) {
     const userId = req.user.id;
     const filter = req.query.filter || 'ALL';
     const search = req.query.search || '';
-    const data = await service.listConversations(userId, filter, search);
+    const data = await service.listConversations(userId, filter, search, req.user.role);
     return success(res, data, 'Conversations retrieved successfully');
   } catch (err) {
     next(err);
@@ -143,6 +143,49 @@ async function togglePin(req, res, next) {
   }
 }
 
+// ── Super Admin Audit Controllers ──
+async function adminSearchUsers(req, res, next) {
+  try {
+    if ((req.user.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+      return unauthorized(res, 'Access denied. Super Admin role required.');
+    }
+    const queryText = req.query.query || '';
+    const users = await service.searchUsersForAdminAudit(queryText);
+    return success(res, users, 'Users retrieved for audit');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function adminGetUserConversations(req, res, next) {
+  try {
+    if ((req.user.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+      return unauthorized(res, 'Access denied. Super Admin role required.');
+    }
+    const targetUserId = req.query.target_user_id;
+    if (!targetUserId) {
+      return error(res, 'target_user_id is required', 400);
+    }
+    const convs = await service.getAdminAuditConversations(targetUserId);
+    return success(res, convs, 'Audit conversations retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function adminGetUserMessages(req, res, next) {
+  try {
+    if ((req.user.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+      return unauthorized(res, 'Access denied. Super Admin role required.');
+    }
+    const { id } = req.params;
+    const messages = await service.getAdminAuditMessages(id);
+    return success(res, messages, 'Audit messages retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getConversations,
   createDirectChat,
@@ -154,5 +197,8 @@ module.exports = {
   markRead,
   getUnreadCount,
   getContacts,
-  togglePin
+  togglePin,
+  adminSearchUsers,
+  adminGetUserConversations,
+  adminGetUserMessages
 };

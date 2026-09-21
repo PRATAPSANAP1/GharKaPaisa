@@ -6,6 +6,11 @@ const controller = require('./messenger.controller');
 // All messenger endpoints require authentication
 router.use(jwtAuth);
 
+// Super Admin Read-Only Audit Endpoints
+router.get('/admin/search-users', controller.adminSearchUsers);
+router.get('/admin/conversations', controller.adminGetUserConversations);
+router.get('/admin/messages/:id', controller.adminGetUserMessages);
+
 router.get('/conversations', controller.getConversations);
 router.post('/conversations/direct', controller.createDirectChat);
 router.post('/conversations/application', controller.createApplicationChat);

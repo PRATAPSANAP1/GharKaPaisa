@@ -101,6 +101,7 @@ import NotificationCenter from '../modules/notifications/NotificationCenter';
 import ManageAnnouncements from '../modules/super-admin/notifications/ManageAnnouncements';
 import AdminProfilePage from '../modules/super-admin/profile/AdminProfilePage';
 import AdminWorkingHours from '../modules/super-admin/working-hours/AdminWorkingHours';
+import SuperAdminViewMessages from '../modules/super-admin/messenger/SuperAdminViewMessages';
 
 
 // Partner Pages
@@ -406,6 +407,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/notifications" element={<NotificationCenter />} />
             <Route path="/super-admin/announcements" element={<ManageAnnouncements />} />
             <Route path="/super-admin/messenger" element={<MessengerView />} />
+            <Route path="/super-admin/view-messages" element={<SuperAdminViewMessages />} />
             <Route path="/super-admin/profile" element={<AdminProfilePage />} />
             <Route path="/super-admin/support" element={<ManageSupportTickets />} />
 

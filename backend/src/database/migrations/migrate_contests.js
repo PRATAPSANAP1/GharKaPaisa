@@ -1,4 +1,4 @@
-const { query } = require('../../config/database');
+const { query, pool } = require('../../config/database');
 const logger = require('../../config/logger');
 
 async function migrateContests() {
@@ -27,11 +27,11 @@ async function migrateContests() {
       updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_contests_status ON contests(status);
-    CREATE INDEX IF NOT EXISTS idx_contests_dates ON contests(start_date, end_date);
+    )
   `);
+
+  await query(`CREATE INDEX IF NOT EXISTS idx_contests_status ON contests(status)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_contests_dates ON contests(start_date, end_date)`);
 
   // 2. contest_participants table
   await query(`
@@ -47,15 +47,15 @@ async function migrateContests() {
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(contest_id, employee_id)
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_contest_participants_employee ON contest_participants(employee_id);
-    CREATE INDEX IF NOT EXISTS idx_contest_participants_contest ON contest_participants(contest_id);
+    )
   `);
+
+  await query(`CREATE INDEX IF NOT EXISTS idx_contest_participants_employee ON contest_participants(employee_id)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_contest_participants_contest ON contest_participants(contest_id)`);
 
   // 3. Insert default sample contest if empty
   const { rows } = await query(`SELECT COUNT(*) FROM contests`);
-  if (parseInt(rows[0].count) === 0) {
+  if (parseInt(rows[0].count, 10) === 0) {
     await query(`
       INSERT INTO contests (
         title,
@@ -87,7 +87,7 @@ async function migrateContests() {
         'Credit Card',
         'All eligible employees',
         'ACTIVE'
-      );
+      )
     `);
     logger.info('[Migration] Default sample contest created.');
   }
@@ -96,3 +96,16 @@ async function migrateContests() {
 }
 
 module.exports = migrateContests;
+
+if (require.main === module) {
+  migrateContests()
+    .then(async () => {
+      logger.info('[Migration] Contests migration execution finished.');
+      if (pool) await pool.end();
+      process.exit(0);
+    })
+    .catch((err) => {
+      logger.error('[Migration] Contests migration execution failed:', err);
+      process.exit(1);
+    });
+}

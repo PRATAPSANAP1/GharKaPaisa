@@ -258,6 +258,14 @@ const startServer = async () => {
       logger.warn('Messenger auto migration note:', mErr.message);
     }
 
+    // Always ensure contests module tables exist on boot
+    try {
+      const migrateContests = require('./database/migrations/migrate_contests.js');
+      await migrateContests();
+    } catch (cErr) {
+      logger.warn('Contest auto migration note:', cErr.message);
+    }
+
     // Initialize scheduled CRON jobs
     const { initReportJobs } = require('./jobs/report.job.js');
     initReportJobs();

@@ -411,30 +411,88 @@ async function togglePin(conversationId, userId) {
  * Search contacts based on platform hierarchy and user role
  */
 async function getContactsForUser(userId, userRole, search = '') {
-  let searchPattern = `%${(search || '').trim()}%`;
-  
-  const isEmployeeRole = (userRole || '').toUpperCase() === 'EMPLOYEE';
+  await ensureMessengerTables();
+  const searchPattern = `%${(search || '').trim()}%`;
+  const roleUpper = (userRole || '').toUpperCase();
 
-  let employeeHierarchySQL = '';
-  if (isEmployeeRole) {
-    employeeHierarchySQL = `
+  let allowedUsersSQL = '';
+  const params = [userId, searchPattern];
+
+  if (roleUpper === 'EMPLOYEE') {
+    allowedUsersSQL = `
       AND (
-        UPPER(COALESCE(u.role, '')) != 'EMPLOYEE'
-        OR EXISTS (
-          SELECT 1 FROM employees emp_curr
-          LEFT JOIN employee_hierarchy eh_curr ON eh_curr.employee_id = emp_curr.id
-          LEFT JOIN employees emp_target ON emp_target.user_id = u.id
-          LEFT JOIN employee_hierarchy eh_target ON eh_target.employee_id = emp_target.id
-          WHERE emp_curr.user_id = $1
-          AND (
-            (emp_curr.department IS NOT NULL AND emp_target.department IS NOT NULL AND LOWER(emp_curr.department) = LOWER(emp_target.department))
-            OR eh_target.manager_id = emp_curr.id
-            OR eh_target.team_leader_id = emp_curr.id
-            OR eh_curr.manager_id = emp_target.id
-            OR eh_curr.team_leader_id = emp_target.id
-            OR (eh_curr.manager_id IS NOT NULL AND eh_curr.manager_id = eh_target.manager_id)
-            OR (eh_curr.team_leader_id IS NOT NULL AND eh_curr.team_leader_id = eh_target.team_leader_id)
+        UPPER(u.role) = 'SUPER_ADMIN'
+        OR (
+          UPPER(u.role) = 'EMPLOYEE'
+          AND EXISTS (
+            SELECT 1 FROM employees emp_curr
+            LEFT JOIN employee_hierarchy eh_curr ON eh_curr.employee_id = emp_curr.id
+            LEFT JOIN employees emp_target ON emp_target.user_id = u.id
+            LEFT JOIN employee_hierarchy eh_target ON eh_target.employee_id = emp_target.id
+            WHERE emp_curr.user_id = $1
+            AND (
+              (emp_curr.department IS NOT NULL AND emp_target.department IS NOT NULL AND LOWER(emp_curr.department) = LOWER(emp_target.department))
+              OR eh_target.manager_id = emp_curr.id
+              OR eh_target.team_leader_id = emp_curr.id
+              OR eh_curr.manager_id = emp_target.id
+              OR eh_curr.team_leader_id = emp_target.id
+              OR (eh_curr.manager_id IS NOT NULL AND eh_curr.manager_id = eh_target.manager_id)
+              OR (eh_curr.team_leader_id IS NOT NULL AND eh_curr.team_leader_id = eh_target.team_leader_id)
+            )
           )
+        )
+      )
+    `;
+  } else if (roleUpper === 'PARTNER') {
+    const { rows: [pProfile] } = await query(
+      `SELECT id, parent_partner_id, partner_type FROM partner_profiles WHERE user_id = $1`,
+      [userId]
+    );
+
+    if (pProfile && pProfile.parent_partner_id) {
+      // Team Member: Can only talk to Super Admin & Parent Partner
+      const { rows: [parentProfile] } = await query(
+        `SELECT user_id FROM partner_profiles WHERE id = $1`,
+        [pProfile.parent_partner_id]
+      );
+      const parentUserId = parentProfile?.user_id || null;
+      params.push(parentUserId);
+      allowedUsersSQL = `
+        AND (
+          UPPER(u.role) = 'SUPER_ADMIN'
+          OR ($3::uuid IS NOT NULL AND u.id = $3::uuid)
+        )
+      `;
+    } else if (pProfile) {
+      // Main Partner: Can only talk to Super Admin & Team Members
+      params.push(pProfile.id);
+      allowedUsersSQL = `
+        AND (
+          UPPER(u.role) = 'SUPER_ADMIN'
+          OR EXISTS (
+            SELECT 1 FROM partner_profiles sub_pp WHERE sub_pp.user_id = u.id AND sub_pp.parent_partner_id = $3::uuid
+          )
+        )
+      `;
+    } else {
+      allowedUsersSQL = ` AND UPPER(u.role) = 'SUPER_ADMIN'`;
+    }
+  } else if (roleUpper === 'ADMIN') {
+    allowedUsersSQL = `
+      AND (
+        UPPER(u.role) = 'SUPER_ADMIN'
+        OR EXISTS (
+          SELECT 1 FROM admin_user_assignments aua WHERE aua.admin_id = $1 AND aua.assigned_user_id = u.id
+        )
+        OR EXISTS (
+          SELECT 1 FROM application_admin_assignments aaa
+          JOIN applications app ON app.id = aaa.application_id
+          WHERE aaa.admin_user_id = $1 AND (app.submitted_by = u.id OR app.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = u.id))
+        )
+        OR EXISTS (
+          SELECT 1 FROM admin_bank_assignments aba
+          JOIN applications app ON app.bank_id = aba.bank_id
+          WHERE aba.admin_id = $1 AND (app.submitted_by = u.id OR app.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = u.id))
         )
       )
     `;
@@ -459,7 +517,7 @@ async function getContactsForUser(userId, userRole, search = '') {
     LEFT JOIN employees emp ON emp.user_id = u.id
     WHERE u.id != $1 
       AND u.is_active = TRUE
-      ${employeeHierarchySQL}
+      ${allowedUsersSQL}
       AND (
         u.full_name ILIKE $2 OR 
         u.email ILIKE $2 OR 
@@ -470,7 +528,24 @@ async function getContactsForUser(userId, userRole, search = '') {
     ORDER BY u.full_name ASC
     LIMIT 30
   `;
-  const { rows } = await query(sql, [userId, searchPattern]);
+  const { rows } = await query(sql, params);
+
+  // If requestor is ADMIN, anonymize non-SuperAdmin contacts to show ONLY their code
+  if (roleUpper === 'ADMIN') {
+    return rows.map(r => {
+      if ((r.role || '').toUpperCase() === 'SUPER_ADMIN') {
+        return r;
+      }
+      const code = r.partner_code || r.employee_code || `USR-${(r.id || '').slice(0, 6).toUpperCase()}`;
+      return {
+        ...r,
+        full_name: `Assigned Member (${code})`,
+        email: 'N/A',
+        mobile: 'N/A'
+      };
+    });
+  }
+
   return rows;
 }
 

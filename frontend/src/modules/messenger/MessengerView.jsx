@@ -9,7 +9,29 @@ import {
 import api from '../../services/api';
 import { useAuthStore } from '../../app/store/authStore';
 
-export default function MessengerView({ initialAppId = null }) {
+export function maskSensitiveData(text) {
+  if (!text || typeof text !== 'string') return text;
+
+  // 1. Mask PAN Card (5 letters + 4 digits + 1 letter -> ABCD******)
+  let masked = text.replace(/\b([A-Za-z]{5}[0-9]{4}[A-Za-z]{1})\b/gi, (match) => {
+    return match.slice(0, 4) + '******';
+  });
+
+  // 2. Mask +91 / 91 12-digit Indian mobile numbers (e.g. +919876543210 -> +919876******)
+  masked = masked.replace(/(\+?91[\s-]?)?([6-9]\d{3})(\d{6})\b/g, (match, countryCode, prefix, lastSix) => {
+    const code = countryCode || '';
+    return `${code}${prefix}******`;
+  });
+
+  // 3. Mask standalone 10 to 12 digit phone number sequences
+  masked = masked.replace(/\b([0-9]{4,6})([0-9]{6})\b/g, (match, prefix, lastSix) => {
+    return `${prefix}******`;
+  });
+
+  return masked;
+}
+
+export default function MessengerView({ initialAppId = null, readOnly = false, targetUserId = null }) {
   const { user } = useAuthStore();
   const [conversations, setConversations] = useState([]);
   const [activeConv, setActiveConv] = useState(null);
@@ -40,12 +62,19 @@ export default function MessengerView({ initialAppId = null }) {
     const source = targetObj.user_id || targetObj.sender_id || targetObj.full_name || targetObj.name ? targetObj : isDirectUser;
     if (!source) return;
 
+    const isCurrentAdmin = (user?.role || '').toUpperCase() === 'ADMIN';
+    const isTargetSuperAdmin = (source.role || source.sender_role || '').toUpperCase() === 'SUPER_ADMIN';
+
+    const codeVal = source.partner_code || source.employee_code || source.sender_partner_code || source.sender_employee_code || source.user_code || source.code || 'N/A';
+
     const normalized = {
       id: source.id || source.user_id || source.sender_id,
-      full_name: source.full_name || source.name || source.sender_name || 'User Profile',
-      mobile: source.mobile || source.sender_mobile || source.phone || 'N/A',
-      email: source.email || source.sender_email || 'N/A',
-      code: source.partner_code || source.employee_code || source.sender_partner_code || source.sender_employee_code || source.user_code || source.code || 'N/A',
+      full_name: (isCurrentAdmin && !isTargetSuperAdmin)
+        ? `Assigned Member (${codeVal})`
+        : (source.full_name || source.name || source.sender_name || 'User Profile'),
+      mobile: (isCurrentAdmin && !isTargetSuperAdmin) ? '[Protected]' : (source.mobile || source.sender_mobile || source.phone || 'N/A'),
+      email: (isCurrentAdmin && !isTargetSuperAdmin) ? '[Protected]' : (source.email || source.sender_email || 'N/A'),
+      code: codeVal,
       role: source.role || source.sender_role || 'Member',
       department: source.department || null,
       designation: source.designation || null,
@@ -57,7 +86,7 @@ export default function MessengerView({ initialAppId = null }) {
   };
 
   const copyToClipboard = (text, fieldName) => {
-    if (!text || text === 'N/A') return;
+    if (!text || text === 'N/A' || text === '[Protected]') return;
     navigator.clipboard.writeText(text);
     setCopiedField(fieldName);
     setTimeout(() => setCopiedField(null), 2000);
@@ -93,9 +122,16 @@ export default function MessengerView({ initialAppId = null }) {
   const fetchConversations = async (showLoader = false) => {
     if (showLoader) setLoadingConvs(true);
     try {
-      const res = await api.get('/messenger/conversations', {
-        params: { filter, search }
-      });
+      let res;
+      if (readOnly && targetUserId) {
+        res = await api.get('/messenger/admin/conversations', {
+          params: { target_user_id: targetUserId }
+        });
+      } else {
+        res = await api.get('/messenger/conversations', {
+          params: { filter, search }
+        });
+      }
       if (res.data?.success) {
         setConversations(res.data.data || []);
       }
@@ -108,13 +144,13 @@ export default function MessengerView({ initialAppId = null }) {
 
   useEffect(() => {
     fetchConversations(true);
-  }, [filter, search]);
+  }, [filter, search, targetUserId, readOnly]);
 
   useEffect(() => {
-    if (initialAppId) {
+    if (initialAppId && !readOnly) {
       handleStartAppChat(initialAppId);
     }
-  }, [initialAppId]);
+  }, [initialAppId, readOnly]);
 
   // Auto-poll conversations & active chat messages
   useEffect(() => {
@@ -125,13 +161,20 @@ export default function MessengerView({ initialAppId = null }) {
       }
     }, 4000);
     return () => clearInterval(interval);
-  }, [activeConv, filter, search]);
+  }, [activeConv, filter, search, targetUserId, readOnly]);
 
   // 2. Fetch Messages for Active Conversation
   const fetchMessages = async (convId, showLoader = true) => {
     if (showLoader) setLoadingMsgs(true);
     try {
-      const res = await api.get(`/messenger/conversations/${convId}/messages`);
+      let res;
+      if (readOnly && targetUserId) {
+        res = await api.get(`/messenger/admin/messages/${convId}`, {
+          params: { target_user_id: targetUserId }
+        });
+      } else {
+        res = await api.get(`/messenger/conversations/${convId}/messages`);
+      }
       if (res.data?.success) {
         setMessages(res.data.data || []);
       }
@@ -370,9 +413,28 @@ export default function MessengerView({ initialAppId = null }) {
   };
 
   const getConvTitle = (conv) => {
-    if (conv.name) return conv.name;
+    if (!conv) return 'Chat';
+    const isCurrentAdmin = (user?.role || '').toUpperCase() === 'ADMIN';
+
+    if (conv.name) {
+      if (isCurrentAdmin && conv.conversation_type === 'DIRECT') {
+        const otherP = conv.other_participants?.[0];
+        if (otherP && (otherP.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+          const code = otherP.partner_code || otherP.employee_code || `USR-${(otherP.user_id || otherP.id || '').slice(0, 6).toUpperCase()}`;
+          return `Assigned Member (${code})`;
+        }
+      }
+      return conv.name;
+    }
+
     if (conv.other_participants && conv.other_participants.length > 0) {
-      return conv.other_participants.map(p => p.full_name).join(', ');
+      return conv.other_participants.map(p => {
+        if (isCurrentAdmin && (p.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+          const code = p.partner_code || p.employee_code || `USR-${(p.user_id || p.id || '').slice(0, 6).toUpperCase()}`;
+          return `Assigned Member (${code})`;
+        }
+        return p.full_name;
+      }).join(', ');
     }
     return 'Direct Chat';
   };
@@ -408,30 +470,32 @@ export default function MessengerView({ initialAppId = null }) {
           <div style={{ padding: isMobile ? '12px 14px' : '16px 20px', borderBottom: '1px solid #F1F5F9' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>Messages</h2>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button
-                  onClick={() => { setShowNewChatModal(true); fetchContacts(''); }}
-                  title="New Direct Chat"
-                  style={{
-                    width: '34px', height: '34px', borderRadius: '50%', background: '#EFF6FF',
-                    border: '1px solid #BFDBFE', color: '#2563EB', cursor: 'pointer', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s'
-                  }}
-                >
-                  <FaPlus size={13} />
-                </button>
-                <button
-                  onClick={() => { setShowGroupModal(true); fetchContacts(''); }}
-                  title="New Group Chat"
-                  style={{
-                    width: '34px', height: '34px', borderRadius: '50%', background: '#F1F5F9',
-                    border: '1px solid #CBD5E1', color: '#475569', cursor: 'pointer', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s'
-                  }}
-                >
-                  <FaUsers size={14} />
-                </button>
-              </div>
+              {!readOnly && (
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    onClick={() => { setShowNewChatModal(true); fetchContacts(''); }}
+                    title="New Direct Chat"
+                    style={{
+                      width: '34px', height: '34px', borderRadius: '50%', background: '#EFF6FF',
+                      border: '1px solid #BFDBFE', color: '#2563EB', cursor: 'pointer', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s'
+                    }}
+                  >
+                    <FaPlus size={13} />
+                  </button>
+                  <button
+                    onClick={() => { setShowGroupModal(true); fetchContacts(''); }}
+                    title="New Group Chat"
+                    style={{
+                      width: '34px', height: '34px', borderRadius: '50%', background: '#F1F5F9',
+                      border: '1px solid #CBD5E1', color: '#475569', cursor: 'pointer', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s'
+                    }}
+                  >
+                    <FaUsers size={14} />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Search Input Box */}
@@ -866,64 +930,74 @@ export default function MessengerView({ initialAppId = null }) {
               )}
 
               {/* Chat Input Composer Bar */}
-              <form
-                onSubmit={handleSendMessage}
-                style={{
-                  padding: isMobile ? '10px 12px' : '16px 24px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0',
-                  display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px'
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setShowEmojiPicker(prev => !prev)}
-                  style={{ background: 'transparent', border: 'none', color: showEmojiPicker ? '#2563EB' : '#64748B', fontSize: '18px', cursor: 'pointer' }}
-                  title="Emoji"
-                >
-                  <FaSmile />
-                </button>
-
-                <input
-                  type="text"
-                  placeholder="Type a message..."
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
+              {readOnly ? (
+                <div style={{
+                  padding: '14px 24px', background: '#F8FAFC', borderTop: '1px solid #E2E8F0',
+                  textAlign: 'center', color: '#64748B', fontWeight: 700, fontSize: '13.5px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                }}>
+                  <FaLock color="#DC2626" /> Read-Only Mode (Super Admin Audit). Messaging disabled.
+                </div>
+              ) : (
+                <form
+                  onSubmit={handleSendMessage}
                   style={{
-                    flex: 1, padding: '12px 20px', background: '#F8FAFC',
-                    border: '1px solid #E2E8F0', borderRadius: '24px',
-                    color: '#0F172A', fontSize: '14px', outline: 'none'
-                  }}
-                />
-
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  style={{ display: 'none' }}
-                  multiple
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '18px', cursor: 'pointer' }}
-                  title="Attach file"
-                >
-                  <FaPaperclip />
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={sending || (!inputText.trim() && attachments.length === 0)}
-                  style={{
-                    width: '42px', height: '42px', borderRadius: '50%', border: 'none',
-                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', color: '#FFFFFF',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', boxShadow: '0 4px 12px rgba(37,99,235,0.35)',
-                    opacity: (sending || (!inputText.trim() && attachments.length === 0)) ? 0.6 : 1
+                    padding: isMobile ? '10px 12px' : '16px 24px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0',
+                    display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px'
                   }}
                 >
-                  <FaPaperPlane size={15} />
-                </button>
-              </form>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(prev => !prev)}
+                    style={{ background: 'transparent', border: 'none', color: showEmojiPicker ? '#2563EB' : '#64748B', fontSize: '18px', cursor: 'pointer' }}
+                    title="Emoji"
+                  >
+                    <FaSmile />
+                  </button>
+
+                  <input
+                    type="text"
+                    placeholder="Type a message..."
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    style={{
+                      flex: 1, padding: '12px 20px', background: '#F8FAFC',
+                      border: '1px solid #E2E8F0', borderRadius: '24px',
+                      color: '#0F172A', fontSize: '14px', outline: 'none'
+                    }}
+                  />
+
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileSelect}
+                    style={{ display: 'none' }}
+                    multiple
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '18px', cursor: 'pointer' }}
+                    title="Attach file"
+                  >
+                    <FaPaperclip />
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={sending || (!inputText.trim() && attachments.length === 0)}
+                    style={{
+                      width: '42px', height: '42px', borderRadius: '50%', border: 'none',
+                      background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', color: '#FFFFFF',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', boxShadow: '0 4px 12px rgba(37,99,235,0.35)',
+                      opacity: (sending || (!inputText.trim() && attachments.length === 0)) ? 0.6 : 1
+                    }}
+                  >
+                    <FaPaperPlane size={14} />
+                  </button>
+                </form>
+              )}
             </>
           ) : (
             <div style={{

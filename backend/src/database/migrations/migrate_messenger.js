@@ -119,6 +119,21 @@ const migrateMessenger = async () => {
       )
     `);
 
+    // 7. Admin User Assignments table
+    await query(`
+      CREATE TABLE IF NOT EXISTS admin_user_assignments (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        admin_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        assigned_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_by UUID REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(admin_id, assigned_user_id)
+      )
+    `);
+
+    await query(`CREATE INDEX IF NOT EXISTS idx_admin_user_assignments_admin ON admin_user_assignments(admin_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_admin_user_assignments_user ON admin_user_assignments(assigned_user_id)`);
+
     await query('COMMIT');
     logger.info('Messenger migrations completed successfully');
     return { success: true, message: 'Messenger migrations completed' };
