@@ -421,9 +421,9 @@ async function getContactsForUser(userId, userRole, search = '') {
   if (roleUpper === 'EMPLOYEE') {
     allowedUsersSQL = `
       AND (
-        UPPER(u.role) = 'SUPER_ADMIN'
+        UPPER(u.role::text) = 'SUPER_ADMIN'
         OR (
-          UPPER(u.role) = 'EMPLOYEE'
+          UPPER(u.role::text) = 'EMPLOYEE'
           AND EXISTS (
             SELECT 1 FROM employees emp_curr
             LEFT JOIN employee_hierarchy eh_curr ON eh_curr.employee_id = emp_curr.id

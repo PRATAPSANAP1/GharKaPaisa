@@ -1,5 +1,6 @@
 const repo = require('./messenger.repository');
 const { query } = require('../../config/database');
+const { createNotification } = require('../notifications/service');
 
 /**
  * Mask sensitive data in message text:
@@ -255,6 +256,36 @@ async function postMessage(senderId, { conversation_id, message_type = 'TEXT', m
   const snippet = maskedText || (attachments.length > 0 ? `📷 [${attachments.length} File Attachment]` : '');
   await repo.updateConversationLastMessage(conversation_id, message.id, snippet);
   await repo.markMessagesAsRead(conversation_id, senderId);
+
+  // Dispatch real-time in-app notification & SSE push to all other conversation participants
+  try {
+    const { rows: [sender] } = await query(`SELECT full_name, role FROM users WHERE id = $1`, [senderId]);
+    const senderName = sender?.full_name || 'Someone';
+    const preview = snippet.length > 80 ? snippet.slice(0, 80) + '...' : snippet;
+
+    const participants = await repo.getConversationParticipants(conversation_id);
+    for (const p of participants) {
+      if (p.user_id && p.user_id !== senderId) {
+        const recipientRole = (p.role || '').toUpperCase();
+        let link = '/messenger';
+        if (recipientRole === 'SUPER_ADMIN') link = '/super-admin/messenger';
+        else if (recipientRole === 'ADMIN') link = '/admin/messenger';
+        else if (recipientRole === 'EMPLOYEE') link = '/employee/messenger';
+        else if (recipientRole === 'PARTNER') link = '/partner/messenger';
+
+        await createNotification(
+          p.user_id,
+          `💬 New message from ${senderName}`,
+          preview,
+          'info',
+          link,
+          { category: 'chat', priority: 'normal' }
+        );
+      }
+    }
+  } catch (notifErr) {
+    console.error('Failed to dispatch messenger notification:', notifErr.message);
+  }
 
   return message;
 }

@@ -153,8 +153,8 @@ export default function ManageApplications() {
   const kpis = {
     total: globalStats?.total ?? totalCount ?? applications.length,
     pending: globalStats?.pending ?? applications.filter(a => ['submitted', 'pending', 'lead_created', 'created', 'initiated', 'new', 'draft'].includes((a.status || '').toLowerCase())).length,
-    underReview: globalStats?.under_review ?? applications.filter(a => ['under_review', 'under review', 'verification', 'in_progress', 'bank_verification'].includes((a.status || '').toLowerCase())).length,
-    approved: globalStats?.approved ?? applications.filter(a => ['approved', 'operational_verified', 'super_admin_approved', 'sanctioned', 'disbursed'].includes((a.status || '').toLowerCase())).length,
+    operationalVerified: globalStats?.operational_verified ?? applications.filter(a => ['operational_verified', 'under_review', 'under review', 'verification', 'in_progress', 'bank_verification'].includes((a.status || '').toLowerCase())).length,
+    approved: globalStats?.approved ?? applications.filter(a => ['approved', 'super_admin_approved', 'sanctioned', 'disbursed'].includes((a.status || '').toLowerCase())).length,
     rejected: globalStats?.rejected ?? applications.filter(a => ['rejected', 'declined', 'cancelled'].includes((a.status || '').toLowerCase())).length
   };
 
@@ -163,8 +163,8 @@ export default function ManageApplications() {
   const todayApps = applications.filter(a => (a.created_at || '').startsWith(todayStr));
   const todayStats = {
     newLeads: globalStats?.today ?? todayApps.length,
-    underReview: todayApps.filter(a => (a.status || '').toLowerCase().includes('review') || (a.status || '').toLowerCase().includes('verification')).length,
-    approved: todayApps.filter(a => (a.status || '').toLowerCase().includes('approved') || (a.status || '').toLowerCase().includes('verified')).length,
+    operationalVerified: todayApps.filter(a => (a.status || '').toLowerCase().includes('verified') || (a.status || '').toLowerCase().includes('review')).length,
+    approved: todayApps.filter(a => (a.status || '').toLowerCase().includes('approved')).length,
     rejected: todayApps.filter(a => (a.status || '').toLowerCase().includes('reject')).length
   };
 
@@ -531,17 +531,17 @@ export default function ManageApplications() {
           </div>
         </div>
 
-        {/* Under Review */}
+        {/* Operational Verified */}
         <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyBetween: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Under Review</span>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <MdTrackChanges size={18} />
+            <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Operational Verified</span>
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShieldCheck size={18} />
             </div>
           </div>
           <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.underReview}</span>
-            <span style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 700 }}>Bank verifying</span>
+            <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.operationalVerified}</span>
+            <span style={{ fontSize: '11px', color: '#8B5CF6', fontWeight: 700 }}>Ops verified</span>
           </div>
         </div>
 
@@ -580,7 +580,7 @@ export default function ManageApplications() {
         <span style={{ fontSize: '12.5px', fontWeight: 800, color: C.text }}>Today's Activity</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '12px', color: C.textMid }}>New Leads: <strong style={{ color: C.text }}>{todayStats.newLeads}</strong></span>
-          <span style={{ fontSize: '12px', color: C.textMid }}>Under Review: <strong style={{ color: '#F59E0B' }}>{todayStats.underReview}</strong></span>
+          <span style={{ fontSize: '12px', color: C.textMid }}>Operational Verified: <strong style={{ color: '#8B5CF6' }}>{todayStats.operationalVerified}</strong></span>
           <span style={{ fontSize: '12px', color: C.textMid }}>Approved: <strong style={{ color: '#10B981' }}>{todayStats.approved}</strong></span>
           <span style={{ fontSize: '12px', color: C.textMid }}>Rejected: <strong style={{ color: '#EF4444' }}>{todayStats.rejected}</strong></span>
         </div>

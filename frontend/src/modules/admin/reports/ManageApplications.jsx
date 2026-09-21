@@ -21,7 +21,8 @@ export default function ManageApplications() {
   const user = useAuthStore((state) => state.user);
   const userRole = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
-  const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
+  const isAdministrativeOperatorUser = ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
+  const isSalesExecUser = (['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userRole)) && !isAdministrativeOperatorUser;
   const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
   const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
   const isQdOperatorUser = ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(userRole);
@@ -356,8 +357,8 @@ export default function ManageApplications() {
   const kpis = {
     total: total || apps.length,
     pending: backendStatusCounts?.pending ?? apps.filter(a => ['submitted', 'pending', 'lead_created', 'created'].includes((a.status || '').toLowerCase())).length,
-    underReview: backendStatusCounts?.under_review ?? apps.filter(a => ['under_review', 'verification', 'in_progress', 'details_submitted'].includes((a.status || '').toLowerCase())).length,
-    approved: backendStatusCounts?.approved ?? apps.filter(a => ['approved', 'operational_verified', 'super_admin_approved'].includes((a.status || '').toLowerCase())).length,
+    operationalVerified: backendStatusCounts?.operational_verified ?? backendStatusCounts?.under_review ?? apps.filter(a => ['operational_verified', 'under_review', 'verification', 'in_progress', 'details_submitted'].includes((a.status || '').toLowerCase())).length,
+    approved: backendStatusCounts?.approved ?? apps.filter(a => ['approved', 'super_admin_approved'].includes((a.status || '').toLowerCase())).length,
     rejected: backendStatusCounts?.rejected ?? apps.filter(a => ['rejected', 'declined', 'cancelled'].includes((a.status || '').toLowerCase())).length
   };
 
@@ -425,16 +426,16 @@ export default function ManageApplications() {
             </div>
           </div>
 
-          {/* Under Review */}
+          {/* Operational Verified */}
           <div style={{ background: C.card, borderRadius: '14px', padding: '14px 16px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Details Submitted</span>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <MdTrackChanges size={18} />
+              <span style={{ fontSize: '12px', fontWeight: 700, color: C.textLight }}>Operational Verified</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'rgba(139, 92, 246, 0.1)', color: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <ShieldCheck size={18} />
               </div>
             </div>
             <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-              <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.underReview}</span>
+              <span style={{ fontSize: '24px', fontWeight: 900, color: C.text }}>{kpis.operationalVerified}</span>
             </div>
           </div>
 

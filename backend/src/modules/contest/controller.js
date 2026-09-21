@@ -20,7 +20,7 @@ async function getEmployeeProgress(employeeId, contest) {
         UNION ALL
         SELECT id FROM bank_card_applications 
         WHERE created_by = $1
-          AND status IN ('approved', 'disbursed', 'operational_verified', 'commission_received', 'sanctioned', 'super_admin_approved')
+          AND qd_status IN ('approved', 'disbursed', 'operational_verified', 'commission_received', 'sanctioned', 'super_admin_approved')
           AND created_at >= $2 AND created_at <= $3
       ) combined_apps
     `;
