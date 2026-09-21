@@ -1535,7 +1535,22 @@ const loginHistory = async (req, res, next) => {
 const devices = async (req, res, next) => {
   try {
     const context = security.clientContext(req);
-    const { rows } = await query(`SELECT id, device_id, device_name, browser, ip_address::text, city, country, created_at, last_used_at, expires_at, revoked, device_id=$2 AS is_current FROM refresh_tokens WHERE user_id=$1 ORDER BY last_used_at DESC`, [req.user.id, context.deviceId]);
+    const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+    const currentHash = refreshToken ? crypto.createHash('sha256').update(refreshToken).digest('hex') : null;
+
+    const { rows } = await query(`
+      SELECT id, device_id, device_name, browser, ip_address::text, city, country, created_at, last_used_at, expires_at, revoked,
+      CASE 
+        WHEN $2::text IS NOT NULL AND token_hash = $2 THEN true
+        WHEN device_id = $3 THEN true
+        WHEN (LOWER(COALESCE(browser, '')) = LOWER($4) AND LOWER(COALESCE(device_name, '')) = LOWER($5) AND COALESCE(ip_address::text, '') = $6) THEN true
+        ELSE false
+      END AS is_current
+      FROM refresh_tokens 
+      WHERE user_id = $1 AND revoked = false AND (expires_at IS NULL OR expires_at > NOW())
+      ORDER BY last_used_at DESC
+    `, [req.user.id, currentHash, context.deviceId, context.browser, context.device, context.ip]);
+
     return success(res, rows, 'Devices retrieved');
   } catch (err) { next(err); }
 };

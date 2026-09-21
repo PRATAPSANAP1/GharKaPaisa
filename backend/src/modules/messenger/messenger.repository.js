@@ -17,7 +17,6 @@ async function ensureMessengerTables() {
  * Get all conversations for a specific user with unread counts and last message details
  */
 async function getConversationsForUser(userId, filter = 'ALL', search = '') {
-  await ensureMessengerTables();
   let whereClause = `cp.user_id = $1 AND cp.left_at IS NULL`;
   const params = [userId];
 
@@ -102,7 +101,6 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
  * Find existing direct conversation between two users
  */
 async function findDirectConversation(user1Id, user2Id) {
-  await ensureMessengerTables();
   const sql = `
     SELECT c.* FROM conversations c
     JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
@@ -118,7 +116,6 @@ async function findDirectConversation(user1Id, user2Id) {
  * Find existing conversation linked to a specific application
  */
 async function findApplicationConversation(applicationId) {
-  await ensureMessengerTables();
   const sql = `
     SELECT c.* FROM conversations c
     WHERE c.application_id = $1 AND c.conversation_type = 'APPLICATION'
@@ -132,7 +129,6 @@ async function findApplicationConversation(applicationId) {
  * Create a new conversation record
  */
 async function createConversation({ conversation_type, name, description, avatar_url, application_id, created_by }) {
-  await ensureMessengerTables();
   const sql = `
     INSERT INTO conversations (conversation_type, name, description, avatar_url, application_id, created_by)
     VALUES ($1, $2, $3, $4, $5, $6)
@@ -321,7 +317,6 @@ function parseFileSizeToBytes(size) {
  * Add attachment to message
  */
 async function createAttachment({ message_id, file_name, file_url, file_type, file_size, storage_key }) {
-  await ensureMessengerTables();
   const parsedSize = parseFileSizeToBytes(file_size);
   const sql = `
     INSERT INTO message_attachments (message_id, file_name, file_url, file_type, file_size, storage_key)
@@ -381,7 +376,6 @@ async function markMessagesAsRead(conversationId, userId) {
  * Get total unread count for a user across all active conversations
  */
 async function getUnreadCount(userId) {
-  await ensureMessengerTables();
   const sql = `
     SELECT COUNT(*)::INT AS total_unread
     FROM messages m
@@ -410,8 +404,7 @@ async function togglePin(conversationId, userId) {
 /**
  * Search contacts based on platform hierarchy and user role
  */
-async function getContactsForUser(userId, userRole, search = '') {
-  await ensureMessengerTables();
+async function getContactsForUser(userId, userRole, search = '', limit = 30, offset = 0) {
   const searchPattern = `%${(search || '').trim()}%`;
   const roleUpper = (userRole || '').toUpperCase();
 
@@ -526,8 +519,9 @@ async function getContactsForUser(userId, userRole, search = '') {
         emp.employee_id ILIKE $2
       )
     ORDER BY u.full_name ASC
-    LIMIT 30
+    LIMIT $${params.length + 1} OFFSET $${params.length + 2}
   `;
+  params.push(Math.max(1, parseInt(limit, 10) || 30), Math.max(0, parseInt(offset, 10) || 0));
   const { rows } = await query(sql, params);
 
   // If requestor is ADMIN, anonymize non-SuperAdmin contacts to show ONLY their code

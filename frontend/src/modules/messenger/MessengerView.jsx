@@ -152,15 +152,28 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     }
   }, [initialAppId, readOnly]);
 
-  // Auto-poll conversations & active chat messages
+  // Auto-poll conversations & active chat messages with visibility awareness to save bandwidth/DB load
   useEffect(() => {
-    const interval = setInterval(() => {
+    let interval = null;
+    const pollUpdates = () => {
+      if (document.hidden) return;
       fetchConversations(false);
       if (activeConv) {
         fetchMessages(activeConv.id, false);
       }
-    }, 4000);
-    return () => clearInterval(interval);
+    };
+
+    interval = setInterval(pollUpdates, 5000);
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) pollUpdates();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [activeConv, filter, search, targetUserId, readOnly]);
 
   // 2. Fetch Messages for Active Conversation
@@ -247,18 +260,20 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     if (!files.length) return;
 
     files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (uploadEvt) => {
-        const newAtt = {
-          file_name: file.name,
-          file_type: file.type.includes('image') ? 'IMAGE' : file.name.endsWith('.pdf') ? 'PDF' : 'DOCUMENT',
-          file_size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
-          file_url: uploadEvt.target.result
-        };
-        setAttachments(prev => [...prev, newAtt]);
+      const isImage = file.type.includes('image');
+      const isPdf = file.name.endsWith('.pdf');
+      const objectUrl = URL.createObjectURL(file);
+
+      const newAtt = {
+        file_name: file.name,
+        file_type: isImage ? 'IMAGE' : isPdf ? 'PDF' : 'DOCUMENT',
+        file_size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
+        file_url: objectUrl,
+        file_blob: file
       };
-      reader.readAsDataURL(file);
+      setAttachments(prev => [...prev, newAtt]);
     });
+    if (e.target) e.target.value = '';
   };
 
   const removeAttachment = (index) => {

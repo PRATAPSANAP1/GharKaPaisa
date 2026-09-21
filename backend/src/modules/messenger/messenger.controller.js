@@ -1,5 +1,6 @@
 const service = require('./messenger.service');
 const { success, error, unauthorized } = require('../../utils/response/response');
+const logger = require('../../config/logger');
 
 async function getConversations(req, res, next) {
   try {
@@ -83,6 +84,7 @@ async function getMessages(req, res, next) {
 async function sendMessage(req, res, next) {
   try {
     const senderId = req.user.id;
+    logger.info(`[Messenger] sendMessage: sender_id=${senderId}, name="${req.user.full_name || 'N/A'}", email="${req.user.email || 'N/A'}"`);
     const { conversation_id, message_type, message_text, reply_to_message_id, attachments } = req.body;
     if (!conversation_id) {
       return error(res, 'conversation_id is required', 400);

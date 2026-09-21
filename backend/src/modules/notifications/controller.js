@@ -794,7 +794,7 @@ const recordAnnouncementAck = async (req, res, next) => {
 
 const broadcastNotification = async (req, res, next) => {
   try {
-    const { target_role, partner_ids, title, message, priority = 'normal', category = 'system' } = req.body;
+    const { target_role, partner_ids, title, message, priority = 'MEDIUM', category = 'system' } = req.body;
     if (!title || !message) return error(res, 'Title and message are required', 400);
 
     let targetUserIds = [];
@@ -804,17 +804,51 @@ const broadcastNotification = async (req, res, next) => {
       const { rows } = await query(`SELECT user_id FROM partner_profiles WHERE id = ANY($1::uuid[])`, [partner_ids]);
       targetUserIds = rows.map(r => r.user_id);
     } else if (target_role && target_role !== 'all') {
-      const { rows } = await query(`SELECT id FROM users WHERE role = $1`, [target_role.toUpperCase()]);
+      const { rows } = await query(`SELECT id FROM users WHERE UPPER(role::text) = UPPER($1)`, [target_role]);
       targetUserIds = rows.map(r => r.id);
     } else {
-      // Broadcast to all users
-      const { rows } = await query(`SELECT id FROM users`);
+      // Broadcast to all active users
+      const { rows } = await query(`SELECT id FROM users WHERE is_active = true`);
       targetUserIds = rows.map(r => r.id);
     }
 
-    await bulkNotify(targetUserIds, title, message, 'info', { category, priority });
+    const nextSeqRes = await query(`SELECT nextval('announcement_seq') as seq`);
+    const annCode = `ANN-BCAST-${nextSeqRes.rows[0].seq}`;
+    const finalAudience = (target_role && target_role !== 'all') ? target_role.toUpperCase() : 'ALL_USERS';
+    const finalPriority = (priority || 'MEDIUM').toUpperCase();
 
-    return success(res, {}, `Successfully broadcasted to ${targetUserIds.length} users.`);
+    // Persist announcement record
+    const { rows: [item] } = await query(`
+      INSERT INTO announcements (
+        announcement_id, title, short_description, message, description, 
+        audience_type, target_role, priority, status, delivery_channels, 
+        published_at, created_by, reach_count
+      )
+      VALUES ($1, $2, $3, $4, $4, $5, $6, $7, 'PUBLISHED', $8, NOW(), $9, $10)
+      RETURNING *
+    `, [
+      annCode, title, message.substring(0, 150), message, 
+      finalAudience, finalAudience.toLowerCase(), finalPriority, JSON.stringify(['in-app']), 
+      req.user?.id || null, targetUserIds.length
+    ]);
+
+    // Populate recipients & send notifications
+    if (targetUserIds.length > 0) {
+      for (const uid of targetUserIds) {
+        await query(`
+          INSERT INTO announcement_recipients (announcement_id, user_id, delivery_status, delivered_at)
+          VALUES ($1, $2, 'DELIVERED', NOW())
+          ON CONFLICT (announcement_id, user_id) DO NOTHING
+        `, [item.id, uid]).catch(() => {});
+      }
+
+      await bulkNotify(targetUserIds, title, message, 'info', { category: category || 'announcement', priority: finalPriority, announcement_id: item.id });
+    }
+
+    await logAnnouncementAudit(item.id, 'Direct Broadcast Alert', req.user?.id, req.user?.full_name || 'Super Admin', {}, { reach: targetUserIds.length });
+    broadcastLiveUpdate({ type: 'announcement', data: item });
+
+    return success(res, item, `Successfully broadcasted to ${targetUserIds.length} users.`);
   } catch (err) {
     next(err);
   }

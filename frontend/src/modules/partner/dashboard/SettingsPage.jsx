@@ -627,74 +627,100 @@ export default function SettingsPage() {
           {/* ═══════════ TAB 3: DEVICE MANAGEMENT ═══════════ */}
           {activeTab === 'devices' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
-              {/* Current Device Hero */}
-              <div style={{ ...S.card, padding: '24px', borderRadius: '16px', background: `linear-gradient(135deg, ${C.primary}12, ${C.card})`, border: `1.5px solid ${C.primary}30` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-                  <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <div style={{ width: 52, height: 52, borderRadius: '14px', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                      <MdComputer size={26} />
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>
-                          {devices.find(d => d.isCurrent)?.name || 'Current Device'}
-                        </h3>
-                        <span style={{ ...S.tag(C.green), padding: '2px 8px' }}>
-                          <MdCheckCircle size={12} /> Current
-                        </span>
-                      </div>
-                      <div style={metaRow}>
-                        <span>Browser: {devices.find(d => d.isCurrent)?.browser}</span>
-                        <span>•</span>
-                        <span>IP: {devices.find(d => d.isCurrent)?.ip}</span>
-                        <span>•</span>
-                        <MdLocationOn size={12} />
-                        <span>{devices.find(d => d.isCurrent)?.location}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <span style={{ ...S.tag(C.primary), padding: '4px 10px' }}>
-                    <MdVerifiedUser size={12} /> Trusted Device
-                  </span>
-                </div>
-              </div>
+              {(() => {
+                const currentDevice = devices.find(d => d.isCurrent) || devices[0];
+                const isMatchingCurrent = (d) => d && currentDevice && (d.isCurrent || (d.name === currentDevice.name && d.browser === currentDevice.browser && d.ip === currentDevice.ip));
+                
+                const otherDevices = [];
+                const seenKeys = new Set();
+                devices.filter(d => !isMatchingCurrent(d)).forEach(d => {
+                  const key = `${d.name || ''}_${d.browser || ''}_${d.ip || ''}`;
+                  if (!seenKeys.has(key)) {
+                    seenKeys.add(key);
+                    otherDevices.push(d);
+                  }
+                });
 
-              {/* Other Devices */}
-              <div style={{ ...S.card, padding: 0, borderRadius: '16px', overflow: 'hidden' }}>
-                <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: C.bgSecondary }}>
-                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <MdDevices size={18} /> Other Devices
-                  </h3>
-                  <button onClick={() => setShowLogoutModal(true)} disabled={devices.filter(d => !d.isCurrent).length === 0} style={{ ...S.btn('sm'), background: `linear-gradient(135deg, ${C.red}, #C62828)`, color: '#fff', padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: 700 }}>
-                    <MdLogout size={14} /> Logout All Others
-                  </button>
-                </div>
-
-                {devices.filter(d => !d.isCurrent).map((device, idx, arr) => {
-                  const Icon = device.icon;
-                  return (
-                    <div key={device.id} style={{ padding: '16px 24px', borderBottom: idx < arr.length - 1 ? `1px solid ${C.border}` : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-                        <div style={{ width: 40, height: 40, borderRadius: '10px', background: C.bgSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMid }}>
-                          <Icon size={20} />
-                        </div>
-                        <div>
-                          <p style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: 0 }}>{device.name}</p>
-                          <div style={metaRow}>
-                            <span>{device.browser}</span>
-                            <span>•</span>
-                            <span>Last active: {device.lastActive}</span>
+                return (
+                  <>
+                    {/* Current Device Hero */}
+                    <div style={{ ...S.card, padding: '24px', borderRadius: '16px', background: `linear-gradient(135deg, ${C.primary}12, ${C.card})`, border: `1.5px solid ${C.primary}30` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                          <div style={{ width: 52, height: 52, borderRadius: '14px', background: `linear-gradient(135deg, ${C.primary}, ${C.primaryDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                            <MdComputer size={26} />
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <h3 style={{ fontSize: '16px', fontWeight: 800, color: C.text, margin: 0 }}>
+                                {currentDevice?.name || 'Current Device'}
+                              </h3>
+                              <span style={{ ...S.tag(C.green), padding: '2px 8px' }}>
+                                <MdCheckCircle size={12} /> Current
+                              </span>
+                            </div>
+                            <div style={metaRow}>
+                              <span>Browser: {currentDevice?.browser || 'Unknown'}</span>
+                              <span>•</span>
+                              <span>IP: {currentDevice?.ip || 'Unknown'}</span>
+                              <span>•</span>
+                              <MdLocationOn size={12} />
+                              <span>{currentDevice?.location || 'Unknown location'}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: C.textMid }}>
-                        Trusted <ToggleSwitch on={device.isTrusted} onToggle={() => toggleTrusted(device.id)} C={C} />
+                        <span style={{ ...S.tag(C.primary), padding: '4px 10px' }}>
+                          <MdVerifiedUser size={12} /> Trusted Device
+                        </span>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+
+                    {/* Other Devices */}
+                    <div style={{ ...S.card, padding: 0, borderRadius: '16px', overflow: 'hidden' }}>
+                      <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: C.bgSecondary }}>
+                        <h3 style={{ fontSize: '15px', fontWeight: 800, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <MdDevices size={18} /> Other Devices
+                        </h3>
+                        <button onClick={() => setShowLogoutModal(true)} disabled={otherDevices.length === 0} style={{ ...S.btn('sm'), background: `linear-gradient(135deg, ${C.red}, #C62828)`, color: '#fff', padding: '8px 16px', borderRadius: '10px', fontSize: '12px', fontWeight: 700, opacity: otherDevices.length === 0 ? 0.5 : 1, cursor: otherDevices.length === 0 ? 'not-allowed' : 'pointer' }}>
+                          <MdLogout size={14} /> Logout All Others
+                        </button>
+                      </div>
+
+                      {otherDevices.length === 0 ? (
+                        <div style={{ padding: '24px', textAlign: 'center', color: C.textLight, fontSize: '13px' }}>
+                          No other active devices logged in.
+                        </div>
+                      ) : (
+                        otherDevices.map((device, idx, arr) => {
+                          const Icon = device.icon;
+                          return (
+                            <div key={device.id} style={{ padding: '16px 24px', borderBottom: idx < arr.length - 1 ? `1px solid ${C.border}` : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                                <div style={{ width: 40, height: 40, borderRadius: '10px', background: C.bgSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textMid }}>
+                                  {Icon ? <Icon size={20} /> : <MdDevices size={20} />}
+                                </div>
+                                <div>
+                                  <p style={{ fontSize: '14px', fontWeight: 700, color: C.text, margin: 0 }}>{device.name}</p>
+                                  <div style={metaRow}>
+                                    <span>{device.browser}</span>
+                                    <span>•</span>
+                                    <span>IP: {device.ip}</span>
+                                    <span>•</span>
+                                    <span>Last active: {device.lastActive}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: C.textMid }}>
+                                Trusted <ToggleSwitch on={device.isTrusted} onToggle={() => toggleTrusted(device.id)} C={C} />
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 

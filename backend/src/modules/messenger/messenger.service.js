@@ -40,8 +40,8 @@ async function listConversations(userId, filter, search, userRole) {
 async function isSameEmployeeHierarchy(userAId, userBId) {
   const { rows } = await query(`
     SELECT 1 FROM employees emp_a
+    JOIN employees emp_b ON emp_b.user_id = $2
     LEFT JOIN employee_hierarchy eh_a ON eh_a.employee_id = emp_a.id
-    LEFT JOIN employees emp_b ON emp_b.user_id = $2
     LEFT JOIN employee_hierarchy eh_b ON eh_b.employee_id = emp_b.id
     WHERE emp_a.user_id = $1
     AND (
@@ -53,6 +53,7 @@ async function isSameEmployeeHierarchy(userAId, userBId) {
       OR (eh_a.manager_id IS NOT NULL AND eh_a.manager_id = eh_b.manager_id)
       OR (eh_a.team_leader_id IS NOT NULL AND eh_a.team_leader_id = eh_b.team_leader_id)
     )
+    LIMIT 1
   `, [userAId, userBId]);
 
   return rows.length > 0;
@@ -110,14 +111,15 @@ async function startOrGetDirectChat(currentUserId, targetUserId) {
     if (targetRole !== 'SUPER_ADMIN') {
       const { rows: assignedCheck } = await query(`
         SELECT 1 FROM admin_user_assignments WHERE admin_id = $1 AND assigned_user_id = $2
-        UNION
+        UNION ALL
         SELECT 1 FROM application_admin_assignments aaa
         JOIN applications app ON app.id = aaa.application_id
         WHERE aaa.admin_user_id = $1 AND (app.submitted_by = $2 OR app.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $2))
-        UNION
+        UNION ALL
         SELECT 1 FROM admin_bank_assignments aba
         JOIN applications app ON app.bank_id = aba.bank_id
         WHERE aba.admin_id = $1 AND (app.submitted_by = $2 OR app.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $2))
+        LIMIT 1
       `, [currentUserId, targetUserId]);
 
       if (assignedCheck.length === 0) {

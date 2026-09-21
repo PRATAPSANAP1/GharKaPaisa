@@ -117,6 +117,17 @@ const uploadLimiter = rateLimit({
   message: { success: false, message: 'Too many document uploads. Please wait a few minutes before trying again.' }
 });
 
+// Messenger Rate Limiter — 60 requests per minute per user/IP
+const messengerLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  validate: { trustProxy: false },
+  message: { success: false, message: 'Too many messenger requests. Please slow down.' }
+});
+
 // Legacy alias — kept so any existing imports don't break
 const authLimiter = loginLimiter;
 const emailActionLimiter = sendOtpLimiter;
@@ -132,6 +143,7 @@ module.exports = {
   chatbotLimiter,
   customerTrackingLimiter,
   uploadLimiter,
+  messengerLimiter,
   // legacy aliases
   authLimiter,
   emailActionLimiter
