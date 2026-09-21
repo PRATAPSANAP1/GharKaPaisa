@@ -31,15 +31,21 @@ export default function SuperAdminCommission() {
       if (res.data?.success) {
         const raw = res.data.data;
         const list = Array.isArray(raw) ? raw : (raw?.items || raw?.rows || []);
-        // Only show applications whose application status is approved and matches selected commission status filter
+        // Only show PARTNER applications whose status is approved (exclude employee incentives/leads)
         const approvedOnly = list.filter(app => {
           const st = (app.status || '').toLowerCase();
           const cst = (app.commission_status || 'pending').toLowerCase();
           const isApprovedStatus = ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(st);
+
+          // Must be associated with a Partner (partner_id or partner_code) and NOT be an employee-only application
+          const hasPartner = Boolean(app.partner_id || app.partner_code);
+          const isEmployeeOnly = (Boolean(app.employee_id || app.emp_code) && !app.partner_id) || app.submitter_role === 'EMPLOYEE';
+          const isPartnerApp = hasPartner && !isEmployeeOnly;
+
           if (statusFilter) {
-            return isApprovedStatus && cst === statusFilter.toLowerCase();
+            return isPartnerApp && isApprovedStatus && cst === statusFilter.toLowerCase();
           }
-          return isApprovedStatus && ['pending', 'on_hold', 'held', 'released', 'processing'].includes(cst);
+          return isPartnerApp && isApprovedStatus && ['pending', 'on_hold', 'held', 'released', 'processing'].includes(cst);
         });
         setApplications(approvedOnly);
       }
