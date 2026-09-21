@@ -977,13 +977,13 @@ const updateStatus = async (req, res, next) => {
             a.commission_amount,
             p.name as product_name,
             -- Partner contact info
-            pp.mobile as partner_profile_mobile,
+            pu.mobile as partner_profile_mobile,
             pu.mobile as partner_user_mobile,
             pu.phone as partner_user_phone,
             pu.id as partner_user_id,
             COALESCE(NULLIF(TRIM(CONCAT(pp.first_name, ' ', COALESCE(pp.last_name, ''))), ''), pu.full_name, 'Partner') as partner_name,
             -- Employee contact info
-            emp.mobile as employee_profile_mobile,
+            emp.mobile_number as employee_profile_mobile,
             eu.mobile as employee_user_mobile,
             eu.phone as employee_user_phone,
             eu.id as employee_user_id,
@@ -3251,7 +3251,7 @@ const submitPartnerApplication = async (req, res, next) => {
       if (!partnerMobile && partnerId) {
         try {
           const { rows: [pUser] } = await client.query(`
-            SELECT u.mobile, u.phone, pp.mobile as partner_mobile 
+            SELECT u.mobile, u.phone, u.mobile as partner_mobile 
             FROM partner_profiles pp 
             LEFT JOIN users u ON u.id = pp.user_id 
             WHERE pp.id = $1 OR pp.user_id = $1

@@ -443,7 +443,7 @@ const createLead = async (req, res, next) => {
       try {
         const { sendLinkedShareSms } = require('../../services/sms/sms.service');
         const { rows: [pUser] } = await query(`
-          SELECT u.mobile, u.phone, pp.mobile as partner_mobile 
+          SELECT u.mobile, u.phone, u.mobile as partner_mobile 
           FROM partner_profiles pp 
           LEFT JOIN users u ON u.id = pp.user_id 
           WHERE pp.id = $1
