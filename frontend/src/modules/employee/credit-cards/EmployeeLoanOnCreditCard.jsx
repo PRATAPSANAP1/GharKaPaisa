@@ -134,7 +134,55 @@ export default function EmployeeLoanOnCreditCard() {
   const { user } = useAuthStore();
   const [search, setSearch] = useState('');
   const [selectedBank, setSelectedBank] = useState('ALL');
-  
+  const [dbOffers, setDbOffers] = useState([]);
+  const [loadingProds, setLoadingProds] = useState(true);
+
+  // Fetch dynamic offers from backend API
+  React.useEffect(() => {
+    const fetchDynamicOffers = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${getApiV1Url()}/products?category=loan_on_credit_card`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
+        if (Array.isArray(prods) && prods.length > 0) {
+          const mapped = prods.map(p => {
+            let parsedFeatures = [];
+            try {
+              parsedFeatures = typeof p.features === 'string' ? JSON.parse(p.features) : (Array.isArray(p.features) ? p.features : []);
+            } catch (e) {
+              parsedFeatures = [p.description || 'Pre-approved instant cash loan'];
+            }
+            return {
+              id: p.id,
+              bank_id: p.bank_id,
+              bank: p.bank_name || p.bank || 'Partner Bank',
+              title: p.name,
+              logo: p.bank_logo || p.logo || null,
+              accent: '#0F766E',
+              maxLoan: '₹10,000,000',
+              minRoi: p.time_period || '11.49% p.a.',
+              tenure: p.time_period || '12 - 60 Months',
+              processingFee: p.annual_fee || '₹999 + GST',
+              disbursalTime: 'Instant (10 Seconds)',
+              badge: p.badge || 'Pre-Approved',
+              features: parsedFeatures.length > 0 ? parsedFeatures : [p.description || 'Pre-approved cash loan over credit limit']
+            };
+          });
+          setDbOffers(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to load dynamic Card Loan offers:', err);
+      } finally {
+        setLoadingProds(false);
+      }
+    };
+    fetchDynamicOffers();
+  }, []);
+
+  const activeOffers = dbOffers.length > 0 ? dbOffers : bankOffers;
+
   // Calculator States
   const [loanAmount, setLoanAmount] = useState(150000);
   const [interestRate, setInterestRate] = useState(13.5);
@@ -173,14 +221,14 @@ export default function EmployeeLoanOnCreditCard() {
   }, [loanAmount, interestRate, tenureMonths]);
 
   const filteredOffers = useMemo(() => {
-    return bankOffers.filter(offer => {
+    return activeOffers.filter(offer => {
       const matchesSearch = offer.title.toLowerCase().includes(search.toLowerCase()) || 
                             offer.bank.toLowerCase().includes(search.toLowerCase()) ||
                             offer.features.some(f => f.toLowerCase().includes(search.toLowerCase()));
       const matchesBank = selectedBank === 'ALL' || offer.bank === selectedBank;
       return matchesSearch && matchesBank;
     });
-  }, [search, selectedBank]);
+  }, [activeOffers, search, selectedBank]);
 
   const handleCopyShareLink = (offer) => {
     const link = `${baseUrl}/apply/${encodeURIComponent(empCode)}/${offer.id}?type=card_loan`;
@@ -206,11 +254,13 @@ export default function EmployeeLoanOnCreditCard() {
       if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(applyOffer?.id);
       await axios.post(`${getApiV1Url()}/employee/leads`, {
         full_name: custName,
         mobile: custMobile,
         card_bank: custCardBank || applyOffer?.bank,
-        product_type: 'card_loan'
+        product_id: isUuid ? applyOffer?.id : undefined,
+        product_type: 'loan_on_credit_card'
       });
       setSubmitSuccess(true);
       setTimeout(() => {

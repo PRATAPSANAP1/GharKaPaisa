@@ -52,6 +52,7 @@ export default function ManageApplications() {
   const [partnerFilter, setPartnerFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [commFilter, setCommFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   // Detail / Review Modal State
   const [selectedApp, setSelectedApp] = useState(null);
@@ -106,6 +107,7 @@ export default function ManageApplications() {
           search: search.trim() || undefined,
           status: status || undefined,
           process_by: processTypeFilter !== 'all' ? processTypeFilter : undefined,
+          category: categoryFilter !== 'all' ? categoryFilter : undefined,
         },
       });
       if (res.data?.success) {
@@ -129,7 +131,7 @@ export default function ManageApplications() {
 
   useEffect(() => {
     fetchApplications();
-  }, [page, limit, status, processTypeFilter]);
+  }, [page, limit, status, processTypeFilter, categoryFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -143,6 +145,7 @@ export default function ManageApplications() {
     setStatus("");
     setStatusFilter("all");
     setCommFilter("all");
+    setCategoryFilter("all");
     setDateRange("all");
     setProcessTypeFilter("all");
     setSourceTypeFilter("all");
@@ -591,6 +594,24 @@ export default function ManageApplications() {
                   <option value="punch_only">Lead Punching (Punch Only)</option>
                   <option value="share_link">Link Sharing (Share Link)</option>
                   <option value="direct_link">Direct Online</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, display: 'block', marginBottom: '4px' }}>Product Category</label>
+                <select 
+                  style={{ ...S.input, height: '36px', fontSize: '12.5px' }} 
+                  value={categoryFilter} 
+                  onChange={e => { setCategoryFilter(e.target.value); setPage(1); }}
+                >
+                  <option value="all">All Categories</option>
+                  <option value="credit_card">Credit Card</option>
+                  <option value="smart_emi">Smart EMI on Credit Card</option>
+                  <option value="loan_on_credit_card">Loan on Credit Card</option>
+                  <option value="personal_loan">Personal Loan</option>
+                  <option value="business_loan">Business Loan</option>
+                  <option value="insurance">Insurance</option>
+                  <option value="utility">Utility / Recharge</option>
                 </select>
               </div>
 

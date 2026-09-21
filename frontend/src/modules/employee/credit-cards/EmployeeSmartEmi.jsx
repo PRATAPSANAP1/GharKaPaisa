@@ -134,6 +134,54 @@ export default function EmployeeSmartEmi() {
   const { user } = useAuthStore();
   const [search, setSearch] = useState('');
   const [selectedBank, setSelectedBank] = useState('ALL');
+  const [dbSchemes, setDbSchemes] = useState([]);
+  const [loadingProds, setLoadingProds] = useState(true);
+
+  // Fetch dynamic schemes from backend API
+  React.useEffect(() => {
+    const fetchDynamicSchemes = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${getApiV1Url()}/products?category=smart_emi`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
+        if (Array.isArray(prods) && prods.length > 0) {
+          const mapped = prods.map(p => {
+            let parsedFeatures = [];
+            try {
+              parsedFeatures = typeof p.features === 'string' ? JSON.parse(p.features) : (Array.isArray(p.features) ? p.features : []);
+            } catch (e) {
+              parsedFeatures = [p.description || 'Flexible EMI conversion'];
+            }
+            return {
+              id: p.id,
+              bank_id: p.bank_id,
+              bank: p.bank_name || p.bank || 'Partner Bank',
+              title: p.name,
+              logo: p.bank_logo || p.logo || null,
+              accent: '#2563EB',
+              minTransaction: p.annual_fee || '₹2,500',
+              minRoi: p.time_period || '1.15% per month (13.8% p.a.)',
+              tenure: p.time_period || '3 - 36 Months',
+              processingFee: '₹199 + GST',
+              conversionSpeed: 'Instant / Within 24 Hrs',
+              badge: p.badge || 'Popular Scheme',
+              features: parsedFeatures.length > 0 ? parsedFeatures : [p.description || 'Convert purchases into easy EMIs']
+            };
+          });
+          setDbSchemes(mapped);
+        }
+      } catch (err) {
+        console.error('Failed to load dynamic Smart EMI schemes:', err);
+      } finally {
+        setLoadingProds(false);
+      }
+    };
+    fetchDynamicSchemes();
+  }, []);
+
+  const activeSchemes = dbSchemes.length > 0 ? dbSchemes : emiSchemes;
 
   // Calculator States
   const [purchaseAmt, setPurchaseAmt] = useState(75000);
@@ -194,14 +242,14 @@ export default function EmployeeSmartEmi() {
   }, [purchaseAmt, tenure, rateType]);
 
   const filteredSchemes = useMemo(() => {
-    return emiSchemes.filter(scheme => {
+    return activeSchemes.filter(scheme => {
       const matchesSearch = scheme.title.toLowerCase().includes(search.toLowerCase()) || 
                             scheme.bank.toLowerCase().includes(search.toLowerCase()) ||
                             scheme.features.some(f => f.toLowerCase().includes(search.toLowerCase()));
       const matchesBank = selectedBank === 'ALL' || scheme.bank === selectedBank;
       return matchesSearch && matchesBank;
     });
-  }, [search, selectedBank]);
+  }, [activeSchemes, search, selectedBank]);
 
   const handleCopyShareLink = (scheme) => {
     const link = `${baseUrl}/apply/${encodeURIComponent(empCode)}/${scheme.id}?type=smart_emi`;
@@ -227,10 +275,12 @@ export default function EmployeeSmartEmi() {
       if (token) {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(applyScheme?.id);
       await axios.post(`${getApiV1Url()}/employee/leads`, {
         full_name: custName,
         mobile: custMobile,
         card_bank: custCardBank || applyScheme?.bank,
+        product_id: isUuid ? applyScheme?.id : undefined,
         product_type: 'smart_emi'
       });
       setSubmitSuccess(true);

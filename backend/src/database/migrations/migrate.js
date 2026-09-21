@@ -111,6 +111,8 @@ const migrate = async () => {
   `);
   await addEnumValue('product_category', 'card_on_loan');
   await addEnumValue('product_category', 'insurance');
+  await addEnumValue('product_category', 'smart_emi');
+  await addEnumValue('product_category', 'loan_on_credit_card');
   await query(`
     DO $$ BEGIN
       CREATE TYPE wallet_txn_type AS ENUM ('credit','debit');
@@ -4833,12 +4835,185 @@ const migrate = async () => {
     logger.error('Messenger migration error note:', mErr.message);
   }
 
-  // ── Contests Migration ──
+  // ── Seed Smart EMI & Loan on Credit Card Products ──
   try {
-    const migrateContests = require('./migrate_contests.js');
-    await migrateContests();
-  } catch (cErr) {
-    logger.error('Contests migration error note:', cErr.message);
+    const banksRes = await query(`SELECT id, name FROM banks WHERE is_active = true`);
+    const bankMap = {};
+    banksRes.rows.forEach(b => {
+      const lower = b.name.toLowerCase();
+      if (lower.includes('hdfc')) bankMap['hdfc'] = b.id;
+      else if (lower.includes('sbi')) bankMap['sbi'] = b.id;
+      else if (lower.includes('icici')) bankMap['icici'] = b.id;
+      else if (lower.includes('axis')) bankMap['axis'] = b.id;
+      else if (lower.includes('idfc')) bankMap['idfc'] = b.id;
+      else if (lower.includes('kotak')) bankMap['kotak'] = b.id;
+    });
+    const defaultBankId = banksRes.rows[0]?.id || null;
+
+    if (defaultBankId) {
+      const smartEmiProducts = [
+        {
+          name: 'HDFC Bank SmartEMI',
+          bank_id: bankMap['hdfc'] || defaultBankId,
+          category: 'smart_emi',
+          description: 'Convert HDFC credit card purchases into flexible EMIs up to 48 months with low interest rates.',
+          annual_fee: 'Nil / Included',
+          time_period: '6 - 48 Months',
+          badge: 'Popular',
+          features: JSON.stringify(['Instant 1-click conversion via netbanking', 'Low monthly interest starting @ 1.25%', 'Flexible tenure options', 'No physical documentation']),
+          eligibility_criteria: 'HDFC Credit Cardholders with unutilized credit limit'
+        },
+        {
+          name: 'SBI Card Encash / EMI',
+          bank_id: bankMap['sbi'] || defaultBankId,
+          category: 'smart_emi',
+          description: 'Instant purchase conversion to EMI for SBI Credit Cardholders with ZERO documentation.',
+          annual_fee: 'Nil / Included',
+          time_period: '3 - 36 Months',
+          badge: 'Zero Docs',
+          features: JSON.stringify(['Instant approval without income proof', 'Convert any transaction above ₹2,500', 'Nominal processing fee of 1%', 'Auto-debit from card statement']),
+          eligibility_criteria: 'Active SBI Cardholders in good standing'
+        },
+        {
+          name: 'ICICI Bank Instant EMI / Dial-an-EMI',
+          bank_id: bankMap['icici'] || defaultBankId,
+          category: 'smart_emi',
+          description: 'Convert retail or online purchases instantly into easy EMIs on ICICI Credit Card.',
+          annual_fee: 'Nil / Included',
+          time_period: '6 - 24 Months',
+          badge: 'Low Processing Fee',
+          features: JSON.stringify(['Instant conversion on iMobile app', 'Competitive monthly ROI @ 1.33%', 'No pre-closure penalty after 6 EMIs', '24x7 self-service processing']),
+          eligibility_criteria: 'ICICI Bank Credit Cardholders'
+        },
+        {
+          name: 'Axis Bank 2EMI on Credit Card',
+          bank_id: bankMap['axis'] || defaultBankId,
+          category: 'smart_emi',
+          description: 'Split credit card outstanding balances into stress-free monthly installments.',
+          annual_fee: 'Nil / Included',
+          time_period: '6 - 36 Months',
+          badge: 'Fast Approval',
+          features: JSON.stringify(['Convert transactions up to 60 days old', 'Flat processing fee', 'Zero paper verification', 'Manage directly via Axis Mobile']),
+          eligibility_criteria: 'Axis Bank Primary Credit Cardholders'
+        },
+        {
+          name: 'IDFC FIRST Card EMI',
+          bank_id: bankMap['idfc'] || defaultBankId,
+          category: 'smart_emi',
+          description: 'Low interest rate purchase conversion for IDFC FIRST credit cards.',
+          annual_fee: 'Nil / Included',
+          time_period: '3 - 24 Months',
+          badge: 'Zero Processing Fee',
+          features: JSON.stringify(['0% processing fee for select customers', 'Seamless digital execution', 'Flexible repayment tenures', 'Transparent monthly statement billing']),
+          eligibility_criteria: 'IDFC FIRST Bank Cardholders'
+        },
+        {
+          name: 'Kotak Mahindra Card EMI',
+          bank_id: bankMap['kotak'] || defaultBankId,
+          category: 'smart_emi',
+          description: 'Convert high-value spend into manageable EMIs with Kotak Credit Cards.',
+          annual_fee: 'Nil / Included',
+          time_period: '6 - 48 Months',
+          badge: 'High Approval Rate',
+          features: JSON.stringify(['Custom EMI conversion rates', 'Instant approval via Kotak 811', 'Easy monthly auto-debit', 'Foreclosure option available']),
+          eligibility_criteria: 'Kotak Bank Credit Cardholders'
+        }
+      ];
+
+      for (const prod of smartEmiProducts) {
+        const { rows: existing } = await query(`SELECT id FROM products WHERE LOWER(name) = LOWER($1) OR (category::text = 'smart_emi' AND bank_id = $2)`, [prod.name, prod.bank_id]);
+        if (existing.length === 0) {
+          const slug = prod.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          await query(`
+            INSERT INTO products (bank_id, name, category, description, annual_fee, time_period, badge, features, eligibility_criteria, is_active, slug)
+            VALUES ($1, $2, $3::product_category, $4, $5, $6, $7, $8::jsonb, $9, true, $10)
+          `, [prod.bank_id, prod.name, prod.category, prod.description, prod.annual_fee, prod.time_period, prod.badge, prod.features, prod.eligibility_criteria, slug]);
+        }
+      }
+
+      const loanOnCardProducts = [
+        {
+          name: 'HDFC Bank Insta Loan & Jumbo Loan',
+          bank_id: bankMap['hdfc'] || defaultBankId,
+          category: 'loan_on_credit_card',
+          description: 'Over-and-above credit limit pre-approved instant cash loan transferred directly to savings account.',
+          annual_fee: '₹999 + GST Fee',
+          time_period: '12 - 60 Months',
+          badge: 'Pre-Approved',
+          features: JSON.stringify(['Instant 10-second credit disbursal', 'Jumbo Loan option over credit limit', 'Zero physical paperwork', 'Flexible foreclosure after 12 months']),
+          eligibility_criteria: 'Pre-approved HDFC Credit Cardholders'
+        },
+        {
+          name: 'SBI Card Encash & Encash Inline',
+          bank_id: bankMap['sbi'] || defaultBankId,
+          category: 'loan_on_credit_card',
+          description: 'Available for active SBI cardholders with instant NEFT cash transfer.',
+          annual_fee: '1% (Min ₹500)',
+          time_period: '12 - 48 Months',
+          badge: 'Popular Choice',
+          features: JSON.stringify(['Instant NEFT or check disbursal within 48 hrs', 'Encash inline block/unblock options', 'Convenient monthly billing', 'No income proof required']),
+          eligibility_criteria: 'SBI Credit Cardholders'
+        },
+        {
+          name: 'ICICI Bank Dial-a-Loan on Credit Card',
+          bank_id: bankMap['icici'] || defaultBankId,
+          category: 'loan_on_credit_card',
+          description: 'Instant pre-approved cash loan credited directly into any bank account via iMobile.',
+          annual_fee: 'Flat ₹499',
+          time_period: '12 - 36 Months',
+          badge: 'Low Processing Fee',
+          features: JSON.stringify(['Instant funds disbursal to any bank', 'Zero impact on credit card spending limit', 'Reduced interest rate for active cardholders', '12 to 36 month repayment']),
+          eligibility_criteria: 'ICICI Bank Credit Cardholders'
+        },
+        {
+          name: 'Axis Bank Instant Cash on Credit Card',
+          bank_id: bankMap['axis'] || defaultBankId,
+          category: 'loan_on_credit_card',
+          description: 'Pre-approved cash disbursal directly from Axis Mobile NetBanking.',
+          annual_fee: '1.5% (Max ₹1,500)',
+          time_period: '6 - 36 Months',
+          badge: 'Fast Transfer',
+          features: JSON.stringify(['Instant NetBanking cash transfer', 'Zero branch visits or paperwork', 'Transparent repayment schedule']),
+          eligibility_criteria: 'Axis Bank Credit Cardholders'
+        },
+        {
+          name: 'IDFC FIRST Card Limit to Cash Loan',
+          bank_id: bankMap['idfc'] || defaultBankId,
+          category: 'loan_on_credit_card',
+          description: 'Convert card limit to 24x7 instant cash disbursal with zero processing fees.',
+          annual_fee: 'ZERO Processing Fee',
+          time_period: '3 - 24 Months',
+          badge: 'Zero Processing Fee',
+          features: JSON.stringify(['1-click instant digital execution', 'Interest-free cash window for select users', 'Zero paper documentation']),
+          eligibility_criteria: 'IDFC FIRST Credit Cardholders'
+        },
+        {
+          name: 'Kotak Smart Loan on Card',
+          bank_id: bankMap['kotak'] || defaultBankId,
+          category: 'loan_on_credit_card',
+          description: 'Customized pre-approved limit based on card history with IMPS instant disbursal.',
+          annual_fee: '₹750 + GST',
+          time_period: '12 - 48 Months',
+          badge: 'High Conversion',
+          features: JSON.stringify(['Instant IMPS disbursal to account', 'Auto-debit billing on statement', 'Zero foreclosure fee after 6 EMIs']),
+          eligibility_criteria: 'Kotak Mahindra Credit Cardholders'
+        }
+      ];
+
+      for (const prod of loanOnCardProducts) {
+        const { rows: existing } = await query(`SELECT id FROM products WHERE LOWER(name) = LOWER($1) OR (category::text = 'loan_on_credit_card' AND bank_id = $2)`, [prod.name, prod.bank_id]);
+        if (existing.length === 0) {
+          const slug = prod.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          await query(`
+            INSERT INTO products (bank_id, name, category, description, annual_fee, time_period, badge, features, eligibility_criteria, is_active, slug)
+            VALUES ($1, $2, $3::product_category, $4, $5, $6, $7, $8::jsonb, $9, true, $10)
+          `, [prod.bank_id, prod.name, prod.category, prod.description, prod.annual_fee, prod.time_period, prod.badge, prod.features, prod.eligibility_criteria, slug]);
+        }
+      }
+    }
+    logger.info('[Migration] Successfully verified Smart EMI and Loan on Credit Card seed products.');
+  } catch (seedErr) {
+    logger.error('Seed products migration error note:', seedErr.message);
   }
 
   if (require.main === module) {
