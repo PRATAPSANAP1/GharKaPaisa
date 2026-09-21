@@ -70,7 +70,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
       (
         SELECT json_agg(json_build_object(
           'user_id', u.id,
-          'full_name', COALESCE(NULLIF(TRIM(u.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(CONCAT(emp.first_name, ' ', emp.last_name)), ''), u.email, 'User Profile'),
+          'full_name', COALESCE(NULLIF(TRIM(u.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(emp.full_name), ''), u.email, 'User Profile'),
           'role', u.role,
           'email', u.email,
           'mobile', u.mobile,
@@ -219,7 +219,7 @@ async function getMessages(conversationId, limit = 50, offset = 0) {
       m.edited_at,
       m.deleted_at,
       m.created_at,
-      COALESCE(NULLIF(TRIM(u.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(CONCAT(emp.first_name, ' ', emp.last_name)), ''), u.email, 'User Profile') AS sender_name,
+      COALESCE(NULLIF(TRIM(u.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(emp.full_name), ''), u.email, 'User Profile') AS sender_name,
       u.role AS sender_role,
       u.mobile AS sender_mobile,
       u.email AS sender_email,
@@ -494,7 +494,7 @@ async function getContactsForUser(userId, userRole, search = '', limit = 30, off
   const sql = `
     SELECT 
       u.id, 
-      COALESCE(NULLIF(TRIM(u.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(CONCAT(emp.first_name, ' ', emp.last_name)), ''), u.email, 'User Profile') AS full_name, 
+      COALESCE(NULLIF(TRIM(u.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(emp.full_name), ''), u.email, 'User Profile') AS full_name, 
       u.email, 
       u.mobile, 
       u.role, 
