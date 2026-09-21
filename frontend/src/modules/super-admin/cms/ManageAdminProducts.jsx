@@ -214,7 +214,7 @@ export default function ManageAdminProducts() {
       name: "",
       bank_id: banks[0]?.id || "",
       category: activeCategory,
-      sub_category: "Core Cards",
+      sub_category: activeCategory === 'loans' ? 'Loan on Credit Card' : activeCategory === 'insurance' ? 'Health Insurance' : 'Core Cards',
       description: "",
       image_url: "",
       status: "Active",
@@ -888,16 +888,36 @@ export default function ManageAdminProducts() {
                   </div>
 
                   <div>
-                    <label style={S.label}>Credit Card Type *</label>
+                    <label style={S.label}>{activeCategory === 'loans' ? 'Loan Sub-Category *' : activeCategory === 'insurance' ? 'Insurance Type *' : 'Credit Card Type *'}</label>
                     <select
                       required
                       value={form.sub_category}
                       onChange={(e) => setForm({ ...form, sub_category: e.target.value })}
                       style={{ ...S.input, height: '42px', fontWeight: 700 }}
                     >
-                      <option value="Core Cards">Core Card</option>
-                      <option value="Co-Branded Cards">Co-Branded Card</option>
-                      <option value="Secured Cards">Secured Card</option>
+                      {activeCategory === 'loans' ? (
+                        <>
+                          <option value="Loan on Credit Card">Loan on Credit Card</option>
+                          <option value="Smart EMI on Credit Card">Smart EMI on Credit Card</option>
+                          <option value="Personal Loan">Personal Loan</option>
+                          <option value="Home Loan">Home Loan</option>
+                          <option value="Business Loan">Business Loan</option>
+                          <option value="Instant Cash Loan">Instant Cash Loan</option>
+                        </>
+                      ) : activeCategory === 'insurance' ? (
+                        <>
+                          <option value="Health Insurance">Health Insurance</option>
+                          <option value="Motor Insurance">Motor Insurance</option>
+                          <option value="Life Insurance">Life Insurance</option>
+                          <option value="Term Insurance">Term Insurance</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Core Cards">Core Card</option>
+                          <option value="Co-Branded Cards">Co-Branded Card</option>
+                          <option value="Secured Cards">Secured Card</option>
+                        </>
+                      )}
                     </select>
                   </div>
 

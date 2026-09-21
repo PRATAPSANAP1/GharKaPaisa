@@ -96,10 +96,10 @@ export default function SuperAdminCommission() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 900, margin: '0 0 6px', color: textPrimary, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <DollarSign size={28} color="#10b981" /> Super Admin Commission Release Engine
+            <DollarSign size={28} color="#10b981" /> Partner Commission Manager
           </h1>
           <p style={{ fontSize: 13, color: textMuted, margin: 0 }}>
-            Manage & authorize partner commission payouts. Releasing commission instantly credits the Partner's Available Wallet balance.
+            Manage & authorize partner commission payouts. Releasing commission credits the Partner's Available Wallet balance.
           </p>
         </div>
         <button

@@ -150,36 +150,50 @@ export default function EmployeeLoanOnCreditCard() {
     const fetchDynamicOffers = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get(`${getApiV1Url()}/products?category=loan_on_credit_card`, {
+        const res = await axios.get(`${getApiV1Url()}/products?limit=1000`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
         if (Array.isArray(prods) && prods.length > 0) {
-          const mapped = prods.map(p => {
-            let parsedFeatures = [];
-            try {
-              parsedFeatures = typeof p.features === 'string' ? JSON.parse(p.features) : (Array.isArray(p.features) ? p.features : []);
-            } catch (e) {
-              parsedFeatures = [p.description || 'Pre-approved instant cash loan'];
-            }
-            const bName = p.bank_name || p.bank || 'Partner Bank';
-            return {
-              id: p.id,
-              bank_id: p.bank_id,
-              bank: bName,
-              title: p.name,
-              logo: getBankLogo(bName, p.bank_logo || p.logo),
-              accent: '#0F766E',
-              maxLoan: '₹10,000,000',
-              minRoi: p.time_period || '11.49% p.a.',
-              tenure: p.time_period || '12 - 60 Months',
-              processingFee: p.annual_fee || '₹999 + GST',
-              disbursalTime: 'Instant (10 Seconds)',
-              badge: p.badge || 'Pre-Approved',
-              features: parsedFeatures.length > 0 ? parsedFeatures : [p.description || 'Pre-approved cash loan over credit limit']
-            };
+          // Filter products relevant for Loan on Credit Card
+          const cardLoanProds = prods.filter(p => {
+            const cat = String(p.category || '').toLowerCase();
+            const subCat = String(p.sub_category || '').toLowerCase();
+            const pName = String(p.name || '').toLowerCase();
+            return cat.includes('loan_on_credit_card') || 
+                   subCat.includes('loan on credit card') || 
+                   (cat.includes('loan') && (pName.includes('credit card') || pName.includes('insta') || pName.includes('jumbo') || pName.includes('encash') || pName.includes('dial') || subCat.includes('loan')));
           });
-          setDbOffers(mapped);
+
+          const targetProds = cardLoanProds.length > 0 ? cardLoanProds : prods.filter(p => String(p.category || '').toLowerCase().includes('loan'));
+
+          if (targetProds.length > 0) {
+            const mapped = targetProds.map(p => {
+              let parsedFeatures = [];
+              try {
+                parsedFeatures = typeof p.features === 'string' ? JSON.parse(p.features) : (Array.isArray(p.features) ? p.features : []);
+              } catch (e) {
+                parsedFeatures = [p.description || 'Pre-approved instant cash loan'];
+              }
+              const bName = p.bank_name || p.bank || 'Partner Bank';
+              return {
+                id: p.id,
+                bank_id: p.bank_id,
+                bank: bName,
+                title: p.name,
+                logo: getBankLogo(bName, p.bank_logo || p.logo || p.image_url),
+                accent: '#0F766E',
+                maxLoan: p.joining_fee || '₹10,000,000',
+                minRoi: p.interest_rate || '11.49% p.a.',
+                tenure: p.time_period || '12 - 60 Months',
+                processingFee: p.annual_fee || '₹999 + GST',
+                disbursalTime: 'Instant (10 Seconds)',
+                badge: p.badge || 'Pre-Approved',
+                features: parsedFeatures.length > 0 ? parsedFeatures : [p.description || 'Pre-approved cash loan over credit limit']
+              };
+            });
+            setDbOffers(mapped);
+          }
         }
       } catch (err) {
         console.error('Failed to load dynamic Card Loan offers:', err);

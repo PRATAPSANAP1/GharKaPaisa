@@ -95,6 +95,7 @@ import ManageDirectLeads from '../modules/super-admin/crm/ManageDirectLeads';
 import ManageLoanApplications from '../modules/super-admin/crm/ManageLoanApplications';
 import ManageCommissions from '../modules/super-admin/settings/ManageCommissions';
 import SuperAdminCommission from '../modules/admin/dashboard/SuperAdminCommission';
+import ManageEmployeeIncentives from '../modules/super-admin/incentives/ManageEmployeeIncentives';
 import ManageCommissionRules from '../modules/super-admin/settings/ManageCommissionRules';
 import ManageWallet from '../modules/super-admin/wallet/ManageWallet';
 import SuperAdminManageApplications from '../modules/super-admin/crm/ManageApplications';
@@ -416,6 +417,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/direct-leads" element={<ManageDirectLeads />} />
             <Route path="/super-admin/loan-applications" element={<ManageLoanApplications />} />
             <Route path="/super-admin/commissions" element={<SuperAdminCommission />} />
+            <Route path="/super-admin/incentives" element={<ManageEmployeeIncentives />} />
             <Route path="/super-admin/commission-rules" element={<Navigate to="/super-admin/commissions" replace />} />
 
             <Route path="/super-admin/wallet" element={<ManageWallet />} />

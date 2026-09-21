@@ -484,7 +484,7 @@ export default function ManageApplications() {
             }}
           >
             <MdAdd size={18} />
-            <span>+ Apply Lead</span>
+            <span>Apply Lead</span>
           </button>
 
           <button 

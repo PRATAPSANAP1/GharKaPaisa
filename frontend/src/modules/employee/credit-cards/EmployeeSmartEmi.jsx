@@ -152,36 +152,53 @@ export default function EmployeeSmartEmi() {
     const fetchDynamicSchemes = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await axios.get(`${getApiV1Url()}/products?category=smart_emi`, {
+        const res = await axios.get(`${getApiV1Url()}/products?limit=1000`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
         const prods = res.data?.data?.rows || res.data?.data || res.data?.products || [];
         if (Array.isArray(prods) && prods.length > 0) {
-          const mapped = prods.map(p => {
-            let parsedFeatures = [];
-            try {
-              parsedFeatures = typeof p.features === 'string' ? JSON.parse(p.features) : (Array.isArray(p.features) ? p.features : []);
-            } catch (e) {
-              parsedFeatures = [p.description || 'Flexible EMI conversion'];
-            }
-            const bName = p.bank_name || p.bank || 'Partner Bank';
-            return {
-              id: p.id,
-              bank_id: p.bank_id,
-              bank: bName,
-              title: p.name,
-              logo: getBankLogo(bName, p.bank_logo || p.logo),
-              accent: '#2563EB',
-              minTransaction: p.annual_fee || '₹2,500',
-              minRoi: p.time_period || '1.15% per month (13.8% p.a.)',
-              tenure: p.time_period || '3 - 36 Months',
-              processingFee: '₹199 + GST',
-              conversionSpeed: 'Instant / Within 24 Hrs',
-              badge: p.badge || 'Popular Scheme',
-              features: parsedFeatures.length > 0 ? parsedFeatures : [p.description || 'Convert purchases into easy EMIs']
-            };
+          // Filter products relevant for Smart EMI / EMI on credit card
+          const smartEmiProds = prods.filter(p => {
+            const cat = String(p.category || '').toLowerCase();
+            const subCat = String(p.sub_category || '').toLowerCase();
+            const pName = String(p.name || '').toLowerCase();
+            return cat.includes('smart_emi') || 
+                   subCat.includes('smart emi') || 
+                   pName.includes('emi') || 
+                   pName.includes('flexipay') || 
+                   pName.includes('convert') ||
+                   (cat.includes('loan') && (subCat.includes('emi') || pName.includes('smart')));
           });
-          setDbSchemes(mapped);
+
+          const targetProds = smartEmiProds.length > 0 ? smartEmiProds : prods.filter(p => String(p.category || '').toLowerCase().includes('loan'));
+
+          if (targetProds.length > 0) {
+            const mapped = targetProds.map(p => {
+              let parsedFeatures = [];
+              try {
+                parsedFeatures = typeof p.features === 'string' ? JSON.parse(p.features) : (Array.isArray(p.features) ? p.features : []);
+              } catch (e) {
+                parsedFeatures = [p.description || 'Flexible EMI conversion'];
+              }
+              const bName = p.bank_name || p.bank || 'Partner Bank';
+              return {
+                id: p.id,
+                bank_id: p.bank_id,
+                bank: bName,
+                title: p.name,
+                logo: getBankLogo(bName, p.bank_logo || p.logo || p.image_url),
+                accent: '#2563EB',
+                minTransaction: p.joining_fee || '₹2,500',
+                minRoi: p.interest_rate || '1.15% per month (13.8% p.a.)',
+                tenure: p.time_period || '3 - 36 Months',
+                processingFee: p.annual_fee || '₹199 + GST',
+                conversionSpeed: 'Instant / Within 24 Hrs',
+                badge: p.badge || 'Popular Scheme',
+                features: parsedFeatures.length > 0 ? parsedFeatures : [p.description || 'Convert purchases into easy EMIs']
+              };
+            });
+            setDbSchemes(mapped);
+          }
         }
       } catch (err) {
         console.error('Failed to load dynamic Smart EMI schemes:', err);
