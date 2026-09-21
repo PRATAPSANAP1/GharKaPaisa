@@ -133,6 +133,18 @@ export default function EmployeeLoanOnCreditCard() {
   const [loadingProds, setLoadingProds] = useState(true);
   const [showCalculator, setShowCalculator] = useState(false);
 
+  const getBankLogo = (bankName, defaultLogo) => {
+    if (defaultLogo) return defaultLogo;
+    const b = String(bankName || '').toLowerCase();
+    if (b.includes('hdfc')) return hdfcLogo;
+    if (b.includes('sbi')) return sbiLogo;
+    if (b.includes('icici')) return iciciLogo;
+    if (b.includes('axis')) return axisLogo;
+    if (b.includes('idfc')) return idfcLogo;
+    if (b.includes('kotak')) return kotakLogo;
+    return hdfcLogo;
+  };
+
   // Fetch dynamic offers from backend API
   React.useEffect(() => {
     const fetchDynamicOffers = async () => {
@@ -150,12 +162,13 @@ export default function EmployeeLoanOnCreditCard() {
             } catch (e) {
               parsedFeatures = [p.description || 'Pre-approved instant cash loan'];
             }
+            const bName = p.bank_name || p.bank || 'Partner Bank';
             return {
               id: p.id,
               bank_id: p.bank_id,
-              bank: p.bank_name || p.bank || 'Partner Bank',
+              bank: bName,
               title: p.name,
-              logo: p.bank_logo || p.logo || null,
+              logo: getBankLogo(bName, p.bank_logo || p.logo),
               accent: '#0F766E',
               maxLoan: '₹10,000,000',
               minRoi: p.time_period || '11.49% p.a.',
@@ -254,6 +267,7 @@ export default function EmployeeLoanOnCreditCard() {
         full_name: custName,
         mobile: custMobile,
         card_bank: applyOffer?.bank,
+        card_name: applyOffer?.title || applyOffer?.name,
         product_id: isUuid ? applyOffer?.id : undefined,
         product_type: 'loan_on_credit_card'
       });

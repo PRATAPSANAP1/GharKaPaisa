@@ -135,6 +135,18 @@ export default function EmployeeSmartEmi() {
   const [loadingProds, setLoadingProds] = useState(true);
   const [showCalculator, setShowCalculator] = useState(false);
 
+  const getBankLogo = (bankName, defaultLogo) => {
+    if (defaultLogo) return defaultLogo;
+    const b = String(bankName || '').toLowerCase();
+    if (b.includes('hdfc')) return hdfcLogo;
+    if (b.includes('sbi')) return sbiLogo;
+    if (b.includes('icici')) return iciciLogo;
+    if (b.includes('axis')) return axisLogo;
+    if (b.includes('idfc')) return idfcLogo;
+    if (b.includes('kotak')) return kotakLogo;
+    return hdfcLogo;
+  };
+
   // Fetch dynamic schemes from backend API
   React.useEffect(() => {
     const fetchDynamicSchemes = async () => {
@@ -152,12 +164,13 @@ export default function EmployeeSmartEmi() {
             } catch (e) {
               parsedFeatures = [p.description || 'Flexible EMI conversion'];
             }
+            const bName = p.bank_name || p.bank || 'Partner Bank';
             return {
               id: p.id,
               bank_id: p.bank_id,
-              bank: p.bank_name || p.bank || 'Partner Bank',
+              bank: bName,
               title: p.name,
-              logo: p.bank_logo || p.logo || null,
+              logo: getBankLogo(bName, p.bank_logo || p.logo),
               accent: '#2563EB',
               minTransaction: p.annual_fee || '₹2,500',
               minRoi: p.time_period || '1.15% per month (13.8% p.a.)',
@@ -277,6 +290,7 @@ export default function EmployeeSmartEmi() {
         full_name: custName,
         mobile: custMobile,
         card_bank: applyScheme?.bank,
+        card_name: applyScheme?.title || applyScheme?.name,
         product_id: isUuid ? applyScheme?.id : undefined,
         product_type: 'smart_emi'
       });

@@ -951,22 +951,75 @@ router.get('/my-bonus-progress', async (req, res, next) => {
 router.post('/leads', async (req, res, next) => {
   try {
     const empId = req.employee.id;
-    let { full_name, mobile, email, product_id, city, state, pincode, monthly_income, employment_type, card_bank, product_type } = req.body;
+    let { 
+      full_name, mobile, email, product_id, city, state, pincode, 
+      monthly_income, employment_type, card_bank, card_name, product_type 
+    } = req.body;
 
     if (!full_name || !mobile) {
       return res.status(400).json({ success: false, message: 'Customer name and mobile number are required' });
     }
 
-    if (!product_id) {
-      const defaultProd = await query(`SELECT id FROM products WHERE is_active = true ORDER BY display_order ASC LIMIT 1`);
+    const leadCategory = product_type || 'credit_card';
+    const bankNameInput = card_bank || '';
+    const cardNameInput = card_name || '';
+
+    // 1. Resolve product_id and bank_id accurately
+    let matchedProductId = null;
+    let matchedBankId = null;
+    let matchedProductName = cardNameInput || 'Loan / Card Application';
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(product_id);
+    if (isUuid) {
+      const prodRes = await query(`SELECT p.id, p.bank_id, p.name FROM products p WHERE p.id = $1`, [product_id]);
+      if (prodRes.rows.length > 0) {
+        matchedProductId = prodRes.rows[0].id;
+        matchedBankId = prodRes.rows[0].bank_id;
+        matchedProductName = prodRes.rows[0].name;
+      }
+    }
+
+    if (!matchedProductId && (bankNameInput || cardNameInput || leadCategory)) {
+      // Try to find matching product by bank and category/name
+      const searchRes = await query(`
+        SELECT p.id, p.bank_id, p.name 
+        FROM products p
+        LEFT JOIN banks b ON b.id = p.bank_id
+        WHERE (
+          (p.category::text = $1 OR p.name ILIKE $2)
+          AND (b.name ILIKE $3 OR $3 IS NULL OR $3 = '')
+        )
+        ORDER BY p.display_order ASC, p.created_at DESC
+        LIMIT 1
+      `, [leadCategory, `%${cardNameInput}%`, `%${bankNameInput}%`]);
+
+      if (searchRes.rows.length > 0) {
+        matchedProductId = searchRes.rows[0].id;
+        matchedBankId = searchRes.rows[0].bank_id;
+        matchedProductName = searchRes.rows[0].name;
+      }
+    }
+
+    if (!matchedBankId && bankNameInput) {
+      const bankRes = await query(`SELECT id FROM banks WHERE LOWER(name) ILIKE $1 LIMIT 1`, [`%${bankNameInput.trim()}%`]);
+      if (bankRes.rows.length > 0) {
+        matchedBankId = bankRes.rows[0].id;
+      }
+    }
+
+    // Fallback if still no product_id
+    if (!matchedProductId) {
+      const defaultProd = await query(`SELECT id, bank_id, name FROM products WHERE is_active = true ORDER BY display_order ASC LIMIT 1`);
       if (defaultProd.rows.length > 0) {
-        product_id = defaultProd.rows[0].id;
+        matchedProductId = defaultProd.rows[0].id;
+        matchedBankId = matchedBankId || defaultProd.rows[0].bank_id;
+        matchedProductName = matchedProductName !== 'Loan / Card Application' ? matchedProductName : defaultProd.rows[0].name;
       } else {
         return res.status(400).json({ success: false, message: 'No active product found for lead mapping' });
       }
     }
 
-    // 1. Create or get customer
+    // 2. Create or get customer
     let custRes = await query(`SELECT id FROM customers WHERE mobile = $1`, [mobile]);
     let customerId = null;
     if (custRes.rows.length > 0) {
@@ -980,35 +1033,52 @@ router.post('/leads', async (req, res, next) => {
       customerId = newCust.rows[0].id;
     }
 
-    // 2. Fetch employee product link if assigned
-    const linkRes = await query(`SELECT id, incentive_amount FROM employee_product_links WHERE employee_id = $1 AND product_id = $2`, [empId, product_id]);
+    // 3. Fetch employee product link if assigned
+    const linkRes = await query(`SELECT id, incentive_amount FROM employee_product_links WHERE employee_id = $1 AND product_id = $2`, [empId, matchedProductId]);
     const linkId = linkRes.rows[0]?.id || null;
     const incentiveAmt = linkRes.rows[0]?.incentive_amount || 500;
 
-    // 3. Generate App Number
+    // 4. Generate App Number
     const appSeq = await query(`SELECT nextval('app_number_seq') as seq`);
     const date = new Date();
     const datePart = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
     const app_number = `APP${datePart}${appSeq.rows[0].seq}`;
 
-    // 4. Create Application record with employee attribution
+    // 5. Dual-sync to direct_card_applications so it appears under Super Admin "Credit Card Loan Applications" / "ManageLoanApplications"
+    try {
+      await query(
+        `INSERT INTO direct_card_applications (customer_name, mobile, bank_name, card_name, category, status)
+         VALUES ($1, $2, $3, $4, $5, 'verified')`,
+        [
+          full_name.trim(),
+          mobile.trim(),
+          bankNameInput || 'Partner Bank',
+          cardNameInput || matchedProductName,
+          leadCategory
+        ]
+      );
+    } catch (directErr) {
+      logger.warn('Employee lead direct_card_applications sync warning:', directErr.message);
+    }
+
+    // 6. Create Application record with employee attribution
     const { rows } = await query(
       `INSERT INTO applications (
-        app_number, customer_id, product_id, partner_id, submitted_by, employee_id, employee_link_id,
-        source_type, process_type, process_by, status, commission_amount
+        app_number, customer_id, product_id, bank_id, partner_id, submitted_by, employee_id, employee_link_id,
+        source_type, process_type, process_by, status, commission_amount, customer_name, customer_mobile
       ) VALUES (
-        $1, $2, $3, '00000000-0000-0000-0000-000000000000', $4, $5, $6,
-        'EMPLOYEE', 'lead_punching', 'lead_punching', 'submitted', $7
+        $1, $2, $3, $4, '00000000-0000-0000-0000-000000000000', $5, $6, $7,
+        'EMPLOYEE', 'lead_punching', 'lead_punching', 'submitted', $8, $9, $10
       ) RETURNING *`,
-      [app_number, customerId, product_id, req.user.id, empId, linkId, incentiveAmt]
+      [app_number, customerId, matchedProductId, matchedBankId, req.user.id, empId, linkId, incentiveAmt, full_name, mobile]
     );
 
-    // 5. Create Pending Incentive Transaction record
+    // 7. Create Pending Incentive Transaction record
     await query(
       `INSERT INTO employee_incentive_transactions (
         employee_id, product_id, application_id, transaction_type, amount, status, customer_name
       ) VALUES ($1, $2, $3, 'EARNED', $4, 'PENDING', $5)`,
-      [empId, product_id, rows[0].id, incentiveAmt, full_name]
+      [empId, matchedProductId, rows[0].id, incentiveAmt, full_name]
     );
 
     res.status(201).json({
