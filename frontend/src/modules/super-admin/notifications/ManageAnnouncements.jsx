@@ -577,8 +577,8 @@ export default function ManageAnnouncements() {
                   <MdDrafts /> View Drafts ({draftCount})
                 </button>
 
-                <button onClick={() => setActiveTab('analytics')} style={{ ...S.btn('outline'), width: '100%', justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
-                  <MdAnalytics /> Announcement Analytics
+                <button onClick={() => setActiveTab('broadcast')} style={{ ...S.btn('outline'), width: '100%', justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
+                  <MdSend /> Direct Broadcast Alert
                 </button>
 
                 <button onClick={exportReport} style={{ ...S.btn('outline'), width: '100%', justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
@@ -799,17 +799,17 @@ export default function ManageAnnouncements() {
 
       {/* MODAL 1: CREATE / EDIT ANNOUNCEMENT FORM */}
       {formOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div style={{ ...S.card, width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', position: 'relative', borderRadius: '20px' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '8px' : '16px' }}>
+          <div style={{ ...S.card, width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '16px' : '28px', position: 'relative', borderRadius: '20px' }}>
             
             <button 
               onClick={() => setFormOpen(false)}
-              style={{ position: 'absolute', top: '20px', right: '20px', background: C.bgSecondary, border: 'none', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textLight }}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: C.bgSecondary, border: 'none', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textLight }}
             >
               <MdClose size={22} />
             </button>
 
-            <h3 style={{ fontSize: '20px', fontWeight: 850, color: C.text, margin: '0 0 20px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: 850, color: C.text, margin: '0 0 20px', paddingRight: '40px' }}>
               {formMode === 'create' ? 'Create New Announcement' : 'Edit Announcement'}
             </h3>
 
@@ -854,7 +854,7 @@ export default function ManageAnnouncements() {
               </div>
 
               {/* Audience & Priority */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={S.label}>Target Audience *</label>
                   <select style={S.input} value={formData.audience_type} onChange={e => setFormData({ ...formData, audience_type: e.target.value })}>
@@ -881,7 +881,7 @@ export default function ManageAnnouncements() {
               {/* Delivery Channels */}
               <div>
                 <label style={S.label}>Delivery Channels</label>
-                <div style={{ display: 'flex', gap: '16px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', gap: '16px', marginTop: '6px', flexWrap: 'wrap' }}>
                   {['in-app', 'email', 'sms'].map(ch => {
                     const checked = formData.delivery_channels.includes(ch);
                     return (
@@ -905,7 +905,7 @@ export default function ManageAnnouncements() {
               </div>
 
               {/* Schedule Options */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={S.label}>Publish Timing</label>
                   <select style={S.input} value={formData.schedule_option} onChange={e => setFormData({ ...formData, schedule_option: e.target.value })}>
@@ -928,7 +928,7 @@ export default function ManageAnnouncements() {
               </div>
 
               {/* Expiry Options */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={S.label}>Announcement Expiry</label>
                   <select style={S.input} value={formData.expiry_option} onChange={e => setFormData({ ...formData, expiry_option: e.target.value })}>
@@ -951,7 +951,7 @@ export default function ManageAnnouncements() {
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', borderTop: `1px solid ${C.border}`, paddingTop: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px', borderTop: `1px solid ${C.border}`, paddingTop: '16px', flexWrap: 'wrap' }}>
                 <button type="button" onClick={() => setFormOpen(false)} style={S.btn('outline')}>
                   Cancel
                 </button>
@@ -971,17 +971,17 @@ export default function ManageAnnouncements() {
 
       {/* MODAL 2: 360° ANNOUNCEMENT DETAILS & ENGAGEMENT REPORT */}
       {detailModalOpen && selectedAnnouncement && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-          <div style={{ ...S.card, width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto', padding: '28px', position: 'relative', borderRadius: '20px' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '8px' : '16px' }}>
+          <div style={{ ...S.card, width: '100%', maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '16px' : '28px', position: 'relative', borderRadius: '20px' }}>
             
             <button 
               onClick={() => setDetailModalOpen(false)}
-              style={{ position: 'absolute', top: '20px', right: '20px', background: C.bgSecondary, border: 'none', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textLight }}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: C.bgSecondary, border: 'none', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textLight }}
             >
               <MdClose size={22} />
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '11px', fontWeight: 800, color: C.primary, textTransform: 'uppercase' }}>
                 {selectedAnnouncement.announcement_id || 'ANN-SPEC'}
               </span>
@@ -989,17 +989,17 @@ export default function ManageAnnouncements() {
               {getPriorityBadge(selectedAnnouncement.priority)}
             </div>
 
-            <h3 style={{ fontSize: '20px', fontWeight: 850, color: C.text, margin: '0 0 12px' }}>
+            <h3 style={{ fontSize: '20px', fontWeight: 850, color: C.text, margin: '0 0 12px', paddingRight: '40px' }}>
               {selectedAnnouncement.title}
             </h3>
 
-            <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', marginBottom: '20px', fontSize: '13.5px', color: C.text }}>
+            <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', marginBottom: '20px', fontSize: '13.5px', color: C.text, wordBreak: 'break-word' }}>
               {selectedAnnouncement.message || selectedAnnouncement.description}
             </div>
 
             {/* PERFORMANCE METRICS */}
             <h4 style={{ fontSize: '14px', fontWeight: 800, margin: '0 0 12px', color: C.text }}>Performance & Reach</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', marginBottom: '24px' }}>
               <div style={{ background: C.bgSecondary, padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
                 <div style={{ fontSize: '11px', color: C.textLight }}>Targeted</div>
                 <div style={{ fontSize: '18px', fontWeight: 850, color: C.text }}>
