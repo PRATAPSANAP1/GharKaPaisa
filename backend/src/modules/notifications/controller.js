@@ -287,12 +287,12 @@ async function logAnnouncementAudit(announcementId, action, userId, userName, ol
   }
 }
 
-// Purge static mock seed announcements so Super Admin works with clean, user-created dynamic announcements
+// Purge static mock seed announcements safely without deleting real user announcements
 async function ensureSeedAnnouncements() {
   try {
-    await query(`DELETE FROM announcements WHERE announcement_id LIKE 'ANN-100%' OR title ILIKE '%Incentive Structure%' OR title ILIKE '%Compliance Training%' OR title ILIKE '%System Maintenance%' OR title ILIKE '%Fast-Track%' OR title ILIKE '%Goa retreat%'`);
+    // No-op: Do not automatically delete user announcements
   } catch (err) {
-    // Ignore cleanup error if already removed
+    // Ignore error
   }
 }
 
