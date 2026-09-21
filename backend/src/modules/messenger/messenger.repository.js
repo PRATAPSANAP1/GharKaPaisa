@@ -459,7 +459,7 @@ async function getContactsForUser(userId, userRole, search = '') {
       params.push(parentUserId);
       allowedUsersSQL = `
         AND (
-          UPPER(u.role) = 'SUPER_ADMIN'
+          UPPER(u.role::text) = 'SUPER_ADMIN'
           OR ($3::uuid IS NOT NULL AND u.id = $3::uuid)
         )
       `;
@@ -468,19 +468,19 @@ async function getContactsForUser(userId, userRole, search = '') {
       params.push(pProfile.id);
       allowedUsersSQL = `
         AND (
-          UPPER(u.role) = 'SUPER_ADMIN'
+          UPPER(u.role::text) = 'SUPER_ADMIN'
           OR EXISTS (
             SELECT 1 FROM partner_profiles sub_pp WHERE sub_pp.user_id = u.id AND sub_pp.parent_partner_id = $3::uuid
           )
         )
       `;
     } else {
-      allowedUsersSQL = ` AND UPPER(u.role) = 'SUPER_ADMIN'`;
+      allowedUsersSQL = ` AND UPPER(u.role::text) = 'SUPER_ADMIN'`;
     }
   } else if (roleUpper === 'ADMIN') {
     allowedUsersSQL = `
       AND (
-        UPPER(u.role) = 'SUPER_ADMIN'
+        UPPER(u.role::text) = 'SUPER_ADMIN'
         OR EXISTS (
           SELECT 1 FROM admin_user_assignments aua WHERE aua.admin_id = $1 AND aua.assigned_user_id = u.id
         )

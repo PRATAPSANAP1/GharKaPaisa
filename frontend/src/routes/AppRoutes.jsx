@@ -92,6 +92,7 @@ import ManageBanks from '../modules/super-admin/cms/ManageBanks';
 import ManageSections from '../modules/super-admin/cms/ManageSections';
 import ManageServices from '../modules/super-admin/system/ManageServices';
 import ManageDirectLeads from '../modules/super-admin/crm/ManageDirectLeads';
+import ManageLoanApplications from '../modules/super-admin/crm/ManageLoanApplications';
 import ManageCommissions from '../modules/super-admin/settings/ManageCommissions';
 import SuperAdminCommission from '../modules/admin/dashboard/SuperAdminCommission';
 import ManageCommissionRules from '../modules/super-admin/settings/ManageCommissionRules';
@@ -413,6 +414,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/sections" element={<ManageSections />} />
             <Route path="/super-admin/services" element={<ManageServices />} />
             <Route path="/super-admin/direct-leads" element={<ManageDirectLeads />} />
+            <Route path="/super-admin/loan-applications" element={<ManageLoanApplications />} />
             <Route path="/super-admin/commissions" element={<SuperAdminCommission />} />
             <Route path="/super-admin/commission-rules" element={<Navigate to="/super-admin/commissions" replace />} />
 

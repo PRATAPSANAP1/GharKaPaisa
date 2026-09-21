@@ -85,9 +85,13 @@ const listApplications = async (req, res, next) => {
     }
 
     if (category && category !== 'all') {
-      whereClause += ` AND (LOWER(category) = $${idx} OR ($${idx} = 'credit_card' AND (category IS NULL OR category = '')))`;
-      values.push(category.trim().toLowerCase());
-      idx++;
+      if (category === 'loan_applications') {
+        whereClause += ` AND (LOWER(category) IN ('loan_on_credit_card', 'smart_emi', 'loan') OR LOWER(card_name) LIKE '%loan%' OR LOWER(card_name) LIKE '%emi%')`;
+      } else {
+        whereClause += ` AND (LOWER(category) = $${idx} OR ($${idx} = 'credit_card' AND (category IS NULL OR category = '')))`;
+        values.push(category.trim().toLowerCase());
+        idx++;
+      }
     }
 
     if (search) {

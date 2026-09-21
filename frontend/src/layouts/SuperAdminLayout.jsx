@@ -181,6 +181,7 @@ const SuperAdminLayout = () => {
       title: "LEAD & APPLICATIONS",
       items: [
         { path: '/super-admin/direct-leads', label: 'Direct Card Leads', icon: <Icons.creditCard size={16} /> },
+        { path: '/super-admin/loan-applications', label: 'Loan Applications', icon: <Icons.wallet size={16} /> },
         { path: '/super-admin/crm', label: 'Applications Tracking', icon: <Icons.trending size={16} /> }
       ]
     },
