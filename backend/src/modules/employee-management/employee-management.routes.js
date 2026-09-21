@@ -1606,7 +1606,7 @@ router.get('/incentives/overview', async (req, res, next) => {
         p.id as product_id,
         p.name as product_name,
         b.name as bank_name,
-        COALESCE(p.category_slug, 'credit_card') as category_slug,
+        COALESCE(p.category::text, p.slug, 'credit_card') as category_slug,
         COUNT(DISTINCT it.application_id) as applications,
         COUNT(DISTINCT CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.application_id END) as approved,
         COALESCE(SUM(it.amount), 0) as earned,
@@ -1619,7 +1619,7 @@ router.get('/incentives/overview', async (req, res, next) => {
       LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
       LEFT JOIN applications a ON a.id = it.application_id
       ${whereClause}
-      GROUP BY p.id, p.name, b.name, p.category_slug
+      GROUP BY p.id, p.name, b.name, p.category, p.slug
       ORDER BY earned DESC
       LIMIT 15
     `;
@@ -1761,7 +1761,7 @@ router.get('/incentives/overview', async (req, res, next) => {
         COALESCE(e.designation, h.hierarchy_level, 'Telecaller') as role,
         p.id as product_id,
         p.name as product_name,
-        p.category_slug,
+        COALESCE(p.category::text, p.slug, 'credit_card') as category_slug,
         b.name as bank_name,
         a.id as application_id,
         a.app_number,
