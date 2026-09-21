@@ -1,4 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  FaDownload, FaPlus, FaCreditCard, FaFire, FaBuilding, 
+  FaShieldAlt, FaClipboardList, FaSyncAlt, FaExclamationTriangle, 
+  FaCheck, FaMobileAlt, FaTimes 
+} from 'react-icons/fa';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
 
@@ -30,6 +35,7 @@ export default function ManageDirectLeads() {
     customerName: "",
     mobile: "",
     category: "credit_card",
+    bankName: "",
     cardName: ""
   });
   const [exporting, setExporting] = useState(false);
@@ -143,10 +149,10 @@ export default function ManageDirectLeads() {
   };
 
   const categories = [
-    { id: "all", label: "All Direct Leads", emoji: "📋" },
-    { id: "credit_card", label: "Credit Cards", emoji: "💳" },
-    { id: "loan", label: "Loans", emoji: "🏦" },
-    { id: "insurance", label: "Insurance", emoji: "🛡️" },
+    { id: "all", label: "All Direct Leads", icon: <FaClipboardList size={14} /> },
+    { id: "credit_card", label: "Credit Cards", icon: <FaCreditCard size={14} /> },
+    { id: "loan", label: "Loans", icon: <FaBuilding size={14} /> },
+    { id: "insurance", label: "Insurance", icon: <FaShieldAlt size={14} /> },
   ];
 
   return (
@@ -171,7 +177,7 @@ export default function ManageDirectLeads() {
               display: "flex", alignItems: "center", gap: "8px"
             }}
           >
-            <span>📥</span>
+            <FaDownload size={14} />
             <span>{exporting ? "Exporting..." : "Export CSV"}</span>
           </button>
           
@@ -185,7 +191,7 @@ export default function ManageDirectLeads() {
               boxShadow: `0 4px 16px ${C.primary}35`
             }}
           >
-            <span>➕</span>
+            <FaPlus size={14} />
             <span>Apply Direct Lead</span>
           </button>
         </div>
@@ -195,7 +201,7 @@ export default function ManageDirectLeads() {
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(200px, 1fr))", gap: isMobile ? "10px" : "16px", marginBottom: "24px" }}>
         <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
           <div style={{ width: "38px", height: "38px", background: `${C.primary}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.primary, fontSize: "18px", flexShrink: 0 }}>
-            💳
+            <FaCreditCard size={18} />
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: isMobile ? "18px" : "22px", fontWeight: 800, color: C.text }}>{total}</div>
@@ -205,7 +211,7 @@ export default function ManageDirectLeads() {
 
         <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
           <div style={{ width: "38px", height: "38px", background: `${C.green}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.green, fontSize: "18px", flexShrink: 0 }}>
-            🔥
+            <FaFire size={18} />
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: isMobile ? "18px" : "22px", fontWeight: 800, color: C.text }}>{todayLeadsCount}</div>
@@ -215,7 +221,7 @@ export default function ManageDirectLeads() {
 
         <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
           <div style={{ width: "38px", height: "38px", background: `${C.teal}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.teal, fontSize: "18px", flexShrink: 0 }}>
-            🏦
+            <FaBuilding size={18} />
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: isMobile ? "18px" : "22px", fontWeight: 800, color: C.text }}>{categoryCounts.loan}</div>
@@ -225,7 +231,7 @@ export default function ManageDirectLeads() {
 
         <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
           <div style={{ width: "38px", height: "38px", background: `${C.gold}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.gold, fontSize: "18px", flexShrink: 0 }}>
-            🛡️
+            <FaShieldAlt size={18} />
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: isMobile ? "18px" : "22px", fontWeight: 800, color: C.text }}>{categoryCounts.insurance}</div>
@@ -252,7 +258,7 @@ export default function ManageDirectLeads() {
                 whiteSpace: "nowrap", flexShrink: 0
               }}
             >
-              <span>{cat.emoji}</span>
+              {cat.icon}
               <span>{cat.label}</span>
             </button>
           );
@@ -277,19 +283,20 @@ export default function ManageDirectLeads() {
           onClick={fetchLeads}
           style={{ background: `${C.teal}10`, border: `1px solid ${C.teal}35`, color: C.teal, borderRadius: "10px", padding: "10px 18px", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: isMobile ? "100%" : "auto" }}
         >
-          🔄 Refresh Table
+          <FaSyncAlt size={14} />
+          <span>Refresh Table</span>
         </button>
       </div>
 
       {/* Notifications */}
       {err && (
-        <div style={{ padding: "14px 18px", background: `${C.red}10`, border: `1px solid ${C.red}25`, borderRadius: "14px", color: C.red, marginBottom: "20px", fontSize: "14px", fontWeight: 600 }}>
-          ⚠️ {err}
+        <div style={{ padding: "14px 18px", background: `${C.red}10`, border: `1px solid ${C.red}25`, borderRadius: "14px", color: C.red, marginBottom: "20px", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}>
+          <FaExclamationTriangle size={16} /> {err}
         </div>
       )}
       {successMsg && (
-        <div style={{ padding: "14px 18px", background: `${C.green}10`, border: `1px solid ${C.green}25`, borderRadius: "14px", color: C.green, marginBottom: "20px", fontSize: "14px", fontWeight: 600 }}>
-          ✓ {successMsg}
+        <div style={{ padding: "14px 18px", background: `${C.green}10`, border: `1px solid ${C.green}25`, borderRadius: "14px", color: C.green, marginBottom: "20px", fontSize: "14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}>
+          <FaCheck size={16} /> {successMsg}
         </div>
       )}
 
@@ -335,7 +342,10 @@ export default function ManageDirectLeads() {
                       </td>
                       <td style={{ padding: "16px 20px" }}>
                         <div style={{ fontWeight: 700, fontSize: "14.5px" }}>{lead.customer_name}</div>
-                        <div style={{ color: C.textLight, fontSize: "12px", marginTop: "2px", fontWeight: 500 }}>📱 {lead.mobile}</div>
+                        <div style={{ color: C.textLight, fontSize: "12px", marginTop: "2px", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
+                          <FaMobileAlt size={12} />
+                          <span>{lead.mobile}</span>
+                        </div>
                       </td>
                       <td style={{ padding: "16px 20px" }}>
                         <span style={{ fontSize: "12px", fontWeight: 800, background: `${C.teal}12`, color: C.teal, padding: "4px 10px", borderRadius: "8px", textTransform: "uppercase" }}>
@@ -399,7 +409,9 @@ export default function ManageDirectLeads() {
           <div style={{ background: C.card, width: "100%", maxWidth: "500px", borderRadius: "20px", border: `1px solid ${C.border}`, boxShadow: "0 25px 50px rgba(0,0,0,0.3)", padding: "24px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
               <h3 style={{ fontSize: "18px", fontWeight: 800, color: C.text, margin: 0 }}>Apply / Record Direct Lead</h3>
-              <button onClick={() => setShowApplyModal(false)} style={{ background: "none", border: "none", color: C.textMid, fontSize: "20px", cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowApplyModal(false)} style={{ background: "none", border: "none", color: C.textMid, cursor: "pointer", display: "flex", alignItems: "center" }}>
+                <FaTimes size={18} />
+              </button>
             </div>
 
             <form onSubmit={handleCreateLead} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
