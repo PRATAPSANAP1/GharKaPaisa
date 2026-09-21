@@ -85,7 +85,7 @@ const listTickets = async (req, res, next) => {
                COALESCE(pp.last_name, '') as last_name,
                COALESCE(pp.partner_code, 'PUBLIC') as partner_code,
                COALESCE(NULLIF(to_jsonb(t)->>'contact_email', ''), u.email, 'support@gharkapaisa.in') as partner_email,
-               COALESCE(NULLIF(to_jsonb(t)->>'mobile', ''), pp.mobile) as mobile
+               COALESCE(NULLIF(to_jsonb(t)->>'mobile', ''), u.mobile) as mobile
         FROM support_tickets t
         LEFT JOIN partner_profiles pp ON pp.id = t.partner_id
         LEFT JOIN users u ON u.id = pp.user_id
@@ -129,9 +129,10 @@ const getTicketDetail = async (req, res, next) => {
              COALESCE(pp.last_name, '') as last_name,
              COALESCE(pp.partner_code, 'PUBLIC') as partner_code,
              COALESCE(NULLIF(to_jsonb(t)->>'contact_email', ''), u.email, 'support@gharkapaisa.in') as partner_email,
-             COALESCE(NULLIF(to_jsonb(t)->>'mobile', ''), pp.mobile) as mobile
+             COALESCE(NULLIF(to_jsonb(t)->>'mobile', ''), u.mobile) as mobile
       FROM support_tickets t
       LEFT JOIN partner_profiles pp ON pp.id = t.partner_id
+      LEFT JOIN users u ON u.id = pp.user_id
       WHERE t.id = $1
     `, [id]);
 
