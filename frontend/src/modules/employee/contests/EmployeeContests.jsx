@@ -9,7 +9,8 @@ import {
   HiOutlineSparkles,
   HiOutlineInformationCircle,
   HiOutlineXMark,
-  HiOutlineFire
+  HiOutlineFire,
+  HiOutlineArrowLeft
 } from 'react-icons/hi2';
 import PartnerBannerCarousel from '../../../components/PartnerBannerCarousel';
 import api from '../../../services/api';
@@ -597,6 +598,30 @@ export default function EmployeeContests() {
                   Valid From: {new Date(selectedContest.start_date).toLocaleDateString('en-IN')} to {new Date(selectedContest.end_date).toLocaleDateString('en-IN')}
                 </span>
               </div>
+
+              {/* Back / Close Button */}
+              <button
+                type="button"
+                onClick={() => setSelectedContest(null)}
+                style={{
+                  width: '100%',
+                  marginTop: '12px',
+                  padding: '12px',
+                  borderRadius: '12px',
+                  border: `1px solid ${C.border}`,
+                  background: isDark ? '#334155' : '#F1F5F9',
+                  color: C.text,
+                  fontSize: '14px',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <HiOutlineArrowLeft size={18} /> Back to Contests
+              </button>
             </div>
           </div>
         </div>
