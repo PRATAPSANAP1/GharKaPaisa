@@ -62,6 +62,8 @@ export default function ManageEmployeeIncentives() {
   const [paymentRef, setPaymentRef] = useState('');
   const [holdReason, setHoldReason] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   // Payout Batch Selection State
   const [selectedIncentiveIds, setSelectedIncentiveIds] = useState([]);
@@ -704,7 +706,7 @@ export default function ManageEmployeeIncentives() {
                       <th style={{ padding: '10px 12px' }}>Customer</th>
                       <th style={{ padding: '10px 12px' }}>Employee</th>
                       <th style={{ padding: '10px 12px' }}>Process Type</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Incentive</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Commission</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Status</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Action</th>
                     </tr>
@@ -712,7 +714,8 @@ export default function ManageEmployeeIncentives() {
                   <tbody>
                     {(() => {
                       const list = (data.table?.data || []).filter(r => 
-                        !['RELEASE', 'RELEASED', 'PAID', 'COMPLETED', 'REJECTED', 'CANCELLED'].includes((r.status || '').toUpperCase())
+                        !['RELEASE', 'RELEASED', 'PAID', 'COMPLETED', 'REJECTED', 'CANCELLED'].includes((r.status || '').toUpperCase()) &&
+                        (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
                       );
                       if (list.length === 0) {
                         return (
@@ -765,7 +768,7 @@ export default function ManageEmployeeIncentives() {
                             </span>
                           </td>
 
-                          {/* 5. Incentive */}
+                          {/* 5. Commission */}
                           <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#10B981', fontSize: '13.5px' }}>
                             {formatINR(row.incentive_earned)}
                           </td>
@@ -777,16 +780,22 @@ export default function ManageEmployeeIncentives() {
 
                           {/* 7. Action */}
                           <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                              <button
+                                onClick={() => { setSelectedTransaction(row); setShowDetailsModal(true); }}
+                                style={{ background: C.bgSecondary, color: C.teal, border: `1px solid ${C.teal}`, borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                View Details
+                              </button>
                               <button
                                 onClick={() => handleQuickHold(row)}
-                                style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                                style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, borderRadius: '6px', padding: '4px 8px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
                               >
                                 [ HOLD ]
                               </button>
                               <button
                                 onClick={() => handleQuickRelease(row)}
-                                style={{ background: '#10B981', border: 'none', color: '#FFF', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                                style={{ background: '#10B981', border: 'none', color: '#FFF', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
                               >
                                 [ RELEASE ]
                               </button>
@@ -822,7 +831,7 @@ export default function ManageEmployeeIncentives() {
                       <th style={{ padding: '10px 12px' }}>Customer</th>
                       <th style={{ padding: '10px 12px' }}>Employee</th>
                       <th style={{ padding: '10px 12px' }}>Process Type</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Incentive</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Commission</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Status</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Action</th>
                     </tr>
@@ -872,7 +881,7 @@ export default function ManageEmployeeIncentives() {
                             </span>
                           </td>
 
-                          {/* 5. Incentive */}
+                          {/* 5. Commission */}
                           <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#10B981', fontSize: '13.5px' }}>
                             {formatINR(row.incentive_earned)}
                           </td>
@@ -886,10 +895,13 @@ export default function ManageEmployeeIncentives() {
 
                           {/* 7. Action */}
                           <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-                              <span style={{ background: '#ECFDF5', color: '#047857', padding: '4px 10px', borderRadius: '6px', fontWeight: 800, fontSize: '11px' }}>
-                                Wallet Credited
-                              </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                              <button
+                                onClick={() => { setSelectedTransaction(row); setShowDetailsModal(true); }}
+                                style={{ background: '#ECFDF5', color: '#047857', padding: '4px 10px', borderRadius: '6px', fontWeight: 800, fontSize: '11px', cursor: 'pointer', border: 'none' }}
+                              >
+                                View Details
+                              </button>
                               {(row.payment_reference || row.incentive_id) && (
                                 <span style={{ fontSize: '10px', color: C.textMid, fontFamily: 'monospace', fontWeight: 700 }}>
                                   TXN: {row.payment_reference || `REL-${row.incentive_id?.slice(0, 8)}`}
@@ -1108,6 +1120,111 @@ export default function ManageEmployeeIncentives() {
                 <button type="submit" disabled={updating} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: C.teal, color: '#fff', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}>{updating ? 'Updating...' : 'Save Changes'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Transaction Details Modal ── */}
+      {showDetailsModal && selectedTransaction && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{ background: C.card, borderRadius: '20px', padding: '24px', maxWidth: '520px', width: '90%', border: `1px solid ${C.border}`, boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: `1px solid ${C.border}`, paddingBottom: '12px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaEye color={C.teal} /> Transaction Details
+              </h3>
+              <button onClick={() => setShowDetailsModal(false)} style={{ background: 'none', border: 'none', fontSize: '18px', color: C.textMid, cursor: 'pointer', fontWeight: 900 }}>✕</button>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '13px', background: C.bgSecondary, padding: '16px', borderRadius: '12px' }}>
+              <div>
+                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Application ID</span>
+                <div style={{ color: C.teal, fontWeight: 900, fontFamily: 'monospace', marginTop: '2px' }}>
+                  {selectedTransaction.app_number ? `#${selectedTransaction.app_number.replace(/^#/, '')}` : `#INC-${selectedTransaction.incentive_id?.slice(0, 8)}`}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Employee Code</span>
+                <div style={{ color: C.text, fontWeight: 800, marginTop: '2px' }}>
+                  {selectedTransaction.employee_name || 'Employee Member'} ({selectedTransaction.emp_code || 'AG01019'})
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Process Type</span>
+                <div style={{ color: C.text, fontWeight: 800, marginTop: '2px' }}>
+                  {selectedTransaction.process_type || 'lead punching'}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Commission Amount</span>
+                <div style={{ color: '#10B981', fontWeight: 900, fontSize: '15px', marginTop: '2px' }}>
+                  {formatINR(selectedTransaction.incentive_earned)}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Incentive Status</span>
+                <div style={{ marginTop: '2px' }}>
+                  {renderStatusBadge(selectedTransaction.status)}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Payment Reference</span>
+                <div style={{ color: C.text, fontWeight: 800, fontFamily: 'monospace', marginTop: '2px' }}>
+                  {selectedTransaction.payment_reference || `REL-${selectedTransaction.incentive_id?.slice(0, 8)}` || 'Pending Release'}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Customer Name</span>
+                <div style={{ color: C.text, fontWeight: 800, marginTop: '2px' }}>
+                  {selectedTransaction.customer_name || 'sanap pratap'}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Customer Phone</span>
+                <div style={{ color: C.text, fontWeight: 800, marginTop: '2px' }}>
+                  {selectedTransaction.customer_mobile || '8010447825'}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Product Name</span>
+                <div style={{ color: C.text, fontWeight: 800, marginTop: '2px' }}>
+                  {selectedTransaction.product_name || 'Credit Card Application'}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Application Status</span>
+                <div style={{ color: C.teal, fontWeight: 800, marginTop: '2px', textTransform: 'capitalize' }}>
+                  {selectedTransaction.application_status || 'Approved'}
+                </div>
+              </div>
+
+              {selectedTransaction.hold_reason && (
+                <div style={{ gridColumn: 'span 2' }}>
+                  <span style={{ color: '#EF4444', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Hold Reason</span>
+                  <div style={{ color: C.text, fontWeight: 700, marginTop: '2px', background: '#FEF2F2', padding: '6px 10px', borderRadius: '6px', border: '1px solid #FCA5A5' }}>
+                    {selectedTransaction.hold_reason}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+              <button onClick={() => setShowDetailsModal(false)} style={{ padding: '8px 20px', background: C.teal, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 800 }}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
