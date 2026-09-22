@@ -1509,7 +1509,7 @@ router.get('/incentives/overview', async (req, res, next) => {
     // 1. KPI Cards Summary Query
     const kpiQuery = `
       SELECT 
-        COALESCE(SUM(it.amount), 0) as total_earned,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) NOT IN ('CANCELLED', 'REJECTED') THEN it.amount ELSE 0 END), 0) as total_earned,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as total_paid,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending_payouts,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'IN_REVIEW' THEN it.amount ELSE 0 END), 0) as in_review,
@@ -1517,6 +1517,10 @@ router.get('/incentives/overview', async (req, res, next) => {
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('REJECTED', 'CANCELLED') THEN it.amount ELSE 0 END), 0) as rejected,
         COUNT(DISTINCT it.employee_id) as employees_earned,
         COUNT(it.id) as total_transactions,
+        COUNT(DISTINCT CASE 
+          WHEN a.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received') THEN a.id 
+          WHEN it.application_id IS NOT NULL AND UPPER(it.status::text) NOT IN ('CANCELLED', 'REJECTED') THEN it.application_id
+        END) as approved_cards_count,
         COUNT(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN 1 END) as approved_transactions,
         COUNT(CASE WHEN UPPER(it.status::text) IN ('REJECTED', 'CANCELLED') THEN 1 END) as rejected_transactions
       FROM employee_incentive_transactions it
@@ -1537,7 +1541,7 @@ router.get('/incentives/overview', async (req, res, next) => {
     const trendQuery = `
       SELECT 
         TO_CHAR(it.created_at, 'YYYY-MM-DD') as date,
-        COALESCE(SUM(it.amount), 0) as earned,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) NOT IN ('CANCELLED', 'REJECTED') THEN it.amount ELSE 0 END), 0) as earned,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending
       FROM employee_incentive_transactions it
@@ -1556,9 +1560,13 @@ router.get('/incentives/overview', async (req, res, next) => {
     const roleQuery = `
       SELECT 
         COALESCE(e.designation, h.hierarchy_level, 'Telecaller') as role,
-        COALESCE(SUM(it.amount), 0) as earned,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) NOT IN ('CANCELLED', 'REJECTED') THEN it.amount ELSE 0 END), 0) as earned,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
+        COUNT(DISTINCT CASE 
+          WHEN a.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received') THEN a.id 
+          WHEN it.application_id IS NOT NULL AND UPPER(it.status::text) NOT IN ('CANCELLED', 'REJECTED') THEN it.application_id
+        END) as approved_apps,
         COUNT(DISTINCT it.employee_id) as count
       FROM employee_incentive_transactions it
       LEFT JOIN employees e ON e.id = it.employee_id
