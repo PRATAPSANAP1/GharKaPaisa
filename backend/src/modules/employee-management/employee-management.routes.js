@@ -2202,9 +2202,32 @@ let isIncentiveSchemaEnsured = false;
 async function ensureIncentiveSchema() {
   if (isIncentiveSchemaEnsured) return;
   try {
+    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS bank_id UUID REFERENCES banks(id) ON DELETE SET NULL;`).catch(() => {});
     await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS bonus_rule_id UUID REFERENCES employee_bonus_rules(id) ON DELETE SET NULL;`).catch(() => {});
     await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS direct_incentive_amount DECIMAL(10,2) DEFAULT 0.00;`).catch(() => {});
     await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS bonus_amount DECIMAL(10,2) DEFAULT 0.00;`).catch(() => {});
+    
+    // Deduplicate employee_bonus_transactions before creating unique index
+    await query(`
+      DELETE FROM employee_bonus_transactions T1
+      USING employee_bonus_transactions T2
+      WHERE T1.id < T2.id 
+        AND T1.employee_id = T2.employee_id 
+        AND T1.bonus_rule_id = T2.bonus_rule_id;
+    `).catch(() => {});
+
+    // Deduplicate employee_incentive_transactions before creating unique index
+    await query(`
+      DELETE FROM employee_incentive_transactions T1
+      USING employee_incentive_transactions T2
+      WHERE T1.id < T2.id 
+        AND T1.employee_id = T2.employee_id 
+        AND T1.bonus_rule_id = T2.bonus_rule_id
+        AND T1.transaction_type = 'BONUS'
+        AND T2.transaction_type = 'BONUS'
+        AND T1.bonus_rule_id IS NOT NULL;
+    `).catch(() => {});
+
     await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_incentive_tx_bonus_rule ON employee_incentive_transactions(employee_id, bonus_rule_id) WHERE transaction_type = 'BONUS' AND bonus_rule_id IS NOT NULL;`).catch(() => {});
     await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_bonus_tx_rule_emp ON employee_bonus_transactions(employee_id, bonus_rule_id);`).catch(() => {});
     isIncentiveSchemaEnsured = true;
