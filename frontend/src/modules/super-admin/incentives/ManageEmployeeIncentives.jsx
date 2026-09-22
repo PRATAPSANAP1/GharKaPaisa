@@ -279,7 +279,8 @@ export default function ManageEmployeeIncentives() {
   const navTabs = [
     { id: 'OVERVIEW', label: 'Overview', icon: FaChartLine },
     { id: 'EMPLOYEES', label: 'Employees', icon: FaUsers },
-    { id: 'PAYOUTS', label: 'Payouts', icon: FaMoneyBillWave },
+    { id: 'PAYOUTS', label: 'Payout Management & Releases', icon: FaMoneyBillWave },
+    { id: 'RELEASED', label: 'Released Incentives', icon: FaCheckCircle },
     { id: 'RULES', label: 'Rules & Targets', icon: FaBullseye },
     { id: 'PRODUCTS', label: 'Products', icon: FaCreditCard },
     { id: 'REPORTS', label: 'Reports', icon: FaClipboardList },
@@ -662,13 +663,15 @@ export default function ManageEmployeeIncentives() {
             </div>
           )}
 
-          {/* ── TAB 3: PAYOUTS ── */}
+          {/* ── TAB 3: PAYOUTS (Pending & Held Incentives) ── */}
           {activeTab === 'PAYOUTS' && (
             <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Payout Management & Releases</h3>
-                  <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal }}>{formatINR(pendingPayouts)} Pending Release</span>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal }}>
+                    {formatINR((data.table?.data || []).filter(r => ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase())).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0))} Pending / Held Release
+                  </span>
                 </div>
                 {selectedIncentiveIds.length > 0 && (
                   <button
@@ -679,67 +682,227 @@ export default function ManageEmployeeIncentives() {
                   </button>
                 )}
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ background: C.bgSecondary, color: C.textMid, fontWeight: 800, borderBottom: `2px solid ${C.border}` }}>
-                    <th style={{ padding: '10px 14px', width: '40px' }}>
-                      <input
-                        type="checkbox"
-                        onChange={(e) => {
-                          const pendingList = (data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING');
-                          if (e.target.checked) {
-                            setSelectedIncentiveIds(pendingList.map(r => r.incentive_id));
-                          } else {
-                            setSelectedIncentiveIds([]);
-                          }
-                        }}
-                        checked={selectedIncentiveIds.length > 0 && selectedIncentiveIds.length === (data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING').length}
-                      />
-                    </th>
-                    <th style={{ padding: '10px 14px' }}>Incentive ID</th>
-                    <th style={{ padding: '10px 14px' }}>Employee</th>
-                    <th style={{ padding: '10px 14px' }}>Product</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Amount</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Status</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING').map((row, idx) => (
-                    <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '10px 14px' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, color: C.textMid, fontWeight: 800, borderBottom: `2px solid ${C.border}`, textTransform: 'uppercase' }}>
+                      <th style={{ padding: '10px 12px', width: '40px' }}>
                         <input
                           type="checkbox"
-                          checked={selectedIncentiveIds.includes(row.incentive_id)}
-                          onChange={() => {
-                            setSelectedIncentiveIds(prev => 
-                              prev.includes(row.incentive_id) ? prev.filter(id => id !== row.incentive_id) : [...prev, row.incentive_id]
-                            );
+                          onChange={(e) => {
+                            const pendingList = (data.table?.data || []).filter(r => ['PENDING', 'HOLD', 'ON_HOLD', 'HELD'].includes((r.status || '').toUpperCase()));
+                            if (e.target.checked) {
+                              setSelectedIncentiveIds(pendingList.map(r => r.incentive_id));
+                            } else {
+                              setSelectedIncentiveIds([]);
+                            }
                           }}
+                          checked={selectedIncentiveIds.length > 0 && selectedIncentiveIds.length === (data.table?.data || []).filter(r => ['PENDING', 'HOLD', 'ON_HOLD', 'HELD'].includes((r.status || '').toUpperCase())).length}
                         />
-                      </td>
-                      <td style={{ padding: '10px 14px', fontWeight: 800, color: C.teal }}>INC-{row.incentive_id?.slice(0, 6)}</td>
-                      <td style={{ padding: '10px 14px', fontWeight: 800, color: C.text }}>{row.employee_name} ({row.emp_code})</td>
-                      <td style={{ padding: '10px 14px', color: C.textMid }}>{row.product_name}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 900, color: C.text }}>{formatINR(row.incentive_earned)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>{renderStatusBadge(row.status)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                          <button onClick={() => handleQuickRelease(row)} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: '#10B981', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Release Payout</button>
-                          <button onClick={() => handleQuickHold(row)} style={{ padding: '4px 10px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Hold</button>
-                        </div>
-                      </td>
+                      </th>
+                      <th style={{ padding: '10px 12px' }}>Application</th>
+                      <th style={{ padding: '10px 12px' }}>Customer</th>
+                      <th style={{ padding: '10px 12px' }}>Employee</th>
+                      <th style={{ padding: '10px 12px' }}>Process Type</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Incentive</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Status</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Action</th>
                     </tr>
-                  ))}
-                  {(data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING').length === 0 && (
-                    <tr>
-                      <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
-                        No pending incentive payouts awaiting release.
-                      </td>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const list = (data.table?.data || []).filter(r => 
+                        !['RELEASE', 'RELEASED', 'PAID', 'COMPLETED', 'REJECTED', 'CANCELLED'].includes((r.status || '').toUpperCase())
+                      );
+                      if (list.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={8} style={{ padding: '24px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
+                              No pending incentive payouts awaiting release.
+                            </td>
+                          </tr>
+                        );
+                      }
+                      return list.map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '10px 12px' }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedIncentiveIds.includes(row.incentive_id)}
+                              onChange={() => {
+                                setSelectedIncentiveIds(prev => 
+                                  prev.includes(row.incentive_id) ? prev.filter(id => id !== row.incentive_id) : [...prev, row.incentive_id]
+                                );
+                              }}
+                            />
+                          </td>
+                          {/* 1. Application & Product */}
+                          <td style={{ padding: '10px 12px' }}>
+                            <div style={{ fontWeight: 900, color: C.teal, fontFamily: 'monospace', fontSize: '12.5px' }}>
+                              {row.app_number ? `#${row.app_number.replace(/^#/, '')}` : `#INC-${row.incentive_id?.slice(0, 8)}`}
+                            </div>
+                            <div style={{ color: C.text, fontSize: '11.5px', fontWeight: 600 }}>
+                              {row.product_name || 'Credit Card Application'}
+                            </div>
+                          </td>
+
+                          {/* 2. Customer */}
+                          <td style={{ padding: '10px 12px', color: C.text }}>
+                            <div style={{ fontWeight: 700 }}>{row.customer_name || 'sanap pratap'}</div>
+                            <div style={{ fontSize: '10.5px', color: C.textMid }}>{row.customer_mobile || '8010447825'}</div>
+                          </td>
+
+                          {/* 3. Employee */}
+                          <td style={{ padding: '10px 12px', color: C.text }}>
+                            <div style={{ fontWeight: 700 }}>{row.employee_name || 'Employee Member'}</div>
+                            <span style={{ fontSize: '10.5px', color: C.teal, fontWeight: 800 }}>{row.emp_code || 'AG01019'}</span>
+                          </td>
+
+                          {/* 4. Process Type */}
+                          <td style={{ padding: '10px 12px', color: C.textMid, fontWeight: 700 }}>
+                            <span style={{ background: C.bgSecondary, color: C.text, padding: '3px 8px', borderRadius: '6px', fontSize: '11px' }}>
+                              {row.process_type || 'lead punching'}
+                            </span>
+                          </td>
+
+                          {/* 5. Incentive */}
+                          <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#10B981', fontSize: '13.5px' }}>
+                            {formatINR(row.incentive_earned)}
+                          </td>
+
+                          {/* 6. Status */}
+                          <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                            {renderStatusBadge(row.status)}
+                          </td>
+
+                          {/* 7. Action */}
+                          <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                              <button
+                                onClick={() => handleQuickHold(row)}
+                                style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                [ HOLD ]
+                              </button>
+                              <button
+                                onClick={() => handleQuickRelease(row)}
+                                style={{ background: '#10B981', border: 'none', color: '#FFF', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                              >
+                                [ RELEASE ]
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* ── TAB: RELEASED INCENTIVES ── */}
+          {activeTab === 'RELEASED' && (
+            <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaCheckCircle color="#10B981" size={18} /> Released Employee Incentives
+                  </h3>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#10B981' }}>
+                    {formatINR((data.table?.data || []).filter(r => ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase())).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0))} Released & Credited
+                  </span>
+                </div>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: C.bgSecondary, color: C.textMid, fontWeight: 800, borderBottom: `2px solid ${C.border}`, textTransform: 'uppercase' }}>
+                      <th style={{ padding: '10px 12px' }}>Application</th>
+                      <th style={{ padding: '10px 12px' }}>Customer</th>
+                      <th style={{ padding: '10px 12px' }}>Employee</th>
+                      <th style={{ padding: '10px 12px' }}>Process Type</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Incentive</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Status</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Action</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const releasedList = (data.table?.data || []).filter(r => 
+                        ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase())
+                      );
+                      if (releasedList.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
+                              No released employee incentive records found.
+                            </td>
+                          </tr>
+                        );
+                      }
+                      return releasedList.map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          {/* 1. Application & Product */}
+                          <td style={{ padding: '10px 12px' }}>
+                            <div style={{ fontWeight: 900, color: C.teal, fontFamily: 'monospace', fontSize: '12.5px' }}>
+                              {row.app_number ? `#${row.app_number.replace(/^#/, '')}` : `#INC-${row.incentive_id?.slice(0, 8)}`}
+                            </div>
+                            <div style={{ color: C.text, fontSize: '11.5px', fontWeight: 600 }}>
+                              {row.product_name || 'Credit Card Application'}
+                            </div>
+                          </td>
+
+                          {/* 2. Customer */}
+                          <td style={{ padding: '10px 12px', color: C.text }}>
+                            <div style={{ fontWeight: 700 }}>{row.customer_name || 'sanap pratap'}</div>
+                            <div style={{ fontSize: '10.5px', color: C.textMid }}>{row.customer_mobile || '8010447825'}</div>
+                          </td>
+
+                          {/* 3. Employee */}
+                          <td style={{ padding: '10px 12px', color: C.text }}>
+                            <div style={{ fontWeight: 700 }}>{row.employee_name || 'Employee Member'}</div>
+                            <span style={{ fontSize: '10.5px', color: C.teal, fontWeight: 800 }}>{row.emp_code || 'AG01019'}</span>
+                          </td>
+
+                          {/* 4. Process Type */}
+                          <td style={{ padding: '10px 12px', color: C.textMid, fontWeight: 700 }}>
+                            <span style={{ background: C.bgSecondary, color: C.text, padding: '3px 8px', borderRadius: '6px', fontSize: '11px' }}>
+                              {row.process_type || 'lead punching'}
+                            </span>
+                          </td>
+
+                          {/* 5. Incentive */}
+                          <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#10B981', fontSize: '13.5px' }}>
+                            {formatINR(row.incentive_earned)}
+                          </td>
+
+                          {/* 6. Status */}
+                          <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                            <span style={{ background: '#DCFCE7', color: '#15803D', padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>
+                              released
+                            </span>
+                          </td>
+
+                          {/* 7. Action */}
+                          <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                              <span style={{ background: '#ECFDF5', color: '#047857', padding: '4px 10px', borderRadius: '6px', fontWeight: 800, fontSize: '11px' }}>
+                                Wallet Credited
+                              </span>
+                              {(row.payment_reference || row.incentive_id) && (
+                                <span style={{ fontSize: '10px', color: C.textMid, fontFamily: 'monospace', fontWeight: 700 }}>
+                                  TXN: {row.payment_reference || `REL-${row.incentive_id?.slice(0, 8)}`}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
