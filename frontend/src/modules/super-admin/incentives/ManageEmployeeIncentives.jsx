@@ -686,14 +686,14 @@ export default function ManageEmployeeIncentives() {
                       <input
                         type="checkbox"
                         onChange={(e) => {
-                          const pendingList = (data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING' || (r.status || '').toUpperCase() === 'ON_HOLD');
+                          const pendingList = (data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING');
                           if (e.target.checked) {
                             setSelectedIncentiveIds(pendingList.map(r => r.incentive_id));
                           } else {
                             setSelectedIncentiveIds([]);
                           }
                         }}
-                        checked={selectedIncentiveIds.length > 0 && selectedIncentiveIds.length === (data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING' || (r.status || '').toUpperCase() === 'ON_HOLD').length}
+                        checked={selectedIncentiveIds.length > 0 && selectedIncentiveIds.length === (data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING').length}
                       />
                     </th>
                     <th style={{ padding: '10px 14px' }}>Incentive ID</th>
@@ -705,7 +705,7 @@ export default function ManageEmployeeIncentives() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING' || (r.status || '').toUpperCase() === 'ON_HOLD').map((row, idx) => (
+                  {(data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING').map((row, idx) => (
                     <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
                       <td style={{ padding: '10px 14px' }}>
                         <input
@@ -731,6 +731,13 @@ export default function ManageEmployeeIncentives() {
                       </td>
                     </tr>
                   ))}
+                  {(data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING').length === 0 && (
+                    <tr>
+                      <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
+                        No pending incentive payouts awaiting release.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

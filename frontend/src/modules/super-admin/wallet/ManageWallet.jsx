@@ -81,6 +81,8 @@ export default function ManageWallet() {
   const [partnersOverview, setPartnersOverview] = useState([]);
   const [ledgerEntries, setLedgerEntries] = useState([]);
   const [teamCommissions, setTeamCommissions] = useState({ summary: {}, transactions: [] });
+  const [employeeIncentives, setEmployeeIncentives] = useState({ kpi: {}, pending: [], paid: [], all: [] });
+  const [incentiveSubTab, setIncentiveSubTab] = useState('pending'); // 'pending' | 'paid'
   const [reconciliation, setReconciliation] = useState(null);
   const [razorpayBalance, setRazorpayBalance] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -122,7 +124,7 @@ export default function ManageWallet() {
         to_date: filters.toDate 
       };
 
-      const [wRes, fRes, cRes, pRes, lRes, rRes, tRes, rzRes] = await Promise.allSettled([
+      const [wRes, fRes, cRes, pRes, lRes, rRes, tRes, rzRes, incRes] = await Promise.allSettled([
         api.get('/wallet/admin/withdrawals', { params: { ...queryParams, status: 'all' } }),
         api.get('/wallet/admin/fund-requests', { params: queryParams }),
         api.get('/wallet/admin/commissions/pending', { params: queryParams }),
@@ -130,7 +132,8 @@ export default function ManageWallet() {
         api.get('/wallet/ledger', { params: queryParams }),
         api.get('/wallet/reconciliation'),
         api.get('/wallet/admin/team-commissions', { params: queryParams }),
-        api.get('/wallet/admin/razorpay/balance')
+        api.get('/wallet/admin/razorpay/balance'),
+        api.get('/employees/incentives/overview', { params: { page: 1, limit: 300 } })
       ]);
 
       const wData = wRes.status === 'fulfilled' ? (wRes.value?.data?.data || wRes.value?.data || []) : [];
@@ -141,8 +144,15 @@ export default function ManageWallet() {
       const rData = rRes.status === 'fulfilled' ? (rRes.value?.data?.data || rRes.value?.data || null) : null;
       const tData = tRes.status === 'fulfilled' ? (tRes.value?.data?.data || tRes.value?.data || { summary: {}, transactions: [] }) : { summary: {}, transactions: [] };
       const rzData = rzRes.status === 'fulfilled' ? (rzRes.value?.data?.data || rzRes.value?.data || null) : null;
+      const incPayload = incRes.status === 'fulfilled' ? (incRes.value?.data || null) : null;
 
       if (rzData) setRazorpayBalance(rzData);
+      if (incPayload) {
+        const tableData = incPayload.table?.data || [];
+        const pending = tableData.filter(r => (r.status || '').toUpperCase() === 'PENDING');
+        const paid = tableData.filter(r => ['PAID', 'COMPLETED'].includes((r.status || '').toUpperCase()));
+        setEmployeeIncentives({ kpi: incPayload.kpi || {}, pending, paid, all: tableData });
+      }
 
       // Client-side date filter safeguard
       const filterByDate = (arr, dateField = 'created_at') => {
@@ -176,6 +186,21 @@ export default function ManageWallet() {
       console.error('Error loading wallet settlement data', e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReleaseIncentivePayout = async (incentiveId) => {
+    setActionLoading(true);
+    try {
+      const res = await api.post(`/employees/incentives/${incentiveId}/update-status`, { status: 'PAID' });
+      if (res.data?.success) {
+        showToast(`Incentive payout released successfully!`, 'success');
+        fetchAllDashboardData();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to release incentive payout', 'error');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -584,17 +609,17 @@ export default function ManageWallet() {
         </div>
       )}
 
-      {/* ── TOP 4 MAIN KPI CARDS ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '14px' }}>
+      {/* ── TOP 5 MAIN KPI CARDS ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '14px' }}>
         
         {/* Card 1: Razorpay Account Balance */}
         <div style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Razorpay Account Balance</span>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Razorpay Balance</span>
             <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EEF2FF', color: '#4F46E5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdAccountBalanceWallet size={22} /></div>
           </div>
           <div>
-            <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
               ₹{(
                 razorpayBalance?.available_balance !== undefined && razorpayBalance?.available_balance !== null
                   ? parseFloat(razorpayBalance.available_balance)
@@ -603,9 +628,9 @@ export default function ManageWallet() {
                     : 0
               ).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </h3>
-            <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+            <span style={{ fontSize: '10.5px', color: '#10B981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} /> 
-              {razorpayBalance?.is_simulated ? 'RazorpayX Simulated Balance' : 'RazorpayX Live Wallet Balance'}
+              {razorpayBalance?.is_simulated ? 'RazorpayX Simulated' : 'RazorpayX Live'}
             </span>
           </div>
         </div>
@@ -613,11 +638,11 @@ export default function ManageWallet() {
         {/* Card 2: Total Approved Commission */}
         <div onClick={() => { setActiveTab('commissions'); setCommissionSubTab('approved'); }} style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Total Approved Commission</span>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Approved Commission</span>
             <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdCheckCircle size={22} /></div>
           </div>
           <div>
-            <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.green, margin: 0, letterSpacing: '-0.5px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.green, margin: 0, letterSpacing: '-0.5px' }}>
               ₹{(() => {
                 const approvedComms = ledgerEntries.filter(l => {
                   const isCredit = (l.type === 'Credited' || parseFloat(l.credit || 0) > 0 || (l.transaction_type || '').toLowerCase().includes('commission'));
@@ -629,20 +654,36 @@ export default function ManageWallet() {
                 return sum.toLocaleString('en-IN', { minimumFractionDigits: 2 });
               })()}
             </h3>
-            <span style={{ fontSize: '11px', color: C.textLight, fontWeight: 700, marginTop: '4px', display: 'block' }}>
-              Released to Partner Wallets
+            <span style={{ fontSize: '10.5px', color: C.textLight, fontWeight: 700, marginTop: '4px', display: 'block' }}>
+              Partner Wallets
             </span>
           </div>
         </div>
 
-        {/* Card 3: Total Withdrawal Amount */}
+        {/* Card 3: Total Approved Incentive */}
+        <div onClick={() => { setActiveTab('employee_incentives'); setIncentiveSubTab('paid'); }} style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Approved Incentive</span>
+            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F3E8FF', color: '#9333EA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdAttachMoney size={22} /></div>
+          </div>
+          <div>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#9333EA', margin: 0, letterSpacing: '-0.5px' }}>
+              ₹{(parseFloat(employeeIncentives.kpi?.total_paid || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </h3>
+            <span style={{ fontSize: '10.5px', color: '#9333EA', fontWeight: 700, marginTop: '4px', display: 'block' }}>
+              Released Incentives
+            </span>
+          </div>
+        </div>
+
+        {/* Card 4: Total Withdrawal Amount */}
         <div onClick={() => { setActiveTab('withdrawals'); setWithdrawalSubTab('approved'); }} style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Total Withdrawal Amount</span>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Total Withdrawal</span>
             <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F0F9FF', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdTrendingUp size={22} /></div>
           </div>
           <div>
-            <h3 style={{ fontSize: '20px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0, letterSpacing: '-0.5px' }}>
               ₹{(() => {
                 const approvedWd = withdrawals.filter(w => {
                   const s = (w.status || '').toLowerCase();
@@ -652,20 +693,20 @@ export default function ManageWallet() {
                 return sum.toLocaleString('en-IN', { minimumFractionDigits: 2 });
               })()}
             </h3>
-            <span style={{ fontSize: '11px', color: '#0284C7', fontWeight: 700, marginTop: '4px', display: 'block' }}>
-              Completed & Settled Payouts
+            <span style={{ fontSize: '10.5px', color: '#0284C7', fontWeight: 700, marginTop: '4px', display: 'block' }}>
+              Settled Payouts
             </span>
           </div>
         </div>
 
-        {/* Card 4: Withdrawal Pending */}
+        {/* Card 5: Withdrawal Pending */}
         <div onClick={() => { setActiveTab('withdrawals'); setWithdrawalSubTab('pending'); }} style={{ ...S.card, padding: '18px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', transition: 'transform 0.15s ease' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Withdrawal Pending</span>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight, textTransform: 'uppercase', letterSpacing: '0.3px' }}>Withdrawal Pending</span>
             <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MdReceipt size={22} /></div>
           </div>
           <div>
-            <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#EA580C', margin: 0, letterSpacing: '-0.5px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#EA580C', margin: 0, letterSpacing: '-0.5px' }}>
               ₹{(() => {
                 const pendingWd = withdrawals.filter(w => {
                   const s = (w.status || '').toLowerCase();
@@ -675,7 +716,7 @@ export default function ManageWallet() {
                 return sum.toLocaleString('en-IN', { minimumFractionDigits: 2 });
               })()}
             </h3>
-            <span style={{ fontSize: '11px', color: '#EA580C', fontWeight: 700, marginTop: '4px', display: 'block' }}>
+            <span style={{ fontSize: '10.5px', color: '#EA580C', fontWeight: 700, marginTop: '4px', display: 'block' }}>
               {withdrawals.filter(w => (w.status || '').toLowerCase().includes('pending')).length} Pending Requests
             </span>
           </div>
@@ -696,6 +737,7 @@ export default function ManageWallet() {
       }}>
         {[
           { id: 'commissions', label: 'Commission', icon: <MdLayers size={18} /> },
+          { id: 'employee_incentives', label: 'Employee Incentives', icon: <MdAttachMoney size={18} /> },
           { id: 'withdrawals', label: 'Withdrawal', icon: <MdAccountBalanceWallet size={18} /> },
           { id: 'add_funds', label: 'Add Funds Requests', icon: <MdAddCard size={18} /> },
           { id: 'team_commission', label: 'Team Commission Hierarchy', icon: <MdPeople size={18} /> },
@@ -735,6 +777,155 @@ export default function ManageWallet() {
 
       {/* ── ACTIVE TAB CONTENT (OPENED DIRECTLY BELOW THE BUTTON ROW) ── */}
       <div>
+
+        {/* TAB: Employee Incentives */}
+        {activeTab === 'employee_incentives' && (
+          <div style={{ ...S.card, padding: '20px', borderRadius: '16px', background: isDark ? '#18181B' : '#FFF', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MdAttachMoney style={{ color: C.teal }} size={20} /> Employee Incentive Management
+                </h3>
+                <span style={{ fontSize: '12px', color: C.textLight }}>Review and release employee card incentive payouts and target bonuses</span>
+              </div>
+            </div>
+
+            {/* Sub-Tabs: Pending Incentives vs Approved & Paid */}
+            <div style={{ display: 'flex', gap: '10px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+              <button
+                onClick={() => setIncentiveSubTab('pending')}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: incentiveSubTab === 'pending' ? C.teal : (isDark ? '#27272A' : '#F1F5F9'),
+                  color: incentiveSubTab === 'pending' ? '#FFF' : C.text,
+                  fontWeight: 800,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>Pending Payouts</span>
+                <span style={{ background: incentiveSubTab === 'pending' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
+                  {employeeIncentives.pending.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setIncentiveSubTab('paid')}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: incentiveSubTab === 'paid' ? C.teal : (isDark ? '#27272A' : '#F1F5F9'),
+                  color: incentiveSubTab === 'paid' ? '#FFF' : C.text,
+                  fontWeight: 800,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span>Approved & Paid</span>
+                <span style={{ background: incentiveSubTab === 'paid' ? 'rgba(255,255,255,0.25)' : (isDark ? '#3F3F46' : '#E2E8F0'), padding: '2px 8px', borderRadius: '12px', fontSize: '11px' }}>
+                  {employeeIncentives.paid.length}
+                </span>
+              </button>
+            </div>
+
+            {/* Sub-Tab 1: Pending Incentives Table */}
+            {incentiveSubTab === 'pending' && (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                      <th style={{ padding: '10px 8px' }}>Incentive ID</th>
+                      <th style={{ padding: '10px 8px' }}>Employee</th>
+                      <th style={{ padding: '10px 8px' }}>Role</th>
+                      <th style={{ padding: '10px 8px' }}>Product / Card Details</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'right' }}>Amount</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Status</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {employeeIncentives.pending.length === 0 ? (
+                      <tr><td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No pending employee incentive payouts awaiting release</td></tr>
+                    ) : (
+                      employeeIncentives.pending.map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '12px 8px', fontWeight: 800, color: C.teal, fontFamily: 'monospace' }}>INC-{row.incentive_id?.slice(0, 6)}</td>
+                          <td style={{ padding: '12px 8px', fontWeight: 700 }}>
+                            <div>{row.employee_name}</div>
+                            <span style={{ fontSize: '10.5px', color: C.textLight }}>{row.emp_code}</span>
+                          </td>
+                          <td style={{ padding: '12px 8px', color: C.textLight }}>{row.role}</td>
+                          <td style={{ padding: '12px 8px', color: C.text }}>{row.product_name || 'Card Incentive'}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.text, fontSize: '13.5px' }}>₹{parseFloat(row.incentive_earned || 0).toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                            <span style={{ background: '#FEF3C7', color: '#B45309', padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>Pending Payout</span>
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                            <button
+                              onClick={() => handleReleaseIncentivePayout(row.incentive_id)}
+                              disabled={actionLoading}
+                              style={{ background: '#10B981', color: '#FFF', border: 'none', borderRadius: '6px', padding: '6px 14px', fontSize: '11.5px', fontWeight: 800, cursor: 'pointer' }}
+                            >
+                              Release Payout
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Sub-Tab 2: Approved & Paid Incentives Table */}
+            {incentiveSubTab === 'paid' && (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
+                      <th style={{ padding: '10px 8px' }}>Incentive ID</th>
+                      <th style={{ padding: '10px 8px' }}>Employee</th>
+                      <th style={{ padding: '10px 8px' }}>Role</th>
+                      <th style={{ padding: '10px 8px' }}>Product</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'right' }}>Amount Paid</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {employeeIncentives.paid.length === 0 ? (
+                      <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px', color: C.textLight, fontWeight: 600 }}>No approved/released incentive payouts found</td></tr>
+                    ) : (
+                      employeeIncentives.paid.map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '12px 8px', fontWeight: 800, color: C.teal, fontFamily: 'monospace' }}>INC-{row.incentive_id?.slice(0, 6)}</td>
+                          <td style={{ padding: '12px 8px', fontWeight: 700 }}>
+                            <div>{row.employee_name}</div>
+                            <span style={{ fontSize: '10.5px', color: C.textLight }}>{row.emp_code}</span>
+                          </td>
+                          <td style={{ padding: '12px 8px', color: C.textLight }}>{row.role}</td>
+                          <td style={{ padding: '12px 8px', color: C.text }}>{row.product_name || 'Card Incentive'}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: '#10B981', fontSize: '13.5px' }}>₹{parseFloat(row.incentive_earned || 0).toLocaleString('en-IN')}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                            <span style={{ background: '#DCFCE7', color: '#15803D', padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>Paid / Released</span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* TAB 1: Withdrawal Settlements */}
         {activeTab === 'withdrawals' && (
@@ -1231,13 +1422,13 @@ export default function ManageWallet() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                   <thead>
                     <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
-                      <th style={{ padding: '10px 8px' }}>Request ID</th>
-                      <th style={{ padding: '10px 8px' }}>Beneficiary User / Partner</th>
-                      <th style={{ padding: '10px 8px' }}>Role</th>
-                      <th style={{ padding: '10px 8px' }}>Product / Lead Source</th>
-                      <th style={{ padding: '10px 8px', textAlign: 'right' }}>Commission (₹)</th>
+                      <th style={{ padding: '10px 8px' }}>Application</th>
+                      <th style={{ padding: '10px 8px' }}>Customer</th>
+                      <th style={{ padding: '10px 8px' }}>Partner</th>
+                      <th style={{ padding: '10px 8px' }}>Process Type</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'right' }}>Commission</th>
                       <th style={{ padding: '10px 8px', textAlign: 'center' }}>Status</th>
-                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Actions</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1260,48 +1451,61 @@ export default function ManageWallet() {
 
                         return (
                           <tr key={c.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                            <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{c.id}</td>
-                            <td style={{ padding: '12px 8px', fontWeight: 700 }}>
-                              <div>{userName}</div>
-                              <span style={{ fontSize: '10.5px', color: C.textLight }}>{c.partner_code || 'N/A'}</span>
+                            {/* 1. Application & Product */}
+                            <td style={{ padding: '12px 8px' }}>
+                              <div style={{ fontWeight: 900, color: C.teal, fontFamily: 'monospace', fontSize: '12.5px' }}>
+                                {c.app_number ? `#${c.app_number.replace(/^#/, '')}` : `#APP-${c.id?.slice(0, 8)}`}
+                              </div>
+                              <div style={{ color: C.text, fontSize: '11.5px', fontWeight: 600 }}>
+                                {c.product_name || c.product || 'Credit Card Application'}
+                              </div>
                             </td>
-                            <td style={{ padding: '12px 8px', color: C.textLight }}>
-                              <span style={{
-                                background: roleName.toLowerCase() === 'partner' ? '#EEF2FF' : '#F0FDF4',
-                                color: roleName.toLowerCase() === 'partner' ? '#4F46E5' : '#166534',
-                                padding: '3px 8px',
-                                borderRadius: '6px',
-                                fontWeight: 700,
-                                fontSize: '11px'
-                              }}>
-                                {roleName}
+
+                            {/* 2. Customer */}
+                            <td style={{ padding: '12px 8px', color: C.text }}>
+                              <div style={{ fontWeight: 700 }}>{c.customer_name || c.customer || 'N/A'}</div>
+                              <div style={{ fontSize: '10.5px', color: C.textLight }}>{c.customer_mobile || c.mobile || 'N/A'}</div>
+                            </td>
+
+                            {/* 3. Partner */}
+                            <td style={{ padding: '12px 8px', color: C.text }}>
+                              <div style={{ fontWeight: 700 }}>{userName}</div>
+                              <span style={{ fontSize: '10.5px', color: C.teal, fontWeight: 800 }}>{c.partner_code || 'N/A'}</span>
+                            </td>
+
+                            {/* 4. Process Type */}
+                            <td style={{ padding: '12px 8px', color: C.textLight, fontWeight: 700 }}>
+                              <span style={{ background: isDark ? '#27272A' : '#F3F4F6', color: C.text, padding: '3px 8px', borderRadius: '6px', fontSize: '11px' }}>
+                                {c.process_type || 'lead punching'}
                               </span>
                             </td>
-                            <td style={{ padding: '12px 8px', color: C.text }}>
-                              <div style={{ fontWeight: 800, color: C.teal }}>
-                                {c.product_name || c.product || 'Approved Credit Card'}
-                              </div>
-                              <div style={{ fontSize: '11px', color: C.textLight }}>
-                                {c.app_number ? `#${c.app_number.replace(/^#/, '')}` : (c.description || 'Approved Credit Card Commission')}
-                              </div>
+
+                            {/* 5. Commission */}
+                            <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.green, fontSize: '13.5px' }}>
+                              ₹{amt.toFixed(2)}
                             </td>
-                            <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.green, fontSize: '13.5px' }}>+₹{amt.toLocaleString('en-IN')}</td>
+
+                            {/* 6. Status */}
                             <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                              <span style={{ background: '#FEF3C7', color: '#D97706', padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>Pending Approval</span>
+                              <span style={{ background: '#FEF3C7', color: '#D97706', padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>
+                                pending
+                              </span>
                             </td>
+
+                            {/* 7. Action */}
                             <td style={{ padding: '12px 8px', textAlign: 'center' }}>
                               <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                                <button
-                                  onClick={() => setViewDetailModalItem({ ...c, type: 'commission' })}
-                                  style={{ background: isDark ? '#27272A' : '#E2E8F0', color: C.text, border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
-                                >
-                                  View Detailed
-                                </button>
                                 <button
                                   onClick={() => handleApproveCommission(c.id)}
                                   style={{ background: C.green, border: 'none', color: '#FFF', borderRadius: '6px', padding: '5px 12px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
                                 >
-                                  Approve & Release
+                                  RELEASE
+                                </button>
+                                <button
+                                  onClick={() => handleRejectCommission(c.id, 'Held by admin')}
+                                  style={{ background: isDark ? '#27272A' : '#E2E8F0', color: C.text, border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                                >
+                                  HOLD
                                 </button>
                               </div>
                             </td>
@@ -1320,13 +1524,13 @@ export default function ManageWallet() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                   <thead>
                     <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textLight, textAlign: 'left', fontWeight: 800, textTransform: 'uppercase' }}>
-                      <th style={{ padding: '10px 8px' }}>Transaction ID</th>
-                      <th style={{ padding: '10px 8px' }}>Beneficiary User</th>
-                      <th style={{ padding: '10px 8px' }}>Product Details</th>
-                      <th style={{ padding: '10px 8px' }}>Approved At</th>
-                      <th style={{ padding: '10px 8px', textAlign: 'right' }}>Commission (₹)</th>
+                      <th style={{ padding: '10px 8px' }}>Application</th>
+                      <th style={{ padding: '10px 8px' }}>Customer</th>
+                      <th style={{ padding: '10px 8px' }}>Partner</th>
+                      <th style={{ padding: '10px 8px' }}>Process Type</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'right' }}>Commission</th>
                       <th style={{ padding: '10px 8px', textAlign: 'center' }}>Status</th>
-                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Actions</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'center' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1360,39 +1564,55 @@ export default function ManageWallet() {
                       return approvedList.map(c => {
                         const userName = c.user_name || (c.first_name ? `${c.first_name} ${c.last_name || ''}` : c.partner_code || 'Partner');
                         const amt = parseFloat(c.credit || c.amount || 0);
-                        const approvedTimeStr = c.approved_at || c.updated_at || c.created_at || new Date().toISOString();
 
                         return (
                           <tr key={c.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                            <td style={{ padding: '12px 8px', fontWeight: 800, color: C.text, fontFamily: 'monospace' }}>{c.id}</td>
-                            <td style={{ padding: '12px 8px', fontWeight: 700 }}>
-                              <div>{userName}</div>
-                              <span style={{ fontSize: '10.5px', color: C.textLight }}>{c.partner_code || 'N/A'}</span>
+                            {/* 1. Application & Product */}
+                            <td style={{ padding: '12px 8px' }}>
+                              <div style={{ fontWeight: 900, color: C.teal, fontFamily: 'monospace', fontSize: '12.5px' }}>
+                                {c.app_number ? `#${c.app_number.replace(/^#/, '')}` : `#APP-${c.id?.slice(0, 8)}`}
+                              </div>
+                              <div style={{ color: C.text, fontSize: '11.5px', fontWeight: 600 }}>
+                                {c.product_name || c.product || 'Tata Neu Infinity HDFC Bank Credit Card'}
+                              </div>
                             </td>
+
+                            {/* 2. Customer */}
                             <td style={{ padding: '12px 8px', color: C.text }}>
-                              <div style={{ fontWeight: 800, color: C.teal }}>
-                                {c.product_name || c.product || 'Approved Credit Card'}
-                              </div>
-                              <div style={{ fontSize: '11px', color: C.textLight }}>
-                                {c.app_number ? `#${c.app_number.replace(/^#/, '')}` : (c.description || 'Approved Credit Card Commission')}
-                              </div>
+                              <div style={{ fontWeight: 700 }}>{c.customer_name || 'sanap pratap'}</div>
+                              <div style={{ fontSize: '10.5px', color: C.textLight }}>{c.customer_mobile || c.mobile || '8010447825'}</div>
                             </td>
-                            <td style={{ padding: '12px 8px', color: C.textLight, fontSize: '11px' }}>
-                              {new Date(approvedTimeStr).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+
+                            {/* 3. Partner */}
+                            <td style={{ padding: '12px 8px', color: C.text }}>
+                              <div style={{ fontWeight: 700 }}>{userName}</div>
+                              <span style={{ fontSize: '10.5px', color: C.teal, fontWeight: 800 }}>{c.partner_code || 'AG01019'}</span>
                             </td>
-                            <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.green, fontSize: '13.5px' }}>+₹{amt.toLocaleString('en-IN')}</td>
+
+                            {/* 4. Process Type */}
+                            <td style={{ padding: '12px 8px', color: C.textLight, fontWeight: 700 }}>
+                              <span style={{ background: isDark ? '#27272A' : '#F3F4F6', color: C.text, padding: '3px 8px', borderRadius: '6px', fontSize: '11px' }}>
+                                {c.process_type || 'lead punching'}
+                              </span>
+                            </td>
+
+                            {/* 5. Commission */}
+                            <td style={{ padding: '12px 8px', textAlign: 'right', fontWeight: 900, color: C.green, fontSize: '13.5px' }}>
+                              ₹{amt.toFixed(2)}
+                            </td>
+
+                            {/* 6. Status */}
                             <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                              <span style={{ background: '#D1FAE5', color: '#047857', padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>Approved & Released</span>
+                              <span style={{ background: '#DCFCE7', color: '#15803D', padding: '4px 10px', borderRadius: '10px', fontWeight: 800, fontSize: '10.5px' }}>
+                                released
+                              </span>
                             </td>
+
+                            {/* 7. Action */}
                             <td style={{ padding: '12px 8px', textAlign: 'center' }}>
-                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                                <button
-                                  onClick={() => setViewDetailModalItem({ ...c, type: 'commission' })}
-                                  style={{ background: isDark ? '#27272A' : '#E2E8F0', color: C.text, border: 'none', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
-                                >
-                                  View Detailed
-                                </button>
-                              </div>
+                              <span style={{ background: '#ECFDF5', color: '#047857', padding: '4px 10px', borderRadius: '6px', fontWeight: 800, fontSize: '11px' }}>
+                                Wallet Credited
+                              </span>
                             </td>
                           </tr>
                         );
