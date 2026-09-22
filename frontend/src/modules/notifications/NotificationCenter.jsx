@@ -488,7 +488,8 @@ export default function NotificationCenter() {
 
           </form>
         </div>
-      )}
+      </div>
+    )}
 
     </div>
   );

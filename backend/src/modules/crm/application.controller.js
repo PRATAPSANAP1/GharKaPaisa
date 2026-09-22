@@ -712,8 +712,11 @@ const syncEmployeeIncentiveLifecycle = async (dbOrClient, app, appFileGenVal = n
         await dbOrClient.query(
           `INSERT INTO employee_incentive_transactions (
              employee_id, product_id, application_id, transaction_type, amount, status, hold_reason, customer_name
-           ) VALUES ($1, $2, $3, 'EARNED', $4, $5, $6, $7)
-           ON CONFLICT (application_id) DO NOTHING`,
+           )
+           SELECT $1, $2, $3, 'EARNED', $4, $5, $6, $7
+           WHERE NOT EXISTS (
+             SELECT 1 FROM employee_incentive_transactions WHERE application_id = $3
+           )`,
           [
             app.employee_id,
             app.product_id || null,

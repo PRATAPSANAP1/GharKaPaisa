@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { 
-  FaCoins, FaMoneyBillWave, FaClock, FaUsers, FaCalculator, FaFileDownload, 
+  FaCoins, FaMoneyBillWave, FaClock, FaUsers, FaFileDownload, 
   FaFilter, FaSearch, FaChevronDown, FaChevronRight, FaEye, FaCheckCircle, 
   FaTimesCircle, FaHourglassHalf, FaPauseCircle, FaTrophy, FaBuilding, 
-  FaCreditCard, FaSitemap, FaRedo, FaInfoCircle, FaEdit, FaCalendarAlt, 
-  FaChartLine, FaUserTie, FaUserShield, FaPhoneAlt, FaClipboardList, FaCheck, FaBullseye
+  FaSitemap, FaRedo, FaInfoCircle, FaEdit, FaCalendarAlt, 
+  FaChartLine, FaUserTie, FaUserShield, FaPhoneAlt, FaClipboardList, FaCheck
 } from 'react-icons/fa';
 import api from '../../../services/api';
 import SuperAdminIncentiveHistory from '../../employee-management/SuperAdminIncentiveHistory';
@@ -99,15 +99,13 @@ export default function ManageEmployeeIncentives() {
   // Dynamic Options for Filters
   const [productsList, setProductsList] = useState([]);
   const [banksList, setBanksList] = useState([]);
-  const [bonusRulesList, setBonusRulesList] = useState([]);
 
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [prodRes, bankRes, rulesRes] = await Promise.allSettled([
+        const [prodRes, bankRes] = await Promise.allSettled([
           api.get('/products'),
-          api.get('/banks/active'),
-          api.get('/employees/bonus-rules')
+          api.get('/banks/active')
         ]);
         if (prodRes.status === 'fulfilled' && prodRes.value.data?.data) {
           setProductsList(prodRes.value.data.data);
@@ -115,11 +113,8 @@ export default function ManageEmployeeIncentives() {
         if (bankRes.status === 'fulfilled' && bankRes.value.data?.data) {
           setBanksList(bankRes.value.data.data);
         }
-        if (rulesRes.status === 'fulfilled' && rulesRes.value.data?.data) {
-          setBonusRulesList(rulesRes.value.data.data);
-        }
-      } catch (err) {
-        console.error('Failed to load filter options:', err);
+      } catch (e) {
+        console.error(e);
       }
     };
     fetchOptions();
@@ -219,17 +214,7 @@ export default function ManageEmployeeIncentives() {
     }
   };
 
-  const handleApplyRules = async () => {
-    try {
-      const res = await api.post('/employees/bonus-rules/apply');
-      if (res.data?.success) {
-        alert(`SUCCESS: ${res.data.message}`);
-        fetchData();
-      }
-    } catch (err) {
-      alert(err.response?.data?.message || 'Failed to apply bonus rules');
-    }
-  };
+
 
   const handleBulkRelease = async () => {
     if (selectedIncentiveIds.length === 0) {
@@ -278,14 +263,45 @@ export default function ManageEmployeeIncentives() {
   const activeEarners = parseInt(kpi.employees_earned || 0);
   const avgPerEmp = parseFloat(kpi.avg_incentive_per_employee || 0);
 
+  const handleExportAuditCSV = () => {
+    const auditList = (data.table?.data || []).filter(row =>
+      !row.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(row.application_status).toLowerCase())
+    );
+    if (!auditList.length) {
+      alert('No records available to export.');
+      return;
+    }
+    const headers = ['Incentive ID', 'Employee Name', 'Employee Code', 'Role', 'Product', 'App ID', 'Customer Name', 'Customer Mobile', 'Earned', 'Paid', 'Status', 'Payment Ref'];
+    const rows = auditList.map(r => [
+      r.incentive_id,
+      `"${r.employee_name || ''}"`,
+      `"${r.emp_code || ''}"`,
+      `"${r.role || ''}"`,
+      `"${r.product_name || ''}"`,
+      `"${r.app_number || ''}"`,
+      `"${r.customer_name || ''}"`,
+      `"${r.customer_mobile || ''}"`,
+      r.incentive_earned || 0,
+      r.incentive_paid || 0,
+      r.status || '',
+      `"${r.payment_reference || ''}"`
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Employee_Incentive_Audit_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const navTabs = [
     { id: 'OVERVIEW', label: 'Overview', icon: FaChartLine },
     { id: 'EMPLOYEES', label: 'Employees', icon: FaUsers },
     { id: 'PAYOUTS', label: 'Payout Management & Releases', icon: FaMoneyBillWave },
     { id: 'RELEASED', label: 'Released Incentives', icon: FaCheckCircle },
-    { id: 'RULES', label: 'Rules & Targets', icon: FaBullseye },
-    { id: 'PRODUCTS', label: 'Products', icon: FaCreditCard },
-    { id: 'REPORTS', label: 'Reports', icon: FaClipboardList },
     { id: 'AUDIT', label: 'Historical Audit', icon: FaUserShield },
     { id: 'HISTORICAL', label: 'Monthly Audit Archive', icon: FaCalendarAlt }
   ];
@@ -672,7 +688,10 @@ export default function ManageEmployeeIncentives() {
                 <div>
                   <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Payout Management & Releases</h3>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal }}>
-                    {formatINR((data.table?.data || []).filter(r => ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase())).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0))} Pending / Held Release
+                    {formatINR((data.table?.data || []).filter(r => 
+                      ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
+                      (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
+                    ).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0))} Pending / Held Release
                   </span>
                 </div>
                 {selectedIncentiveIds.length > 0 && (
@@ -692,14 +711,20 @@ export default function ManageEmployeeIncentives() {
                         <input
                           type="checkbox"
                           onChange={(e) => {
-                            const pendingList = (data.table?.data || []).filter(r => ['PENDING', 'HOLD', 'ON_HOLD', 'HELD'].includes((r.status || '').toUpperCase()));
+                            const pendingList = (data.table?.data || []).filter(r => 
+                              ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
+                              (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
+                            );
                             if (e.target.checked) {
                               setSelectedIncentiveIds(pendingList.map(r => r.incentive_id));
                             } else {
                               setSelectedIncentiveIds([]);
                             }
                           }}
-                          checked={selectedIncentiveIds.length > 0 && selectedIncentiveIds.length === (data.table?.data || []).filter(r => ['PENDING', 'HOLD', 'ON_HOLD', 'HELD'].includes((r.status || '').toUpperCase())).length}
+                          checked={selectedIncentiveIds.length > 0 && selectedIncentiveIds.length === (data.table?.data || []).filter(r => 
+                            ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
+                            (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
+                          ).length}
                         />
                       </th>
                       <th style={{ padding: '10px 12px' }}>Application</th>
@@ -714,14 +739,14 @@ export default function ManageEmployeeIncentives() {
                   <tbody>
                     {(() => {
                       const list = (data.table?.data || []).filter(r => 
-                        !['RELEASE', 'RELEASED', 'PAID', 'COMPLETED', 'REJECTED', 'CANCELLED'].includes((r.status || '').toUpperCase()) &&
+                        ['PENDING', 'ON_HOLD', 'HELD', 'IN_REVIEW'].includes((r.status || '').toUpperCase()) &&
                         (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
                       );
                       if (list.length === 0) {
                         return (
                           <tr>
                             <td colSpan={8} style={{ padding: '24px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
-                              No pending incentive payouts awaiting release.
+                              No pending or held incentive payouts awaiting release.
                             </td>
                           </tr>
                         );
@@ -819,7 +844,10 @@ export default function ManageEmployeeIncentives() {
                     <FaCheckCircle color="#10B981" size={18} /> Released Employee Incentives
                   </h3>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: '#10B981' }}>
-                    {formatINR((data.table?.data || []).filter(r => ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase())).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0))} Released & Credited
+                    {formatINR((data.table?.data || []).filter(r => 
+                      ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase()) &&
+                      (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
+                    ).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0))} Released & Credited
                   </span>
                 </div>
               </div>
@@ -839,7 +867,8 @@ export default function ManageEmployeeIncentives() {
                   <tbody>
                     {(() => {
                       const releasedList = (data.table?.data || []).filter(r => 
-                        ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase())
+                        ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase()) &&
+                        (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
                       );
                       if (releasedList.length === 0) {
                         return (
@@ -918,109 +947,25 @@ export default function ManageEmployeeIncentives() {
             </div>
           )}
 
-          {/* ── TAB 4: RULES & TARGETS ── */}
-          {activeTab === 'RULES' && (
-            <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Bonus Rules & Department Targets</h3>
-                <button
-                  onClick={handleApplyRules}
-                  style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: C.teal, color: '#fff', fontSize: '12.5px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <FaCalculator size={13} /> Convert Achieved Rules to Incentives
-                </button>
-              </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ background: C.bgSecondary, color: C.textMid, fontWeight: 800, borderBottom: `2px solid ${C.border}` }}>
-                    <th style={{ padding: '10px 14px' }}>Bank / Product</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Target Cards</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Bonus / Card</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bonusRulesList.map((rule, idx) => (
-                    <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '10px 14px', fontWeight: 800, color: C.text }}>{rule.bank_name || 'Department Bank'}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 800 }}>{rule.target_count || 10} Cards</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 900, color: '#10B981' }}>{formatINR(rule.bonus_per_card || 500)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'center' }}><span style={{ padding: '3px 8px', borderRadius: '10px', background: '#10B98115', color: '#10B981', fontWeight: 800, fontSize: '11px' }}>ACTIVE</span></td>
-                    </tr>
-                  ))}
-                  {bonusRulesList.length === 0 && (
-                    <tr><td colSpan={4} style={{ padding: '20px', textAlign: 'center', color: C.textMid }}>Default card incentive rates applied system-wide</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* ── TAB 5: PRODUCTS ── */}
-          {activeTab === 'PRODUCTS' && (
-            <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Product Incentive Performance</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ background: C.bgSecondary, color: C.textMid, fontWeight: 800, borderBottom: `2px solid ${C.border}` }}>
-                    <th style={{ padding: '10px 14px' }}>Bank</th>
-                    <th style={{ padding: '10px 14px' }}>Product</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'center' }}>Applications</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Total Earned</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Paid</th>
-                    <th style={{ padding: '10px 14px', textAlign: 'right' }}>Pending</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data.by_product || []).map((p, idx) => (
-                    <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                      <td style={{ padding: '10px 14px', fontWeight: 700, color: C.textMid }}>{p.bank_name || 'Bank'}</td>
-                      <td style={{ padding: '10px 14px', fontWeight: 800, color: C.text }}>{p.product_name}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 800 }}>{p.applications}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 900, color: C.text }}>{formatINR(p.earned)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#10B981' }}>{formatINR(p.paid)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800, color: '#F59E0B' }}>{formatINR(p.pending)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* ── TAB 6: REPORTS ── */}
-          {activeTab === 'REPORTS' && (
-            <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Incentive Performance Reports & Exports</h3>
-                <button style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: C.teal, color: '#fff', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <FaFileDownload size={13} /> Export CSV Report
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '14px' }}>
-                <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>TOTAL EARNED THIS MONTH</span>
-                  <div style={{ fontSize: '22px', fontWeight: 900, color: C.text, marginTop: '4px' }}>{formatINR(totalEarned)}</div>
-                </div>
-                <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>TOTAL DISBURSED PAYOUTS</span>
-                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#10B981', marginTop: '4px' }}>{formatINR(totalPaid)}</div>
-                </div>
-                <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800 }}>PENDING FINANCIAL RELEASE</span>
-                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#F59E0B', marginTop: '4px' }}>{formatINR(pendingPayouts)}</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── TAB 7: AUDIT (Historical Transaction Audit Table) ── */}
+          {/* ── AUDIT (Historical Transaction Audit Table) ── */}
           {activeTab === 'AUDIT' && (
             <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Incentive Audit — Transaction Records</h3>
-                <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>
-                  {data.table?.pagination?.total || 0} Total Records
-                </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h3 style={{ fontSize: '16px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Incentive Audit — Transaction Records</h3>
+                  <p style={{ fontSize: '12px', color: C.textMid, margin: '2px 0 0' }}>Approved applications transaction audit</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button
+                    onClick={handleExportAuditCSV}
+                    style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: C.teal, color: '#fff', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <FaFileDownload size={13} /> Export CSV
+                  </button>
+                  <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>
+                    {data.table?.pagination?.total || 0} Total Records
+                  </span>
+                </div>
               </div>
 
               <div style={{ overflowX: 'auto' }}>
@@ -1039,28 +984,42 @@ export default function ManageEmployeeIncentives() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(data.table?.data || []).map((row, idx) => (
-                      <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                        <td style={{ padding: '10px 12px', fontWeight: 800, color: C.teal }}>INC-{row.incentive_id?.slice(0, 6)}</td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{ fontWeight: 800, color: C.text, display: 'block' }}>{row.employee_name}</span>
-                          <span style={{ fontSize: '10.5px', color: C.textMid }}>{row.emp_code}</span>
-                        </td>
-                        <td style={{ padding: '10px 12px', color: C.textMid }}>{row.role}</td>
-                        <td style={{ padding: '10px 12px', fontWeight: 700, color: C.text }}>{row.product_name}</td>
-                        <td style={{ padding: '10px 12px', fontWeight: 700, color: C.text }}>{row.app_number || 'N/A'}</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: C.text }}>{formatINR(row.incentive_earned)}</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#10B981' }}>{formatINR(row.incentive_paid)}</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>{renderStatusBadge(row.status)}</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                            <button onClick={() => handleQuickRelease(row)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #10B981', background: '#10B98115', color: '#10B981', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Release</button>
-                            <button onClick={() => handleQuickHold(row)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #8B5CF6', background: '#8B5CF615', color: '#8B5CF6', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Hold</button>
-                            <button onClick={() => { setSelectedIncentive(row); setUpdateStatus(row.status || 'PAID'); setPaymentRef(row.payment_reference || ''); setHoldReason(row.hold_reason || ''); }} style={{ padding: '4px 8px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}><FaEye size={10} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {(() => {
+                      const auditList = (data.table?.data || []).filter(row =>
+                        !row.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(row.application_status).toLowerCase())
+                      );
+                      if (auditList.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={9} style={{ padding: '24px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
+                              No incentive audit records found for approved applications.
+                            </td>
+                          </tr>
+                        );
+                      }
+                      return auditList.map((row, idx) => (
+                        <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                          <td style={{ padding: '10px 12px', fontWeight: 800, color: C.teal }}>INC-{row.incentive_id?.slice(0, 6)}</td>
+                          <td style={{ padding: '10px 12px' }}>
+                            <span style={{ fontWeight: 800, color: C.text, display: 'block' }}>{row.employee_name}</span>
+                            <span style={{ fontSize: '10.5px', color: C.textMid }}>{row.emp_code}</span>
+                          </td>
+                          <td style={{ padding: '10px 12px', color: C.textMid }}>{row.role}</td>
+                          <td style={{ padding: '10px 12px', fontWeight: 700, color: C.text }}>{row.product_name}</td>
+                          <td style={{ padding: '10px 12px', fontWeight: 700, color: C.text }}>{row.app_number || 'N/A'}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: C.text }}>{formatINR(row.incentive_earned)}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 800, color: '#10B981' }}>{formatINR(row.incentive_paid)}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center' }}>{renderStatusBadge(row.status)}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                              <button onClick={() => handleQuickRelease(row)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #10B981', background: '#10B98115', color: '#10B981', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Release</button>
+                              <button onClick={() => handleQuickHold(row)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #8B5CF6', background: '#8B5CF615', color: '#8B5CF6', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Hold</button>
+                              <button onClick={() => { setSelectedIncentive(row); setUpdateStatus(row.status || 'PAID'); setPaymentRef(row.payment_reference || ''); setHoldReason(row.hold_reason || ''); }} style={{ padding: '4px 8px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}><FaEye size={10} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      ));
+                    })()}
                   </tbody>
                 </table>
               </div>

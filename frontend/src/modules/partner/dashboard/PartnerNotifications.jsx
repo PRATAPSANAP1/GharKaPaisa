@@ -424,7 +424,7 @@ export default function PartnerNotifications() {
         <div style={{ animation: 'fadeUp 0.3s ease' }}>
           <NotificationSettings />
           
-          <div style={{ marginTop: '20px', padding: '20px', borderRadius: 18, background: cardBg, border: `1px solid ${border}` }}>
+          <form onSubmit={savePrefs} style={{ marginTop: '20px', padding: '20px', borderRadius: 18, background: cardBg, border: `1px solid ${border}` }}>
             <h3 style={{ fontSize: 14, fontWeight: 800, color: text, margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Settings size={16} color={accent} /> Advanced Preferences
             </h3>
@@ -444,21 +444,22 @@ export default function PartnerNotifications() {
               ].map((item, i) => (
                 <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: i < 3 ? `1px solid ${border}` : 'none', gap: 12 }}>
                   <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: text }}>{item.label}</div>
-                  <div style={{ fontSize: 11, color: muted, marginTop: 2 }}>{item.desc}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: text }}>{item.label}</div>
+                    <div style={{ fontSize: 11, color: muted, marginTop: 2 }}>{item.desc}</div>
+                  </div>
+                  <Toggle value={!!prefs[item.key]} onChange={() => setPrefs(p => ({ ...p, [item.key]: !p[item.key] }))} accent={accent} />
                 </div>
-                <Toggle value={!!prefs[item.key]} onChange={() => setPrefs(p => ({ ...p, [item.key]: !p[item.key] }))} accent={accent} />
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <div style={{ paddingTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" disabled={savingPrefs}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: `0 4px 16px ${accent}40`, opacity: savingPrefs ? 0.6 : 1 }}>
-              {savingPrefs ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-              {savingPrefs ? 'Saving...' : 'Save Preferences'}
-            </button>
-          </div>
+            <div style={{ paddingTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="submit" disabled={savingPrefs}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 24px', borderRadius: 12, border: 'none', background: `linear-gradient(135deg,${accent},${C.primaryDark})`, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: `0 4px 16px ${accent}40`, opacity: savingPrefs ? 0.6 : 1 }}>
+                {savingPrefs ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                {savingPrefs ? 'Saving...' : 'Save Preferences'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </div>
