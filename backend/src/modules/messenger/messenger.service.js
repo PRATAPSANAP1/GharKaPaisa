@@ -59,6 +59,63 @@ async function isSameEmployeeHierarchy(userAId, userBId) {
   return rows.length > 0;
 }
 
+async function canUserMessageTarget(currentUserId, currentRole, targetUserId, targetRole) {
+  if (currentRole === 'SUPER_ADMIN') return true;
+
+  // Check if explicitly assigned in messenger_assignments
+  const { rows: assignCheck } = await query(`
+    SELECT 1 FROM messenger_assignments 
+    WHERE status = 'ACTIVE' 
+      AND ((account_user_id = $1 AND assigned_messenger_user_id = $2) OR (account_user_id = $2 AND assigned_messenger_user_id = $1))
+    LIMIT 1
+  `, [currentUserId, targetUserId]);
+
+  if (assignCheck.length > 0) return true;
+
+  // Target is Super Admin -> Always allowed
+  if (targetRole === 'SUPER_ADMIN') return true;
+
+  // Default Role Rules:
+  if (currentRole === 'ADMIN') {
+    // Admin can ONLY message Super Admin unless assigned
+    return false;
+  }
+
+  if (currentRole === 'PARTNER') {
+    // Partner default: Super Admin + Own Team Members
+    const { rows: [pProfile] } = await query(`SELECT id, parent_partner_id FROM partner_profiles WHERE user_id = $1`, [currentUserId]);
+    if (pProfile && pProfile.parent_partner_id) {
+      const { rows: [parentP] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [pProfile.parent_partner_id]);
+      return parentP?.user_id === targetUserId;
+    } else if (pProfile) {
+      const { rows: [targetP] } = await query(`SELECT parent_partner_id FROM partner_profiles WHERE user_id = $1`, [targetUserId]);
+      return targetP?.parent_partner_id === pProfile.id;
+    }
+    return false;
+  }
+
+  if (['EMPLOYEE', 'TELECALLER', 'TEAM_LEADER'].includes(currentRole)) {
+    // Upward hierarchy only
+    if (targetRole !== 'EMPLOYEE') return false;
+    const { rows: [empCurr] } = await query(`SELECT designation FROM employees WHERE user_id = $1`, [currentUserId]);
+    const { rows: [empTarget] } = await query(`SELECT designation FROM employees WHERE user_id = $1`, [targetUserId]);
+    if (!empCurr || !empTarget) return false;
+
+    const getRank = (desig) => {
+      const d = (desig || '').toUpperCase();
+      if (d.includes('BRANCH')) return 5;
+      if (d.includes('SENIOR MANAGER') || d.includes('SR MANAGER')) return 4;
+      if (d.includes('MANAGER')) return 3;
+      if (d.includes('TEAM LEADER') || d.includes('TL')) return 2;
+      return 1;
+    };
+
+    return getRank(empTarget.designation) > getRank(empCurr.designation);
+  }
+
+  return false;
+}
+
 async function startOrGetDirectChat(currentUserId, targetUserId) {
   if (currentUserId === targetUserId) {
     throw new Error('You cannot start a direct chat with yourself.');
@@ -75,57 +132,9 @@ async function startOrGetDirectChat(currentUserId, targetUserId) {
   const currentRole = (currentUser?.role || '').toUpperCase();
   const targetRole = (targetUser?.role || '').toUpperCase();
 
-  // Employee restriction: can only message Super Admin or employee hierarchy members
-  if (currentRole === 'EMPLOYEE') {
-    if (targetRole !== 'SUPER_ADMIN') {
-      if (targetRole !== 'EMPLOYEE') {
-        throw new Error('Employees can only message Super Admin or team members within their hierarchy.');
-      }
-      const isAllowed = await isSameEmployeeHierarchy(currentUserId, targetUserId);
-      if (!isAllowed) {
-        throw new Error('Employees can only message team members within their hierarchy.');
-      }
-    }
-  }
-
-  // Partner restriction: team members can only talk to parent & super admin; main partners to team & super admin
-  if (currentRole === 'PARTNER') {
-    if (targetRole !== 'SUPER_ADMIN') {
-      const { rows: [pProfile] } = await query(`SELECT id, parent_partner_id FROM partner_profiles WHERE user_id = $1`, [currentUserId]);
-      if (pProfile && pProfile.parent_partner_id) {
-        const { rows: [parentP] } = await query(`SELECT user_id FROM partner_profiles WHERE id = $1`, [pProfile.parent_partner_id]);
-        if (parentP?.user_id !== targetUserId) {
-          throw new Error('Team members can only message their parent partner or Super Admin.');
-        }
-      } else if (pProfile) {
-        const { rows: [targetP] } = await query(`SELECT parent_partner_id FROM partner_profiles WHERE user_id = $1`, [targetUserId]);
-        if (targetP?.parent_partner_id !== pProfile.id) {
-          throw new Error('Partners can only message their assigned team members or Super Admin.');
-        }
-      }
-    }
-  }
-
-  // Admin restriction: can only talk to Super Admin or assigned members
-  if (currentRole === 'ADMIN') {
-    if (targetRole !== 'SUPER_ADMIN') {
-      const { rows: assignedCheck } = await query(`
-        SELECT 1 FROM admin_user_assignments WHERE admin_id = $1 AND assigned_user_id = $2
-        UNION ALL
-        SELECT 1 FROM application_admin_assignments aaa
-        JOIN applications app ON app.id = aaa.application_id
-        WHERE aaa.admin_user_id = $1 AND (app.submitted_by = $2 OR app.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $2))
-        UNION ALL
-        SELECT 1 FROM admin_bank_assignments aba
-        JOIN applications app ON app.bank_id = aba.bank_id
-        WHERE aba.admin_id = $1 AND (app.submitted_by = $2 OR app.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = $2))
-        LIMIT 1
-      `, [currentUserId, targetUserId]);
-
-      if (assignedCheck.length === 0) {
-        throw new Error('Admins can only message Super Admin or assigned members.');
-      }
-    }
+  const isAllowed = await canUserMessageTarget(currentUserId, currentRole, targetUserId, targetRole);
+  if (!isAllowed) {
+    throw new Error('Access denied: You do not have permission to message this contact based on role hierarchy or assignments.');
   }
 
   // Check if conversation already exists
@@ -401,6 +410,22 @@ async function deleteUserMessage(userId, messageId) {
   return await repo.deleteMessage(messageId, userId);
 }
 
+async function assignMessengers(accountUserId, assignedMessengerUserIds, assignedBy) {
+  return await repo.assignMessengers(accountUserId, assignedMessengerUserIds, assignedBy);
+}
+
+async function getAllMessengerAssignments() {
+  return await repo.getAllMessengerAssignments();
+}
+
+async function removeMessengerAssignment(assignmentId) {
+  return await repo.removeMessengerAssignment(assignmentId);
+}
+
+async function getAllAccountsForAssignment() {
+  return await repo.getAllAccountsForAssignment();
+}
+
 module.exports = {
   maskSensitiveData,
   listConversations,
@@ -421,5 +446,9 @@ module.exports = {
   leaveUserConversation,
   deleteUserConversation,
   editUserMessage,
-  deleteUserMessage
+  deleteUserMessage,
+  assignMessengers,
+  getAllMessengerAssignments,
+  removeMessengerAssignment,
+  getAllAccountsForAssignment
 };

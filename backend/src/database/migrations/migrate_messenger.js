@@ -122,20 +122,22 @@ const migrateMessenger = async () => {
       )
     `);
 
-    // 7. Admin User Assignments table
+    // 8. Messenger Assignments table
     await query(`
-      CREATE TABLE IF NOT EXISTS admin_user_assignments (
+      CREATE TABLE IF NOT EXISTS messenger_assignments (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        admin_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        assigned_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        created_by UUID REFERENCES users(id),
+        account_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        assigned_messenger_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        assigned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
         created_at TIMESTAMPTZ DEFAULT NOW(),
-        UNIQUE(admin_id, assigned_user_id)
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (account_user_id, assigned_messenger_user_id)
       )
     `);
 
-    await query(`CREATE INDEX IF NOT EXISTS idx_admin_user_assignments_admin ON admin_user_assignments(admin_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_admin_user_assignments_user ON admin_user_assignments(assigned_user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messenger_assignments_account ON messenger_assignments(account_user_id)`);
+    await query(`CREATE INDEX IF NOT EXISTS idx_messenger_assignments_target ON messenger_assignments(assigned_messenger_user_id)`);
 
     await query('COMMIT');
     logger.info('Messenger migrations completed successfully');

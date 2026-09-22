@@ -668,86 +668,126 @@ const getFilteredNotes = async (applicationId, userRole) => {
 };
 
 // ── Employee Incentive Engine Lifecycle Sync Helper ────────────────────────────
-const syncEmployeeIncentiveLifecycle = async (dbOrClient, app, appFileGenVal = null, statusVal = null) => {
+const syncEmployeeIncentiveLifecycle = async (dbOrClient, application, appFileGenVal = null, statusVal = null) => {
   try {
-    if (!app || !app.employee_id) return;
-    const currentStatus = String(statusVal || app.status || '').toLowerCase();
-    const currentAppFileGen = String(appFileGenVal !== null && appFileGenVal !== undefined ? appFileGenVal : (app.app_file_generated || '')).trim().toLowerCase();
-    const isAppFileYes = currentAppFileGen === 'yes';
+    if (!application || (!application.employee_id && !application.submitted_by)) return;
 
-    if (['rejected', 'cancelled', 'declined'].includes(currentStatus)) {
-      await dbOrClient.query(`
-        UPDATE employee_incentive_transactions 
-        SET status = 'CANCELLED', updated_at = NOW() 
-        WHERE application_id = $1
-      `, [app.id]);
+    const dbQuery = (dbOrClient && typeof dbOrClient.query === 'function')
+      ? dbOrClient.query.bind(dbOrClient)
+      : (typeof dbOrClient === 'function' ? dbOrClient : query);
+
+    // Resolve actual employee_id
+    let employeeId = application.employee_id;
+    if (!employeeId && application.submitted_by) {
+      const { rows: [emp] } = await dbQuery(`SELECT id FROM employees WHERE user_id = $1 OR id = $1 LIMIT 1`, [application.submitted_by]);
+      if (emp) employeeId = emp.id;
+    }
+    if (!employeeId) return;
+
+    // Verify employeeId belongs to employees table
+    const { rows: [empCheck] } = await dbQuery(`SELECT id FROM employees WHERE id = $1 LIMIT 1`, [employeeId]);
+    if (!empCheck) return;
+
+    const INCENTIVE_ELIGIBLE_STATUSES = [
+      'approved',
+      'super_admin_approved',
+      'sanctioned',
+      'disbursed',
+      'commission_released',
+      'commission_received',
+      'released'
+    ];
+
+    const applicationStatus = String(statusVal || application.status || '').toLowerCase().trim();
+    const productId = application.product_id;
+
+    let customerName = application.customer_name;
+    if (!customerName && application.customer_id) {
+      const { rows: [cust] } = await dbQuery(`SELECT full_name FROM customers WHERE id = $1`, [application.customer_id]);
+      if (cust) customerName = cust.full_name;
+    }
+    if (!customerName) customerName = 'Customer';
+
+    if (!INCENTIVE_ELIGIBLE_STATUSES.includes(applicationStatus)) {
+      // No incentive before approval or if application transitions away from approved to rejected/pending:
+      // Amount becomes 0 and status becomes HOLD.
+      await dbQuery(
+        `
+        UPDATE employee_incentive_transactions
+        SET
+          amount = 0,
+          status = 'HOLD',
+          application_status = $1,
+          updated_at = NOW()
+        WHERE application_id = $2
+          AND status NOT IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED')
+        `,
+        [applicationStatus, application.id]
+      );
+
       return;
     }
 
-    if (['approved', 'super_admin_approved', 'commission_released', 'released', 'disbursed', 'sanctioned'].includes(currentStatus)) {
-      // 1. Check if incentive transaction exists
-      const { rows: existingTxn } = await dbOrClient.query(
-        `SELECT id FROM employee_incentive_transactions WHERE application_id = $1 LIMIT 1`,
-        [app.id]
+    // Then only after this check passes, create or update the incentive:
+    const { rows: [existingTxn] } = await dbQuery(
+      `SELECT id, status FROM employee_incentive_transactions WHERE application_id = $1 LIMIT 1`,
+      [application.id]
+    );
+
+    let incAmt = 500;
+    if (productId) {
+      const { rows: linkRows } = await dbQuery(
+        `SELECT COALESCE(epl.incentive_amount, p.commission_amount, 500) as amt
+         FROM products p
+         LEFT JOIN employee_product_links epl ON epl.product_id = p.id AND epl.employee_id = $1 AND epl.status = 'ACTIVE'
+         WHERE p.id = $2 LIMIT 1`,
+        [employeeId, productId]
       );
-
-      if (existingTxn.length === 0) {
-        let incAmt = 500;
-        if (app.product_id) {
-          const { rows: linkRows } = await dbOrClient.query(
-            `SELECT COALESCE(epl.incentive_amount, p.commission_amount, 500) as amt
-             FROM products p
-             LEFT JOIN employee_product_links epl ON epl.product_id = p.id AND epl.employee_id = $1 AND epl.status = 'ACTIVE'
-             WHERE p.id = $2 LIMIT 1`,
-            [app.employee_id, app.product_id]
-          );
-          if (linkRows.length > 0 && linkRows[0].amt) {
-            incAmt = parseFloat(linkRows[0].amt) || 500;
-          }
-        }
-
-        const initialStatus = isAppFileYes ? 'PENDING' : 'HOLD';
-        const holdReason = isAppFileYes ? null : 'App file generated is pending (No)';
-
-        await dbOrClient.query(
-          `INSERT INTO employee_incentive_transactions (
-             employee_id, product_id, application_id, transaction_type, amount, status, hold_reason, customer_name
-           )
-           SELECT $1, $2, $3, 'EARNED', $4, $5, $6, $7
-           WHERE NOT EXISTS (
-             SELECT 1 FROM employee_incentive_transactions WHERE application_id = $3
-           )`,
-          [
-            app.employee_id,
-            app.product_id || null,
-            app.id,
-            incAmt,
-            initialStatus,
-            holdReason,
-            app.customer_name || 'Customer'
-          ]
-        );
-      } else {
-        if (!isAppFileYes) {
-          await dbOrClient.query(`
-            UPDATE employee_incentive_transactions 
-            SET status = 'HOLD', hold_reason = 'App file generated is pending (No)', updated_at = NOW() 
-            WHERE application_id = $1 AND status NOT IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED')
-          `, [app.id]);
-        } else {
-          await dbOrClient.query(`
-            UPDATE employee_incentive_transactions 
-            SET status = 'PENDING', hold_reason = NULL, updated_at = NOW() 
-            WHERE application_id = $1 AND status IN ('HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING', 'ON_HOLD')
-          `, [app.id]);
-        }
+      if (linkRows.length > 0 && linkRows[0].amt) {
+        incAmt = parseFloat(linkRows[0].amt) || 500;
       }
-    } else if (currentStatus === 'operational_verified') {
-      await dbOrClient.query(`
-        UPDATE employee_incentive_transactions 
-        SET status = 'HOLD', hold_reason = 'Operational verification pending', updated_at = NOW() 
-        WHERE application_id = $1 AND status NOT IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED')
-      `, [app.id]);
+    }
+
+    if (!existingTxn) {
+      await dbQuery(
+        `
+        INSERT INTO employee_incentive_transactions (
+          employee_id,
+          product_id,
+          application_id,
+          transaction_type,
+          amount,
+          status,
+          application_status,
+          customer_name
+        )
+        VALUES ($1, $2, $3, 'EARNED', $4, 'PENDING', $5, $6)
+        `,
+        [
+          employeeId,
+          productId || null,
+          application.id,
+          incAmt,
+          applicationStatus,
+          customerName
+        ]
+      );
+    } else {
+      if (!['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes(existingTxn.status)) {
+        await dbQuery(
+          `
+          UPDATE employee_incentive_transactions
+          SET
+            amount = $1,
+            status = 'PENDING',
+            application_status = $2,
+            customer_name = COALESCE($3, customer_name),
+            updated_at = NOW()
+          WHERE application_id = $4
+          `,
+          [incAmt, applicationStatus, customerName, application.id]
+        );
+      }
     }
   } catch (err) {
     logger.error('Error syncing employee incentive lifecycle:', err);

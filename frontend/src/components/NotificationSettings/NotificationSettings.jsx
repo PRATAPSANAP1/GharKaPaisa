@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Bell, BellOff, Mail, MailOff, Check } from 'lucide-react';
+import { FaBell, FaBellSlash, FaEnvelope, FaCheck } from 'react-icons/fa';
 import api from '../../services/api';
 
 function NotificationSettings({ onMuteChange }) {
@@ -117,7 +117,7 @@ function NotificationSettings({ onMuteChange }) {
           alignItems: 'center',
           gap: '6px'
         }}>
-          <Check size={14} /> Settings updated successfully
+          <FaCheck size={14} /> Settings updated successfully
         </div>
       )}
 
@@ -146,7 +146,7 @@ function NotificationSettings({ onMuteChange }) {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            {settings.mute_notifications ? <BellOff size={18} /> : <Bell size={18} />}
+            {settings.mute_notifications ? <FaBellSlash size={18} /> : <FaBell size={18} />}
           </div>
           <div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>
@@ -197,7 +197,7 @@ function NotificationSettings({ onMuteChange }) {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            {settings.mute_emails ? <MailOff size={18} /> : <Mail size={18} />}
+            {settings.mute_emails ? <FaEnvelope size={18} /> : <FaEnvelope size={18} />}
           </div>
           <div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: C.text }}>

@@ -478,48 +478,44 @@ async function togglePin(conversationId, userId) {
 }
 
 /**
- * Search contacts based on platform hierarchy and user role
+ * Search contacts based on 2-layer platform hierarchy and user role:
+ * Layer 1: Default Role / Hierarchy Access
+ * Layer 2: Super Admin Assigned Access (messenger_assignments)
+ * Identity Masking: Partner / Admin contacts show ONLY Code (e.g., ADM001, PTR001) for non-SuperAdmin views
  */
-async function getContactsForUser(userId, userRole, search = '', limit = 30, offset = 0) {
+async function getContactsForUser(userId, userRole, search = '', limit = 50, offset = 0) {
   const searchPattern = `%${(search || '').trim()}%`;
   const roleUpper = (userRole || '').toUpperCase();
 
   let allowedUsersSQL = '';
   const params = [userId, searchPattern];
 
-  if (roleUpper === 'EMPLOYEE') {
+  if (roleUpper === 'SUPER_ADMIN') {
+    // Super Admin has full access to all active users
+    allowedUsersSQL = '';
+  } else if (roleUpper === 'ADMIN') {
+    // Admin default: Super Admin ONLY + Super Admin Assignments
     allowedUsersSQL = `
       AND (
         UPPER(u.role::text) = 'SUPER_ADMIN'
-        OR (
-          UPPER(u.role::text) = 'EMPLOYEE'
-          AND EXISTS (
-            SELECT 1 FROM employees emp_curr
-            LEFT JOIN employee_hierarchy eh_curr ON eh_curr.employee_id = emp_curr.id
-            LEFT JOIN employees emp_target ON emp_target.user_id = u.id
-            LEFT JOIN employee_hierarchy eh_target ON eh_target.employee_id = emp_target.id
-            WHERE emp_curr.user_id = $1
-            AND (
-              (emp_curr.department IS NOT NULL AND emp_target.department IS NOT NULL AND LOWER(emp_curr.department) = LOWER(emp_target.department))
-              OR eh_target.manager_id = emp_curr.id
-              OR eh_target.team_leader_id = emp_curr.id
-              OR eh_curr.manager_id = emp_target.id
-              OR eh_curr.team_leader_id = emp_target.id
-              OR (eh_curr.manager_id IS NOT NULL AND eh_curr.manager_id = eh_target.manager_id)
-              OR (eh_curr.team_leader_id IS NOT NULL AND eh_curr.team_leader_id = eh_target.team_leader_id)
-            )
+        OR EXISTS (
+          SELECT 1 FROM messenger_assignments ma
+          WHERE ma.status = 'ACTIVE' AND (
+            (ma.account_user_id = $1 AND ma.assigned_messenger_user_id = u.id)
+            OR (ma.assigned_messenger_user_id = $1 AND ma.account_user_id = u.id)
           )
         )
       )
     `;
   } else if (roleUpper === 'PARTNER') {
+    // Partner default: Super Admin + Own Team Members + Super Admin Assignments
     const { rows: [pProfile] } = await query(
-      `SELECT id, parent_partner_id, partner_type FROM partner_profiles WHERE user_id = $1`,
+      `SELECT id, parent_partner_id FROM partner_profiles WHERE user_id = $1`,
       [userId]
     );
 
     if (pProfile && pProfile.parent_partner_id) {
-      // Team Member: Can only talk to Super Admin & Parent Partner
+      // Sub-partner / Team Member: Super Admin & Parent Partner + Assignments
       const { rows: [parentProfile] } = await query(
         `SELECT user_id FROM partner_profiles WHERE id = $1`,
         [pProfile.parent_partner_id]
@@ -530,10 +526,17 @@ async function getContactsForUser(userId, userRole, search = '', limit = 30, off
         AND (
           UPPER(u.role::text) = 'SUPER_ADMIN'
           OR ($3::uuid IS NOT NULL AND u.id = $3::uuid)
+          OR EXISTS (
+            SELECT 1 FROM messenger_assignments ma
+            WHERE ma.status = 'ACTIVE' AND (
+              (ma.account_user_id = $1 AND ma.assigned_messenger_user_id = u.id)
+              OR (ma.assigned_messenger_user_id = $1 AND ma.account_user_id = u.id)
+            )
+          )
         )
       `;
     } else if (pProfile) {
-      // Main Partner: Can only talk to Super Admin & Team Members
+      // Main Partner: Super Admin & Team Members under parent_partner_id + Assignments
       params.push(pProfile.id);
       allowedUsersSQL = `
         AND (
@@ -541,27 +544,70 @@ async function getContactsForUser(userId, userRole, search = '', limit = 30, off
           OR EXISTS (
             SELECT 1 FROM partner_profiles sub_pp WHERE sub_pp.user_id = u.id AND sub_pp.parent_partner_id = $3::uuid
           )
+          OR EXISTS (
+            SELECT 1 FROM messenger_assignments ma
+            WHERE ma.status = 'ACTIVE' AND (
+              (ma.account_user_id = $1 AND ma.assigned_messenger_user_id = u.id)
+              OR (ma.assigned_messenger_user_id = $1 AND ma.account_user_id = u.id)
+            )
+          )
         )
       `;
     } else {
-      allowedUsersSQL = ` AND UPPER(u.role::text) = 'SUPER_ADMIN'`;
+      allowedUsersSQL = `
+        AND (
+          UPPER(u.role::text) = 'SUPER_ADMIN'
+          OR EXISTS (
+            SELECT 1 FROM messenger_assignments ma
+            WHERE ma.status = 'ACTIVE' AND (
+              (ma.account_user_id = $1 AND ma.assigned_messenger_user_id = u.id)
+              OR (ma.assigned_messenger_user_id = $1 AND ma.account_user_id = u.id)
+            )
+          )
+        )
+      `;
     }
-  } else if (roleUpper === 'ADMIN') {
+  } else if (['EMPLOYEE', 'TELECALLER', 'TEAM_LEADER'].includes(roleUpper)) {
+    // Employee default: Upward hierarchy ONLY (Level > current_level) + Super Admin + Super Admin Assignments
+    const { rows: [empCurrent] } = await query(
+      `SELECT designation FROM employees WHERE user_id = $1`,
+      [userId]
+    );
+    const currDesignation = (empCurrent?.designation || '').toUpperCase();
+    let currentLevel = 1; // Telecaller / TC
+    if (currDesignation.includes('BRANCH')) currentLevel = 5;
+    else if (currDesignation.includes('SENIOR MANAGER') || currDesignation.includes('SR MANAGER')) currentLevel = 4;
+    else if (currDesignation.includes('MANAGER')) currentLevel = 3;
+    else if (currDesignation.includes('TEAM LEADER') || currDesignation.includes('TL')) currentLevel = 2;
+
+    params.push(currentLevel);
+    const levelParamIdx = params.length;
+
     allowedUsersSQL = `
       AND (
         UPPER(u.role::text) = 'SUPER_ADMIN'
-        OR EXISTS (
-          SELECT 1 FROM admin_user_assignments aua WHERE aua.admin_id = $1 AND aua.assigned_user_id = u.id
+        OR (
+          UPPER(u.role::text) = 'EMPLOYEE'
+          AND EXISTS (
+            SELECT 1 FROM employees target_emp
+            WHERE target_emp.user_id = u.id
+            AND (
+              CASE
+                WHEN UPPER(target_emp.designation) LIKE '%BRANCH%' THEN 5
+                WHEN UPPER(target_emp.designation) LIKE '%SENIOR%MANAGER%' OR UPPER(target_emp.designation) LIKE '%SR%MANAGER%' THEN 4
+                WHEN UPPER(target_emp.designation) LIKE '%MANAGER%' THEN 3
+                WHEN UPPER(target_emp.designation) LIKE '%TEAM%LEADER%' OR UPPER(target_emp.designation) LIKE '%TL%' THEN 2
+                ELSE 1
+              END
+            ) > $${levelParamIdx}
+          )
         )
         OR EXISTS (
-          SELECT 1 FROM application_admin_assignments aaa
-          JOIN applications app ON app.id = aaa.application_id
-          WHERE aaa.admin_user_id = $1 AND (app.submitted_by = u.id OR app.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = u.id))
-        )
-        OR EXISTS (
-          SELECT 1 FROM admin_bank_assignments aba
-          JOIN applications app ON app.bank_id = aba.bank_id
-          WHERE aba.admin_id = $1 AND (app.submitted_by = u.id OR app.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = u.id))
+          SELECT 1 FROM messenger_assignments ma
+          WHERE ma.status = 'ACTIVE' AND (
+            (ma.account_user_id = $1 AND ma.assigned_messenger_user_id = u.id)
+            OR (ma.assigned_messenger_user_id = $1 AND ma.account_user_id = u.id)
+          )
         )
       )
     `;
@@ -597,11 +643,11 @@ async function getContactsForUser(userId, userRole, search = '', limit = 30, off
     ORDER BY u.full_name ASC
     LIMIT $${params.length + 1} OFFSET $${params.length + 2}
   `;
-  params.push(Math.max(1, parseInt(limit, 10) || 30), Math.max(0, parseInt(offset, 10) || 0));
+  params.push(Math.max(1, parseInt(limit, 10) || 50), Math.max(0, parseInt(offset, 10) || 0));
   const { rows } = await query(sql, params);
 
-  // If requestor is ADMIN, anonymize non-SuperAdmin contacts to show ONLY their code
-  if (roleUpper === 'ADMIN') {
+  // Identity Masking: For Admin and Partner viewing assigned or restricted contacts, show ONLY Code (e.g., ADM001, PTR001)
+  if (roleUpper === 'ADMIN' || roleUpper === 'PARTNER') {
     return rows.map(r => {
       if ((r.role || '').toUpperCase() === 'SUPER_ADMIN') {
         return r;
@@ -609,9 +655,10 @@ async function getContactsForUser(userId, userRole, search = '', limit = 30, off
       const code = r.partner_code || r.employee_code || `USR-${(r.id || '').slice(0, 6).toUpperCase()}`;
       return {
         ...r,
-        full_name: `Assigned Member (${code})`,
-        email: 'N/A',
-        mobile: 'N/A'
+        full_name: code,
+        display_code_only: true,
+        email: '[Protected]',
+        mobile: '[Protected]'
       };
     });
   }
@@ -649,6 +696,95 @@ async function deleteConversationForUser(conversationId, userId) {
   return result.rowCount > 0;
 }
 
+/**
+ * Assign Messengers to an account (Super Admin action)
+ */
+async function assignMessengers(accountUserId, assignedMessengerUserIds = [], assignedBy) {
+  if (!accountUserId || !assignedMessengerUserIds.length) return [];
+  const results = [];
+  for (const targetId of assignedMessengerUserIds) {
+    if (accountUserId === targetId) continue;
+    const sql = `
+      INSERT INTO messenger_assignments (account_user_id, assigned_messenger_user_id, assigned_by, status)
+      VALUES ($1, $2, $3, 'ACTIVE')
+      ON CONFLICT (account_user_id, assigned_messenger_user_id)
+      DO UPDATE SET status = 'ACTIVE', updated_at = NOW(), assigned_by = $3
+      RETURNING *
+    `;
+    const { rows } = await query(sql, [accountUserId, targetId, assignedBy]);
+    if (rows[0]) results.push(rows[0]);
+  }
+  return results;
+}
+
+/**
+ * Get all active messenger assignments for Super Admin view
+ */
+async function getAllMessengerAssignments() {
+  const sql = `
+    SELECT 
+      ma.id,
+      ma.account_user_id,
+      ma.assigned_messenger_user_id,
+      ma.status,
+      ma.created_at,
+      u_acc.full_name AS account_name,
+      u_acc.role AS account_role,
+      u_acc.email AS account_email,
+      pp_acc.partner_code AS account_partner_code,
+      emp_acc.employee_id AS account_employee_code,
+
+      u_target.full_name AS messenger_name,
+      u_target.role AS messenger_role,
+      u_target.email AS messenger_email,
+      pp_target.partner_code AS messenger_partner_code,
+      emp_target.employee_id AS messenger_employee_code
+    FROM messenger_assignments ma
+    JOIN users u_acc ON u_acc.id = ma.account_user_id
+    LEFT JOIN partner_profiles pp_acc ON pp_acc.user_id = u_acc.id
+    LEFT JOIN employees emp_acc ON emp_acc.user_id = u_acc.id
+    JOIN users u_target ON u_target.id = ma.assigned_messenger_user_id
+    LEFT JOIN partner_profiles pp_target ON pp_target.user_id = u_target.id
+    LEFT JOIN employees emp_target ON emp_target.user_id = u_target.id
+    WHERE ma.status = 'ACTIVE'
+    ORDER BY ma.created_at DESC
+  `;
+  const { rows } = await query(sql);
+  return rows;
+}
+
+/**
+ * Delete a messenger assignment
+ */
+async function removeMessengerAssignment(assignmentId) {
+  const sql = `DELETE FROM messenger_assignments WHERE id = $1 RETURNING *`;
+  const { rows } = await query(sql, [assignmentId]);
+  return rows[0] || null;
+}
+
+/**
+ * Get candidate accounts for Super Admin assignment
+ */
+async function getAllAccountsForAssignment() {
+  const sql = `
+    SELECT 
+      u.id, 
+      COALESCE(NULLIF(TRIM(u.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(emp.full_name), ''), u.email, 'User Profile') AS full_name, 
+      u.email, 
+      u.mobile, 
+      u.role, 
+      pp.partner_code,
+      emp.employee_id AS employee_code
+    FROM users u
+    LEFT JOIN partner_profiles pp ON pp.user_id = u.id
+    LEFT JOIN employees emp ON emp.user_id = u.id
+    WHERE u.is_active = TRUE
+    ORDER BY u.role ASC, u.full_name ASC
+  `;
+  const { rows } = await query(sql);
+  return rows;
+}
+
 module.exports = {
   getConversationsForUser,
   findDirectConversation,
@@ -671,5 +807,9 @@ module.exports = {
   deleteConversationForUser,
   getMessageById,
   editMessage,
-  deleteMessage
+  deleteMessage,
+  assignMessengers,
+  getAllMessengerAssignments,
+  removeMessengerAssignment,
+  getAllAccountsForAssignment
 };

@@ -247,6 +247,62 @@ async function deleteMessage(req, res, next) {
   }
 }
 
+async function assignMessengers(req, res, next) {
+  try {
+    if ((req.user.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+      return unauthorized(res, 'Access denied. Super Admin role required.');
+    }
+    const { account_user_id, assigned_messenger_user_ids } = req.body;
+    if (!account_user_id) {
+      return error(res, 'account_user_id is required', 400);
+    }
+    if (!Array.isArray(assigned_messenger_user_ids) || assigned_messenger_user_ids.length === 0) {
+      return error(res, 'assigned_messenger_user_ids array is required', 400);
+    }
+    const result = await service.assignMessengers(account_user_id, assigned_messenger_user_ids, req.user.id);
+    return success(res, result, 'Messenger assignments saved successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getAssignments(req, res, next) {
+  try {
+    if ((req.user.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+      return unauthorized(res, 'Access denied. Super Admin role required.');
+    }
+    const assignments = await service.getAllMessengerAssignments();
+    return success(res, assignments, 'Assignments retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function removeAssignment(req, res, next) {
+  try {
+    if ((req.user.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+      return unauthorized(res, 'Access denied. Super Admin role required.');
+    }
+    const { id } = req.params;
+    const deleted = await service.removeMessengerAssignment(id);
+    return success(res, deleted, 'Assignment removed successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getCandidateAccounts(req, res, next) {
+  try {
+    if ((req.user.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+      return unauthorized(res, 'Access denied. Super Admin role required.');
+    }
+    const accounts = await service.getAllAccountsForAssignment();
+    return success(res, accounts, 'Accounts retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getConversations,
   createDirectChat,
@@ -266,5 +322,9 @@ module.exports = {
   leaveGroup,
   deleteConversation,
   editMessage,
-  deleteMessage
+  deleteMessage,
+  assignMessengers,
+  getAssignments,
+  removeAssignment,
+  getCandidateAccounts
 };

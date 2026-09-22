@@ -129,6 +129,65 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [groupDesc, setGroupDesc] = useState('');
   const [selectedContactIds, setSelectedContactIds] = useState([]);
 
+  // Super Admin Assign Messenger State
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [accountsList, setAccountsList] = useState([]);
+  const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [selectedMessengerIds, setSelectedMessengerIds] = useState([]);
+  const [existingAssignments, setExistingAssignments] = useState([]);
+  const [loadingAssignments, setLoadingAssignments] = useState(false);
+  const [savingAssignment, setSavingAssignment] = useState(false);
+
+  const fetchAccountsAndAssignments = async () => {
+    setLoadingAssignments(true);
+    try {
+      const [accRes, assignRes] = await Promise.all([
+        api.get('/messenger/admin/accounts'),
+        api.get('/messenger/admin/assignments')
+      ]);
+      if (accRes.data?.success) setAccountsList(accRes.data.data || []);
+      if (assignRes.data?.success) setExistingAssignments(assignRes.data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch accounts or assignments:', err);
+    } finally {
+      setLoadingAssignments(false);
+    }
+  };
+
+  const handleAssignMessengersSubmit = async (e) => {
+    e?.preventDefault();
+    if (!selectedAccountId) return alert('Please select an account.');
+    if (!selectedMessengerIds.length) return alert('Please select at least one messenger contact to assign.');
+    setSavingAssignment(true);
+    try {
+      const res = await api.post('/messenger/admin/assignments', {
+        account_user_id: selectedAccountId,
+        assigned_messenger_user_ids: selectedMessengerIds
+      });
+      if (res.data?.success) {
+        alert('Messenger contacts assigned successfully!');
+        setSelectedMessengerIds([]);
+        fetchAccountsAndAssignments();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to assign messengers.');
+    } finally {
+      setSavingAssignment(false);
+    }
+  };
+
+  const handleRemoveAssignmentItem = async (assignmentId) => {
+    if (!window.confirm('Are you sure you want to remove this messenger assignment?')) return;
+    try {
+      const res = await api.delete(`/messenger/admin/assignments/${assignmentId}`);
+      if (res.data?.success) {
+        setExistingAssignments(prev => prev.filter(a => a.id !== assignmentId));
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to remove assignment.');
+    }
+  };
+
   // File Upload
   const fileInputRef = useRef(null);
   const [attachments, setAttachments] = useState([]);
@@ -621,6 +680,36 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 </div>
               )}
             </div>
+
+            {/* Super Admin Access Mode Toggle Header */}
+            {(user?.role || '').toUpperCase() === 'SUPER_ADMIN' && !readOnly && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', background: '#F8FAFC', padding: '4px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAssignModal(false)}
+                  style={{
+                    flex: 1, padding: '7px 10px', borderRadius: '8px', border: 'none',
+                    background: !showAssignModal ? '#2563EB' : 'transparent',
+                    color: !showAssignModal ? '#FFFFFF' : '#475569',
+                    fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                >
+                  View Messenger
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowAssignModal(true); fetchAccountsAndAssignments(); }}
+                  style={{
+                    flex: 1, padding: '7px 10px', borderRadius: '8px', border: 'none',
+                    background: showAssignModal ? '#2563EB' : 'transparent',
+                    color: showAssignModal ? '#FFFFFF' : '#475569',
+                    fontSize: '11.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                >
+                  Assign Messenger
+                </button>
+              </div>
+            )}
 
             {/* Search Input Box */}
             <div style={{
@@ -1533,6 +1622,241 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 </button>
               </div>
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SUPER ADMIN ASSIGN MESSENGER MODAL ── */}
+      {showAssignModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, padding: '16px'
+        }}>
+          <div style={{
+            background: '#FFFFFF', borderRadius: '20px', width: '100%', maxWidth: '640px',
+            maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #E2E8F0'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '20px 24px', background: '#0F172A', color: '#FFFFFF',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+            }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#FFFFFF' }}>
+                  Assign Messenger
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '12.5px', color: '#94A3B8' }}>
+                  Grant custom 2-layer Messenger access to accounts outside default rules
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAssignModal(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.1)', border: 'none', color: '#FFFFFF',
+                  width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}
+              >
+                <FaTimes size={14} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Select Account * */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+                  Select Account *
+                </label>
+                <select
+                  value={selectedAccountId}
+                  onChange={(e) => setSelectedAccountId(e.target.value)}
+                  style={{
+                    width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1.5px solid #CBD5E1',
+                    fontSize: '14px', color: '#0F172A', background: '#FFFFFF', fontWeight: 600, outline: 'none'
+                  }}
+                >
+                  <option value="">-- Select Account --</option>
+                  {accountsList.map(acc => {
+                    const code = acc.partner_code || acc.employee_code || `USR-${acc.id.slice(0, 6).toUpperCase()}`;
+                    return (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.full_name} ({code} - {(acc.role || '').toUpperCase()})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* Select Messengers * */}
+              {selectedAccountId && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+                    Select Messengers *
+                  </label>
+                  <div style={{
+                    maxHeight: '180px', overflowY: 'auto', border: '1.5px solid #CBD5E1',
+                    borderRadius: '12px', padding: '10px', background: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '6px'
+                  }}>
+                    {accountsList.filter(a => a.id !== selectedAccountId).map(targetAcc => {
+                      const code = targetAcc.partner_code || targetAcc.employee_code || `USR-${targetAcc.id.slice(0, 6).toUpperCase()}`;
+                      const isChecked = selectedMessengerIds.includes(targetAcc.id);
+                      return (
+                        <label
+                          key={targetAcc.id}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px',
+                            borderRadius: '8px', background: isChecked ? '#EFF6FF' : '#FFFFFF',
+                            border: `1px solid ${isChecked ? '#BFDBFE' : '#E2E8F0'}`, cursor: 'pointer'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              setSelectedMessengerIds(prev =>
+                                prev.includes(targetAcc.id)
+                                  ? prev.filter(id => id !== targetAcc.id)
+                                  : [...prev, targetAcc.id]
+                              );
+                            }}
+                          />
+                          <div style={{ flex: 1, fontSize: '13px' }}>
+                            <strong style={{ color: '#0F172A' }}>{targetAcc.full_name}</strong>
+                            <span style={{ color: '#64748B', marginLeft: '6px', fontSize: '12px' }}>
+                              ({code} - {targetAcc.role})
+                            </span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Selected Messengers Chips */}
+              {selectedMessengerIds.length > 0 && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#64748B', marginBottom: '6px' }}>
+                    Selected Messengers ({selectedMessengerIds.length})
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {selectedMessengerIds.map(id => {
+                      const acc = accountsList.find(a => a.id === id);
+                      const code = acc?.partner_code || acc?.employee_code || acc?.full_name || 'User';
+                      return (
+                        <span
+                          key={id}
+                          style={{
+                            padding: '6px 12px', borderRadius: '20px', background: '#EFF6FF',
+                            border: '1px solid #BFDBFE', color: '#1D4ED8', fontSize: '12.5px',
+                            fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px'
+                          }}
+                        >
+                          {code}
+                          <FaTimes
+                            size={12}
+                            style={{ cursor: 'pointer', color: '#1E40AF' }}
+                            onClick={() => setSelectedMessengerIds(prev => prev.filter(item => item !== id))}
+                          />
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Active Assignments Table */}
+              <div>
+                <h4 style={{ margin: '16px 0 8px', fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
+                  Current Active Assignments
+                </h4>
+                {loadingAssignments ? (
+                  <div style={{ fontSize: '12px', color: '#64748B' }}>Loading assignments...</div>
+                ) : existingAssignments.length === 0 ? (
+                  <div style={{ fontSize: '12.5px', color: '#94A3B8', fontStyle: 'italic' }}>
+                    No custom messenger assignments currently set.
+                  </div>
+                ) : (
+                  <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid #E2E8F0', borderRadius: '10px' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                      <thead style={{ background: '#F1F5F9', color: '#475569', fontWeight: 800 }}>
+                        <tr>
+                          <th style={{ padding: '8px 12px' }}>Account</th>
+                          <th style={{ padding: '8px 12px' }}>Can Message</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {existingAssignments.map(a => {
+                          const accCode = a.account_partner_code || a.account_employee_code || a.account_name;
+                          const targetCode = a.messenger_partner_code || a.messenger_employee_code || a.messenger_name;
+                          return (
+                            <tr key={a.id} style={{ borderTop: '1px solid #F1F5F9' }}>
+                              <td style={{ padding: '8px 12px', fontWeight: 700, color: '#0F172A' }}>
+                                {a.account_name} <span style={{ color: '#64748B', fontWeight: 500 }}>({accCode})</span>
+                              </td>
+                              <td style={{ padding: '8px 12px', color: '#2563EB', fontWeight: 700 }}>
+                                {a.messenger_name} <span style={{ color: '#64748B', fontWeight: 500 }}>({targetCode})</span>
+                              </td>
+                              <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveAssignmentItem(a.id)}
+                                  style={{
+                                    padding: '3px 8px', borderRadius: '6px', background: '#FEF2F2',
+                                    border: '1px solid #FCA5A5', color: '#DC2626', fontSize: '11px',
+                                    fontWeight: 800, cursor: 'pointer'
+                                  }}
+                                >
+                                  Unassign
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '16px 24px', background: '#F8FAFC', borderTop: '1px solid #E2E8F0',
+              display: 'flex', justifyContent: 'flex-end', gap: '12px'
+            }}>
+              <button
+                type="button"
+                onClick={() => setShowAssignModal(false)}
+                style={{
+                  padding: '10px 20px', borderRadius: '10px', background: '#F1F5F9',
+                  color: '#475569', fontWeight: 700, border: 'none', cursor: 'pointer', fontSize: '13.5px'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAssignMessengersSubmit}
+                disabled={savingAssignment || !selectedAccountId || !selectedMessengerIds.length}
+                style={{
+                  padding: '10px 24px', borderRadius: '10px', background: '#2563EB',
+                  color: '#FFFFFF', fontWeight: 800, border: 'none', cursor: 'pointer', fontSize: '13.5px',
+                  opacity: (savingAssignment || !selectedAccountId || !selectedMessengerIds.length) ? 0.6 : 1,
+                  boxShadow: '0 4px 12px rgba(37,99,235,0.25)'
+                }}
+              >
+                {savingAssignment ? 'Assigning...' : 'Assign'}
+              </button>
             </div>
           </div>
         </div>

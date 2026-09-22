@@ -7,10 +7,14 @@ const controller = require('./messenger.controller');
 // All messenger endpoints require authentication & rate limiting
 router.use(jwtAuth);
 
-// Super Admin Read-Only Audit Endpoints
+// Super Admin Audit & Assignment Endpoints
 router.get('/admin/search-users', controller.adminSearchUsers);
 router.get('/admin/conversations', controller.adminGetUserConversations);
 router.get('/admin/messages/:id', controller.adminGetUserMessages);
+router.get('/admin/accounts', controller.getCandidateAccounts);
+router.get('/admin/assignments', controller.getAssignments);
+router.post('/admin/assignments', messengerLimiter, controller.assignMessengers);
+router.delete('/admin/assignments/:id', messengerLimiter, controller.removeAssignment);
 
 router.get('/conversations', controller.getConversations);
 router.post('/conversations/direct', messengerLimiter, controller.createDirectChat);
