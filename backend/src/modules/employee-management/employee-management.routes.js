@@ -1789,7 +1789,7 @@ router.get('/incentives/overview', async (req, res, next) => {
         a.status as application_status,
         a.created_at as approval_date,
         COALESCE(a.customer_name, it.customer_name, 'Customer') as customer_name,
-        COALESCE(a.customer_phone, a.customer_mobile, a.mobile_number, '8010447825') as customer_mobile,
+        COALESCE(a.customer_mobile, a.mobile_number, '8010447825') as customer_mobile,
         COALESCE(a.process_type, 'lead punching') as process_type,
         it.transaction_type,
         it.amount as incentive_earned,
