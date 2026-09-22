@@ -1173,7 +1173,7 @@ export function FooterSection({ C, navigate }) {
 
 
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "16px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#ffffff", opacity: 0.7 }}>
-        <span>© 2026 OitStack. All Rights Reserved.</span>
+        <span>© 2026 OIT_Stack. All Rights Reserved.</span>
       </div>
     </div>
   );

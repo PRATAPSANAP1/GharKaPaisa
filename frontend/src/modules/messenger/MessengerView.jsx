@@ -139,6 +139,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [savingAssignment, setSavingAssignment] = useState(false);
 
   const fetchAccountsAndAssignments = async () => {
+    if ((user?.role || '').toUpperCase() !== 'SUPER_ADMIN') return;
     setLoadingAssignments(true);
     try {
       const [accRes, assignRes] = await Promise.all([
@@ -156,6 +157,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
   const handleAssignMessengersSubmit = async (e) => {
     e?.preventDefault();
+    if ((user?.role || '').toUpperCase() !== 'SUPER_ADMIN') return alert('Access denied. Super Admin role required.');
     if (!selectedAccountId) return alert('Please select an account.');
     if (!selectedMessengerIds.length) return alert('Please select at least one messenger contact to assign.');
     setSavingAssignment(true);
@@ -1628,7 +1630,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       )}
 
       {/* ── SUPER ADMIN ASSIGN MESSENGER MODAL ── */}
-      {showAssignModal && (
+      {showAssignModal && (user?.role || '').toUpperCase() === 'SUPER_ADMIN' && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',

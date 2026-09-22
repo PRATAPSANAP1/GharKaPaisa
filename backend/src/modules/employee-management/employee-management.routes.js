@@ -2237,7 +2237,17 @@ async function ensureIncentiveSchema() {
         AND T1.bonus_rule_id IS NOT NULL;
     `).catch(() => {});
 
+    // Deduplicate employee_incentive_transactions application_id before creating unique index
+    await query(`
+      DELETE FROM employee_incentive_transactions T1
+      USING employee_incentive_transactions T2
+      WHERE T1.id < T2.id 
+        AND T1.application_id = T2.application_id
+        AND T1.application_id IS NOT NULL;
+    `).catch(() => {});
+
     await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_incentive_tx_bonus_rule ON employee_incentive_transactions(employee_id, bonus_rule_id) WHERE transaction_type = 'BONUS' AND bonus_rule_id IS NOT NULL;`).catch(() => {});
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_incentive_tx_app_id ON employee_incentive_transactions(application_id) WHERE application_id IS NOT NULL;`).catch(() => {});
     await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_bonus_tx_rule_emp ON employee_bonus_transactions(employee_id, bonus_rule_id);`).catch(() => {});
     isIncentiveSchemaEnsured = true;
   } catch (err) {

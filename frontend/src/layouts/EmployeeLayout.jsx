@@ -6,7 +6,7 @@ import {
   FaChartPie, FaCreditCard, FaCoins, FaShieldAlt, FaFileAlt, FaUsers, 
   FaGift, FaUserCircle, FaCheckCircle, FaFileContract, FaCog,
   FaSignOutAlt, FaMoon, FaSun, FaBars, FaTimes, FaChevronDown,
-  FaUserPlus, FaHandshake, FaCopy, FaShareAlt, FaTrophy
+  FaUserPlus, FaHandshake, FaCopy, FaShareAlt, FaTrophy, FaBell, FaComments
 } from 'react-icons/fa';
 import logo from '../assets/logos/logo.png';
 import Chatbot from '../components/Chatbot/Chatbot';
@@ -26,6 +26,13 @@ export default function EmployeeLayout() {
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 1024 : false);
   const [imgError, setImgError] = useState(false);
   const dropdownRef = useRef(null);
+  const notifDropdownRef = useRef(null);
+
+  // Notification & Messenger State
+  const [notifMenuOpen, setNotifMenuOpen] = useState(false);
+  const [messengerUnread, setMessengerUnread] = useState(0);
+  const [notificationsList, setNotificationsList] = useState([]);
+  const [systemUnreadCount, setSystemUnreadCount] = useState(0);
 
   // Invite Modal State
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
@@ -33,6 +40,33 @@ export default function EmployeeLayout() {
   const [copiedMsg, setCopiedMsg] = useState('');
 
   const [fetchedPhoto, setFetchedPhoto] = useState(null);
+
+  const fetchNotificationCounts = async () => {
+    try {
+      const [msgRes, notifRes] = await Promise.all([
+        api.get('/messenger/unread-count').catch(() => ({ data: { success: false } })),
+        api.get('/notifications/unread').catch(() => ({ data: { success: false } }))
+      ]);
+
+      if (msgRes.data?.success && typeof msgRes.data?.data?.unread_count === 'number') {
+        setMessengerUnread(msgRes.data.data.unread_count);
+      }
+      if (notifRes.data?.success) {
+        setNotificationsList(notifRes.data.data?.notifications || []);
+        setSystemUnreadCount(notifRes.data.data?.unread_count || 0);
+      }
+    } catch (err) {
+      console.error('Error fetching notification counts:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    fetchNotificationCounts();
+
+    const interval = setInterval(fetchNotificationCounts, 10000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -50,10 +84,25 @@ export default function EmployeeLayout() {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setProfileMenuOpen(false);
       }
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target)) {
+        setNotifMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.post('/notifications/read-all').catch(() => {});
+      setSystemUnreadCount(0);
+      setNotificationsList(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
+
+  const totalUnreadCount = messengerUnread + systemUnreadCount;
 
   useEffect(() => {
     let isMounted = true;
@@ -182,6 +231,7 @@ export default function EmployeeLayout() {
         <nav style={{ flex: 1, padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: '6px', overflowY: 'auto' }}>
           {navItems.map((item) => {
             const active = location.pathname === item.path;
+            const isMessenger = item.path === '/employee/messenger';
             return (
               <Link
                 key={item.path}
@@ -202,7 +252,20 @@ export default function EmployeeLayout() {
                 }}
               >
                 <span style={{ fontSize: '16px' }}>{item.icon}</span>
-                <span>{item.label}</span>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {isMessenger && messengerUnread > 0 && (
+                  <span style={{
+                    background: '#EF4444',
+                    color: '#ffffff',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    padding: '2px 7px',
+                    borderRadius: '10px',
+                    lineHeight: 1
+                  }}>
+                    {messengerUnread}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -248,7 +311,191 @@ export default function EmployeeLayout() {
             </h2>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }} ref={dropdownRef}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }}>
+
+            {/* Notification Bell Button & Popover Dropdown */}
+            <div style={{ position: 'relative' }} ref={notifDropdownRef}>
+              <button
+                onClick={() => { setNotifMenuOpen(!notifMenuOpen); setProfileMenuOpen(false); }}
+                title="Notifications"
+                style={{
+                  background: C.bgSecondary,
+                  border: `1px solid ${notifMenuOpen ? (C.employeePrimary || '#0F766E') : C.border}`,
+                  borderRadius: '50%',
+                  width: '38px',
+                  height: '38px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  color: C.text,
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+              >
+                <FaBell size={16} color={totalUnreadCount > 0 ? (C.employeePrimary || '#0F766E') : C.textMid} />
+                {totalUnreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-2px',
+                    right: '-2px',
+                    background: '#EF4444',
+                    color: '#FFFFFF',
+                    fontSize: '10px',
+                    fontWeight: 900,
+                    minWidth: '18px',
+                    height: '18px',
+                    borderRadius: '9px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 4px',
+                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
+                    border: `2px solid ${C.card}`
+                  }}>
+                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Popover Dropdown */}
+              {notifMenuOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '48px',
+                  right: isMobile ? '-40px' : '0',
+                  width: isMobile ? '300px' : '360px',
+                  background: C.card,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: '16px',
+                  boxShadow: '0 12px 36px rgba(0,0,0,0.18)',
+                  padding: '16px',
+                  zIndex: 1000,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: C.text }}>Notifications</h4>
+                      {totalUnreadCount > 0 && (
+                        <span style={{ background: `${C.employeePrimary || '#0F766E'}20`, color: C.employeePrimary || '#0F766E', fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '12px' }}>
+                          {totalUnreadCount} Unread
+                        </span>
+                      )}
+                    </div>
+                    {systemUnreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        style={{ background: 'transparent', border: 'none', color: C.employeePrimary || '#0F766E', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ maxHeight: '340px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    
+                    {/* Messenger Unread Notification Alert Card */}
+                    {messengerUnread > 0 && (
+                      <div
+                        onClick={() => { setNotifMenuOpen(false); navigate('/employee/messenger'); }}
+                        style={{
+                          background: `linear-gradient(135deg, ${C.employeePrimary || '#0F766E'}15 0%, #3B82F615 100%)`,
+                          border: `1px solid ${C.employeePrimary || '#0F766E'}40`,
+                          borderRadius: '12px',
+                          padding: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: C.employeePrimary || '#0F766E', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <FaComments size={18} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span>Messenger Alert</span>
+                            <span style={{ fontSize: '10px', background: '#EF4444', color: '#fff', padding: '1px 6px', borderRadius: '8px', fontWeight: 800 }}>NEW</span>
+                          </div>
+                          <p style={{ margin: '2px 0 0', fontSize: '12px', color: C.textMid, fontWeight: 600 }}>
+                            You have <strong style={{ color: C.employeePrimary || '#0F766E' }}>{messengerUnread}</strong> unread message{messengerUnread > 1 ? 's' : ''} on Messenger.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* System Notifications List */}
+                    {notificationsList.length > 0 ? (
+                      notificationsList.map((notif) => (
+                        <div
+                          key={notif.id}
+                          onClick={() => {
+                            if (notif.link || notif.redirect_url) {
+                              setNotifMenuOpen(false);
+                              navigate(notif.link || notif.redirect_url);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            background: notif.is_read ? 'transparent' : C.bgSecondary,
+                            border: `1px solid ${C.border}`,
+                            cursor: notif.link || notif.redirect_url ? 'pointer' : 'default',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px'
+                          }}
+                        >
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>{notif.title || 'Notification'}</span>
+                            {!notif.is_read && (
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: C.employeePrimary || '#0F766E' }} />
+                            )}
+                          </div>
+                          <p style={{ margin: 0, fontSize: '12px', color: C.textMid, lineHeight: 1.4 }}>
+                            {notif.message}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      messengerUnread === 0 && (
+                        <div style={{ textAlign: 'center', padding: '24px 12px', color: C.textMid, fontSize: '13px' }}>
+                          <FaBell style={{ fontSize: '24px', opacity: 0.4, marginBottom: '6px' }} />
+                          <p style={{ margin: 0, fontWeight: 600 }}>No new notifications</p>
+                        </div>
+                      )
+                    )}
+                  </div>
+
+                  {/* Footer Action */}
+                  <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '10px', display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      onClick={() => { setNotifMenuOpen(false); navigate('/employee/messenger'); }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: C.employeePrimary || '#0F766E',
+                        fontSize: '12.5px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <FaComments /> Go to Messenger
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{ position: 'relative' }} ref={dropdownRef}>
 
             {/* Top Right Profile Photo Button (Click opens features dropdown) */}
             {(() => {
@@ -500,7 +747,8 @@ export default function EmployeeLayout() {
               </div>
             )}
           </div>
-        </header>
+        </div>
+      </header>
 
         {/* Page Content Rendered Here */}
         <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 12px 60px' : '24px', boxSizing: 'border-box' }}>

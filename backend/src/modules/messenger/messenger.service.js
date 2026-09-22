@@ -76,8 +76,14 @@ async function canUserMessageTarget(currentUserId, currentRole, targetUserId, ta
   if (targetRole === 'SUPER_ADMIN') return true;
 
   // Default Role Rules:
-  if (currentRole === 'ADMIN') {
-    // Admin can ONLY message Super Admin unless assigned
+  const ADMIN_ROLES = [
+    'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD',
+    'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE',
+    'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'REMARK_OPERATOR', 'REMARK OPERATOR'
+  ];
+
+  if (ADMIN_ROLES.includes(currentRole)) {
+    // Admin & Operational roles can ONLY message Super Admin unless explicitly assigned
     return false;
   }
 
@@ -122,15 +128,15 @@ async function startOrGetDirectChat(currentUserId, targetUserId) {
   }
 
   // Verify users exist & check role hierarchy
-  const { rows: [currentUser] } = await query(`SELECT id, role FROM users WHERE id = $1`, [currentUserId]);
-  const { rows: [targetUser] } = await query(`SELECT id, full_name, role FROM users WHERE id = $1`, [targetUserId]);
+  const { rows: [currentUser] } = await query(`SELECT id, role, designation FROM users WHERE id = $1`, [currentUserId]);
+  const { rows: [targetUser] } = await query(`SELECT id, full_name, role, designation FROM users WHERE id = $1`, [targetUserId]);
 
   if (!targetUser) {
     throw new Error('Target user not found.');
   }
 
-  const currentRole = (currentUser?.role || '').toUpperCase();
-  const targetRole = (targetUser?.role || '').toUpperCase();
+  const currentRole = (currentUser?.role || currentUser?.designation || '').toUpperCase();
+  const targetRole = (targetUser?.role || targetUser?.designation || '').toUpperCase();
 
   const isAllowed = await canUserMessageTarget(currentUserId, currentRole, targetUserId, targetRole);
   if (!isAllowed) {
@@ -311,7 +317,8 @@ async function getUserUnreadCount(userId) {
 }
 
 async function getContacts(user, queryText) {
-  return await repo.getContactsForUser(user.id, user.role, queryText);
+  const effectiveRole = (user?.role || user?.designation || '').toUpperCase();
+  return await repo.getContactsForUser(user.id, effectiveRole, queryText);
 }
 
 async function togglePinConversation(conversationId, userId) {

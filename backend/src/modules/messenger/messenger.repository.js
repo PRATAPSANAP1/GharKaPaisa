@@ -490,11 +490,17 @@ async function getContactsForUser(userId, userRole, search = '', limit = 50, off
   let allowedUsersSQL = '';
   const params = [userId, searchPattern];
 
+  const ADMIN_ROLES = [
+    'ADMIN', 'SUPER_ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD',
+    'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE',
+    'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'REMARK_OPERATOR', 'REMARK OPERATOR'
+  ];
+
   if (roleUpper === 'SUPER_ADMIN') {
     // Super Admin has full access to all active users
     allowedUsersSQL = '';
-  } else if (roleUpper === 'ADMIN') {
-    // Admin default: Super Admin ONLY + Super Admin Assignments
+  } else if (ADMIN_ROLES.includes(roleUpper)) {
+    // Admin & Operational Roles default: Super Admin ONLY + Super Admin Assignments
     allowedUsersSQL = `
       AND (
         UPPER(u.role::text) = 'SUPER_ADMIN'
@@ -647,7 +653,7 @@ async function getContactsForUser(userId, userRole, search = '', limit = 50, off
   const { rows } = await query(sql, params);
 
   // Identity Masking: For Admin and Partner viewing assigned or restricted contacts, show ONLY Code (e.g., ADM001, PTR001)
-  if (roleUpper === 'ADMIN' || roleUpper === 'PARTNER') {
+  if (ADMIN_ROLES.includes(roleUpper) || roleUpper === 'PARTNER') {
     return rows.map(r => {
       if ((r.role || '').toUpperCase() === 'SUPER_ADMIN') {
         return r;

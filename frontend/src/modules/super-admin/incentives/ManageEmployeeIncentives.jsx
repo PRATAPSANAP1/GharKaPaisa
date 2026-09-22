@@ -246,6 +246,23 @@ export default function ManageEmployeeIncentives() {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
   };
 
+  const APPROVED_APP_STATUSES = new Set([
+    'approved',
+    'super_admin_approved',
+    'sanctioned',
+    'disbursed',
+    'commission_released',
+    'commission_received',
+    'released',
+    'operational_verified',
+    'app file generated (approved)'
+  ]);
+
+  const isApprovedApplicationStatus = (appStatus) => {
+    const s = String(appStatus || '').toLowerCase().trim();
+    return APPROVED_APP_STATUSES.has(s) || s.includes('approved');
+  };
+
   const renderStatusBadge = (statusStr) => {
     const s = (statusStr || '').toUpperCase();
     if (s === 'PAID' || s === 'COMPLETED') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#10B98115', color: '#10B981', border: '1px solid #10B98130', fontWeight: 800, fontSize: '11px' }}>Paid / Released</span>;
@@ -689,7 +706,8 @@ export default function ManageEmployeeIncentives() {
                   <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Payout Management & Releases</h3>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal }}>
                     {formatINR((data.table?.data || []).filter(r => 
-                      ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase())
+                      ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
+                      (!r.application_id || isApprovedApplicationStatus(r.application_status))
                     ).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0))} Pending / Held Release
                   </span>
                 </div>
@@ -711,7 +729,8 @@ export default function ManageEmployeeIncentives() {
                           type="checkbox"
                           onChange={(e) => {
                             const pendingList = (data.table?.data || []).filter(r => 
-                              ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase())
+                              ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
+                              (!r.application_id || isApprovedApplicationStatus(r.application_status))
                             );
                             if (e.target.checked) {
                               setSelectedIncentiveIds(pendingList.map(r => r.incentive_id));
@@ -720,7 +739,8 @@ export default function ManageEmployeeIncentives() {
                             }
                           }}
                           checked={selectedIncentiveIds.length > 0 && selectedIncentiveIds.length === (data.table?.data || []).filter(r => 
-                            ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase())
+                            ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
+                            (!r.application_id || isApprovedApplicationStatus(r.application_status))
                           ).length}
                         />
                       </th>
@@ -736,7 +756,8 @@ export default function ManageEmployeeIncentives() {
                   <tbody>
                     {(() => {
                       const list = (data.table?.data || []).filter(r => 
-                        ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING', 'IN_REVIEW'].includes((r.status || '').toUpperCase())
+                        ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING', 'IN_REVIEW'].includes((r.status || '').toUpperCase()) &&
+                        (!r.application_id || isApprovedApplicationStatus(r.application_status))
                       );
                       if (list.length === 0) {
                         return (

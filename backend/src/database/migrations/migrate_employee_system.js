@@ -341,7 +341,7 @@ const migrateEmployeeSystem = async () => {
     await query(`ALTER TABLE employee_incentive_transactions ALTER COLUMN application_status TYPE VARCHAR(50)`);
 
     await query(`CREATE INDEX IF NOT EXISTS idx_employee_incentive_employee_id ON employee_incentive_transactions(employee_id)`);
-    await query(`CREATE INDEX IF NOT EXISTS idx_employee_incentive_application_id ON employee_incentive_transactions(application_id)`);
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_incentive_tx_app_id ON employee_incentive_transactions(application_id) WHERE application_id IS NOT NULL;`);
     await query(`CREATE INDEX IF NOT EXISTS idx_employee_incentive_status ON employee_incentive_transactions(status)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_employee_incentive_type ON employee_incentive_transactions(transaction_type)`);
 

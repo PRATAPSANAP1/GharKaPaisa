@@ -292,12 +292,10 @@ const AdminLayout = () => {
             </NavLink>
 
             {/* Messenger */}
-            {!isRemarkOperator && !isQdOperator && (
-              <NavLink to="/admin/messenger" style={navLinkStyle}>
-                <Icons.profile size={18} />
-                <span>Messenger</span>
-              </NavLink>
-            )}
+            <NavLink to="/admin/messenger" style={navLinkStyle}>
+              <Icons.profile size={18} />
+              <span>Messenger</span>
+            </NavLink>
 
             {/* Additional Admin Nav Items */}
             {!isBackend && !isSalesExec && !isPanChecker && !isRemarkOperator && !isQdOperator && (
