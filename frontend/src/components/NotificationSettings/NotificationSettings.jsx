@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Bell, BellOff, Mail, MailOff, Check, X } from 'lucide-react';
+import { Bell, BellOff, Mail, MailOff, Check } from 'lucide-react';
 import api from '../../services/api';
 
-export default function NotificationSettings({ onMuteChange }) {
+function NotificationSettings({ onMuteChange }) {
   const { C, isDark } = useTheme();
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState({
@@ -229,3 +229,6 @@ export default function NotificationSettings({ onMuteChange }) {
     </div>
   );
 }
+
+export { NotificationSettings };
+export default NotificationSettings;

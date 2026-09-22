@@ -689,8 +689,7 @@ export default function ManageEmployeeIncentives() {
                   <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Payout Management & Releases</h3>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal }}>
                     {formatINR((data.table?.data || []).filter(r => 
-                      ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
-                      (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
+                      ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase())
                     ).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0))} Pending / Held Release
                   </span>
                 </div>
@@ -712,8 +711,7 @@ export default function ManageEmployeeIncentives() {
                           type="checkbox"
                           onChange={(e) => {
                             const pendingList = (data.table?.data || []).filter(r => 
-                              ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
-                              (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
+                              ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase())
                             );
                             if (e.target.checked) {
                               setSelectedIncentiveIds(pendingList.map(r => r.incentive_id));
@@ -722,8 +720,7 @@ export default function ManageEmployeeIncentives() {
                             }
                           }}
                           checked={selectedIncentiveIds.length > 0 && selectedIncentiveIds.length === (data.table?.data || []).filter(r => 
-                            ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase()) &&
-                            (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
+                            ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes((r.status || '').toUpperCase())
                           ).length}
                         />
                       </th>
@@ -739,8 +736,7 @@ export default function ManageEmployeeIncentives() {
                   <tbody>
                     {(() => {
                       const list = (data.table?.data || []).filter(r => 
-                        ['PENDING', 'ON_HOLD', 'HELD', 'IN_REVIEW'].includes((r.status || '').toUpperCase()) &&
-                        (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
+                        ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING', 'IN_REVIEW'].includes((r.status || '').toUpperCase())
                       );
                       if (list.length === 0) {
                         return (
@@ -845,8 +841,7 @@ export default function ManageEmployeeIncentives() {
                   </h3>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: '#10B981' }}>
                     {formatINR((data.table?.data || []).filter(r => 
-                      ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase()) &&
-                      (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
+                      ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase())
                     ).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0))} Released & Credited
                   </span>
                 </div>
@@ -867,8 +862,7 @@ export default function ManageEmployeeIncentives() {
                   <tbody>
                     {(() => {
                       const releasedList = (data.table?.data || []).filter(r => 
-                        ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase()) &&
-                        (!r.application_status || ['approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received'].includes(String(r.application_status).toLowerCase()))
+                        ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase())
                       );
                       if (releasedList.length === 0) {
                         return (

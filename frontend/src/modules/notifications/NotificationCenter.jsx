@@ -5,7 +5,7 @@ import {
   MdNotifications, MdNotificationsOff, MdSettings, MdAnnouncement, MdCheck, MdDelete, 
   MdSearch, MdFilterList, MdPriorityHigh, MdInfoOutline 
 } from 'react-icons/md';
-import NotificationSettings from '../../components/NotificationSettings/NotificationSettings';
+import NotificationSettings from '../../components/NotificationSettings/NotificationSettings.jsx';
 
 export default function NotificationCenter() {
   const { C } = useTheme();
