@@ -1789,7 +1789,7 @@ router.get('/incentives/overview', async (req, res, next) => {
         a.status as application_status,
         a.created_at as approval_date,
         COALESCE(a.customer_name, it.customer_name, 'Customer') as customer_name,
-        COALESCE(a.customer_mobile, a.mobile_number, '8010447825') as customer_mobile,
+        COALESCE(c.mobile, a.customer_mobile, '8010447825') as customer_mobile,
         COALESCE(a.process_type, 'lead punching') as process_type,
         it.transaction_type,
         it.amount as incentive_earned,
@@ -1813,6 +1813,7 @@ router.get('/incentives/overview', async (req, res, next) => {
       LEFT JOIN products p ON p.id = it.product_id
       LEFT JOIN banks b ON b.id = p.bank_id
       LEFT JOIN applications a ON a.id = it.application_id
+      LEFT JOIN customers c ON c.id = a.customer_id
       ${whereClause}
       ORDER BY it.created_at DESC
       LIMIT $${mainTableParams.length - 1} OFFSET $${mainTableParams.length}

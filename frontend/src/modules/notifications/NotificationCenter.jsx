@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useTheme, makeS } from '../../contexts/ThemeContext';
 import { 
-  MdNotifications, MdSettings, MdAnnouncement, MdCheck, MdDelete, 
+  MdNotifications, MdNotificationsOff, MdSettings, MdAnnouncement, MdCheck, MdDelete, 
   MdSearch, MdFilterList, MdPriorityHigh, MdInfoOutline 
 } from 'react-icons/md';
+import NotificationSettings from '../../components/NotificationSettings/NotificationSettings';
 
 export default function NotificationCenter() {
   const { C } = useTheme();
@@ -155,13 +156,51 @@ export default function NotificationCenter() {
     }
   };
 
+  const isMuted = !prefForm.app_enabled && !prefForm.email_enabled && !prefForm.sms_enabled;
+
+  const toggleMuteAll = async () => {
+    const newMuteState = !isMuted;
+    const updated = {
+      ...prefForm,
+      app_enabled: !newMuteState,
+      email_enabled: !newMuteState,
+      sms_enabled: !newMuteState,
+      marketing_enabled: !newMuteState,
+      commission_enabled: !newMuteState,
+      kyc_enabled: !newMuteState,
+      application_enabled: !newMuteState,
+    };
+    setPrefForm(updated);
+    try {
+      await api.put('/notifications/settings', updated);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px', paddingBottom: '60px' }}>
       
       {/* Header */}
-      <div>
-        <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>Notification & Preferences Hub</h2>
-        <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>Audit system notifications, read announcements, and control delivery channels</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: C.text, margin: 0 }}>Notification & Preferences Hub</h2>
+          <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0' }}>Audit system notifications, read announcements, and control delivery channels</p>
+        </div>
+        <button
+          onClick={toggleMuteAll}
+          style={{
+            padding: '8px 16px', borderRadius: '10px',
+            border: `1px solid ${isMuted ? '#10B981' : '#EF4444'}`,
+            background: isMuted ? '#10B98115' : '#EF444415',
+            color: isMuted ? '#10B981' : '#EF4444',
+            fontSize: '13px', fontWeight: 800, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px'
+          }}
+        >
+          {isMuted ? <MdNotifications size={18} /> : <MdNotificationsOff size={18} />}
+          {isMuted ? 'Unmute Notification' : 'Mute Notification'}
+        </button>
       </div>
 
       {/* Tabs */}
@@ -366,103 +405,74 @@ export default function NotificationCenter() {
 
       {/* PREFERENCES CONFIG TAB */}
       {activeTab === 'preferences' && (
-        <div style={{ ...S.card, padding: '28px', borderRadius: '16px' }}>
-          <h3 style={{ fontSize: '17px', fontWeight: 850, color: C.text, margin: '0 0 4px' }}>Notification & Delivery Settings</h3>
-          <p style={{ fontSize: '13px', color: C.textLight, margin: '0 0 24px' }}>Specify exactly which communication channels we can use to contact you.</p>
+        <div>
+          <NotificationSettings />
+          
+          <div style={{ ...S.card, padding: '28px', borderRadius: '16px', marginTop: '20px' }}>
+            <h3 style={{ fontSize: '17px', fontWeight: 850, color: C.text, margin: '0 0 4px' }}>Advanced Preferences</h3>
+            <p style={{ fontSize: '13px', color: C.textLight, margin: '0 0 24px' }}>Specify exactly which communication channels we can use to contact you.</p>
 
-          <form onSubmit={handleSavePreferences} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+            <form onSubmit={handleSavePreferences} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               
-              {/* Channel Selectors */}
-              <div style={{ background: C.bgSecondary, padding: '20px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.text, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Channels</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', cursor: 'pointer', userSelect: 'none' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={prefForm.app_enabled} 
-                    onChange={e => setPrefForm({ ...prefForm, app_enabled: e.target.checked })} 
-                  />
-                  In-App Notification Center
-                </label>
+                {/* Event Triggers */}
+                <div style={{ background: C.bgSecondary, padding: '20px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.text, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Event Triggers</h4>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', cursor: 'pointer', userSelect: 'none' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={prefForm.email_enabled} 
-                    onChange={e => setPrefForm({ ...prefForm, email_enabled: e.target.checked })} 
-                  />
-                  Email Delivery Alerts (AWS SES)
-                </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', cursor: 'pointer', userSelect: 'none' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={prefForm.kyc_enabled} 
+                      onChange={e => setPrefForm({ ...prefForm, kyc_enabled: e.target.checked })} 
+                    />
+                    KYC Verification Progress
+                  </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', cursor: 'pointer', userSelect: 'none' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={prefForm.sms_enabled} 
-                    onChange={e => setPrefForm({ ...prefForm, sms_enabled: e.target.checked })} 
-                  />
-                  SMS Instant Alerts (MSG91)
-                </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', cursor: 'pointer', userSelect: 'none' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={prefForm.application_enabled} 
+                      onChange={e => setPrefForm({ ...prefForm, application_enabled: e.target.checked })} 
+                    />
+                    Customer Applications Status
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', cursor: 'pointer', userSelect: 'none' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={prefForm.commission_enabled} 
+                      onChange={e => setPrefForm({ ...prefForm, commission_enabled: e.target.checked })} 
+                    />
+                    Wallet Payouts & Commissions
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', cursor: 'pointer', userSelect: 'none' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={prefForm.marketing_enabled} 
+                      onChange={e => setPrefForm({ ...prefForm, marketing_enabled: e.target.checked })} 
+                    />
+                    Special offers & Festival Campaigns
+                  </label>
+                </div>
+
               </div>
 
-              {/* Event Triggers */}
-              <div style={{ background: C.bgSecondary, padding: '20px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 800, color: C.text, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Event Triggers</h4>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', cursor: 'pointer', userSelect: 'none' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={prefForm.kyc_enabled} 
-                    onChange={e => setPrefForm({ ...prefForm, kyc_enabled: e.target.checked })} 
-                  />
-                  KYC Verification Progress
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', cursor: 'pointer', userSelect: 'none' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={prefForm.application_enabled} 
-                    onChange={e => setPrefForm({ ...prefForm, application_enabled: e.target.checked })} 
-                  />
-                  Customer Applications Status
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', cursor: 'pointer', userSelect: 'none' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={prefForm.commission_enabled} 
-                    onChange={e => setPrefForm({ ...prefForm, commission_enabled: e.target.checked })} 
-                  />
-                  Wallet Payouts & Commissions
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', cursor: 'pointer', userSelect: 'none' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={prefForm.marketing_enabled} 
-                    onChange={e => setPrefForm({ ...prefForm, marketing_enabled: e.target.checked })} 
-                  />
-                  Special offers & Festival Campaigns
-                </label>
-              </div>
-
-            </div>
-
-            {/* Language & Frequency */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', maxWidth: '600px' }}>
-              <div>
-                <label style={S.label}>Preferred Language</label>
-                <select style={S.input} value={prefForm.language} onChange={e => setPrefForm({ ...prefForm, language: e.target.value })}>
-                  <option value="en">English</option>
-                  <option value="hi">हिंदी (Hindi)</option>
-                  <option value="mr">मराठी (Marathi)</option>
-                  <option value="te">తెలుగు (Telugu)</option>
-                </select>
-              </div>
-              <div>
-                <label style={S.label}>Alert Frequency digest</label>
-                <select style={S.input} value={prefForm.frequency} onChange={e => setPrefForm({ ...prefForm, frequency: e.target.value })}>
+              {/* Language & Frequency */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', maxWidth: '600px' }}>
+                <div>
+                  <label style={S.label}>Preferred Language</label>
+                  <select style={S.input} value={prefForm.language} onChange={e => setPrefForm({ ...prefForm, language: e.target.value })}>
+                    <option value="en">English</option>
+                    <option value="hi">हिंदी (Hindi)</option>
+                    <option value="mr">मराठी (Marathi)</option>
+                    <option value="te">తెలుగు (Telugu)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={S.label}>Alert Frequency digest</label>
+                  <select style={S.input} value={prefForm.frequency} onChange={e => setPrefForm({ ...prefForm, frequency: e.target.value })}>
                   <option value="instant">Instant Real-Time Alerts</option>
                   <option value="daily">Daily Summary Digest</option>
                   <option value="weekly">Weekly Summary Digest</option>

@@ -237,6 +237,50 @@ const saveSettings = async (req, res, next) => {
   }
 };
 
+// PUT /notifications/toggle-mute - Simple toggle for mute/unmute notifications and emails
+const toggleMute = async (req, res, next) => {
+  try {
+    const { mute_notifications, mute_emails } = req.body;
+
+    const { rows: [pref] } = await query(`
+      SELECT * FROM notification_preferences WHERE user_id = $1
+    `, [req.user.id]);
+
+    if (!pref) {
+      // Create new preference with mute settings
+      const { rows: [newPref] } = await query(`
+        INSERT INTO notification_preferences (user_id, app_enabled, email_enabled)
+        VALUES ($1, $2, $3)
+        RETURNING *
+      `, [
+        req.user.id,
+        mute_notifications !== undefined ? !mute_notifications : true,
+        mute_emails !== undefined ? !mute_emails : true
+      ]);
+      return success(res, newPref, 'Mute preferences saved');
+    }
+
+    // Update existing preference
+    const { rows: [updated] } = await query(`
+      UPDATE notification_preferences
+      SET 
+        app_enabled = COALESCE($2, app_enabled),
+        email_enabled = COALESCE($3, email_enabled),
+        updated_at = NOW()
+      WHERE user_id = $1
+      RETURNING *
+    `, [
+      req.user.id,
+      mute_notifications !== undefined ? !mute_notifications : pref.app_enabled,
+      mute_emails !== undefined ? !mute_emails : pref.email_enabled
+    ]);
+
+    return success(res, updated, 'Mute preferences updated');
+  } catch (err) {
+    next(err);
+  }
+};
+
 // Helper to resolve user IDs based on audience selection
 async function resolveAnnouncementTargetUsers(audienceType, targetRole, targetUserIds = []) {
   try {
@@ -922,6 +966,7 @@ module.exports = {
   deleteNotification,
   getSettings,
   saveSettings,
+  toggleMute,
   getAnnouncements,
   getAnnouncementStats,
   getAnnouncementAnalytics,

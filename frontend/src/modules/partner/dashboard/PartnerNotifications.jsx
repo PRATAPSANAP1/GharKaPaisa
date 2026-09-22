@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import api from '../../../services/api';
 import {
-  Bell, CheckCheck, Trash2, X, Clock, Zap, Wallet,
+  Bell, BellOff, CheckCheck, Trash2, X, Clock, Zap, Wallet,
   FileText, ShieldCheck, TrendingUp, Settings, Activity, Save, RefreshCw
 } from 'lucide-react';
+import NotificationSettings from '../../../components/NotificationSettings/NotificationSettings';
 
 const FILTERS = [
   { id: 'all',          label: 'All',         icon: Bell },
@@ -171,6 +172,25 @@ export default function PartnerNotifications() {
     } catch { /* silent */ }
   };
 
+  const isMuted = !prefs.email_enabled && !prefs.sms_enabled && !prefs.application_notifications && !prefs.wallet_notifications && !prefs.commission_notifications && !prefs.system_notifications;
+
+  const toggleMuteAll = async () => {
+    const newMuteState = !isMuted;
+    const updatedPrefs = {
+      ...prefs,
+      email_enabled: !newMuteState,
+      sms_enabled: !newMuteState,
+      wallet_notifications: !newMuteState,
+      commission_notifications: !newMuteState,
+      application_notifications: !newMuteState,
+      system_notifications: !newMuteState,
+    };
+    setPrefs(updatedPrefs);
+    try {
+      await api.put('/notifications/preferences', updatedPrefs);
+    } catch { /* silent */ }
+  };
+
   const savePrefs = async (e) => {
     e.preventDefault(); setSavingPrefs(true);
     try {
@@ -218,9 +238,9 @@ export default function PartnerNotifications() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ position: 'relative' }}>
             <div style={{ width: 44, height: 44, borderRadius: 14, background: `${accent}15`, border: `1px solid ${accent}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Bell size={20} color={accent} />
+              {isMuted ? <BellOff size={20} color="#ef4444" /> : <Bell size={20} color={accent} />}
             </div>
-            {unreadCount > 0 && (
+            {unreadCount > 0 && !isMuted && (
               <div style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 99, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', animation: 'pulse 2s infinite' }}>
                 {unreadCount > 99 ? '99+' : unreadCount}
               </div>
@@ -229,12 +249,17 @@ export default function PartnerNotifications() {
           <div>
             <h1 style={{ fontSize: 'clamp(16px,3vw,22px)', fontWeight: 900, color: text, margin: 0 }}>Notifications</h1>
             <p style={{ fontSize: 12, color: muted, margin: '2px 0 0' }}>
-              {unreadCount > 0 ? <span style={{ color: accent, fontWeight: 700 }}>{unreadCount} unread</span> : 'All caught up'} · Live stream active
+              {isMuted ? <span style={{ color: '#ef4444', fontWeight: 700 }}>Notifications Muted</span> : (unreadCount > 0 ? <span style={{ color: accent, fontWeight: 700 }}>{unreadCount} unread</span> : 'All caught up')} · Live stream active
             </p>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={toggleMuteAll} className="action-btn"
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: `1px solid ${isMuted ? '#10b98130' : '#ef444430'}`, background: isMuted ? '#10b98110' : '#ef444408', color: isMuted ? '#10b981' : '#ef4444', fontWeight: 800, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}>
+            {isMuted ? <Bell size={14} /> : <BellOff size={14} />}
+            {isMuted ? 'Unmute Notification' : 'Mute Notification'}
+          </button>
           {unreadCount > 0 && (
             <button onClick={markAllRead} className="action-btn"
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: `1px solid ${border}`, background: isDark ? '#111' : '#f8faff', color: text, fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}>
@@ -396,28 +421,29 @@ export default function PartnerNotifications() {
 
       {/* ══════════════ PREFERENCES VIEW ══════════════ */}
       {view === 'prefs' && (
-        <form onSubmit={savePrefs} style={{ padding: '20px', borderRadius: 18, background: cardBg, border: `1px solid ${border}`, animation: 'fadeUp 0.3s ease' }}>
-          <h3 style={{ fontSize: 14, fontWeight: 800, color: text, margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Settings size={16} color={accent} /> Notification Preferences
-          </h3>
+        <div style={{ animation: 'fadeUp 0.3s ease' }}>
+          <NotificationSettings />
+          
+          <div style={{ marginTop: '20px', padding: '20px', borderRadius: 18, background: cardBg, border: `1px solid ${border}` }}>
+            <h3 style={{ fontSize: 14, fontWeight: 800, color: text, margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Settings size={16} color={accent} /> Advanced Preferences
+            </h3>
 
-          {prefSaved && (
-            <div style={{ padding: '10px 14px', borderRadius: 12, background: '#10b98115', border: '1px solid #10b98130', color: '#10b981', fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
-              ✅ Preferences saved!
-            </div>
-          )}
+            {prefSaved && (
+              <div style={{ padding: '10px 14px', borderRadius: 12, background: '#10b98115', border: '1px solid #10b98130', color: '#10b981', fontSize: 13, fontWeight: 600, marginBottom: 16 }}>
+                ✅ Preferences saved!
+              </div>
+            )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {[
-              { key: 'email_enabled',            label: 'Email Notifications',       desc: 'Receive updates via email' },
-              { key: 'sms_enabled',              label: 'SMS Notifications',         desc: 'Get SMS alerts on your mobile' },
-              { key: 'wallet_notifications',     label: 'Wallet & Withdrawal',       desc: 'Balance credits and payout alerts' },
-              { key: 'commission_notifications', label: 'Commission Payouts',        desc: 'When commissions are released' },
-              { key: 'application_notifications',label: 'Application Updates',       desc: 'Lead status changes and approvals' },
-              { key: 'system_notifications',     label: 'System Announcements',      desc: 'Platform updates and notices' },
-            ].map((item, i) => (
-              <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: i < 5 ? `1px solid ${border}` : 'none', gap: 12 }}>
-                <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {[
+                { key: 'wallet_notifications',     label: 'Wallet & Withdrawal',       desc: 'Balance credits and payout alerts' },
+                { key: 'commission_notifications', label: 'Commission Payouts',        desc: 'When commissions are released' },
+                { key: 'application_notifications',label: 'Application Updates',       desc: 'Lead status changes and approvals' },
+                { key: 'system_notifications',     label: 'System Announcements',      desc: 'Platform updates and notices' },
+              ].map((item, i) => (
+                <div key={item.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: i < 3 ? `1px solid ${border}` : 'none', gap: 12 }}>
+                  <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: text }}>{item.label}</div>
                   <div style={{ fontSize: 11, color: muted, marginTop: 2 }}>{item.desc}</div>
                 </div>
@@ -433,7 +459,7 @@ export default function PartnerNotifications() {
               {savingPrefs ? 'Saving...' : 'Save Preferences'}
             </button>
           </div>
-        </form>
+        </div>
       )}
     </div>
   );

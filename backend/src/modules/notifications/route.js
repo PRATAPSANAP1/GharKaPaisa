@@ -29,6 +29,7 @@ router.get('/preferences', notifCtrl.getSettings);
 router.put('/preferences', notifCtrl.saveSettings);
 router.get('/settings', notifCtrl.getSettings);
 router.put('/settings', notifCtrl.saveSettings);
+router.put('/toggle-mute', notifCtrl.toggleMute);
 
 // Activity Timeline & Audit Logs
 router.get('/activity', notifCtrl.getActivityLogsController);

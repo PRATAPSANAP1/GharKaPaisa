@@ -9,6 +9,7 @@ import {
   FaKey, FaGlobe, FaClock, FaCheck, FaEdit, FaChevronRight, FaHeadset, FaLaptop
 } from 'react-icons/fa';
 import api from '../../../services/api';
+import NotificationSettings from '../../../components/NotificationSettings/NotificationSettings';
 
 export default function EmployeeSettingsPortal() {
   const { C, theme, setTheme } = useTheme();
@@ -263,33 +264,7 @@ export default function EmployeeSettingsPortal() {
                 <FaBell /> 3. Notification Settings & Alert Channels
               </h2>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
-                  <h4 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>Application & Lead Alerts</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={notifications.new_leads} onChange={(e) => setNotifications(p => ({ ...p, new_leads: e.target.checked }))} />
-                      Notify when a new lead is assigned to me
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={notifications.app_approved} onChange={(e) => setNotifications(p => ({ ...p, app_approved: e.target.checked }))} />
-                      Notify when my submitted application is Approved
-                    </label>
-                  </div>
-                </div>
-
-                <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '14px', border: `1px solid ${C.border}` }}>
-                  <h4 style={{ margin: '0 0 10px 0', fontSize: '14px' }}>Delivery Channels</h4>
-                  <div style={{ display: 'flex', gap: '16px', fontSize: '13px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input type="checkbox" checked={notifications.push} onChange={(e) => setNotifications(p => ({ ...p, push: e.target.checked }))} /> Push Notifications
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input type="checkbox" checked={notifications.email} onChange={(e) => setNotifications(p => ({ ...p, email: e.target.checked }))} /> Email Alerts
-                    </label>
-                  </div>
-                </div>
-              </div>
+              <NotificationSettings />
             </div>
           )}
 
