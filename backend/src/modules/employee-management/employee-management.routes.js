@@ -698,6 +698,12 @@ router.post('/assign-custom-product-links', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // Guard: Pass control to next route handlers if ID is not a valid UUID format
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) {
+      return next();
+    }
     
     // 1. Employee profile
     const empRes = await query(`
@@ -2208,7 +2214,7 @@ async function ensureIncentiveSchema() {
 }
 
 // ── 3. GET /api/v1/employees/bonus-rules — List & Filter Employee Bonus Rules ──
-router.get('/bonus-rules/all', async (req, res, next) => {
+router.get(['/bonus-rules', '/bonus-rules/all'], async (req, res, next) => {
   try {
     await ensureIncentiveSchema();
     const { employee_id, bank_id, status } = req.query;
