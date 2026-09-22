@@ -685,6 +685,27 @@ const syncEmployeeIncentiveLifecycle = async (dbOrClient, app, appFileGenVal = n
     }
 
     if (['approved', 'super_admin_approved', 'commission_released', 'released', 'disbursed', 'sanctioned'].includes(currentStatus)) {
+      // First, create incentive transaction if it doesn't exist
+      await dbOrClient.query(`
+        INSERT INTO employee_incentive_transactions (
+          employee_id, product_id, application_id, transaction_type, amount, status, customer_name
+        )
+        SELECT 
+          $1::uuid as employee_id,
+          $2::uuid as product_id,
+          $3::uuid as application_id,
+          'EARNED' as transaction_type,
+          COALESCE(epl.incentive_amount, p.commission_amount, 500) as amount,
+          'PENDING' as status,
+          $4::text as customer_name
+        FROM employee_product_links epl
+        JOIN products p ON p.id = $2::uuid
+        WHERE epl.employee_id = $1::uuid 
+          AND epl.product_id = $2::uuid 
+          AND epl.status = 'ACTIVE'
+        ON CONFLICT (application_id) DO NOTHING
+      `, [app.employee_id, app.product_id, app.id, app.customer_name || 'Customer']).catch(() => {});
+
       if (!isAppFileYes) {
         // App file generated is not Yes -> Hold incentive
         await dbOrClient.query(`

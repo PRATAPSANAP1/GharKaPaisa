@@ -1073,14 +1073,6 @@ router.post('/leads', async (req, res, next) => {
       [app_number, customerId, matchedProductId, matchedBankId, req.user.id, empId, linkId, incentiveAmt, full_name, mobile]
     );
 
-    // 7. Create Pending Incentive Transaction record
-    await query(
-      `INSERT INTO employee_incentive_transactions (
-        employee_id, product_id, application_id, transaction_type, amount, status, customer_name
-      ) VALUES ($1, $2, $3, 'EARNED', $4, 'PENDING', $5)`,
-      [empId, matchedProductId, rows[0].id, incentiveAmt, full_name]
-    );
-
     res.status(201).json({
       success: true,
       message: 'Lead created successfully under employee tracking',
