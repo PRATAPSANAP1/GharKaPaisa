@@ -671,7 +671,7 @@ const getFilteredNotes = async (applicationId, userRole) => {
 const syncEmployeeIncentiveLifecycle = async (dbOrClient, app, appFileGenVal = null, statusVal = null) => {
   try {
     if (!app || !app.employee_id) return;
-    const currentStatus = statusVal || app.status;
+    const currentStatus = String(statusVal || app.status || '').toLowerCase();
     const currentAppFileGen = String(appFileGenVal !== null && appFileGenVal !== undefined ? appFileGenVal : (app.app_file_generated || '')).trim().toLowerCase();
     const isAppFileYes = currentAppFileGen === 'yes';
 
@@ -685,48 +685,65 @@ const syncEmployeeIncentiveLifecycle = async (dbOrClient, app, appFileGenVal = n
     }
 
     if (['approved', 'super_admin_approved', 'commission_released', 'released', 'disbursed', 'sanctioned'].includes(currentStatus)) {
-      // First, create incentive transaction if it doesn't exist
-      await dbOrClient.query(`
-        INSERT INTO employee_incentive_transactions (
-          employee_id, product_id, application_id, transaction_type, amount, status, customer_name
-        )
-        SELECT 
-          $1::uuid as employee_id,
-          $2::uuid as product_id,
-          $3::uuid as application_id,
-          'EARNED' as transaction_type,
-          COALESCE(epl.incentive_amount, p.commission_amount, 500) as amount,
-          'PENDING' as status,
-          $4::text as customer_name
-        FROM employee_product_links epl
-        JOIN products p ON p.id = $2::uuid
-        WHERE epl.employee_id = $1::uuid 
-          AND epl.product_id = $2::uuid 
-          AND epl.status = 'ACTIVE'
-        ON CONFLICT (application_id) DO NOTHING
-      `, [app.employee_id, app.product_id, app.id, app.customer_name || 'Customer']).catch(() => {});
+      // 1. Check if incentive transaction exists
+      const { rows: existingTxn } = await dbOrClient.query(
+        `SELECT id FROM employee_incentive_transactions WHERE application_id = $1 LIMIT 1`,
+        [app.id]
+      );
 
-      if (!isAppFileYes) {
-        // App file generated is not Yes -> Set status to HOLD (if not already RELEASED)
-        await dbOrClient.query(`
-          UPDATE employee_incentive_transactions 
-          SET status = 'HOLD', hold_reason = 'App file generated is pending (No)', updated_at = NOW() 
-          WHERE application_id = $1 AND status NOT IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED')
-        `, [app.id]);
-        return;
+      if (existingTxn.length === 0) {
+        let incAmt = 500;
+        if (app.product_id) {
+          const { rows: linkRows } = await dbOrClient.query(
+            `SELECT COALESCE(epl.incentive_amount, p.commission_amount, 500) as amt
+             FROM products p
+             LEFT JOIN employee_product_links epl ON epl.product_id = p.id AND epl.employee_id = $1 AND epl.status = 'ACTIVE'
+             WHERE p.id = $2 LIMIT 1`,
+            [app.employee_id, app.product_id]
+          );
+          if (linkRows.length > 0 && linkRows[0].amt) {
+            incAmt = parseFloat(linkRows[0].amt) || 500;
+          }
+        }
+
+        const initialStatus = isAppFileYes ? 'PENDING' : 'HOLD';
+        const holdReason = isAppFileYes ? null : 'App file generated is pending (No)';
+
+        await dbOrClient.query(
+          `INSERT INTO employee_incentive_transactions (
+             employee_id, product_id, application_id, transaction_type, amount, status, hold_reason, customer_name
+           ) VALUES ($1, $2, $3, 'EARNED', $4, $5, $6, $7)
+           ON CONFLICT (application_id) DO NOTHING`,
+          [
+            app.employee_id,
+            app.product_id || null,
+            app.id,
+            incAmt,
+            initialStatus,
+            holdReason,
+            app.customer_name || 'Customer'
+          ]
+        );
+      } else {
+        if (!isAppFileYes) {
+          await dbOrClient.query(`
+            UPDATE employee_incentive_transactions 
+            SET status = 'HOLD', hold_reason = 'App file generated is pending (No)', updated_at = NOW() 
+            WHERE application_id = $1 AND status NOT IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED')
+          `, [app.id]);
+        } else {
+          await dbOrClient.query(`
+            UPDATE employee_incentive_transactions 
+            SET status = 'PENDING', hold_reason = NULL, updated_at = NOW() 
+            WHERE application_id = $1 AND status IN ('HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING', 'ON_HOLD')
+          `, [app.id]);
+        }
       }
-
-      // App File is Yes -> Transition HOLD -> PENDING if currently on HOLD
-      await dbOrClient.query(`
-        UPDATE employee_incentive_transactions 
-        SET status = 'PENDING', hold_reason = NULL, updated_at = NOW() 
-        WHERE application_id = $1 AND status IN ('HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING', 'ON_HOLD')
-      `, [app.id]);
     } else if (currentStatus === 'operational_verified') {
       await dbOrClient.query(`
         UPDATE employee_incentive_transactions 
-        SET status = 'HELD', updated_at = NOW() 
-        WHERE application_id = $1
+        SET status = 'HOLD', hold_reason = 'Operational verification pending', updated_at = NOW() 
+        WHERE application_id = $1 AND status NOT IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED')
       `, [app.id]);
     }
   } catch (err) {
