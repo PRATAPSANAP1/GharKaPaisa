@@ -277,14 +277,14 @@ export default function ManageEmployeeIncentives() {
   const avgPerEmp = parseFloat(kpi.avg_incentive_per_employee || 0);
 
   const navTabs = [
-    { id: 'OVERVIEW', label: '📊 Overview' },
-    { id: 'EMPLOYEES', label: '👥 Employees' },
-    { id: 'PAYOUTS', label: '💰 Payouts' },
-    { id: 'RULES', label: '🎯 Rules & Targets' },
-    { id: 'PRODUCTS', label: '💳 Products' },
-    { id: 'REPORTS', label: '📈 Reports' },
-    { id: 'AUDIT', label: '🛡 Historical Audit' },
-    { id: 'HISTORICAL', label: '📜 Monthly Audit Archive' }
+    { id: 'OVERVIEW', label: 'Overview', icon: FaChartLine },
+    { id: 'EMPLOYEES', label: 'Employees', icon: FaUsers },
+    { id: 'PAYOUTS', label: 'Payouts', icon: FaMoneyBillWave },
+    { id: 'RULES', label: 'Rules & Targets', icon: FaBullseye },
+    { id: 'PRODUCTS', label: 'Products', icon: FaCreditCard },
+    { id: 'REPORTS', label: 'Reports', icon: FaClipboardList },
+    { id: 'AUDIT', label: 'Historical Audit', icon: FaUserShield },
+    { id: 'HISTORICAL', label: 'Monthly Audit Archive', icon: FaCalendarAlt }
   ];
 
   return (
@@ -318,21 +318,27 @@ export default function ManageEmployeeIncentives() {
         background: C.card, borderRadius: '14px', border: `1px solid ${C.border}`,
         boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
       }}>
-        {navTabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id)}
-            style={{
-              padding: '9px 16px', borderRadius: '10px', border: 'none',
-              background: activeTab === t.id ? C.teal : 'transparent',
-              color: activeTab === t.id ? '#ffffff' : C.textMid,
-              fontWeight: activeTab === t.id ? 900 : 700,
-              fontSize: '12.5px', cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap'
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
+        {navTabs.map(t => {
+          const IconComp = t.icon;
+          const isActive = activeTab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              style={{
+                padding: '9px 16px', borderRadius: '10px', border: 'none',
+                background: isActive ? C.teal : 'transparent',
+                color: isActive ? '#ffffff' : C.textMid,
+                fontWeight: isActive ? 900 : 700,
+                fontSize: '12.5px', cursor: 'pointer', transition: 'all 0.2s ease', whiteSpace: 'nowrap',
+                display: 'flex', alignItems: 'center', gap: '8px'
+              }}
+            >
+              <IconComp size={14} color={isActive ? '#ffffff' : C.teal} />
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* ── 4. COLLAPSED SEARCH & FILTER HEADER ── */}
