@@ -8,6 +8,7 @@ import api, { getAccessToken } from '../services/api';
 import { getApiV1Url } from '../config/api';
 import logo from '../assets/logos/logo.png';
 import Chatbot from '../components/Chatbot/Chatbot';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 import '../components/Navbar/Navbar.css';
 import { MdNotifications } from 'react-icons/md';
 
@@ -743,6 +744,7 @@ const SuperAdminLayout = () => {
 
         {/* Page Body */}
         <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '12px 14px' : '16px 20px' }}>
+          <AnnouncementBanner />
           <Outlet />
         </main>
       </div>

@@ -254,7 +254,10 @@ async function resolveAnnouncementTargetUsers(audienceType, targetRole, targetUs
       const { rows } = await query(`SELECT id FROM users WHERE UPPER(role::text) = 'PARTNER' AND is_active = true`);
       return rows.map(r => r.id);
     } else if (type === 'EMPLOYEES' || type === 'EMPLOYEE') {
-      const { rows } = await query(`SELECT id FROM users WHERE UPPER(role::text) IN ('EMPLOYEE','ADMIN','HR','SUPER_ADMIN') AND is_active = true`);
+      const { rows } = await query(`SELECT id FROM users WHERE UPPER(role::text) = 'EMPLOYEE' AND is_active = true`);
+      return rows.map(r => r.id);
+    } else if (type === 'ADMIN' || type === 'ADMINS' || type === 'ADMINISTRATIVE_OPERATOR' || type === 'QD_OPERATOR' || type === 'PAN_CHECKER' || type === 'REMARK_OPERATOR') {
+      const { rows } = await query(`SELECT id FROM users WHERE UPPER(role::text) IN ('ADMIN','SUPER_ADMIN','ADMINISTRATIVE_OPERATOR','QD_OPERATOR','PAN_CHECKER','REMARK_OPERATOR') AND is_active = true`);
       return rows.map(r => r.id);
     } else if (type === 'MANAGERS' || type === 'MANAGER') {
       const { rows } = await query(`SELECT id FROM users WHERE (UPPER(COALESCE(designation::text, '')) LIKE '%MANAGER%' OR UPPER(role::text) IN ('ADMIN', 'SUPER_ADMIN')) AND is_active = true`);
@@ -386,7 +389,8 @@ const getAnnouncements = async (req, res, next) => {
           ar.user_id = $1
           OR UPPER(COALESCE(a.audience_type, a.target_role, 'ALL_USERS')) IN ('ALL_USERS', 'ALL')
           OR ($2 = 'PARTNER' AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('PARTNERS', 'PARTNER'))
-          OR ($2 IN ('EMPLOYEE', 'ADMIN', 'SUPER_ADMIN') AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('EMPLOYEES', 'EMPLOYEE'))
+          OR ($2 = 'EMPLOYEE' AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('EMPLOYEES', 'EMPLOYEE'))
+          OR ($2 IN ('ADMIN', 'SUPER_ADMIN', 'ADMINISTRATIVE_OPERATOR', 'QD_OPERATOR', 'PAN_CHECKER', 'REMARK_OPERATOR') AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('ADMIN', 'ADMINS', 'ADMINISTRATIVE_OPERATOR'))
           OR ($3 LIKE '%MANAGER%' AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('MANAGERS', 'MANAGER'))
           OR (($3 LIKE '%LEADER%' OR $3 LIKE '%TL%') AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('TEAM_LEADERS', 'TL', 'TEAM_LEADER'))
           OR (($3 LIKE '%TELECALLER%' OR $3 LIKE '%TC%') AND UPPER(COALESCE(a.audience_type, a.target_role, '')) IN ('TELECALLERS', 'TC', 'TELECALLER'))

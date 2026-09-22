@@ -14,6 +14,7 @@ import api from '../services/api';
 
 import EmployeeForcePasswordModal from '../modules/employee/components/EmployeeForcePasswordModal';
 import EmployeeMobileBottomNav from '../components/EmployeeMobileBottomNav';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 
 export default function EmployeeLayout() {
   const { user, logout } = useAuthStore();
@@ -503,6 +504,7 @@ export default function EmployeeLayout() {
 
         {/* Page Content Rendered Here */}
         <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 12px 60px' : '24px', boxSizing: 'border-box' }}>
+          <AnnouncementBanner />
           <Outlet />
         </main>
       </div>

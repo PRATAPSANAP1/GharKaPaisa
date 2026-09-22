@@ -1589,9 +1589,12 @@ router.get('/incentives/overview', async (req, res, next) => {
         e.employee_id as emp_code,
         e.full_name,
         COALESCE(e.designation, h.hierarchy_level, 'TC') as role,
-        COUNT(DISTINCT it.application_id) as applications,
-        COUNT(DISTINCT CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.application_id END) as approved,
-        COALESCE(SUM(it.amount), 0) as earned,
+        COUNT(DISTINCT CASE 
+          WHEN a.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received') THEN a.id 
+          WHEN it.application_id IS NOT NULL AND UPPER(it.status::text) NOT IN ('CANCELLED', 'REJECTED') THEN it.application_id
+        END) as applications,
+        COUNT(DISTINCT CASE WHEN a.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received') THEN a.id END) as approved,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) NOT IN ('CANCELLED', 'REJECTED') THEN it.amount ELSE 0 END), 0) as earned,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending
       FROM employee_incentive_transactions it
@@ -2021,10 +2024,26 @@ router.post('/incentives/:id/update-status', async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Incentive transaction not found' });
     }
 
+    const updatedTxn = rows[0];
+    if (isPaid) {
+      if (updatedTxn.bonus_rule_id) {
+        await query(
+          `UPDATE employee_bonus_transactions SET status = 'PAID', paid_at = NOW() WHERE employee_id = $1 AND bonus_rule_id = $2`,
+          [updatedTxn.employee_id, updatedTxn.bonus_rule_id]
+        ).catch(() => {});
+      }
+      if (updatedTxn.application_id) {
+        await query(
+          `UPDATE applications SET commission_released = true WHERE id = $1`,
+          [updatedTxn.application_id]
+        ).catch(() => {});
+      }
+    }
+
     res.json({
       success: true,
       message: `Incentive transaction updated to ${uppercaseStatus}`,
-      data: rows[0]
+      data: updatedTxn
     });
   } catch (err) {
     next(err);
@@ -2060,6 +2079,23 @@ router.post('/incentives/bulk-update-status', async (req, res, next) => {
        RETURNING *`,
       [uppercaseStatus, payment_reference || null, payment_method, hold_reason || null, isPaid, req.user?.id || null, incentive_ids]
     );
+
+    if (isPaid && rows.length > 0) {
+      for (const updatedTxn of rows) {
+        if (updatedTxn.bonus_rule_id) {
+          await query(
+            `UPDATE employee_bonus_transactions SET status = 'PAID', paid_at = NOW() WHERE employee_id = $1 AND bonus_rule_id = $2`,
+            [updatedTxn.employee_id, updatedTxn.bonus_rule_id]
+          ).catch(() => {});
+        }
+        if (updatedTxn.application_id) {
+          await query(
+            `UPDATE applications SET commission_released = true WHERE id = $1`,
+            [updatedTxn.application_id]
+          ).catch(() => {});
+        }
+      }
+    }
 
     res.json({
       success: true,

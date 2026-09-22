@@ -594,7 +594,7 @@ export default function ManageEmployeeIncentives() {
                           <td style={{ padding: '8px 6px', fontWeight: 900, color: C.teal }}>#{idx + 1}</td>
                           <td style={{ padding: '8px 6px', fontWeight: 800, color: C.text }}>{emp.full_name}</td>
                           <td style={{ padding: '8px 6px', color: C.textMid }}>{emp.role}</td>
-                          <td style={{ padding: '8px 6px', textAlign: 'center', fontWeight: 800 }}>{emp.applications}</td>
+                          <td style={{ padding: '8px 6px', textAlign: 'center', fontWeight: 800 }}>{emp.approved || emp.applications || 0}</td>
                           <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: 900, color: '#10B981' }}>{formatINR(emp.earned)}</td>
                         </tr>
                       ))}

@@ -7,6 +7,7 @@ import { useActiveBanks } from '../contexts/BanksContext';
 import { Icons } from '../components/Icon/PartnerIcons';
 import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 import Chatbot from '../components/Chatbot/Chatbot';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 import api from '../services/api';
 import { MdExpandMore, MdChevronRight, MdAccountBalance, MdShoppingBag, MdSettings, MdMenu, MdClose } from 'react-icons/md';
 
@@ -505,6 +506,7 @@ const AdminLayout = () => {
 
         {/* Dynamic Inner Page Content */}
         <main style={{ flex: 1, overflowY: 'auto', padding: '16px', boxSizing: 'border-box' }}>
+          <AnnouncementBanner />
           <Outlet />
           {!isHR && <Chatbot />}
         </main>
