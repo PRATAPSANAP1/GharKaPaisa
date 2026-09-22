@@ -707,77 +707,21 @@ const syncEmployeeIncentiveLifecycle = async (dbOrClient, app, appFileGenVal = n
       `, [app.employee_id, app.product_id, app.id, app.customer_name || 'Customer']).catch(() => {});
 
       if (!isAppFileYes) {
-        // App file generated is not Yes -> Hold incentive
+        // App file generated is not Yes -> Set status to HOLD (if not already RELEASED)
         await dbOrClient.query(`
           UPDATE employee_incentive_transactions 
-          SET status = 'HELD_APPFILE_PENDING', updated_at = NOW() 
-          WHERE application_id = $1
+          SET status = 'HOLD', hold_reason = 'App file generated is pending (No)', updated_at = NOW() 
+          WHERE application_id = $1 AND status NOT IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED')
         `, [app.id]);
         return;
       }
 
-      // Both Approved AND App File Generated === 'Yes'
-      const prodBankRes = await dbOrClient.query(`SELECT bank_id FROM products WHERE id = $1`, [app.product_id]);
-      const appBankId = prodBankRes.rows[0]?.bank_id;
-
-      let isDeptBank = false;
-      let isTargetAchieved = false;
-
-      if (appBankId) {
-        const deptCheck = await dbOrClient.query(`
-          SELECT id, target_count, start_date, end_date
-          FROM employee_bonus_rules
-          WHERE employee_id = $1 AND bank_id = $2 AND status = 'ACTIVE'
-        `, [app.employee_id, appBankId]);
-
-        if (deptCheck.rows.length > 0) {
-          isDeptBank = true;
-          const rule = deptCheck.rows[0];
-          const appCountRes = await dbOrClient.query(`
-            SELECT COUNT(*) as approved_count
-            FROM applications app
-            JOIN products p ON p.id = app.product_id
-            WHERE (app.employee_id = $1 OR app.submitted_by IN (SELECT user_id FROM employees WHERE id = $1))
-              AND p.bank_id = $2
-              AND app.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received')
-              AND LOWER(TRIM(COALESCE(app.app_file_generated, ''))) = 'yes'
-              AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) >= $3
-              AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) <= $4
-          `, [app.employee_id, appBankId, rule.start_date, rule.end_date]);
-
-          const approvedCount = parseInt(appCountRes.rows[0]?.approved_count || 0);
-          if (approvedCount >= parseInt(rule.target_count || 0)) {
-            isTargetAchieved = true;
-          }
-        }
-      }
-
-      if (isDeptBank) {
-        if (isTargetAchieved) {
-          // Target Achieved: Release incentive for all cards under this department bank where app_file_generated = 'yes'
-          await dbOrClient.query(`
-            UPDATE employee_incentive_transactions 
-            SET status = 'COMPLETED', updated_at = NOW() 
-            WHERE employee_id = $1 
-              AND product_id IN (SELECT id FROM products WHERE bank_id = $2)
-              AND application_id IN (SELECT id FROM applications WHERE LOWER(TRIM(COALESCE(app_file_generated, ''))) = 'yes' AND status::text IN ('approved', 'disbursed', 'super_admin_approved', 'commission_released', 'sanctioned'))
-          `, [app.employee_id, appBankId]);
-        } else {
-          // Target Pending: Hold incentive until target threshold is satisfied
-          await dbOrClient.query(`
-            UPDATE employee_incentive_transactions 
-            SET status = 'HELD_TARGET_PENDING', updated_at = NOW() 
-            WHERE application_id = $1
-          `, [app.id]);
-        }
-      } else {
-        // Non-Department Bank: Immediately release card incentive since app_file_generated is Yes and status is Approved
-        await dbOrClient.query(`
-          UPDATE employee_incentive_transactions 
-          SET status = 'COMPLETED', updated_at = NOW() 
-          WHERE application_id = $1
-        `, [app.id]);
-      }
+      // App File is Yes -> Transition HOLD -> PENDING if currently on HOLD
+      await dbOrClient.query(`
+        UPDATE employee_incentive_transactions 
+        SET status = 'PENDING', hold_reason = NULL, updated_at = NOW() 
+        WHERE application_id = $1 AND status IN ('HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING', 'ON_HOLD')
+      `, [app.id]);
     } else if (currentStatus === 'operational_verified') {
       await dbOrClient.query(`
         UPDATE employee_incentive_transactions 

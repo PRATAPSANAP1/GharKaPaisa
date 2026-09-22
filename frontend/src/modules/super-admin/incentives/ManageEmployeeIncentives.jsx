@@ -178,7 +178,7 @@ export default function ManageEmployeeIncentives() {
   };
 
   const handleQuickRelease = async (row) => {
-    const isAlreadyPaid = (row.status || '').toUpperCase() === 'PAID' || (row.status || '').toUpperCase() === 'COMPLETED';
+    const isAlreadyPaid = ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((row.status || '').toUpperCase());
     if (isAlreadyPaid) {
       alert('This incentive has already been released and paid to the employee.');
       return;
@@ -187,12 +187,12 @@ export default function ManageEmployeeIncentives() {
     try {
       const refNo = `REL-${Date.now().toString(36).toUpperCase()}`;
       const res = await api.post(`/employees/incentives/${row.incentive_id}/update-status`, {
-        status: 'PAID',
+        status: 'RELEASE',
         payment_reference: refNo,
         payment_method: 'BANK_TRANSFER'
       });
       if (res.data?.success) {
-        alert(`SUCCESS: Incentive ${formatINR(row.incentive_earned)} released and credited to ${row.employee_name}!`);
+        alert(`SUCCESS: Incentive ${formatINR(row.incentive_earned)} released and credited to ${row.employee_name}! Transaction Ref: ${refNo}`);
         fetchData();
       }
     } catch (err) {
@@ -201,15 +201,15 @@ export default function ManageEmployeeIncentives() {
   };
 
   const handleQuickHold = async (row) => {
-    const reason = window.prompt(`Enter Hold Reason for ${row.employee_name} (${row.emp_code}):`, row.hold_reason || 'Pending manager verification / target audit');
+    const reason = window.prompt(`Enter Hold Reason for ${row.employee_name} (${row.emp_code}):`, row.hold_reason || 'App file generated pending / Target audit');
     if (reason === null) return;
     try {
       const res = await api.post(`/employees/incentives/${row.incentive_id}/update-status`, {
-        status: 'ON_HOLD',
+        status: 'HOLD',
         hold_reason: reason
       });
       if (res.data?.success) {
-        alert(`Incentive placed ON HOLD for ${row.employee_name}.`);
+        alert(`Incentive placed on HOLD for ${row.employee_name}.`);
         fetchData();
       }
     } catch (err) {
@@ -239,7 +239,7 @@ export default function ManageEmployeeIncentives() {
       const refNo = `BATCH-${Date.now().toString(36).toUpperCase()}`;
       const res = await api.post('/employees/incentives/bulk-update-status', {
         incentive_ids: selectedIncentiveIds,
-        status: 'PAID',
+        status: 'RELEASE',
         payment_reference: refNo,
         payment_method: 'BANK_TRANSFER'
       });

@@ -1508,10 +1508,10 @@ router.get('/incentives/overview', async (req, res, next) => {
     const kpiQuery = `
       SELECT 
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) NOT IN ('CANCELLED', 'REJECTED') THEN it.amount ELSE 0 END), 0) as total_earned,
-        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as total_paid,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as total_paid,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending_payouts,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'IN_REVIEW' THEN it.amount ELSE 0 END), 0) as in_review,
-        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('ON_HOLD', 'HELD') THEN it.amount ELSE 0 END), 0) as on_hold,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING') THEN it.amount ELSE 0 END), 0) as on_hold,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('REJECTED', 'CANCELLED') THEN it.amount ELSE 0 END), 0) as rejected,
         COUNT(DISTINCT it.employee_id) as employees_earned,
         COUNT(it.id) as total_transactions,
@@ -1519,7 +1519,7 @@ router.get('/incentives/overview', async (req, res, next) => {
           WHEN a.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received') THEN a.id 
           WHEN it.application_id IS NOT NULL AND UPPER(it.status::text) NOT IN ('CANCELLED', 'REJECTED') THEN it.application_id
         END) as approved_cards_count,
-        COUNT(CASE WHEN UPPER(it.status::text) IN ('PAID', 'COMPLETED') THEN 1 END) as approved_transactions,
+        COUNT(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN 1 END) as approved_transactions,
         COUNT(CASE WHEN UPPER(it.status::text) IN ('REJECTED', 'CANCELLED') THEN 1 END) as rejected_transactions
       FROM employee_incentive_transactions it
       LEFT JOIN employees e ON e.id = it.employee_id
@@ -2016,7 +2016,7 @@ router.post('/incentives/:id/update-status', async (req, res, next) => {
     }
 
     const uppercaseStatus = status.toUpperCase();
-    const isPaid = uppercaseStatus === 'PAID' || uppercaseStatus === 'COMPLETED';
+    const isPaid = ['PAID', 'COMPLETED', 'RELEASE', 'RELEASED'].includes(uppercaseStatus);
 
     const { rows } = await query(
       `UPDATE employee_incentive_transactions
@@ -2076,7 +2076,7 @@ router.post('/incentives/bulk-update-status', async (req, res, next) => {
     }
 
     const uppercaseStatus = status.toUpperCase();
-    const isPaid = uppercaseStatus === 'PAID' || uppercaseStatus === 'COMPLETED';
+    const isPaid = ['PAID', 'COMPLETED', 'RELEASE', 'RELEASED'].includes(uppercaseStatus);
 
     const { rows } = await query(
       `UPDATE employee_incentive_transactions
