@@ -53,6 +53,9 @@ const migrateMessenger = async () => {
       )
     `);
 
+    await query(`ALTER TABLE conversation_participants ADD COLUMN IF NOT EXISTS cleared_at TIMESTAMPTZ`).catch(() => {});
+    await query(`UPDATE conversations SET name = NULL WHERE conversation_type = 'DIRECT'`).catch(() => {});
+
     await query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_conv_id ON conversation_participants(conversation_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_user_id ON conversation_participants(user_id)`);
 

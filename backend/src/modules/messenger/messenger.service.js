@@ -133,14 +133,14 @@ async function startOrGetDirectChat(currentUserId, targetUserId) {
   if (!conv) {
     conv = await repo.createConversation({
       conversation_type: 'DIRECT',
-      name: targetUser.full_name,
+      name: null,
       created_by: currentUserId
     });
     await repo.addParticipant({ conversation_id: conv.id, user_id: currentUserId, role: 'ADMIN' });
     await repo.addParticipant({ conversation_id: conv.id, user_id: targetUserId, role: 'MEMBER' });
   }
 
-  return await repo.getConversationById(conv.id);
+  return await repo.getConversationById(conv.id, currentUserId);
 }
 
 async function startOrGetApplicationChat(currentUserId, applicationId) {
@@ -213,7 +213,7 @@ async function getMessages(conversationId, userId, limit = 50, offset = 0) {
     throw new Error('Access denied to this conversation.');
   }
   await repo.markMessagesAsRead(conversationId, userId);
-  const messages = await repo.getMessages(conversationId, limit, offset);
+  const messages = await repo.getMessages(conversationId, userId, limit, offset);
 
   return messages.map(m => ({
     ...m,
@@ -351,12 +351,54 @@ async function getAdminAuditMessages(conversationId) {
   }));
 }
 
+async function clearUserConversation(conversationId, userId) {
+  const isPart = await repo.isParticipant(conversationId, userId);
+  if (!isPart) {
+    throw new Error('Access denied. You are not a participant of this conversation.');
+  }
+  return await repo.clearConversationForUser(conversationId, userId);
+}
+
+async function leaveUserConversation(conversationId, userId) {
+  const isPart = await repo.isParticipant(conversationId, userId);
+  if (!isPart) {
+    throw new Error('Access denied. You are not a participant of this conversation.');
+  }
+  return await repo.leaveConversationForUser(conversationId, userId);
+}
+
 async function deleteUserConversation(conversationId, userId) {
   const isPart = await repo.isParticipant(conversationId, userId);
   if (!isPart) {
     throw new Error('Access denied. You are not a participant of this conversation.');
   }
   return await repo.deleteConversationForUser(conversationId, userId);
+}
+
+async function editUserMessage(userId, messageId, messageText) {
+  const msg = await repo.getMessageById(messageId);
+  if (!msg) {
+    throw new Error('Message not found.');
+  }
+  if (msg.sender_id !== userId) {
+    throw new Error('Access denied. You can only edit your own messages.');
+  }
+  const updated = await repo.editMessage(messageId, userId, messageText);
+  if (updated && updated.message_text) {
+    updated.message_text = maskSensitiveData(updated.message_text);
+  }
+  return updated;
+}
+
+async function deleteUserMessage(userId, messageId) {
+  const msg = await repo.getMessageById(messageId);
+  if (!msg) {
+    throw new Error('Message not found.');
+  }
+  if (msg.sender_id !== userId) {
+    throw new Error('Access denied. You can only delete your own messages.');
+  }
+  return await repo.deleteMessage(messageId, userId);
 }
 
 module.exports = {
@@ -375,5 +417,9 @@ module.exports = {
   searchUsersForAdminAudit,
   getAdminAuditConversations,
   getAdminAuditMessages,
-  deleteUserConversation
+  clearUserConversation,
+  leaveUserConversation,
+  deleteUserConversation,
+  editUserMessage,
+  deleteUserMessage
 };

@@ -217,6 +217,42 @@ export default function ManageEmployeeIncentives() {
     }
   };
 
+  const handleApplyRules = async () => {
+    try {
+      const res = await api.post('/employees/bonus-rules/apply');
+      if (res.data?.success) {
+        alert(`SUCCESS: ${res.data.message}`);
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to apply bonus rules');
+    }
+  };
+
+  const handleBulkRelease = async () => {
+    if (selectedIncentiveIds.length === 0) {
+      alert('Please select at least one incentive transaction to release.');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to BULK RELEASE ${selectedIncentiveIds.length} payout(s)?`)) return;
+    try {
+      const refNo = `BATCH-${Date.now().toString(36).toUpperCase()}`;
+      const res = await api.post('/employees/incentives/bulk-update-status', {
+        incentive_ids: selectedIncentiveIds,
+        status: 'PAID',
+        payment_reference: refNo,
+        payment_method: 'BANK_TRANSFER'
+      });
+      if (res.data?.success) {
+        alert(`SUCCESS: ${res.data.message}`);
+        setSelectedIncentiveIds([]);
+        fetchData();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to bulk release payouts');
+    }
+  };
+
   // Helper formatting
   const formatINR = (amt) => {
     const val = parseFloat(amt || 0);
@@ -623,13 +659,37 @@ export default function ManageEmployeeIncentives() {
           {/* ── TAB 3: PAYOUTS ── */}
           {activeTab === 'PAYOUTS' && (
             <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Payout Management & Releases</h3>
-                <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal }}>{formatINR(pendingPayouts)} Pending Release</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Payout Management & Releases</h3>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: C.teal }}>{formatINR(pendingPayouts)} Pending Release</span>
+                </div>
+                {selectedIncentiveIds.length > 0 && (
+                  <button
+                    onClick={handleBulkRelease}
+                    style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: '#10B981', color: '#fff', fontSize: '12.5px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <FaCheckCircle size={13} /> Release Selected ({selectedIncentiveIds.length})
+                  </button>
+                )}
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ background: C.bgSecondary, color: C.textMid, fontWeight: 800, borderBottom: `2px solid ${C.border}` }}>
+                    <th style={{ padding: '10px 14px', width: '40px' }}>
+                      <input
+                        type="checkbox"
+                        onChange={(e) => {
+                          const pendingList = (data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING' || (r.status || '').toUpperCase() === 'ON_HOLD');
+                          if (e.target.checked) {
+                            setSelectedIncentiveIds(pendingList.map(r => r.incentive_id));
+                          } else {
+                            setSelectedIncentiveIds([]);
+                          }
+                        }}
+                        checked={selectedIncentiveIds.length > 0 && selectedIncentiveIds.length === (data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING' || (r.status || '').toUpperCase() === 'ON_HOLD').length}
+                      />
+                    </th>
                     <th style={{ padding: '10px 14px' }}>Incentive ID</th>
                     <th style={{ padding: '10px 14px' }}>Employee</th>
                     <th style={{ padding: '10px 14px' }}>Product</th>
@@ -641,6 +701,17 @@ export default function ManageEmployeeIncentives() {
                 <tbody>
                   {(data.table?.data || []).filter(r => (r.status || '').toUpperCase() === 'PENDING' || (r.status || '').toUpperCase() === 'ON_HOLD').map((row, idx) => (
                     <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: '10px 14px' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIncentiveIds.includes(row.incentive_id)}
+                          onChange={() => {
+                            setSelectedIncentiveIds(prev => 
+                              prev.includes(row.incentive_id) ? prev.filter(id => id !== row.incentive_id) : [...prev, row.incentive_id]
+                            );
+                          }}
+                        />
+                      </td>
                       <td style={{ padding: '10px 14px', fontWeight: 800, color: C.teal }}>INC-{row.incentive_id?.slice(0, 6)}</td>
                       <td style={{ padding: '10px 14px', fontWeight: 800, color: C.text }}>{row.employee_name} ({row.emp_code})</td>
                       <td style={{ padding: '10px 14px', color: C.textMid }}>{row.product_name}</td>
@@ -662,8 +733,14 @@ export default function ManageEmployeeIncentives() {
           {/* ── TAB 4: RULES & TARGETS ── */}
           {activeTab === 'RULES' && (
             <div style={{ background: C.card, borderRadius: '18px', border: `1px solid ${C.border}`, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Bonus Rules & Department Targets</h3>
+                <button
+                  onClick={handleApplyRules}
+                  style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: C.teal, color: '#fff', fontSize: '12.5px', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <FaCalculator size={13} /> Convert Achieved Rules to Incentives
+                </button>
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
                 <thead>

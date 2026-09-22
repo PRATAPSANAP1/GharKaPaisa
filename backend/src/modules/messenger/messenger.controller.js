@@ -188,12 +188,60 @@ async function adminGetUserMessages(req, res, next) {
   }
 }
 
+async function clearChat(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const result = await service.clearUserConversation(id, userId);
+    return success(res, { cleared: result }, 'Chat history cleared successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function leaveGroup(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const result = await service.leaveUserConversation(id, userId);
+    return success(res, { left: result }, 'Left group successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function deleteConversation(req, res, next) {
   try {
     const userId = req.user.id;
     const { id } = req.params;
     const result = await service.deleteUserConversation(id, userId);
     return success(res, { deleted: result }, 'Conversation deleted successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function editMessage(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { message_text } = req.body;
+    if (!message_text || !message_text.trim()) {
+      return res.status(400).json({ success: false, message: 'Message text is required' });
+    }
+    const updated = await service.editUserMessage(userId, id, message_text.trim());
+    return success(res, updated, 'Message edited successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteMessage(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const result = await service.deleteUserMessage(userId, id);
+    return success(res, { deleted: Boolean(result) }, 'Message deleted successfully');
   } catch (err) {
     next(err);
   }
@@ -214,5 +262,9 @@ module.exports = {
   adminSearchUsers,
   adminGetUserConversations,
   adminGetUserMessages,
-  deleteConversation
+  clearChat,
+  leaveGroup,
+  deleteConversation,
+  editMessage,
+  deleteMessage
 };

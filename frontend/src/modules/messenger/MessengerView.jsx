@@ -4,7 +4,7 @@ import {
   FaUser, FaFilePdf, FaFileAlt, FaCheckDouble, FaThumbtack, FaPlus, 
   FaTimes, FaPhone, FaVideo, FaEllipsisV, FaCircle, FaRedo,
   FaFilter, FaArrowLeft, FaDownload, FaCheck, FaUserPlus, FaVolumeMute,
-  FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt, FaLock
+  FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt, FaLock, FaSignOutAlt, FaEdit
 } from 'react-icons/fa';
 import api from '../../services/api';
 import { useAuthStore } from '../../app/store/authStore';
@@ -51,6 +51,36 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [showChatSearch, setShowChatSearch] = useState(false);
   const [msgSearch, setMsgSearch] = useState('');
   const [callStatus, setCallStatus] = useState(null); // { type: 'voice' | 'video', active: true }
+
+  // Message Editing & Deletion State
+  const [editingMsgId, setEditingMsgId] = useState(null);
+  const [editingText, setEditingText] = useState('');
+
+  const handleEditMessage = async (msgId) => {
+    if (!editingText.trim()) return;
+    try {
+      const res = await api.put(`/messenger/messages/${msgId}`, { message_text: editingText });
+      if (res.data?.success) {
+        setMessages(prev => prev.map(m => m.id === msgId ? { ...m, message_text: editingText, is_edited: true } : m));
+        setEditingMsgId(null);
+        setEditingText('');
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to edit message.');
+    }
+  };
+
+  const handleDeleteSingleMessage = async (msgId) => {
+    if (!window.confirm('Are you sure you want to delete this message?')) return;
+    try {
+      const res = await api.delete(`/messenger/messages/${msgId}`);
+      if (res.data?.success) {
+        setMessages(prev => prev.filter(m => m.id !== msgId));
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete message.');
+    }
+  };
 
   // User Profile Modal State
   const [selectedProfileUser, setSelectedProfileUser] = useState(null);
@@ -350,10 +380,51 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     }
   };
 
+  const handleClearChat = async () => {
+    if (!activeConv) return;
+    const titleName = getConvTitle(activeConv);
+    const isGroup = activeConv.conversation_type === 'GROUP';
+    const confirmMsg = isGroup 
+      ? `Are you sure you want to delete chat history for "${titleName}"? The group will remain in your messages list.`
+      : `Are you sure you want to delete chat history for "${titleName}"?`;
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+    try {
+      const res = await api.post(`/messenger/conversations/${activeConv.id}/clear`);
+      if (res.data?.success) {
+        setMessages([]);
+        setShowMoreMenu(false);
+        fetchConversations(false);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to clear chat.');
+    }
+  };
+
+  const handleLeaveGroup = async () => {
+    if (!activeConv) return;
+    const titleName = getConvTitle(activeConv);
+    if (!window.confirm(`Are you sure you want to leave group "${titleName}"? You will be disconnected from this group and it will be removed from your messages list.`)) {
+      return;
+    }
+    try {
+      const res = await api.post(`/messenger/conversations/${activeConv.id}/leave`);
+      if (res.data?.success) {
+        setActiveConv(null);
+        setMessages([]);
+        setShowMoreMenu(false);
+        fetchConversations(false);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to leave group.');
+    }
+  };
+
   const handleDeleteConversation = async () => {
     if (!activeConv) return;
     const titleName = getConvTitle(activeConv);
-    if (!window.confirm(`Are you sure you want to delete conversation with ${titleName}? It will be removed from your chat list.`)) {
+    if (!window.confirm(`Are you sure you want to delete chat with "${titleName}"? It will be removed from your messages list.`)) {
       return;
     }
     try {
@@ -365,7 +436,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
         fetchConversations(false);
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to delete conversation.');
+      alert(err.response?.data?.message || 'Failed to delete chat.');
     }
   };
 
@@ -442,7 +513,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     if (conv.conversation_type === 'APPLICATION') {
       return { text: `Application Channel #${conv.application_number || ''}`, isOnline: true };
     }
-    const targetUser = conv.other_participants?.[0] || conv.participants?.find(p => (p.user_id || p.id) !== user?.id);
+    const targetUser = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || 
+                       conv.participants?.find(p => (p.user_id || p.id) !== user?.id) || 
+                       conv.other_participants?.[0];
     return getUserStatusText(targetUser);
   };
 
@@ -452,7 +525,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
     // For DIRECT conversations, ALWAYS resolve the counterpart / target participant's name!
     if (conv.conversation_type === 'DIRECT') {
-      const otherP = conv.other_participants?.[0] || conv.participants?.find(p => (p.user_id || p.id) !== user?.id);
+      const otherP = conv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) || 
+                     conv.participants?.find(p => (p.user_id || p.id) !== user?.id) ||
+                     (conv.other_participants?.[0] && (conv.other_participants[0].user_id || conv.other_participants[0].id) !== user?.id ? conv.other_participants[0] : null);
       if (otherP) {
         if (isCurrentAdmin && (otherP.role || '').toUpperCase() !== 'SUPER_ADMIN') {
           const code = otherP.partner_code || otherP.employee_code || `USR-${(otherP.user_id || otherP.id || '').slice(0, 6).toUpperCase()}`;
@@ -462,6 +537,11 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
           ? otherP.full_name
           : (otherP.name || (otherP.first_name ? `${otherP.first_name} ${otherP.last_name || ''}`.trim() : '') || otherP.email || 'Direct Chat');
       }
+
+      if (conv.name && conv.name.trim().toLowerCase() !== (user?.full_name || '').trim().toLowerCase()) {
+        return conv.name;
+      }
+      return 'Direct Chat';
     }
 
     if (conv.name) {
@@ -469,13 +549,16 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     }
 
     if (conv.other_participants && conv.other_participants.length > 0) {
-      return conv.other_participants.map(p => {
-        if (isCurrentAdmin && (p.role || '').toUpperCase() !== 'SUPER_ADMIN') {
-          const code = p.partner_code || p.employee_code || `USR-${(p.user_id || p.id || '').slice(0, 6).toUpperCase()}`;
-          return `Assigned Member (${code})`;
-        }
-        return p.full_name;
-      }).join(', ');
+      const others = conv.other_participants.filter(p => (p.user_id || p.id) !== user?.id);
+      if (others.length > 0) {
+        return others.map(p => {
+          if (isCurrentAdmin && (p.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+            const code = p.partner_code || p.employee_code || `USR-${(p.user_id || p.id || '').slice(0, 6).toUpperCase()}`;
+            return `Assigned Member (${code})`;
+          }
+          return p.full_name;
+        }).join(', ');
+      }
     }
     return 'Direct Chat';
   };
@@ -811,13 +894,32 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                         <FaVolumeMute size={13} color="#64748B" />
                         <span>Mute Notifications</span>
                       </div>
-                      <div
-                        onClick={handleDeleteConversation}
-                        style={{ padding: '10px 16px', fontSize: '13px', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid #F1F5F9' }}
-                      >
-                        <FaTrashAlt size={12} color="#DC2626" />
-                        <span style={{ fontWeight: 600 }}>Delete Conversation</span>
-                      </div>
+                      {activeConv.conversation_type === 'GROUP' ? (
+                        <>
+                          <div
+                            onClick={handleClearChat}
+                            style={{ padding: '10px 16px', fontSize: '13px', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid #F1F5F9' }}
+                          >
+                            <FaTrashAlt size={12} color="#DC2626" />
+                            <span style={{ fontWeight: 600 }}>Delete Chat</span>
+                          </div>
+                          <div
+                            onClick={handleLeaveGroup}
+                            style={{ padding: '10px 16px', fontSize: '13px', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+                          >
+                            <FaSignOutAlt size={12} color="#DC2626" />
+                            <span style={{ fontWeight: 600 }}>Leave Group</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div
+                          onClick={handleDeleteConversation}
+                          style={{ padding: '10px 16px', fontSize: '13px', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid #F1F5F9' }}
+                        >
+                          <FaTrashAlt size={12} color="#DC2626" />
+                          <span style={{ fontWeight: 600 }}>Delete Chat</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -874,18 +976,21 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     </div>
 
                     {filteredMessages.map((msg) => {
-                    const isMe = msg.sender_id === user?.id;
+                    const isMe = String(msg.sender_id || '').toLowerCase() === String(user?.id || '').toLowerCase();
                     const isReadByReceiver = Boolean(
                       msg.is_read ||
-                      (Array.isArray(msg.reads) && msg.reads.some(r => r.user_id && r.user_id !== msg.sender_id))
+                      (Array.isArray(msg.reads) && msg.reads.some(r => r.user_id && String(r.user_id).toLowerCase() !== String(msg.sender_id).toLowerCase()))
                     );
+
+                    const isEditingThis = editingMsgId === msg.id;
 
                     return (
                       <div
                         key={msg.id}
                         style={{
                           display: 'flex', flexDirection: 'column',
-                          alignItems: isMe ? 'flex-end' : 'flex-start'
+                          alignItems: isMe ? 'flex-end' : 'flex-start',
+                          position: 'relative'
                         }}
                       >
                         {!isMe && (
@@ -904,9 +1009,31 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                           border: isMe ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
                           color: '#1E293B',
                           boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                          fontSize: isMobile ? '13.5px' : '14px', lineHeight: 1.5
+                          fontSize: isMobile ? '13.5px' : '14px', lineHeight: 1.5,
+                          position: 'relative'
                         }}>
-                          {msg.message_text && <div>{msg.message_text}</div>}
+                          {isEditingThis ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <input
+                                type="text"
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #2563EB', outline: 'none', fontSize: '13px' }}
+                                autoFocus
+                              />
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                <button onClick={() => setEditingMsgId(null)} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                                <button onClick={() => handleEditMessage(msg.id)} style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#2563EB', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Save</button>
+                              </div>
+                            </div>
+                          ) : (
+                            msg.message_text && (
+                              <div>
+                                {msg.message_text}
+                                {msg.is_edited && <span style={{ fontSize: '10px', color: '#64748B', fontStyle: 'italic', marginLeft: '6px' }}>(edited)</span>}
+                              </div>
+                            )
+                          )}
 
                           {/* Render File Attachment Box */}
                           {msg.attachments && msg.attachments.length > 0 && (
@@ -941,18 +1068,26 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                             </div>
                           )}
 
-                          {/* Timestamp & Double Ticks (Grey for sent, Blue when read by receiver) */}
+                          {/* Timestamp & Actions */}
                           <div style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-                            gap: '4px', marginTop: '4px', fontSize: '10.5px', color: '#64748B'
+                            gap: '6px', marginTop: '4px', fontSize: '10.5px', color: '#64748B'
                           }}>
                             <span>{formatTime(msg.created_at)}</span>
                             {isMe && (
-                              <FaCheckDouble
-                                color={isReadByReceiver ? '#2563EB' : '#94A3B8'}
-                                size={13}
-                                title={isReadByReceiver ? 'Read by recipient' : 'Sent'}
-                              />
+                              <>
+                                <FaCheckDouble
+                                  color={isReadByReceiver ? '#2563EB' : '#94A3B8'}
+                                  size={13}
+                                  title={isReadByReceiver ? 'Read by recipient' : 'Sent'}
+                                />
+                                {!isEditingThis && (
+                                  <div style={{ display: 'inline-flex', gap: '4px', marginLeft: '6px' }}>
+                                    <button onClick={() => { setEditingMsgId(msg.id); setEditingText(msg.message_text || ''); }} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0 }} title="Edit message"><FaEdit size={10} /></button>
+                                    <button onClick={() => handleDeleteSingleMessage(msg.id)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0 }} title="Delete message"><FaTimes size={10} /></button>
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>

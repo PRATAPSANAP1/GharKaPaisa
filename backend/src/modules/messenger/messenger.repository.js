@@ -49,8 +49,8 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
       c.description,
       c.avatar_url,
       c.application_id,
-      CASE WHEN c.last_message_at >= NOW() - INTERVAL '48 hours' THEN c.last_message_id ELSE NULL END AS last_message_id,
-      CASE WHEN c.last_message_at >= NOW() - INTERVAL '48 hours' THEN c.last_message_text ELSE NULL END AS last_message_text,
+      CASE WHEN c.last_message_at >= NOW() - INTERVAL '48 hours' AND (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_id ELSE NULL END AS last_message_id,
+      CASE WHEN c.last_message_at >= NOW() - INTERVAL '48 hours' AND (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_text ELSE NULL END AS last_message_text,
       c.last_message_at,
       c.created_at,
       c.updated_at,
@@ -66,11 +66,12 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
         FROM messages m
         LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
         WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
+          AND (cp.cleared_at IS NULL OR m.created_at > cp.cleared_at)
       )::INT AS unread_count,
       (
         SELECT json_agg(json_build_object(
           'user_id', u.id,
-          'full_name', COALESCE(NULLIF(TRIM(u.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(emp.full_name), ''), u.email, 'User Profile'),
+          'full_name', COALESCE(NULLIF(TRIM(emp.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(u.full_name), ''), u.email, 'User Profile'),
           'role', u.role,
           'email', u.email,
           'mobile', u.mobile,
@@ -163,14 +164,36 @@ async function addParticipant({ conversation_id, user_id, role = 'MEMBER' }) {
 /**
  * Get conversation details by ID
  */
-async function getConversationById(conversationId) {
+async function getConversationById(conversationId, userId = null) {
   const sql = `
-    SELECT c.*, a.app_number AS application_number, a.status AS application_status
+    SELECT 
+      c.*, 
+      a.app_number AS application_number, 
+      a.status AS application_status,
+      (
+        SELECT json_agg(json_build_object(
+          'user_id', u.id,
+          'full_name', COALESCE(NULLIF(TRIM(emp.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(u.full_name), ''), u.email, 'User Profile'),
+          'role', u.role,
+          'email', u.email,
+          'mobile', u.mobile,
+          'partner_code', pp.partner_code,
+          'employee_code', emp.employee_id,
+          'last_active_at', u.last_active_at,
+          'last_logout_at', u.last_logout_at,
+          'last_login', u.last_login
+        ))
+        FROM conversation_participants cp2
+        JOIN users u ON u.id = cp2.user_id
+        LEFT JOIN partner_profiles pp ON pp.user_id = u.id
+        LEFT JOIN employees emp ON emp.user_id = u.id
+        WHERE cp2.conversation_id = c.id AND ($2::uuid IS NULL OR cp2.user_id != $2::uuid)
+      ) AS other_participants
     FROM conversations c
     LEFT JOIN applications a ON a.id = c.application_id
     WHERE c.id = $1
   `;
-  const { rows } = await query(sql, [conversationId]);
+  const { rows } = await query(sql, [conversationId, userId]);
   return rows[0] || null;
 }
 
@@ -206,7 +229,20 @@ async function isParticipant(conversationId, userId) {
 /**
  * Get message history for a conversation
  */
-async function getMessages(conversationId, limit = 50, offset = 0) {
+async function getMessages(conversationId, userId = null, limit = 50, offset = 0) {
+  const params = [conversationId, limit, offset];
+  let clearedFilter = '';
+  if (userId) {
+    params.push(userId);
+    clearedFilter = ` AND NOT EXISTS (
+      SELECT 1 FROM conversation_participants cp_check
+      WHERE cp_check.conversation_id = m.conversation_id 
+        AND cp_check.user_id = $4::uuid 
+        AND cp_check.cleared_at IS NOT NULL 
+        AND m.created_at <= cp_check.cleared_at
+    )`;
+  }
+
   const sql = `
     SELECT 
       m.id,
@@ -219,7 +255,7 @@ async function getMessages(conversationId, limit = 50, offset = 0) {
       m.edited_at,
       m.deleted_at,
       m.created_at,
-      COALESCE(NULLIF(TRIM(u.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(emp.full_name), ''), u.email, 'User Profile') AS sender_name,
+      COALESCE(NULLIF(TRIM(emp.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(u.full_name), ''), u.email, 'User Profile') AS sender_name,
       u.role AS sender_role,
       u.mobile AS sender_mobile,
       u.email AS sender_email,
@@ -266,10 +302,11 @@ async function getMessages(conversationId, limit = 50, offset = 0) {
     LEFT JOIN partner_profiles pp ON pp.user_id = u.id
     LEFT JOIN employees emp ON emp.user_id = u.id
     WHERE m.conversation_id = $1 AND m.deleted_at IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
+      ${clearedFilter}
     ORDER BY m.created_at ASC
     LIMIT $2 OFFSET $3
   `;
-  const { rows } = await query(sql, [conversationId, limit, offset]);
+  const { rows } = await query(sql, params);
   return rows;
 }
 
@@ -290,6 +327,45 @@ async function createMessage({ conversation_id, sender_id, message_type = 'TEXT'
     reply_to_message_id || null
   ]);
   return rows[0];
+}
+
+/**
+ * Get single message by ID
+ */
+async function getMessageById(messageId) {
+  const sql = `SELECT * FROM messages WHERE id = $1 AND deleted_at IS NULL`;
+  const { rows } = await query(sql, [messageId]);
+  return rows[0] || null;
+}
+
+/**
+ * Edit message text
+ */
+async function editMessage(messageId, userId, messageText) {
+  const sql = `
+    UPDATE messages
+    SET message_text = $3,
+        is_edited = true,
+        edited_at = NOW()
+    WHERE id = $1 AND sender_id = $2 AND deleted_at IS NULL
+    RETURNING *
+  `;
+  const { rows } = await query(sql, [messageId, userId, messageText]);
+  return rows[0] || null;
+}
+
+/**
+ * Soft delete a message
+ */
+async function deleteMessage(messageId, userId) {
+  const sql = `
+    UPDATE messages
+    SET deleted_at = NOW()
+    WHERE id = $1 AND sender_id = $2 AND deleted_at IS NULL
+    RETURNING *
+  `;
+  const { rows } = await query(sql, [messageId, userId]);
+  return rows[0] || null;
 }
 
 function parseFileSizeToBytes(size) {
@@ -543,10 +619,30 @@ async function getContactsForUser(userId, userRole, search = '', limit = 30, off
   return rows;
 }
 
-async function deleteConversationForUser(conversationId, userId) {
+async function clearConversationForUser(conversationId, userId) {
+  const sql = `
+    UPDATE conversation_participants
+    SET cleared_at = NOW()
+    WHERE conversation_id = $1 AND user_id = $2
+  `;
+  const result = await query(sql, [conversationId, userId]);
+  return result.rowCount > 0;
+}
+
+async function leaveConversationForUser(conversationId, userId) {
   const sql = `
     UPDATE conversation_participants
     SET left_at = NOW()
+    WHERE conversation_id = $1 AND user_id = $2
+  `;
+  const result = await query(sql, [conversationId, userId]);
+  return result.rowCount > 0;
+}
+
+async function deleteConversationForUser(conversationId, userId) {
+  const sql = `
+    UPDATE conversation_participants
+    SET left_at = NOW(), cleared_at = NOW()
     WHERE conversation_id = $1 AND user_id = $2
   `;
   const result = await query(sql, [conversationId, userId]);
@@ -570,5 +666,10 @@ module.exports = {
   getUnreadCount,
   togglePin,
   getContactsForUser,
-  deleteConversationForUser
+  clearConversationForUser,
+  leaveConversationForUser,
+  deleteConversationForUser,
+  getMessageById,
+  editMessage,
+  deleteMessage
 };

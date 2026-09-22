@@ -2031,6 +2031,47 @@ router.post('/incentives/:id/update-status', async (req, res, next) => {
   }
 });
 
+// ── POST /api/v1/employees/incentives/bulk-update-status — Super Admin Bulk Update Incentive Status ──
+router.post('/incentives/bulk-update-status', async (req, res, next) => {
+  try {
+    const { incentive_ids, status, payment_reference, payment_method = 'BANK_TRANSFER', hold_reason } = req.body;
+
+    if (!Array.isArray(incentive_ids) || incentive_ids.length === 0) {
+      return res.status(400).json({ success: false, message: 'incentive_ids array is required' });
+    }
+
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'Status is required' });
+    }
+
+    const uppercaseStatus = status.toUpperCase();
+    const isPaid = uppercaseStatus === 'PAID' || uppercaseStatus === 'COMPLETED';
+
+    const { rows } = await query(
+      `UPDATE employee_incentive_transactions
+       SET status = $1,
+           payment_reference = COALESCE($2, payment_reference),
+           payment_method = COALESCE($3, payment_method),
+           hold_reason = COALESCE($4, hold_reason),
+           paid_at = CASE WHEN $5::boolean THEN NOW() ELSE paid_at END,
+           updated_at = NOW(),
+           processed_by = $6
+       WHERE id = ANY($7::uuid[])
+       RETURNING *`,
+      [uppercaseStatus, payment_reference || null, payment_method, hold_reason || null, isPaid, req.user?.id || null, incentive_ids]
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully updated ${rows.length} incentive transaction(s) to ${uppercaseStatus}`,
+      count: rows.length,
+      data: rows
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ── 1. GET /api/v1/employees/:id/departments — List assigned departments/banks for Employee ──
 router.get('/:id/departments', async (req, res, next) => {
   try {
@@ -2115,9 +2156,25 @@ router.post('/:id/departments', async (req, res, next) => {
   }
 });
 
+let isIncentiveSchemaEnsured = false;
+async function ensureIncentiveSchema() {
+  if (isIncentiveSchemaEnsured) return;
+  try {
+    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS bonus_rule_id UUID REFERENCES employee_bonus_rules(id) ON DELETE SET NULL;`).catch(() => {});
+    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS direct_incentive_amount DECIMAL(10,2) DEFAULT 0.00;`).catch(() => {});
+    await query(`ALTER TABLE employee_incentive_transactions ADD COLUMN IF NOT EXISTS bonus_amount DECIMAL(10,2) DEFAULT 0.00;`).catch(() => {});
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_incentive_tx_bonus_rule ON employee_incentive_transactions(employee_id, bonus_rule_id) WHERE transaction_type = 'BONUS' AND bonus_rule_id IS NOT NULL;`).catch(() => {});
+    await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_bonus_tx_rule_emp ON employee_bonus_transactions(employee_id, bonus_rule_id);`).catch(() => {});
+    isIncentiveSchemaEnsured = true;
+  } catch (err) {
+    logger.warn(`Schema check warning: ${err.message}`);
+  }
+}
+
 // ── 3. GET /api/v1/employees/bonus-rules — List & Filter Employee Bonus Rules ──
 router.get('/bonus-rules/all', async (req, res, next) => {
   try {
+    await ensureIncentiveSchema();
     const { employee_id, bank_id, status } = req.query;
 
     let whereConds = [];
@@ -2174,18 +2231,33 @@ router.get('/bonus-rules/all', async (req, res, next) => {
       const targetCount = parseInt(rule.target_count || 0);
       const bonusPerCard = parseFloat(rule.bonus_per_card || 0);
       const targetAchieved = targetCount > 0 && approvedCount >= targetCount;
-      const projectedBonus = approvedCount * bonusPerCard;
-      // Bonus is unlocked & earned ONLY when approved cards >= targetCount
-      const earnedBonus = targetAchieved ? projectedBonus : 0;
+      // MARGINAL BONUS CALCULATION - Only cards beyond target get bonus
+      const cardsBeyondTarget = Math.max(0, approvedCount - targetCount);
+      const earnedBonus = targetAchieved ? (cardsBeyondTarget * bonusPerCard) : 0;
+      const projectedBonus = earnedBonus;
       const progressPercentage = targetCount > 0 ? Math.min(100, Math.round((approvedCount / targetCount) * 100)) : 0;
 
-      // Auto-sync bonus transaction for this specific employee when target is achieved
+      // Auto-sync bonus transaction & main incentive transaction for this employee when target is achieved
       if (targetAchieved && earnedBonus > 0) {
         await query(`
           INSERT INTO employee_bonus_transactions (employee_id, bank_id, bonus_rule_id, bonus_amount, status)
           VALUES ($1, $2, $3, $4, 'EARNED')
-          ON CONFLICT (application_id, bonus_rule_id) DO UPDATE SET bonus_amount = EXCLUDED.bonus_amount
+          ON CONFLICT (employee_id, bonus_rule_id) DO UPDATE SET bonus_amount = EXCLUDED.bonus_amount
         `, [rule.employee_id, rule.bank_id, rule.id, earnedBonus]).catch(() => {});
+
+        await query(`
+          INSERT INTO employee_incentive_transactions (employee_id, bank_id, bonus_rule_id, transaction_type, amount, bonus_amount, status, customer_name)
+          VALUES ($1, $2, $3, 'BONUS', $4, $4, 'PENDING', $5)
+          ON CONFLICT (employee_id, bonus_rule_id) WHERE transaction_type = 'BONUS' AND bonus_rule_id IS NOT NULL 
+          DO UPDATE SET amount = EXCLUDED.amount, bonus_amount = EXCLUDED.bonus_amount, customer_name = EXCLUDED.customer_name, updated_at = NOW()
+          WHERE employee_incentive_transactions.status = 'PENDING'
+        `, [rule.employee_id, rule.bank_id, rule.id, earnedBonus, `Target Achieved: ${rule.bank_name || 'Bonus Rule'} (${approvedCount}/${targetCount} cards, ${cardsBeyondTarget} bonus cards)`]).catch(() => {});
+      } else {
+        await query(`
+          UPDATE employee_incentive_transactions
+          SET status = 'CANCELLED', amount = 0, bonus_amount = 0, updated_at = NOW()
+          WHERE employee_id = $1 AND bonus_rule_id = $2 AND transaction_type = 'BONUS' AND status = 'PENDING'
+        `, [rule.employee_id, rule.id]).catch(() => {});
       }
 
       return {
@@ -2275,6 +2347,67 @@ router.delete('/bonus-rules/:id', async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Bonus rule not found' });
     }
     res.json({ success: true, message: 'Bonus rule deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ── POST /api/v1/employees/bonus-rules/apply — Trigger Automatic Bonus Rule Conversion to Incentives ──
+router.post('/bonus-rules/apply', async (req, res, next) => {
+  try {
+    const { rows: rules } = await query(`
+      SELECT br.*, e.full_name as employee_name, b.name as bank_name
+      FROM employee_bonus_rules br
+      JOIN employees e ON e.id = br.employee_id
+      JOIN banks b ON b.id = br.bank_id
+      WHERE br.status = 'ACTIVE'
+    `);
+
+    let generatedCount = 0;
+    for (const rule of rules) {
+      const appCountRes = await query(`
+        SELECT COUNT(*) as approved_count
+        FROM applications app
+        JOIN products p ON p.id = app.product_id
+        WHERE (app.employee_id = $1 OR app.submitted_by IN (SELECT user_id FROM employees WHERE id = $1))
+          AND p.bank_id = $2
+          AND app.status::text IN ('approved', 'disbursed', 'sanctioned', 'super_admin_approved', 'commission_released', 'commission_received')
+          AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) >= $3
+          AND DATE(COALESCE(app.approved_at, app.updated_at, app.created_at)) <= $4
+      `, [rule.employee_id, rule.bank_id, rule.start_date, rule.end_date]);
+
+      const approvedCount = parseInt(appCountRes.rows[0]?.approved_count || 0);
+      const targetCount = parseInt(rule.target_count || 0);
+      const bonusPerCard = parseFloat(rule.bonus_per_card || 0);
+
+      if (targetCount > 0 && approvedCount >= targetCount && bonusPerCard > 0) {
+        const cardsBeyondTarget = Math.max(0, approvedCount - targetCount);
+        const earnedBonus = cardsBeyondTarget * bonusPerCard;
+
+        if (earnedBonus > 0) {
+          const insRes = await query(`
+            INSERT INTO employee_incentive_transactions 
+              (employee_id, bank_id, bonus_rule_id, transaction_type, amount, bonus_amount, status, customer_name)
+            VALUES ($1, $2, $3, 'BONUS', $4, $4, 'PENDING', $5)
+            ON CONFLICT (employee_id, bonus_rule_id) WHERE transaction_type = 'BONUS' AND bonus_rule_id IS NOT NULL 
+            DO UPDATE SET amount = EXCLUDED.amount, bonus_amount = EXCLUDED.bonus_amount, customer_name = EXCLUDED.customer_name, updated_at = NOW()
+            WHERE employee_incentive_transactions.status = 'PENDING'
+            RETURNING id
+          `, [rule.employee_id, rule.bank_id, rule.id, earnedBonus, `Target Achieved: ${rule.bank_name} (${approvedCount}/${targetCount} cards, ${cardsBeyondTarget} bonus cards)`]).catch(() => null);
+
+          if (insRes?.rows?.length > 0) {
+            generatedCount++;
+          }
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Processed ${rules.length} active bonus rule(s), converted ${generatedCount} achieved rule(s) to pending incentive transactions.`,
+      rules_processed: rules.length,
+      incentives_generated: generatedCount
+    });
   } catch (err) {
     next(err);
   }

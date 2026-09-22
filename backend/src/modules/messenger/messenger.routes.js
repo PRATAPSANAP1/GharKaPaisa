@@ -21,9 +21,13 @@ router.get('/conversations/:id', controller.getConversation);
 router.get('/conversations/:id/messages', controller.getMessages);
 router.post('/conversations/:id/read', controller.markRead);
 router.post('/conversations/:id/pin', controller.togglePin);
+router.post('/conversations/:id/clear', messengerLimiter, controller.clearChat);
+router.post('/conversations/:id/leave', messengerLimiter, controller.leaveGroup);
 router.delete('/conversations/:id', messengerLimiter, controller.deleteConversation);
 
 router.post('/messages', messengerLimiter, controller.sendMessage);
+router.put('/messages/:id', messengerLimiter, controller.editMessage);
+router.delete('/messages/:id', messengerLimiter, controller.deleteMessage);
 router.get('/unread-count', controller.getUnreadCount);
 router.get('/contacts', controller.getContacts);
 
