@@ -2067,9 +2067,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
             <div style={{ padding: '18px 24px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               
               {/* Add Member Toggle Button */}
-              {!readOnly && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>Group Members</h4>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>Group Members</h4>
+                {!readOnly && isSuperAdminOrSharad && (
                   <button
                     onClick={handleOpenAddMemberSection}
                     style={{
@@ -2081,11 +2081,11 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   >
                     <FaUserPlus size={13} /> {showAddGroupMemberSection ? 'Cancel Add' : 'Add Member'}
                   </button>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Inline Add Member Panel */}
-              {showAddGroupMemberSection && !readOnly && (
+              {showAddGroupMemberSection && !readOnly && isSuperAdminOrSharad && (
                 <div style={{
                   background: '#F8FAFC', padding: '14px', borderRadius: '16px', border: '1px solid #E2E8F0',
                   display: 'flex', flexDirection: 'column', gap: '10px'
@@ -2241,7 +2241,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                               >
                                 Leave
                               </button>
-                            ) : (
+                            ) : isSuperAdminOrSharad ? (
                               <button
                                 onClick={() => handleRemoveGroupMemberItem(memberUserId, m.full_name || 'Member')}
                                 disabled={removingUserId === memberUserId}
@@ -2254,7 +2254,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                               >
                                 <FaTrashAlt size={10} /> Remove
                               </button>
-                            )}
+                            ) : null}
                           </div>
                         )}
                       </div>
