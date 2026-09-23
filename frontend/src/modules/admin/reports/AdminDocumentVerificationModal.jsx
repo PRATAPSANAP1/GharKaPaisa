@@ -218,7 +218,14 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const categoryStr = `${application?.category || ''} ${application?.product_type || ''} ${application?.product_category || ''} ${application?.lead_type || ''} ${application?.card_name || ''} ${application?.product_name || ''} ${application?.product?.name || ''}`.toLowerCase();
   
   const isSmartEmi = categoryStr.includes('smart_emi') || categoryStr.includes('smart emi');
-  const isLoanOnCreditCard = categoryStr.includes('loan_on_credit_card') || categoryStr.includes('loan on credit card') || categoryStr.includes('card_loan') || categoryStr.includes('card loan');
+  const isLoanOnCreditCard = !isSmartEmi && (
+    categoryStr.includes('loan_on_credit_card') || 
+    categoryStr.includes('loan on credit card') || 
+    categoryStr.includes('card_loan') || 
+    categoryStr.includes('card loan') ||
+    categoryStr.includes('loan') ||
+    categoryStr.includes('loans')
+  );
 
   // Smart EMI States
   const [bankSmartEmiOffer, setBankSmartEmiOffer] = useState(sanitizeVal(application?.bank_smart_emi_offer) || sanitizeVal(application?.physical_details?.bank_smart_emi_offer) || '');
