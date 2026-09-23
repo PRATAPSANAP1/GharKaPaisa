@@ -680,50 +680,84 @@ const INCENTIVE_ELIGIBLE_STATUSES = new Set([
 
 const syncEmployeeIncentiveLifecycle = async (dbOrClient, application, appFileGenVal = null, statusVal = null) => {
   let dbQuery = query;
-  let appObj = application;
-  let effectiveStatusVal = statusVal;
-
   if (dbOrClient && typeof dbOrClient.query === 'function') {
     dbQuery = dbOrClient.query.bind(dbOrClient);
   } else if (typeof dbOrClient === 'function') {
     dbQuery = dbOrClient;
-  } else if (dbOrClient && (dbOrClient.id || dbOrClient.status || dbOrClient.employee_id)) {
-    appObj = dbOrClient;
-    effectiveStatusVal = application || null;
   }
 
-  if (!appObj) return;
+  // Determine application ID from arguments
+  let appId = null;
+  if (application && typeof application === 'object') {
+    appId = application.id;
+  } else if (typeof application === 'string') {
+    appId = application;
+  } else if (dbOrClient && typeof dbOrClient === 'object' && dbOrClient.id) {
+    appId = dbOrClient.id;
+  }
 
-  // Resolve actual employee_id if not present directly on application object
-  let employeeId = appObj.employee_id;
-  if (!employeeId && appObj.submitted_by) {
-    const { rows: [emp] } = await dbQuery(`SELECT id FROM employees WHERE user_id = $1 OR id = $1 LIMIT 1`, [appObj.submitted_by]);
+  if (!appId) return;
+
+  // CRITICAL SECURITY FIX: Always perform authoritative database read with FOR UPDATE lock
+  const { rows: [dbApp] } = await dbQuery(
+    `SELECT id, status, employee_id, submitted_by, product_id, customer_id, app_file_generated, customer_name 
+     FROM applications WHERE id = $1 FOR UPDATE`,
+    [appId]
+  );
+
+  if (!dbApp) return;
+
+  const currentDbStatus = String(dbApp.status || '').trim().toLowerCase();
+
+  // Authoritative Status Gate
+  if (!INCENTIVE_ELIGIBLE_STATUSES.has(currentDbStatus)) {
+    return;
+  }
+
+  // Resolve actual employee_id
+  let employeeId = dbApp.employee_id;
+  if (!employeeId && dbApp.submitted_by) {
+    const { rows: [emp] } = await dbQuery(`SELECT id FROM employees WHERE user_id = $1 OR id = $1 LIMIT 1`, [dbApp.submitted_by]);
     if (emp) employeeId = emp.id;
   }
   if (!employeeId) return;
 
-  // Verify employeeId belongs to employees table
+  // Verify employee exists
   const { rows: [empCheck] } = await dbQuery(`SELECT id FROM employees WHERE id = $1 LIMIT 1`, [employeeId]);
   if (!empCheck) return;
 
-  const status = String(effectiveStatusVal || appObj.status || '')
-    .trim()
-    .toLowerCase();
-
-  // IMPORTANT:
-  // No incentive before approval.
-  if (!INCENTIVE_ELIGIBLE_STATUSES.has(status)) {
-    return;
-  }
-
-  let customerName = appObj.customer_name;
-  if (!customerName && appObj.customer_id) {
-    const { rows: [cust] } = await dbQuery(`SELECT full_name FROM customers WHERE id = $1`, [appObj.customer_id]);
+  // Resolve customer name
+  let customerName = dbApp.customer_name;
+  if (!customerName && dbApp.customer_id) {
+    const { rows: [cust] } = await dbQuery(`SELECT full_name FROM customers WHERE id = $1`, [dbApp.customer_id]);
     if (cust) customerName = cust.full_name;
   }
   if (!customerName) customerName = 'Customer';
 
-  // Create incentive transaction strictly upon eligibility/approval
+  // Calculate incentive amount
+  let incentiveAmount = 500;
+  if (dbApp.product_id) {
+    const { rows: [link] } = await dbQuery(
+      `SELECT incentive_amount FROM employee_product_links WHERE employee_id = $1 AND product_id = $2 AND status = 'ACTIVE' LIMIT 1`,
+      [employeeId, dbApp.product_id]
+    );
+    if (link && link.incentive_amount) {
+      incentiveAmount = parseFloat(link.incentive_amount);
+    } else {
+      const { rows: [prod] } = await dbQuery(`SELECT COALESCE(commission_amount, commission_value, 500) as default_amt FROM products WHERE id = $1`, [dbApp.product_id]);
+      if (prod && prod.default_amt) incentiveAmount = parseFloat(prod.default_amt);
+    }
+  }
+
+  // Determine Incentive Lifecycle Status (PENDING vs HOLD vs RELEASE)
+  const isAppFileYes = appFileGenVal !== null 
+    ? (String(appFileGenVal).trim().toLowerCase() === 'yes')
+    : (String(dbApp.app_file_generated || '').trim().toLowerCase() === 'yes');
+
+  const incentiveStatus = isAppFileYes ? 'PENDING' : 'HOLD';
+  const holdReason = isAppFileYes ? null : 'App File Pending';
+
+  // Perform Upsert into employee_incentive_transactions
   await dbQuery(
     `
     INSERT INTO employee_incentive_transactions (
@@ -733,28 +767,38 @@ const syncEmployeeIncentiveLifecycle = async (dbOrClient, application, appFileGe
       transaction_type,
       amount,
       status,
+      hold_reason,
       customer_name
     )
-    SELECT
+    VALUES (
       $1::uuid,
       $2::uuid,
       $3::uuid,
-      'EARNED',
-      COALESCE(epl.incentive_amount, p.commission_amount, 500),
-      'PENDING',
-      $4::text
-    FROM employee_product_links epl
-    JOIN products p
-      ON p.id = $2::uuid
-    WHERE epl.employee_id = $1::uuid
-      AND epl.product_id = $2::uuid
-      AND epl.status = 'ACTIVE'
-    ON CONFLICT (application_id) DO NOTHING
+      'DIRECT',
+      $4::numeric,
+      $5::varchar,
+      $6::text,
+      $7::text
+    )
+    ON CONFLICT (application_id) WHERE application_id IS NOT NULL DO UPDATE SET
+      amount = EXCLUDED.amount,
+      status = CASE 
+        WHEN employee_incentive_transactions.status IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN employee_incentive_transactions.status
+        ELSE EXCLUDED.status
+      END,
+      hold_reason = CASE 
+        WHEN employee_incentive_transactions.status IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN employee_incentive_transactions.hold_reason
+        ELSE EXCLUDED.hold_reason
+      END,
+      updated_at = NOW()
     `,
     [
       employeeId,
-      appObj.product_id,
-      appObj.id,
+      dbApp.product_id,
+      dbApp.id,
+      incentiveAmount,
+      incentiveStatus,
+      holdReason,
       customerName
     ]
   );
@@ -3331,26 +3375,36 @@ const bulkUpdateStatus = async (req, res, next) => {
   }
   if (!status) return error(res, 'Status is required', 400);
 
+  const normalizedStatus = String(status).trim().toLowerCase();
+
   const client = await getClient();
   try {
     await client.query('BEGIN');
 
-    const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
-    await client.query(
-      `UPDATE applications SET status = '${status}', updated_at = NOW() WHERE id IN (${placeholders})`,
-      ids
+    // Secure Parameterized Query
+    const historyEntry = JSON.stringify([{ status: normalizedStatus, updated_by: req.user?.id, updated_at: new Date().toISOString(), remarks: remarks || null }]);
+    const { rows: updatedApps } = await client.query(
+      `UPDATE applications 
+       SET status = $1, 
+           updated_at = NOW(),
+           approved_at = CASE WHEN $1 = 'approved' THEN COALESCE(approved_at, NOW()) ELSE approved_at END,
+           status_history = status_history || $2::jsonb
+       WHERE id = ANY($3::uuid[])
+       RETURNING id, status, employee_id, product_id, app_file_generated`,
+      [normalizedStatus, historyEntry, ids]
     );
 
-    // Log timeline for each
+    // Sync incentives and log timeline for each application
     const performedBy = req.user?.id;
-    for (const id of ids) {
-      await logTimeline(client, id, status, 'Bulk status update', remarks || `Status changed to ${status}`, performedBy);
+    for (const app of updatedApps) {
+      await syncEmployeeIncentiveLifecycle(client, app);
+      await logTimeline(client, app.id, normalizedStatus, 'Bulk status update', remarks || `Status changed to ${normalizedStatus}`, performedBy);
     }
 
     await client.query('COMMIT');
-    await logAction(req, 'BULK_UPDATE_APPLICATION_STATUS', null, { ids, status });
+    await logAction(req, 'BULK_UPDATE_APPLICATION_STATUS', null, { ids, status: normalizedStatus });
 
-    return success(res, { updated: ids.length, status }, `${ids.length} applications updated to ${status}`);
+    return success(res, { updated: updatedApps.length, status: normalizedStatus }, `${updatedApps.length} applications updated to ${normalizedStatus}`);
   } catch (err) {
     await client.query('ROLLBACK');
     next(err);
@@ -5505,6 +5559,59 @@ const getRemarkOperatorDashboard = async (req, res, next) => {
       completed_today_count: parseInt(completedRes?.count || 0),
       assigned_banks_count: assignedBankIds.length
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const approveApplication = async (req, res, next) => {
+  try {
+    const { id, remarks } = req.body;
+    if (!id) return error(res, 'Application ID is required', 400);
+    const { transitionApplicationStatus } = require('../../services/applicationStatus.service');
+    const result = await transitionApplicationStatus(id, 'approved', req.user, { remarks });
+    const { rows: [app] } = await query(`SELECT * FROM applications WHERE id = $1`, [id]);
+    if (app) {
+      await syncEmployeeIncentiveLifecycle({ query }, app);
+    }
+    return success(res, result, 'Application approved successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const rejectApplication = async (req, res, next) => {
+  try {
+    const { id, remarks } = req.body;
+    if (!id) return error(res, 'Application ID is required', 400);
+    const { transitionApplicationStatus } = require('../../services/applicationStatus.service');
+    const result = await transitionApplicationStatus(id, 'rejected', req.user, { remarks });
+    return success(res, result, 'Application rejected successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const reassignApplication = async (req, res, next) => {
+  try {
+    const { id, partner_id, employee_id } = req.body;
+    if (!id) return error(res, 'Application ID is required', 400);
+    await query(
+      `UPDATE applications SET partner_id = COALESCE($1, partner_id), employee_id = COALESCE($2, employee_id), updated_at = NOW() WHERE id = $3`,
+      [partner_id || null, employee_id || null, id]
+    );
+    return success(res, { id }, 'Application reassigned successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
+const manualCommission = async (req, res, next) => {
+  try {
+    const { id, commission_amount } = req.body;
+    if (!id) return error(res, 'Application ID is required', 400);
+    await query(`UPDATE applications SET commission_amount = $1, updated_at = NOW() WHERE id = $2`, [parseFloat(commission_amount) || 0, id]);
+    return success(res, { id, commission_amount }, 'Commission updated successfully');
   } catch (err) {
     next(err);
   }

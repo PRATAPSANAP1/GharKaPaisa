@@ -1168,8 +1168,8 @@ router.get('/incentives', resolveEmployee, async (req, res, next) => {
 
     const stats = await query(`
       SELECT 
-        COALESCE(SUM(amount) FILTER (WHERE status = 'COMPLETED'), 0) as total_paid,
-        COALESCE(SUM(amount) FILTER (WHERE status IN ('PENDING', 'HELD', 'HELD_TARGET_PENDING', 'HELD_APP_FILE_PENDING', 'HELD_APPFILE_PENDING')), 0) as pending_incentive,
+        COALESCE(SUM(amount) FILTER (WHERE status IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED')), 0) as total_paid,
+        COALESCE(SUM(amount) FILTER (WHERE status IN ('PENDING', 'HOLD', 'ON_HOLD', 'HELD')), 0) as pending_incentive,
         COUNT(*) as total_leads_converted
       FROM employee_incentive_transactions
       WHERE employee_id = $1
@@ -1529,6 +1529,8 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
       approved_cards_count: 0,
       app_file_yes_cards_count: 0,
       target_achieved: false,
+      direct_incentive_earned: 0,
+      department_bonus_earned: 0,
       earned_incentive: 0,
       released_incentive: 0,
       held_incentive: 0
@@ -1549,6 +1551,8 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
         approved_cards_count: 0,
         app_file_yes_cards_count: 0,
         target_achieved: false,
+        direct_incentive_earned: 0,
+        department_bonus_earned: 0,
         earned_incentive: 0,
         released_incentive: 0,
         held_incentive: 0
@@ -1566,6 +1570,7 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
     }
 
     let calculatedIncentive = 0;
+    let isDeptBonus = false;
     if (isApproved && isAppFileYes) {
       bm.app_file_yes_cards_count += 1;
       const cardSeq = bm.app_file_yes_cards_count;
@@ -1577,6 +1582,7 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
         // Only cards exceeding target_count earn bonus_per_card!
         if (cardSeq > bm.target_count) {
           calculatedIncentive = app.tx_amount ? parseFloat(app.tx_amount) : (bm.bonus_per_card || parseFloat(app.default_incentive || 0));
+          isDeptBonus = true;
         } else {
           calculatedIncentive = 0; // Target Quota Card
         }
@@ -1590,9 +1596,14 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
     }
 
     app.tx_amount = calculatedIncentive;
-    bm.earned_incentive += calculatedIncentive;
+    if (isDeptBonus) {
+      bm.department_bonus_earned += calculatedIncentive;
+    } else {
+      bm.direct_incentive_earned += calculatedIncentive;
+    }
+    bm.earned_incentive = bm.direct_incentive_earned + bm.department_bonus_earned;
 
-    if (app.tx_status === 'COMPLETED') {
+    if (['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes(String(app.tx_status || '').toUpperCase())) {
       bm.released_incentive += calculatedIncentive;
     } else if (calculatedIncentive > 0) {
       bm.held_incentive += calculatedIncentive;
@@ -1600,6 +1611,8 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
   });
 
   let totalApprovedCards = 0;
+  let directIncentiveEarned = 0;
+  let departmentBonusEarned = 0;
   let totalIncentiveEarned = 0;
   let totalIncentiveReleased = 0;
   let totalIncentiveHeld = 0;
@@ -1612,6 +1625,8 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
     }
 
     totalApprovedCards += bm.approved_cards_count;
+    directIncentiveEarned += bm.direct_incentive_earned;
+    departmentBonusEarned += bm.department_bonus_earned;
     totalIncentiveEarned += bm.earned_incentive;
     totalIncentiveReleased += bm.released_incentive;
     totalIncentiveHeld += bm.held_incentive;
@@ -1644,6 +1659,8 @@ async function getMonthlyIncentiveReportData(employeeId, targetYear, targetMonth
     },
     summary: {    
       total_approved_cards: totalApprovedCards,
+      direct_incentive_earned: directIncentiveEarned,
+      department_bonus_earned: departmentBonusEarned,
       total_incentive_earned: totalIncentiveEarned,
       total_incentive_released: totalIncentiveReleased,
       total_incentive_held: totalIncentiveHeld,

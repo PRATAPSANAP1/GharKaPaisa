@@ -253,23 +253,20 @@ export default function ManageEmployeeIncentives() {
     'disbursed',
     'commission_released',
     'commission_received',
-    'released',
-    'operational_verified',
-    'app file generated (approved)'
+    'released'
   ]);
 
   const isApprovedApplicationStatus = (appStatus) => {
     const s = String(appStatus || '').toLowerCase().trim();
-    return APPROVED_APP_STATUSES.has(s) || s.includes('approved');
+    return APPROVED_APP_STATUSES.has(s);
   };
 
   const renderStatusBadge = (statusStr) => {
-    const s = (statusStr || '').toUpperCase();
-    if (s === 'PAID' || s === 'COMPLETED') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#10B98115', color: '#10B981', border: '1px solid #10B98130', fontWeight: 800, fontSize: '11px' }}>Paid / Released</span>;
-    if (s === 'PENDING') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#F59E0B15', color: '#F59E0B', border: '1px solid #F59E0B30', fontWeight: 800, fontSize: '11px' }}>Pending Payout</span>;
-    if (s === 'IN_REVIEW') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#3B82F615', color: '#3B82F6', border: '1px solid #3B82F630', fontWeight: 800, fontSize: '11px' }}>In Review</span>;
-    if (s === 'ON_HOLD' || s === 'HELD' || s.includes('HELD')) return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#8B5CF615', color: '#8B5CF6', border: '1px solid #8B5CF630', fontWeight: 800, fontSize: '11px' }}>On Hold</span>;
-    if (s === 'REJECTED' || s === 'CANCELLED') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#EF444415', color: '#EF4444', border: '1px solid #EF444430', fontWeight: 800, fontSize: '11px' }}>Rejected</span>;
+    const s = (statusStr || '').toUpperCase().trim();
+    if (s === 'RELEASE' || s === 'RELEASED' || s === 'PAID' || s === 'COMPLETED') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#10B98115', color: '#10B981', border: '1px solid #10B98130', fontWeight: 800, fontSize: '11px' }}>RELEASE</span>;
+    if (s === 'PENDING') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#F59E0B15', color: '#F59E0B', border: '1px solid #F59E0B30', fontWeight: 800, fontSize: '11px' }}>PENDING</span>;
+    if (s === 'HOLD' || s === 'ON_HOLD' || s === 'HELD' || s.includes('HELD')) return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#8B5CF615', color: '#8B5CF6', border: '1px solid #8B5CF630', fontWeight: 800, fontSize: '11px' }}>HOLD</span>;
+    if (s === 'REJECTED' || s === 'CANCELLED') return <span style={{ padding: '4px 10px', borderRadius: '12px', background: '#EF444415', color: '#EF4444', border: '1px solid #EF444430', fontWeight: 800, fontSize: '11px' }}>REJECTED</span>;
     return <span style={{ padding: '4px 10px', borderRadius: '12px', background: C.bgSecondary, color: C.textMid, fontWeight: 800, fontSize: '11px' }}>{s}</span>;
   };
 
@@ -482,9 +479,8 @@ export default function ManageEmployeeIncentives() {
             >
               <option value="">All Statuses</option>
               <option value="PENDING">Pending</option>
-              <option value="PAID">Paid / Released</option>
-              <option value="ON_HOLD">On Hold</option>
-              <option value="REJECTED">Rejected</option>
+              <option value="HOLD">Hold</option>
+              <option value="RELEASE">Released</option>
             </select>
           </div>
 
@@ -793,14 +789,14 @@ export default function ManageEmployeeIncentives() {
 
                           {/* 2. Customer */}
                           <td style={{ padding: '10px 12px', color: C.text }}>
-                            <div style={{ fontWeight: 700 }}>{row.customer_name || 'sanap pratap'}</div>
-                            <div style={{ fontSize: '10.5px', color: C.textMid }}>{row.customer_mobile || '8010447825'}</div>
+                            <div style={{ fontWeight: 700 }}>{row.customer_name || 'N/A'}</div>
+                            <div style={{ fontSize: '10.5px', color: C.textMid }}>{row.customer_mobile || 'N/A'}</div>
                           </td>
 
                           {/* 3. Employee */}
                           <td style={{ padding: '10px 12px', color: C.text }}>
                             <div style={{ fontWeight: 700 }}>{row.employee_name || 'Employee Member'}</div>
-                            <span style={{ fontSize: '10.5px', color: C.teal, fontWeight: 800 }}>{row.emp_code || 'AG01019'}</span>
+                            <span style={{ fontSize: '10.5px', color: C.teal, fontWeight: 800 }}>{row.emp_code || 'N/A'}</span>
                           </td>
 
                           {/* 4. Process Type */}
@@ -908,14 +904,14 @@ export default function ManageEmployeeIncentives() {
 
                           {/* 2. Customer */}
                           <td style={{ padding: '10px 12px', color: C.text }}>
-                            <div style={{ fontWeight: 700 }}>{row.customer_name || 'sanap pratap'}</div>
-                            <div style={{ fontSize: '10.5px', color: C.textMid }}>{row.customer_mobile || '8010447825'}</div>
+                            <div style={{ fontWeight: 700 }}>{row.customer_name || 'N/A'}</div>
+                            <div style={{ fontSize: '10.5px', color: C.textMid }}>{row.customer_mobile || 'N/A'}</div>
                           </td>
 
                           {/* 3. Employee */}
                           <td style={{ padding: '10px 12px', color: C.text }}>
                             <div style={{ fontWeight: 700 }}>{row.employee_name || 'Employee Member'}</div>
-                            <span style={{ fontSize: '10.5px', color: C.teal, fontWeight: 800 }}>{row.emp_code || 'AG01019'}</span>
+                            <span style={{ fontSize: '10.5px', color: C.teal, fontWeight: 800 }}>{row.emp_code || 'N/A'}</span>
                           </td>
 
                           {/* 4. Process Type */}
@@ -1074,16 +1070,15 @@ export default function ManageEmployeeIncentives() {
                 <label style={{ fontSize: '11px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Payout Status</label>
                 <select value={updateStatus} onChange={(e) => setUpdateStatus(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '12.5px', fontWeight: 700 }}>
                   <option value="PENDING">PENDING</option>
-                  <option value="PAID">PAID / RELEASED</option>
-                  <option value="ON_HOLD">ON HOLD</option>
-                  <option value="REJECTED">REJECTED</option>
+                  <option value="HOLD">HOLD</option>
+                  <option value="RELEASE">RELEASE</option>
                 </select>
               </div>
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Payment UTR / Reference</label>
                 <input type="text" placeholder="e.g. UTR98218391823" value={paymentRef} onChange={(e) => setPaymentRef(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '12.5px', fontWeight: 600 }} />
               </div>
-              {updateStatus === 'ON_HOLD' && (
+              {updateStatus === 'HOLD' && (
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Hold Reason</label>
                   <input type="text" placeholder="Reason for holding payout..." value={holdReason} onChange={(e) => setHoldReason(e.target.value)} style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.inputBg, color: C.text, fontSize: '12.5px', fontWeight: 600 }} />
@@ -1124,7 +1119,7 @@ export default function ManageEmployeeIncentives() {
               <div>
                 <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Employee Code</span>
                 <div style={{ color: C.text, fontWeight: 800, marginTop: '2px' }}>
-                  {selectedTransaction.employee_name || 'Employee Member'} ({selectedTransaction.emp_code || 'AG01019'})
+                  {selectedTransaction.employee_name || 'N/A'} ({selectedTransaction.emp_code || 'N/A'})
                 </div>
               </div>
 
@@ -1152,28 +1147,28 @@ export default function ManageEmployeeIncentives() {
               <div>
                 <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Payment Reference</span>
                 <div style={{ color: C.text, fontWeight: 800, fontFamily: 'monospace', marginTop: '2px' }}>
-                  {selectedTransaction.payment_reference || `REL-${selectedTransaction.incentive_id?.slice(0, 8)}` || 'Pending Release'}
+                  {selectedTransaction.payment_reference || 'N/A'}
                 </div>
               </div>
 
               <div>
                 <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Customer Name</span>
                 <div style={{ color: C.text, fontWeight: 800, marginTop: '2px' }}>
-                  {selectedTransaction.customer_name || 'sanap pratap'}
+                  {selectedTransaction.customer_name || 'N/A'}
                 </div>
               </div>
 
               <div>
                 <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Customer Phone</span>
                 <div style={{ color: C.text, fontWeight: 800, marginTop: '2px' }}>
-                  {selectedTransaction.customer_mobile || '8010447825'}
+                  {selectedTransaction.customer_mobile || 'N/A'}
                 </div>
               </div>
 
               <div>
                 <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Product Name</span>
                 <div style={{ color: C.text, fontWeight: 800, marginTop: '2px' }}>
-                  {selectedTransaction.product_name || 'Credit Card Application'}
+                  {selectedTransaction.product_name || 'N/A'}
                 </div>
               </div>
 
