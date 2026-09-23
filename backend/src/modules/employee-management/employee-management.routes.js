@@ -1497,8 +1497,15 @@ router.get('/incentives/overview', async (req, res, next) => {
       whereConditions.push(`p.bank_id = $${params.length}`);
     }
     if (status) {
-      params.push(status.toUpperCase());
-      whereConditions.push(`UPPER(it.status::text) = $${params.length}`);
+      const upperStatus = status.toUpperCase().trim();
+      if (['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes(upperStatus)) {
+        whereConditions.push(`UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED')`);
+      } else if (['HOLD', 'ON_HOLD', 'HELD'].includes(upperStatus)) {
+        whereConditions.push(`UPPER(it.status::text) IN ('HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING')`);
+      } else {
+        params.push(upperStatus);
+        whereConditions.push(`UPPER(it.status::text) = $${params.length}`);
+      }
     }
     if (search) {
       params.push(`%${search}%`);

@@ -72,15 +72,22 @@ export default function ManageEmployeeIncentives() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      let effectiveStatus = statusFilter || undefined;
+      if (!statusFilter) {
+        if (activeTab === 'RELEASED') {
+          effectiveStatus = 'RELEASE';
+        }
+      }
+
       const params = {
         page,
-        limit: 20,
+        limit: activeTab === 'OVERVIEW' ? 20 : 500,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
         role: roleFilter || undefined,
         product_id: productFilter || undefined,
         bank_id: bankFilter || undefined,
-        status: statusFilter || undefined,
+        status: effectiveStatus,
         manager_id: managerFilter || undefined,
         team_leader_id: tlFilter || undefined,
         search: search || undefined
@@ -122,7 +129,7 @@ export default function ManageEmployeeIncentives() {
 
   useEffect(() => {
     fetchData();
-  }, [datePreset, startDate, endDate, roleFilter, productFilter, bankFilter, statusFilter, managerFilter, tlFilter, page, search]);
+  }, [activeTab, datePreset, startDate, endDate, roleFilter, productFilter, bankFilter, statusFilter, managerFilter, tlFilter, page, search]);
 
   const handleDatePresetChange = (preset) => {
     setDatePreset(preset);
@@ -859,7 +866,7 @@ export default function ManageEmployeeIncentives() {
                   <span style={{ fontSize: '12px', fontWeight: 800, color: '#10B981' }}>
                     {formatINR((data.table?.data || []).filter(r => 
                       ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase())
-                    ).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0))} Released & Credited
+                    ).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0) || totalPaid)} Released & Credited
                   </span>
                 </div>
               </div>
