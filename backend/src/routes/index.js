@@ -88,7 +88,11 @@ router.use('/partner',          partnerSelfRouter);
 router.use('/Partners',         partnerRouter);
 router.use('/kyc',              kycRouter);
 
+const kycOperatorRoute                     = require('../modules/kyc-operator/kyc-operator.routes.js');
+
 // ── Admin / CRM / Operational Scopes ───────────────────────────
+router.use('/kyc-operator',     kycOperatorRoute);
+router.use('/kyc/applications', kycOperatorRoute);
 router.use('/admin',            adminRoute);
 router.use('/superadmin',       superadminRouter);
 router.use('/applications',     applicationRouter);

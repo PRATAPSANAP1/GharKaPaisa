@@ -78,6 +78,7 @@ import ManageApplications from '../modules/admin/reports/ManageApplications';
 import ManagePartners from '../modules/admin/users/ManagePartners';
 import ManageWithdrawals from '../modules/admin/users/ManageWithdrawals';
 import ManageLeads from '../modules/admin/users/ManageLeads';
+import KycOperatorDashboard from '../modules/admin/kyc-operator/KycOperatorDashboard';
 
 // Super Admin Pages
 import SuperAdminOverview from '../modules/super-admin/dashboard/SuperAdminOverview';
@@ -343,11 +344,13 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
-      {/* Admin Protected Routes */}
+      {/* Admin & KYC Operator Protected Routes */}
       <Route element={<ProtectedRoute />}>
-        <Route element={<RoleRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']} />}>
+        <Route element={<RoleRoute allowedRoles={['ADMIN', 'SUPER_ADMIN', 'KYC_OPERATOR']} />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/kyc-operator" element={<KycOperatorDashboard />} />
+            <Route path="/admin/kyc" element={<KycOperatorDashboard />} />
             <Route path="/admin/applications" element={<ManageApplications />} />
             <Route path="/admin/partners" element={<ManagePartners />} />
             <Route path="/admin/withdrawals" element={<ManageWithdrawals />} />
@@ -400,6 +403,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/partners" element={<ManagePartners />} />
             <Route path="/super-admin/leads" element={<Navigate to="/super-admin/overview" replace />} />
             <Route path="/super-admin/applications" element={<SuperAdminManageApplications />} />
+            <Route path="/super-admin/kyc-operator" element={<KycOperatorDashboard />} />
             <Route path="/super-admin/crm" element={<SuperAdminManageApplications />} />
             <Route path="/super-admin/reports" element={<SuperAdminReports />} />
             <Route path="/super-admin/reports/referral-analytics" element={<ReferralAnalyticsView />} />

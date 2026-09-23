@@ -28,8 +28,12 @@ const createAdmin = async (req, res, next) => {
       return error(res, 'All required fields must be provided', 400);
     }
 
-    if (!['ADMIN', 'EMPLOYEE', 'HR'].includes(role)) {
-      return error(res, 'Role must be either ADMIN, EMPLOYEE, or HR', 400);
+    if (String(designation || '').toUpperCase().includes('KYC OPERATOR') || String(designation || '').toUpperCase() === 'KYC_OPERATOR') {
+      role = 'KYC_OPERATOR';
+    }
+
+    if (!['ADMIN', 'EMPLOYEE', 'HR', 'KYC_OPERATOR'].includes(role)) {
+      return error(res, 'Role must be either ADMIN, EMPLOYEE, HR, or KYC_OPERATOR', 400);
     }
 
     if (password !== confirmPassword) {
@@ -78,10 +82,11 @@ const createAdmin = async (req, res, next) => {
       }
     }
 
-    // Ensure HR and EMPLOYEE enum values exist safely
+    // Ensure HR, EMPLOYEE, and KYC_OPERATOR enum values exist safely
     try {
       await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'HR'`);
       await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'EMPLOYEE'`);
+      await query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'KYC_OPERATOR'`);
     } catch (e) {}
 
     // Hash password
