@@ -1094,7 +1094,7 @@ export default function ManageApplications() {
                       <span style={{ color: C.textLight }}>Referred By (Partner / Employee):</span>{' '}
                       <strong style={{ color: C.text }}>
                         {appDetail.employee_name || appDetail.emp_code
-                          ? `Employee: ${appDetail.employee_name} (${String(appDetail.emp_code || 'EMP').replace(/^CAND/, 'YOH-SE')})`
+                          ? `Employee: ${appDetail.employee_name} (${String(appDetail.emp_code || 'EMP')})`
                           : appDetail.partner_code || appDetail.Partner_first_name || appDetail.partner_first_name
                             ? `Partner: ${appDetail.partner_first_name || appDetail.Partner_first_name || ''} ${appDetail.partner_last_name || appDetail.Partner_last_name || ''} (${appDetail.partner_code || appDetail.Partner_code || 'N/A'})`.trim()
                             : 'Direct / Customer Online'}
@@ -1127,7 +1127,26 @@ export default function ManageApplications() {
                     <div><span style={{ color: C.textLight }}>App / Bank Reference #:</span> <strong style={{ color: C.text, fontFamily: 'monospace' }}>{appDetail.bank_ref_number || appDetail.bank_application_number || appDetail.app_number || '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Applied Loan Amount:</span> <strong style={{ color: C.text }}>{(appDetail.loan_amount && Number(appDetail.loan_amount) > 0) ? `₹${parseFloat(appDetail.loan_amount).toLocaleString('en-IN')}` : '—'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Commission Amount / Status:</span> <strong style={{ color: C.text }}>{appDetail.commission_amount ? `₹${parseFloat(appDetail.commission_amount).toLocaleString('en-IN')}` : '₹500.00'} ({appDetail.commission_status || 'pending'})</strong></div>
-                    <div><span style={{ color: C.textLight }}>VKYC / Direct Web Link:</span> <strong style={{ color: C.text }}>{appDetail.vkyc_url ? <a href={appDetail.vkyc_url} target="_blank" rel="noreferrer" style={{ color: C.primary }}>Open Link ↗</a> : '—'}</strong></div>
+                    <div><span style={{ color: C.textLight }}>VKYC / Direct Web Link:</span> <strong style={{ color: C.text }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const link = appDetail.vkyc_url || appDetail.vkyc_link || appDetail.physical_details?.vkyc_url;
+                          if (link && String(link).trim() !== '' && String(link).toUpperCase() !== 'N/A' && String(link).toUpperCase() !== 'NA') {
+                            let targetUrl = String(link).trim();
+                            if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                              targetUrl = 'https://' + targetUrl;
+                            }
+                            window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                          } else {
+                            alert("Link not assigned");
+                          }
+                        }}
+                        style={{ background: 'none', border: 'none', color: C.primary, fontWeight: 700, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                      >
+                        Open Link ↗
+                      </button>
+                    </strong></div>
                     <div><span style={{ color: C.textLight }}>Final Status from Bank:</span> <strong style={{ color: C.text }}>{appDetail.final_status || 'pending'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Eligible for Re-QD:</span> <strong style={{ color: C.text }}>{appDetail.eligible_reqd || 'No'}</strong></div>
                     <div><span style={{ color: C.textLight }}>Bank Remark:</span> <strong style={{ color: C.text }}>{appDetail.bank_remark || '—'}</strong></div>

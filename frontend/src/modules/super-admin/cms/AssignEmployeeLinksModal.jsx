@@ -310,7 +310,7 @@ export default function AssignEmployeeLinksModal({ isOpen, onClose, onSuccess, b
                             {emp.full_name}
                           </div>
                           <div style={{ fontSize: '10.5px', color: C.textLight }}>
-                            {emp.employee_id || 'YOH-SE'} • {emp.designation || 'Staff'}
+                            {emp.employee_id || 'EMP'} • {emp.designation || 'Staff'}
                           </div>
                         </div>
                       </label>

@@ -215,6 +215,31 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     application?.bank_application_number || application?.bank_ref_number || application?.physical_details?.bank_ref_number || application?.physical_details?.bank_application_number,
     application?.app_number
   ));
+  const categoryStr = `${application?.category || ''} ${application?.product_type || ''} ${application?.product_category || ''} ${application?.lead_type || ''} ${application?.card_name || ''} ${application?.product_name || ''} ${application?.product?.name || ''}`.toLowerCase();
+  
+  const isSmartEmi = categoryStr.includes('smart_emi') || categoryStr.includes('smart emi');
+  const isLoanOnCreditCard = categoryStr.includes('loan_on_credit_card') || categoryStr.includes('loan on credit card') || categoryStr.includes('card_loan') || categoryStr.includes('card loan');
+
+  // Smart EMI States
+  const [bankSmartEmiOffer, setBankSmartEmiOffer] = useState(sanitizeVal(application?.bank_smart_emi_offer) || sanitizeVal(application?.physical_details?.bank_smart_emi_offer) || '');
+  const [bankSmartEmiTenure, setBankSmartEmiTenure] = useState(sanitizeVal(application?.bank_smart_emi_tenure) || sanitizeVal(application?.physical_details?.bank_smart_emi_tenure) || '06 Months');
+  const [disbursedSmartEmi, setDisbursedSmartEmi] = useState(sanitizeVal(application?.disbursed_smart_emi) || sanitizeVal(application?.physical_details?.disbursed_smart_emi) || '');
+  const [disbursedSmartEmiTenure, setDisbursedSmartEmiTenure] = useState(sanitizeVal(application?.disbursed_smart_emi_tenure) || sanitizeVal(application?.physical_details?.disbursed_smart_emi_tenure) || '06 Months');
+  const [smartEmiOfferStatus, setSmartEmiOfferStatus] = useState(sanitizeVal(application?.smart_emi_offer_status) || sanitizeVal(application?.physical_details?.smart_emi_offer_status) || 'Yes');
+  const [finalSmartEmiDisburse, setFinalSmartEmiDisburse] = useState(sanitizeVal(application?.final_smart_emi_disburse) || sanitizeVal(application?.physical_details?.final_smart_emi_disburse) || '');
+  const [finalTenure, setFinalTenure] = useState(sanitizeVal(application?.final_tenure) || sanitizeVal(application?.physical_details?.final_tenure) || '06 Months');
+  const [offerDeclineReason, setOfferDeclineReason] = useState(sanitizeVal(application?.offer_decline_reason) || sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.offer_decline_reason) || '');
+  const [eligibleForIncentive, setEligibleForIncentive] = useState(sanitizeVal(application?.eligible_for_incentive) || sanitizeVal(application?.physical_details?.eligible_for_incentive) || 'YES');
+
+  // Loan on Credit Card States
+  const [instaJumboOffer, setInstaJumboOffer] = useState(sanitizeVal(application?.insta_jumbo_offer) || sanitizeVal(application?.physical_details?.insta_jumbo_offer) || 'Yes');
+  const [customerLoanOffer, setCustomerLoanOffer] = useState(sanitizeVal(application?.customer_loan_offer) || sanitizeVal(application?.physical_details?.customer_loan_offer) || 'Yes');
+  const [offerTenure, setOfferTenure] = useState(sanitizeVal(application?.offer_tenure) || sanitizeVal(application?.physical_details?.offer_tenure) || '6 Months');
+  const [disbursedAmount, setDisbursedAmount] = useState(sanitizeVal(application?.disbursed_amount) || sanitizeVal(application?.physical_details?.disbursed_amount) || '');
+  const [disbursedTenure, setDisbursedTenure] = useState(sanitizeVal(application?.disbursed_tenure) || sanitizeVal(application?.physical_details?.disbursed_tenure) || '6 Months');
+  const [finalLoanDisbursed, setFinalLoanDisbursed] = useState(sanitizeVal(application?.final_loan_disbursed) || sanitizeVal(application?.physical_details?.final_loan_disbursed) || '');
+  const [finalLoanTenure, setFinalLoanTenure] = useState(sanitizeVal(application?.final_loan_tenure) || sanitizeVal(application?.physical_details?.final_loan_tenure) || '6 Months');
+
   const [approvedAmount, setApprovedAmount] = useState(sanitizeVal(application?.approved_amount) || sanitizeVal(application?.physical_details?.approved_amount) || sanitizeVal(application?.loan_amount));
 
   // 4. Real Database Status Snapshot (for Real DB Status vs Selected Status UI display)
@@ -466,8 +491,26 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           bank_current_lead_status: bankCurrentLeadStatus || 'None',
           bank_lead_status: bankCurrentLeadStatus || 'None',
           user_remark: userRemark,
+          backend_remark: backendRemark,
           notes: userRemark,
-          operational_remarks: userRemark
+          operational_remarks: userRemark,
+          // Smart EMI & Loan on Credit Card fields
+          bank_smart_emi_offer: bankSmartEmiOffer,
+          bank_smart_emi_tenure: bankSmartEmiTenure,
+          disbursed_smart_emi: disbursedSmartEmi,
+          disbursed_smart_emi_tenure: disbursedSmartEmiTenure,
+          smart_emi_offer_status: smartEmiOfferStatus,
+          final_smart_emi_disburse: finalSmartEmiDisburse,
+          final_tenure: finalTenure,
+          offer_decline_reason: offerDeclineReason,
+          eligible_for_incentive: eligibleForIncentive,
+          insta_jumbo_offer: instaJumboOffer,
+          customer_loan_offer: customerLoanOffer,
+          offer_tenure: offerTenure,
+          disbursed_amount: disbursedAmount,
+          disbursed_tenure: disbursedTenure,
+          final_loan_disbursed: finalLoanDisbursed,
+          final_loan_tenure: finalLoanTenure
         };
         if (isOpsOrAdmin && !['approved', 'rejected', 'sanctioned'].includes(String(currentStatus).toLowerCase())) {
           payload.status = 'operational_verified';
@@ -521,8 +564,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           queryable_sales_remark: queryableSalesRemark,
           digital_remark: digitalRemark,
           bank_remark: bankRemark,
-          decline_reason: declineReason || declineRemark || bankRemark || userRemark,
+          decline_reason: declineReason || offerDeclineReason || declineRemark || bankRemark || userRemark,
           user_remark: userRemark,
+          backend_remark: backendRemark,
           notes: userRemark,
           operational_remarks: userRemark,
           final_status: finalStatus,
@@ -531,7 +575,24 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           bank_lead_status: bankCurrentLeadStatus || 'None',
           app_file_generated: appFileGenerated,
           digital_journey_url: digitalJourneyUrl || undefined,
-          status: targetStatus
+          status: targetStatus,
+          // Smart EMI & Loan on Credit Card fields
+          bank_smart_emi_offer: bankSmartEmiOffer,
+          bank_smart_emi_tenure: bankSmartEmiTenure,
+          disbursed_smart_emi: disbursedSmartEmi,
+          disbursed_smart_emi_tenure: disbursedSmartEmiTenure,
+          smart_emi_offer_status: smartEmiOfferStatus,
+          final_smart_emi_disburse: finalSmartEmiDisburse,
+          final_tenure: finalTenure,
+          offer_decline_reason: offerDeclineReason,
+          eligible_for_incentive: eligibleForIncentive,
+          insta_jumbo_offer: instaJumboOffer,
+          customer_loan_offer: customerLoanOffer,
+          offer_tenure: offerTenure,
+          disbursed_amount: disbursedAmount,
+          disbursed_tenure: disbursedTenure,
+          final_loan_disbursed: finalLoanDisbursed,
+          final_loan_tenure: finalLoanTenure
         };
       }
 
@@ -636,6 +697,39 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
               title="Open Digital Complete Journey Link"
             >
               <ExternalLink size={15} /> Digital Complete Journey
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const link = vkycUrl || application?.vkyc_url || application?.vkyc_link || application?.physical_details?.vkyc_url;
+                if (link && String(link).trim() !== '' && String(link).toUpperCase() !== 'N/A' && String(link).toUpperCase() !== 'NA') {
+                  let targetUrl = String(link).trim();
+                  if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                    targetUrl = 'https://' + targetUrl;
+                  }
+                  window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                } else {
+                  alert("Link not assigned");
+                }
+              }}
+              style={{
+                background: 'linear-gradient(135deg, #059669, #047857)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
+              }}
+              title="Open VKYC Link"
+            >
+              <ExternalLink size={15} /> Open VKYC Link
             </button>
 
             {isOpsHead && currentStatus !== 'approved' && currentStatus !== 'super_admin_approved' && (
@@ -1451,6 +1545,45 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     </div>
                   </div>
 
+                  {/* VKYC Link Modify Field */}
+                  <div style={{ gridColumn: '1 / -1', marginTop: '6px', padding: '14px', background: '#f0fdf4', borderRadius: '10px', border: '1px solid #bbf7d0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <label style={{ fontSize: '11px', color: '#15803d', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                        <LinkIcon size={14} color="#16a34a" /> VKYC LINK (Modify Link)
+                      </label>
+                      <span style={{ fontSize: '10px', fontWeight: 700, background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '10px' }}>
+                        APPLICATION VKYC
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <input
+                        type="url"
+                        disabled={!canEditQd}
+                        value={vkycUrl}
+                        onChange={(e) => setVkycUrl(e.target.value)}
+                        placeholder="Enter / Edit VKYC Link (e.g. https://vkyc.bank.com/...)"
+                        style={{ flex: 1, minWidth: '220px', padding: '10px 12px', borderRadius: '8px', border: '1px solid #86efac', fontSize: '13px', fontWeight: 600, background: !canEditQd ? '#f8fafc' : '#fff', color: '#0f172a' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (vkycUrl && String(vkycUrl).trim() !== '' && String(vkycUrl).toUpperCase() !== 'N/A' && String(vkycUrl).toUpperCase() !== 'NA') {
+                            let targetUrl = String(vkycUrl).trim();
+                            if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                              targetUrl = 'https://' + targetUrl;
+                            }
+                            window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                          } else {
+                            alert("Link not assigned");
+                          }
+                        }}
+                        style={{ padding: '8px 14px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <ExternalLink size={13} /> Open VKYC Link
+                      </button>
+                    </div>
+                  </div>
+
                 </div>
 
                 <div style={{
@@ -1497,8 +1630,190 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
-                  {/* 🅰️ SBI BANK WORKFLOW */}
-                  {isSbi ? (
+                  {/* ⚡ SMART EMI ON CREDIT CARD WORKFLOW */}
+                  {isSmartEmi ? (
+                    <>
+                      {/* 1. BANK SMART EMI OFFER */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>BANK SMART EMI OFFER</label>
+                        <input
+                          type="text"
+                          disabled={!canEditRemark}
+                          value={bankSmartEmiOffer}
+                          onChange={(e) => setBankSmartEmiOffer(e.target.value)}
+                          placeholder="Enter Bank Smart EMI Offer"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        />
+                      </div>
+
+                      {/* 2. BANK SMART EMI TENURE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>BANK SMART EMI TENURE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={bankSmartEmiTenure}
+                          onChange={(e) => setBankSmartEmiTenure(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="06 Months">06 Months</option>
+                          <option value="01 Year">01 Year</option>
+                          <option value="02 Years">02 Years</option>
+                          <option value="03 Years">03 Years</option>
+                          <option value="04 Years">04 Years</option>
+                        </select>
+                      </div>
+
+                      {/* 3. DISBURSED SMART EMI */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DISBURSED SMART EMI</label>
+                        <input
+                          type="text"
+                          disabled={!canEditRemark}
+                          value={disbursedSmartEmi}
+                          onChange={(e) => setDisbursedSmartEmi(e.target.value)}
+                          placeholder="Enter Disbursed Smart EMI Amount"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        />
+                      </div>
+
+                      {/* 4. DISBURSED SMART EMI TENURE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DISBURSED SMART EMI TENURE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={disbursedSmartEmiTenure}
+                          onChange={(e) => setDisbursedSmartEmiTenure(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="06 Months">06 Months</option>
+                          <option value="01 Year">01 Year</option>
+                          <option value="02 Years">02 Years</option>
+                          <option value="03 Years">03 Years</option>
+                          <option value="04 Years">04 Years</option>
+                        </select>
+                      </div>
+
+                      {/* 5. LOS NOT / SMART EMI REF NO. */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>LOS NOT / SMART EMI REF NO.</label>
+                        <input
+                          type="text"
+                          disabled={!canEditRemark}
+                          value={bankRefNumber}
+                          onChange={(e) => setBankRefNumber(e.target.value)}
+                          placeholder="Enter LOS / Smart EMI Ref No."
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 700, fontFamily: 'monospace' }}
+                        />
+                      </div>
+
+                      {/* 6. SMART EMI OFFER — YES / NO */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>SMART EMI OFFER — YES / NO</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={smartEmiOfferStatus}
+                          onChange={(e) => setSmartEmiOfferStatus(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                        </select>
+                      </div>
+                    </>
+                  ) : isLoanOnCreditCard ? (
+                    /* 💳 LOAN ON CREDIT CARD WORKFLOW */
+                    <>
+                      {/* 1. INSTA/JUMBO OFFER — YES / NO */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>INSTA / JUMBO OFFER</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={instaJumboOffer}
+                          onChange={(e) => setInstaJumboOffer(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                        </select>
+                      </div>
+
+                      {/* 2. CUSTOMER LOAN OFFER — YES / NO */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>CUSTOMER LOAN OFFER</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={customerLoanOffer}
+                          onChange={(e) => setCustomerLoanOffer(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                        </select>
+                      </div>
+
+                      {/* 3. OFFER TENURE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>OFFER TENURE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={offerTenure}
+                          onChange={(e) => setOfferTenure(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="6 Months">6 Months</option>
+                          <option value="1 Year">1 Year</option>
+                          <option value="2 Years">2 Years</option>
+                          <option value="3 Years">3 Years</option>
+                          <option value="4 Years">4 Years</option>
+                          <option value="5 Years">5 Years</option>
+                        </select>
+                      </div>
+
+                      {/* 4. DISBURSED AMOUNT */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DISBURSED AMOUNT</label>
+                        <input
+                          type="text"
+                          disabled={!canEditRemark}
+                          value={disbursedAmount}
+                          onChange={(e) => setDisbursedAmount(e.target.value)}
+                          placeholder="Enter Disbursed Amount"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        />
+                      </div>
+
+                      {/* 5. DISBURSED TENURE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DISBURSED TENURE</label>
+                        <select
+                          disabled={!canEditRemark}
+                          value={disbursedTenure}
+                          onChange={(e) => setDisbursedTenure(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 600 }}
+                        >
+                          <option value="6 Months">6 Months</option>
+                          <option value="1 Year">1 Year</option>
+                          <option value="2 Years">2 Years</option>
+                          <option value="3 Years">3 Years</option>
+                          <option value="4 Years">4 Years</option>
+                          <option value="5 Years">5 Years</option>
+                        </select>
+                      </div>
+
+                      {/* 6. LOS NO. / BANK REFERENCE NUMBER */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>LOS NO. / BANK REFERENCE NUMBER</label>
+                        <input
+                          type="text"
+                          disabled={!canEditRemark}
+                          value={bankRefNumber}
+                          onChange={(e) => setBankRefNumber(e.target.value)}
+                          placeholder="Enter LOS / Bank Ref No."
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditRemark ? '#f8fafc' : '#fff', fontWeight: 700, fontFamily: 'monospace' }}
+                        />
+                      </div>
+                    </>
+                  ) : isSbi ? (
                     <>
                       {/* 1. APPCODE STATUS (Punching only & Physical process) */}
                       {(isPunchLead || isPhysical) && (
@@ -2216,11 +2531,170 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
                   
-                  {/* 1. FINAL BANK STAGE / CARD APPROVE */}
-                  <div>
-                    <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                      {isSbi ? '1. FINAL BANK STAGE' : '1. FINAL CARD APPROVE'}
-                    </label>
+                  {isSmartEmi ? (
+                    <>
+                      {/* 1. FINAL STATUS */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. FINAL STATUS</label>
+                        <select
+                          disabled={!canEditFinal}
+                          value={finalStatus || 'None'}
+                          onChange={(e) => setFinalStatus(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="approve">approve</option>
+                          <option value="decline">decline</option>
+                          <option value="in process">in process</option>
+                          {finalStatus && !['None', 'approve', 'decline', 'in process', ''].includes(finalStatus) && (
+                            <option value={finalStatus}>{finalStatus}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* 2. FINAL SMART EMI DISBURSE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL SMART EMI DISBURSE</label>
+                        <input
+                          type="text"
+                          disabled={!canEditFinal}
+                          value={finalSmartEmiDisburse}
+                          onChange={(e) => setFinalSmartEmiDisburse(e.target.value)}
+                          placeholder="Enter Final Smart EMI Disburse Amount"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        />
+                      </div>
+
+                      {/* 3. FINAL TENURE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL TENURE</label>
+                        <select
+                          disabled={!canEditFinal}
+                          value={finalTenure}
+                          onChange={(e) => setFinalTenure(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        >
+                          <option value="06 Months">06 Months</option>
+                          <option value="01 Year">01 Year</option>
+                          <option value="02 Years">02 Years</option>
+                          <option value="03 Years">03 Years</option>
+                          <option value="04 Years">04 Years</option>
+                        </select>
+                      </div>
+
+                      {/* 4. OFFER DECLINE REASON */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>OFFER DECLINE REASON</label>
+                        <input
+                          type="text"
+                          disabled={!canEditFinal}
+                          value={offerDeclineReason}
+                          onChange={(e) => setOfferDeclineReason(e.target.value)}
+                          placeholder="Enter Offer Decline Reason"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
+                        />
+                      </div>
+
+                      {/* 5. ELIGIBLE FOR INCENTIVE - YES, NO */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>ELIGIBLE FOR INCENTIVE</label>
+                        <select
+                          disabled={!canEditFinal}
+                          value={eligibleForIncentive}
+                          onChange={(e) => setEligibleForIncentive(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        >
+                          <option value="YES">YES</option>
+                          <option value="NO">NO</option>
+                        </select>
+                      </div>
+                    </>
+                  ) : isLoanOnCreditCard ? (
+                    <>
+                      {/* 1. FINAL STATUS */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>1. FINAL STATUS</label>
+                        <select
+                          disabled={!canEditFinal}
+                          value={finalStatus || 'None'}
+                          onChange={(e) => setFinalStatus(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        >
+                          <option value="None">None</option>
+                          <option value="approve">approve</option>
+                          <option value="decline">decline</option>
+                          <option value="in process">in process</option>
+                          {finalStatus && !['None', 'approve', 'decline', 'in process', ''].includes(finalStatus) && (
+                            <option value={finalStatus}>{finalStatus}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      {/* 2. FINAL LOAN DISBURSED */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL LOAN DISBURSED</label>
+                        <input
+                          type="text"
+                          disabled={!canEditFinal}
+                          value={finalLoanDisbursed}
+                          onChange={(e) => setFinalLoanDisbursed(e.target.value)}
+                          placeholder="Enter Final Loan Disbursed Amount"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        />
+                      </div>
+
+                      {/* 3. FINAL LOAN TENURE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>FINAL LOAN TENURE</label>
+                        <select
+                          disabled={!canEditFinal}
+                          value={finalLoanTenure}
+                          onChange={(e) => setFinalLoanTenure(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        >
+                          <option value="6 Months">6 Months</option>
+                          <option value="1 Year">1 Year</option>
+                          <option value="2 Years">2 Years</option>
+                          <option value="3 Years">3 Years</option>
+                          <option value="4 Years">4 Years</option>
+                          <option value="5 Years">5 Years</option>
+                        </select>
+                      </div>
+
+                      {/* 4. DECLINE REASON */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>DECLINE REASON</label>
+                        <input
+                          type="text"
+                          disabled={!canEditFinal}
+                          value={offerDeclineReason}
+                          onChange={(e) => setOfferDeclineReason(e.target.value)}
+                          placeholder="Enter Decline Reason"
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
+                        />
+                      </div>
+
+                      {/* 5. ELIGIBLE FOR INCENTIVE - YES, NO */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>ELIGIBLE FOR INCENTIVE</label>
+                        <select
+                          disabled={!canEditFinal}
+                          value={eligibleForIncentive}
+                          onChange={(e) => setEligibleForIncentive(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff', fontWeight: 700 }}
+                        >
+                          <option value="Yes">Yes</option>
+                          <option value="No">No</option>
+                        </select>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* 1. FINAL BANK STAGE / CARD APPROVE */}
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 800, color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                          {isSbi ? '1. FINAL BANK STAGE' : '1. FINAL CARD APPROVE'}
+                        </label>
                     <select
                       disabled={!canEditFinal}
                       value={finalStatus || 'None'}
@@ -2398,8 +2872,10 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: !canEditFinal ? '#f8fafc' : '#fff' }}
                     />
                   </div>
+                </>
+              )}
 
-                </div>
+            </div>
 
                 <div style={{
                   display: 'flex',

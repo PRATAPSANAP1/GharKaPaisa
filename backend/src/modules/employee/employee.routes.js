@@ -228,16 +228,10 @@ async function resolveEmployee(req, res, next) {
       );
       
       const cand = candRes.rows[0] || {};
-      const desigUpper = String(cand.target_role || cand.current_designation || 'TC').toUpperCase();
-      let code = 'SE';
-      if (desigUpper.includes('TEAM LEADER') || desigUpper.includes('TL') || desigUpper === 'TL') code = 'TL';
-      else if (desigUpper.includes('MANAGER') || desigUpper.includes('MGR')) code = 'MGR';
-      else if (desigUpper.includes('HR')) code = 'HR';
-
-      let empCode = cand.employee_id || '';
-      if (!empCode.startsWith('YOH-')) {
-        const num = Math.floor(1000 + Math.random() * 9000);
-        empCode = `YOH-${code}${String(num).padStart(4, '0')}`;
+      let empCode = cand.reference_code || cand.employee_id || '';
+      if (!empCode || !/^CAND\d+$/.test(empCode)) {
+        const seqRes = await query(`SELECT nextval('candidate_reference_seq') AS seq`).catch(() => ({ rows: [] }));
+        empCode = seqRes.rows[0]?.seq ? `CAND${seqRes.rows[0].seq}` : `CAND${Math.floor(10000 + Math.random() * 90000)}`;
       }
 
       const createRes = await query(
@@ -953,7 +947,8 @@ router.post('/leads', async (req, res, next) => {
     const empId = req.employee.id;
     let { 
       full_name, mobile, email, product_id, city, state, pincode, 
-      monthly_income, employment_type, card_bank, card_name, product_type 
+      monthly_income, employment_type, card_bank, card_name, product_type,
+      smart_emi_amount, loan_required_amount, tenure
     } = req.body;
 
     if (!full_name || !mobile) {
@@ -963,6 +958,11 @@ router.post('/leads', async (req, res, next) => {
     const leadCategory = product_type || 'credit_card';
     const bankNameInput = card_bank || '';
     const cardNameInput = card_name || '';
+
+    // Ensure columns exist on applications table
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS smart_emi_amount VARCHAR(50)`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS loan_required_amount VARCHAR(50)`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS tenure VARCHAR(50)`).catch(() => {});
 
     // 1. Resolve product_id and bank_id accurately
     let matchedProductId = null;
@@ -1061,16 +1061,30 @@ router.post('/leads', async (req, res, next) => {
       logger.warn('Employee lead direct_card_applications sync warning:', directErr.message);
     }
 
+    const metadataObj = {
+      smart_emi_amount: smart_emi_amount || null,
+      loan_required_amount: loan_required_amount || null,
+      tenure: tenure || null,
+      card_bank: bankNameInput,
+      card_name: cardNameInput,
+      product_type: leadCategory
+    };
+
     // 6. Create Application record with employee attribution
     const { rows } = await query(
       `INSERT INTO applications (
         app_number, customer_id, product_id, bank_id, partner_id, submitted_by, employee_id, employee_link_id,
-        source_type, process_type, process_by, status, commission_amount, customer_name, customer_mobile
+        source_type, process_type, process_by, status, commission_amount, customer_name, customer_mobile,
+        smart_emi_amount, loan_required_amount, tenure, metadata
       ) VALUES (
         $1, $2, $3, $4, '00000000-0000-0000-0000-000000000000', $5, $6, $7,
-        'EMPLOYEE', 'lead_punching', 'lead_punching', 'submitted', $8, $9, $10
+        'EMPLOYEE', 'lead_punching', 'lead_punching', 'submitted', $8, $9, $10,
+        $11, $12, $13, $14::jsonb
       ) RETURNING *`,
-      [app_number, customerId, matchedProductId, matchedBankId, req.user.id, empId, linkId, incentiveAmt, full_name, mobile]
+      [
+        app_number, customerId, matchedProductId, matchedBankId, req.user.id, empId, linkId, incentiveAmt, full_name, mobile,
+        smart_emi_amount || null, loan_required_amount || null, tenure || null, JSON.stringify(metadataObj)
+      ]
     );
 
     res.status(201).json({

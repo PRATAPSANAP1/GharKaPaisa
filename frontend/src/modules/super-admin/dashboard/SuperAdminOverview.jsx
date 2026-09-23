@@ -892,7 +892,7 @@ export default function SuperAdminOverview() {
                     .map((e, idx) => (
                       <tr key={e.id || idx} style={{ borderBottom: `1px solid ${C.border}` }}>
                         <td style={{ padding: '12px 16px', fontWeight: 800, color: C.purple, fontFamily: 'monospace' }}>
-                          {String(e.employee_id || e.emp_code || 'EMP').replace(/^CAND/, 'YOH-SE')}
+                          {String(e.employee_id || e.emp_code || 'EMP')}
                         </td>
                         <td style={{ padding: '12px 16px', fontWeight: 800, color: C.text }}>
                           {e.full_name || e.employee_name || 'Employee'}

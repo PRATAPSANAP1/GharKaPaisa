@@ -573,7 +573,7 @@ export default function ManageProductLinks() {
                           <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
                             <div style={{ fontWeight: 800, color: C.text }}>{empGroup.employee_name}</div>
                             <div style={{ fontSize: '11px', color: C.primary, fontWeight: 700, marginTop: '2px' }}>
-                              {empGroup.emp_code || 'YOH-SE'}
+                              {empGroup.emp_code || 'EMP'}
                             </div>
                             {empGroup.employee_mobile && (
                               <div style={{ fontSize: '10.5px', color: C.textLight }}>{empGroup.employee_mobile}</div>
@@ -1048,7 +1048,7 @@ export default function ManageProductLinks() {
                 Assigned Cards & Custom Links
               </h3>
               <p style={{ fontSize: '13px', color: C.textLight, margin: '4px 0 0 0' }}>
-                Employee: <strong style={{ color: C.text }}>{viewEmpCardsModal.employee.employee_name}</strong> ({viewEmpCardsModal.employee.emp_code || 'YOH-SE'}) • <span style={{ color: C.primary, fontWeight: 700 }}>{viewEmpCardsModal.employee.links.length} Assigned Card(s)</span>
+                Employee: <strong style={{ color: C.text }}>{viewEmpCardsModal.employee.employee_name}</strong> ({viewEmpCardsModal.employee.emp_code || 'EMP'}) • <span style={{ color: C.primary, fontWeight: 700 }}>{viewEmpCardsModal.employee.links.length} Assigned Card(s)</span>
               </p>
             </div>
 

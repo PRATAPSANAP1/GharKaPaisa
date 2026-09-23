@@ -2061,7 +2061,7 @@ export default function ManageWallet() {
             <form onSubmit={handleManualAdjustSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <label style={S.label}>Partner / Employee ID *</label>
-                <input type="text" required value={adjForm.partner_id} onChange={e => setAdjForm({ ...adjForm, partner_id: e.target.value })} placeholder="e.g. YOH-TL1001" style={S.input} />
+                <input type="text" required value={adjForm.partner_id} onChange={e => setAdjForm({ ...adjForm, partner_id: e.target.value })} placeholder="e.g. CAND10073" style={S.input} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>

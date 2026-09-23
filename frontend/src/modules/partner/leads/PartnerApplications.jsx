@@ -1699,12 +1699,27 @@ export default function PartnerApplications() {
                         <strong style={{ color: trackApp.vkyc_status === 'Completed' ? '#10b981' : '#f59e0b' }}>{trackApp.vkyc_status}</strong>
                       </div>
                     )}
-                    {trackApp.vkyc_url && (
-                      <div style={{ gridColumn: 'span 2' }}>
-                        <span style={{ color: textMuted, fontSize: 10 }}>VKYC Link: </span>
-                        <a href={trackApp.vkyc_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: 700 }}>Open VKYC</a>
-                      </div>
-                    )}
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <span style={{ color: textMuted, fontSize: 10 }}>VKYC Link: </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const link = trackApp.vkyc_url || trackApp.vkyc_link;
+                          if (link && String(link).trim() !== '' && String(link).toUpperCase() !== 'N/A' && String(link).toUpperCase() !== 'NA') {
+                            let targetUrl = String(link).trim();
+                            if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                              targetUrl = 'https://' + targetUrl;
+                            }
+                            window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                          } else {
+                            alert("Link not assigned");
+                          }
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#2563eb', fontWeight: 700, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                      >
+                        Open VKYC Link
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

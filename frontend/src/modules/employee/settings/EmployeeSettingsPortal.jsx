@@ -102,7 +102,7 @@ export default function EmployeeSettingsPortal() {
   const fullName = jDetails.full_name || emp.full_name || emp.name || 'Employee';
   const designation = jDetails.designation || emp.designation || 'Telecaller';
   const department = jDetails.department || emp.department || 'Sales & Operations';
-  const empCode = emp.employee_id || emp.emp_code || emp.id || 'YOH-TC1001';
+  const empCode = emp.employee_id || emp.emp_code || emp.id || 'EMP10001';
 
   const navTabs = [
     { id: 'account', label: 'Account', icon: <FaUser /> },

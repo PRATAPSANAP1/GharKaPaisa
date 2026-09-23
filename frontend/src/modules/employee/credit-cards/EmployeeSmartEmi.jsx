@@ -221,6 +221,8 @@ export default function EmployeeSmartEmi() {
   const [applyScheme, setApplyScheme] = useState(null);
   const [custName, setCustName] = useState('');
   const [custMobile, setCustMobile] = useState('');
+  const [smartEmiAmt, setSmartEmiAmt] = useState('');
+  const [smartEmiTenure, setSmartEmiTenure] = useState('06 Months');
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const empCode = user?.employee_id || user?.emp_code || user?.id || '';
@@ -306,6 +308,8 @@ export default function EmployeeSmartEmi() {
       await axios.post(`${getApiV1Url()}/employee/leads`, {
         full_name: custName,
         mobile: custMobile,
+        smart_emi_amount: smartEmiAmt,
+        tenure: smartEmiTenure,
         card_bank: applyScheme?.bank,
         card_name: applyScheme?.title || applyScheme?.name,
         product_id: isUuid ? applyScheme?.id : undefined,
@@ -317,6 +321,8 @@ export default function EmployeeSmartEmi() {
         setApplyScheme(null);
         setCustName('');
         setCustMobile('');
+        setSmartEmiAmt('');
+        setSmartEmiTenure('06 Months');
       }, 2500);
     } catch (err) {
       console.error('Failed to submit Smart EMI lead:', err);
@@ -326,6 +332,8 @@ export default function EmployeeSmartEmi() {
         setApplyScheme(null);
         setCustName('');
         setCustMobile('');
+        setSmartEmiAmt('');
+        setSmartEmiTenure('06 Months');
       }, 2500);
     } finally {
       setIsSubmitting(false);
@@ -761,7 +769,7 @@ export default function EmployeeSmartEmi() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Mobile Number</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Customer Mobile/Number</label>
                   <input 
                     type="tel" 
                     required 
@@ -771,6 +779,33 @@ export default function EmployeeSmartEmi() {
                     onChange={(e) => setCustMobile(e.target.value.replace(/\D/g, ''))}
                     style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 600 }}
                   />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Smart EMI Amount</label>
+                  <input 
+                    type="number" 
+                    required
+                    placeholder="Enter Smart EMI Amount..."
+                    value={smartEmiAmt}
+                    onChange={(e) => setSmartEmiAmt(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 600 }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Tenure</label>
+                  <select
+                    value={smartEmiTenure}
+                    onChange={(e) => setSmartEmiTenure(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 600 }}
+                  >
+                    <option value="06 Months">06 Months</option>
+                    <option value="01 Year">01 Year</option>
+                    <option value="02 Years">02 Years</option>
+                    <option value="03 Years">03 Years</option>
+                    <option value="04 Years">04 Years</option>
+                  </select>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>

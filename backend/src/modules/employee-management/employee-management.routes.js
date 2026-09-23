@@ -179,7 +179,7 @@ async function syncAndSeedEmployees() {
       INSERT INTO users (full_name, mobile, email, role, status, employee_id, designation, department, password_hash)
       SELECT 
         c.full_name, TRIM(c.mobile_number), LOWER(TRIM(c.email_id)), 'EMPLOYEE', 'active', 
-        COALESCE(c.employee_id, 'YOH-SE' || FLOOR(1000 + RANDOM() * 9000)::text), COALESCE(c.offered_designation, c.target_role, 'TC'), 'Sales & Support',
+        COALESCE(c.reference_code, c.employee_id, 'CAND' || FLOOR(10000 + RANDOM() * 90000)::text), COALESCE(c.offered_designation, c.target_role, 'TC'), 'Sales & Support',
         '$2a$10$e8w.oF/9Z9sK.9J0U.Y0c.Z0/0.0.0.0.0.0.0.0.0.0'
       FROM employee_candidates c
       WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.mobile = TRIM(c.mobile_number) OR (u.email IS NOT NULL AND LOWER(u.email) = LOWER(TRIM(c.email_id))))
@@ -194,7 +194,7 @@ async function syncAndSeedEmployees() {
         employment_type, offered_salary, recruitment_source, employee_status, activation_status
       )
       SELECT 
-        COALESCE(u.employee_id, c.employee_id, 'YOH-SE' || FLOOR(1000 + RANDOM() * 9000)::text), u.id, c.id, c.full_name, TRIM(c.mobile_number), LOWER(TRIM(c.email_id)),
+        COALESCE(c.reference_code, c.employee_id, u.employee_id, 'CAND' || FLOOR(10000 + RANDOM() * 90000)::text), u.id, c.id, c.full_name, TRIM(c.mobile_number), LOWER(TRIM(c.email_id)),
         c.date_of_birth, c.current_address, COALESCE(c.offered_designation, c.target_role, 'TC'), 'Sales & Support', CURRENT_DATE,
         COALESCE(c.experience_type, 'Full-time'), COALESCE(c.offered_salary, c.expected_salary, 18000), COALESCE(c.how_did_you_hear, 'Career Portal'),
         'ONBOARDING', 'PENDING'
@@ -203,6 +203,23 @@ async function syncAndSeedEmployees() {
       WHERE NOT EXISTS (SELECT 1 FROM employees e WHERE e.candidate_id = c.id OR e.mobile_number = TRIM(c.mobile_number))
       ON CONFLICT (mobile_number) DO UPDATE SET user_id = EXCLUDED.user_id
     `).catch(e => logger.warn('Employee candidate sync note:', e.message));
+
+    // Fix existing employees/users to use candidate reference_code (e.g. CAND10073) instead of YOH- prefixes
+    await query(`
+      UPDATE users u
+      SET employee_id = c.reference_code
+      FROM employee_candidates c
+      WHERE (u.mobile = TRIM(c.mobile_number) OR (u.email IS NOT NULL AND LOWER(u.email) = LOWER(TRIM(c.email_id))))
+        AND c.reference_code IS NOT NULL AND c.reference_code != ''
+        AND (u.employee_id LIKE 'YOH-%' OR u.employee_id IS NULL OR u.employee_id = '');
+
+      UPDATE employees e
+      SET employee_id = c.reference_code
+      FROM employee_candidates c
+      WHERE (e.candidate_id = c.id OR e.mobile_number = TRIM(c.mobile_number) OR (e.email_id IS NOT NULL AND LOWER(e.email_id) = LOWER(TRIM(c.email_id))))
+        AND c.reference_code IS NOT NULL AND c.reference_code != ''
+        AND (e.employee_id LIKE 'YOH-%' OR e.employee_id IS NULL OR e.employee_id = '');
+    `).catch(e => logger.warn('Refcode sync note:', e.message));
 
     // Delete any partner_profiles for users with EMPLOYEE role
     await query(`
@@ -231,7 +248,7 @@ async function syncAndSeedEmployees() {
       INSERT INTO hr_profiles (user_id, employee_id, full_name, email, mobile_number, designation, department, status)
       SELECT 
         u.id, 
-        COALESCE(u.employee_id, 'YOH-HR' || FLOOR(1000 + RANDOM() * 9000)::text), 
+        COALESCE(u.employee_id, 'CAND' || FLOOR(10000 + RANDOM() * 90000)::text), 
         u.full_name, 
         LOWER(TRIM(u.email)), 
         TRIM(u.mobile), 
@@ -264,7 +281,7 @@ async function syncAndSeedEmployees() {
         employee_status, activation_status
       )
       SELECT 
-        COALESCE(u.employee_id, 'YOH-SE' || FLOOR(1000 + RANDOM() * 9000)::text), u.id, u.full_name, TRIM(u.mobile), LOWER(TRIM(u.email)),
+        COALESCE(u.employee_id, 'CAND' || FLOOR(10000 + RANDOM() * 90000)::text), u.id, u.full_name, TRIM(u.mobile), LOWER(TRIM(u.email)),
         COALESCE(u.designation, 'TC'), COALESCE(u.department, 'Sales & Support'), CURRENT_DATE,
         'Full-time', 18000,
         'ONBOARDING', 'PENDING'
@@ -1193,16 +1210,9 @@ router.post('/create', async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Employee with this mobile number or email already exists' });
     }
 
-    // 2. Generate Employee Code based on hierarchy level
-    const levelUpper = (hierarchy_level || designation || 'TC').toUpperCase();
-    let prefix = 'TC';
-    if (levelUpper.includes('BRANCH') || levelUpper === 'BRANCH_HEAD') prefix = 'BH';
-    else if (levelUpper.includes('SENIOR') || levelUpper === 'SENIOR_MANAGER') prefix = 'SM';
-    else if (levelUpper.includes('MANAGER') || levelUpper === 'MANAGER') prefix = 'MGR';
-    else if (levelUpper.includes('TEAM') || levelUpper.includes('TL') || levelUpper === 'TEAM_LEADER') prefix = 'TL';
-
-    const seqRes = await query(`SELECT nextval('employee_id_seq') as seq`).catch(() => ({ rows: [{ seq: Math.floor(1000 + Math.random() * 9000) }] }));
-    const empCode = `YOH-${prefix}${seqRes.rows[0]?.seq || Math.floor(1000 + Math.random() * 9000)}`;
+    // 2. Generate Employee Code using candidate_reference_seq
+    const seqRes = await query(`SELECT nextval('candidate_reference_seq') as seq`).catch(() => ({ rows: [] }));
+    const empCode = seqRes.rows[0]?.seq ? `CAND${seqRes.rows[0].seq}` : `CAND${Math.floor(10000 + Math.random() * 90000)}`;
 
     // 3. Create User record
     const bcrypt = require('bcryptjs');

@@ -13,26 +13,23 @@ const { getSignedDownloadUrl } = require('../../services/aws/s3.service');
 router.use(jwtAuth);
 router.use(roleCheck('HR', 'ADMIN', 'SUPER_ADMIN'));
 
-// Helper: Generate unique Employee ID in format like YOH-SE9983, YOH-TL2324, YOH-MGR0985
-async function generateEmployeeId(designation = '') {
-  const desigUpper = String(designation || '').toUpperCase();
-  let code = 'SE';
-  if (desigUpper.includes('HR')) code = 'HR';
-  else if (desigUpper.includes('ADMIN')) code = 'ADM';
-  else if (desigUpper.includes('TEAM LEADER') || desigUpper.includes('TL') || desigUpper === 'TL') code = 'TL';
-  else if (desigUpper.includes('MANAGER') || desigUpper.includes('MGR')) code = 'MGR';
-  else if (desigUpper.includes('TELECALLER') || desigUpper.includes('TC') || desigUpper.includes('SALES') || desigUpper.includes('EXECUTIVE') || desigUpper === 'SE') code = 'SE';
-  else code = 'SE';
-  
+// Helper: Generate unique Employee ID using sequence or fallback
+async function generateEmployeeId() {
+  try {
+    const { rows } = await query(`SELECT nextval('candidate_reference_seq') AS seq`);
+    if (rows[0]?.seq) {
+      return `CAND${rows[0].seq}`;
+    }
+  } catch (err) {
+    console.warn("Sequence candidate_reference_seq query error, using fallback ID:", err.message);
+  }
   let isUnique = false;
   let employeeId = '';
   while (!isUnique) {
-    const num = Math.floor(1000 + Math.random() * 9000);
-    employeeId = `YOH-${code}${String(num).padStart(4, '0')}`;
-    const { rows } = await query(`SELECT id FROM users WHERE employee_id = $1`, [employeeId]);
-    if (rows.length === 0) {
-      isUnique = true;
-    }
+    const num = Math.floor(10000 + Math.random() * 90000);
+    employeeId = `CAND${num}`;
+    const { rows: check } = await query(`SELECT id FROM users WHERE employee_id = $1`, [employeeId]);
+    if (check.length === 0) isUnique = true;
   }
   return employeeId;
 }
@@ -320,7 +317,11 @@ router.post('/candidates/:id/select', async (req, res, next) => {
     let userRes = await query(`SELECT id FROM users WHERE mobile = $1 OR email = $2`, [candidate.mobile_number, candidate.email_id]);
     let userId = null;
 
-    const employee_id = await generateEmployeeId(offered_designation);
+    const employee_id = (candidate.reference_code && /^CAND\d+$/.test(candidate.reference_code))
+      ? candidate.reference_code
+      : (candidate.employee_id && /^CAND\d+$/.test(candidate.employee_id))
+        ? candidate.employee_id
+        : await generateEmployeeId();
 
     // Generate readable temporary password
     const tempPassword = `GKP@${Math.floor(100000 + Math.random() * 900000)}`;

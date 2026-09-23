@@ -59,27 +59,22 @@ const createAdmin = async (req, res, next) => {
       return error(res, 'At least one assigned bank is required for Operational Head, Administrative Operator, Administrative Sales Executive, PAN Checker, Remark Operator, or QD Operator designation', 400);
     }
 
-    // Generate unique employeeId in format YOH-SE9983, YOH-TL2324, YOH-MGR0985, YOH-HR0123
-    let code = 'SE';
-    if (role === 'HR' || desigUpper.includes('HR')) {
-      code = 'HR';
-    } else if (role === 'ADMIN') {
-      code = 'ADM';
-    } else {
-      if (desigUpper.includes('TEAM LEADER') || desigUpper.includes('TL') || desigUpper === 'TL') code = 'TL';
-      else if (desigUpper.includes('MANAGER') || desigUpper.includes('MGR')) code = 'MGR';
-      else if (desigUpper.includes('TELECALLER') || desigUpper.includes('TC') || desigUpper.includes('SALES') || desigUpper.includes('EXECUTIVE') || desigUpper === 'SE') code = 'SE';
-      else code = 'SE';
-    }
-
-    let isUnique = false;
-    let uniqueEmployeeId = '';
-    while (!isUnique) {
-      const num = Math.floor(1000 + Math.random() * 9000);
-      uniqueEmployeeId = `YOH-${code}${String(num).padStart(4, '0')}`;
-      const { rows: [existingEmployee] } = await query(`SELECT id FROM users WHERE employee_id = $1`, [uniqueEmployeeId]);
-      if (!existingEmployee) {
-        isUnique = true;
+    let uniqueEmployeeId = req.body.employeeId || req.body.employee_id || '';
+    if (!uniqueEmployeeId || !/^CAND\d+$/.test(uniqueEmployeeId)) {
+      try {
+        const { rows } = await query(`SELECT nextval('candidate_reference_seq') AS seq`);
+        if (rows[0]?.seq) {
+          uniqueEmployeeId = `CAND${rows[0].seq}`;
+        }
+      } catch (e) {}
+      if (!uniqueEmployeeId) {
+        let isUnique = false;
+        while (!isUnique) {
+          const num = Math.floor(10000 + Math.random() * 90000);
+          uniqueEmployeeId = `CAND${num}`;
+          const { rows: [existingEmployee] } = await query(`SELECT id FROM users WHERE employee_id = $1`, [uniqueEmployeeId]);
+          if (!existingEmployee) isUnique = true;
+        }
       }
     }
 

@@ -1867,8 +1867,6 @@ const listApplications = async (req, res, next) => {
           ap.first_name as partner_first_name,
           ap.last_name as partner_last_name,
           COALESCE(
-            NULLIF(CASE WHEN su.employee_id LIKE 'YOH-%' THEN su.employee_id END, ''),
-            NULLIF(CASE WHEN emp.employee_id LIKE 'YOH-%' THEN emp.employee_id END, ''),
             NULLIF(su.employee_id, ''),
             NULLIF(emp.employee_id, '')
           ) as emp_code,
@@ -2188,8 +2186,6 @@ const getApplication = async (req, res, next) => {
         b.name as bank_name, b.short_code as bank_code,
         ap.partner_code, ap.first_name as Partner_first_name, ap.last_name as Partner_last_name,
         COALESCE(
-          NULLIF(CASE WHEN su.employee_id LIKE 'YOH-%' THEN su.employee_id END, ''),
-          NULLIF(CASE WHEN emp.employee_id LIKE 'YOH-%' THEN emp.employee_id END, ''),
           NULLIF(su.employee_id, ''),
           NULLIF(emp.employee_id, '')
         ) as emp_code,
@@ -3811,6 +3807,22 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_check VARCHAR(10) DEFAULT 'no'`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS requery_date DATE`);
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS digital_journey_url TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_smart_emi_offer TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_smart_emi_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursed_smart_emi VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursed_smart_emi_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS smart_emi_offer_status VARCHAR(20)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_smart_emi_disburse VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS offer_decline_reason TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS eligible_for_incentive VARCHAR(20)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS insta_jumbo_offer VARCHAR(20)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS customer_loan_offer VARCHAR(20)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS offer_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursed_amount VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS disbursed_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_loan_disbursed VARCHAR(50)`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS final_loan_tenure VARCHAR(50)`);
 
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS token VARCHAR(255)`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS address1 TEXT`);
@@ -3842,6 +3854,22 @@ const updateApplicationDetails = async (req, res, next) => {
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS notes TEXT`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS operational_remarks TEXT`);
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS requery_date DATE`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_smart_emi_offer TEXT`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bank_smart_emi_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursed_smart_emi VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursed_smart_emi_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS smart_emi_offer_status VARCHAR(20)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_smart_emi_disburse VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS offer_decline_reason TEXT`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS eligible_for_incentive VARCHAR(20)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS insta_jumbo_offer VARCHAR(20)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS customer_loan_offer VARCHAR(20)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS offer_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursed_amount VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS disbursed_tenure VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_loan_disbursed VARCHAR(50)`);
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS final_loan_tenure VARCHAR(50)`);
   } catch (_) { }
 
   const client = await getClient();
@@ -3907,7 +3935,23 @@ const updateApplicationDetails = async (req, res, next) => {
       bank_current_lead_status,
       bank_lead_status,
       requery_date,
-      re_query_date
+      re_query_date,
+      bank_smart_emi_offer,
+      bank_smart_emi_tenure,
+      disbursed_smart_emi,
+      disbursed_smart_emi_tenure,
+      smart_emi_offer_status,
+      final_smart_emi_disburse,
+      final_tenure,
+      offer_decline_reason,
+      eligible_for_incentive,
+      insta_jumbo_offer,
+      customer_loan_offer,
+      offer_tenure,
+      disbursed_amount,
+      disbursed_tenure,
+      final_loan_disbursed,
+      final_loan_tenure
     } = req.body;
 
     let { rows: [app] } = await client.query(
@@ -4094,6 +4138,22 @@ const updateApplicationDetails = async (req, res, next) => {
         bank_current_lead_status = COALESCE(NULLIF($45, ''), bank_current_lead_status),
         requery_date = COALESCE(NULLIF($46, '')::date, requery_date),
         digital_journey_url = COALESCE(NULLIF($47, ''), digital_journey_url),
+        bank_smart_emi_offer = COALESCE(NULLIF($48, ''), bank_smart_emi_offer),
+        bank_smart_emi_tenure = COALESCE(NULLIF($49, ''), bank_smart_emi_tenure),
+        disbursed_smart_emi = COALESCE(NULLIF($50, ''), disbursed_smart_emi),
+        disbursed_smart_emi_tenure = COALESCE(NULLIF($51, ''), disbursed_smart_emi_tenure),
+        smart_emi_offer_status = COALESCE(NULLIF($52, ''), smart_emi_offer_status),
+        final_smart_emi_disburse = COALESCE(NULLIF($53, ''), final_smart_emi_disburse),
+        final_tenure = COALESCE(NULLIF($54, ''), final_tenure),
+        offer_decline_reason = COALESCE(NULLIF($55, ''), offer_decline_reason),
+        eligible_for_incentive = COALESCE(NULLIF($56, ''), eligible_for_incentive),
+        insta_jumbo_offer = COALESCE(NULLIF($57, ''), insta_jumbo_offer),
+        customer_loan_offer = COALESCE(NULLIF($58, ''), customer_loan_offer),
+        offer_tenure = COALESCE(NULLIF($59, ''), offer_tenure),
+        disbursed_amount = COALESCE(NULLIF($60, ''), disbursed_amount),
+        disbursed_tenure = COALESCE(NULLIF($61, ''), disbursed_tenure),
+        final_loan_disbursed = COALESCE(NULLIF($62, ''), final_loan_disbursed),
+        final_loan_tenure = COALESCE(NULLIF($63, ''), final_loan_tenure),
         updated_at = NOW()
       WHERE id = $34
       RETURNING *
@@ -4144,7 +4204,23 @@ const updateApplicationDetails = async (req, res, next) => {
       cleanStr(pan_check || (isPanCheckerUser ? 'yes' : null)),
       cleanStr(bank_current_lead_status || bank_lead_status || req.body.bank_current_lead_status || req.body.bank_lead_status),
       cleanStr(requery_date || re_query_date || req.body.requery_date || req.body.re_query_date),
-      cleanStr(req.body.digital_journey_url || req.body.digital_link || req.body.redirect_url)
+      cleanStr(req.body.digital_journey_url || req.body.digital_link || req.body.redirect_url),
+      cleanStr(bank_smart_emi_offer),
+      cleanStr(bank_smart_emi_tenure),
+      cleanStr(disbursed_smart_emi),
+      cleanStr(disbursed_smart_emi_tenure),
+      cleanStr(smart_emi_offer_status),
+      cleanStr(final_smart_emi_disburse),
+      cleanStr(final_tenure),
+      cleanStr(offer_decline_reason),
+      cleanStr(eligible_for_incentive),
+      cleanStr(insta_jumbo_offer),
+      cleanStr(customer_loan_offer),
+      cleanStr(offer_tenure),
+      cleanStr(disbursed_amount),
+      cleanStr(disbursed_tenure),
+      cleanStr(final_loan_disbursed),
+      cleanStr(final_loan_tenure)
     ]);
 
     const currentOpCode = req.user?.employee_id || req.user?.user_code || req.user?.employee_code || req.user?.emp_code || req.user?.full_name || req.user?.email || req.user?.id;
@@ -4258,6 +4334,22 @@ const updateApplicationDetails = async (req, res, next) => {
           user_remark,
           income_details,
           mail_status,
+          bank_smart_emi_offer,
+          bank_smart_emi_tenure,
+          disbursed_smart_emi,
+          disbursed_smart_emi_tenure,
+          smart_emi_offer_status,
+          final_smart_emi_disburse,
+          final_tenure,
+          offer_decline_reason,
+          eligible_for_incentive,
+          insta_jumbo_offer,
+          customer_loan_offer,
+          offer_tenure,
+          disbursed_amount,
+          disbursed_tenure,
+          final_loan_disbursed,
+          final_loan_tenure,
           created_at,
           updated_at
         ) VALUES (
@@ -4297,6 +4389,7 @@ const updateApplicationDetails = async (req, res, next) => {
           $31,
           $32,
           $33,
+          $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, $45, $46, $47, $48, $49,
           NOW(),
           NOW()
         ) ON CONFLICT (application_id) DO UPDATE SET
@@ -4337,6 +4430,22 @@ const updateApplicationDetails = async (req, res, next) => {
           user_remark = COALESCE(NULLIF(EXCLUDED.user_remark, ''), physical_application_details.user_remark),
           pan_check = COALESCE(NULLIF(EXCLUDED.pan_check, ''), physical_application_details.pan_check),
           requery_date = COALESCE(EXCLUDED.requery_date, physical_application_details.requery_date),
+          bank_smart_emi_offer = COALESCE(NULLIF(EXCLUDED.bank_smart_emi_offer, ''), physical_application_details.bank_smart_emi_offer),
+          bank_smart_emi_tenure = COALESCE(NULLIF(EXCLUDED.bank_smart_emi_tenure, ''), physical_application_details.bank_smart_emi_tenure),
+          disbursed_smart_emi = COALESCE(NULLIF(EXCLUDED.disbursed_smart_emi, ''), physical_application_details.disbursed_smart_emi),
+          disbursed_smart_emi_tenure = COALESCE(NULLIF(EXCLUDED.disbursed_smart_emi_tenure, ''), physical_application_details.disbursed_smart_emi_tenure),
+          smart_emi_offer_status = COALESCE(NULLIF(EXCLUDED.smart_emi_offer_status, ''), physical_application_details.smart_emi_offer_status),
+          final_smart_emi_disburse = COALESCE(NULLIF(EXCLUDED.final_smart_emi_disburse, ''), physical_application_details.final_smart_emi_disburse),
+          final_tenure = COALESCE(NULLIF(EXCLUDED.final_tenure, ''), physical_application_details.final_tenure),
+          offer_decline_reason = COALESCE(NULLIF(EXCLUDED.offer_decline_reason, ''), physical_application_details.offer_decline_reason),
+          eligible_for_incentive = COALESCE(NULLIF(EXCLUDED.eligible_for_incentive, ''), physical_application_details.eligible_for_incentive),
+          insta_jumbo_offer = COALESCE(NULLIF(EXCLUDED.insta_jumbo_offer, ''), physical_application_details.insta_jumbo_offer),
+          customer_loan_offer = COALESCE(NULLIF(EXCLUDED.customer_loan_offer, ''), physical_application_details.customer_loan_offer),
+          offer_tenure = COALESCE(NULLIF(EXCLUDED.offer_tenure, ''), physical_application_details.offer_tenure),
+          disbursed_amount = COALESCE(NULLIF(EXCLUDED.disbursed_amount, ''), physical_application_details.disbursed_amount),
+          disbursed_tenure = COALESCE(NULLIF(EXCLUDED.disbursed_tenure, ''), physical_application_details.disbursed_tenure),
+          final_loan_disbursed = COALESCE(NULLIF(EXCLUDED.final_loan_disbursed, ''), physical_application_details.final_loan_disbursed),
+          final_loan_tenure = COALESCE(NULLIF(EXCLUDED.final_loan_tenure, ''), physical_application_details.final_loan_tenure),
           updated_at = NOW()
       `, [
         mobile || customer_mobile || null,
@@ -4371,7 +4480,23 @@ const updateApplicationDetails = async (req, res, next) => {
         cleanStr(vkyc_url || req.body.vkyc_url),
         cleanStr(user_remark || req.body.user_remark || req.body.user_notes || req.body.notes || notes || user_notes),
         cleanStr(income_details || req.body.income_details),
-        cleanStr(mail_status || req.body.mail_status)
+        cleanStr(mail_status || req.body.mail_status),
+        cleanStr(bank_smart_emi_offer),
+        cleanStr(bank_smart_emi_tenure),
+        cleanStr(disbursed_smart_emi),
+        cleanStr(disbursed_smart_emi_tenure),
+        cleanStr(smart_emi_offer_status),
+        cleanStr(final_smart_emi_disburse),
+        cleanStr(final_tenure),
+        cleanStr(offer_decline_reason),
+        cleanStr(eligible_for_incentive),
+        cleanStr(insta_jumbo_offer),
+        cleanStr(customer_loan_offer),
+        cleanStr(offer_tenure),
+        cleanStr(disbursed_amount),
+        cleanStr(disbursed_tenure),
+        cleanStr(final_loan_disbursed),
+        cleanStr(final_loan_tenure)
       ]);
       await client.query('RELEASE SAVEPOINT phys_sp');
     } catch (physErr) {

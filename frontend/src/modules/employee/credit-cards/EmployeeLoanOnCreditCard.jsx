@@ -216,6 +216,8 @@ export default function EmployeeLoanOnCreditCard() {
   const [applyOffer, setApplyOffer] = useState(null);
   const [custName, setCustName] = useState('');
   const [custMobile, setCustMobile] = useState('');
+  const [loanRequiredAmt, setLoanRequiredAmt] = useState('');
+  const [loanTenure, setLoanTenure] = useState('6 Months');
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const empCode = user?.employee_id || user?.emp_code || user?.id || '';
@@ -280,6 +282,8 @@ export default function EmployeeLoanOnCreditCard() {
       await axios.post(`${getApiV1Url()}/employee/leads`, {
         full_name: custName,
         mobile: custMobile,
+        loan_required_amount: loanRequiredAmt,
+        tenure: loanTenure,
         card_bank: applyOffer?.bank,
         card_name: applyOffer?.title || applyOffer?.name,
         product_id: isUuid ? applyOffer?.id : undefined,
@@ -291,6 +295,8 @@ export default function EmployeeLoanOnCreditCard() {
         setApplyOffer(null);
         setCustName('');
         setCustMobile('');
+        setLoanRequiredAmt('');
+        setLoanTenure('6 Months');
       }, 2500);
     } catch (err) {
       console.error('Failed to submit card loan lead:', err);
@@ -300,6 +306,8 @@ export default function EmployeeLoanOnCreditCard() {
         setApplyOffer(null);
         setCustName('');
         setCustMobile('');
+        setLoanRequiredAmt('');
+        setLoanTenure('6 Months');
       }, 2500);
     } finally {
       setIsSubmitting(false);
@@ -708,7 +716,7 @@ export default function EmployeeLoanOnCreditCard() {
             ) : (
               <form onSubmit={handleSubmitLead} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Customer Full Name</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Name</label>
                   <input 
                     type="text" 
                     required 
@@ -720,7 +728,7 @@ export default function EmployeeLoanOnCreditCard() {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Mobile Number</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Number</label>
                   <input 
                     type="tel" 
                     required 
@@ -730,6 +738,34 @@ export default function EmployeeLoanOnCreditCard() {
                     onChange={(e) => setCustMobile(e.target.value.replace(/\D/g, ''))}
                     style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 600 }}
                   />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Loan Required Amount</label>
+                  <input 
+                    type="number" 
+                    required
+                    placeholder="Enter Loan Required Amount..."
+                    value={loanRequiredAmt}
+                    onChange={(e) => setLoanRequiredAmt(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 600 }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: C.textMid, display: 'block', marginBottom: '4px' }}>Loan Tenure</label>
+                  <select
+                    value={loanTenure}
+                    onChange={(e) => setLoanTenure(e.target.value)}
+                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 600 }}
+                  >
+                    <option value="6 Months">6 Months</option>
+                    <option value="1 Year">1 Year</option>
+                    <option value="2 Years">2 Years</option>
+                    <option value="3 Years">3 Years</option>
+                    <option value="4 Years">4 Years</option>
+                    <option value="5 Years">5 Years</option>
+                  </select>
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
