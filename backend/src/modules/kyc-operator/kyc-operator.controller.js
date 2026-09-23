@@ -6,6 +6,20 @@ const logger = require('../../config/logger');
  * Restricts access exclusively to non-declined soft approval applications.
  */
 
+// Helper to ensure kyc_status and kyc_remarks columns exist on applications table
+let columnsChecked = false;
+const ensureKycColumns = async () => {
+  if (columnsChecked) return;
+  try {
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(50) DEFAULT 'PENDING'`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50) DEFAULT 'PENDING'`);
+    columnsChecked = true;
+  } catch (err) {
+    logger.warn('Failed ensuring kyc columns on applications table:', err.message);
+  }
+};
+
 // Helper to check if application is soft approval declined
 const isSoftApprovalDeclined = (softApprovalStatus) => {
   const status = String(softApprovalStatus || '').trim().toLowerCase();
@@ -18,6 +32,7 @@ const isSoftApprovalDeclined = (softApprovalStatus) => {
  */
 const getKycApplications = async (req, res) => {
   try {
+    await ensureKycColumns();
     const page = parseInt(req.query.page || '1', 10);
     const limit = parseInt(req.query.limit || '20', 10);
     const offset = (page - 1) * limit;
@@ -57,7 +72,7 @@ const getKycApplications = async (req, res) => {
     }
 
     if (kyc_status) {
-      whereConditions.push(`LOWER(COALESCE(a.kyc_status, 'pending')) = $${paramIdx}`);
+      whereConditions.push(`LOWER(COALESCE(a.kyc_status, a.vkyc_status, 'pending')) = $${paramIdx}`);
       queryParams.push(kyc_status.toLowerCase());
       paramIdx++;
     }
@@ -80,9 +95,9 @@ const getKycApplications = async (req, res) => {
     const statsQuery = `
       SELECT 
         COUNT(*)::int as total_kyc,
-        COUNT(CASE WHEN LOWER(COALESCE(a.kyc_status, 'pending')) IN ('pending', 'new', 'under_review') THEN 1 END)::int as pending_kyc,
-        COUNT(CASE WHEN LOWER(COALESCE(a.kyc_status, 'pending')) IN ('verified', 'approved') THEN 1 END)::int as verified_kyc,
-        COUNT(CASE WHEN LOWER(COALESCE(a.kyc_status, 'pending')) = 'rejected' THEN 1 END)::int as rejected_kyc
+        COUNT(CASE WHEN LOWER(COALESCE(a.kyc_status, a.vkyc_status, 'pending')) IN ('pending', 'new', 'under_review') THEN 1 END)::int as pending_kyc,
+        COUNT(CASE WHEN LOWER(COALESCE(a.kyc_status, a.vkyc_status, 'pending')) IN ('verified', 'approved') THEN 1 END)::int as verified_kyc,
+        COUNT(CASE WHEN LOWER(COALESCE(a.kyc_status, a.vkyc_status, 'pending')) = 'rejected' THEN 1 END)::int as rejected_kyc
       FROM applications a
       LEFT JOIN physical_application_details pad ON (pad.application_id = a.id OR pad.application_id::text = a.id::text)
       WHERE ${whereConditions[0]}
@@ -114,7 +129,7 @@ const getKycApplications = async (req, res) => {
         COALESCE(e.employee_id, u.employee_id, e.full_name, 'Direct') as referred_by,
         a.status as application_status,
         COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status,
-        COALESCE(a.kyc_status, 'PENDING') as kyc_status,
+        COALESCE(a.kyc_status, a.vkyc_status, 'PENDING') as kyc_status,
         a.kyc_remarks,
         a.created_at,
         a.updated_at
@@ -156,13 +171,14 @@ const getKycApplications = async (req, res) => {
  */
 const getKycApplicationById = async (req, res) => {
   try {
+    await ensureKycColumns();
     const { id } = req.params;
 
     const appRes = await query(`
       SELECT 
         a.*,
         COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status,
-        COALESCE(a.kyc_status, 'PENDING') as kyc_status,
+        COALESCE(a.kyc_status, a.vkyc_status, 'PENDING') as kyc_status,
         p.name as product_name,
         b.name as bank_name,
         COALESCE(e.employee_id, u.employee_id, e.full_name, 'Direct') as referred_by
