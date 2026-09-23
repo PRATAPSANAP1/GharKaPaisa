@@ -13,6 +13,8 @@ import {
 
 const CATEGORY_MAP = {
   credit_card: "Credit Cards",
+  loan_on_credit_card: "Loan on Credit Card",
+  smart_emi: "Credit Card EMI & Smart EMI",
   loans: "Loans",
   insurance: "Insurance",
   savings_account: "Savings Account",
@@ -158,6 +160,8 @@ export default function ManageAdminProducts() {
           category: activeCategory === 'credit_card' ? '%card%' :
                     activeCategory === 'loans' ? '%loan%' :
                     activeCategory === 'insurance' ? '%insurance%' :
+                    activeCategory === 'loan_on_credit_card' ? 'loan_on_credit_card' :
+                    activeCategory === 'smart_emi' ? 'smart_emi' :
                     activeCategory,
           is_active: 'all',
           limit: 1000
@@ -214,7 +218,7 @@ export default function ManageAdminProducts() {
       name: "",
       bank_id: banks[0]?.id || "",
       category: activeCategory,
-      sub_category: activeCategory === 'loans' ? 'Loan on Credit Card' : activeCategory === 'insurance' ? 'Health Insurance' : 'Core Cards',
+      sub_category: activeCategory === 'loan_on_credit_card' ? 'Loan on Credit Card' : activeCategory === 'smart_emi' ? 'Smart EMI on Credit Card' : activeCategory === 'loans' ? 'Personal Loan' : activeCategory === 'insurance' ? 'Health Insurance' : 'Core Cards',
       description: "",
       image_url: "",
       status: "Active",
@@ -645,10 +649,12 @@ export default function ManageAdminProducts() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: isMobile ? '1 1 calc(50% - 6px)' : 'none' }}>
             <span style={{ fontSize: '11px', fontWeight: 800, color: C.textLight }}>Card Type</span>
             <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ ...S.input, height: '42px', minWidth: isMobile ? '100%' : '150px', width: '100%', padding: '0 12px', fontSize: '13px', fontWeight: 700, borderRadius: '10px', boxSizing: 'border-box' }}>
-              <option value="All">All Card Types</option>
+              <option value="All">All Product Types</option>
               <option value="Core Cards">Core Cards</option>
               <option value="Co-Branded Cards">Co-Branded Cards</option>
               <option value="Secured Cards">Secured Cards</option>
+              <option value="Loan on Credit Card">Loan on Credit Card</option>
+              <option value="Smart EMI on Credit Card">Smart EMI on Credit Card</option>
             </select>
           </div>
 

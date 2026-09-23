@@ -182,8 +182,8 @@ const AdminLayout = () => {
           </>
         ) : (
           <>
-            {/* Dashboard (Available to all Admin Roles except Remark Operator and QD Operator) */}
-            {!isRemarkOperator && !isQdOperator && (
+            {/* Dashboard (Available to all Admin Roles except Remark Operator, QD Operator, and KYC Operator) */}
+            {!isRemarkOperator && !isQdOperator && !isKycOperator && (
               <NavLink to="/admin/dashboard" style={navLinkStyle}>
                 <Icons.dashboard size={18} />
                 <span>Dashboard</span>
@@ -215,7 +215,7 @@ const AdminLayout = () => {
             )}
 
             {/* CREDIT CARDS — Only Assigned Banks */}
-            {!isPanChecker && !isRemarkOperator && !isSalesExec && !isQdOperator && (
+            {!isPanChecker && !isRemarkOperator && !isSalesExec && !isQdOperator && !isKycOperator && (
               <div>
                 <button onClick={() => setOpenCcMenu(!openCcMenu)} style={menuBtnStyle(openCcMenu)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -241,7 +241,7 @@ const AdminLayout = () => {
             )}
 
             {/* LOANS — Only Assigned Banks */}
-            {!isPanChecker && !isRemarkOperator && !isSalesExec && !isQdOperator && (
+            {!isPanChecker && !isRemarkOperator && !isSalesExec && !isQdOperator && !isKycOperator && (
               <div>
                 <button onClick={() => setOpenLoansMenu(!openLoansMenu)} style={menuBtnStyle(openLoansMenu)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -267,7 +267,7 @@ const AdminLayout = () => {
             )}
 
             {/* INSURANCE — Only Assigned Banks */}
-            {!isPanChecker && !isRemarkOperator && !isSalesExec && !isQdOperator && (
+            {!isPanChecker && !isRemarkOperator && !isSalesExec && !isQdOperator && !isKycOperator && (
               <div>
                 <button onClick={() => setOpenInsuranceMenu(!openInsuranceMenu)} style={menuBtnStyle(openInsuranceMenu)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -315,7 +315,7 @@ const AdminLayout = () => {
             </NavLink>
 
             {/* Additional Admin Nav Items */}
-            {!isBackend && !isSalesExec && !isPanChecker && !isRemarkOperator && !isQdOperator && (
+            {!isBackend && !isSalesExec && !isPanChecker && !isRemarkOperator && !isQdOperator && !isKycOperator && (
               <>
                 {/* Customers */}
                 <NavLink to="/admin/leads" style={navLinkStyle}>
