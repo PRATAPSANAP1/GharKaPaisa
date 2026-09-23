@@ -270,20 +270,26 @@ async function createGroup(currentUserId, { name, description, memberUserIds = [
   return await repo.getConversationById(conv.id);
 }
 
-async function getConversationDetails(conversationId, userId) {
-  const isPart = await repo.isParticipant(conversationId, userId);
-  if (!isPart) {
-    throw new Error('Access denied to this conversation.');
+async function getConversationDetails(conversationId, userId, userRole = null) {
+  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
+  if (!isSuperAdmin) {
+    const isPart = await repo.isParticipant(conversationId, userId);
+    if (!isPart) {
+      throw new Error('Access denied to this conversation.');
+    }
   }
   const conv = await repo.getConversationById(conversationId);
   const participants = await repo.getConversationParticipants(conversationId);
   return { ...conv, participants };
 }
 
-async function getMessages(conversationId, userId, limit = 50, offset = 0) {
-  const isPart = await repo.isParticipant(conversationId, userId);
-  if (!isPart) {
-    throw new Error('Access denied to this conversation.');
+async function getMessages(conversationId, userId, limit = 50, offset = 0, userRole = null) {
+  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
+  if (!isSuperAdmin) {
+    const isPart = await repo.isParticipant(conversationId, userId);
+    if (!isPart) {
+      throw new Error('Access denied to this conversation.');
+    }
   }
   await repo.markMessagesAsRead(conversationId, userId);
   const messages = await repo.getMessages(conversationId, userId, limit, offset);
@@ -294,10 +300,16 @@ async function getMessages(conversationId, userId, limit = 50, offset = 0) {
   }));
 }
 
-async function postMessage(senderId, { conversation_id, message_type = 'TEXT', message_text, reply_to_message_id, attachments = [] }) {
-  const isPart = await repo.isParticipant(conversation_id, senderId);
+async function postMessage(senderId, { conversation_id, message_type = 'TEXT', message_text, reply_to_message_id, attachments = [] }, userRole = null) {
+  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
+  let isPart = await repo.isParticipant(conversation_id, senderId);
   if (!isPart) {
-    throw new Error('You are not a participant of this conversation.');
+    if (isSuperAdmin) {
+      await repo.addParticipant({ conversation_id, user_id: senderId, role: 'ADMIN' });
+      isPart = true;
+    } else {
+      throw new Error('You are not a participant of this conversation.');
+    }
   }
 
   if (!message_text && (!attachments || attachments.length === 0)) {
@@ -425,26 +437,35 @@ async function getAdminAuditMessages(conversationId) {
   }));
 }
 
-async function clearUserConversation(conversationId, userId) {
-  const isPart = await repo.isParticipant(conversationId, userId);
-  if (!isPart) {
-    throw new Error('Access denied. You are not a participant of this conversation.');
+async function clearUserConversation(conversationId, userId, userRole = null) {
+  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
+  if (!isSuperAdmin) {
+    const isPart = await repo.isParticipant(conversationId, userId);
+    if (!isPart) {
+      throw new Error('Access denied. You are not a participant of this conversation.');
+    }
   }
   return await repo.clearConversationForUser(conversationId, userId);
 }
 
-async function leaveUserConversation(conversationId, userId) {
-  const isPart = await repo.isParticipant(conversationId, userId);
-  if (!isPart) {
-    throw new Error('Access denied. You are not a participant of this conversation.');
+async function leaveUserConversation(conversationId, userId, userRole = null) {
+  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
+  if (!isSuperAdmin) {
+    const isPart = await repo.isParticipant(conversationId, userId);
+    if (!isPart) {
+      throw new Error('Access denied. You are not a participant of this conversation.');
+    }
   }
   return await repo.leaveConversationForUser(conversationId, userId);
 }
 
-async function deleteUserConversation(conversationId, userId) {
-  const isPart = await repo.isParticipant(conversationId, userId);
-  if (!isPart) {
-    throw new Error('Access denied. You are not a participant of this conversation.');
+async function deleteUserConversation(conversationId, userId, userRole = null) {
+  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
+  if (!isSuperAdmin) {
+    const isPart = await repo.isParticipant(conversationId, userId);
+    if (!isPart) {
+      throw new Error('Access denied. You are not a participant of this conversation.');
+    }
   }
   return await repo.deleteConversationForUser(conversationId, userId);
 }
@@ -491,18 +512,24 @@ async function getAllAccountsForAssignment() {
   return await repo.getAllAccountsForAssignment();
 }
 
-async function getGroupMembers(conversationId, userId) {
-  const isPart = await repo.isParticipant(conversationId, userId);
-  if (!isPart) {
-    throw new Error('Access denied to this conversation.');
+async function getGroupMembers(conversationId, userId, userRole = null) {
+  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
+  if (!isSuperAdmin) {
+    const isPart = await repo.isParticipant(conversationId, userId);
+    if (!isPart) {
+      throw new Error('Access denied to this conversation.');
+    }
   }
   return await repo.getConversationParticipants(conversationId);
 }
 
-async function addGroupMembers(conversationId, currentUserId, memberUserIds = []) {
-  const isPart = await repo.isParticipant(conversationId, currentUserId);
-  if (!isPart) {
-    throw new Error('Access denied. You are not a participant of this group.');
+async function addGroupMembers(conversationId, currentUserId, memberUserIds = [], userRole = null) {
+  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
+  if (!isSuperAdmin) {
+    const isPart = await repo.isParticipant(conversationId, currentUserId);
+    if (!isPart) {
+      throw new Error('Access denied. You are not a participant of this group.');
+    }
   }
   const conv = await repo.getConversationById(conversationId);
   if (!conv || conv.conversation_type !== 'GROUP') {
@@ -537,10 +564,13 @@ async function addGroupMembers(conversationId, currentUserId, memberUserIds = []
   return await repo.getConversationParticipants(conversationId);
 }
 
-async function removeGroupMember(conversationId, currentUserId, targetUserId) {
-  const isPart = await repo.isParticipant(conversationId, currentUserId);
-  if (!isPart) {
-    throw new Error('Access denied. You are not a participant of this group.');
+async function removeGroupMember(conversationId, currentUserId, targetUserId, userRole = null) {
+  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
+  if (!isSuperAdmin) {
+    const isPart = await repo.isParticipant(conversationId, currentUserId);
+    if (!isPart) {
+      throw new Error('Access denied. You are not a participant of this group.');
+    }
   }
   const conv = await repo.getConversationById(conversationId);
   if (!conv || conv.conversation_type !== 'GROUP') {

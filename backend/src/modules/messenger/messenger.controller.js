@@ -61,7 +61,7 @@ async function getConversation(req, res, next) {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const conv = await service.getConversationDetails(id, userId);
+    const conv = await service.getConversationDetails(id, userId, req.user.role);
     return success(res, conv, 'Conversation details retrieved');
   } catch (err) {
     next(err);
@@ -74,7 +74,7 @@ async function getMessages(req, res, next) {
     const { id } = req.params;
     const limit = parseInt(req.query.limit || 50, 10);
     const offset = parseInt(req.query.offset || 0, 10);
-    const messages = await service.getMessages(id, userId, limit, offset);
+    const messages = await service.getMessages(id, userId, limit, offset, req.user.role);
     return success(res, messages, 'Messages retrieved');
   } catch (err) {
     next(err);
@@ -95,7 +95,7 @@ async function sendMessage(req, res, next) {
       message_text,
       reply_to_message_id,
       attachments
-    });
+    }, req.user.role);
     return success(res, msg, 'Message sent successfully');
   } catch (err) {
     next(err);
@@ -183,7 +183,7 @@ async function clearChat(req, res, next) {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const result = await service.clearUserConversation(id, userId);
+    const result = await service.clearUserConversation(id, userId, req.user.role);
     return success(res, { cleared: result }, 'Chat history cleared successfully');
   } catch (err) {
     next(err);
@@ -194,7 +194,7 @@ async function leaveGroup(req, res, next) {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const result = await service.leaveUserConversation(id, userId);
+    const result = await service.leaveUserConversation(id, userId, req.user.role);
     return success(res, { left: result }, 'Left group successfully');
   } catch (err) {
     next(err);
@@ -205,7 +205,7 @@ async function deleteConversation(req, res, next) {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const result = await service.deleteUserConversation(id, userId);
+    const result = await service.deleteUserConversation(id, userId, req.user.role);
     return success(res, { deleted: result }, 'Conversation deleted successfully');
   } catch (err) {
     next(err);
@@ -286,7 +286,7 @@ async function getGroupMembers(req, res, next) {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const members = await service.getGroupMembers(id, userId);
+    const members = await service.getGroupMembers(id, userId, req.user.role);
     return success(res, members, 'Group members retrieved successfully');
   } catch (err) {
     next(err);
@@ -298,7 +298,7 @@ async function addGroupMembers(req, res, next) {
     const userId = req.user.id;
     const { id } = req.params;
     const { member_user_ids } = req.body;
-    const members = await service.addGroupMembers(id, userId, member_user_ids || []);
+    const members = await service.addGroupMembers(id, userId, member_user_ids || [], req.user.role);
     return success(res, members, 'Members added successfully');
   } catch (err) {
     next(err);
@@ -309,7 +309,7 @@ async function removeGroupMember(req, res, next) {
   try {
     const userId = req.user.id;
     const { id, targetUserId } = req.params;
-    const members = await service.removeGroupMember(id, userId, targetUserId);
+    const members = await service.removeGroupMember(id, userId, targetUserId, req.user.role);
     return success(res, members, 'Member removed successfully');
   } catch (err) {
     next(err);
