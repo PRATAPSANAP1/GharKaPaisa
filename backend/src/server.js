@@ -266,6 +266,14 @@ const startServer = async () => {
       logger.warn('Contest auto migration note:', cErr.message);
     }
 
+    // Always ensure Loan on Credit Card & Smart EMI products are seeded on boot
+    try {
+      const { seedSmartEmiAndLoccProducts } = require('./database/seeds/seed-smart-emi-locc.js');
+      await seedSmartEmiAndLoccProducts();
+    } catch (emiErr) {
+      logger.warn('Smart EMI / LOCC auto seed note:', emiErr.message);
+    }
+
     // Initialize scheduled CRON jobs
     const { initReportJobs } = require('./jobs/report.job.js');
     initReportJobs();
