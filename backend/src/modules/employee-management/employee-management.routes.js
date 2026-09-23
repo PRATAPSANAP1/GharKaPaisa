@@ -2068,10 +2068,10 @@ router.post('/incentives/:id/update-status', async (req, res, next) => {
 
     const { rows } = await query(
       `UPDATE employee_incentive_transactions
-       SET status = $1,
+       SET status = $1::varchar,
            payment_reference = COALESCE($2, payment_reference),
            payment_method = COALESCE($3, payment_method),
-           hold_reason = CASE WHEN $1 = 'HOLD' THEN COALESCE($4, hold_reason, 'App File Pending') ELSE NULL END,
+           hold_reason = CASE WHEN $1::varchar = 'HOLD' THEN COALESCE($4, hold_reason, 'App File Pending') ELSE NULL END,
            paid_at = CASE WHEN $5::boolean THEN NOW() ELSE paid_at END,
            updated_at = NOW(),
            processed_by = $6
@@ -2145,10 +2145,10 @@ router.post('/incentives/bulk-update-status', async (req, res, next) => {
 
     const { rows } = await query(
       `UPDATE employee_incentive_transactions
-       SET status = $1,
+       SET status = $1::varchar,
            payment_reference = COALESCE($2, payment_reference),
            payment_method = COALESCE($3, payment_method),
-           hold_reason = CASE WHEN $1 = 'HOLD' THEN COALESCE($4, hold_reason, 'App File Pending') ELSE NULL END,
+           hold_reason = CASE WHEN $1::varchar = 'HOLD' THEN COALESCE($4, hold_reason, 'App File Pending') ELSE NULL END,
            paid_at = CASE WHEN $5::boolean THEN NOW() ELSE paid_at END,
            updated_at = NOW(),
            processed_by = $6
