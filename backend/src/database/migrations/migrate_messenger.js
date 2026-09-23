@@ -10,8 +10,8 @@ const migrateMessenger = async () => {
     await query('BEGIN');
 
     // Add user active tracking columns if not existing
-    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ DEFAULT NOW()`).catch(() => {});
-    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_logout_at TIMESTAMPTZ`).catch(() => {});
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ DEFAULT NOW()`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_logout_at TIMESTAMPTZ`);
 
     // 1. Conversations table
     await query(`
@@ -53,8 +53,8 @@ const migrateMessenger = async () => {
       )
     `);
 
-    await query(`ALTER TABLE conversation_participants ADD COLUMN IF NOT EXISTS cleared_at TIMESTAMPTZ`).catch(() => {});
-    await query(`UPDATE conversations SET name = NULL WHERE conversation_type = 'DIRECT'`).catch(() => {});
+    await query(`ALTER TABLE conversation_participants ADD COLUMN IF NOT EXISTS cleared_at TIMESTAMPTZ`);
+    await query(`UPDATE conversations SET name = NULL WHERE conversation_type = 'DIRECT'`);
 
     await query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_conv_id ON conversation_participants(conversation_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_conv_participants_user_id ON conversation_participants(user_id)`);
@@ -93,9 +93,9 @@ const migrateMessenger = async () => {
       )
     `);
 
-    await query(`ALTER TABLE message_attachments ALTER COLUMN file_size TYPE BIGINT USING file_size::bigint`).catch(() => {});
-    await query(`ALTER TABLE message_attachments ALTER COLUMN file_url TYPE TEXT`).catch(() => {});
-    await query(`ALTER TABLE message_attachments ALTER COLUMN storage_key TYPE TEXT`).catch(() => {});
+    await query(`ALTER TABLE message_attachments ALTER COLUMN file_size TYPE BIGINT USING file_size::bigint`);
+    await query(`ALTER TABLE message_attachments ALTER COLUMN file_url TYPE TEXT`);
+    await query(`ALTER TABLE message_attachments ALTER COLUMN storage_key TYPE TEXT`);
     await query(`CREATE INDEX IF NOT EXISTS idx_message_attachments_msg_id ON message_attachments(message_id)`);
 
     // 5. Message Reads table
@@ -129,12 +129,17 @@ const migrateMessenger = async () => {
         account_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         assigned_messenger_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         assigned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        removed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+        removed_at TIMESTAMPTZ,
         status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE (account_user_id, assigned_messenger_user_id)
       )
     `);
+
+    await query(`ALTER TABLE messenger_assignments ADD COLUMN IF NOT EXISTS removed_by UUID REFERENCES users(id) ON DELETE SET NULL`);
+    await query(`ALTER TABLE messenger_assignments ADD COLUMN IF NOT EXISTS removed_at TIMESTAMPTZ`);
 
     await query(`CREATE INDEX IF NOT EXISTS idx_messenger_assignments_account ON messenger_assignments(account_user_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_messenger_assignments_target ON messenger_assignments(assigned_messenger_user_id)`);

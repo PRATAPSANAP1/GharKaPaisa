@@ -168,6 +168,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       });
       if (res.data?.success) {
         alert('Messenger contacts assigned successfully!');
+        setSelectedAccountId('');
         setSelectedMessengerIds([]);
         fetchAccountsAndAssignments();
       }

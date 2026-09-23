@@ -1,17 +1,7 @@
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
 
-let isTablesChecked = false;
-async function ensureMessengerTables() {
-  if (isTablesChecked) return;
-  try {
-    const migrateMessenger = require('../../database/migrations/migrate_messenger');
-    await migrateMessenger();
-    isTablesChecked = true;
-  } catch (err) {
-    logger.error('Auto ensure messenger tables note:', err.message);
-  }
-}
+
 
 /**
  * Get all conversations for a specific user with unread counts and last message details
@@ -703,18 +693,46 @@ async function deleteConversationForUser(conversationId, userId) {
 }
 
 /**
- * Assign Messengers to an account (Super Admin action)
+ * Assign Messengers to an account (Super Admin action with defense-in-depth)
  */
 async function assignMessengers(accountUserId, assignedMessengerUserIds = [], assignedBy) {
   if (!accountUserId || !assignedMessengerUserIds.length) return [];
+
+  // Defense in depth: Verify assignedBy is an active Super Admin
+  const { rows: admins } = await query(
+    `SELECT id FROM users WHERE id = $1 AND UPPER(role::text) = 'SUPER_ADMIN' AND is_active = TRUE`,
+    [assignedBy]
+  );
+  if (!admins.length) {
+    throw new Error('Only an active Super Admin can create Messenger assignments.');
+  }
+
+  // Validate account user exists and is active
+  const { rows: accountUsers } = await query(
+    `SELECT id FROM users WHERE id = $1 AND is_active = TRUE`,
+    [accountUserId]
+  );
+  if (!accountUsers.length) {
+    throw new Error('Account user does not exist or is inactive.');
+  }
+
+  // Validate assigned messenger users exist and are active
+  const { rows: validMessengerUsers } = await query(
+    `SELECT id FROM users WHERE id = ANY($1::uuid[]) AND is_active = TRUE`,
+    [assignedMessengerUserIds]
+  );
+  const validMessengerIds = new Set(validMessengerUsers.map(u => u.id));
+
   const results = [];
   for (const targetId of assignedMessengerUserIds) {
-    if (accountUserId === targetId) continue;
+    if (accountUserId === targetId) continue; // Prevent self-assignment
+    if (!validMessengerIds.has(targetId)) continue; // Skip inactive/invalid target users
+
     const sql = `
-      INSERT INTO messenger_assignments (account_user_id, assigned_messenger_user_id, assigned_by, status)
-      VALUES ($1, $2, $3, 'ACTIVE')
+      INSERT INTO messenger_assignments (account_user_id, assigned_messenger_user_id, assigned_by, status, removed_by, removed_at)
+      VALUES ($1, $2, $3, 'ACTIVE', NULL, NULL)
       ON CONFLICT (account_user_id, assigned_messenger_user_id)
-      DO UPDATE SET status = 'ACTIVE', updated_at = NOW(), assigned_by = $3
+      DO UPDATE SET status = 'ACTIVE', updated_at = NOW(), assigned_by = $3, removed_by = NULL, removed_at = NULL
       RETURNING *
     `;
     const { rows } = await query(sql, [accountUserId, targetId, assignedBy]);
@@ -760,11 +778,28 @@ async function getAllMessengerAssignments() {
 }
 
 /**
- * Delete a messenger assignment
+ * Soft delete a messenger assignment with audit trail (removed_by, removed_at)
  */
-async function removeMessengerAssignment(assignmentId) {
-  const sql = `DELETE FROM messenger_assignments WHERE id = $1 RETURNING *`;
-  const { rows } = await query(sql, [assignmentId]);
+async function removeMessengerAssignment(assignmentId, removedBy) {
+  // Defense in depth: Verify removedBy is an active Super Admin
+  const { rows: admins } = await query(
+    `SELECT id FROM users WHERE id = $1 AND UPPER(role::text) = 'SUPER_ADMIN' AND is_active = TRUE`,
+    [removedBy]
+  );
+  if (!admins.length) {
+    throw new Error('Only an active Super Admin can remove Messenger assignments.');
+  }
+
+  const sql = `
+    UPDATE messenger_assignments
+    SET status = 'INACTIVE',
+        removed_by = $2,
+        removed_at = NOW(),
+        updated_at = NOW()
+    WHERE id = $1 AND status = 'ACTIVE'
+    RETURNING *
+  `;
+  const { rows } = await query(sql, [assignmentId, removedBy]);
   return rows[0] || null;
 }
 

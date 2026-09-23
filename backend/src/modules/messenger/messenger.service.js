@@ -160,7 +160,7 @@ async function startOrGetDirectChat(currentUserId, targetUserId) {
 
 async function startOrGetApplicationChat(currentUserId, applicationId) {
   const { rows: [app] } = await query(
-    `SELECT a.id, a.app_number, a.status, c.full_name AS customer_name
+    `SELECT a.id, a.app_number, a.status, a.employee_id, a.partner_id, a.created_by, c.full_name AS customer_name
      FROM applications a
      LEFT JOIN customers c ON c.id = a.customer_id
      WHERE a.id = $1 OR a.app_number = $1`,
@@ -168,6 +168,36 @@ async function startOrGetApplicationChat(currentUserId, applicationId) {
   );
   if (!app) {
     throw new Error('Application not found.');
+  }
+
+  // Authorization check for Application Chat: Verify current user has CRM permission to access this application
+  const { rows: [currentUser] } = await query(`SELECT id, role, designation FROM users WHERE id = $1`, [currentUserId]);
+  const currentRole = (currentUser?.role || currentUser?.designation || '').toUpperCase();
+
+  let hasAccess = false;
+  if (currentRole === 'SUPER_ADMIN') {
+    hasAccess = true;
+  } else if (app.employee_id === currentUserId || app.created_by === currentUserId) {
+    hasAccess = true;
+  } else if (currentRole === 'PARTNER') {
+    const { rows: [pProfile] } = await query(`SELECT id, parent_partner_id FROM partner_profiles WHERE user_id = $1`, [currentUserId]);
+    if (pProfile && (pProfile.id === app.partner_id || (pProfile.parent_partner_id && pProfile.parent_partner_id === app.partner_id))) {
+      hasAccess = true;
+    }
+  } else {
+    // Admin, Employee & Operational Staff handling applications
+    const ADMIN_ROLES = [
+      'ADMIN', 'EMPLOYEE', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD',
+      'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES EXECUTIVE',
+      'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'TELECALLER', 'TEAM_LEADER'
+    ];
+    if (ADMIN_ROLES.includes(currentRole)) {
+      hasAccess = true;
+    }
+  }
+
+  if (!hasAccess) {
+    throw new Error('Access denied: You do not have permission to view or message on this application.');
   }
 
   let conv = await repo.findApplicationConversation(app.id);
@@ -195,6 +225,22 @@ async function createGroup(currentUserId, { name, description, memberUserIds = [
   }
 
   const uniqueMemberIds = Array.from(new Set(memberUserIds.filter(id => id && id !== currentUserId)));
+
+  // Validate group member messaging permissions
+  const { rows: [currentUser] } = await query(`SELECT id, role, designation FROM users WHERE id = $1`, [currentUserId]);
+  const currentRole = (currentUser?.role || currentUser?.designation || '').toUpperCase();
+
+  for (const mId of uniqueMemberIds) {
+    const { rows: [memberUser] } = await query(`SELECT id, full_name, role, designation FROM users WHERE id = $1 AND is_active = TRUE`, [mId]);
+    if (!memberUser) {
+      throw new Error(`Selected group member user ID ${mId} not found or inactive.`);
+    }
+    const memberRole = (memberUser.role || memberUser.designation || '').toUpperCase();
+    const isAllowed = await canUserMessageTarget(currentUserId, currentRole, memberUser.id, memberRole);
+    if (!isAllowed) {
+      throw new Error(`Access denied: You do not have Messenger permission for member "${memberUser.full_name || mId}".`);
+    }
+  }
 
   const conv = await repo.createConversation({
     conversation_type: 'GROUP',
@@ -425,8 +471,8 @@ async function getAllMessengerAssignments() {
   return await repo.getAllMessengerAssignments();
 }
 
-async function removeMessengerAssignment(assignmentId) {
-  return await repo.removeMessengerAssignment(assignmentId);
+async function removeMessengerAssignment(assignmentId, removedBy) {
+  return await repo.removeMessengerAssignment(assignmentId, removedBy);
 }
 
 async function getAllAccountsForAssignment() {

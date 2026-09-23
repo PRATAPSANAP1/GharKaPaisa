@@ -2,19 +2,20 @@ const express = require('express');
 const router = express.Router();
 const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
 const { messengerLimiter } = require('../../middleware/rate-limit/rateLimit.middleware');
+const requireSuperAdmin = require('../../middleware/authentication/requireSuperAdmin.middleware');
 const controller = require('./messenger.controller');
 
 // All messenger endpoints require authentication & rate limiting
 router.use(jwtAuth);
 
 // Super Admin Audit & Assignment Endpoints
-router.get('/admin/search-users', controller.adminSearchUsers);
-router.get('/admin/conversations', controller.adminGetUserConversations);
-router.get('/admin/messages/:id', controller.adminGetUserMessages);
-router.get('/admin/accounts', controller.getCandidateAccounts);
-router.get('/admin/assignments', controller.getAssignments);
-router.post('/admin/assignments', messengerLimiter, controller.assignMessengers);
-router.delete('/admin/assignments/:id', messengerLimiter, controller.removeAssignment);
+router.get('/admin/search-users', requireSuperAdmin, controller.adminSearchUsers);
+router.get('/admin/conversations', requireSuperAdmin, controller.adminGetUserConversations);
+router.get('/admin/messages/:id', requireSuperAdmin, controller.adminGetUserMessages);
+router.get('/admin/accounts', requireSuperAdmin, controller.getCandidateAccounts);
+router.get('/admin/assignments', requireSuperAdmin, controller.getAssignments);
+router.post('/admin/assignments', requireSuperAdmin, messengerLimiter, controller.assignMessengers);
+router.delete('/admin/assignments/:id', requireSuperAdmin, messengerLimiter, controller.removeAssignment);
 
 router.get('/conversations', controller.getConversations);
 router.post('/conversations/direct', messengerLimiter, controller.createDirectChat);

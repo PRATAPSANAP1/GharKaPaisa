@@ -314,6 +314,18 @@ const startServer = async () => {
       };
       runMessengerPurge();
       setInterval(runMessengerPurge, 15 * 60 * 1000);
+
+      // Initialize Scheduled Announcement Auto-Publisher (runs every minute and on startup)
+      const runAnnouncementScheduler = async () => {
+        try {
+          const { processScheduledAnnouncements } = require('./jobs/announcementScheduler.job.js');
+          await processScheduledAnnouncements();
+        } catch (err) {
+          logger.error('Announcement Scheduler Job error:', err.message);
+        }
+      };
+      runAnnouncementScheduler();
+      setInterval(runAnnouncementScheduler, 60 * 1000);
     });
   } catch (err) {
     logger.error('Failed to start server due to database connectivity issue:', err);
