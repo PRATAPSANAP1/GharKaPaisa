@@ -8,6 +8,9 @@ const getRoleDashboard = (user) => {
   if (['REMARK OPERATOR', 'REMARK_OPERATOR', 'QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(designation) || ['REMARK OPERATOR', 'REMARK_OPERATOR', 'QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(role)) {
     return '/admin/applications';
   }
+  if (['KYC OPERATOR', 'KYC_OPERATOR'].includes(designation) || ['KYC OPERATOR', 'KYC_OPERATOR'].includes(role)) {
+    return '/admin/kyc-operator';
+  }
   if (role === 'SUPER_ADMIN') return '/super-admin/overview';
   if (role === 'ADMIN') return '/admin/dashboard';
   if (role === 'HR') return '/hr/dashboard';

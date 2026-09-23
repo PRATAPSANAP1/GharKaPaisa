@@ -24,6 +24,9 @@ router.post('/conversations/group', messengerLimiter, controller.createGroupChat
 
 router.get('/conversations/:id', controller.getConversation);
 router.get('/conversations/:id/messages', controller.getMessages);
+router.get('/conversations/:id/members', controller.getGroupMembers);
+router.post('/conversations/:id/members', messengerLimiter, controller.addGroupMembers);
+router.delete('/conversations/:id/members/:targetUserId', messengerLimiter, controller.removeGroupMember);
 router.post('/conversations/:id/read', controller.markRead);
 router.post('/conversations/:id/pin', controller.togglePin);
 router.post('/conversations/:id/clear', messengerLimiter, controller.clearChat);

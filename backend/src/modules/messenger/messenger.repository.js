@@ -826,12 +826,27 @@ async function getAllAccountsForAssignment() {
   return rows;
 }
 
+/**
+ * Remove participant from group conversation
+ */
+async function removeParticipant(conversationId, userId) {
+  const sql = `
+    UPDATE conversation_participants
+    SET left_at = NOW()
+    WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL
+    RETURNING *
+  `;
+  const { rows } = await query(sql, [conversationId, userId]);
+  return rows[0] || null;
+}
+
 module.exports = {
   getConversationsForUser,
   findDirectConversation,
   findApplicationConversation,
   createConversation,
   addParticipant,
+  removeParticipant,
   getConversationById,
   getConversationParticipants,
   isParticipant,

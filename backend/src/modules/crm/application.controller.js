@@ -5567,6 +5567,7 @@ const updateRemarkOperatorApplication = async (req, res, next) => {
     }
 
     const userRole = (req.user?.role || '').toUpperCase();
+    const userDesignation = (req.user?.designation || '').toUpperCase();
     if (userRole !== 'SUPER_ADMIN') {
       const { rows: [bankAssigned] } = await client.query(
         `SELECT 1 FROM admin_bank_assignments WHERE admin_id = $1 AND bank_id = $2`,

@@ -282,6 +282,40 @@ async function getCandidateAccounts(req, res, next) {
   }
 }
 
+async function getGroupMembers(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const members = await service.getGroupMembers(id, userId);
+    return success(res, members, 'Group members retrieved successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function addGroupMembers(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { member_user_ids } = req.body;
+    const members = await service.addGroupMembers(id, userId, member_user_ids || []);
+    return success(res, members, 'Members added successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function removeGroupMember(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { id, targetUserId } = req.params;
+    const members = await service.removeGroupMember(id, userId, targetUserId);
+    return success(res, members, 'Member removed successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getConversations,
   createDirectChat,
@@ -305,5 +339,8 @@ module.exports = {
   assignMessengers,
   getAssignments,
   removeAssignment,
-  getCandidateAccounts
+  getCandidateAccounts,
+  getGroupMembers,
+  addGroupMembers,
+  removeGroupMember
 };

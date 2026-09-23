@@ -123,6 +123,132 @@ const emiSchemes = [
       'Choose customized tenure options',
       'Complete visibility in monthly statement'
     ]
+  },
+  {
+    id: 'idfc-card-emi',
+    bank: 'IDFC FIRST Bank',
+    title: 'IDFC FIRST Card Instant EMI',
+    logo: null,
+    accent: '#991B1B',
+    minTransaction: '₹2,500',
+    minRoi: '1.00% per month (12.0% p.a.)',
+    tenure: '3 - 24 Months',
+    processingFee: 'ZERO Processing Fee',
+    conversionSpeed: 'Instant App EMI',
+    badge: 'Zero Fee EMI',
+    features: [
+      '0% processing fee for select cardholders',
+      'Seamless digital execution via IDFC FIRST Bank app',
+      'Transparent monthly statement billing'
+    ]
+  },
+  {
+    id: 'indusind-merchant-emi',
+    bank: 'IndusInd Bank',
+    title: 'IndusInd Merchant & Flexi EMI',
+    logo: null,
+    accent: '#8B5CF6',
+    minTransaction: '₹2,000',
+    minRoi: '1.15% per month (13.8% p.a.)',
+    tenure: '3 - 24 Months',
+    processingFee: '₹199 + GST',
+    conversionSpeed: 'Instant Checkout / App',
+    badge: 'Low Interest',
+    features: [
+      'Merchant EMI checkout across Amazon, Flipkart, & stores',
+      'Post-purchase EMI conversion via IndusMobile App',
+      'Flexible 3 to 24 month tenures'
+    ]
+  },
+  {
+    id: 'au-flexi-emi',
+    bank: 'AU Small Finance Bank',
+    title: 'AU Merchant & Flexi EMI',
+    logo: null,
+    accent: '#D97706',
+    minTransaction: '₹2,000',
+    minRoi: '1.20% per month (14.4% p.a.)',
+    tenure: '3 - 24 Months',
+    processingFee: '₹199 + GST',
+    conversionSpeed: 'Instant 0101 EMI',
+    badge: 'Customizable EMI',
+    features: [
+      'Convert transactions directly on AU 0101 App',
+      'No-cost EMI offers with major retail partners',
+      'Retain reward points on initial spend'
+    ]
+  },
+  {
+    id: 'federal-scapia-emi',
+    bank: 'Federal Bank',
+    title: 'Federal Bank & Scapia Credit EMI',
+    logo: null,
+    accent: '#10B981',
+    minTransaction: '₹2,500',
+    minRoi: '1.15% per month (13.8% p.a.)',
+    tenure: '3 - 24 Months',
+    processingFee: '₹149 + GST',
+    conversionSpeed: 'Instant App Conversion',
+    badge: 'Easy EMI',
+    features: [
+      'Instant conversion on FedMobile & Scapia app',
+      'Zero foreclosure fees after 3 EMIs',
+      'Flexible tenures from 3 to 24 months'
+    ]
+  },
+  {
+    id: 'yes-speed-emi',
+    bank: 'YES Bank',
+    title: 'YES Bank Speed EMI & Balance Transfer',
+    logo: null,
+    accent: '#06B6D4',
+    minTransaction: '₹2,500',
+    minRoi: '1.20% per month (14.4% p.a.)',
+    tenure: '3 - 36 Months',
+    processingFee: '₹199 + GST',
+    conversionSpeed: 'Instant IRIS EMI',
+    badge: 'Speed EMI',
+    features: [
+      'Convert purchases within 30 days via YES Online / IRIS App',
+      'Balance Transfer on EMI for other bank credit cards',
+      'Flexible repayment options'
+    ]
+  },
+  {
+    id: 'bob-card-emi',
+    bank: 'Bank of Baroda',
+    title: 'BOBCARD EMI & Balance Transfer',
+    logo: null,
+    accent: '#F97316',
+    minTransaction: '₹2,500',
+    minRoi: '1.25% per month (15.0% p.a.)',
+    tenure: '3 - 24 Months',
+    processingFee: '₹199 + GST',
+    conversionSpeed: 'App Conversion',
+    badge: 'Easy Conversion',
+    features: [
+      'Convert transactions over ₹2,500 into EMIs',
+      'Balance transfer from other cards to BOBCARD EMI',
+      'Flexible tenure selection'
+    ]
+  },
+  {
+    id: 'scb-kuch-bhi-emi',
+    bank: 'Standard Chartered Bank',
+    title: 'Standard Chartered Kuch Bhi EMI',
+    logo: null,
+    accent: '#2563EB',
+    minTransaction: '₹2,000',
+    minRoi: '1.15% per month (13.8% p.a.)',
+    tenure: '3 - 36 Months',
+    processingFee: '₹199 + GST',
+    conversionSpeed: 'SC Mobile EMI',
+    badge: 'Kuch Bhi EMI',
+    features: [
+      'Convert any transaction above ₹2,000 into EMI',
+      'Balance Transfer on EMI option available',
+      'Instant digital processing via SC Mobile'
+    ]
   }
 ];
 
@@ -576,8 +702,17 @@ export default function EmployeeSmartEmi() {
             <option value="SBI Card">SBI Card</option>
             <option value="ICICI Bank">ICICI Bank</option>
             <option value="Axis Bank">Axis Bank</option>
-            <option value="RBL Bank">RBL Bank</option>
+            <option value="IDFC FIRST Bank">IDFC FIRST Bank</option>
             <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
+            <option value="RBL Bank">RBL Bank</option>
+            <option value="IndusInd Bank">IndusInd Bank</option>
+            <option value="AU Small Finance Bank">AU Small Finance Bank</option>
+            <option value="Federal Bank">Federal Bank</option>
+            <option value="YES Bank">YES Bank</option>
+            <option value="Bank of Baroda">Bank of Baroda</option>
+            <option value="Standard Chartered Bank">Standard Chartered Bank</option>
+            <option value="Canara Bank">Canara Bank</option>
+            <option value="Union Bank of India">Union Bank of India</option>
           </select>
         </div>
       </div>

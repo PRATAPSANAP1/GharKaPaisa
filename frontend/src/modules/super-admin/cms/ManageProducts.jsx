@@ -11,6 +11,8 @@ import {
 
 const PRODUCT_CATEGORIES = [
   { id: "credit_card", label: "Credit Cards" },
+  { id: "loan_on_credit_card", label: "Loan on Credit Card" },
+  { id: "smart_emi", label: "Smart EMI on Credit Card" },
   { id: "personal_loan", label: "Personal Loans" },
   { id: "business_loan", label: "Business Loans" },
   { id: "home_loan", label: "Home Loans" },
@@ -65,6 +67,8 @@ export default function ManageProducts() {
 
   const getInitialCategory = () => {
     if (typeParam === 'credit_card') return '%card%';
+    if (typeParam === 'loan_on_credit_card') return 'loan_on_credit_card';
+    if (typeParam === 'smart_emi') return 'smart_emi';
     if (typeParam === 'loans') return '%loan%';
     if (typeParam === 'insurance') return '%insurance%';
     return '';
@@ -100,11 +104,17 @@ export default function ManageProducts() {
     banner: "",
     image: "",
     category: "credit_card",
+    sub_category: "",
     bank_id: "",
     is_active: true,
     status: "Active", // Active, Hidden, Coming Soon, Inactive
     public_visible: true,
     partner_visible: true,
+
+    // Loan / Smart EMI Specials
+    badge: "",
+    time_period: "",
+    joining_fee: "",
 
     // Eligibility
     min_age: 18,
@@ -208,11 +218,15 @@ export default function ManageProducts() {
       banner: "",
       image: "",
       category: "credit_card",
+      sub_category: "",
       bank_id: banks[0]?.id || "",
       is_active: true,
       status: "Active",
       public_visible: true,
       partner_visible: true,
+      badge: "",
+      time_period: "",
+      joining_fee: "",
       min_age: 18,
       max_age: 60,
       min_income: 0,
@@ -258,11 +272,15 @@ export default function ManageProducts() {
       banner: prod.banner || "",
       image: prod.image || prod.image_url || "",
       category: prod.category || "credit_card",
+      sub_category: prod.sub_category || "",
       bank_id: prod.bank_id || "",
       is_active: prod.is_active ?? true,
       status: prod.status || "Active",
       public_visible: prod.public_visible ?? true,
       partner_visible: prod.partner_visible ?? true,
+      badge: prod.badge || "",
+      time_period: prod.time_period || "",
+      joining_fee: prod.joining_fee || "",
       min_age: prod.min_age ?? 18,
       max_age: prod.max_age ?? 60,
       min_income: prod.min_income ?? 0,
@@ -773,12 +791,32 @@ export default function ManageProducts() {
                       <input placeholder="e.g. Free or ₹499" style={S.input} value={form.annual_fee} onChange={e => setForm({ ...form, annual_fee: e.target.value })} />
                     </div>
                     <div>
-                      <label style={S.label}>Interest Rate (%)</label>
-                      <input placeholder="e.g. 11.5% or 36%" style={S.input} value={form.interest_rate} onChange={e => setForm({ ...form, interest_rate: e.target.value })} />
+                      <label style={S.label}>Interest Rate (%) / ROI</label>
+                      <input placeholder="e.g. 1.15% p.m. / 11.5% p.a." style={S.input} value={form.interest_rate} onChange={e => setForm({ ...form, interest_rate: e.target.value })} />
                     </div>
                     <div>
                       <label style={S.label}>Processing Fee Description</label>
-                      <input placeholder="e.g. 1% of loan value" style={S.input} value={form.processing_fee} onChange={e => setForm({ ...form, processing_fee: e.target.value })} />
+                      <input placeholder="e.g. ₹199 + GST or 1%" style={S.input} value={form.processing_fee} onChange={e => setForm({ ...form, processing_fee: e.target.value })} />
+                    </div>
+                  </div>
+
+                  {/* LOAN & SMART EMI SPECIFIC FIELDS */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "12px", background: `${C.primary}08`, padding: "12px", borderRadius: "10px", border: `1px solid ${C.primary}20` }}>
+                    <div>
+                      <label style={{ ...S.label, color: C.primary, fontWeight: 800 }}>Tenure / Time Period</label>
+                      <input placeholder="e.g. 3 - 36 Months" style={S.input} value={form.time_period} onChange={e => setForm({ ...form, time_period: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={{ ...S.label, color: C.primary, fontWeight: 800 }}>Badge Tag</label>
+                      <input placeholder="e.g. Pre-Approved / Zero Fee" style={S.input} value={form.badge} onChange={e => setForm({ ...form, badge: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={{ ...S.label, color: C.primary, fontWeight: 800 }}>Min Purchase / Trans Value</label>
+                      <input placeholder="e.g. ₹2,500 / ₹5,000" style={S.input} value={form.joining_fee} onChange={e => setForm({ ...form, joining_fee: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={{ ...S.label, color: C.primary, fontWeight: 800 }}>Sub Category Label</label>
+                      <input placeholder="e.g. EMI on Credit Card" style={S.input} value={form.sub_category} onChange={e => setForm({ ...form, sub_category: e.target.value })} />
                     </div>
                   </div>
 

@@ -128,6 +128,9 @@ const getRoleDashboard = (user) => {
   if (['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(designation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(role)) {
     return '/admin/applications';
   }
+  if (['KYC OPERATOR', 'KYC_OPERATOR'].includes(designation) || ['KYC OPERATOR', 'KYC_OPERATOR'].includes(role)) {
+    return '/admin/kyc-operator';
+  }
   if (role === "SUPER_ADMIN") return "/super-admin/overview";
   if (role === "ADMIN") return "/admin/dashboard";
   if (role === "HR") return "/hr/dashboard";
@@ -138,6 +141,11 @@ const getRoleDashboard = (user) => {
 const resolveDestination = (profile, rawFromPath) => {
   const defaultDashboard = getRoleDashboard(profile);
   const role = (profile?.role || "").toUpperCase();
+  const designation = (profile?.designation || "").toUpperCase();
+
+  if (['KYC OPERATOR', 'KYC_OPERATOR'].includes(designation) || ['KYC OPERATOR', 'KYC_OPERATOR'].includes(role)) {
+    return '/admin/kyc-operator';
+  }
 
   if (
     !rawFromPath ||

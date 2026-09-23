@@ -5016,6 +5016,16 @@ const migrate = async () => {
     logger.error('Seed products migration error note:', seedErr.message);
   }
 
+  try {
+    const { seedSmartEmiAndLoccProducts } = require('../seeds/seed-smart-emi-locc');
+    await seedSmartEmiAndLoccProducts();
+  } catch (smartEmiSeedErr) {
+    logger.error('Failed to run Smart EMI and LOCC full seeder:', smartEmiSeedErr.message);
+  }
+
+  const { migrateSmartEmiAndLoccSchema } = require('./migrate_smart_emi_locc_and_reports');
+  await migrateSmartEmiAndLoccSchema();
+
   if (require.main === module) {
     process.exit(0);
   }

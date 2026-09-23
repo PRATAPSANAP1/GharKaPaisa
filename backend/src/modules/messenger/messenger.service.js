@@ -479,6 +479,83 @@ async function getAllAccountsForAssignment() {
   return await repo.getAllAccountsForAssignment();
 }
 
+async function getGroupMembers(conversationId, userId) {
+  const isPart = await repo.isParticipant(conversationId, userId);
+  if (!isPart) {
+    throw new Error('Access denied to this conversation.');
+  }
+  return await repo.getConversationParticipants(conversationId);
+}
+
+async function addGroupMembers(conversationId, currentUserId, memberUserIds = []) {
+  const isPart = await repo.isParticipant(conversationId, currentUserId);
+  if (!isPart) {
+    throw new Error('Access denied. You are not a participant of this group.');
+  }
+  const conv = await repo.getConversationById(conversationId);
+  if (!conv || conv.conversation_type !== 'GROUP') {
+    throw new Error('Group conversation not found.');
+  }
+
+  const uniqueIds = Array.from(new Set(memberUserIds.filter(id => id && id !== currentUserId)));
+  if (!uniqueIds.length) {
+    throw new Error('Please select at least one member to add.');
+  }
+
+  const addedNames = [];
+  for (const mId of uniqueIds) {
+    const { rows: [mUser] } = await query(`SELECT id, full_name, email, mobile FROM users WHERE id = $1 AND is_active = TRUE`, [mId]);
+    if (mUser) {
+      await repo.addParticipant({ conversation_id: conversationId, user_id: mId, role: 'MEMBER' });
+      addedNames.push(mUser.full_name || mUser.email || 'User');
+    }
+  }
+
+  if (addedNames.length > 0) {
+    const { rows: [actor] } = await query(`SELECT full_name FROM users WHERE id = $1`, [currentUserId]);
+    const sysText = `ℹ️ ${actor?.full_name || 'A member'} added ${addedNames.join(', ')} to the group.`;
+    await repo.createMessage({
+      conversation_id: conversationId,
+      sender_id: currentUserId,
+      message_type: 'SYSTEM',
+      message_text: sysText
+    });
+  }
+
+  return await repo.getConversationParticipants(conversationId);
+}
+
+async function removeGroupMember(conversationId, currentUserId, targetUserId) {
+  const isPart = await repo.isParticipant(conversationId, currentUserId);
+  if (!isPart) {
+    throw new Error('Access denied. You are not a participant of this group.');
+  }
+  const conv = await repo.getConversationById(conversationId);
+  if (!conv || conv.conversation_type !== 'GROUP') {
+    throw new Error('Group conversation not found.');
+  }
+
+  const { rows: [targetUser] } = await query(`SELECT id, full_name, email FROM users WHERE id = $1`, [targetUserId]);
+  const targetName = targetUser?.full_name || targetUser?.email || 'Member';
+
+  const removed = await repo.removeParticipant(conversationId, targetUserId);
+
+  if (removed) {
+    const { rows: [actor] } = await query(`SELECT full_name FROM users WHERE id = $1`, [currentUserId]);
+    const sysText = currentUserId === targetUserId
+      ? `ℹ️ ${targetName} left the group.`
+      : `ℹ️ ${actor?.full_name || 'A member'} removed ${targetName} from the group.`;
+    await repo.createMessage({
+      conversation_id: conversationId,
+      sender_id: currentUserId,
+      message_type: 'SYSTEM',
+      message_text: sysText
+    });
+  }
+
+  return await repo.getConversationParticipants(conversationId);
+}
+
 module.exports = {
   maskSensitiveData,
   listConversations,
@@ -503,5 +580,8 @@ module.exports = {
   assignMessengers,
   getAllMessengerAssignments,
   removeMessengerAssignment,
-  getAllAccountsForAssignment
+  getAllAccountsForAssignment,
+  getGroupMembers,
+  addGroupMembers,
+  removeGroupMember
 };

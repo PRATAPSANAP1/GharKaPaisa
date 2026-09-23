@@ -403,7 +403,6 @@ const AppRoutes = () => {
             <Route path="/super-admin/partners" element={<ManagePartners />} />
             <Route path="/super-admin/leads" element={<Navigate to="/super-admin/overview" replace />} />
             <Route path="/super-admin/applications" element={<SuperAdminManageApplications />} />
-            <Route path="/super-admin/kyc-operator" element={<KycOperatorDashboard />} />
             <Route path="/super-admin/crm" element={<SuperAdminManageApplications />} />
             <Route path="/super-admin/reports" element={<SuperAdminReports />} />
             <Route path="/super-admin/reports/referral-analytics" element={<ReferralAnalyticsView />} />

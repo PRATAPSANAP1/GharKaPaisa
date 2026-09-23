@@ -122,6 +122,97 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     setTimeout(() => setCopiedField(null), 2000);
   };
 
+  // Group Members Modal State
+  const [showGroupMembersModal, setShowGroupMembersModal] = useState(false);
+  const [groupMembers, setGroupMembers] = useState([]);
+  const [loadingGroupMembers, setLoadingGroupMembers] = useState(false);
+  const [showAddGroupMemberSection, setShowAddGroupMemberSection] = useState(false);
+  const [addMemberSearch, setAddMemberSearch] = useState('');
+  const [addMemberContacts, setAddMemberContacts] = useState([]);
+  const [selectedAddUserIds, setSelectedAddUserIds] = useState([]);
+  const [addingMembers, setAddingMembers] = useState(false);
+  const [removingUserId, setRemovingUserId] = useState(null);
+
+  const openGroupMembersModal = async (conv) => {
+    if (!conv || conv.conversation_type !== 'GROUP') return;
+    setShowGroupMembersModal(true);
+    setShowAddGroupMemberSection(false);
+    setSelectedAddUserIds([]);
+    setAddMemberSearch('');
+    setLoadingGroupMembers(true);
+    try {
+      const res = await api.get(`/messenger/conversations/${conv.id}/members`);
+      if (res.data?.success) {
+        setGroupMembers(res.data.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch group members:', err);
+      alert(err.response?.data?.message || 'Failed to load group members.');
+    } finally {
+      setLoadingGroupMembers(false);
+    }
+  };
+
+  const handleOpenAddMemberSection = async () => {
+    const nextState = !showAddGroupMemberSection;
+    setShowAddGroupMemberSection(nextState);
+    if (nextState) {
+      fetchAddMemberContacts('');
+    }
+  };
+
+  const fetchAddMemberContacts = async (queryText = '') => {
+    try {
+      const res = await api.get('/messenger/contacts', { params: { query: queryText } });
+      if (res.data?.success) {
+        const existingIds = new Set(groupMembers.map(m => m.user_id || m.id));
+        const filtered = (res.data.data || []).filter(c => !existingIds.has(c.id));
+        setAddMemberContacts(filtered);
+      }
+    } catch (err) {
+      console.error('Failed to search add member contacts:', err);
+    }
+  };
+
+  const handleAddGroupMembersSubmit = async () => {
+    if (!activeConv || !selectedAddUserIds.length) return alert('Please select at least one contact to add.');
+    setAddingMembers(true);
+    try {
+      const res = await api.post(`/messenger/conversations/${activeConv.id}/members`, {
+        member_user_ids: selectedAddUserIds
+      });
+      if (res.data?.success) {
+        setGroupMembers(res.data.data || []);
+        setSelectedAddUserIds([]);
+        setShowAddGroupMemberSection(false);
+        fetchMessages(activeConv.id, false);
+        fetchConversations(false);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to add members.');
+    } finally {
+      setAddingMembers(false);
+    }
+  };
+
+  const handleRemoveGroupMemberItem = async (targetUserId, targetName) => {
+    if (!activeConv) return;
+    if (!window.confirm(`Are you sure you want to remove "${targetName}" from this group?`)) return;
+    setRemovingUserId(targetUserId);
+    try {
+      const res = await api.delete(`/messenger/conversations/${activeConv.id}/members/${targetUserId}`);
+      if (res.data?.success) {
+        setGroupMembers(res.data.data || []);
+        fetchMessages(activeConv.id, false);
+        fetchConversations(false);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to remove group member.');
+    } finally {
+      setRemovingUserId(null);
+    }
+  };
+
   // Contact list
   const [contacts, setContacts] = useState([]);
   const [contactSearch, setContactSearch] = useState('');
@@ -864,9 +955,15 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 boxShadow: '0 2px 10px rgba(0,0,0,0.02)', position: 'relative', zIndex: 10
               }}>
                 <div 
-                  onClick={() => openUserProfile(activeConv.other_participants?.[0] || { full_name: getConvTitle(activeConv) })}
+                  onClick={() => {
+                    if (activeConv.conversation_type === 'GROUP') {
+                      openGroupMembersModal(activeConv);
+                    } else {
+                      openUserProfile(activeConv.other_participants?.[0] || { full_name: getConvTitle(activeConv) });
+                    }
+                  }}
                   style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '14px', cursor: 'pointer', minWidth: 0 }}
-                  title="Click to view User Profile"
+                  title={activeConv.conversation_type === 'GROUP' ? "Click to view Group Members" : "Click to view User Profile"}
                 >
                   {isMobile && (
                     <button
@@ -948,11 +1045,18 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       boxShadow: '0 10px 25px rgba(0,0,0,0.1)', width: '190px', zIndex: 100
                     }}>
                       <div
-                        onClick={() => { openUserProfile(activeConv.other_participants?.[0] || { full_name: getConvTitle(activeConv) }); setShowMoreMenu(false); }}
+                        onClick={() => {
+                          if (activeConv.conversation_type === 'GROUP') {
+                            openGroupMembersModal(activeConv);
+                          } else {
+                            openUserProfile(activeConv.other_participants?.[0] || { full_name: getConvTitle(activeConv) });
+                          }
+                          setShowMoreMenu(false);
+                        }}
                         style={{ padding: '10px 16px', fontSize: '13px', color: '#1E293B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
                       >
-                        <FaUserCircle size={14} color="#2563EB" />
-                        <span>View User Profile</span>
+                        {activeConv.conversation_type === 'GROUP' ? <FaUsers size={14} color="#2563EB" /> : <FaUserCircle size={14} color="#2563EB" />}
+                        <span>{activeConv.conversation_type === 'GROUP' ? 'Group Members & Info' : 'View User Profile'}</span>
                       </div>
                       {isMobile && (
                         <>
@@ -1068,7 +1172,20 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     </div>
 
                     {filteredMessages.map((msg) => {
-                    const isMe = String(msg.sender_id || '').toLowerCase() === String(user?.id || '').toLowerCase();
+                      if (msg.message_type === 'SYSTEM') {
+                        return (
+                          <div key={msg.id} style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
+                            <span style={{
+                              padding: '5px 14px', borderRadius: '16px', background: '#F1F5F9', border: '1px solid #CBD5E1',
+                              color: '#475569', fontSize: '11.5px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px'
+                            }}>
+                              {msg.message_text}
+                            </span>
+                          </div>
+                        );
+                      }
+
+                      const isMe = String(msg.sender_id || '').toLowerCase() === String(user?.id || '').toLowerCase();
                     const isReadByReceiver = Boolean(
                       msg.is_read ||
                       (Array.isArray(msg.reads) && msg.reads.some(r => r.user_id && String(r.user_id).toLowerCase() !== String(msg.sender_id).toLowerCase()))
@@ -1860,6 +1977,248 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
               >
                 {savingAssignment ? 'Assigning...' : 'Assign'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: GROUP MEMBERS & INFO ── */}
+      {showGroupMembersModal && activeConv && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 99999, padding: isMobile ? '16px' : '24px'
+        }}>
+          <div style={{
+            width: isMobile ? '100%' : '480px', maxWidth: '500px', background: '#FFFFFF', borderRadius: '24px', overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', border: '1px solid #E2E8F0', maxHeight: '92vh', display: 'flex', flexDirection: 'column'
+          }}>
+            {/* Header Banner */}
+            <div style={{
+              background: 'linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%)',
+              padding: '24px', color: '#FFFFFF', position: 'relative', textAlign: 'center'
+            }}>
+              <button
+                onClick={() => setShowGroupMembersModal(false)}
+                style={{
+                  position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.2)',
+                  border: 'none', color: '#FFFFFF', width: '32px', height: '32px', borderRadius: '50%',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px'
+                }}
+              >
+                ✕
+              </button>
+
+              <div style={{
+                width: '68px', height: '68px', borderRadius: '50%', background: '#FFFFFF',
+                color: '#2563EB', fontWeight: 900, display: 'flex',
+                alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.15)', border: '3px solid rgba(255,255,255,0.8)'
+              }}>
+                <FaUsers size={32} />
+              </div>
+
+              <h2 style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: 800, color: '#FFFFFF' }}>
+                {getConvTitle(activeConv)}
+              </h2>
+
+              {activeConv.description && (
+                <p style={{ margin: '0 0 8px', fontSize: '12.5px', color: '#DBEAFE', fontWeight: 500 }}>
+                  {activeConv.description}
+                </p>
+              )}
+              
+              <span style={{
+                display: 'inline-block', background: 'rgba(255,255,255,0.2)', padding: '4px 14px',
+                borderRadius: '14px', fontSize: '12px', fontWeight: 700
+              }}>
+                👥 {groupMembers.length || '0'} Group Members
+              </span>
+            </div>
+
+            {/* Action Bar & Content */}
+            <div style={{ padding: '18px 24px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              
+              {/* Add Member Toggle Button */}
+              {!readOnly && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>Group Members</h4>
+                  <button
+                    onClick={handleOpenAddMemberSection}
+                    style={{
+                      padding: '6px 14px', borderRadius: '16px', background: showAddGroupMemberSection ? '#EFF6FF' : '#2563EB',
+                      border: showAddGroupMemberSection ? '1px solid #BFDBFE' : 'none',
+                      color: showAddGroupMemberSection ? '#2563EB' : '#FFFFFF',
+                      fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                    }}
+                  >
+                    <FaUserPlus size={13} /> {showAddGroupMemberSection ? 'Cancel Add' : 'Add Member'}
+                  </button>
+                </div>
+              )}
+
+              {/* Inline Add Member Panel */}
+              {showAddGroupMemberSection && !readOnly && (
+                <div style={{
+                  background: '#F8FAFC', padding: '14px', borderRadius: '16px', border: '1px solid #E2E8F0',
+                  display: 'flex', flexDirection: 'column', gap: '10px'
+                }}>
+                  <h5 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#1E293B' }}>Add New Members to Group</h5>
+                  <input
+                    type="text"
+                    placeholder="Search team member name or role..."
+                    value={addMemberSearch}
+                    onChange={(e) => { setAddMemberSearch(e.target.value); fetchAddMemberContacts(e.target.value); }}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '8px 12px', background: '#FFFFFF',
+                      border: '1px solid #CBD5E1', borderRadius: '10px', outline: 'none', fontSize: '13px'
+                    }}
+                  />
+
+                  <div style={{ maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {addMemberContacts.length === 0 ? (
+                      <div style={{ fontSize: '12px', color: '#94A3B8', textAlign: 'center', padding: '10px' }}>
+                        No available contacts to add
+                      </div>
+                    ) : (
+                      addMemberContacts.map(c => {
+                        const isChecked = selectedAddUserIds.includes(c.id);
+                        return (
+                          <label
+                            key={c.id}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px',
+                              borderRadius: '10px', background: isChecked ? '#EFF6FF' : '#FFFFFF',
+                              border: `1px solid ${isChecked ? '#BFDBFE' : '#E2E8F0'}`, cursor: 'pointer'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                setSelectedAddUserIds(prev =>
+                                  prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
+                                );
+                              }}
+                            />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A' }}>{c.full_name}</div>
+                              <div style={{ fontSize: '11px', color: '#64748B' }}>{c.role} {c.partner_code || c.employee_code ? `(${c.partner_code || c.employee_code})` : ''}</div>
+                            </div>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {selectedAddUserIds.length > 0 && (
+                    <button
+                      onClick={handleAddGroupMembersSubmit}
+                      disabled={addingMembers}
+                      style={{
+                        padding: '10px', borderRadius: '10px', background: '#2563EB',
+                        color: '#FFFFFF', fontWeight: 800, border: 'none', cursor: 'pointer',
+                        fontSize: '13px', opacity: addingMembers ? 0.7 : 1
+                      }}
+                    >
+                      {addingMembers ? 'Adding...' : `Add Selected (${selectedAddUserIds.length})`}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Member List */}
+              {loadingGroupMembers ? (
+                <div style={{ textAlign: 'center', color: '#94A3B8', padding: '20px', fontSize: '13px' }}>
+                  Loading group members...
+                </div>
+              ) : groupMembers.length === 0 ? (
+                <div style={{ textAlign: 'center', color: '#94A3B8', padding: '20px', fontSize: '13px' }}>
+                  No active members in this group.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {groupMembers.map(m => {
+                    const memberUserId = m.user_id || m.id;
+                    const isMe = String(memberUserId).toLowerCase() === String(user?.id || '').toLowerCase();
+                    const isAdmin = m.role === 'ADMIN' || m.participant_role === 'ADMIN';
+                    const codeVal = m.partner_code || m.employee_code || (m.user_id ? `USR-${m.user_id.slice(0, 6).toUpperCase()}` : '');
+
+                    return (
+                      <div
+                        key={memberUserId}
+                        style={{
+                          padding: '10px 14px', borderRadius: '14px', background: '#F8FAFC',
+                          border: '1px solid #F1F5F9', display: 'flex', alignItems: 'center',
+                          justifyContent: 'space-between', gap: '12px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                          <div style={{
+                            width: '38px', height: '38px', borderRadius: '50%', background: '#0EA5E9',
+                            color: '#FFFFFF', fontWeight: 800, fontSize: '15px', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                          }}>
+                            {(m.full_name || 'U').charAt(0).toUpperCase()}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {m.full_name || m.email || 'Group Member'}
+                              </span>
+                              {isMe && (
+                                <span style={{ fontSize: '10px', background: '#DBEAFE', color: '#1E40AF', padding: '2px 6px', borderRadius: '8px', fontWeight: 800 }}>
+                                  You
+                                </span>
+                              )}
+                              {isAdmin && (
+                                <span style={{ fontSize: '10px', background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: '8px', fontWeight: 800 }}>
+                                  Admin
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '11.5px', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {m.role || 'Member'} {codeVal ? `• ${codeVal}` : ''}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Remove Button */}
+                        {!readOnly && (
+                          <div>
+                            {isMe ? (
+                              <button
+                                onClick={handleLeaveGroup}
+                                style={{
+                                  padding: '4px 10px', borderRadius: '8px', background: '#FEF2F2',
+                                  border: '1px solid #FCA5A5', color: '#DC2626', fontSize: '11px',
+                                  fontWeight: 800, cursor: 'pointer'
+                                }}
+                              >
+                                Leave
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleRemoveGroupMemberItem(memberUserId, m.full_name || 'Member')}
+                                disabled={removingUserId === memberUserId}
+                                style={{
+                                  padding: '4px 10px', borderRadius: '8px', background: '#FEF2F2',
+                                  border: '1px solid #FCA5A5', color: '#DC2626', fontSize: '11px',
+                                  fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                                  opacity: removingUserId === memberUserId ? 0.6 : 1
+                                }}
+                              >
+                                <FaTrashAlt size={10} /> Remove
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
             </div>
           </div>
         </div>

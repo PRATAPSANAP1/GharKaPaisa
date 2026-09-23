@@ -262,7 +262,7 @@ const createProduct = async (req, res, next) => {
       documents_required, benefits, fees_charges, apply_button_text, seo_title,
       seo_description, seo_keywords, priority, status, is_active,
       card_network, card_variant, best_for, welcome_benefits, is_lifetime_free, badge, is_recommended, is_trending,
-      public_url, partner_url
+      public_url, partner_url, joining_fee, processing_fee
     } = req.body;
     let image_url = req.body.image_url;
 
@@ -324,12 +324,12 @@ const createProduct = async (req, res, next) => {
         fees_charges, apply_button_text, seo_title, seo_description, seo_keywords,
         priority, status, is_active, created_by, slug,
         card_network, card_variant, best_for, welcome_benefits, is_lifetime_free, badge, is_recommended, is_trending,
-        public_url, partner_url
+        public_url, partner_url, joining_fee, processing_fee
       )
       VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
         $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,
-        $40,$41,$42,$43,$44,$45,$46,$47,$48,$49
+        $40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51
       ) RETURNING id
     `, [
       bank_id, name, category, sub_category || null, description, JSON.stringify(parsedFeatures || []), 
@@ -342,7 +342,7 @@ const createProduct = async (req, res, next) => {
       fees_charges || null, apply_button_text || 'Apply Now', seo_title || null, seo_description || null, seo_keywords || null,
       priority || 0, status || 'Active', isActive, req.user?.id || null, productSlug,
       card_network || null, card_variant || null, best_for || null, welcome_benefits || null, isLtf, badge || null, isRec, isTrend,
-      public_url || null, partner_url || null
+      public_url || null, partner_url || null, joining_fee || null, processing_fee || null
     ]);
 
     await logAction(req, 'CREATE_PRODUCT', p.id, { name, category, commission_value });
@@ -467,6 +467,8 @@ const updateProduct = async (req, res, next) => {
         max_age = COALESCE($49, max_age),
         min_income = COALESCE($50, min_income),
         operation_head_id = COALESCE($51, operation_head_id),
+        joining_fee = COALESCE($52, joining_fee),
+        processing_fee = COALESCE($53, processing_fee),
         updated_at = NOW()
       WHERE id = $33
     `, [
@@ -520,7 +522,9 @@ const updateProduct = async (req, res, next) => {
       min_age ? parseInt(min_age) : null,
       max_age ? parseInt(max_age) : null,
       min_income ? parseFloat(min_income) : null,
-      validOpHeadId
+      validOpHeadId,
+      req.body.joining_fee || null,
+      processing_fee || null
     ]);
 
     await logAction(req, 'UPDATE_PRODUCT', id, { name, bank_id: validBankId, category, commission_value, is_active });

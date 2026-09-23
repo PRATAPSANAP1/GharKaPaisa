@@ -121,6 +121,132 @@ const bankOffers = [
       'Hassle-free auto-debit billing',
       'Zero foreclosure charges after 6 EMIs'
     ]
+  },
+  {
+    id: 'rbl-cash-loan',
+    bank: 'RBL Bank',
+    title: 'RBL Split-N-Pay Cash Loan',
+    logo: null,
+    accent: '#0284C7',
+    maxLoan: '₹500,000',
+    minRoi: '13.50% p.a.',
+    tenure: '12 - 36 Months',
+    processingFee: '1.5% (Min ₹500)',
+    disbursalTime: 'Instant App Transfer',
+    badge: 'Instant Cash',
+    features: [
+      'Instant fund transfer directly to bank account via MyCard app',
+      'Zero paper verification',
+      'Flexible tenure up to 36 months'
+    ]
+  },
+  {
+    id: 'indusind-cash-loan',
+    bank: 'IndusInd Bank',
+    title: 'IndusMoney Instant Cash on Card',
+    logo: null,
+    accent: '#8B5CF6',
+    maxLoan: '₹600,000',
+    minRoi: '12.50% p.a.',
+    tenure: '6 - 36 Months',
+    processingFee: '1% (Min ₹500)',
+    disbursalTime: 'Instant Transfer',
+    badge: 'Pre-Approved',
+    features: [
+      'Instant cash transfer via IndusMobile app',
+      'Pre-approved credit line over card limit',
+      'Zero documentation required'
+    ]
+  },
+  {
+    id: 'au-cash-loan',
+    bank: 'AU Small Finance Bank',
+    title: 'AU Instant Cash Loan on Card',
+    logo: null,
+    accent: '#D97706',
+    maxLoan: '₹400,000',
+    minRoi: '13.00% p.a.',
+    tenure: '6 - 36 Months',
+    processingFee: '1% (Min ₹500)',
+    disbursalTime: 'Instant 0101 Disbursal',
+    badge: 'Pre-Approved',
+    features: [
+      'Instant digital disbursal via AU 0101 app',
+      'Zero paper documentation required',
+      'Auto-debit monthly EMI billing'
+    ]
+  },
+  {
+    id: 'federal-cash-loan',
+    bank: 'Federal Bank',
+    title: 'Federal Bank Card Cash Loan',
+    logo: null,
+    accent: '#10B981',
+    maxLoan: '₹350,000',
+    minRoi: '12.99% p.a.',
+    tenure: '6 - 36 Months',
+    processingFee: '1% (Min ₹499)',
+    disbursalTime: 'Instant FedMobile Transfer',
+    badge: 'Fast Credit',
+    features: [
+      'Instant funds disbursal to FedMobile linked account',
+      '100% digital execution with zero paperwork',
+      'Convenient monthly statement billing'
+    ]
+  },
+  {
+    id: 'yes-cash-loan',
+    bank: 'YES Bank',
+    title: 'YES Bank Quick Loan on Credit Card',
+    logo: null,
+    accent: '#06B6D4',
+    maxLoan: '₹500,000',
+    minRoi: '12.50% p.a.',
+    tenure: '12 - 48 Months',
+    processingFee: '1% (Min ₹500)',
+    disbursalTime: 'Instant Digital Disbursal',
+    badge: 'Quick Disbursal',
+    features: [
+      'Instant digital approval via YES Online & IRIS app',
+      'No physical documentation required',
+      'Flexible tenures up to 48 months'
+    ]
+  },
+  {
+    id: 'bob-cash-loan',
+    bank: 'Bank of Baroda',
+    title: 'BOBCARD Cash on Card Loan',
+    logo: null,
+    accent: '#F97316',
+    maxLoan: '₹400,000',
+    minRoi: '13.00% p.a.',
+    tenure: '6 - 36 Months',
+    processingFee: '1% (Min ₹500)',
+    disbursalTime: 'NEFT Disbursal',
+    badge: 'Pre-Approved',
+    features: [
+      'Direct NEFT cash transfer to bank account',
+      'Zero paper documentation',
+      'Pre-approved based on card track record'
+    ]
+  },
+  {
+    id: 'scb-cash-loan',
+    bank: 'Standard Chartered Bank',
+    title: 'Standard Chartered Instant Cash on Card',
+    logo: null,
+    accent: '#2563EB',
+    maxLoan: '₹500,000',
+    minRoi: '12.00% p.a.',
+    tenure: '12 - 48 Months',
+    processingFee: '1% (Min ₹500)',
+    disbursalTime: 'SC Mobile Transfer',
+    badge: 'Instant Funds',
+    features: [
+      'Instant funds disbursal via SC Mobile app',
+      'No income proof or collateral required',
+      'Choice of flexible EMIs'
+    ]
   }
 ];
 
@@ -536,6 +662,15 @@ export default function EmployeeLoanOnCreditCard() {
             <option value="Axis Bank">Axis Bank</option>
             <option value="IDFC FIRST Bank">IDFC FIRST Bank</option>
             <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
+            <option value="RBL Bank">RBL Bank</option>
+            <option value="IndusInd Bank">IndusInd Bank</option>
+            <option value="AU Small Finance Bank">AU Small Finance Bank</option>
+            <option value="Federal Bank">Federal Bank</option>
+            <option value="YES Bank">YES Bank</option>
+            <option value="Bank of Baroda">Bank of Baroda</option>
+            <option value="Standard Chartered Bank">Standard Chartered Bank</option>
+            <option value="Canara Bank">Canara Bank</option>
+            <option value="Union Bank of India">Union Bank of India</option>
           </select>
         </div>
       </div>
