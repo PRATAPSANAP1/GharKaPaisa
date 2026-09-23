@@ -1275,6 +1275,12 @@ const approveApplication = async (req, res, next) => {
     await logTimeline(client, id, 'approved', 'Application Approved', 'Approved by Super Admin override.', req.user.id);
     await logAction(req, 'SUPER_ADMIN_APPROVE_APPLICATION', id, { approved_amount });
 
+    // Sync Employee Incentive Lifecycle
+    const { rows: [updatedApp] } = await client.query(`SELECT * FROM applications WHERE id = $1`, [app.id]);
+    if (updatedApp) {
+      await syncEmployeeIncentiveLifecycle(client, updatedApp);
+    }
+
     await client.query('COMMIT');
     return success(res, {}, 'Application approved and commission split processed successfully.');
   } catch (err) {
@@ -5559,59 +5565,6 @@ const getRemarkOperatorDashboard = async (req, res, next) => {
       completed_today_count: parseInt(completedRes?.count || 0),
       assigned_banks_count: assignedBankIds.length
     });
-  } catch (err) {
-    next(err);
-  }
-};
-
-const approveApplication = async (req, res, next) => {
-  try {
-    const { id, remarks } = req.body;
-    if (!id) return error(res, 'Application ID is required', 400);
-    const { transitionApplicationStatus } = require('../../services/applicationStatus.service');
-    const result = await transitionApplicationStatus(id, 'approved', req.user, { remarks });
-    const { rows: [app] } = await query(`SELECT * FROM applications WHERE id = $1`, [id]);
-    if (app) {
-      await syncEmployeeIncentiveLifecycle({ query }, app);
-    }
-    return success(res, result, 'Application approved successfully');
-  } catch (err) {
-    next(err);
-  }
-};
-
-const rejectApplication = async (req, res, next) => {
-  try {
-    const { id, remarks } = req.body;
-    if (!id) return error(res, 'Application ID is required', 400);
-    const { transitionApplicationStatus } = require('../../services/applicationStatus.service');
-    const result = await transitionApplicationStatus(id, 'rejected', req.user, { remarks });
-    return success(res, result, 'Application rejected successfully');
-  } catch (err) {
-    next(err);
-  }
-};
-
-const reassignApplication = async (req, res, next) => {
-  try {
-    const { id, partner_id, employee_id } = req.body;
-    if (!id) return error(res, 'Application ID is required', 400);
-    await query(
-      `UPDATE applications SET partner_id = COALESCE($1, partner_id), employee_id = COALESCE($2, employee_id), updated_at = NOW() WHERE id = $3`,
-      [partner_id || null, employee_id || null, id]
-    );
-    return success(res, { id }, 'Application reassigned successfully');
-  } catch (err) {
-    next(err);
-  }
-};
-
-const manualCommission = async (req, res, next) => {
-  try {
-    const { id, commission_amount } = req.body;
-    if (!id) return error(res, 'Application ID is required', 400);
-    await query(`UPDATE applications SET commission_amount = $1, updated_at = NOW() WHERE id = $2`, [parseFloat(commission_amount) || 0, id]);
-    return success(res, { id, commission_amount }, 'Commission updated successfully');
   } catch (err) {
     next(err);
   }
