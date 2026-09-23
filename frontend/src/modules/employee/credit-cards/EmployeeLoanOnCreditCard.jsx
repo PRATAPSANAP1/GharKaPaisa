@@ -15,241 +15,6 @@ import axisLogo from '../../home/components/banks/axis_bank.png';
 import idfcLogo from '../../home/components/banks/idfc_first_bank.png';
 import kotakLogo from '../../home/components/banks/kotak_bank.png';
 
-const bankOffers = [
-  {
-    id: 'hdfc-insta',
-    bank: 'HDFC Bank',
-    title: 'Insta Loan & Jumbo Loan',
-    logo: hdfcLogo,
-    accent: '#2563EB',
-    maxLoan: '₹10,000,000',
-    minRoi: '11.49% p.a.',
-    tenure: '12 - 60 Months',
-    processingFee: '₹999 + GST',
-    disbursalTime: 'Instant (10 Seconds)',
-    badge: 'Pre-Approved',
-    features: [
-      'Over-and-above credit limit (Jumbo Loan option)',
-      'Instant credit directly to savings account',
-      'Flexible foreclosure options after 12 months'
-    ]
-  },
-  {
-    id: 'sbi-encash',
-    bank: 'SBI Card',
-    title: 'Encash & Encash Inline',
-    logo: sbiLogo,
-    accent: '#0284C7',
-    maxLoan: '₹500,000',
-    minRoi: '12.50% p.a.',
-    tenure: '12 - 48 Months',
-    processingFee: '1% (Min ₹500)',
-    disbursalTime: 'Within 48 Hours / Instant NEFT',
-    badge: 'Popular Choice',
-    features: [
-      'Available for all active SBI Card holders',
-      'Encash Inline block/unblock limit options',
-      'Convenient monthly EMI billing on card statement'
-    ]
-  },
-  {
-    id: 'icici-dial',
-    bank: 'ICICI Bank',
-    title: 'Dial-a-Loan on Credit Card',
-    logo: iciciLogo,
-    accent: '#F97316',
-    maxLoan: '₹750,000',
-    minRoi: '11.99% p.a.',
-    tenure: '12 - 36 Months',
-    processingFee: 'Flat ₹499',
-    disbursalTime: 'Instant Credit via iMobile',
-    badge: 'Low Processing Fee',
-    features: [
-      'Instant funds disbursal into any bank account',
-      'Repay in easy 12 to 36 month EMIs',
-      'Zero impact on existing credit card spending limit'
-    ]
-  },
-  {
-    id: 'axis-instant',
-    bank: 'Axis Bank',
-    title: 'Instant Cash on Credit Card',
-    logo: axisLogo,
-    accent: '#E11D48',
-    maxLoan: '₹500,000',
-    minRoi: '13.00% p.a.',
-    tenure: '6 - 36 Months',
-    processingFee: '1.5% (Max ₹1,500)',
-    disbursalTime: 'Instant NetBanking Transfer',
-    badge: 'Fast Transfer',
-    features: [
-      'Pre-approved cash disbursal directly from Axis Mobile',
-      'Transparent repayment schedule in monthly statement'
-    ]
-  },
-  {
-    id: 'idfc-card-loan',
-    bank: 'IDFC FIRST Bank',
-    title: 'Card Limit to Cash Loan',
-    logo: idfcLogo,
-    accent: '#DC2626',
-    maxLoan: '₹300,000',
-    minRoi: '12.00% p.a.',
-    tenure: '3 - 24 Months',
-    processingFee: 'ZERO Processing Fee',
-    disbursalTime: 'Instant 24x7 Disbursal',
-    badge: 'Zero Processing Fee',
-    features: [
-      'Interest-free cash disbursal window for select users',
-      'Digital 1-click execution'
-    ]
-  },
-  {
-    id: 'kotak-smart-loan',
-    bank: 'Kotak Mahindra Bank',
-    title: 'Kotak Smart Loan on Card',
-    logo: kotakLogo,
-    accent: '#DC2626',
-    maxLoan: '₹400,000',
-    minRoi: '12.99% p.a.',
-    tenure: '12 - 48 Months',
-    processingFee: '₹750 + GST',
-    disbursalTime: 'Instant IMPS Disbursal',
-    badge: 'High Conversion',
-    features: [
-      'Customized pre-approved limit based on card history',
-      'Hassle-free auto-debit billing',
-      'Zero foreclosure charges after 6 EMIs'
-    ]
-  },
-  {
-    id: 'rbl-cash-loan',
-    bank: 'RBL Bank',
-    title: 'RBL Split-N-Pay Cash Loan',
-    logo: null,
-    accent: '#0284C7',
-    maxLoan: '₹500,000',
-    minRoi: '13.50% p.a.',
-    tenure: '12 - 36 Months',
-    processingFee: '1.5% (Min ₹500)',
-    disbursalTime: 'Instant App Transfer',
-    badge: 'Instant Cash',
-    features: [
-      'Instant fund transfer directly to bank account via MyCard app',
-      'Zero paper verification',
-      'Flexible tenure up to 36 months'
-    ]
-  },
-  {
-    id: 'indusind-cash-loan',
-    bank: 'IndusInd Bank',
-    title: 'IndusMoney Instant Cash on Card',
-    logo: null,
-    accent: '#8B5CF6',
-    maxLoan: '₹600,000',
-    minRoi: '12.50% p.a.',
-    tenure: '6 - 36 Months',
-    processingFee: '1% (Min ₹500)',
-    disbursalTime: 'Instant Transfer',
-    badge: 'Pre-Approved',
-    features: [
-      'Instant cash transfer via IndusMobile app',
-      'Pre-approved credit line over card limit',
-      'Zero documentation required'
-    ]
-  },
-  {
-    id: 'au-cash-loan',
-    bank: 'AU Small Finance Bank',
-    title: 'AU Instant Cash Loan on Card',
-    logo: null,
-    accent: '#D97706',
-    maxLoan: '₹400,000',
-    minRoi: '13.00% p.a.',
-    tenure: '6 - 36 Months',
-    processingFee: '1% (Min ₹500)',
-    disbursalTime: 'Instant 0101 Disbursal',
-    badge: 'Pre-Approved',
-    features: [
-      'Instant digital disbursal via AU 0101 app',
-      'Zero paper documentation required',
-      'Auto-debit monthly EMI billing'
-    ]
-  },
-  {
-    id: 'federal-cash-loan',
-    bank: 'Federal Bank',
-    title: 'Federal Bank Card Cash Loan',
-    logo: null,
-    accent: '#10B981',
-    maxLoan: '₹350,000',
-    minRoi: '12.99% p.a.',
-    tenure: '6 - 36 Months',
-    processingFee: '1% (Min ₹499)',
-    disbursalTime: 'Instant FedMobile Transfer',
-    badge: 'Fast Credit',
-    features: [
-      'Instant funds disbursal to FedMobile linked account',
-      '100% digital execution with zero paperwork',
-      'Convenient monthly statement billing'
-    ]
-  },
-  {
-    id: 'yes-cash-loan',
-    bank: 'YES Bank',
-    title: 'YES Bank Quick Loan on Credit Card',
-    logo: null,
-    accent: '#06B6D4',
-    maxLoan: '₹500,000',
-    minRoi: '12.50% p.a.',
-    tenure: '12 - 48 Months',
-    processingFee: '1% (Min ₹500)',
-    disbursalTime: 'Instant Digital Disbursal',
-    badge: 'Quick Disbursal',
-    features: [
-      'Instant digital approval via YES Online & IRIS app',
-      'No physical documentation required',
-      'Flexible tenures up to 48 months'
-    ]
-  },
-  {
-    id: 'bob-cash-loan',
-    bank: 'Bank of Baroda',
-    title: 'BOBCARD Cash on Card Loan',
-    logo: null,
-    accent: '#F97316',
-    maxLoan: '₹400,000',
-    minRoi: '13.00% p.a.',
-    tenure: '6 - 36 Months',
-    processingFee: '1% (Min ₹500)',
-    disbursalTime: 'NEFT Disbursal',
-    badge: 'Pre-Approved',
-    features: [
-      'Direct NEFT cash transfer to bank account',
-      'Zero paper documentation',
-      'Pre-approved based on card track record'
-    ]
-  },
-  {
-    id: 'scb-cash-loan',
-    bank: 'Standard Chartered Bank',
-    title: 'Standard Chartered Instant Cash on Card',
-    logo: null,
-    accent: '#2563EB',
-    maxLoan: '₹500,000',
-    minRoi: '12.00% p.a.',
-    tenure: '12 - 48 Months',
-    processingFee: '1% (Min ₹500)',
-    disbursalTime: 'SC Mobile Transfer',
-    badge: 'Instant Funds',
-    features: [
-      'Instant funds disbursal via SC Mobile app',
-      'No income proof or collateral required',
-      'Choice of flexible EMIs'
-    ]
-  }
-];
-
 export default function EmployeeLoanOnCreditCard() {
   const { C, isDark } = useTheme();
   const { user } = useAuthStore();
@@ -330,7 +95,7 @@ export default function EmployeeLoanOnCreditCard() {
     fetchDynamicOffers();
   }, []);
 
-  const activeOffers = dbOffers.length > 0 ? dbOffers : bankOffers;
+  const activeOffers = dbOffers;
 
   // Calculator States
   const [loanAmount, setLoanAmount] = useState(150000);
@@ -676,153 +441,166 @@ export default function EmployeeLoanOnCreditCard() {
       </div>
 
       {/* ── 4. OFFERS GRID ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
-        {filteredOffers.map(offer => (
-          <div
-            key={offer.id}
-            style={{
-              background: isDark ? '#1E293B' : '#FFFFFF',
-              borderRadius: '20px',
-              border: `1px solid ${C.border}`,
-              padding: '22px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: '18px',
-              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)',
-              transition: 'all 0.2s ease',
-              position: 'relative'
-            }}
-          >
-            <div>
-              {/* Product Header Row 1: Logo (Left), Bank Name (Center), Badge Tag (Right) */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '40px' }}>
-                  {offer.logo ? (
-                    <img src={offer.logo} alt={offer.bank} style={{ height: '30px', objectFit: 'contain' }} />
-                  ) : (
-                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: `${offer.accent}15`, color: offer.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '13px' }}>
-                      {offer.bank.charAt(0)}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                  <span style={{ fontSize: '16px', fontWeight: 900, color: C.text }}>{offer.bank}</span>
-                </div>
-
-                <span style={{ background: `${offer.accent}15`, color: offer.accent, fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px' }}>
-                  {offer.badge}
-                </span>
-              </div>
-
-              {/* Product Header Row 2: Centered Product Title */}
-              <div style={{ textAlign: 'center', marginBottom: '14px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 800, color: offer.accent, margin: 0 }}>{offer.title}</h4>
-              </div>
-
-              {/* Key Metrics Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', background: isDark ? '#0F172A' : '#F8FAFC', padding: '12px', borderRadius: '12px', marginBottom: '14px' }}>
-                <div>
-                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Max Loan Limit</span>
-                  <strong style={{ fontSize: '13.5px', color: C.text, fontWeight: 900 }}>{offer.maxLoan}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Interest Rate</span>
-                  <strong style={{ fontSize: '13.5px', color: '#10B981', fontWeight: 900 }}>{offer.minRoi}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Tenure</span>
-                  <strong style={{ fontSize: '13px', color: C.text, fontWeight: 800 }}>{offer.tenure}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Disbursal Time</span>
-                  <strong style={{ fontSize: '13px', color: offer.accent, fontWeight: 800 }}>{offer.disbursalTime}</strong>
-                </div>
-              </div>
-
-              {/* Features Checklist */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {offer.features.map((feat, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: C.textMid, fontWeight: 600 }}>
-                    <FaCheckCircle color="#10B981" size={13} style={{ flexShrink: 0 }} />
-                    <span>{feat}</span>
+      {loadingProds ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', background: C.card, borderRadius: '20px', border: `1px solid ${C.border}` }}>
+          <div style={{ width: '32px', height: '32px', border: `3px solid ${C.employeePrimary || '#0F766E'}`, borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto 12px', animation: 'spin 1s linear infinite' }}></div>
+          <p style={{ color: C.textMid, fontSize: '14px', fontWeight: 600 }}>Loading dynamic Loan on Credit Card offers from database...</p>
+        </div>
+      ) : filteredOffers.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', background: C.card, borderRadius: '20px', border: `1px solid ${C.border}` }}>
+          <FaCoins size={40} color={C.textLight} style={{ marginBottom: '12px', opacity: 0.5 }} />
+          <h4 style={{ fontSize: '18px', fontWeight: 800, color: C.text, margin: '0 0 6px 0' }}>No Dynamic Loan Offers Found</h4>
+          <p style={{ color: C.textMid, fontSize: '13.5px', margin: 0 }}>There are currently no products under "Loan on Credit Card". You can add new products in Super Admin Product Management.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+          {filteredOffers.map(offer => (
+            <div
+              key={offer.id}
+              style={{
+                background: isDark ? '#1E293B' : '#FFFFFF',
+                borderRadius: '20px',
+                border: `1px solid ${C.border}`,
+                padding: '22px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: '18px',
+                boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)',
+                transition: 'all 0.2s ease',
+                position: 'relative'
+              }}
+            >
+              <div>
+                {/* Product Header Row 1: Logo (Left), Bank Name (Center), Badge Tag (Right) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '40px' }}>
+                    {offer.logo ? (
+                      <img src={offer.logo} alt={offer.bank} style={{ height: '30px', objectFit: 'contain' }} />
+                    ) : (
+                      <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: `${offer.accent}15`, color: offer.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '13px' }}>
+                        {offer.bank.charAt(0)}
+                      </div>
+                    )}
                   </div>
-                ))}
+
+                  <div style={{ textAlign: 'center', flex: 1 }}>
+                    <span style={{ fontSize: '16px', fontWeight: 900, color: C.text }}>{offer.bank}</span>
+                  </div>
+
+                  <span style={{ background: `${offer.accent}15`, color: offer.accent, fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px' }}>
+                    {offer.badge}
+                  </span>
+                </div>
+
+                {/* Product Header Row 2: Centered Product Title */}
+                <div style={{ textAlign: 'center', marginBottom: '14px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 800, color: offer.accent, margin: 0 }}>{offer.title}</h4>
+                </div>
+
+                {/* Key Metrics Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', background: isDark ? '#0F172A' : '#F8FAFC', padding: '12px', borderRadius: '12px', marginBottom: '14px' }}>
+                  <div>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Max Loan Limit</span>
+                    <strong style={{ fontSize: '13.5px', color: C.text, fontWeight: 900 }}>{offer.maxLoan}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Interest Rate</span>
+                    <strong style={{ fontSize: '13.5px', color: '#10B981', fontWeight: 900 }}>{offer.minRoi}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Tenure</span>
+                    <strong style={{ fontSize: '13px', color: C.text, fontWeight: 800 }}>{offer.tenure}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Disbursal Time</span>
+                    <strong style={{ fontSize: '13px', color: offer.accent, fontWeight: 800 }}>{offer.disbursalTime}</strong>
+                  </div>
+                </div>
+
+                {/* Features Checklist */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {offer.features.map((feat, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: C.textMid, fontWeight: 600 }}>
+                      <FaCheckCircle color="#10B981" size={13} style={{ flexShrink: 0 }} />
+                      <span>{feat}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button
-                onClick={() => setApplyOffer(offer)}
-                style={{
-                  width: '100%',
-                  padding: '11px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: C.employeePrimary || '#0F766E',
-                  color: '#FFFFFF',
-                  fontSize: '13.5px',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(15, 118, 110, 0.2)'
-                }}
-              >
-                <FaUserCheck /> Apply for Customer Now
-              </button>
-
-              <div style={{ display: 'flex', gap: '8px' }}>
+              {/* Action Buttons */}
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <button
-                  onClick={() => handleCopyShareLink(offer)}
+                  onClick={() => setApplyOffer(offer)}
                   style={{
-                    flex: 1,
-                    padding: '9px',
-                    borderRadius: '10px',
-                    border: `1px solid ${C.border}`,
-                    background: C.bgSecondary,
-                    color: C.text,
-                    fontSize: '12.5px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <FaCopy size={12} /> {copiedId === offer.id ? 'Copied!' : 'Copy Link'}
-                </button>
-
-                <button
-                  onClick={() => handleWhatsAppShare(offer)}
-                  style={{
-                    flex: 1,
-                    padding: '9px',
-                    borderRadius: '10px',
+                    width: '100%',
+                    padding: '11px',
+                    borderRadius: '12px',
                     border: 'none',
-                    background: '#25D366',
+                    background: C.employeePrimary || '#0F766E',
                     color: '#FFFFFF',
-                    fontSize: '12.5px',
+                    fontSize: '13.5px',
                     fontWeight: 800,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px'
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(15, 118, 110, 0.2)'
                   }}
                 >
-                  <FaShareAlt size={12} /> WhatsApp
+                  <FaUserCheck /> Apply for Customer Now
                 </button>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleCopyShareLink(offer)}
+                    style={{
+                      flex: 1,
+                      padding: '9px',
+                      borderRadius: '10px',
+                      border: `1px solid ${C.border}`,
+                      background: C.bgSecondary,
+                      color: C.text,
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FaCopy size={12} /> {copiedId === offer.id ? 'Copied!' : 'Copy Link'}
+                  </button>
+
+                  <button
+                    onClick={() => handleWhatsAppShare(offer)}
+                    style={{
+                      flex: 1,
+                      padding: '9px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: '#25D366',
+                      color: '#FFFFFF',
+                      fontSize: '12.5px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FaShareAlt size={12} /> WhatsApp
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* ── 5. QUICK APPLY MODAL ── */}
       {applyOffer && (

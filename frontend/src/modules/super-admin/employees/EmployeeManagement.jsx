@@ -1436,6 +1436,7 @@ export default function EmployeeManagement() {
                   style={{ padding: '9px 14px', background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '13.5px' }}
                 >
                   <option value="">All Designations</option>
+                  <option value="KYC Operator">KYC Operator</option>
                   <option value="QD Operator">QD Operator</option>
                   <option value="Remark Operator">Remark Operator</option>
                   <option value="PAN Checker">PAN Checker</option>

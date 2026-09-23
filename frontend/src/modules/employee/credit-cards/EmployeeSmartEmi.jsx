@@ -15,243 +15,6 @@ import axisLogo from '../../home/components/banks/axis_bank.png';
 import rblLogo from '../../home/components/banks/rbl_bank.png';
 import kotakLogo from '../../home/components/banks/kotak_bank.png';
 
-const emiSchemes = [
-  {
-    id: 'hdfc-smart-emi',
-    bank: 'HDFC Bank',
-    title: 'SmartEMI on Credit Card',
-    logo: hdfcLogo,
-    accent: '#2563EB',
-    minTransaction: '₹2,500',
-    minRoi: '1.15% per month (13.8% p.a.)',
-    tenure: '3 - 36 Months',
-    processingFee: '₹199 + GST',
-    conversionSpeed: 'Instant / Within 24 Hrs',
-    badge: 'Popular Scheme',
-    features: [
-      'Convert card purchases into monthly EMIs instantly via NetBanking/App',
-      'No-Cost EMI options available across 5,000+ merchant partners',
-      'Earn reward points on initial transaction before conversion'
-    ]
-  },
-  {
-    id: 'sbi-flexipay',
-    bank: 'SBI Card',
-    title: 'Flexipay (Post-Purchase EMI)',
-    logo: sbiLogo,
-    accent: '#0284C7',
-    minTransaction: '₹5,000',
-    minRoi: '1.25% per month (15.0% p.a.)',
-    tenure: '6 - 24 Months',
-    processingFee: '1% (Min ₹99)',
-    disbursalTime: 'Instant 1-Click Convert',
-    badge: 'Flexi Option',
-    features: [
-      'Convert transactions within 30 days of purchase',
-      'Flexible repayment tenure options (6, 9, 12, 24 months)',
-      'Manage EMIs directly from SBI Card App'
-    ]
-  },
-  {
-    id: 'icici-emi-card',
-    bank: 'ICICI Bank',
-    title: 'Instant EMI on Card',
-    logo: iciciLogo,
-    accent: '#F97316',
-    minTransaction: '₹3,000',
-    minRoi: '1.08% per month (13.0% p.a.)',
-    tenure: '3 - 24 Months',
-    processingFee: 'Flat ₹199',
-    conversionSpeed: 'Instant at Checkout / App',
-    badge: 'Low Processing Fee',
-    features: [
-      'Instant checkout EMI at Amazon, Flipkart & leading stores',
-      'Convert existing card balance into easy EMIs',
-      'Exclusive 0% No-Cost EMI brand tie-ups'
-    ]
-  },
-  {
-    id: 'axis-dial-convert',
-    bank: 'Axis Bank',
-    title: 'Dial-a-Convert EMI',
-    logo: axisLogo,
-    accent: '#E11D48',
-    minTransaction: '₹2,500',
-    minRoi: '1.20% per month (14.4% p.a.)',
-    tenure: '3 - 36 Months',
-    processingFee: '1.5% (Min ₹150)',
-    conversionSpeed: 'Instant via Axis Mobile',
-    badge: 'Fast Convert',
-    features: [
-      'Convert transactions up to 60 days post-purchase',
-      '24x7 conversion feature via mobile app',
-      'Retain credit card reward points earned'
-    ]
-  },
-  {
-    id: 'rbl-split-pay',
-    bank: 'RBL Bank',
-    title: 'Split N Pay EMI',
-    logo: rblLogo,
-    accent: '#0284C7',
-    minTransaction: '₹3,000',
-    minRoi: '1.16% per month (14.0% p.a.)',
-    tenure: '3 - 24 Months',
-    processingFee: '₹150 + GST',
-    conversionSpeed: 'Instant App Conversion',
-    badge: 'Easy Split',
-    features: [
-      'Split single or multiple transaction items into EMIs',
-      'Special zero interest promotional windows',
-      'Zero foreclosure fees'
-    ]
-  },
-  {
-    id: 'kotak-smart-emi',
-    bank: 'Kotak Mahindra Bank',
-    title: 'Kotak Smart EMI Scheme',
-    logo: kotakLogo,
-    accent: '#DC2626',
-    minTransaction: '₹2,500',
-    minRoi: '1.25% per month (15.0% p.a.)',
-    tenure: '3 - 48 Months',
-    processingFee: '₹199 + GST',
-    conversionSpeed: 'Instant 1-Tap EMI',
-    badge: 'High Approval',
-    features: [
-      'Convert transactions online or SMS keyword',
-      'Choose customized tenure options',
-      'Complete visibility in monthly statement'
-    ]
-  },
-  {
-    id: 'idfc-card-emi',
-    bank: 'IDFC FIRST Bank',
-    title: 'IDFC FIRST Card Instant EMI',
-    logo: null,
-    accent: '#991B1B',
-    minTransaction: '₹2,500',
-    minRoi: '1.00% per month (12.0% p.a.)',
-    tenure: '3 - 24 Months',
-    processingFee: 'ZERO Processing Fee',
-    conversionSpeed: 'Instant App EMI',
-    badge: 'Zero Fee EMI',
-    features: [
-      '0% processing fee for select cardholders',
-      'Seamless digital execution via IDFC FIRST Bank app',
-      'Transparent monthly statement billing'
-    ]
-  },
-  {
-    id: 'indusind-merchant-emi',
-    bank: 'IndusInd Bank',
-    title: 'IndusInd Merchant & Flexi EMI',
-    logo: null,
-    accent: '#8B5CF6',
-    minTransaction: '₹2,000',
-    minRoi: '1.15% per month (13.8% p.a.)',
-    tenure: '3 - 24 Months',
-    processingFee: '₹199 + GST',
-    conversionSpeed: 'Instant Checkout / App',
-    badge: 'Low Interest',
-    features: [
-      'Merchant EMI checkout across Amazon, Flipkart, & stores',
-      'Post-purchase EMI conversion via IndusMobile App',
-      'Flexible 3 to 24 month tenures'
-    ]
-  },
-  {
-    id: 'au-flexi-emi',
-    bank: 'AU Small Finance Bank',
-    title: 'AU Merchant & Flexi EMI',
-    logo: null,
-    accent: '#D97706',
-    minTransaction: '₹2,000',
-    minRoi: '1.20% per month (14.4% p.a.)',
-    tenure: '3 - 24 Months',
-    processingFee: '₹199 + GST',
-    conversionSpeed: 'Instant 0101 EMI',
-    badge: 'Customizable EMI',
-    features: [
-      'Convert transactions directly on AU 0101 App',
-      'No-cost EMI offers with major retail partners',
-      'Retain reward points on initial spend'
-    ]
-  },
-  {
-    id: 'federal-scapia-emi',
-    bank: 'Federal Bank',
-    title: 'Federal Bank & Scapia Credit EMI',
-    logo: null,
-    accent: '#10B981',
-    minTransaction: '₹2,500',
-    minRoi: '1.15% per month (13.8% p.a.)',
-    tenure: '3 - 24 Months',
-    processingFee: '₹149 + GST',
-    conversionSpeed: 'Instant App Conversion',
-    badge: 'Easy EMI',
-    features: [
-      'Instant conversion on FedMobile & Scapia app',
-      'Zero foreclosure fees after 3 EMIs',
-      'Flexible tenures from 3 to 24 months'
-    ]
-  },
-  {
-    id: 'yes-speed-emi',
-    bank: 'YES Bank',
-    title: 'YES Bank Speed EMI & Balance Transfer',
-    logo: null,
-    accent: '#06B6D4',
-    minTransaction: '₹2,500',
-    minRoi: '1.20% per month (14.4% p.a.)',
-    tenure: '3 - 36 Months',
-    processingFee: '₹199 + GST',
-    conversionSpeed: 'Instant IRIS EMI',
-    badge: 'Speed EMI',
-    features: [
-      'Convert purchases within 30 days via YES Online / IRIS App',
-      'Balance Transfer on EMI for other bank credit cards',
-      'Flexible repayment options'
-    ]
-  },
-  {
-    id: 'bob-card-emi',
-    bank: 'Bank of Baroda',
-    title: 'BOBCARD EMI & Balance Transfer',
-    logo: null,
-    accent: '#F97316',
-    minTransaction: '₹2,500',
-    minRoi: '1.25% per month (15.0% p.a.)',
-    tenure: '3 - 24 Months',
-    processingFee: '₹199 + GST',
-    conversionSpeed: 'App Conversion',
-    badge: 'Easy Conversion',
-    features: [
-      'Convert transactions over ₹2,500 into EMIs',
-      'Balance transfer from other cards to BOBCARD EMI',
-      'Flexible tenure selection'
-    ]
-  },
-  {
-    id: 'scb-kuch-bhi-emi',
-    bank: 'Standard Chartered Bank',
-    title: 'Standard Chartered Kuch Bhi EMI',
-    logo: null,
-    accent: '#2563EB',
-    minTransaction: '₹2,000',
-    minRoi: '1.15% per month (13.8% p.a.)',
-    tenure: '3 - 36 Months',
-    processingFee: '₹199 + GST',
-    conversionSpeed: 'SC Mobile EMI',
-    badge: 'Kuch Bhi EMI',
-    features: [
-      'Convert any transaction above ₹2,000 into EMI',
-      'Balance Transfer on EMI option available',
-      'Instant digital processing via SC Mobile'
-    ]
-  }
-];
-
 export default function EmployeeSmartEmi() {
   const { C, isDark } = useTheme();
   const { user } = useAuthStore();
@@ -317,7 +80,7 @@ export default function EmployeeSmartEmi() {
                 minTransaction: p.joining_fee || '₹2,500',
                 minRoi: p.interest_rate || '1.15% per month (13.8% p.a.)',
                 tenure: p.time_period || '3 - 36 Months',
-                processingFee: p.annual_fee || '₹199 + GST',
+                processingFee: p.annual_fee || p.processing_fee || '₹199 + GST',
                 conversionSpeed: 'Instant / Within 24 Hrs',
                 badge: p.badge || 'Popular Scheme',
                 features: parsedFeatures.length > 0 ? parsedFeatures : [p.description || 'Convert purchases into easy EMIs']
@@ -335,7 +98,7 @@ export default function EmployeeSmartEmi() {
     fetchDynamicSchemes();
   }, []);
 
-  const activeSchemes = dbSchemes.length > 0 ? dbSchemes : emiSchemes;
+  const activeSchemes = dbSchemes;
 
   // Calculator States
   const [purchaseAmt, setPurchaseAmt] = useState(75000);
@@ -718,152 +481,162 @@ export default function EmployeeSmartEmi() {
       </div>
 
       {/* ── 4. SCHEMES GRID ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
-        {filteredSchemes.map(scheme => (
-          <div
-            key={scheme.id}
-            style={{
-              background: isDark ? '#1E293B' : '#FFFFFF',
-              borderRadius: '20px',
-              border: `1px solid ${C.border}`,
-              padding: '22px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: '18px',
-              boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <div>
-              {/* Product Header Row 1: Logo (Left), Bank Name (Center), Badge Tag (Right) */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '40px' }}>
-                  {scheme.logo ? (
-                    <img src={scheme.logo} alt={scheme.bank} style={{ height: '30px', objectFit: 'contain' }} />
-                  ) : (
-                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: `${scheme.accent}15`, color: scheme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '13px' }}>
-                      {scheme.bank.charAt(0)}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ textAlign: 'center', flex: 1 }}>
-                  <span style={{ fontSize: '16px', fontWeight: 900, color: C.text }}>{scheme.bank}</span>
-                </div>
-
-                <span style={{ background: `${scheme.accent}15`, color: scheme.accent, fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px' }}>
-                  {scheme.badge}
-                </span>
-              </div>
-
-              {/* Product Header Row 2: Centered Product Title */}
-              <div style={{ textAlign: 'center', marginBottom: '14px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 800, color: scheme.accent, margin: 0 }}>{scheme.title}</h4>
-              </div>
-
-              {/* Key Metrics Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', background: isDark ? '#0F172A' : '#F8FAFC', padding: '12px', borderRadius: '12px', marginBottom: '14px' }}>
-                <div>
-                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Min Purchase Value</span>
-                  <strong style={{ fontSize: '13.5px', color: C.text, fontWeight: 900 }}>{scheme.minTransaction}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Interest Rate</span>
-                  <strong style={{ fontSize: '13px', color: '#10B981', fontWeight: 900 }}>{scheme.minRoi}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Tenure</span>
-                  <strong style={{ fontSize: '13px', color: C.text, fontWeight: 800 }}>{scheme.tenure}</strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Processing Fee</span>
-                  <strong style={{ fontSize: '13px', color: scheme.accent, fontWeight: 800 }}>{scheme.processingFee}</strong>
-                </div>
-              </div>
-
-              {/* Features Checklist */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {scheme.features.map((feat, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: C.textMid, fontWeight: 600 }}>
-                    <FaCheckCircle color="#10B981" size={13} style={{ flexShrink: 0 }} />
-                    <span>{feat}</span>
+      {loadingProds ? (
+        <div style={{ padding: '60px', textAlign: 'center', color: C.textMid, fontWeight: 700 }}>
+          Loading dynamic Smart EMI schemes...
+        </div>
+      ) : filteredSchemes.length === 0 ? (
+        <div style={{ padding: '60px', textAlign: 'center', color: C.textMid, fontWeight: 700, background: C.card, borderRadius: '16px', border: `1px solid ${C.border}` }}>
+          No dynamic Smart EMI schemes found matching your criteria.
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+          {filteredSchemes.map(scheme => (
+            <div
+              key={scheme.id}
+              style={{
+                background: isDark ? '#1E293B' : '#FFFFFF',
+                borderRadius: '20px',
+                border: `1px solid ${C.border}`,
+                padding: '22px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: '18px',
+                boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.2)' : '0 4px 18px rgba(15,23,42,0.03)',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <div>
+                {/* Product Header Row 1: Logo (Left), Bank Name (Center), Badge Tag (Right) */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '40px' }}>
+                    {scheme.logo ? (
+                      <img src={scheme.logo} alt={scheme.bank} style={{ height: '30px', objectFit: 'contain' }} />
+                    ) : (
+                      <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: `${scheme.accent}15`, color: scheme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '13px' }}>
+                        {scheme.bank.charAt(0)}
+                      </div>
+                    )}
                   </div>
-                ))}
+
+                  <div style={{ textAlign: 'center', flex: 1 }}>
+                    <span style={{ fontSize: '16px', fontWeight: 900, color: C.text }}>{scheme.bank}</span>
+                  </div>
+
+                  <span style={{ background: `${scheme.accent}15`, color: scheme.accent, fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px' }}>
+                    {scheme.badge}
+                  </span>
+                </div>
+
+                {/* Product Header Row 2: Centered Product Title */}
+                <div style={{ textAlign: 'center', marginBottom: '14px', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 800, color: scheme.accent, margin: 0 }}>{scheme.title}</h4>
+                </div>
+
+                {/* Key Metrics Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', background: isDark ? '#0F172A' : '#F8FAFC', padding: '12px', borderRadius: '12px', marginBottom: '14px' }}>
+                  <div>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Min Purchase Value</span>
+                    <strong style={{ fontSize: '13.5px', color: C.text, fontWeight: 900 }}>{scheme.minTransaction}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Interest Rate</span>
+                    <strong style={{ fontSize: '13px', color: '#10B981', fontWeight: 900 }}>{scheme.minRoi}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Tenure</span>
+                    <strong style={{ fontSize: '13px', color: C.text, fontWeight: 800 }}>{scheme.tenure}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '11px', color: C.textLight, display: 'block', fontWeight: 600 }}>Processing Fee</span>
+                    <strong style={{ fontSize: '13px', color: scheme.accent, fontWeight: 800 }}>{scheme.processingFee}</strong>
+                  </div>
+                </div>
+
+                {/* Features Checklist */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {scheme.features.map((feat, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: C.textMid, fontWeight: 600 }}>
+                      <FaCheckCircle color="#10B981" size={13} style={{ flexShrink: 0 }} />
+                      <span>{feat}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button
-                onClick={() => setApplyScheme(scheme)}
-                style={{
-                  width: '100%',
-                  padding: '11px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: '#4338CA',
-                  color: '#FFFFFF',
-                  fontSize: '13.5px',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(67, 56, 202, 0.2)'
-                }}
-              >
-                <FaUserCheck /> Submit Smart EMI Lead
-              </button>
-
-              <div style={{ display: 'flex', gap: '8px' }}>
+              {/* Action Buttons */}
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <button
-                  onClick={() => handleCopyShareLink(scheme)}
+                  onClick={() => setApplyScheme(scheme)}
                   style={{
-                    flex: 1,
-                    padding: '9px',
-                    borderRadius: '10px',
-                    border: `1px solid ${C.border}`,
-                    background: C.bgSecondary,
-                    color: C.text,
-                    fontSize: '12.5px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <FaCopy size={12} /> {copiedId === scheme.id ? 'Copied!' : 'Copy Link'}
-                </button>
-
-                <button
-                  onClick={() => handleWhatsAppShare(scheme)}
-                  style={{
-                    flex: 1,
-                    padding: '9px',
-                    borderRadius: '10px',
+                    width: '100%',
+                    padding: '11px',
+                    borderRadius: '12px',
                     border: 'none',
-                    background: '#25D366',
+                    background: '#4338CA',
                     color: '#FFFFFF',
-                    fontSize: '12.5px',
+                    fontSize: '13.5px',
                     fontWeight: 800,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px'
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(67, 56, 202, 0.2)'
                   }}
                 >
-                  <FaShareAlt size={12} /> WhatsApp
+                  <FaUserCheck /> Submit Smart EMI Lead
                 </button>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => handleCopyShareLink(scheme)}
+                    style={{
+                      flex: 1,
+                      padding: '9px',
+                      borderRadius: '10px',
+                      border: `1px solid ${C.border}`,
+                      background: C.bgSecondary,
+                      color: C.text,
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FaCopy size={12} /> {copiedId === scheme.id ? 'Copied!' : 'Copy Link'}
+                  </button>
+
+                  <button
+                    onClick={() => handleWhatsAppShare(scheme)}
+                    style={{
+                      flex: 1,
+                      padding: '9px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      background: '#25D366',
+                      color: '#FFFFFF',
+                      fontSize: '12.5px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FaShareAlt size={12} /> WhatsApp
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* ── 5. QUICK SUBMIT MODAL ── */}
       {applyScheme && (
