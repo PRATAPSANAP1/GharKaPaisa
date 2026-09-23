@@ -10,20 +10,32 @@ const { createNotification } = require('../notifications/service');
 function maskSensitiveData(text) {
   if (!text || typeof text !== 'string') return text;
 
+  // Preserve Application Numbers (e.g. APP2026092456317, APP-12345, #APP...) so they are NEVER masked
+  const appNumbers = [];
+  let preservedText = text.replace(/(?:APP|app|#APP|Application\s*#?)[A-Za-z0-9_-]+/gi, (match) => {
+    appNumbers.push(match);
+    return `__APP_NUM_TOKEN_${appNumbers.length - 1}__`;
+  });
+
   // 1. Mask PAN Card (5 letters + 4 digits + 1 letter -> ABCD******)
-  let masked = text.replace(/\b([A-Za-z]{5}[0-9]{4}[A-Za-z]{1})\b/gi, (match) => {
+  let masked = preservedText.replace(/\b([A-Za-z]{5}[0-9]{4}[A-Za-z]{1})\b/gi, (match) => {
     return match.slice(0, 4) + '******';
   });
 
-  // 2. Mask +91 / 91 12-digit Indian mobile numbers (e.g. +919876543210 -> +919876******)
-  masked = masked.replace(/(\+?91[\s-]?)?([6-9]\d{3})(\d{6})\b/g, (match, countryCode, prefix, lastSix) => {
+  // 2. Mask +91 / 91 10-digit Indian mobile numbers (e.g. +919876543210 -> +919876******)
+  masked = masked.replace(/(\+?91[\s-]?)?([6-9]\d{3})(\d{6})\b/g, (match, countryCode, prefix) => {
     const code = countryCode || '';
     return `${code}${prefix}******`;
   });
 
   // 3. Mask standalone 10 to 12 digit phone number blocks
-  masked = masked.replace(/\b([0-9]{4,6})([0-9]{6})\b/g, (match, prefix, lastSix) => {
+  masked = masked.replace(/\b([6-9]\d{3})(\d{6})\b/g, (match, prefix) => {
     return `${prefix}******`;
+  });
+
+  // Restore preserved Application Numbers intact
+  masked = masked.replace(/__APP_NUM_TOKEN_(\d+)__/g, (_, idx) => {
+    return appNumbers[parseInt(idx, 10)] || '';
   });
 
   return masked;

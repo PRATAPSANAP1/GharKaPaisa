@@ -33,6 +33,13 @@ export function maskSensitiveData(text) {
 
 export default function MessengerView({ initialAppId = null, readOnly = false, targetUserId = null }) {
   const { user } = useAuthStore();
+
+  const isSuperAdminOrSharad = 
+    (user?.role || '').toUpperCase() === 'SUPER_ADMIN' ||
+    (user?.full_name || '').toLowerCase().includes('sharad yohesa') ||
+    (user?.full_name || '').toLowerCase().includes('sharad') ||
+    (user?.email || '').toLowerCase().includes('sharad');
+
   const [conversations, setConversations] = useState([]);
   const [activeConv, setActiveConv] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -92,19 +99,16 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     const source = targetObj.user_id || targetObj.sender_id || targetObj.full_name || targetObj.name ? targetObj : isDirectUser;
     if (!source) return;
 
-    const isCurrentAdmin = (user?.role || '').toUpperCase() === 'ADMIN';
-    const isTargetSuperAdmin = (source.role || source.sender_role || '').toUpperCase() === 'SUPER_ADMIN';
-
     const codeVal = source.partner_code || source.employee_code || source.sender_partner_code || source.sender_employee_code || source.user_code || source.code || 'N/A';
 
     const normalized = {
       id: source.id || source.user_id || source.sender_id,
-      full_name: (isCurrentAdmin && !isTargetSuperAdmin)
-        ? `Assigned Member (${codeVal})`
-        : ((source.full_name && source.full_name !== 'User Profile') ? source.full_name : (source.name || source.sender_name || (source.first_name ? `${source.first_name} ${source.last_name || ''}`.trim() : '') || source.email || 'User Profile')),
-      mobile: (isCurrentAdmin && !isTargetSuperAdmin) ? '[Protected]' : (source.mobile || source.sender_mobile || source.phone || 'N/A'),
-      email: (isCurrentAdmin && !isTargetSuperAdmin) ? '[Protected]' : (source.email || source.sender_email || 'N/A'),
-      code: codeVal,
+      full_name: isSuperAdminOrSharad
+        ? ((source.full_name && source.full_name !== 'User Profile') ? source.full_name : (source.name || source.sender_name || (source.first_name ? `${source.first_name} ${source.last_name || ''}`.trim() : '') || source.email || 'User Profile'))
+        : (codeVal && codeVal !== 'N/A' ? codeVal : 'User'),
+      mobile: isSuperAdminOrSharad ? (source.mobile || source.sender_mobile || source.phone || 'N/A') : '[Protected]',
+      email: isSuperAdminOrSharad ? (source.email || source.sender_email || 'N/A') : '[Protected]',
+      code: isSuperAdminOrSharad ? codeVal : '[Protected]',
       role: source.role || source.sender_role || 'Member',
       department: source.department || null,
       designation: source.designation || null,
@@ -674,7 +678,6 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
   const getConvTitle = (conv) => {
     if (!conv) return 'Chat';
-    const isCurrentAdmin = (user?.role || '').toUpperCase() === 'ADMIN';
 
     // For DIRECT conversations, ALWAYS resolve the counterpart / target participant's name!
     if (conv.conversation_type === 'DIRECT') {
@@ -682,13 +685,14 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                      conv.participants?.find(p => (p.user_id || p.id) !== user?.id) ||
                      (conv.other_participants?.[0] && (conv.other_participants[0].user_id || conv.other_participants[0].id) !== user?.id ? conv.other_participants[0] : null);
       if (otherP) {
-        if (isCurrentAdmin && (otherP.role || '').toUpperCase() !== 'SUPER_ADMIN') {
-          const code = otherP.partner_code || otherP.employee_code || `USR-${(otherP.user_id || otherP.id || '').slice(0, 6).toUpperCase()}`;
-          return `Assigned Member (${code})`;
+        if (isSuperAdminOrSharad) {
+          return (otherP.full_name && otherP.full_name !== 'User Profile')
+            ? otherP.full_name
+            : (otherP.name || (otherP.first_name ? `${otherP.first_name} ${otherP.last_name || ''}`.trim() : '') || otherP.email || 'Direct Chat');
+        } else {
+          const code = otherP.partner_code || otherP.employee_code || (otherP.user_id || otherP.id ? `USR-${(otherP.user_id || otherP.id).slice(0, 6).toUpperCase()}` : '');
+          return code || 'Direct Chat';
         }
-        return (otherP.full_name && otherP.full_name !== 'User Profile')
-          ? otherP.full_name
-          : (otherP.name || (otherP.first_name ? `${otherP.first_name} ${otherP.last_name || ''}`.trim() : '') || otherP.email || 'Direct Chat');
       }
 
       if (conv.name && conv.name.trim().toLowerCase() !== (user?.full_name || '').trim().toLowerCase()) {
@@ -705,9 +709,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       const others = conv.other_participants.filter(p => (p.user_id || p.id) !== user?.id);
       if (others.length > 0) {
         return others.map(p => {
-          if (isCurrentAdmin && (p.role || '').toUpperCase() !== 'SUPER_ADMIN') {
+          if (!isSuperAdminOrSharad) {
             const code = p.partner_code || p.employee_code || `USR-${(p.user_id || p.id || '').slice(0, 6).toUpperCase()}`;
-            return `Assigned Member (${code})`;
+            return code || 'Member';
           }
           return p.full_name;
         }).join(', ');
@@ -1204,11 +1208,24 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       >
                         {!isMe && (
                           <span 
-                            onClick={() => openUserProfile(msg)}
-                            title="Click to view profile details"
-                            style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB', marginBottom: '3px', marginLeft: '4px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            onClick={() => {
+                              if (isSuperAdminOrSharad) {
+                                openUserProfile(msg);
+                              }
+                            }}
+                            title={isSuperAdminOrSharad ? "Click to view profile details" : "Member"}
+                            style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB', marginBottom: '3px', marginLeft: '4px', cursor: isSuperAdminOrSharad ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                           >
-                            <FaUserCircle size={11} /> {msg.sender_name || 'Member'}
+                            <FaUserCircle size={11} /> {
+                              isSuperAdminOrSharad
+                                ? (msg.sender_name || 'Member')
+                                : (() => {
+                                    const memberIdx = groupMembers.findIndex(gm => 
+                                      String(gm.user_id || gm.id).toLowerCase() === String(msg.sender_id || msg.user_id).toLowerCase()
+                                    );
+                                    return memberIdx !== -1 ? `User ${memberIdx + 1}` : (msg.sender_name ? 'User' : 'Member');
+                                  })()
+                            }
                           </span>
                         )}
                         <div style={{
@@ -1461,23 +1478,30 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
             />
 
             <div style={{ maxHeight: isMobile ? '50vh' : '260px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {contacts.map(c => (
-                <div
-                  key={c.id}
-                  onClick={() => handleStartDirectChat(c.id)}
-                  style={{
-                    padding: '10px 14px', borderRadius: '12px', background: '#F8FAFC',
-                    cursor: 'pointer', border: '1px solid #E2E8F0', display: 'flex',
-                    alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.15s'
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A' }}>{c.full_name}</div>
-                    <div style={{ fontSize: '11px', color: '#64748B' }}>{c.role} • {c.email || c.mobile}</div>
+              {contacts.map(c => {
+                const codeVal = c.partner_code || c.employee_code || (c.id ? `USR-${c.id.slice(0, 6).toUpperCase()}` : '');
+                const displayName = isSuperAdminOrSharad ? (c.full_name || 'User') : (codeVal || 'User');
+                const subDetails = isSuperAdminOrSharad 
+                  ? `${c.role || 'Member'} • ${c.email || c.mobile || 'N/A'}`
+                  : `${c.role || 'Member'} • [Protected]`;
+                return (
+                  <div
+                    key={c.id}
+                    onClick={() => handleStartDirectChat(c.id)}
+                    style={{
+                      padding: '10px 14px', borderRadius: '12px', background: '#F8FAFC',
+                      cursor: 'pointer', border: '1px solid #E2E8F0', display: 'flex',
+                      alignItems: 'center', justifyContent: 'space-between', transition: 'all 0.15s'
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A' }}>{displayName}</div>
+                      <div style={{ fontSize: '11px', color: '#64748B' }}>{subDetails}</div>
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#2563EB', fontWeight: 800 }}>Chat →</span>
                   </div>
-                  <span style={{ fontSize: '12px', color: '#2563EB', fontWeight: 800 }}>Chat →</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1541,6 +1565,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
             <div style={{ maxHeight: isMobile ? '35vh' : '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '18px' }}>
               {contacts.map(c => {
                 const isSelected = selectedContactIds.includes(c.id);
+                const codeVal = c.partner_code || c.employee_code || (c.id ? `USR-${c.id.slice(0, 6).toUpperCase()}` : '');
+                const displayName = isSuperAdminOrSharad ? (c.full_name || 'User') : (codeVal || 'User');
+                const subDetails = isSuperAdminOrSharad ? (c.role || 'Member') : `${c.role || 'Member'} • [Protected]`;
                 return (
                   <div
                     key={c.id}
@@ -1552,8 +1579,8 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     }}
                   >
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A' }}>{c.full_name}</div>
-                      <div style={{ fontSize: '11px', color: '#64748B' }}>{c.role}</div>
+                      <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A' }}>{displayName}</div>
+                      <div style={{ fontSize: '11px', color: '#64748B' }}>{subDetails}</div>
                     </div>
                     {isSelected && <FaCheck color="#2563EB" size={13} />}
                   </div>
@@ -2083,6 +2110,11 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     ) : (
                       addMemberContacts.map(c => {
                         const isChecked = selectedAddUserIds.includes(c.id);
+                        const codeVal = c.partner_code || c.employee_code || (c.id ? `USR-${c.id.slice(0, 6).toUpperCase()}` : '');
+                        const displayName = isSuperAdminOrSharad ? (c.full_name || 'User') : (codeVal || 'User');
+                        const subDetails = isSuperAdminOrSharad
+                          ? `${c.role || 'Member'} ${codeVal ? `(${codeVal})` : ''}`
+                          : `${c.role || 'Member'} • [Protected]`;
                         return (
                           <label
                             key={c.id}
@@ -2102,8 +2134,8 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                               }}
                             />
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A' }}>{c.full_name}</div>
-                              <div style={{ fontSize: '11px', color: '#64748B' }}>{c.role} {c.partner_code || c.employee_code ? `(${c.partner_code || c.employee_code})` : ''}</div>
+                              <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A' }}>{displayName}</div>
+                              <div style={{ fontSize: '11px', color: '#64748B' }}>{subDetails}</div>
                             </div>
                           </label>
                         );
@@ -2138,11 +2170,23 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {groupMembers.map(m => {
+                  {groupMembers.map((m, idx) => {
                     const memberUserId = m.user_id || m.id;
                     const isMe = String(memberUserId).toLowerCase() === String(user?.id || '').toLowerCase();
                     const isAdmin = m.role === 'ADMIN' || m.participant_role === 'ADMIN';
-                    const codeVal = m.partner_code || m.employee_code || (m.user_id ? `USR-${m.user_id.slice(0, 6).toUpperCase()}` : '');
+                    const rawCode = m.partner_code || m.employee_code || (m.user_id ? `USR-${m.user_id.slice(0, 6).toUpperCase()}` : '');
+
+                    const memberDisplayName = isSuperAdminOrSharad
+                      ? (m.full_name || m.email || 'Group Member')
+                      : `User ${idx + 1}`;
+
+                    const avatarLetter = isSuperAdminOrSharad
+                      ? (m.full_name || 'U').charAt(0).toUpperCase()
+                      : `U${idx + 1}`;
+
+                    const subtitleText = isSuperAdminOrSharad
+                      ? `${m.role || 'Member'} ${rawCode ? `• ${rawCode}` : ''}`
+                      : (m.role || 'Member');
 
                     return (
                       <div
@@ -2156,15 +2200,15 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
                           <div style={{
                             width: '38px', height: '38px', borderRadius: '50%', background: '#0EA5E9',
-                            color: '#FFFFFF', fontWeight: 800, fontSize: '15px', display: 'flex',
+                            color: '#FFFFFF', fontWeight: 800, fontSize: isSuperAdminOrSharad ? '15px' : '13px', display: 'flex',
                             alignItems: 'center', justifyContent: 'center', flexShrink: 0
                           }}>
-                            {(m.full_name || 'U').charAt(0).toUpperCase()}
+                            {avatarLetter}
                           </div>
                           <div style={{ minWidth: 0 }}>
                             <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {m.full_name || m.email || 'Group Member'}
+                                {memberDisplayName}
                               </span>
                               {isMe && (
                                 <span style={{ fontSize: '10px', background: '#DBEAFE', color: '#1E40AF', padding: '2px 6px', borderRadius: '8px', fontWeight: 800 }}>
@@ -2178,7 +2222,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                               )}
                             </div>
                             <div style={{ fontSize: '11.5px', color: '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {m.role || 'Member'} {codeVal ? `• ${codeVal}` : ''}
+                              {subtitleText}
                             </div>
                           </div>
                         </div>
