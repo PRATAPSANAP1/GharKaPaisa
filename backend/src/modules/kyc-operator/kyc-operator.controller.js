@@ -52,8 +52,8 @@ const getKycApplications = async (req, res) => {
         a.application_number ILIKE $${paramIdx} OR 
         a.customer_name ILIKE $${paramIdx} OR 
         a.customer_mobile ILIKE $${paramIdx} OR
-        pad.customer_name ILIKE $${paramIdx} OR
-        pad.mobile_number ILIKE $${paramIdx}
+        pad.full_name ILIKE $${paramIdx} OR
+        pad.mobile ILIKE $${paramIdx}
       )`);
       queryParams.push(term);
       paramIdx++;
@@ -120,8 +120,8 @@ const getKycApplications = async (req, res) => {
       SELECT 
         a.id,
         a.application_number,
-        COALESCE(NULLIF(a.customer_name, ''), pad.customer_name, 'Customer') as customer_name,
-        COALESCE(NULLIF(a.customer_mobile, ''), pad.mobile_number, 'N/A') as customer_mobile,
+        COALESCE(NULLIF(a.customer_name, ''), pad.full_name, 'Customer') as customer_name,
+        COALESCE(NULLIF(a.customer_mobile, ''), pad.mobile, 'N/A') as customer_mobile,
         a.product_id,
         COALESCE(p.name, a.product_type, 'Product') as product_name,
         a.bank_id,

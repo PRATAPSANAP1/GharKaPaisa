@@ -4921,7 +4921,7 @@ const migrate = async () => {
       ];
 
       for (const prod of smartEmiProducts) {
-        const { rows: existing } = await query(`SELECT id FROM products WHERE LOWER(name) = LOWER($1) OR (category::text = 'smart_emi' AND bank_id = $2)`, [prod.name, prod.bank_id]);
+        const { rows: existing } = await query(`SELECT id FROM products WHERE LOWER(name) = LOWER($1)`, [prod.name]);
         if (existing.length === 0) {
           const slug = prod.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
           await query(`
@@ -5001,7 +5001,7 @@ const migrate = async () => {
       ];
 
       for (const prod of loanOnCardProducts) {
-        const { rows: existing } = await query(`SELECT id FROM products WHERE LOWER(name) = LOWER($1) OR (category::text = 'loan_on_credit_card' AND bank_id = $2)`, [prod.name, prod.bank_id]);
+        const { rows: existing } = await query(`SELECT id FROM products WHERE LOWER(name) = LOWER($1)`, [prod.name]);
         if (existing.length === 0) {
           const slug = prod.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
           await query(`

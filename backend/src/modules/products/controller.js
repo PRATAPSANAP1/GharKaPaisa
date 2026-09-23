@@ -40,10 +40,17 @@ const listProducts = async (req, res, next) => {
     if (category) { 
       if (category.includes('%')) {
         where += ` AND p.category::text ILIKE $${idx++}`; 
+        values.push(category); 
+        // Exclude specialized categories from generic wildcard searches (e.g. %card% should not match loan_on_credit_card or smart_emi)
+        where += ` AND COALESCE(p.category::text, '') NOT IN ('loan_on_credit_card', 'smart_emi') AND COALESCE(p.sub_category, '') NOT ILIKE '%loan%credit%card%' AND COALESCE(p.sub_category, '') NOT ILIKE '%emi%card%'`;
+      } else if (category === 'loan_on_credit_card') {
+        where += ` AND (p.category::text = 'loan_on_credit_card' OR p.sub_category ILIKE '%loan%credit%card%' OR p.sub_category ILIKE '%loan%card%')`;
+      } else if (category === 'smart_emi') {
+        where += ` AND (p.category::text = 'smart_emi' OR p.sub_category ILIKE '%smart%emi%' OR p.sub_category ILIKE '%emi%card%' OR p.sub_category ILIKE '%emi on credit card%')`;
       } else {
         where += ` AND p.category::text = $${idx++}`; 
+        values.push(category); 
       }
-      values.push(category); 
     }
     if (bank_id) { 
       where += ` AND p.bank_id = $${idx++}`; 
