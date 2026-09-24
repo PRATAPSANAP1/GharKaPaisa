@@ -674,7 +674,7 @@ const LOAN_ON_CARD_AND_SMART_EMI_PRODUCTS = [
 ];
 
 async function seedSmartEmiAndLoccProducts() {
-  logger.info('🚀 Starting seeding for Loan on Credit Card & Smart EMI products...');
+  logger.debug('🚀 Starting seeding for Loan on Credit Card & Smart EMI products...');
 
   // Ensure Enum values exist in PostgreSQL for product_category if needed
   try {
@@ -782,7 +782,7 @@ async function seedSmartEmiAndLoccProducts() {
       } else {
         updatedCount++;
       }
-      logger.info(`  ✅ Saved Product: ${prod.name} (${prod.category})`);
+      logger.debug(`  Saved Product: ${prod.name} (${prod.category})`);
     } catch (err) {
       // Fallback query without enum cast if enum cast fails
       try {
@@ -819,14 +819,14 @@ async function seedSmartEmiAndLoccProducts() {
           featuresJson, prod.eligibility_criteria, prodSlug
         ]);
         updatedCount++;
-        logger.info(`  ✅ Saved Product (fallback): ${prod.name}`);
+        logger.debug(`  Saved Product (fallback): ${prod.name}`);
       } catch (fallbackErr) {
         logger.error(`  ❌ Error saving product ${prod.name}:`, fallbackErr.message);
       }
     }
   }
 
-  logger.info(`🎉 Finished seeding Smart EMI & LOCC products. Inserted: ${insertedCount}, Updated: ${updatedCount}`);
+  logger.debug(`Finished seeding Smart EMI & LOCC products. Inserted: ${insertedCount}, Updated: ${updatedCount}`);
 }
 
 if (require.main === module) {

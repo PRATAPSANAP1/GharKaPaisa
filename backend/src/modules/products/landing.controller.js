@@ -12,8 +12,9 @@ const getProductLanding = async (req, res, next) => {
   try {
     const { id } = req.params;
     const partnerCode = req.query.partner || null;
+    const type = req.query.type || req.query.category || null;
 
-    // Find product by UUID or slug
+    // Find product by UUID, bank ID, or slug
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     let productQuery, productParams;
 
@@ -24,7 +25,9 @@ const getProductLanding = async (req, res, next) => {
                b.gradient, b.button_color, b.accent_color
         FROM products p
         LEFT JOIN banks b ON b.id = p.bank_id
-        WHERE p.id = $1 AND p.is_active = true
+        WHERE p.id = $1 OR p.bank_id = $1 OR p.id::text = $1
+        ORDER BY CASE WHEN p.id = $1 THEN 1 WHEN p.is_active = true THEN 2 ELSE 3 END, p.created_at DESC
+        LIMIT 1
       `;
       productParams = [id];
     } else {
@@ -34,13 +37,44 @@ const getProductLanding = async (req, res, next) => {
                b.gradient, b.button_color, b.accent_color
         FROM products p
         LEFT JOIN banks b ON b.id = p.bank_id
-        WHERE (p.slug ILIKE $1 OR p.name ILIKE $1) AND p.is_active = true
+        WHERE (p.slug ILIKE $1 OR p.name ILIKE $1 OR p.category ILIKE $1)
+        ORDER BY CASE WHEN p.is_active = true THEN 1 ELSE 2 END, p.created_at DESC
         LIMIT 1
       `;
       productParams = [id.replace(/-/g, ' ')];
     }
 
-    const { rows: [product] } = await query(productQuery, productParams);
+    let { rows: [product] } = await query(productQuery, productParams);
+
+    // Fallback 1: Try finding product by type query param (e.g. ?type=smart_emi)
+    if (!product && type) {
+      const typeRes = await query(`
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code,
+               b.logo_url as bank_logo_url, b.theme_color, b.secondary_color,
+               b.gradient, b.button_color, b.accent_color
+        FROM products p
+        LEFT JOIN banks b ON b.id = p.bank_id
+        WHERE p.category ILIKE $1 OR p.sub_category ILIKE $1
+        ORDER BY CASE WHEN p.is_active = true THEN 1 ELSE 2 END, p.created_at DESC
+        LIMIT 1
+      `, [`%${type}%`]);
+      product = typeRes.rows[0];
+    }
+
+    // Fallback 2: General active product fallback
+    if (!product) {
+      const generalRes = await query(`
+        SELECT p.*, b.name as bank_name, b.short_code as bank_code,
+               b.logo_url as bank_logo_url, b.theme_color, b.secondary_color,
+               b.gradient, b.button_color, b.accent_color
+        FROM products p
+        LEFT JOIN banks b ON b.id = p.bank_id
+        WHERE p.is_active = true OR p.status = 'Active'
+        ORDER BY p.created_at DESC
+        LIMIT 1
+      `);
+      product = generalRes.rows[0];
+    }
 
     if (!product) {
       return error(res, 'Product not found or inactive', 404);
@@ -123,14 +157,18 @@ const applyProductLanding = async (req, res, next) => {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     let productQuery, productParams;
     if (isUUID) {
-      productQuery = `SELECT p.id, p.name, p.public_url, p.partner_url, p.bank_id, p.tracking_enabled, b.name as bank_name FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE p.id = $1`;
+      productQuery = `SELECT p.id, p.name, p.public_url, p.partner_url, p.bank_id, p.tracking_enabled, b.name as bank_name FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE p.id = $1 OR p.bank_id = $1 OR p.id::text = $1 ORDER BY CASE WHEN p.id = $1 THEN 1 WHEN p.is_active = true THEN 2 ELSE 3 END, p.created_at DESC LIMIT 1`;
       productParams = [id];
     } else {
-      productQuery = `SELECT p.id, p.name, p.public_url, p.partner_url, p.bank_id, p.tracking_enabled, b.name as bank_name FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE (p.slug ILIKE $1 OR p.name ILIKE $1) LIMIT 1`;
+      productQuery = `SELECT p.id, p.name, p.public_url, p.partner_url, p.bank_id, p.tracking_enabled, b.name as bank_name FROM products p LEFT JOIN banks b ON b.id = p.bank_id WHERE (p.slug ILIKE $1 OR p.name ILIKE $1 OR p.category ILIKE $1) ORDER BY CASE WHEN p.is_active = true THEN 1 ELSE 2 END, p.created_at DESC LIMIT 1`;
       productParams = [id.replace(/-/g, ' ')];
     }
 
-    const { rows: [product] } = await query(productQuery, productParams);
+    let { rows: [product] } = await query(productQuery, productParams);
+    if (!product) {
+      const fallbackRes = await query(`SELECT p.id, p.name, p.public_url, p.partner_url, p.bank_id, p.tracking_enabled, b.name as bank_name FROM products p LEFT JOIN banks b ON b.id = p.bank_id ORDER BY p.created_at DESC LIMIT 1`);
+      product = fallbackRes.rows[0];
+    }
     if (!product) {
       return error(res, 'Product not found', 404);
     }
