@@ -1567,7 +1567,7 @@ router.get('/incentives/overview', async (req, res, next) => {
       LEFT JOIN products p ON p.id = it.product_id
       LEFT JOIN applications a ON a.id = it.application_id
       ${whereClause}
-      GROUP BY TO_CHAR(it.created_at, 'YYYY-MM-DD')
+      GROUP BY TO_CHAR(it.created_at, 'YYYY-MM-DD'), TO_CHAR(it.created_at, 'DD-MM')
       ORDER BY date ASC
       LIMIT 30
     `;

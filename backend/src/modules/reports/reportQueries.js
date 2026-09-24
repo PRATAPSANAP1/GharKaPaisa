@@ -98,8 +98,8 @@ async function getEmployeeReportData(filters = {}, maskSensitive = true) {
       COALESCE(u.department, e.department, 'Operations') AS department,
       e.joining_date,
       CASE WHEN u.is_active THEN 'Active' ELSE 'Inactive' END AS employment_status,
-      COALESCE(mgr.full_name, e.reporting_manager, 'N/A') AS reporting_manager,
-      COALESCE(tl.full_name, e.team_leader, 'N/A') AS team_leader,
+      COALESCE(e.reporting_manager, 'N/A') AS reporting_manager,
+      COALESCE(e.team_leader, 'N/A') AS team_leader,
       COALESCE(e.branch, 'Head Office') AS branch,
       e.pan_number,
       e.aadhaar_number,
@@ -118,12 +118,10 @@ async function getEmployeeReportData(filters = {}, maskSensitive = true) {
       COALESCE(SUM(CASE WHEN a.status::text IN ('approved', 'disbursed', 'commission_received') THEN COALESCE(a.commission_amount, 0) ELSE 0 END), 0) AS total_commission
     FROM users u
     LEFT JOIN employees e ON e.user_id = u.id OR e.employee_id = u.employee_id
-    LEFT JOIN users mgr ON e.reporting_manager_id = mgr.id
-    LEFT JOIN users tl ON e.team_leader_id = tl.id
     LEFT JOIN customers c ON c.created_by = u.id
     LEFT JOIN applications a ON a.submitted_by = u.id OR a.partner_id IN (SELECT id FROM partner_profiles WHERE user_id = u.id)
     ${whereClause ? whereClause + " AND u.role = 'EMPLOYEE'" : "WHERE u.role = 'EMPLOYEE'"}
-    GROUP BY u.id, e.id, mgr.id, tl.id
+    GROUP BY u.id, e.id
     ORDER BY u.created_at DESC
   `;
 
