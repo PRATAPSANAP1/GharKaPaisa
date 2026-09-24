@@ -158,7 +158,7 @@ export default function EmployeeLayout() {
   };
 
   const navItems = isApproved ? [
-    { path: '/employee/dashboard', label: 'Employee Dashboard', icon: <FaChartPie /> },
+    { path: '/employee/dashboard', label: 'Dashboard', icon: <FaChartPie /> },
     { path: '/employee/credit-cards', label: 'Credit Cards', icon: <FaCreditCard /> },
     { path: '/employee/loan-on-credit-card', label: 'Loan on Credit Card', icon: <FaCoins /> },
     { path: '/employee/smart-emi', label: 'Smart EMI on Credit Card', icon: <FaCreditCard /> },
@@ -172,7 +172,7 @@ export default function EmployeeLayout() {
     ...(isManagerOrTL ? [{ path: '/employee/team', label: 'My Team Architecture', icon: <FaUsers /> }] : []),
     { path: '/employee/settings', label: 'Settings & Preferences', icon: <FaCog /> }
   ] : [
-    { path: '/employee/dashboard', label: 'Employee Dashboard', icon: <FaChartPie /> },
+    { path: '/employee/dashboard', label: 'Dashboard', icon: <FaChartPie /> },
     { path: '/employee/kyc', label: 'Employee Onboarding & KYC', icon: <FaCheckCircle /> },
     { path: '/employee/profile', label: 'Employee Profile', icon: <FaUserCircle /> },
     { path: '/employee/settings', label: 'Settings & Preferences', icon: <FaCog /> }

@@ -73,10 +73,14 @@ export default function EmployeeDashboard() {
     return <div style={{ padding: '60px 16px', textAlign: 'center', background: C.bg, minHeight: '100vh', color: C.text }}>Loading Employee Dashboard...</div>;
   }
 
+  const missingItems = verState?.missing_items || [];
+  const isVideoRejected = verState?.video_status?.toUpperCase() === 'REJECTED' || 
+                          missingItems.some(i => (i.type === 'video' || i.type === 'terms_video') && String(i.status || '').toUpperCase() === 'REJECTED');
+
   const isApproved = employee?.activation_status === 'APPROVED' || employee?.employee_status === 'ACTIVE';
 
-  if (isApproved && verState?.overall_status === 'VERIFIED') {
-    // When approved & verified, render Partner Dashboard
+  if (isApproved && verState?.overall_status === 'VERIFIED' && !isVideoRejected) {
+    // When approved & verified (and video is NOT rejected), render Partner Dashboard
     const partnerAdapter = {
       ...employee,
       partner_id: employee?.id,
@@ -86,7 +90,7 @@ export default function EmployeeDashboard() {
     return <PartnerDashboardComponent partner={partnerAdapter} />;
   }
 
-  const isOverallVerified = verState?.overall_status === 'VERIFIED';
+  const isOverallVerified = verState?.overall_status === 'VERIFIED' && !isVideoRejected;
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: isMobile ? '16px 8px 60px' : '24px 24px 80px', fontFamily: "'Inter', sans-serif", color: C.text }}>
@@ -127,9 +131,10 @@ export default function EmployeeDashboard() {
 
         {/* Dynamic Verification Banners */}
         {!isOverallVerified && verState && (() => {
-          const missingItems = verState.missing_items || [];
-          const isVideoRejected = verState.video_status === 'REJECTED' || missingItems.some(i => i.type === 'video' && i.status === 'REJECTED');
-          const videoRejectionReason = verState.video_notes || (missingItems.find(i => i.type === 'video' && i.status === 'REJECTED')?.reason) || "Video verification was rejected by Super Admin. Please re-record a clear teleprompter video.";
+          const currentMissingItems = verState.missing_items || [];
+          const currentIsVideoRejected = verState.video_status?.toUpperCase() === 'REJECTED' || 
+                                         currentMissingItems.some(i => (i.type === 'video' || i.type === 'terms_video') && String(i.status || '').toUpperCase() === 'REJECTED');
+          const videoRejectionReason = verState.video_notes || (currentMissingItems.find(i => (i.type === 'video' || i.type === 'terms_video') && String(i.status || '').toUpperCase() === 'REJECTED')?.reason) || "Video verification was rejected by Super Admin. Please re-record a clear teleprompter video.";
 
           const actionRequiredItems = missingItems.filter(item => 
             item.status === 'NOT_UPLOADED' || item.status === 'NOT_COMPLETED' || item.status === 'REJECTED' || item.status === 'REQUIRES_UPDATE'

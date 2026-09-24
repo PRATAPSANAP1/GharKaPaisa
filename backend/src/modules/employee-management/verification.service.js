@@ -253,10 +253,10 @@ async function calculateEmployeeVerificationState(employeeId) {
   const isInfoVerified = infoStatus === 'VERIFIED';
 
   let overallStatus = 'PENDING';
-  if ((isAllDocsApproved && isVideoVerified) || employee.activation_status === 'APPROVED') {
-    overallStatus = 'VERIFIED';
-  } else if (missingItems.some(i => i.status === 'REJECTED')) {
+  if (videoStatus === 'REJECTED' || missingItems.some(i => i.status === 'REJECTED')) {
     overallStatus = 'REJECTED';
+  } else if ((isAllDocsApproved && isVideoVerified) || (employee.activation_status === 'APPROVED' && videoStatus !== 'REJECTED')) {
+    overallStatus = 'VERIFIED';
   } else if (approvedDocsCount > 0 || videoStatus === 'UNDER_REVIEW' || underReviewItems.length > 0) {
     overallStatus = 'UNDER_REVIEW';
   }
