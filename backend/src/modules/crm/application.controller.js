@@ -1656,7 +1656,7 @@ const listApplications = async (req, res, next) => {
     const hasAaaTable = await ensureAssignmentsTableExists();
 
     const userDesignation = (req.user?.designation || '').toUpperCase();
-    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
+    const isOpHeadUser = ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['OPERATIONAL HEAD', 'OPERATIONAL_HEAD', 'BACKEND', 'BACKEND OPERATION', 'BACKEND_OPERATION', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'REMARK OPERATOR', 'REMARK_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
     const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     const isSalesExecOnlyUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
     let salesExecFilterSQL = '';
@@ -1755,10 +1755,28 @@ const listApplications = async (req, res, next) => {
       remarkOperatorFilterSQL = ` AND ${bankAssignmentFilter} AND ${panCheckCondition} AND (COALESCE(combined.dispatch_status, '') = '' OR LOWER(COALESCE(combined.dispatch_status, 'none')) IN ('none', 'na', 'n/a')) AND combined.status NOT IN ('rejected', 'declined', 'cancelled') AND LOWER(COALESCE(combined.bank_remark, '')) NOT LIKE '%pan%reject%'`;
     }
 
+    const isFinalStatusOperatorUser = ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
+    let finalStatusOperatorFilterSQL = '';
+    if (isFinalStatusOperatorUser && req.user?.id) {
+      const bankAssignmentFilter = `(
+        combined.bank_id IN (SELECT bank_id FROM admin_bank_assignments WHERE admin_id = '${req.user.id}')
+        OR EXISTS (
+          SELECT 1 FROM admin_bank_assignments aba 
+          JOIN banks b ON b.id = aba.bank_id 
+          WHERE aba.admin_id = '${req.user.id}' 
+          AND (
+            (LOWER(combined.bank_code) = LOWER(b.short_code))
+            OR (LOWER(combined.bank_name) = LOWER(b.name))
+          )
+        )
+      )`;
+      finalStatusOperatorFilterSQL = ` AND ${bankAssignmentFilter}`;
+    }
+
     if (!isPartnerOrTeam && req.user?.id) {
       const { rows: abRows } = await query(`SELECT bank_id FROM admin_bank_assignments WHERE admin_id = $1`, [req.user.id]);
       if (abRows.length > 0) {
-        if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser) {
+        if (isSalesExecUser || isPanCheckerUser || isRemarkOperatorUser || isQdOperatorUser || isFinalStatusOperatorUser) {
           opHeadBankFilterSQL = ``;
           countOpHeadBankFilterSQL = ``;
         } else {
@@ -1767,7 +1785,7 @@ const listApplications = async (req, res, next) => {
           queryParams.push(req.user.id);
           countQueryParams.push(req.user.id);
         }
-      } else if (isOpHeadUser && !isPanCheckerUser && !isRemarkOperatorUser && !isSalesExecUser && !isQdOperatorUser) {
+      } else if (isOpHeadUser && !isPanCheckerUser && !isRemarkOperatorUser && !isSalesExecUser && !isQdOperatorUser && !isFinalStatusOperatorUser) {
         opHeadBankFilterSQL = ` AND 1=0`;
         countOpHeadBankFilterSQL = ` AND 1=0`;
       }
@@ -1961,6 +1979,7 @@ const listApplications = async (req, res, next) => {
         ${panCheckerFilterSQL}
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
+        ${finalStatusOperatorFilterSQL}
       ORDER BY combined.created_at DESC
       LIMIT $6 OFFSET $7
     `, queryParams);
@@ -2046,6 +2065,7 @@ const listApplications = async (req, res, next) => {
         ${panCheckerFilterSQL}
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
+        ${finalStatusOperatorFilterSQL}
     `, countQueryParams);
 
     // Compute real-time canonical status counts scoped to user role & bank filters
@@ -2094,6 +2114,7 @@ const listApplications = async (req, res, next) => {
         ${panCheckerFilterSQL}
         ${qdOperatorFilterSQL}
         ${remarkOperatorFilterSQL}
+        ${finalStatusOperatorFilterSQL}
       GROUP BY combined.status
     `, countQueryParams);
     const statusCountsObj = {

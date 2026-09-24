@@ -32,8 +32,8 @@ router.get('/dashboard', requireApprovedPartnerOrAdmin, appCtrl.getApplicationsD
 router.get('/remark-operator/dashboard', authorize('ADMIN', 'SUPER_ADMIN'), appCtrl.getRemarkOperatorDashboard);
 router.get('/analytics', requireApprovedPartnerOrAdmin, appCtrl.getAnalytics);
 router.get('/search', requireApprovedPartnerOrAdmin, appCtrl.listApplications);
-router.get('/admin/applications', authorize('ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD_OPERATOR', 'QD OPERATOR'), appCtrl.listApplications);
-router.get('/super-admin/applications', authorize('SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD_OPERATOR', 'QD OPERATOR'), appCtrl.listApplications);
+router.get('/admin/applications', authorize('ADMIN', 'SUPER_ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR'), appCtrl.listApplications);
+router.get('/super-admin/applications', authorize('SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD', 'OPERATIONAL HEAD', 'OPERATIONS HEAD', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'REMARK_OPERATOR', 'REMARK OPERATOR', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL_STATUS_OPERATOR', 'FINAL STATUS OPERATOR'), appCtrl.listApplications);
 
 // Bulk Operations & Export (must be before /:id routes)
 router.put('/bulk-status', requireApprovedPartnerOrAdmin, appCtrl.bulkUpdateStatus);

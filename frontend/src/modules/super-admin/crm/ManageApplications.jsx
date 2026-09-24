@@ -38,7 +38,8 @@ export default function ManageApplications() {
   const userDesignation = (user?.designation || '').toUpperCase();
   const isSalesExecUser = ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userRole);
   const isPanCheckerUser = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(userRole);
-  const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation);
+  const isRemarkOperatorUser = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
+  const isFinalStatusOperatorUser = ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
   const navigate = useNavigate();
 
   const [searchParams] = useSearchParams();
@@ -911,9 +912,12 @@ export default function ManageApplications() {
                       {/* Actions: PAN Check / Remark Review OR Review Button + 3-Dots Menu */}
                       <td style={{ padding: '14px 16px', textAlign: 'right', position: 'relative' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
-                          {isPanCheckerUser || isRemarkOperatorUser ? (
+                          {isPanCheckerUser || isRemarkOperatorUser || isFinalStatusOperatorUser ? (
                             <button
-                              onClick={() => setVerifyModalApp(app)}
+                              onClick={() => {
+                                setVerifyModalApp(app);
+                                setVerifyModalTab(isFinalStatusOperatorUser ? 'final' : isRemarkOperatorUser ? 'remark' : 'qd');
+                              }}
                               style={{ padding: '6px 12px', borderRadius: '8px', background: '#2563eb', color: '#fff', fontSize: '12px', fontWeight: 800, border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                             >
                               <ShieldCheck size={14} /> Review

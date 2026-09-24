@@ -21,6 +21,7 @@ const DESIGNATIONS = {
   PAN_CHECKER: 'PAN Checker',
   REMARK_OPERATOR: 'Remark Operator',
   QD_OPERATOR: 'QD Operator',
+  FINAL_STATUS_OPERATOR: 'Final Status Operator',
   SUPER_ADMIN: 'Super Admin',
 };
 

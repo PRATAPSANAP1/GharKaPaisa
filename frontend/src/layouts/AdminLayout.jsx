@@ -97,16 +97,17 @@ const AdminLayout = () => {
   const isRemarkOperator = ['Remark Operator', 'REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userRole);
   const isQdOperator = ['QD Checker', 'QD Operator', 'QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(userRole);
   const isKycOperator = ['KYC Operator', 'KYC OPERATOR', 'KYC_OPERATOR'].includes(userDesignation) || userRole === 'KYC_OPERATOR';
+  const isFinalStatusOperator = ['Final Status Operator', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole);
   const isBackend = ['Backend', 'BACKEND', 'Backend Operation', 'BACKEND_OPERATION', 'Administrative Operator', 'ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR'].includes(userDesignation);
   const assignedList = user?.assigned_banks?.length ? user.assigned_banks : (user?.permissions?.assigned_banks || []);
-  if ((isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker || isQdOperator || isKycOperator || assignedList.length > 0) && assignedList.length > 0) {
+  if ((isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker || isQdOperator || isKycOperator || isFinalStatusOperator || assignedList.length > 0) && assignedList.length > 0) {
     banks = assignedList.map(b => ({
       id: b.id,
       name: b.name || b.bank_name || b.short_code,
       short_code: b.short_code || b.code || b.name,
       logo: b.logo_url || b.logo
     }));
-  } else if (isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker || isQdOperator || isKycOperator) {
+  } else if (isOpHead || isBackend || isRemarkOperator || isSalesExec || isPanChecker || isQdOperator || isKycOperator || isFinalStatusOperator) {
     banks = [];
   }
 
@@ -129,7 +130,7 @@ const AdminLayout = () => {
       if (!isAllowed) {
         navigate('/admin/kyc-operator', { replace: true });
       }
-    } else if (isRemarkOperator || isQdOperator) {
+    } else if (isRemarkOperator || isQdOperator || isFinalStatusOperator) {
       const allowedPaths = ['/admin/applications', '/admin/messenger'];
       const isAllowed = allowedPaths.some(p => location.pathname.startsWith(p));
       if (!isAllowed) {
@@ -148,7 +149,7 @@ const AdminLayout = () => {
         navigate('/admin/dashboard', { replace: true });
       }
     }
-  }, [location.pathname, isHR, isKycOperator, isRemarkOperator, isQdOperator, isSalesExec, isBackend, navigate]);
+  }, [location.pathname, isHR, isKycOperator, isRemarkOperator, isQdOperator, isFinalStatusOperator, isSalesExec, isBackend, navigate]);
 
   const handleLogout = () => {
     logout();
@@ -166,7 +167,7 @@ const AdminLayout = () => {
             {t('adminLayout.title', 'GharKaPaisa')}
           </h2>
           <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {isHR ? 'HR Management Portal' : isKycOperator ? 'KYC Operator Portal' : isRemarkOperator ? 'Remark Operator' : isPanChecker ? 'PAN Checker' : isSalesExec ? 'Administrative Sales Executive' : isBackend ? 'Administrative Operator' : 'Admin Operations Portal'}
+            {isHR ? 'HR Management Portal' : isKycOperator ? 'KYC Operator Portal' : isRemarkOperator ? 'Remark Operator' : isPanChecker ? 'PAN Checker' : isFinalStatusOperator ? 'Final Status Operator' : isSalesExec ? 'Administrative Sales Executive' : isBackend ? 'Administrative Operator' : 'Admin Operations Portal'}
           </span>
         </div>
       </div>
@@ -182,8 +183,8 @@ const AdminLayout = () => {
           </>
         ) : (
           <>
-            {/* Dashboard (Available to all Admin Roles except Remark Operator, QD Operator, and KYC Operator) */}
-            {!isRemarkOperator && !isQdOperator && !isKycOperator && (
+            {/* Dashboard (Available to all Admin Roles except Remark Operator, QD Operator, KYC Operator, and Final Status Operator) */}
+            {!isRemarkOperator && !isQdOperator && !isKycOperator && !isFinalStatusOperator && (
               <NavLink to="/admin/dashboard" style={navLinkStyle}>
                 <Icons.dashboard size={18} />
                 <span>Dashboard</span>
@@ -304,7 +305,7 @@ const AdminLayout = () => {
             {!isKycOperator && (
               <NavLink to="/admin/applications" style={navLinkStyle}>
                 <Icons.creditCard size={18} />
-                <span>{isQdOperator ? 'QD Operator' : isRemarkOperator ? 'Remark Operator' : isPanChecker ? 'PAN Checker' : 'Applications'}</span>
+                <span>{isQdOperator ? 'QD Operator' : isRemarkOperator ? 'Remark Operator' : isPanChecker ? 'PAN Checker' : isFinalStatusOperator ? 'Final Status Operator' : 'Applications'}</span>
               </NavLink>
             )}
 
@@ -315,7 +316,7 @@ const AdminLayout = () => {
             </NavLink>
 
             {/* Additional Admin Nav Items */}
-            {!isBackend && !isSalesExec && !isPanChecker && !isRemarkOperator && !isQdOperator && !isKycOperator && (
+            {!isBackend && !isSalesExec && !isPanChecker && !isRemarkOperator && !isQdOperator && !isKycOperator && !isFinalStatusOperator && (
               <>
                 {/* Customers */}
                 <NavLink to="/admin/leads" style={navLinkStyle}>

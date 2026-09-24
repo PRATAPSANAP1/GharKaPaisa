@@ -5,7 +5,7 @@ import { useAuthStore } from '../app/store/authStore';
 const getRoleDashboard = (user) => {
   const role = (user?.role || (typeof user === 'string' ? user : '')).toUpperCase();
   const designation = (user?.designation || '').toUpperCase();
-  if (['REMARK OPERATOR', 'REMARK_OPERATOR', 'QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(designation) || ['REMARK OPERATOR', 'REMARK_OPERATOR', 'QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER'].includes(role)) {
+  if (['REMARK OPERATOR', 'REMARK_OPERATOR', 'QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(designation) || ['REMARK OPERATOR', 'REMARK_OPERATOR', 'QD OPERATOR', 'QD_OPERATOR', 'QD CHECKER', 'QD_CHECKER', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(role)) {
     return '/admin/applications';
   }
   if (['KYC OPERATOR', 'KYC_OPERATOR'].includes(designation) || ['KYC OPERATOR', 'KYC_OPERATOR'].includes(role)) {

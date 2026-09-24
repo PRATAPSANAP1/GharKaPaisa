@@ -46,12 +46,13 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const user = useAuthStore((state) => state.user);
   const role = (user?.role || '').toUpperCase();
   const userDesignation = (user?.designation || '').toUpperCase();
+  const isFinalStatusOperator = ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation) || ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(role);
   const isPanChecker = ['PAN CHECKER', 'PAN_CHECKER'].includes(userDesignation) || ['PAN CHECKER', 'PAN_CHECKER'].includes(role);
   const isRemarkOperator = ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(userDesignation) || ['REMARK OPERATOR', 'REMARK_OPERATOR'].includes(role);
   const isQdOperator = ['QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation) || ['QD OPERATOR', 'QD_OPERATOR'].includes(role);
   const isAdministrativeOperator = ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(userDesignation) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE SALES OPERATOR', 'ADMINISTRATIVE_SALES_OPERATOR'].includes(role);
   const isSalesExecUser = (['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(userDesignation) || ['ADMINISTRATIVE SALES EXECUTIVE', 'ADMINISTRATIVE_SALES_EXECUTIVE'].includes(role)) && !isAdministrativeOperator;
-  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR'].includes(userDesignation);
+  const isOpsOperator = ['ADMINISTRATIVE_OPERATOR', 'ADMINISTRATIVE OPERATOR', 'OPERATOR', 'PAN_CHECKER', 'PAN CHECKER', 'QD_OPERATOR', 'QD OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(role) || ['ADMINISTRATIVE OPERATOR', 'ADMINISTRATIVE_OPERATOR', 'PAN CHECKER', 'PAN_CHECKER', 'QD OPERATOR', 'QD_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation);
   const isSuperAdminRole = ['SUPER_ADMIN', 'SUPER ADMIN'].includes(role) || ['SUPER_ADMIN', 'SUPER ADMIN'].includes(userDesignation);
   const isOpsHead = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_HEAD', 'OPERATIONAL_HEAD', 'OPERATIONS HEAD', 'OPERATIONAL HEAD'].includes(role) && !isOpsOperator;
   const isOpsOrAdmin = isOpsHead || isOpsOperator || isSuperAdminRole;
@@ -123,7 +124,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   // Role & Status Access Rules:
   const canEditQd = !isLockedStatus;
   const canEditRemark = !isLockedStatus;
-  const canEditFinal = !isSalesExecUser && !isQdOperator && (isSuperAdminOrAdmin || (!isPartner && !isLockedStatus));
+  const canEditFinal = !isSalesExecUser && !isQdOperator && (isSuperAdminOrAdmin || isFinalStatusOperator || (!isPartner && !isLockedStatus));
 
   const sanitizeVal = (val) => {
     if (!val || val === 'null' || val === 'undefined') return '';
@@ -739,7 +740,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
               <ExternalLink size={15} /> Open VKYC Link
             </button>
 
-            {isOpsHead && currentStatus !== 'approved' && currentStatus !== 'super_admin_approved' && (
+            {(isOpsHead || isFinalStatusOperator || isSuperAdminOrAdmin) && currentStatus !== 'approved' && currentStatus !== 'super_admin_approved' && (
               <button
                 disabled={actionLoading}
                 onClick={async () => {
@@ -749,8 +750,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                     const res = await api.put(`/applications/${targetId}/verification`, {
                       status: 'approved',
                       final_status: 'Approved',
-                      super_admin_remark: 'Approved by Operations Head / Super Admin',
-                      bank_remark: 'Approved by Operations Head / Super Admin'
+                      super_admin_remark: 'Approved by Final Status Operator / Admin',
+                      bank_remark: bankRemark || 'Approved by Final Status Operator'
                     });
                     if (res.data?.success) {
                       alert('Application status updated to APPROVED successfully!');
@@ -779,7 +780,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   boxShadow: '0 2px 4px rgba(22,163,74,0.2)'
                 }}
               >
-                <CheckCircle size={15} /> Approve (Super Admin Approved)
+                <CheckCircle size={15} /> Approve Application
               </button>
             )}
 
@@ -1266,7 +1267,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
             </button>
 
             {/* 3. Final Tab (Shown for all processes including Customer Apply & Direct Bank) */}
-            {!isSalesExecUser && !isRemarkOperator && (initialTabKey === 'final' || showAllTabs) && (
+            {!isSalesExecUser && !isRemarkOperator && (initialTabKey === 'final' || showAllTabs || isFinalStatusOperator) && (
               <button
                 onClick={() => setActiveTab('final')}
                 style={{
@@ -2898,14 +2899,48 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                   boxShadow: '0 -6px 16px rgba(0,0,0,0.06)'
                 }}>
                   {canEditFinal ? (
-                    <button
-                      type="button"
-                      onClick={() => handleSaveDetails('final')}
-                      disabled={actionLoading}
-                      style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', width: isMobile ? '100%' : 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                    >
-                      <Save size={16} /> {actionLoading ? 'Saving...' : 'Save Final Status & Remarks'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveDetails('final')}
+                        disabled={actionLoading}
+                        style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 700, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      >
+                        <Save size={16} /> {actionLoading ? 'Saving...' : 'Save Final Status & Remarks'}
+                      </button>
+
+                      {(isFinalStatusOperator || isOpsHead || isSuperAdminOrAdmin) && currentStatus !== 'approved' && currentStatus !== 'super_admin_approved' && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setActionLoading(true);
+                            try {
+                              const targetId = application.app_number || application.id || application.application_id || application.lead_id;
+                              const res = await api.put(`/applications/${targetId}/verification`, {
+                                status: 'approved',
+                                final_status: 'Approved',
+                                super_admin_remark: 'Approved by Final Status Operator / Admin',
+                                bank_remark: bankRemark || 'Approved by Final Status Operator'
+                              });
+                              if (res.data?.success) {
+                                alert('Application status updated to APPROVED successfully!');
+                                setCurrentStatus('approved');
+                                await fetchData();
+                                if (onRefresh) onRefresh();
+                              }
+                            } catch (err) {
+                              alert(err.response?.data?.message || 'Failed to approve application');
+                            } finally {
+                              setActionLoading(false);
+                            }
+                          }}
+                          disabled={actionLoading}
+                          style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                        >
+                          <CheckCircle size={16} /> Approve Application
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, padding: '8px 14px', background: '#f1f5f9', borderRadius: '8px', width: '100%', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                       <Lock size={13} /> Editing is disabled because application status is {currentStatus?.replace(/_/g, ' ')}.
