@@ -128,12 +128,80 @@ export default function EmployeeDashboard() {
         {/* Dynamic Verification Banners */}
         {!isOverallVerified && verState && (() => {
           const missingItems = verState.missing_items || [];
+          const isVideoRejected = verState.video_status === 'REJECTED' || missingItems.some(i => i.type === 'video' && i.status === 'REJECTED');
+          const videoRejectionReason = verState.video_notes || (missingItems.find(i => i.type === 'video' && i.status === 'REJECTED')?.reason) || "Video verification was rejected by Super Admin. Please re-record a clear teleprompter video.";
+
           const actionRequiredItems = missingItems.filter(item => 
             item.status === 'NOT_UPLOADED' || item.status === 'NOT_COMPLETED' || item.status === 'REJECTED' || item.status === 'REQUIRES_UPDATE'
           );
           const underReviewItems = missingItems.filter(item => item.status === 'UNDER_REVIEW');
 
-          // Case A: Items require immediate upload/fix from employee
+          // Priority Case 0: Video Verification Specifically Rejected
+          if (isVideoRejected) {
+            return (
+              <div style={{
+                background: '#FEF2F2',
+                border: '2px solid #EF4444',
+                borderRadius: '24px',
+                padding: isMobile ? '20px' : '28px',
+                marginBottom: '24px',
+                boxShadow: '0 6px 24px rgba(239, 68, 68, 0.15)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexDirection: isMobile ? 'column' : 'row', gap: '20px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <FaExclamationTriangle style={{ fontSize: '24px', color: '#DC2626' }} />
+                      <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#991B1B', margin: 0 }}>
+                        ⚠️ Video Verification Rejected
+                      </h3>
+                    </div>
+                    
+                    <p style={{ fontSize: '13.5px', color: '#991B1B', margin: '0 0 12px 0', lineHeight: 1.5, fontWeight: 700 }}>
+                      Your recorded video verification was rejected. Please re-record your video verification to complete employee onboarding.
+                    </p>
+
+                    {/* Rejection Reason Notice */}
+                    <div style={{ background: '#FFFFFF', border: '1px solid #FCA5A5', padding: '12px 16px', borderRadius: '12px', fontSize: '13px', color: '#991B1B', fontWeight: 800, marginBottom: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontSize: '15px' }}>🚨</span>
+                      <div>
+                        <strong style={{ display: 'block', textTransform: 'uppercase', fontSize: '11px', color: '#DC2626', letterSpacing: '0.5px' }}>Rejection Reason / Warning:</strong>
+                        "{videoRejectionReason}"
+                      </div>
+                    </div>
+
+                    {verState.latest_reminder && (
+                      <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', color: '#7F1D1D', fontWeight: 700, marginBottom: '14px' }}>
+                        🔔 <strong>Reminder:</strong> "{verState.latest_reminder.message}"
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => navigate('/employee/terms')}
+                    style={{
+                      background: '#DC2626',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '14px 28px',
+                      borderRadius: '14px',
+                      fontWeight: 900,
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(220, 38, 38, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <FaVideo /> Verify Video Now <FaArrowRight />
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          // Case A: Other items require immediate upload/fix from employee
           if (actionRequiredItems.length > 0) {
             return (
               <div style={{
@@ -171,13 +239,19 @@ export default function EmployeeDashboard() {
                         }}>
                           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: item.status === 'REJECTED' ? '#DC2626' : '#D97706' }} />
                           {item.text || item.label}
+                          {item.type === 'video' && item.reason && (
+                            <span style={{ fontSize: '12px', color: '#DC2626', fontWeight: 700 }}>({item.reason})</span>
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <button
-                    onClick={() => navigate('/employee/verification')}
+                    onClick={() => {
+                      const hasVideoItem = actionRequiredItems.some(i => i.type === 'video');
+                      navigate(hasVideoItem ? '/employee/terms' : '/employee/verification');
+                    }}
                     style={{
                       background: '#D97706',
                       color: '#ffffff',

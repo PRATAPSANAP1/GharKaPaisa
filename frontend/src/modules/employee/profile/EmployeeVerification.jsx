@@ -458,29 +458,52 @@ export default function EmployeeVerification() {
 
         {/* SECTION 3: VIDEO VERIFICATION VIEW */}
         {activeSection === 'video' && (
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: isMobile ? '20px' : '32px', boxShadow: '0 4px 24px rgba(0,0,0,0.03)' }}>
+          <div style={{ background: C.card, border: `1px solid ${video_status === 'REJECTED' ? '#FCA5A5' : C.border}`, borderRadius: '24px', padding: isMobile ? '20px' : '32px', boxShadow: '0 4px 24px rgba(0,0,0,0.03)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '14px' }}>
               <div>
                 <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0 }}>Video Teleprompter Verification</h3>
                 <p style={{ fontSize: '12.5px', color: C.textMid, margin: '2px 0 0 0' }}>
-                  Video status: <strong>{video_status}</strong>
+                  Video status: <strong style={{ color: video_status === 'VERIFIED' ? '#059669' : (video_status === 'REJECTED' ? '#DC2626' : '#D97706') }}>{video_status}</strong>
                 </p>
               </div>
               <button 
                 type="button" 
                 onClick={() => navigate('/employee/terms')}
-                style={{ background: C.teal, color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '12px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' }}
+                style={{ background: video_status === 'REJECTED' ? '#DC2626' : C.teal, color: '#fff', border: 'none', padding: '10px 16px', borderRadius: '12px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
-                Go to Video Recorder Wizard →
+                <FaVideo /> {video_status === 'REJECTED' ? 'Re-record Video Now' : 'Go to Video Recorder Wizard →'}
               </button>
             </div>
+
+            {/* Video Rejection Banner */}
+            {video_status === 'REJECTED' && (
+              <div style={{ background: '#FEF2F2', border: '1.5px solid #FCA5A5', padding: '16px 20px', borderRadius: '16px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <FaExclamationTriangle style={{ color: '#DC2626', fontSize: '20px' }} />
+                  <strong style={{ fontSize: '15px', color: '#991B1B', fontWeight: 900 }}>⚠️ Video Verification Rejected by Admin</strong>
+                </div>
+                <p style={{ fontSize: '13px', color: '#991B1B', margin: '0 0 10px 0', lineHeight: 1.5 }}>
+                  Your previous video recording was rejected. Please re-record your video verification using the teleprompter wizard.
+                </p>
+                <div style={{ background: '#FFFFFF', border: '1px solid #FCA5A5', padding: '10px 14px', borderRadius: '10px', fontSize: '12.5px', color: '#991B1B', fontWeight: 800 }}>
+                  🚨 <strong>Rejection Reason:</strong> "{verState.video_notes || (missing_items.find(i => i.type === 'video' && i.status === 'REJECTED')?.reason) || 'Video verification failed review. Please record a clear video with proper audio.'}"
+                </div>
+              </div>
+            )}
 
             {verState.video_url ? (
               <div style={{ textAlign: 'center', padding: '20px', background: C.bgSecondary, borderRadius: '16px' }}>
                 <video src={verState.video_url} controls style={{ maxWidth: '100%', maxHeight: '360px', borderRadius: '14px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-                <div style={{ marginTop: '12px', fontSize: '13px', fontWeight: 800, color: video_status === 'VERIFIED' ? '#059669' : '#D97706' }}>
+                <div style={{ marginTop: '12px', fontSize: '13px', fontWeight: 800, color: video_status === 'VERIFIED' ? '#059669' : (video_status === 'REJECTED' ? '#DC2626' : '#D97706') }}>
                   Status: {video_status}
                 </div>
+                {video_status === 'REJECTED' && (
+                  <div style={{ marginTop: '16px' }}>
+                    <button type="button" onClick={() => navigate('/employee/terms')} style={{ background: '#DC2626', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                      <FaVideo /> Re-record & Submit New Video
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 20px', background: C.bgSecondary, borderRadius: '16px' }}>
