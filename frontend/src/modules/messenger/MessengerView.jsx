@@ -4,7 +4,7 @@ import {
   FaUser, FaFilePdf, FaFileAlt, FaCheckDouble, FaThumbtack, FaPlus, 
   FaTimes, FaPhone, FaVideo, FaEllipsisV, FaCircle, FaRedo,
   FaFilter, FaArrowLeft, FaDownload, FaCheck, FaUserPlus, FaVolumeMute,
-  FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt, FaLock, FaSignOutAlt, FaEdit
+  FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt, FaLock, FaSignOutAlt, FaEdit, FaImage
 } from 'react-icons/fa';
 import api from '../../services/api';
 import { useAuthStore } from '../../app/store/authStore';
@@ -320,9 +320,11 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     }
   };
 
-  // File Upload
+  // File & Image Upload
   const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
   const [attachments, setAttachments] = useState([]);
+  const [previewImageUrl, setPreviewImageUrl] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Responsive state
@@ -1327,36 +1329,76 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                             )
                           )}
 
-                          {/* Render File Attachment Box */}
+                          {/* Render File & Image Attachments */}
                           {msg.attachments && msg.attachments.length > 0 && (
                             <div style={{ marginTop: msg.message_text ? '10px' : 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              {msg.attachments.map((att, idx) => (
-                                <div
-                                  key={idx}
-                                  style={{
-                                    padding: '10px 14px', background: '#FFFFFF', borderRadius: '12px',
-                                    border: '1px solid #CBD5E1', display: 'flex', alignItems: 'center', gap: '12px'
-                                  }}
-                                >
-                                  <div style={{
-                                    width: '36px', height: '36px', borderRadius: '8px', background: '#FEE2E2',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444'
-                                  }}>
-                                    <FaFilePdf size={18} />
+                              {msg.attachments.map((att, idx) => {
+                                const isImg = att.file_type === 'IMAGE' || 
+                                              /\.(png|jpe?g|gif|webp|bmp|svg)($|\?)/i.test(att.file_url || att.file_name || '') ||
+                                              (att.file_url && att.file_url.startsWith('blob:'));
+                                return isImg ? (
+                                  <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '280px' }}>
+                                    <img
+                                      src={att.file_url}
+                                      alt={att.file_name || 'Attachment'}
+                                      onClick={() => setPreviewImageUrl(att.file_url)}
+                                      style={{
+                                        maxWidth: '100%',
+                                        maxHeight: '220px',
+                                        borderRadius: '12px',
+                                        objectFit: 'cover',
+                                        border: '1px solid #CBD5E1',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                                      }}
+                                    />
+                                    {att.file_url && (
+                                      <a
+                                        href={att.file_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        download={att.file_name}
+                                        style={{
+                                          position: 'absolute', bottom: '8px', right: '8px',
+                                          background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
+                                          borderRadius: '50%', width: '28px', height: '28px',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                          backdropFilter: 'blur(4px)'
+                                        }}
+                                        title="Download Image"
+                                      >
+                                        <FaDownload size={12} />
+                                      </a>
+                                    )}
                                   </div>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                      {att.file_name}
+                                ) : (
+                                  <div
+                                    key={idx}
+                                    style={{
+                                      padding: '10px 14px', background: '#FFFFFF', borderRadius: '12px',
+                                      border: '1px solid #CBD5E1', display: 'flex', alignItems: 'center', gap: '12px'
+                                    }}
+                                  >
+                                    <div style={{
+                                      width: '36px', height: '36px', borderRadius: '8px', background: '#FEE2E2',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444'
+                                    }}>
+                                      <FaFilePdf size={18} />
                                     </div>
-                                    <div style={{ fontSize: '11px', color: '#64748B' }}>{att.file_size || 'Document'}</div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {att.file_name}
+                                      </div>
+                                      <div style={{ fontSize: '11px', color: '#64748B' }}>{att.file_size || 'Document'}</div>
+                                    </div>
+                                    {att.file_url && (
+                                      <a href={att.file_url} target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>
+                                        <FaDownload size={14} />
+                                      </a>
+                                    )}
                                   </div>
-                                  {att.file_url && (
-                                    <a href={att.file_url} target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>
-                                      <FaDownload size={14} />
-                                    </a>
-                                  )}
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
 
@@ -1393,9 +1435,14 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
               {/* Pending Attachments Chip Bar */}
               {attachments.length > 0 && (
-                <div style={{ padding: '8px 16px', background: '#EFF6FF', borderTop: '1px solid #BFDBFE', display: 'flex', gap: '8px', overflowX: 'auto' }}>
+                <div style={{ padding: '8px 16px', background: '#EFF6FF', borderTop: '1px solid #BFDBFE', display: 'flex', gap: '8px', overflowX: 'auto', alignItems: 'center' }}>
                   {attachments.map((att, idx) => (
-                    <div key={idx} style={{ padding: '6px 12px', background: '#FFFFFF', border: '1px solid #93C5FD', borderRadius: '16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: '#1E3A8A' }}>
+                    <div key={idx} style={{ padding: '4px 10px', background: '#FFFFFF', border: '1px solid #93C5FD', borderRadius: '16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: '#1E3A8A' }}>
+                      {att.file_type === 'IMAGE' && att.file_url ? (
+                        <img src={att.file_url} alt="thumb" style={{ width: '24px', height: '24px', borderRadius: '4px', objectFit: 'cover' }} />
+                      ) : (
+                        <FaFileAlt size={14} color="#2563EB" />
+                      )}
                       <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{att.file_name}</span>
                       <FaTimes size={12} color="#EF4444" style={{ cursor: 'pointer' }} onClick={() => removeAttachment(idx)} />
                     </div>
@@ -1462,6 +1509,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     }}
                   />
 
+                  {/* Document Attachment Input */}
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -1472,10 +1520,28 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '18px', cursor: 'pointer' }}
-                    title="Attach file"
+                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '18px', cursor: 'pointer', padding: '4px' }}
+                    title="Attach File / Document"
                   >
                     <FaPaperclip />
+                  </button>
+
+                  {/* Image Attachment Input */}
+                  <input
+                    type="file"
+                    ref={imageInputRef}
+                    onChange={handleFileSelect}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    multiple
+                  />
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    style={{ background: 'transparent', border: 'none', color: '#64748B', fontSize: '18px', cursor: 'pointer', padding: '4px' }}
+                    title="Upload Image"
+                  >
+                    <FaImage />
                   </button>
 
                   <button
@@ -2402,6 +2468,40 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* ── MODAL: IMAGE PREVIEW LIGHTBOX ── */}
+      {previewImageUrl && (
+        <div 
+          onClick={() => setPreviewImageUrl(null)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)',
+            backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 999999, padding: '24px'
+          }}
+        >
+          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setPreviewImageUrl(null)}
+              style={{
+                position: 'absolute', top: '-16px', right: '-16px', background: '#EF4444',
+                color: '#FFFFFF', border: 'none', borderRadius: '50%', width: '36px', height: '36px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                fontWeight: 900, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', zIndex: 10
+              }}
+            >
+              ✕
+            </button>
+            <img
+              src={previewImageUrl}
+              alt="Full Preview"
+              style={{
+                maxWidth: '90vw', maxHeight: '85vh', borderRadius: '16px', objectFit: 'contain',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid rgba(255,255,255,0.2)'
+              }}
+            />
+          </div>
         </div>
       )}
 
