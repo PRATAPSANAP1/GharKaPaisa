@@ -31,6 +31,34 @@ export default function KycOperatorDashboard() {
   const [submittingAction, setSubmittingAction] = useState(false);
   const [toast, setToast] = useState(null);
 
+  const KYC_STAGES = [
+    'Vkyc approved',
+    'Vkyc pending',
+    'Vkyc failed',
+    'Bio done',
+    'Bio pending',
+    'Bio inprocess',
+    'Digilocker 1 rup credit/debit done',
+    'Digilocker 1 rup credit/debit pending'
+  ];
+
+  const handleStageChange = async (appId, newStage) => {
+    try {
+      setApplications(prev => prev.map(a => a.id === appId ? { ...a, kyc_stage: newStage } : a));
+      if (appDetails && appDetails.id === appId) {
+        setAppDetails(prev => ({ ...prev, kyc_stage: newStage }));
+      }
+      const res = await api.post(`/kyc-operator/applications/${appId}/update-stage`, { kyc_stage: newStage });
+      if (res.data?.success) {
+        setToast({ type: 'success', text: `KYC Stage updated to "${newStage}"` });
+      }
+    } catch (err) {
+      console.error("Error updating stage:", err);
+      setToast({ type: 'error', text: err.response?.data?.message || 'Failed to update KYC stage' });
+      fetchApplications();
+    }
+  };
+
   // Auto-dismiss toast
   useEffect(() => {
     if (toast) {
@@ -262,68 +290,134 @@ export default function KycOperatorDashboard() {
             <thead>
               <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textMid, textTransform: 'uppercase', fontSize: '11px', fontWeight: 900 }}>
                 <th style={{ padding: '14px 18px' }}>App ID & Date</th>
-                <th style={{ padding: '14px 18px' }}>Customer Details</th>
-                <th style={{ padding: '14px 18px' }}>Product & Bank</th>
-                <th style={{ padding: '14px 18px' }}>Referred By</th>
-                <th style={{ padding: '14px 18px' }}>Soft Approval</th>
-                <th style={{ padding: '14px 18px' }}>KYC Status</th>
+                <th style={{ padding: '14px 18px' }}>Customer Name & Number</th>
+                <th style={{ padding: '14px 18px' }}>PAN Number</th>
+                <th style={{ padding: '14px 18px' }}>Bank App No.</th>
+                <th style={{ padding: '14px 18px' }}>VKYC Link</th>
+                <th style={{ padding: '14px 18px' }}>Remarks</th>
+                <th style={{ padding: '14px 18px' }}>KYC Stage</th>
                 <th style={{ padding: '14px 18px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: C.textMid }}>
+                  <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: C.textMid }}>
                     <FaSync className="fa-spin" style={{ fontSize: '24px', color: C.teal, marginBottom: '8px' }} />
                     <div style={{ fontWeight: 700 }}>Loading eligible KYC queue...</div>
                   </td>
                 </tr>
               ) : applications.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: C.textMid }}>
+                  <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: C.textMid }}>
                     <FaShieldAlt style={{ fontSize: '32px', color: C.teal, marginBottom: '8px' }} />
                     <div style={{ fontWeight: 800, fontSize: '15px', color: C.text }}>No Eligible KYC Applications Found</div>
                     <p style={{ margin: '4px 0 0 0', fontSize: '12.5px' }}>
-                      All non-declined soft approval applications are either clear or no records match your filter criteria.
+                      All non-declined soft approval applications are clear or match your search criteria.
                     </p>
                   </td>
                 </tr>
               ) : (
                 applications.map((app) => (
                   <tr key={app.id} style={{ borderBottom: `1px solid ${C.border}`, transition: 'background 0.15s' }}>
+                    
+                    {/* Application ID & Date */}
                     <td style={{ padding: '14px 18px' }}>
-                      <div style={{ fontWeight: 900, color: C.text, fontFamily: 'monospace' }}>
+                      <div style={{ fontWeight: 900, color: C.text, fontFamily: 'monospace', fontSize: '13px' }}>
                         {app.application_number || app.id}
                       </div>
-                      <div style={{ fontSize: '11px', color: C.textMid, marginTop: '2px' }}>
+                      <div style={{ fontSize: '11px', color: C.teal, fontWeight: 800, marginTop: '2px' }}>
+                        {app.product_name} • {app.bank_name}
+                      </div>
+                      <div style={{ fontSize: '10.5px', color: C.textMid, marginTop: '2px' }}>
                         {new Date(app.created_at).toLocaleDateString()}
                       </div>
                     </td>
 
+                    {/* Customer Name & Number */}
                     <td style={{ padding: '14px 18px' }}>
-                      <div style={{ fontWeight: 800, color: C.text }}>{app.customer_name}</div>
-                      <div style={{ fontSize: '11.5px', color: C.textMid }}>{app.customer_mobile}</div>
+                      <div style={{ fontWeight: 800, color: C.text, fontSize: '13px' }}>{app.customer_name}</div>
+                      <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, fontFamily: 'monospace' }}>
+                        📞 {app.customer_mobile}
+                      </div>
                     </td>
 
+                    {/* Customer PAN Number */}
                     <td style={{ padding: '14px 18px' }}>
-                      <div style={{ fontWeight: 700, color: C.text }}>{app.product_name}</div>
-                      <div style={{ fontSize: '11px', color: C.teal, fontWeight: 800 }}>{app.bank_name}</div>
-                    </td>
-
-                    <td style={{ padding: '14px 18px', fontFamily: 'monospace', fontWeight: 700, color: C.textMid }}>
-                      {app.referred_by || 'Direct'}
-                    </td>
-
-                    <td style={{ padding: '14px 18px' }}>
-                      <span style={{ background: '#D1FAE5', color: '#065F46', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
-                        ✓ {app.soft_approval_status || 'PASSED'}
+                      <span style={{ fontFamily: 'monospace', fontWeight: 800, color: C.teal, background: C.bgSecondary, border: `1px solid ${C.border}`, padding: '4px 8px', borderRadius: '6px', fontSize: '12px', letterSpacing: '0.5px' }}>
+                        🪪 {app.pan_number || 'N/A'}
                       </span>
                     </td>
 
+                    {/* Bank Application Number */}
                     <td style={{ padding: '14px 18px' }}>
-                      {getKycBadge(app.kyc_status)}
+                      <div style={{ fontFamily: 'monospace', fontWeight: 800, color: C.text, fontSize: '12.5px' }}>
+                        {app.bank_application_number && app.bank_application_number !== 'N/A' ? (
+                          app.bank_application_number
+                        ) : (
+                          <span style={{ color: C.textMid, fontWeight: 600, fontStyle: 'italic', fontSize: '11.5px' }}>Not Assigned</span>
+                        )}
+                      </div>
                     </td>
 
+                    {/* VKYC Link */}
+                    <td style={{ padding: '14px 18px' }}>
+                      {app.vkyc_link ? (
+                        <a 
+                          href={app.vkyc_link.startsWith('http') ? app.vkyc_link : `https://${app.vkyc_link}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ background: '#0284C7', color: '#FFF', padding: '6px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)' }}
+                        >
+                          <FaExternalLinkAlt /> Launch VKYC
+                        </a>
+                      ) : (
+                        <span style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 600, fontStyle: 'italic' }}>No VKYC Link</span>
+                      )}
+                    </td>
+
+                    {/* Remarks (User & KYC) */}
+                    <td style={{ padding: '14px 18px', maxWidth: '200px' }}>
+                      {app.user_remark && (
+                        <div style={{ fontSize: '11.5px', color: C.text, marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={`User Remark: ${app.user_remark}`}>
+                          <strong style={{ color: C.teal }}>User:</strong> {app.user_remark}
+                        </div>
+                      )}
+                      {app.kyc_remarks && (
+                        <div style={{ fontSize: '11.5px', color: '#D97706', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={`KYC Remark: ${app.kyc_remarks}`}>
+                          <strong>KYC:</strong> {app.kyc_remarks}
+                        </div>
+                      )}
+                      {!app.user_remark && !app.kyc_remarks && (
+                        <span style={{ fontSize: '11.5px', color: C.textMid }}>-</span>
+                      )}
+                    </td>
+
+                    {/* KYC Stage Dropdown */}
+                    <td style={{ padding: '14px 18px' }}>
+                      <select
+                        value={app.kyc_stage || 'Vkyc pending'}
+                        onChange={(e) => handleStageChange(app.id, e.target.value)}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '10px',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          border: `1px solid ${C.border}`,
+                          background: String(app.kyc_stage || '').toLowerCase().includes('approved') || String(app.kyc_stage || '').toLowerCase().includes('done') ? '#D1FAE5' : String(app.kyc_stage || '').toLowerCase().includes('failed') ? '#FEE2E2' : '#FEF3C7',
+                          color: String(app.kyc_stage || '').toLowerCase().includes('approved') || String(app.kyc_stage || '').toLowerCase().includes('done') ? '#065F46' : String(app.kyc_stage || '').toLowerCase().includes('failed') ? '#991B1B' : '#92400E',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {KYC_STAGES.map((stg) => (
+                          <option key={stg} value={stg} style={{ background: C.card, color: C.text, fontWeight: 700 }}>
+                            {stg}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+
+                    {/* Actions */}
                     <td style={{ padding: '14px 18px', textAlign: 'right' }}>
                       <button 
                         onClick={() => handleViewApplication(app)}
@@ -395,14 +489,29 @@ export default function KycOperatorDashboard() {
                   </div>
                 </div>
 
-                {/* Customer Details */}
+                {/* Customer & Application Core Details Card */}
                 <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 900, margin: '0 0 10px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FaUserCheck /> Customer Details
+                  <h3 style={{ fontSize: '14px', fontWeight: 900, margin: '0 0 12px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaUserCheck /> Application & Identity Information
                   </h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12.5px' }}>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12.5px', marginBottom: '14px' }}>
                     <div>
-                      <span style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 700 }}>FULL NAME</span>
+                      <span style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 700 }}>APPLICATION ID</span>
+                      <strong style={{ fontFamily: 'monospace', fontSize: '13px' }}>{appDetails.application_number || appDetails.id}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 700 }}>CUSTOMER PAN</span>
+                      <input 
+                        type="text"
+                        value={appDetails.pan_number || ''}
+                        onChange={(e) => setAppDetails(prev => ({ ...prev, pan_number: e.target.value }))}
+                        placeholder="e.g. ABCDE1234F"
+                        style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontWeight: 700, fontFamily: 'monospace' }}
+                      />
+                    </div>
+                    <div>
+                      <span style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 700 }}>CUSTOMER NAME</span>
                       <strong>{appDetails.customer_name || 'N/A'}</strong>
                     </div>
                     <div>
@@ -418,14 +527,108 @@ export default function KycOperatorDashboard() {
                       <strong>{appDetails.bank_name || 'N/A'}</strong>
                     </div>
                   </div>
-                </div>
 
-                {/* Remarks & History */}
-                {appDetails.kyc_remarks && (
-                  <div style={{ background: '#FEF3C7', border: '1px solid #F59E0B', padding: '14px', borderRadius: '12px', fontSize: '12.5px', color: '#92400E' }}>
-                    <strong><FaComments /> KYC Remarks:</strong> {appDetails.kyc_remarks}
+                  {/* Editable Fields: Bank App #, VKYC Link, Remarks */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '10px', borderTop: `1px dashed ${C.border}` }}>
+                    <div>
+                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '3px' }}>BANK APPLICATION NUMBER</label>
+                      <input 
+                        type="text"
+                        value={appDetails.bank_application_number || ''}
+                        onChange={(e) => setAppDetails(prev => ({ ...prev, bank_application_number: e.target.value }))}
+                        placeholder="Enter Bank Application Number..."
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontWeight: 700, fontFamily: 'monospace' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '3px' }}>VKYC LINK</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input 
+                          type="text"
+                          value={appDetails.vkyc_link || ''}
+                          onChange={(e) => setAppDetails(prev => ({ ...prev, vkyc_link: e.target.value }))}
+                          placeholder="https://vkyc.bank.com/session/..."
+                          style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '12px', fontWeight: 600 }}
+                        />
+                        {appDetails.vkyc_link && (
+                          <a 
+                            href={appDetails.vkyc_link.startsWith('http') ? appDetails.vkyc_link : `https://${appDetails.vkyc_link}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ background: '#0284C7', color: '#FFF', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <FaExternalLinkAlt /> Launch
+                          </a>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '3px' }}>USER REMARK</label>
+                      <input 
+                        type="text"
+                        value={appDetails.user_remark || ''}
+                        onChange={(e) => setAppDetails(prev => ({ ...prev, user_remark: e.target.value }))}
+                        placeholder="User / applicant notes..."
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '12.5px' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '3px' }}>KYC REMARK</label>
+                      <input 
+                        type="text"
+                        value={appDetails.kyc_remarks || ''}
+                        onChange={(e) => setAppDetails(prev => ({ ...prev, kyc_remarks: e.target.value }))}
+                        placeholder="Operator KYC verification remark..."
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '12.5px' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '3px' }}>KYC STAGE</label>
+                      <select 
+                        value={appDetails.kyc_stage || 'Vkyc pending'}
+                        onChange={(e) => setAppDetails(prev => ({ ...prev, kyc_stage: e.target.value }))}
+                        style={{ width: '100%', padding: '9px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '13px', fontWeight: 800 }}
+                      >
+                        {KYC_STAGES.map(stg => (
+                          <option key={stg} value={stg}>{stg}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          setSubmittingAction(true);
+                          const res = await api.post(`/kyc-operator/applications/${appDetails.id}/update-stage`, {
+                            kyc_stage: appDetails.kyc_stage,
+                            bank_application_number: appDetails.bank_application_number,
+                            vkyc_link: appDetails.vkyc_link,
+                            user_remark: appDetails.user_remark,
+                            kyc_remarks: appDetails.kyc_remarks,
+                            pan_number: appDetails.pan_number
+                          });
+                          if (res.data?.success) {
+                            setToast({ type: 'success', text: 'Application details updated!' });
+                            fetchApplications();
+                          }
+                        } catch (err) {
+                          setToast({ type: 'error', text: err.response?.data?.message || 'Update failed' });
+                        } finally {
+                          setSubmittingAction(false);
+                        }
+                      }}
+                      style={{ marginTop: '6px', background: C.teal, color: '#FFF', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '12.5px' }}
+                    >
+                      💾 Save KYC Details & Stage
+                    </button>
                   </div>
-                )}
+
+                </div>
 
                 {/* Documents List */}
                 <div>

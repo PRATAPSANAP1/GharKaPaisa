@@ -7,7 +7,8 @@ const {
   getKycApplicationDocuments,
   verifyKycApplication,
   rejectKycApplication,
-  requestInfoKycApplication
+  requestInfoKycApplication,
+  updateKycStageAndDetails
 } = require('./kyc-operator.controller.js');
 
 /**
@@ -40,5 +41,7 @@ router.get('/applications/:id/documents', getKycApplicationDocuments);
 router.post('/applications/:id/verify', verifyKycApplication);
 router.post('/applications/:id/reject', rejectKycApplication);
 router.post('/applications/:id/request-information', requestInfoKycApplication);
+router.post('/applications/:id/update-stage', updateKycStageAndDetails);
+router.put('/applications/:id/update-stage', updateKycStageAndDetails);
 
 module.exports = router;

@@ -11,9 +11,14 @@ let columnsChecked = false;
 const ensureKycColumns = async () => {
   if (columnsChecked) return;
   try {
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(50) DEFAULT 'PENDING'`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`);
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50) DEFAULT 'PENDING'`);
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(50) DEFAULT 'PENDING'`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_status VARCHAR(50) DEFAULT 'PENDING'`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bank_application_number VARCHAR(100)`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS pan_number VARCHAR(20)`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_link TEXT`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS user_remark TEXT`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100) DEFAULT 'Vkyc pending'`).catch(() => {});
     columnsChecked = true;
   } catch (err) {
     logger.warn('Failed ensuring kyc columns on applications table:', err.message);
@@ -52,8 +57,11 @@ const getKycApplications = async (req, res) => {
         a.application_number ILIKE $${paramIdx} OR 
         a.customer_name ILIKE $${paramIdx} OR 
         a.customer_mobile ILIKE $${paramIdx} OR
+        a.pan_number ILIKE $${paramIdx} OR
+        a.bank_application_number ILIKE $${paramIdx} OR
         pad.full_name ILIKE $${paramIdx} OR
-        pad.mobile ILIKE $${paramIdx}
+        pad.mobile ILIKE $${paramIdx} OR
+        pad.pan_number ILIKE $${paramIdx}
       )`);
       queryParams.push(term);
       paramIdx++;
@@ -122,6 +130,12 @@ const getKycApplications = async (req, res) => {
         a.application_number,
         COALESCE(NULLIF(a.customer_name, ''), pad.full_name, 'Customer') as customer_name,
         COALESCE(NULLIF(a.customer_mobile, ''), pad.mobile, 'N/A') as customer_mobile,
+        COALESCE(NULLIF(a.pan_number, ''), NULLIF(pad.pan_number, ''), NULLIF(pad.pan, ''), 'N/A') as pan_number,
+        COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(pad.bank_application_number, ''), 'N/A') as bank_application_number,
+        COALESCE(NULLIF(a.vkyc_link, ''), NULLIF(a.vkyc_url, ''), NULLIF(pad.vkyc_link, ''), NULLIF(pad.vkyc_url, ''), '') as vkyc_link,
+        COALESCE(NULLIF(a.user_remark, ''), NULLIF(pad.user_remark, ''), NULLIF(a.notes, ''), '') as user_remark,
+        COALESCE(NULLIF(a.kyc_remarks, ''), '') as kyc_remarks,
+        COALESCE(NULLIF(a.kyc_stage, ''), NULLIF(a.vkyc_status, ''), 'Vkyc pending') as kyc_stage,
         a.product_id,
         COALESCE(p.name, 'Product') as product_name,
         a.bank_id,
@@ -130,7 +144,6 @@ const getKycApplications = async (req, res) => {
         a.status as application_status,
         COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status,
         COALESCE(a.kyc_status, a.vkyc_status, 'PENDING') as kyc_status,
-        a.kyc_remarks,
         a.created_at,
         a.updated_at
       FROM applications a
@@ -177,6 +190,14 @@ const getKycApplicationById = async (req, res) => {
     const appRes = await query(`
       SELECT 
         a.*,
+        COALESCE(NULLIF(a.customer_name, ''), pad.full_name, 'Customer') as customer_name,
+        COALESCE(NULLIF(a.customer_mobile, ''), pad.mobile, 'N/A') as customer_mobile,
+        COALESCE(NULLIF(a.pan_number, ''), NULLIF(pad.pan_number, ''), NULLIF(pad.pan, ''), 'N/A') as pan_number,
+        COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(pad.bank_application_number, ''), 'N/A') as bank_application_number,
+        COALESCE(NULLIF(a.vkyc_link, ''), NULLIF(a.vkyc_url, ''), NULLIF(pad.vkyc_link, ''), NULLIF(pad.vkyc_url, ''), '') as vkyc_link,
+        COALESCE(NULLIF(a.user_remark, ''), NULLIF(pad.user_remark, ''), NULLIF(a.notes, ''), '') as user_remark,
+        COALESCE(NULLIF(a.kyc_remarks, ''), '') as kyc_remarks,
+        COALESCE(NULLIF(a.kyc_stage, ''), NULLIF(a.vkyc_status, ''), 'Vkyc pending') as kyc_stage,
         COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status,
         COALESCE(a.kyc_status, a.vkyc_status, 'PENDING') as kyc_status,
         p.name as product_name,
@@ -430,11 +451,108 @@ const requestInfoKycApplication = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/v1/kyc-operator/applications/:id/update-stage
+ * Updates application KYC stage, VKYC link, bank application number, user remark, kyc remarks, and PAN.
+ */
+const updateKycStageAndDetails = async (req, res) => {
+  try {
+    await ensureKycColumns();
+    const { id } = req.params;
+    const { kyc_stage, bank_application_number, vkyc_link, user_remark, kyc_remarks, pan_number, kyc_status } = req.body;
+
+    const appRes = await query(`
+      SELECT a.id, COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status
+      FROM applications a
+      LEFT JOIN physical_application_details pad ON (pad.application_id = a.id OR pad.application_id::text = a.id::text)
+      WHERE a.id = $1 OR a.application_number = $1
+    `, [id]);
+
+    if (appRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
+
+    if (isSoftApprovalDeclined(appRes.rows[0].soft_approval_status)) {
+      return res.status(403).json({ success: false, message: 'Access Denied: Soft approval is declined.' });
+    }
+
+    const appId = appRes.rows[0].id;
+
+    let updates = [];
+    let params = [];
+    let pIdx = 1;
+
+    if (kyc_stage !== undefined) {
+      updates.push(`kyc_stage = $${pIdx}`);
+      params.push(kyc_stage);
+      pIdx++;
+
+      const stageLower = String(kyc_stage).toLowerCase();
+      if (stageLower.includes('vkyc approved') || stageLower.includes('bio done') || stageLower.includes('digilocker 1 rup credit/debit done')) {
+        updates.push(`vkyc_status = 'APPROVED'`);
+      } else if (stageLower.includes('vkyc failed')) {
+        updates.push(`vkyc_status = 'FAILED'`);
+      }
+    }
+
+    if (bank_application_number !== undefined) {
+      updates.push(`bank_application_number = $${pIdx}`);
+      params.push(bank_application_number);
+      pIdx++;
+    }
+
+    if (vkyc_link !== undefined) {
+      updates.push(`vkyc_link = $${pIdx}`);
+      params.push(vkyc_link);
+      pIdx++;
+    }
+
+    if (user_remark !== undefined) {
+      updates.push(`user_remark = $${pIdx}`);
+      params.push(user_remark);
+      pIdx++;
+    }
+
+    if (kyc_remarks !== undefined) {
+      updates.push(`kyc_remarks = $${pIdx}`);
+      params.push(kyc_remarks);
+      pIdx++;
+    }
+
+    if (pan_number !== undefined) {
+      updates.push(`pan_number = $${pIdx}`);
+      params.push(pan_number);
+      pIdx++;
+    }
+
+    if (kyc_status !== undefined) {
+      updates.push(`kyc_status = $${pIdx}`);
+      params.push(kyc_status);
+      pIdx++;
+    }
+
+    if (updates.length > 0) {
+      updates.push(`updated_at = NOW()`);
+      params.push(appId);
+      await query(`UPDATE applications SET ${updates.join(', ')} WHERE id = $${pIdx}`, params);
+    }
+
+    return res.json({
+      success: true,
+      message: 'KYC Stage & Application Details updated successfully!'
+    });
+  } catch (err) {
+    logger.error('Error updating KYC stage:', err);
+    return res.status(500).json({ success: false, message: 'Failed to update KYC stage details' });
+  }
+};
+
 module.exports = {
   getKycApplications,
   getKycApplicationById,
   getKycApplicationDocuments,
   verifyKycApplication,
   rejectKycApplication,
-  requestInfoKycApplication
+  requestInfoKycApplication,
+  updateKycStageAndDetails
 };
