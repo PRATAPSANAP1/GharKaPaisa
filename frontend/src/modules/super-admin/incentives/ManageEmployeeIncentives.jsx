@@ -7,6 +7,7 @@ import {
   FaSitemap, FaRedo, FaInfoCircle, FaEdit, FaCalendarAlt, 
   FaChartLine, FaUserTie, FaUserShield, FaPhoneAlt, FaClipboardList, FaCheck
 } from 'react-icons/fa';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import api from '../../../services/api';
 import SuperAdminIncentiveHistory from '../../employee-management/SuperAdminIncentiveHistory';
 
@@ -52,6 +53,7 @@ export default function ManageEmployeeIncentives() {
   const [tlFilter, setTlFilter] = useState('');
   const [page, setPage] = useState(1);
   const [trendFreq, setTrendFreq] = useState('Daily');
+  const [selectedTrendPoint, setSelectedTrendPoint] = useState(null);
 
   // Breakdown toggle state (By Role vs By Status)
   const [breakdownView, setBreakdownView] = useState('ROLE');
@@ -553,28 +555,139 @@ export default function ManageEmployeeIncentives() {
 
               {/* Grid Section: Trend Chart & Performance Breakdown */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr', gap: '16px' }}>
-                {/* 5. Compact Incentive Trend */}
+                {/* 5. Incentive Trend Line Chart */}
                 <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '18px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Incentive Trend</h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Incentive Trend</h3>
+                      <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>Click any date point on chart to view details</span>
+                    </div>
                     <div style={{ display: 'flex', gap: '4px', background: C.bgSecondary, padding: '3px', borderRadius: '8px' }}>
                       {['Daily', 'Weekly', 'Monthly'].map(f => (
                         <button key={f} onClick={() => setTrendFreq(f)} style={{ padding: '3px 8px', borderRadius: '6px', border: 'none', background: trendFreq === f ? C.teal : 'transparent', color: trendFreq === f ? '#fff' : C.textMid, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>{f}</button>
                       ))}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '16px', fontSize: '12px', fontWeight: 800 }}>
-                    <span style={{ color: C.teal }}>━━ Earned</span>
-                    <span style={{ color: '#10B981' }}>━━ Paid</span>
-                  </div>
-                  {/* Timeline representation */}
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '110px', paddingTop: '10px' }}>
-                    {(data.trend || []).slice(0, 10).map((t, idx) => (
-                      <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                        <div style={{ width: '100%', height: `${Math.min(100, (parseFloat(t.earned || 0) / 1000))}px`, background: `${C.teal}50`, borderRadius: '4px 4px 0 0' }} />
-                        <span style={{ fontSize: '9.5px', color: C.textMid }}>{t.date?.slice(5)}</span>
+
+                  {/* Clicked / Active Date Info Box */}
+                  {selectedTrendPoint && (
+                    <div style={{
+                      background: `${C.teal}10`, border: `1px solid ${C.teal}40`, borderRadius: '12px',
+                      padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      fontSize: '12px', flexWrap: 'wrap', gap: '8px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontWeight: 900, color: C.teal, background: C.card, padding: '4px 10px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
+                          📅 Date: {selectedTrendPoint.display_date}
+                        </span>
+                        <span style={{ fontWeight: 800, color: C.text }}>
+                          📊 Count: <strong style={{ color: C.teal }}>{selectedTrendPoint.count || 0}</strong> Payouts
+                        </span>
+                        {selectedTrendPoint.released_count > 0 && (
+                          <span style={{ fontWeight: 800, color: '#10B981' }}>
+                            ✅ Released: <strong>{selectedTrendPoint.released_count}</strong>
+                          </span>
+                        )}
                       </div>
-                    ))}
+                      <div style={{ display: 'flex', gap: '12px', fontWeight: 800 }}>
+                        <span style={{ color: C.teal }}>Earned: {formatINR(selectedTrendPoint.earned)}</span>
+                        <span style={{ color: '#10B981' }}>Released: {formatINR(selectedTrendPoint.paid)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '16px', fontSize: '12px', fontWeight: 800 }}>
+                    <span style={{ color: C.teal }}>━━ Total Earned</span>
+                    <span style={{ color: '#10B981' }}>━━ Released Paid</span>
+                  </div>
+
+                  {/* Line Chart Component */}
+                  <div style={{ width: '100%', height: '180px', marginTop: '6px' }}>
+                    {data.trend && data.trend.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={data.trend.map(t => {
+                            let displayDate = t.display_date;
+                            if (!displayDate && t.date) {
+                              const parts = t.date.split('-');
+                              if (parts.length === 3) {
+                                displayDate = `${parts[2]}-${parts[1]}`;
+                              } else {
+                                displayDate = t.date;
+                              }
+                            }
+                            return {
+                              ...t,
+                              display_date: displayDate || 'N/A',
+                              count: parseInt(t.count || t.released_count || 0),
+                              released_count: parseInt(t.released_count || 0),
+                              earned: parseFloat(t.earned || 0),
+                              paid: parseFloat(t.paid || 0)
+                            };
+                          })}
+                          onClick={(chartState) => {
+                            if (chartState && chartState.activePayload && chartState.activePayload[0]) {
+                              setSelectedTrendPoint(chartState.activePayload[0].payload);
+                            }
+                          }}
+                          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke={C.border} opacity={0.5} />
+                          <XAxis 
+                            dataKey="display_date" 
+                            stroke={C.textMid} 
+                            fontSize={11} 
+                            fontWeight={700}
+                            tickLine={false}
+                          />
+                          <YAxis 
+                            stroke={C.textMid} 
+                            fontSize={11} 
+                            fontWeight={700}
+                            tickLine={false}
+                            tickFormatter={(v) => v >= 1000 ? `₹${(v/1000).toFixed(0)}k` : `₹${v}`}
+                          />
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const pt = payload[0].payload;
+                                return (
+                                  <div style={{ background: C.card, border: `1px solid ${C.teal}`, padding: '10px 14px', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', fontSize: '12px' }}>
+                                    <div style={{ fontWeight: 900, color: C.teal, marginBottom: '4px' }}>📅 Date: {pt.display_date}</div>
+                                    <div style={{ fontWeight: 800, color: C.text }}>📊 Count: {pt.count || 0} Payouts</div>
+                                    {pt.released_count > 0 && <div style={{ fontWeight: 800, color: '#10B981' }}>✅ Released Count: {pt.released_count}</div>}
+                                    <div style={{ fontWeight: 800, color: C.teal }}>Earned: {formatINR(pt.earned)}</div>
+                                    <div style={{ fontWeight: 800, color: '#10B981' }}>Released: {formatINR(pt.paid)}</div>
+                                    <div style={{ fontSize: '10px', color: C.textMid, marginTop: '4px', fontStyle: 'italic' }}>Click point to fix selection</div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="earned"
+                            stroke={C.teal}
+                            strokeWidth={3}
+                            dot={{ r: 5, fill: C.teal, strokeWidth: 2, stroke: '#fff', cursor: 'pointer' }}
+                            activeDot={{ r: 8, fill: C.teal, cursor: 'pointer' }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="paid"
+                            stroke="#10B981"
+                            strokeWidth={3}
+                            dot={{ r: 5, fill: '#10B981', strokeWidth: 2, stroke: '#fff', cursor: 'pointer' }}
+                            activeDot={{ r: 8, fill: '#10B981', cursor: 'pointer' }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: C.textMid, fontSize: '12px' }}>
+                        No trend data available
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -615,34 +728,61 @@ export default function ManageEmployeeIncentives() {
                 </div>
               </div>
 
-              {/* Bottom Row: Top 5 Employees & Recent Activity */}
+              {/* Bottom Row: Top Performing Employees (Released Only) & Recent Activity */}
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr', gap: '16px' }}>
-                {/* 7. Top 5 Employees */}
+                {/* 7. Top Performing Employees */}
                 <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '18px', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Top Performing Employees</h3>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 900, color: C.text, margin: 0 }}>Top Performing Employees</h3>
+                      <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 800 }}>Released Accounts & Count</span>
+                    </div>
                     <button onClick={() => setActiveTab('EMPLOYEES')} style={{ background: 'none', border: 'none', color: C.teal, fontWeight: 900, fontSize: '12px', cursor: 'pointer' }}>View All →</button>
                   </div>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ color: C.textMid, fontWeight: 800, borderBottom: `1px solid ${C.border}` }}>
                         <th style={{ padding: '6px' }}>#</th>
-                        <th style={{ padding: '6px' }}>Employee</th>
+                        <th style={{ padding: '6px' }}>Employee Name</th>
                         <th style={{ padding: '6px' }}>Role</th>
-                        <th style={{ padding: '6px', textAlign: 'center' }}>Apps</th>
-                        <th style={{ padding: '6px', textAlign: 'right' }}>Earned</th>
+                        <th style={{ padding: '6px', textAlign: 'center' }}>Released Count</th>
+                        <th style={{ padding: '6px', textAlign: 'right' }}>Released Payout</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {(data.top_employees || []).slice(0, 5).map((emp, idx) => (
-                        <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
-                          <td style={{ padding: '8px 6px', fontWeight: 900, color: C.teal }}>#{idx + 1}</td>
-                          <td style={{ padding: '8px 6px', fontWeight: 800, color: C.text }}>{emp.full_name}</td>
-                          <td style={{ padding: '8px 6px', color: C.textMid }}>{emp.role}</td>
-                          <td style={{ padding: '8px 6px', textAlign: 'center', fontWeight: 800 }}>{emp.approved || emp.applications || 0}</td>
-                          <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: 900, color: '#10B981' }}>{formatINR(emp.earned)}</td>
-                        </tr>
-                      ))}
+                      {(() => {
+                        const releasedOnly = (data.top_employees || []).filter(emp => 
+                          parseInt(emp.released_count || 0) > 0 || parseFloat(emp.paid || 0) > 0
+                        );
+                        const displayList = releasedOnly.length > 0 ? releasedOnly : (data.top_employees || []);
+                        if (!displayList || displayList.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={5} style={{ padding: '16px', textAlign: 'center', color: C.textMid }}>
+                                No released employee accounts found.
+                              </td>
+                            </tr>
+                          );
+                        }
+                        return displayList.slice(0, 5).map((emp, idx) => (
+                          <tr key={idx} style={{ borderBottom: `1px solid ${C.border}` }}>
+                            <td style={{ padding: '8px 6px', fontWeight: 900, color: C.teal }}>#{idx + 1}</td>
+                            <td style={{ padding: '8px 6px' }}>
+                              <span style={{ fontWeight: 800, color: C.text, display: 'block' }}>{emp.full_name}</span>
+                              <span style={{ fontSize: '10.5px', color: C.textMid }}>{emp.emp_code}</span>
+                            </td>
+                            <td style={{ padding: '8px 6px', color: C.textMid, fontWeight: 600 }}>{emp.role}</td>
+                            <td style={{ padding: '8px 6px', textAlign: 'center' }}>
+                              <span style={{ background: '#10B98115', color: '#10B981', border: '1px solid #10B98130', padding: '3px 8px', borderRadius: '10px', fontWeight: 900, fontSize: '11.5px' }}>
+                                {emp.released_count || emp.approved || 0}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px 6px', textAlign: 'right', fontWeight: 900, color: '#10B981' }}>
+                              {formatINR(emp.paid || emp.earned)}
+                            </td>
+                          </tr>
+                        ));
+                      })()}
                     </tbody>
                   </table>
                 </div>

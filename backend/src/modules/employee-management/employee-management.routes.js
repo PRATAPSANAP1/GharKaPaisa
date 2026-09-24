@@ -1554,8 +1554,11 @@ router.get('/incentives/overview', async (req, res, next) => {
     const trendQuery = `
       SELECT 
         TO_CHAR(it.created_at, 'YYYY-MM-DD') as date,
+        TO_CHAR(it.created_at, 'DD-MM') as display_date,
+        COUNT(it.id) as count,
+        COUNT(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN 1 END) as released_count,
         COALESCE(SUM(it.amount), 0) as earned,
-        COALESCE(SUM(CASE WHEN it.status = 'RELEASE' THEN it.amount ELSE 0 END), 0) as paid,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
         COALESCE(SUM(CASE WHEN it.status = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
         COALESCE(SUM(CASE WHEN it.status = 'HOLD' THEN it.amount ELSE 0 END), 0) as hold
       FROM employee_incentive_transactions it
@@ -1620,9 +1623,10 @@ router.get('/incentives/overview', async (req, res, next) => {
         COUNT(DISTINCT CASE 
           WHEN LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'sanctioned', 'disbursed', 'commission_released', 'commission_received', 'released') THEN a.id 
         END) as approved,
+        COUNT(DISTINCT CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN COALESCE(a.id, it.id) END) as released_count,
         COUNT(DISTINCT a.id) as applications,
         COALESCE(SUM(it.amount), 0) as earned,
-        COALESCE(SUM(CASE WHEN it.status = 'RELEASE' THEN it.amount ELSE 0 END), 0) as paid,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
         COALESCE(SUM(CASE WHEN it.status = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
         COALESCE(SUM(CASE WHEN it.status = 'HOLD' THEN it.amount ELSE 0 END), 0) as hold
       FROM employee_incentive_transactions it
@@ -1632,7 +1636,7 @@ router.get('/incentives/overview', async (req, res, next) => {
       LEFT JOIN applications a ON a.id = it.application_id
       ${whereClause}
       GROUP BY e.id, e.employee_id, e.full_name, e.designation, h.hierarchy_level
-      ORDER BY earned DESC
+      ORDER BY paid DESC, released_count DESC, earned DESC
       LIMIT 10
     `;
     const topEmployeesRes = await query(topEmployeesQuery, params);

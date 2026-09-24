@@ -114,7 +114,7 @@ export default function EmployeeLoanOnCreditCard() {
   const empCode = user?.employee_id || user?.emp_code || user?.id || '';
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://gharkapaisa.in';
 
-  // Calculate EMI
+  // Calculate 33
   const emiDetails = useMemo(() => {
     const P = parseFloat(loanAmount) || 0;
     const r = (parseFloat(interestRate) || 0) / 12 / 100;
