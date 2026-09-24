@@ -1454,6 +1454,8 @@ router.get('/incentives/overview', async (req, res, next) => {
       bank_id,
       status,
       search,
+      trend_freq,
+      trendFreq,
       page = 1,
       limit = 20
     } = req.query;
@@ -1461,8 +1463,8 @@ router.get('/incentives/overview', async (req, res, next) => {
     let whereConditions = [];
     let params = [];
 
-    // Strictly show incentives for approved applications only (exclude rejected/pending-app leads)
-    whereConditions.push(`LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received', 'released')`);
+    // Allow approved applications or standalone incentives (where application_id IS NULL)
+    whereConditions.push(`(a.id IS NULL OR LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'disbursed', 'sanctioned', 'commission_released', 'commission_received', 'released', 'operational_verified', 'completed', 'paid'))`);
 
     if (startDate) {
       params.push(startDate);
@@ -1524,18 +1526,18 @@ router.get('/incentives/overview', async (req, res, next) => {
     const kpiQuery = `
       SELECT 
         COALESCE(SUM(it.amount), 0) as total_earned,
-        COALESCE(SUM(CASE WHEN it.status = 'RELEASE' THEN it.amount ELSE 0 END), 0) as total_paid,
-        COALESCE(SUM(CASE WHEN it.status = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending_payouts,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as total_paid,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending_payouts,
         0 as in_review,
-        COALESCE(SUM(CASE WHEN it.status = 'HOLD' THEN it.amount ELSE 0 END), 0) as on_hold,
-        COALESCE(SUM(CASE WHEN it.status = 'REJECTED' THEN it.amount ELSE 0 END), 0) as rejected,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING') THEN it.amount ELSE 0 END), 0) as on_hold,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'REJECTED' THEN it.amount ELSE 0 END), 0) as rejected,
         COUNT(DISTINCT it.employee_id) as employees_earned,
         COUNT(it.id) as total_transactions,
         COUNT(DISTINCT CASE 
-          WHEN LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'sanctioned', 'disbursed', 'commission_released', 'commission_received', 'released') THEN a.id 
+          WHEN a.id IS NOT NULL AND LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'sanctioned', 'disbursed', 'commission_released', 'commission_received', 'released') THEN a.id 
         END) as approved_cards_count,
-        COUNT(CASE WHEN it.status = 'RELEASE' THEN 1 END) as approved_transactions,
-        COUNT(CASE WHEN it.status = 'REJECTED' THEN 1 END) as rejected_transactions
+        COUNT(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN 1 END) as approved_transactions,
+        COUNT(CASE WHEN UPPER(it.status::text) = 'REJECTED' THEN 1 END) as rejected_transactions
       FROM employee_incentive_transactions it
       LEFT JOIN employees e ON e.id = it.employee_id
       LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
@@ -1550,24 +1552,35 @@ router.get('/incentives/overview', async (req, res, next) => {
     const employeesEarned = parseInt(kpi.employees_earned || 0);
     kpi.avg_incentive_per_employee = employeesEarned > 0 ? Math.round(totalEarned / employeesEarned) : 0;
 
-    // 2. Incentive Trend Overview (Grouped by Date)
+    // 2. Incentive Trend Overview (Grouped by Daily / Weekly / Monthly)
+    const freq = (trend_freq || trendFreq || 'daily').toLowerCase();
+    let dateGroupExpr = "TO_CHAR(it.created_at, 'YYYY-MM-DD')";
+    let displayDateExpr = "TO_CHAR(it.created_at, 'DD-MM')";
+    if (freq === 'weekly') {
+      dateGroupExpr = "TO_CHAR(DATE_TRUNC('week', it.created_at), 'YYYY-MM-DD')";
+      displayDateExpr = "'Wk ' || TO_CHAR(DATE_TRUNC('week', it.created_at), 'DD Mon')";
+    } else if (freq === 'monthly') {
+      dateGroupExpr = "TO_CHAR(it.created_at, 'YYYY-MM')";
+      displayDateExpr = "TO_CHAR(it.created_at, 'Mon YYYY')";
+    }
+
     const trendQuery = `
       SELECT 
-        TO_CHAR(it.created_at, 'YYYY-MM-DD') as date,
-        TO_CHAR(it.created_at, 'DD-MM') as display_date,
+        ${dateGroupExpr} as date,
+        ${displayDateExpr} as display_date,
         COUNT(it.id) as count,
         COUNT(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN 1 END) as released_count,
         COALESCE(SUM(it.amount), 0) as earned,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
-        COALESCE(SUM(CASE WHEN it.status = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
-        COALESCE(SUM(CASE WHEN it.status = 'HOLD' THEN it.amount ELSE 0 END), 0) as hold
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('HOLD', 'ON_HOLD', 'HELD') THEN it.amount ELSE 0 END), 0) as hold
       FROM employee_incentive_transactions it
       LEFT JOIN employees e ON e.id = it.employee_id
       LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
       LEFT JOIN products p ON p.id = it.product_id
       LEFT JOIN applications a ON a.id = it.application_id
       ${whereClause}
-      GROUP BY TO_CHAR(it.created_at, 'YYYY-MM-DD'), TO_CHAR(it.created_at, 'DD-MM')
+      GROUP BY ${dateGroupExpr}, ${displayDateExpr}
       ORDER BY date ASC
       LIMIT 30
     `;
@@ -1578,11 +1591,11 @@ router.get('/incentives/overview', async (req, res, next) => {
       SELECT 
         COALESCE(e.designation, h.hierarchy_level, 'Telecaller') as role,
         COALESCE(SUM(it.amount), 0) as earned,
-        COALESCE(SUM(CASE WHEN it.status = 'RELEASE' THEN it.amount ELSE 0 END), 0) as paid,
-        COALESCE(SUM(CASE WHEN it.status = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
-        COALESCE(SUM(CASE WHEN it.status = 'HOLD' THEN it.amount ELSE 0 END), 0) as hold,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('HOLD', 'ON_HOLD', 'HELD') THEN it.amount ELSE 0 END), 0) as hold,
         COUNT(DISTINCT CASE 
-          WHEN LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'sanctioned', 'disbursed', 'commission_released', 'commission_received', 'released') THEN a.id 
+          WHEN a.id IS NOT NULL AND LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'sanctioned', 'disbursed', 'commission_released', 'commission_received', 'released') THEN a.id 
         END) as approved_apps,
         COUNT(DISTINCT it.employee_id) as count
       FROM employee_incentive_transactions it
@@ -1621,14 +1634,14 @@ router.get('/incentives/overview', async (req, res, next) => {
         e.full_name,
         COALESCE(e.designation, h.hierarchy_level, 'TC') as role,
         COUNT(DISTINCT CASE 
-          WHEN LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'sanctioned', 'disbursed', 'commission_released', 'commission_received', 'released') THEN a.id 
+          WHEN a.id IS NOT NULL AND LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'sanctioned', 'disbursed', 'commission_released', 'commission_received', 'released') THEN a.id 
         END) as approved,
         COUNT(DISTINCT CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN COALESCE(a.id, it.id) END) as released_count,
         COUNT(DISTINCT a.id) as applications,
         COALESCE(SUM(it.amount), 0) as earned,
         COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
-        COALESCE(SUM(CASE WHEN it.status = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
-        COALESCE(SUM(CASE WHEN it.status = 'HOLD' THEN it.amount ELSE 0 END), 0) as hold
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('HOLD', 'ON_HOLD', 'HELD') THEN it.amount ELSE 0 END), 0) as hold
       FROM employee_incentive_transactions it
       JOIN employees e ON e.id = it.employee_id
       LEFT JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
@@ -1650,12 +1663,12 @@ router.get('/incentives/overview', async (req, res, next) => {
         COALESCE(p.category::text, p.slug, 'credit_card') as category_slug,
         COUNT(DISTINCT a.id) as applications,
         COUNT(DISTINCT CASE 
-          WHEN LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'sanctioned', 'disbursed', 'commission_released', 'commission_received', 'released') THEN a.id 
+          WHEN a.id IS NOT NULL AND LOWER(a.status::text) IN ('approved', 'super_admin_approved', 'sanctioned', 'disbursed', 'commission_released', 'commission_received', 'released') THEN a.id 
         END) as approved,
         COALESCE(SUM(it.amount), 0) as earned,
-        COALESCE(SUM(CASE WHEN it.status = 'RELEASE' THEN it.amount ELSE 0 END), 0) as paid,
-        COALESCE(SUM(CASE WHEN it.status = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
-        COALESCE(SUM(CASE WHEN it.status = 'HOLD' THEN it.amount ELSE 0 END), 0) as hold
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('HOLD', 'ON_HOLD', 'HELD') THEN it.amount ELSE 0 END), 0) as hold
       FROM employee_incentive_transactions it
       JOIN products p ON p.id = it.product_id
       LEFT JOIN banks b ON b.id = p.bank_id
@@ -1670,7 +1683,7 @@ router.get('/incentives/overview', async (req, res, next) => {
     const productRes = await query(productQuery, params);
 
     // 7. Recent Incentive Payouts (Only RELEASE status)
-    const payoutsWhereConditions = [...whereConditions, "it.status = 'RELEASE'"];
+    const payoutsWhereConditions = [...whereConditions, "UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED')"];
     const payoutsWhereClause = `WHERE ${payoutsWhereConditions.join(' AND ')}`;
 
     const payoutsQuery = `
@@ -1708,9 +1721,9 @@ router.get('/incentives/overview', async (req, res, next) => {
         e.employee_id as emp_code,
         e.designation,
         COALESCE(SUM(it.amount), 0) as total_incentives,
-        COALESCE(SUM(CASE WHEN it.status = 'RELEASE' THEN it.amount ELSE 0 END), 0) as paid_incentives,
-        COALESCE(SUM(CASE WHEN it.status = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending_incentives,
-        COALESCE(SUM(CASE WHEN it.status = 'HOLD' THEN it.amount ELSE 0 END), 0) as hold_incentives,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN it.amount ELSE 0 END), 0) as paid_incentives,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END), 0) as pending_incentives,
+        COALESCE(SUM(CASE WHEN UPPER(it.status::text) IN ('HOLD', 'ON_HOLD', 'HELD') THEN it.amount ELSE 0 END), 0) as hold_incentives,
         COUNT(DISTINCT it.application_id) as total_apps
       FROM employees e
       JOIN employee_hierarchy h ON h.employee_id = e.id AND h.is_active = true
@@ -1828,9 +1841,9 @@ router.get('/incentives/overview', async (req, res, next) => {
         COALESCE(a.process_type, 'lead punching') as process_type,
         it.transaction_type,
         it.amount as incentive_earned,
-        CASE WHEN it.status = 'RELEASE' THEN it.amount ELSE 0 END as incentive_paid,
-        CASE WHEN it.status = 'PENDING' THEN it.amount ELSE 0 END as pending_amount,
-        CASE WHEN it.status = 'HOLD' THEN it.amount ELSE 0 END as hold_amount,
+        CASE WHEN UPPER(it.status::text) IN ('RELEASE', 'RELEASED', 'PAID', 'COMPLETED') THEN it.amount ELSE 0 END as incentive_paid,
+        CASE WHEN UPPER(it.status::text) = 'PENDING' THEN it.amount ELSE 0 END as pending_amount,
+        CASE WHEN UPPER(it.status::text) IN ('HOLD', 'ON_HOLD', 'HELD') THEN it.amount ELSE 0 END as hold_amount,
         it.status,
         it.hold_until,
         it.hold_reason,

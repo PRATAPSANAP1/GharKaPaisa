@@ -92,7 +92,8 @@ export default function ManageEmployeeIncentives() {
         status: effectiveStatus,
         manager_id: managerFilter || undefined,
         team_leader_id: tlFilter || undefined,
-        search: search || undefined
+        search: search || undefined,
+        trend_freq: trendFreq.toLowerCase()
       };
       const res = await api.get('/employees/incentives/overview', { params });
       if (res.data?.success) {
@@ -131,7 +132,7 @@ export default function ManageEmployeeIncentives() {
 
   useEffect(() => {
     fetchData();
-  }, [activeTab, datePreset, startDate, endDate, roleFilter, productFilter, bankFilter, statusFilter, managerFilter, tlFilter, page, search]);
+  }, [activeTab, datePreset, startDate, endDate, roleFilter, productFilter, bankFilter, statusFilter, managerFilter, tlFilter, page, search, trendFreq]);
 
   const handleDatePresetChange = (preset) => {
     setDatePreset(preset);
@@ -564,7 +565,7 @@ export default function ManageEmployeeIncentives() {
                     </div>
                     <div style={{ display: 'flex', gap: '4px', background: C.bgSecondary, padding: '3px', borderRadius: '8px' }}>
                       {['Daily', 'Weekly', 'Monthly'].map(f => (
-                        <button key={f} onClick={() => setTrendFreq(f)} style={{ padding: '3px 8px', borderRadius: '6px', border: 'none', background: trendFreq === f ? C.teal : 'transparent', color: trendFreq === f ? '#fff' : C.textMid, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>{f}</button>
+                        <button key={f} onClick={() => { setTrendFreq(f); setSelectedTrendPoint(null); }} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: trendFreq === f ? C.teal : 'transparent', color: trendFreq === f ? '#fff' : C.textMid, fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>{f}</button>
                       ))}
                     </div>
                   </div>
@@ -578,10 +579,10 @@ export default function ManageEmployeeIncentives() {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span style={{ fontWeight: 900, color: C.teal, background: C.card, padding: '4px 10px', borderRadius: '8px', border: `1px solid ${C.border}` }}>
-                          📅 Date: {selectedTrendPoint.display_date}
+                          📅 {trendFreq} Period: {selectedTrendPoint.display_date} ({selectedTrendPoint.date || 'Active'})
                         </span>
                         <span style={{ fontWeight: 800, color: C.text }}>
-                          📊 Count: <strong style={{ color: C.teal }}>{selectedTrendPoint.count || 0}</strong> Payouts
+                          📊 Payouts: <strong style={{ color: C.teal }}>{selectedTrendPoint.count || 0}</strong>
                         </span>
                         {selectedTrendPoint.released_count > 0 && (
                           <span style={{ fontWeight: 800, color: '#10B981' }}>
@@ -589,9 +590,15 @@ export default function ManageEmployeeIncentives() {
                           </span>
                         )}
                       </div>
-                      <div style={{ display: 'flex', gap: '12px', fontWeight: 800 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 800 }}>
                         <span style={{ color: C.teal }}>Earned: {formatINR(selectedTrendPoint.earned)}</span>
                         <span style={{ color: '#10B981' }}>Released: {formatINR(selectedTrendPoint.paid)}</span>
+                        <button
+                          onClick={() => setSelectedTrendPoint(null)}
+                          style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.textMid, padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          ✕ Clear
+                        </button>
                       </div>
                     </div>
                   )}
@@ -1004,9 +1011,13 @@ export default function ManageEmployeeIncentives() {
                     <FaCheckCircle color="#10B981" size={18} /> Released Employee Incentives
                   </h3>
                   <span style={{ fontSize: '12px', fontWeight: 800, color: '#10B981' }}>
-                    {formatINR((data.table?.data || []).filter(r => 
-                      ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase())
-                    ).reduce((s, r) => s + parseFloat(r.incentive_earned || 0), 0) || totalPaid)} Released & Credited
+                    {(() => {
+                      const releasedList = (data.table?.data || []).filter(r => 
+                        ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase().trim())
+                      );
+                      const sumReleased = releasedList.reduce((s, r) => s + parseFloat(r.incentive_earned || r.incentive_paid || 0), 0);
+                      return formatINR(sumReleased > 0 ? sumReleased : totalPaid);
+                    })()} Released & Credited
                   </span>
                 </div>
               </div>
