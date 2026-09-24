@@ -1271,6 +1271,16 @@ export default function PartnerApplications() {
         const isHdfcBank = (bankId === HDFC_BANK_ID) || 
           (String(bankName).toLowerCase().includes('hdfc') && !String(productName).toLowerCase().includes('tata'));
 
+        const categoryStr = `${d.category || viewApp.category || ''} ${d.product_type || viewApp.product_type || ''} ${d.product_category || viewApp.product_category || ''} ${d.sub_category || viewApp.sub_category || ''} ${d.lead_type || viewApp.lead_type || ''} ${d.card_name || viewApp.card_name || ''} ${d.product_name || viewApp.product_name || ''} ${productName}`.toLowerCase();
+
+        const isSmartEmi = categoryStr.includes('smart_emi') || categoryStr.includes('smart emi');
+        const isLoanOnCreditCard = !isSmartEmi && (
+          categoryStr.includes('loan_on_credit_card') || 
+          categoryStr.includes('loan on credit card') || 
+          categoryStr.includes('card_loan') || 
+          categoryStr.includes('card loan')
+        );
+
         const rawProcess = String(d.process_type || d.process_by || viewApp.process_type || viewApp.process_by || 'lead_punching').trim().toLowerCase();
         const procBadge = getProcessByBadge(rawProcess, d.process_type);
         const stBadge = getStatusBadge(d.status || viewApp.status);
@@ -1459,88 +1469,275 @@ export default function PartnerApplications() {
 
                   {/* Section 2: Operational Stage & Remarks */}
                   <div style={{ background: isDark ? '#1a2234' : '#eff6ff', borderRadius: 14, padding: 14, border: '1px solid #3b82f640' }}>
-                    <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Operational Stage & Remarks</h4>
+                    <h4 style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {isSmartEmi ? 'Smart EMI Operational Stage & Remarks' : isLoanOnCreditCard ? 'Loan on Credit Card Operational Stage & Remarks' : 'Operational Stage & Remarks'}
+                    </h4>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 12 }}>
-                      <div>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                          <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>{displayBankAppNum}</div>
-                          {hasValidBankNum && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(displayBankAppNum);
-                                alert(`📋 Copied Bank Application Number: ${displayBankAppNum}`);
-                              }}
-                              title="Copy Bank Application Number"
-                              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb', padding: '2px 4px', display: 'inline-flex', alignItems: 'center' }}
-                            >
-                              <Copy size={13} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
-                        <div style={{ fontWeight: 800, color: finalStatusColor, textTransform: 'capitalize' }}>
-                          {String(finalStatusVal).replace(/_/g, ' ')}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>IPA STAGE</div>
-                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.ipa_stage || pd.ipa_stage || 'None'}</div>
-                      </div>
-
-                      <div>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>KYC STAGE</div>
-                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.kyc_stage || pd.kyc_stage || 'None'}</div>
-                      </div>
-
-                      <div>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>SOFT APPROVAL STAGE</div>
-                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.soft_approval_status || pd.soft_approval_status || 'N/A'}</div>
-                      </div>
-
-                      <div>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>VKYC STAGE</div>
-                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.vkyc_stage || d.vkyc_status || pd.vkyc_stage || 'Pending'}</div>
-                      </div>
-
-                      <div>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>IQA STAGE</div>
-                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.iqa_stage || pd.iqa_stage || 'N/A'}</div>
-                      </div>
-
-                      <div>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DISPATCH STATUS</div>
-                        <div style={{ fontWeight: 800, color: textPrimary }}>{d.dispatch_status || pd.dispatch_status || 'N/A'}</div>
-                      </div>
-
-                      {/* Remarks */}
-                      <div style={{ gridColumn: 'span 2' }}>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>OPERATION / USER REMARK</div>
-                        <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
-                          {userRemarkVal}
-                        </div>
-                      </div>
-
-                      <div style={{ gridColumn: 'span 2' }}>
-                        <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>
-                        <div style={{ fontWeight: 700, color: textPrimary, marginTop: 4 }}>
-                          {bankRemarkVal}
-                        </div>
-                      </div>
-
-                      {declineReasonVal && (
-                        <div style={{ gridColumn: 'span 2' }}>
-                          <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DECLINE REASON</div>
-                          <div style={{ fontWeight: 700, color: '#ef4444', background: isDark ? '#2a1215' : '#fef2f2', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
-                            {declineReasonVal}
+                      {isSmartEmi ? (
+                        <>
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER / LOS NO.</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                              <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>{displayBankAppNum}</div>
+                              {hasValidBankNum && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(displayBankAppNum);
+                                    alert(`📋 Copied Bank Application Number: ${displayBankAppNum}`);
+                                  }}
+                                  title="Copy Bank Application Number"
+                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb', padding: '2px 4px', display: 'inline-flex', alignItems: 'center' }}
+                                >
+                                  <Copy size={13} />
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
+                            <div style={{ fontWeight: 800, color: finalStatusColor, textTransform: 'capitalize' }}>
+                              {String(finalStatusVal).replace(/_/g, ' ')}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK SMART EMI OFFER</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.bank_smart_emi_offer || pd.bank_smart_emi_offer || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK SMART EMI TENURE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.bank_smart_emi_tenure || pd.bank_smart_emi_tenure || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DISBURSED SMART EMI</div>
+                            <div style={{ fontWeight: 800, color: '#10b981' }}>{d.disbursed_smart_emi || pd.disbursed_smart_emi ? `₹${Number(d.disbursed_smart_emi || pd.disbursed_smart_emi).toLocaleString('en-IN')}` : 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DISBURSED SMART EMI TENURE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.disbursed_smart_emi_tenure || pd.disbursed_smart_emi_tenure || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>SMART EMI OFFER STATUS</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.smart_emi_offer_status || pd.smart_emi_offer_status || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL SMART EMI DISBURSE</div>
+                            <div style={{ fontWeight: 800, color: '#10b981' }}>{d.final_smart_emi_disburse || pd.final_smart_emi_disburse ? `₹${Number(d.final_smart_emi_disburse || pd.final_smart_emi_disburse).toLocaleString('en-IN')}` : 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL TENURE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.final_tenure || pd.final_tenure || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>ELIGIBLE FOR INCENTIVE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.eligible_for_incentive || pd.eligible_for_incentive || 'N/A'}</div>
+                          </div>
+
+                          {/* Remarks */}
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>OPERATION / USER REMARK</div>
+                            <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                              {userRemarkVal}
+                            </div>
+                          </div>
+
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>
+                            <div style={{ fontWeight: 700, color: textPrimary, marginTop: 4 }}>
+                              {bankRemarkVal}
+                            </div>
+                          </div>
+
+                          {(d.offer_decline_reason || pd.offer_decline_reason || declineReasonVal) && (
+                            <div style={{ gridColumn: 'span 2' }}>
+                              <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>OFFER / DECLINE REASON</div>
+                              <div style={{ fontWeight: 700, color: '#ef4444', background: isDark ? '#2a1215' : '#fef2f2', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                                {d.offer_decline_reason || pd.offer_decline_reason || declineReasonVal}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : isLoanOnCreditCard ? (
+                        <>
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER / LOS NO.</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                              <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>{displayBankAppNum}</div>
+                              {hasValidBankNum && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(displayBankAppNum);
+                                    alert(`📋 Copied Bank Application Number: ${displayBankAppNum}`);
+                                  }}
+                                  title="Copy Bank Application Number"
+                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb', padding: '2px 4px', display: 'inline-flex', alignItems: 'center' }}
+                                >
+                                  <Copy size={13} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
+                            <div style={{ fontWeight: 800, color: finalStatusColor, textTransform: 'capitalize' }}>
+                              {String(finalStatusVal).replace(/_/g, ' ')}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>INSTA / JUMBO OFFER</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.insta_jumbo_offer || pd.insta_jumbo_offer || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>CUSTOMER LOAN OFFER</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.customer_loan_offer || pd.customer_loan_offer || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>OFFER TENURE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.offer_tenure || pd.offer_tenure || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DISBURSED AMOUNT</div>
+                            <div style={{ fontWeight: 800, color: '#10b981' }}>{d.disbursed_amount || pd.disbursed_amount ? `₹${Number(d.disbursed_amount || pd.disbursed_amount).toLocaleString('en-IN')}` : 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DISBURSED TENURE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.disbursed_tenure || pd.disbursed_tenure || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL LOAN DISBURSED</div>
+                            <div style={{ fontWeight: 800, color: '#10b981' }}>{d.final_loan_disbursed || pd.final_loan_disbursed ? `₹${Number(d.final_loan_disbursed || pd.final_loan_disbursed).toLocaleString('en-IN')}` : 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL LOAN TENURE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.final_loan_tenure || pd.final_loan_tenure || 'N/A'}</div>
+                          </div>
+
+                          {/* Remarks */}
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>OPERATION / USER REMARK</div>
+                            <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                              {userRemarkVal}
+                            </div>
+                          </div>
+
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>
+                            <div style={{ fontWeight: 700, color: textPrimary, marginTop: 4 }}>
+                              {bankRemarkVal}
+                            </div>
+                          </div>
+
+                          {declineReasonVal && (
+                            <div style={{ gridColumn: 'span 2' }}>
+                              <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DECLINE REASON</div>
+                              <div style={{ fontWeight: 700, color: '#ef4444', background: isDark ? '#2a1215' : '#fef2f2', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                                {declineReasonVal}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK APPLICATION NUMBER</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                              <div style={{ fontWeight: 800, color: textPrimary, fontFamily: 'monospace' }}>{displayBankAppNum}</div>
+                              {hasValidBankNum && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(displayBankAppNum);
+                                    alert(`📋 Copied Bank Application Number: ${displayBankAppNum}`);
+                                  }}
+                                  title="Copy Bank Application Number"
+                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#2563eb', padding: '2px 4px', display: 'inline-flex', alignItems: 'center' }}
+                                >
+                                  <Copy size={13} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>FINAL STATUS FROM BANK</div>
+                            <div style={{ fontWeight: 800, color: finalStatusColor, textTransform: 'capitalize' }}>
+                              {String(finalStatusVal).replace(/_/g, ' ')}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>IPA STAGE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.ipa_stage || pd.ipa_stage || 'None'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>KYC STAGE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.kyc_stage || pd.kyc_stage || 'None'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>SOFT APPROVAL STAGE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.soft_approval_status || pd.soft_approval_status || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>VKYC STAGE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.vkyc_stage || d.vkyc_status || pd.vkyc_stage || 'Pending'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>IQA STAGE</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.iqa_stage || pd.iqa_stage || 'N/A'}</div>
+                          </div>
+
+                          <div>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DISPATCH STATUS</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{d.dispatch_status || pd.dispatch_status || 'N/A'}</div>
+                          </div>
+
+                          {/* Remarks */}
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>OPERATION / USER REMARK</div>
+                            <div style={{ fontWeight: 700, color: '#1e3a8a', background: isDark ? '#1e293b' : '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                              {userRemarkVal}
+                            </div>
+                          </div>
+
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>BANK REMARK</div>
+                            <div style={{ fontWeight: 700, color: textPrimary, marginTop: 4 }}>
+                              {bankRemarkVal}
+                            </div>
+                          </div>
+
+                          {declineReasonVal && (
+                            <div style={{ gridColumn: 'span 2' }}>
+                              <div style={{ color: textMuted, fontSize: 10, fontWeight: 700 }}>DECLINE REASON</div>
+                              <div style={{ fontWeight: 700, color: '#ef4444', background: isDark ? '#2a1215' : '#fef2f2', padding: '6px 10px', borderRadius: '6px', marginTop: 4 }}>
+                                {declineReasonVal}
+                              </div>
+                            </div>
+                          )}
+                        </>
                       )}
 
                       {/* Process Actions & Direct Redirect Links */}
