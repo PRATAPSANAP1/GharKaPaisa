@@ -294,10 +294,20 @@ async function getMessages(conversationId, userId, limit = 50, offset = 0, userR
   await repo.markMessagesAsRead(conversationId, userId);
   const messages = await repo.getMessages(conversationId, userId, limit, offset);
 
-  return messages.map(m => ({
-    ...m,
-    message_text: maskSensitiveData(m.message_text)
-  }));
+  const conv = await repo.getConversationById(conversationId);
+  const isGroup = conv && (conv.conversation_type === 'GROUP' || conv.conversation_type === 'DEPARTMENT');
+
+  return messages.map(m => {
+    let senderName = m.sender_name;
+    if (isGroup && !isSuperAdmin) {
+      senderName = 'User';
+    }
+    return {
+      ...m,
+      sender_name: senderName,
+      message_text: maskSensitiveData(m.message_text)
+    };
+  });
 }
 
 async function postMessage(senderId, { conversation_id, message_type = 'TEXT', message_text, reply_to_message_id, attachments = [] }, userRole = null) {
@@ -523,6 +533,21 @@ async function getGroupMembers(conversationId, userId, userRole = null) {
   return await repo.getConversationParticipants(conversationId);
 }
 
+async function updateGroupName(conversationId, name, userId, userRole) {
+  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
+  if (!isSuperAdmin) {
+    throw new Error('Access denied. Only Super Admin can edit the group name.');
+  }
+  if (!name || !name.trim()) {
+    throw new Error('Group name is required.');
+  }
+  const updated = await repo.updateGroupName(conversationId, name.trim());
+  if (!updated) {
+    throw new Error('Group conversation not found.');
+  }
+  return updated;
+}
+
 async function addGroupMembers(conversationId, currentUserId, memberUserIds = [], userRole = null) {
   const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
   if (!isSuperAdmin) {
@@ -541,24 +566,11 @@ async function addGroupMembers(conversationId, currentUserId, memberUserIds = []
     throw new Error('Please select at least one member to add.');
   }
 
-  const addedNames = [];
   for (const mId of uniqueIds) {
-    const { rows: [mUser] } = await query(`SELECT id, full_name, email, mobile FROM users WHERE id = $1 AND is_active = TRUE`, [mId]);
+    const { rows: [mUser] } = await query(`SELECT id FROM users WHERE id = $1 AND is_active = TRUE`, [mId]);
     if (mUser) {
       await repo.addParticipant({ conversation_id: conversationId, user_id: mId, role: 'MEMBER' });
-      addedNames.push(mUser.full_name || mUser.email || 'User');
     }
-  }
-
-  if (addedNames.length > 0) {
-    const { rows: [actor] } = await query(`SELECT full_name FROM users WHERE id = $1`, [currentUserId]);
-    const sysText = `ℹ️ ${actor?.full_name || 'A member'} added ${addedNames.join(', ')} to the group.`;
-    await repo.createMessage({
-      conversation_id: conversationId,
-      sender_id: currentUserId,
-      message_type: 'SYSTEM',
-      message_text: sysText
-    });
   }
 
   return await repo.getConversationParticipants(conversationId);
@@ -577,24 +589,7 @@ async function removeGroupMember(conversationId, currentUserId, targetUserId, us
     throw new Error('Group conversation not found.');
   }
 
-  const { rows: [targetUser] } = await query(`SELECT id, full_name, email FROM users WHERE id = $1`, [targetUserId]);
-  const targetName = targetUser?.full_name || targetUser?.email || 'Member';
-
-  const removed = await repo.removeParticipant(conversationId, targetUserId);
-
-  if (removed) {
-    const { rows: [actor] } = await query(`SELECT full_name FROM users WHERE id = $1`, [currentUserId]);
-    const sysText = currentUserId === targetUserId
-      ? `ℹ️ ${targetName} left the group.`
-      : `ℹ️ ${actor?.full_name || 'A member'} removed ${targetName} from the group.`;
-    await repo.createMessage({
-      conversation_id: conversationId,
-      sender_id: currentUserId,
-      message_type: 'SYSTEM',
-      message_text: sysText
-    });
-  }
-
+  await repo.removeParticipant(conversationId, targetUserId);
   return await repo.getConversationParticipants(conversationId);
 }
 
@@ -604,6 +599,7 @@ module.exports = {
   startOrGetDirectChat,
   startOrGetApplicationChat,
   createGroup,
+  updateGroupName,
   getConversationDetails,
   getMessages,
   postMessage,

@@ -840,11 +840,23 @@ async function removeParticipant(conversationId, userId) {
   return rows[0] || null;
 }
 
+async function updateGroupName(conversationId, name) {
+  const sql = `
+    UPDATE conversations
+    SET name = $2, updated_at = NOW()
+    WHERE id = $1 AND conversation_type IN ('GROUP', 'DEPARTMENT')
+    RETURNING *
+  `;
+  const { rows } = await query(sql, [conversationId, name]);
+  return rows[0] || null;
+}
+
 module.exports = {
   getConversationsForUser,
   findDirectConversation,
   findApplicationConversation,
   createConversation,
+  updateGroupName,
   addParticipant,
   removeParticipant,
   getConversationById,

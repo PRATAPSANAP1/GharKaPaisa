@@ -34,8 +34,10 @@ export function maskSensitiveData(text) {
 export default function MessengerView({ initialAppId = null, readOnly = false, targetUserId = null }) {
   const { user } = useAuthStore();
 
+  const isSuperAdmin = (user?.role || '').toUpperCase() === 'SUPER_ADMIN';
+
   const isSuperAdminOrSharad = 
-    (user?.role || '').toUpperCase() === 'SUPER_ADMIN' ||
+    isSuperAdmin ||
     (user?.full_name || '').toLowerCase().includes('sharad yohesa') ||
     (user?.full_name || '').toLowerCase().includes('sharad') ||
     (user?.email || '').toLowerCase().includes('sharad');
@@ -49,6 +51,38 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
+
+  // Edit Group Name State (Super Admin Only)
+  const [showEditGroupNameModal, setShowEditGroupNameModal] = useState(false);
+  const [editingGroupNameText, setEditingGroupNameText] = useState('');
+  const [savingGroupName, setSavingGroupName] = useState(false);
+
+  const handleOpenEditGroupName = () => {
+    if (!activeConv || !isSuperAdmin) return;
+    setEditingGroupNameText(activeConv.name || '');
+    setShowEditGroupNameModal(true);
+  };
+
+  const handleSaveGroupName = async (e) => {
+    e?.preventDefault();
+    if (!activeConv || !editingGroupNameText.trim() || !isSuperAdmin) return;
+    setSavingGroupName(true);
+    try {
+      const res = await api.put(`/messenger/conversations/${activeConv.id}/name`, {
+        name: editingGroupNameText.trim()
+      });
+      if (res.data?.success) {
+        const updatedName = res.data.data?.name || editingGroupNameText.trim();
+        setActiveConv(prev => prev ? { ...prev, name: updatedName } : prev);
+        setConversations(prev => prev.map(c => c.id === activeConv.id ? { ...c, name: updatedName } : c));
+        setShowEditGroupNameModal(false);
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update group name.');
+    } finally {
+      setSavingGroupName(false);
+    }
+  };
 
   // Modals & Popups
   const [showNewChatModal, setShowNewChatModal] = useState(false);
@@ -996,9 +1030,21 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   </div>
 
                   <div style={{ minWidth: 0 }}>
-                    <h3 style={{ margin: 0, fontSize: isMobile ? '14px' : '15.5px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: isMobile ? '120px' : '220px' }}>
+                    <h3 style={{ margin: 0, fontSize: isMobile ? '14px' : '15.5px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: isMobile ? '120px' : '220px' }}>
                       {getConvTitle(activeConv)}
                       {activeConv.is_pinned && <FaThumbtack size={10} color="#2563EB" title="Pinned Chat" />}
+                      {activeConv.conversation_type === 'GROUP' && isSuperAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditGroupName();
+                          }}
+                          title="Edit Group Name (Super Admin Only)"
+                          style={{ background: 'transparent', border: 'none', color: '#2563EB', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                        >
+                          <FaEdit size={13} />
+                        </button>
+                      )}
                     </h3>
                     <span style={{ fontSize: isMobile ? '11px' : '12px', color: getActiveConvStatus(activeConv).isOnline ? '#22C55E' : '#64748B', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', maxWidth: isMobile ? '120px' : '220px' }}>
                       {getActiveConvStatus(activeConv).text}
@@ -1096,6 +1142,18 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       </div>
                       {activeConv.conversation_type === 'GROUP' ? (
                         <>
+                          {isSuperAdmin && (
+                            <div
+                              onClick={() => {
+                                handleOpenEditGroupName();
+                                setShowMoreMenu(false);
+                              }}
+                              style={{ padding: '10px 16px', fontSize: '13px', color: '#2563EB', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700 }}
+                            >
+                              <FaEdit size={13} color="#2563EB" />
+                              <span>Edit Group Name</span>
+                            </div>
+                          )}
                           <div
                             onClick={handleClearChat}
                             style={{ padding: '10px 16px', fontSize: '13px', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', borderTop: '1px solid #F1F5F9' }}
@@ -1177,6 +1235,10 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
                     {filteredMessages.map((msg) => {
                       if (msg.message_type === 'SYSTEM') {
+                        const sysTxt = (msg.message_text || '').toLowerCase();
+                        if (sysTxt.includes('added') || sysTxt.includes('removed') || sysTxt.includes('left') || sysTxt.includes('joined')) {
+                          return null;
+                        }
                         return (
                           <div key={msg.id} style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
                             <span style={{
@@ -1209,22 +1271,26 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                         {!isMe && (
                           <span 
                             onClick={() => {
-                              if (isSuperAdminOrSharad) {
+                              if (isSuperAdmin) {
                                 openUserProfile(msg);
                               }
                             }}
-                            title={isSuperAdminOrSharad ? "Click to view profile details" : "Member"}
-                            style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB', marginBottom: '3px', marginLeft: '4px', cursor: isSuperAdminOrSharad ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            title={isSuperAdmin ? "Click to view profile details" : "Member"}
+                            style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB', marginBottom: '3px', marginLeft: '4px', cursor: isSuperAdmin ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                           >
                             <FaUserCircle size={11} /> {
-                              isSuperAdminOrSharad
-                                ? (msg.sender_name || 'Member')
-                                : (() => {
-                                    const memberIdx = groupMembers.findIndex(gm => 
-                                      String(gm.user_id || gm.id).toLowerCase() === String(msg.sender_id || msg.user_id).toLowerCase()
-                                    );
-                                    return memberIdx !== -1 ? `User ${memberIdx + 1}` : (msg.sender_name ? 'User' : 'Member');
-                                  })()
+                              (activeConv?.conversation_type === 'GROUP' || activeConv?.conversation_type === 'DEPARTMENT')
+                                ? (isSuperAdmin
+                                    ? (msg.sender_name || 'Member')
+                                    : (() => {
+                                        const memberIdx = groupMembers.findIndex(gm => 
+                                          String(gm.user_id || gm.id).toLowerCase() === String(msg.sender_id || msg.user_id).toLowerCase()
+                                        );
+                                        return memberIdx !== -1 ? `User ${memberIdx + 1}` : 'User';
+                                      })())
+                                : (isSuperAdminOrSharad
+                                    ? (msg.sender_name || 'Member')
+                                    : (msg.sender_partner_code || msg.sender_employee_code || 'Member'))
                             }
                           </span>
                         )}
@@ -2045,8 +2111,20 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 <FaUsers size={32} />
               </div>
 
-              <h2 style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: 800, color: '#FFFFFF' }}>
+              <h2 style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                 {getConvTitle(activeConv)}
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => {
+                      setShowGroupMembersModal(false);
+                      handleOpenEditGroupName();
+                    }}
+                    title="Edit Group Name (Super Admin Only)"
+                    style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#FFFFFF', width: '28px', height: '28px', borderRadius: '50%', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <FaEdit size={13} />
+                  </button>
+                )}
               </h2>
 
               {activeConv.description && (
@@ -2265,6 +2343,65 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── MODAL: EDIT GROUP NAME (SUPER ADMIN ONLY) ── */}
+      {showEditGroupNameModal && isSuperAdmin && activeConv && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 99999, padding: isMobile ? '16px' : '24px'
+        }}>
+          <form onSubmit={handleSaveGroupName} style={{
+            width: isMobile ? '100%' : '400px', maxWidth: '420px', background: '#FFFFFF', borderRadius: '20px', padding: '24px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '16px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaEdit color="#2563EB" size={16} /> Edit Group Name
+              </h3>
+              <button type="button" onClick={() => setShowEditGroupNameModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748B', fontSize: '16px' }}>✕</button>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                New Group Name *
+              </label>
+              <input
+                type="text"
+                value={editingGroupNameText}
+                onChange={(e) => setEditingGroupNameText(e.target.value)}
+                placeholder="Enter new group name..."
+                autoFocus
+                style={{
+                  width: '100%', boxSizing: 'border-box', padding: '10px 14px', background: '#F8FAFC',
+                  border: '1.5px solid #2563EB', borderRadius: '10px', outline: 'none', fontSize: '14px', fontWeight: 600
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setShowEditGroupNameModal(false)}
+                style={{ padding: '8px 16px', borderRadius: '10px', background: '#F1F5F9', color: '#475569', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingGroupName || !editingGroupNameText.trim()}
+                style={{
+                  padding: '8px 20px', borderRadius: '10px', background: '#2563EB', color: '#FFFFFF',
+                  border: 'none', fontWeight: 800, cursor: 'pointer', fontSize: '13px',
+                  opacity: (savingGroupName || !editingGroupNameText.trim()) ? 0.6 : 1
+                }}
+              >
+                {savingGroupName ? 'Saving...' : 'Save Name'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

@@ -695,14 +695,26 @@ export default function ManageAdminProducts() {
 
       {/* PRODUCT LIST TABLE */}
       <div style={{ background: C.card, borderRadius: '20px', border: `1px solid ${C.border}`, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        {(() => {
+          const isLoanOrEmi = activeCategory === 'loan_on_credit_card' || activeCategory === 'smart_emi';
+          return (
         <table style={{ width: '100%', minWidth: '950px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
           <thead>
             <tr style={{ background: isDark ? C.bgSecondary : '#F8FAFC', borderBottom: `1px solid ${C.border}` }}>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Image</th>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Product Name</th>
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Bank</th>
-              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Type</th>
-              <th style={{ padding: '14px 16px', fontWeight: 800 }}>Fee</th>
+              {isLoanOrEmi ? (
+                <>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Interest Rate</th>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Tenure</th>
+                </>
+              ) : (
+                <>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Type</th>
+                  <th style={{ padding: '14px 16px', fontWeight: 800 }}>Fee</th>
+                </>
+              )}
               <th style={{ padding: '14px 16px', fontWeight: 800 }}>Status</th>
               <th style={{ padding: '14px 16px', fontWeight: 800, textAlign: 'center' }}>Actions</th>
             </tr>
@@ -711,7 +723,7 @@ export default function ManageAdminProducts() {
             {loading ? (
               <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>Loading products...</td></tr>
             ) : filteredProducts.length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products match your selected filters. Click <strong>Reset Filters</strong> or add a new card!</td></tr>
+              <tr><td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: C.textLight }}>No products match your selected filters. Click <strong>Reset Filters</strong> or add a new product!</td></tr>
             ) : (
               paginatedProducts.map(prod => (
                 <tr key={prod.id} style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -735,15 +747,24 @@ export default function ManageAdminProducts() {
                         />
                       ) : null;
                     })()}
-                    <span style={{ fontSize: '20px', display: (prod.image_url || prod.logo || prod.image || prod.bank_logo) ? 'none' : 'inline-block' }}>💳</span>
+                    <span style={{ fontSize: '20px', display: (prod.image_url || prod.logo || prod.image || prod.bank_logo) ? 'none' : 'inline-block' }}>{isLoanOrEmi ? '🏦' : '💳'}</span>
                   </td>
                   <td style={{ padding: '14px 16px', fontWeight: 800, color: C.text }}>
                     {prod.name}
                     {prod.badge && <span style={{ marginLeft: '8px', fontSize: '10px', padding: '2px 6px', background: '#F59E0B20', color: '#D97706', borderRadius: '4px', fontWeight: 800 }}>{prod.badge}</span>}
                   </td>
                   <td style={{ padding: '14px 16px', fontWeight: 700, color: C.teal }}>{prod.bank_name || 'Generic'}</td>
-                  <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 700 }}>{prod.sub_category || 'Core Cards'}</td>
-                  <td style={{ padding: '14px 16px', fontWeight: 700 }}>{prod.is_lifetime_free ? <span style={{ color: '#10B981' }}>Lifetime Free</span> : (prod.annual_fee || '₹500')}</td>
+                  {isLoanOrEmi ? (
+                    <>
+                      <td style={{ padding: '14px 16px', fontWeight: 700, color: '#6366F1' }}>{prod.interest_rate || '—'}</td>
+                      <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 700 }}>{prod.time_period || '—'}</td>
+                    </>
+                  ) : (
+                    <>
+                      <td style={{ padding: '14px 16px', fontSize: '12px', fontWeight: 700 }}>{prod.sub_category || 'Core Cards'}</td>
+                      <td style={{ padding: '14px 16px', fontWeight: 700 }}>{prod.is_lifetime_free ? <span style={{ color: '#10B981' }}>Lifetime Free</span> : (prod.annual_fee || '₹500')}</td>
+                    </>
+                  )}
                   <td style={{ padding: '14px 16px' }}>
                     <button
                       onClick={() => toggleStatus(prod)}
@@ -771,6 +792,8 @@ export default function ManageAdminProducts() {
             )}
           </tbody>
         </table>
+          );
+        })()}
       </div>
 
       {/* Pagination */}
@@ -894,14 +917,30 @@ export default function ManageAdminProducts() {
                   </div>
 
                   <div>
-                    <label style={S.label}>{activeCategory === 'loans' ? 'Loan Sub-Category *' : activeCategory === 'insurance' ? 'Insurance Type *' : 'Credit Card Type *'}</label>
+                    <label style={S.label}>{activeCategory === 'loans' ? 'Loan Sub-Category *' : activeCategory === 'insurance' ? 'Insurance Type *' : activeCategory === 'loan_on_credit_card' ? 'Loan Type *' : activeCategory === 'smart_emi' ? 'EMI Type *' : 'Credit Card Type *'}</label>
                     <select
                       required
                       value={form.sub_category}
                       onChange={(e) => setForm({ ...form, sub_category: e.target.value })}
                       style={{ ...S.input, height: '42px', fontWeight: 700 }}
                     >
-                      {activeCategory === 'loans' ? (
+                      {activeCategory === 'loan_on_credit_card' ? (
+                        <>
+                          <option value="Loan on Credit Card">Loan on Credit Card</option>
+                          <option value="Insta Loan">Insta Loan</option>
+                          <option value="Jumbo Loan">Jumbo Loan</option>
+                          <option value="Cash on Card">Cash on Card</option>
+                          <option value="Encash">Encash</option>
+                        </>
+                      ) : activeCategory === 'smart_emi' ? (
+                        <>
+                          <option value="EMI on Credit Card">EMI on Credit Card</option>
+                          <option value="Smart EMI on Credit Card">Smart EMI on Credit Card</option>
+                          <option value="Flexipay">Flexipay</option>
+                          <option value="Balance Transfer EMI">Balance Transfer EMI</option>
+                          <option value="No Cost EMI">No Cost EMI</option>
+                        </>
+                      ) : activeCategory === 'loans' ? (
                         <>
                           <option value="Loan on Credit Card">Loan on Credit Card</option>
                           <option value="Smart EMI on Credit Card">Smart EMI on Credit Card</option>

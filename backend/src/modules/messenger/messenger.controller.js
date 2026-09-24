@@ -316,11 +316,23 @@ async function removeGroupMember(req, res, next) {
   }
 }
 
+async function updateGroupName(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const updated = await service.updateGroupName(id, name, req.user.id, req.user.role);
+    return success(res, updated, 'Group name updated successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getConversations,
   createDirectChat,
   createApplicationChat,
   createGroupChat,
+  updateGroupName,
   getConversation,
   getMessages,
   sendMessage,
