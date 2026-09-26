@@ -743,49 +743,41 @@ async function seedSmartEmiAndLoccProducts() {
     const featuresJson = JSON.stringify(prod.features || []);
 
     try {
-      const res = await query(`
-        INSERT INTO products (
-          bank_id, name, category, sub_category, description, short_description,
-          annual_fee, joining_fee, interest_rate, time_period, badge,
-          features, eligibility_criteria, is_active, status, public_visible, partner_visible,
-          slug, commission_type, commission_value
-        ) VALUES (
-          $1, $2, $3::product_category, $4, $5, $6,
-          $7, $8, $9, $10, $11,
-          $12::jsonb, $13, true, 'Active', true, true,
-          $14, 'fixed', 500
-        )
-        ON CONFLICT (bank_id, name) DO UPDATE SET
-          category = EXCLUDED.category,
-          sub_category = EXCLUDED.sub_category,
-          description = EXCLUDED.description,
-          short_description = EXCLUDED.short_description,
-          annual_fee = EXCLUDED.annual_fee,
-          joining_fee = EXCLUDED.joining_fee,
-          interest_rate = EXCLUDED.interest_rate,
-          time_period = EXCLUDED.time_period,
-          badge = EXCLUDED.badge,
-          features = EXCLUDED.features,
-          eligibility_criteria = EXCLUDED.eligibility_criteria,
-          slug = EXCLUDED.slug,
-          is_active = true,
-          status = 'Active'
-        RETURNING (xmin = 0) AS is_insert
-      `, [
-        targetBankId, prod.name, prod.category, prod.sub_category, prod.description, prod.short_description,
-        prod.annual_fee, prod.joining_fee, prod.interest_rate, prod.time_period, prod.badge,
-        featuresJson, prod.eligibility_criteria, prodSlug
-      ]);
+      // Look up existing product by slug OR (bank_id AND name) OR name to prevent unique constraint conflict
+      const { rows: existingProds } = await query(
+        `SELECT id FROM products WHERE slug = $1 OR (bank_id = $2 AND LOWER(name) = LOWER($3)) OR LOWER(name) = LOWER($3) LIMIT 1`,
+        [prodSlug, targetBankId, prod.name]
+      );
 
-      if (res.rows[0]?.is_insert) {
-        insertedCount++;
-      } else {
+      if (existingProds.length > 0) {
+        const existingId = existingProds[0].id;
+        await query(`
+          UPDATE products SET
+            bank_id = $1,
+            name = $2,
+            category = $3,
+            sub_category = $4,
+            description = $5,
+            short_description = $6,
+            annual_fee = $7,
+            joining_fee = $8,
+            interest_rate = $9,
+            time_period = $10,
+            badge = $11,
+            features = $12::jsonb,
+            eligibility_criteria = $13,
+            slug = $14,
+            is_active = true,
+            status = 'Active'
+          WHERE id = $15
+        `, [
+          targetBankId, prod.name, prod.category, prod.sub_category, prod.description, prod.short_description,
+          prod.annual_fee, prod.joining_fee, prod.interest_rate, prod.time_period, prod.badge,
+          featuresJson, prod.eligibility_criteria, prodSlug, existingId
+        ]);
         updatedCount++;
-      }
-      logger.debug(`  Saved Product: ${prod.name} (${prod.category})`);
-    } catch (err) {
-      // Fallback query without enum cast if enum cast fails
-      try {
+        logger.debug(`  Updated Product: ${prod.name} (${prod.category})`);
+      } else {
         await query(`
           INSERT INTO products (
             bank_id, name, category, sub_category, description, short_description,
@@ -798,31 +790,16 @@ async function seedSmartEmiAndLoccProducts() {
             $12::jsonb, $13, true, 'Active', true, true,
             $14, 'fixed', 500
           )
-          ON CONFLICT (bank_id, name) DO UPDATE SET
-            category = EXCLUDED.category,
-            sub_category = EXCLUDED.sub_category,
-            description = EXCLUDED.description,
-            short_description = EXCLUDED.short_description,
-            annual_fee = EXCLUDED.annual_fee,
-            joining_fee = EXCLUDED.joining_fee,
-            interest_rate = EXCLUDED.interest_rate,
-            time_period = EXCLUDED.time_period,
-            badge = EXCLUDED.badge,
-            features = EXCLUDED.features,
-            eligibility_criteria = EXCLUDED.eligibility_criteria,
-            slug = EXCLUDED.slug,
-            is_active = true,
-            status = 'Active'
         `, [
           targetBankId, prod.name, prod.category, prod.sub_category, prod.description, prod.short_description,
           prod.annual_fee, prod.joining_fee, prod.interest_rate, prod.time_period, prod.badge,
           featuresJson, prod.eligibility_criteria, prodSlug
         ]);
-        updatedCount++;
-        logger.debug(`  Saved Product (fallback): ${prod.name}`);
-      } catch (fallbackErr) {
-        logger.error(`  ❌ Error saving product ${prod.name}:`, fallbackErr.message);
+        insertedCount++;
+        logger.debug(`  Inserted Product: ${prod.name} (${prod.category})`);
       }
+    } catch (err) {
+      logger.error(`  ❌ Error saving product ${prod.name}:`, err.message);
     }
   }
 
