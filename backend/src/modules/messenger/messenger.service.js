@@ -283,7 +283,7 @@ async function getConversationDetails(conversationId, userId, userRole = null) {
   return { ...conv, participants };
 }
 
-async function getMessages(conversationId, userId, limit = 50, offset = 0, userRole = null) {
+async function getMessages(conversationId, userId, limit = 5000, offset = 0, userRole = null) {
   const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
   if (!isSuperAdmin) {
     const isPart = await repo.isParticipant(conversationId, userId);
@@ -440,7 +440,7 @@ async function getAdminAuditConversations(targetUserId) {
 }
 
 async function getAdminAuditMessages(conversationId) {
-  const messages = await repo.getMessages(conversationId, 100, 0);
+  const messages = await repo.getMessages(conversationId, null, 5000, 0);
   return messages.map(m => ({
     ...m,
     message_text: maskSensitiveData(m.message_text)

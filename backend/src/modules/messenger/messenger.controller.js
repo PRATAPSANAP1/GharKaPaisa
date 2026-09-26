@@ -72,7 +72,7 @@ async function getMessages(req, res, next) {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const limit = parseInt(req.query.limit || 50, 10);
+    const limit = Math.min(parseInt(req.query.limit || 5000, 10), 5000);
     const offset = parseInt(req.query.offset || 0, 10);
     const messages = await service.getMessages(id, userId, limit, offset, req.user.role);
     return success(res, messages, 'Messages retrieved');

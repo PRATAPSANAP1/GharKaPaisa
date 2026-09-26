@@ -406,10 +406,12 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       let res;
       if (readOnly && targetUserId) {
         res = await api.get(`/messenger/admin/messages/${convId}`, {
-          params: { target_user_id: targetUserId }
+          params: { target_user_id: targetUserId, limit: 5000 }
         });
       } else {
-        res = await api.get(`/messenger/conversations/${convId}/messages`);
+        res = await api.get(`/messenger/conversations/${convId}/messages`, {
+          params: { limit: 5000 }
+        });
       }
       if (res.data?.success) {
         setMessages(res.data.data || []);

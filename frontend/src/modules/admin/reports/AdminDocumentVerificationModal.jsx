@@ -177,6 +177,7 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     application?.product_name || application?.product?.name || '',
     bankId
   );
+  const hasBankAppNumber = Boolean((bankRefNumber || application?.bank_application_number || application?.bank_ref_number || '').trim());
 
   const [ipaStage, setIpaStage] = useState(sanitizeVal(application?.ipa_stage) || sanitizeVal(application?.physical_details?.ipa_stage) || 'None');
   const [kycStage, setKycStage] = useState(sanitizeVal(application?.kyc_stage) || sanitizeVal(application?.physical_details?.kyc_stage) || 'None');
@@ -581,6 +582,8 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
           in_process_stage: inProcessStage || 'None',
           bank_current_lead_status: bankCurrentLeadStatus || 'None',
           bank_lead_status: bankCurrentLeadStatus || 'None',
+          bank_ref_number: bankRefNumber,
+          bank_application_number: bankRefNumber,
           app_file_generated: appFileGenerated,
           digital_journey_url: digitalJourneyUrl || undefined,
           status: targetStatus,
@@ -663,6 +666,9 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
             </div>
             <p style={{ fontSize: '12px', color: '#64748b', margin: '4px 0 0', wordBreak: 'break-word' }}>
               Customer: <strong>{customerName || application.customer_name || 'Customer'}</strong> | Mobile: {(isPanChecker || isRemarkOperator) ? ((customerMobile || application.customer_mobile || application.mobile || '').length >= 6 ? `${(customerMobile || application.customer_mobile || application.mobile).slice(0, (customerMobile || application.customer_mobile || application.mobile).length - 6)}******` : '******') : (customerMobile || application.customer_mobile)} | Bank: {application.bank_name || application.bank_code || 'Partner Bank'}
+              {(isFinalStatusOperator || isOpsOrAdmin) && (
+                <> | Bank App No: <strong style={{ color: hasBankAppNumber ? '#0284c7' : '#94a3b8' }}>{bankRefNumber || application?.bank_application_number || application?.bank_ref_number || 'Not Filled'}</strong> | PAN: <strong style={{ color: hasBankAppNumber ? '#16a34a' : '#dc2626' }}>{hasBankAppNumber ? (panNumber || application.pan_number || application.pan || 'N/A') : '🔒 Hidden (Fill Bank App No Required)'}</strong></>
+              )}
             </p>
             {(isOpsOrAdmin || isSuperAdminOrAdmin) && (application.sales_operator_code || application.pan_checker_code || application.remark_operator_code) && (
               <div style={{ display: 'flex', gap: '12px', fontSize: '11px', fontWeight: 700, color: '#475569', marginTop: '6px', background: '#f1f5f9', padding: '3px 10px', borderRadius: '6px' }}>
@@ -1212,6 +1218,122 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                 >
                   <CheckCircle size={16} /> Save & Complete Remark
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Final Status Operator Workspace Card */}
+          {isFinalStatusOperator && (
+            <div style={{
+              background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+              border: '1px solid #86efac',
+              borderRadius: '14px',
+              padding: '16px 20px',
+              marginBottom: '20px',
+              boxShadow: '0 4px 12px rgba(22, 163, 74, 0.08)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ background: '#16a34a', color: '#fff', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                    <Building2 size={18} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#14532d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Final Status Operator Workspace
+                    </h4>
+                    <span style={{ fontSize: '11px', color: '#166534', fontWeight: 600 }}>
+                      Process bank remarks, stage verification &amp; final status updates
+                    </span>
+                  </div>
+                </div>
+
+                {/* Show Remark & Final Both Buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('remark')}
+                    style={{
+                      padding: '9px 18px',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      border: activeTab === 'remark' ? '2px solid #ea580c' : '1px solid #cbd5e1',
+                      background: activeTab === 'remark' ? '#ea580c' : '#ffffff',
+                      color: activeTab === 'remark' ? '#ffffff' : '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: activeTab === 'remark' ? '0 4px 12px rgba(234, 88, 12, 0.25)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <Sliders size={16} /> Remark
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('final')}
+                    style={{
+                      padding: '9px 18px',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      border: activeTab === 'final' ? '2px solid #16a34a' : '1px solid #cbd5e1',
+                      background: activeTab === 'final' ? '#16a34a' : '#ffffff',
+                      color: activeTab === 'final' ? '#ffffff' : '#334155',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: activeTab === 'final' ? '0 4px 12px rgba(22, 163, 74, 0.25)' : 'none',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <Building2 size={16} /> Final
+                  </button>
+                </div>
+              </div>
+
+              {/* Metadata & Conditional PAN Box */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '12px',
+                background: '#ffffff',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                border: '1px solid #bbf7d0'
+              }}>
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', display: 'block', textTransform: 'uppercase' }}>BANK NAME</span>
+                  <strong style={{ fontSize: '13px', color: '#0f172a', fontWeight: 800 }}>{application.bank_name || application.bank_code || 'Partner Bank'}</strong>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', display: 'block', textTransform: 'uppercase' }}>BANK APPLICATION NO.</span>
+                  <strong style={{ fontSize: '13px', color: bankRefNumber ? '#0284c7' : '#94a3b8', fontFamily: 'monospace', fontWeight: 800 }}>
+                    {bankRefNumber || application?.bank_application_number || application?.bank_ref_number || 'Not Filled Yet'}
+                  </strong>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', display: 'block', textTransform: 'uppercase' }}>PAN NUMBER</span>
+                  {hasBankAppNumber ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#dcfce7', color: '#15803d', padding: '3px 10px', borderRadius: '6px', fontWeight: 900, fontFamily: 'monospace', fontSize: '13px', border: '1px solid #86efac' }}>
+                      <CheckCircle size={14} /> {panNumber || application.pan_number || application.pan || 'N/A'}
+                    </span>
+                  ) : (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fef2f2', color: '#dc2626', padding: '3px 10px', borderRadius: '6px', fontWeight: 800, fontSize: '12px', border: '1px solid #fecaca' }}>
+                      <Lock size={12} /> Fill Bank App No. to reveal PAN
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', display: 'block', textTransform: 'uppercase' }}>CUSTOMER MOBILE</span>
+                  <strong style={{ fontSize: '13px', color: '#0f172a', fontWeight: 800 }}>{customerMobile || application.customer_mobile || application.mobile || 'N/A'}</strong>
+                </div>
               </div>
             </div>
           )}
@@ -2538,6 +2660,41 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
+                  
+                  {/* Quick Context Summary for Final Tab */}
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '10px 14px',
+                    marginBottom: '4px',
+                    display: 'flex',
+                    justify: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                    fontSize: '12.5px'
+                  }}>
+                    <div>
+                      <span style={{ color: '#64748b', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>Bank Application No: </span>
+                      <strong style={{ color: bankRefNumber ? '#0284c7' : '#94a3b8', fontFamily: 'monospace' }}>
+                        {bankRefNumber || application?.bank_application_number || application?.bank_ref_number || 'Not Filled Yet'}
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748b', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>PAN Number: </span>
+                      {hasBankAppNumber ? (
+                        <strong style={{ color: '#16a34a', fontFamily: 'monospace', background: '#dcfce7', padding: '2px 8px', borderRadius: '4px', border: '1px solid #86efac' }}>
+                          {panNumber || application.pan_number || application.pan || 'N/A'}
+                        </strong>
+                      ) : (
+                        <span style={{ color: '#dc2626', fontWeight: 700, fontSize: '11.5px', background: '#fef2f2', padding: '2px 8px', borderRadius: '4px', border: '1px solid #fecaca' }}>
+                          🔒 Fill Bank App No. to reveal PAN
+                        </span>
+                      )}
+                    </div>
+                  </div>
                   
                   {isSmartEmi ? (
                     <>
