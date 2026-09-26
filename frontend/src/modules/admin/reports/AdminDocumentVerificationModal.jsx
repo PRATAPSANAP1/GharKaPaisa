@@ -172,6 +172,17 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const isSbi = bankId === 'e7c2c604-139d-4fcf-a87c-695633535a02' || combinedBankText.includes('SBI') || combinedBankText.includes('STATE BANK');
   const isTataCobrandHdfc = bankId === '1eacfa67-1187-48c7-adde-8a6edcfe9969' || combinedBankText.includes('TATA CO-BRAND HDFC') || combinedBankText.includes('TATA CO BRAND HDFC') || (combinedBankText.includes('TATA') && combinedBankText.includes('HDFC'));
   const isHdfcBank = (bankId === 'f0b5742d-f04d-4a91-b162-6009ddf6e345' || (combinedBankText.includes('HDFC') && !combinedBankText.includes('TATA'))) && !isTataCobrandHdfc;
+
+  const resolveBankRefNo = (rawRef, sysNo) => {
+    const s = sanitizeVal(rawRef);
+    if (!s || s === sysNo || s.toUpperCase() === 'NA' || s.toUpperCase() === 'N/A') return '';
+    return s;
+  };
+  const [bankRefNumber, setBankRefNumber] = useState(resolveBankRefNo(
+    application?.bank_application_number || application?.bank_ref_number || application?.physical_details?.bank_ref_number || application?.physical_details?.bank_application_number,
+    application?.app_number
+  ));
+
   const bankAppConfig = getBankAppNumberConfig(
     application?.bank_name || application?.bank?.name || application?.bank_code || '',
     application?.product_name || application?.product?.name || '',
@@ -208,15 +219,6 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
   const [appFileGenerated, setAppFileGenerated] = useState(sanitizeVal(application?.app_file_generated) || sanitizeVal(application?.appfile_generated) || sanitizeVal(application?.physical_details?.app_file_generated) || 'None');
   const [declineReason, setDeclineReason] = useState(sanitizeVal(application?.decline_reason) || sanitizeVal(application?.physical_details?.decline_reason));
   const [eligibleReQd, setEligibleReQd] = useState(sanitizeVal(application?.eligible_reqd) || sanitizeVal(application?.physical_details?.eligible_reqd) || 'No');
-  const resolveBankRefNo = (rawRef, sysNo) => {
-    const s = sanitizeVal(rawRef);
-    if (!s || s === sysNo || s.toUpperCase() === 'NA' || s.toUpperCase() === 'N/A') return '';
-    return s;
-  };
-  const [bankRefNumber, setBankRefNumber] = useState(resolveBankRefNo(
-    application?.bank_application_number || application?.bank_ref_number || application?.physical_details?.bank_ref_number || application?.physical_details?.bank_application_number,
-    application?.app_number
-  ));
   const categoryStr = `${application?.category || ''} ${application?.product_type || ''} ${application?.product_category || ''} ${application?.lead_type || ''} ${application?.card_name || ''} ${application?.product_name || ''} ${application?.product?.name || ''}`.toLowerCase();
   
   const isSmartEmi = categoryStr.includes('smart_emi') || categoryStr.includes('smart emi');
