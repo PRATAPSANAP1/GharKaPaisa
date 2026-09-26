@@ -28,14 +28,7 @@ export default function PrivacyPolicy() {
           </div>
         </div>
 
-        {/* Intro Alert Box */}
-        <div style={{ 
-          background: isDark ? '#1e293b' : '#f0fdf4', border: `1px solid ${C.teal}30`, 
-          borderRadius: '16px', padding: '20px', color: C.textMid, fontSize: '14px', lineHeight: 1.6, marginBottom: '24px' 
-        }}>
-          GharKaPaisa respects your privacy and is committed to protecting the personal information you provide while using our website and services.<br /><br />
-          This Privacy Policy explains what information we collect, why we collect it, how we use it, and how we protect it.
-        </div>
+
 
         {/* Policy Content Card */}
         <div style={{ 
