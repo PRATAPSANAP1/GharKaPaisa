@@ -2,6 +2,10 @@
 
 GharKaPaisa is a financial services management platform providing tools for lead processing, partner onboarding, and service management.
 
+## Developer Documentation
+
+For complete architectural details, module mapping, file locations, database schema, roles, and workflows, refer to the [Developer Guide](DEVELOPER_GUIDE.md).
+
 ## Tech Stack
 
 - **Frontend**: React 19, Vite, React Router, Zustand, CSS
