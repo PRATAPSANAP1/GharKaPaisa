@@ -81,7 +81,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
     JOIN conversations c ON c.id = cp.conversation_id
     LEFT JOIN applications a ON a.id = c.application_id
     WHERE ${whereClause}
-    ORDER BY cp.is_pinned DESC, c.last_message_at DESC NULLS LAST, c.updated_at DESC
+    ORDER BY cp.is_pinned DESC, COALESCE(c.last_message_at, c.updated_at, c.created_at) DESC
   `;
 
   const { rows } = await query(sql, params);

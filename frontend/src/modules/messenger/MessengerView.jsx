@@ -341,6 +341,20 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
   const isMobile = winW < 768;
 
+  // Helper to sort conversations: pinned conversations at top, followed by latest message/update timestamp descending
+  const sortConversationsList = (list = []) => {
+    return [...list].sort((a, b) => {
+      const isPinnedA = Boolean(a.is_pinned);
+      const isPinnedB = Boolean(b.is_pinned);
+      if (isPinnedA !== isPinnedB) {
+        return isPinnedA ? -1 : 1;
+      }
+      const timeA = new Date(a.last_message_at || a.updated_at || a.created_at || 0).getTime();
+      const timeB = new Date(b.last_message_at || b.updated_at || b.created_at || 0).getTime();
+      return timeB - timeA;
+    });
+  };
+
   // 1. Fetch Conversations
   const fetchConversations = async (showLoader = false) => {
     if (showLoader) setLoadingConvs(true);
@@ -356,7 +370,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
         });
       }
       if (res.data?.success) {
-        setConversations(res.data.data || []);
+        setConversations(sortConversationsList(res.data.data || []));
       }
     } catch (err) {
       console.error('Failed to load conversations:', err);
@@ -449,6 +463,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       attachments: attachments
     };
 
+    const nowIso = new Date().toISOString();
+    const msgSnippet = inputText.trim() || (attachments.length > 0 ? `📷 [${attachments.length} File Attachment]` : '');
+
     const tempMsg = {
       id: `temp-${Date.now()}`,
       sender_id: user?.id,
@@ -456,7 +473,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       message_text: inputText.trim(),
       message_type: attachments.length > 0 ? 'FILE' : 'TEXT',
       attachments: attachments,
-      created_at: new Date().toISOString(),
+      created_at: nowIso,
       reads: []
     };
     setMessages(prev => [...prev, tempMsg]);
@@ -464,6 +481,22 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     setAttachments([]);
     setShowEmojiPicker(false);
     setSending(true);
+
+    // Optimistically update conversation snippet & move to top of conversation list!
+    setConversations(prev => {
+      const updatedList = prev.map(c => {
+        if (c.id === activeConv.id) {
+          return {
+            ...c,
+            last_message_text: msgSnippet,
+            last_message_at: nowIso,
+            updated_at: nowIso
+          };
+        }
+        return c;
+      });
+      return sortConversationsList(updatedList);
+    });
 
     try {
       const res = await api.post('/messenger/messages', payload);
