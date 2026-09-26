@@ -41,7 +41,12 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
       c.application_id,
       CASE WHEN c.last_message_at >= NOW() - INTERVAL '48 hours' AND (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_id ELSE NULL END AS last_message_id,
       CASE WHEN c.last_message_at >= NOW() - INTERVAL '48 hours' AND (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_text ELSE NULL END AS last_message_text,
-      c.last_message_at,
+      COALESCE(
+        (SELECT MAX(m_max.created_at) FROM messages m_max WHERE m_max.conversation_id = c.id AND m_max.deleted_at IS NULL AND (cp.cleared_at IS NULL OR m_max.created_at > cp.cleared_at)),
+        c.last_message_at,
+        c.updated_at,
+        c.created_at
+      ) AS last_message_at,
       c.created_at,
       c.updated_at,
       cp.role AS participant_role,
@@ -81,7 +86,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
     JOIN conversations c ON c.id = cp.conversation_id
     LEFT JOIN applications a ON a.id = c.application_id
     WHERE ${whereClause}
-    ORDER BY cp.is_pinned DESC, COALESCE(c.last_message_at, c.updated_at, c.created_at) DESC
+    ORDER BY cp.is_pinned DESC, COALESCE((SELECT MAX(m_max.created_at) FROM messages m_max WHERE m_max.conversation_id = c.id AND m_max.deleted_at IS NULL AND (cp.cleared_at IS NULL OR m_max.created_at > cp.cleared_at)), c.last_message_at, c.updated_at, c.created_at) DESC
   `;
 
   const { rows } = await query(sql, params);
