@@ -434,7 +434,16 @@ export default function EmployeeLayout() {
                       notificationsList.map((notif) => (
                         <div
                           key={notif.id}
-                          onClick={() => {
+                          onClick={async () => {
+                            if (!notif.is_read) {
+                              try {
+                                await api.post('/notifications/read', { id: notif.id, ids: [notif.id] });
+                                setSystemUnreadCount(prev => Math.max(0, prev - 1));
+                                setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n));
+                              } catch (e) {
+                                /* silent */
+                              }
+                            }
                             if (notif.link || notif.redirect_url) {
                               setNotifMenuOpen(false);
                               navigate(notif.link || notif.redirect_url);

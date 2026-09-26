@@ -53,7 +53,7 @@ const getNotifications = async (req, res, next) => {
     const [count, data, unreadCount] = await Promise.all([
       query(`SELECT COUNT(*) FROM notifications ${where}`, values),
       query(`SELECT * FROM notifications ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`, [...values, limit, offset]),
-      query(`SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = false`, [req.user.id]),
+      query(`SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = false AND category != 'chat'`, [req.user.id]),
     ]);
 
     return success(res, {
@@ -76,12 +76,12 @@ const getUnreadNotifications = async (req, res, next) => {
   try {
     const { rows: unread } = await query(`
       SELECT * FROM notifications 
-      WHERE user_id = $1 AND is_read = false 
+      WHERE user_id = $1 AND is_read = false AND category != 'chat'
       ORDER BY created_at DESC LIMIT 5
     `, [req.user.id]);
     
     const { rows: [count] } = await query(`
-      SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = false
+      SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND is_read = false AND category != 'chat'
     `, [req.user.id]);
 
     return success(res, {

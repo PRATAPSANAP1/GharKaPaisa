@@ -436,6 +436,12 @@ async function markMessagesAsRead(conversationId, userId) {
     `UPDATE conversation_participants SET last_read_at = NOW() WHERE conversation_id = $1 AND user_id = $2`,
     [conversationId, userId]
   );
+
+  // Update system chat notifications for this user to is_read = true
+  await query(
+    `UPDATE notifications SET is_read = true, read_at = NOW() WHERE user_id = $1 AND category = 'chat' AND is_read = false`,
+    [userId]
+  );
 }
 
 /**
@@ -448,6 +454,7 @@ async function getUnreadCount(userId) {
     JOIN conversation_participants cp ON cp.conversation_id = m.conversation_id AND cp.user_id = $1 AND cp.left_at IS NULL
     LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
     WHERE m.sender_id != $1 AND mr.id IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
+      AND (cp.cleared_at IS NULL OR m.created_at > cp.cleared_at)
   `;
   const { rows } = await query(sql, [userId]);
   return rows[0]?.total_unread || 0;
