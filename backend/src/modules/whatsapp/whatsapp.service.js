@@ -12,10 +12,10 @@ async function getWhatsAppConfig() {
   const { rows } = await query(`SELECT * FROM whatsapp_settings LIMIT 1`);
   const dbConfig = rows[0] || {};
 
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_PHONE_NUMBER_ID || dbConfig.phone_number_id || '1374538775742787';
-  const wabaId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || process.env.META_WHATSAPP_BUSINESS_ACCOUNT_ID || dbConfig.waba_id || '2311979219210283';
-  const appId = process.env.WHATSAPP_APP_ID || process.env.META_APP_ID || dbConfig.meta_app_id || '38773576468924779';
-  const apiToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_TOKEN || 'EAInAXMQaCWsBSkt05fz69KHkv3ceHvMrIuQWWLysBVDxQbedMYJLQZB6A1uF2BEWDP6EhxyAcnk370SEIHFTWg6XYoyaomUGbFUxSjcRsZBG8FpcPhnB7h9lFO72t2LHleErKGogZCRlC9nSXE1XZCvemtvbKRenZAFku37ZBPZAVlzTbXVZAYkiXLG2EgxVHzcg2vguQJKLIOboDEjQdp3oqUoNPYhfPiTt28dDr4Mo2MvYDJVZCPLZBMuSZCxddcwH2E4Ufq7pyltBIKpYA01pGgOxwZDZD';
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_PHONE_NUMBER_ID || dbConfig.phone_number_id || null;
+  const wabaId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || process.env.META_WHATSAPP_BUSINESS_ACCOUNT_ID || dbConfig.waba_id || null;
+  const appId = process.env.WHATSAPP_APP_ID || process.env.META_APP_ID || dbConfig.meta_app_id || null;
+  const apiToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.META_WHATSAPP_TOKEN || dbConfig.access_token || null;
   const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN || dbConfig.webhook_verify_token || 'gharkapaisa_meta_webhook_secret_2026';
   const apiVersion = process.env.WHATSAPP_API_VERSION || process.env.META_API_VERSION || 'v19.0';
   const phoneNumber = process.env.WHATSAPP_PHONE_NUMBER || process.env.META_PHONE_NUMBER || dbConfig.phone_number || '+91 92703 19438';
@@ -29,8 +29,8 @@ async function getWhatsAppConfig() {
     apiToken,
     verifyToken,
     apiVersion,
-    isLive: Boolean(apiToken),
-    mockMode: !Boolean(apiToken),
+    isLive: Boolean(apiToken) && Boolean(phoneNumberId),
+    mockMode: !Boolean(apiToken) || !Boolean(phoneNumberId),
     lastWebhookAt: dbConfig.last_webhook_at
   };
 }
