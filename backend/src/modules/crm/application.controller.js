@@ -1876,7 +1876,7 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(to_jsonb(a)->>'last_operator_designation', ''), NULLIF(pad.last_operator_designation, '')) as last_operator_designation,
           COALESCE(NULLIF(to_jsonb(a)->>'last_operator_code', ''), NULLIF(pad.last_operator_code, '')) as last_operator_code,
           COALESCE(NULLIF(to_jsonb(a)->>'final_status_operator_code', ''), NULLIF(pad.final_status_operator_code, '')) as final_status_operator_code,
-          COALESCE((to_jsonb(a)->>'last_operated_at')::timestamptz, pad.last_operated_at) as last_operated_at,
+          COALESCE(NULLIF(to_jsonb(a)->>'last_operated_at', '')::timestamptz, pad.last_operated_at) as last_operated_at,
           COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(to_jsonb(a)->>'last_operator_code', ''), NULLIF(pad.last_operator_name, ''), 'Not Assigned') as currently_working_by,
           a.submitted_at,
           a.approved_at,
@@ -1934,9 +1934,9 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(to_jsonb(a)->>'pan_checker_code', ''), NULLIF(to_jsonb(pad)->>'pan_checker_code', '')) as pan_checker_code,
           COALESCE(NULLIF(to_jsonb(a)->>'remark_operator_code', ''), NULLIF(to_jsonb(pad)->>'remark_operator_code', '')) as remark_operator_code,
           COALESCE(NULLIF(to_jsonb(a)->>'backend_remark', ''), NULLIF(to_jsonb(pad)->>'backend_remark', '')) as backend_remark,
-          COALESCE((to_jsonb(a)->>'remark_updated')::boolean, FALSE) as remark_updated,
-          (to_jsonb(a)->>'remark_updated_by')::uuid as remark_updated_by,
-          (to_jsonb(a)->>'remark_updated_at')::timestamptz as remark_updated_at
+          COALESCE(NULLIF(to_jsonb(a)->>'remark_updated', '')::boolean, FALSE) as remark_updated,
+          NULLIF(to_jsonb(a)->>'remark_updated_by', '')::uuid as remark_updated_by,
+          NULLIF(to_jsonb(a)->>'remark_updated_at', '')::timestamptz as remark_updated_at
         FROM applications a
         LEFT JOIN leads l ON l.id = a.lead_id
         LEFT JOIN customers c ON c.id = a.customer_id
