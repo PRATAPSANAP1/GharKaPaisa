@@ -57,6 +57,27 @@ export default function SuperAdminWhatsApp() {
 
   // Quick Send Modal
   const [showSendModal, setShowSendModal] = useState(false);
+  const [modalInitialData, setModalInitialData] = useState({
+    recipientMobile: '',
+    recipientName: '',
+    applicationId: null,
+    leadId: null,
+    customerId: null
+  });
+
+  const openSendModalWithData = (data = {}) => {
+    setModalInitialData({
+      recipientMobile: data.recipient_mobile || data.mobile || '',
+      recipientName: data.recipient_name || data.name || '',
+      applicationId: data.application_number || data.application_id || data.app_number || null,
+      leadId: data.lead_id || null,
+      customerId: data.customer_id || null,
+      documentName: data.document_name || '',
+      documentUrl: data.document_url || '',
+      initialVariables: data.initial_variables || {}
+    });
+    setShowSendModal(true);
+  };
 
   useEffect(() => {
     fetchDashboardMetrics();
@@ -243,7 +264,7 @@ export default function SuperAdminWhatsApp() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
-            onClick={() => setShowSendModal(true)}
+            onClick={() => openSendModalWithData()}
             style={{
               padding: '10px 18px',
               borderRadius: '10px',
@@ -541,21 +562,42 @@ export default function SuperAdminWhatsApp() {
                         {m.created_at ? new Date(m.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '-'}
                       </td>
                       <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => setSelectedMessageDetails(m)}
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            background: '#EFF6FF',
-                            border: '1px solid #BFDBFE',
-                            color: '#2563EB',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          View
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                          <button
+                            onClick={() => setSelectedMessageDetails(m)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              background: '#EFF6FF',
+                              border: '1px solid #BFDBFE',
+                              color: '#2563EB',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={() => openSendModalWithData(m)}
+                            title="Send WhatsApp Message for this record"
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              background: '#ECFDF5',
+                              border: '1px solid #A7F3D0',
+                              color: '#047857',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <FaPaperPlane size={10} /> WhatsApp
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -691,9 +733,41 @@ export default function SuperAdminWhatsApp() {
           flexDirection: 'column',
           gap: '20px'
         }}>
-          <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0F172A' }}>
-            Delivery Success Rate & Reports
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0F172A' }}>
+                Delivery Success Rate & Performance Reports
+              </h3>
+              <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#64748B' }}>
+                Track delivery metrics and dispatch summary reports directly via WhatsApp
+              </p>
+            </div>
+
+            <button
+              onClick={() => openSendModalWithData({
+                recipient_name: 'Management / Stakeholder',
+                recipient_mobile: '',
+                document_name: `GharKaPaisa_WhatsApp_Delivery_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+                document_url: 'https://gharkapaisa.in/api/v1/whatsapp/delivery-report-download'
+              })}
+              style={{
+                padding: '9px 16px',
+                borderRadius: '10px',
+                background: '#059669',
+                color: '#FFFFFF',
+                fontWeight: 800,
+                fontSize: '13px',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
+              }}
+            >
+              <FaPaperPlane size={11} /> Share Report via WhatsApp
+            </button>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div style={{ background: '#F8FAFC', padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
@@ -1112,6 +1186,14 @@ export default function SuperAdminWhatsApp() {
       <SendWhatsAppModal
         isOpen={showSendModal}
         onClose={() => setShowSendModal(false)}
+        recipientMobile={modalInitialData.recipientMobile}
+        recipientName={modalInitialData.recipientName}
+        applicationId={modalInitialData.applicationId}
+        leadId={modalInitialData.leadId}
+        customerId={modalInitialData.customerId}
+        documentName={modalInitialData.documentName}
+        documentUrl={modalInitialData.documentUrl}
+        initialVariables={modalInitialData.initialVariables}
         onSuccess={() => {
           fetchDashboardMetrics();
           if (activeTab === 'messages') fetchMessages(1);
