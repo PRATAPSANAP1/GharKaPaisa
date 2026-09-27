@@ -11,7 +11,8 @@ const logger = require('../../config/logger');
 const getWorkingHoursConfig = async (req, res, next) => {
   try {
     await ensureWorkingHoursTables();
-    const { dateStr } = getKolkataTimeInfo();
+    const { dateStr, dayName } = getKolkataTimeInfo();
+    const { resolvePolicyForUser } = require('../auth/workingHours.service');
 
     // 1. Fetch global/default config
     const { rows: globalRows } = await query(`
@@ -60,16 +61,28 @@ const getWorkingHoursConfig = async (req, res, next) => {
       ORDER BY e.created_at DESC
     `, [dateStr]);
 
-    // Check if there is a global 'ALL' extension for today
-    const globalExtension = extensionsToday.find(e => e.apply_to === 'ALL');
+
+    // Clean up any corrupt legacy 10:00 AM rows in admin_working_hours
+    await query(`
+      UPDATE admin_working_hours 
+      SET end_time = '08:00 PM' 
+      WHERE UPPER(end_time) IN ('10:00 AM', '10:00AM', '10:00')
+    `).catch(() => {});
 
     // Combine users with effective parameters
-    const userList = users.map(u => {
+    const userList = await Promise.all(users.map(async u => {
       const assignedBanks = bankMap[u.id] || [];
       const bankDisplay = assignedBanks.length > 0 ? assignedBanks.join(', ') : 'All Banks / Platform';
       
-      const startTime = u.start_time || defaultConfig.start_time || '09:30 AM';
-      const baseEndTime = u.end_time || defaultConfig.end_time || '08:00 PM';
+      const policyRes = await resolvePolicyForUser(u, dayName);
+
+      let startTime = u.start_time || policyRes.startTime || defaultConfig.start_time || '09:30 AM';
+      let baseEndTime = u.end_time || policyRes.endTime || defaultConfig.end_time || '08:00 PM';
+
+      // Fix invalid 10:00 AM or < 1 hr shift error in baseEndTime
+      if (timeToMinutes(baseEndTime) <= timeToMinutes(startTime) + 60) {
+        baseEndTime = defaultConfig.end_time || '08:00 PM';
+      }
 
       const specificExt = extensionsToday.find(e => e.apply_to === 'SPECIFIC' && String(e.user_id) === String(u.id));
       const activeExt = specificExt || globalExtension || null;
@@ -109,7 +122,7 @@ const getWorkingHoursConfig = async (req, res, next) => {
           createdByName: activeExt.created_by_name
         } : null
       };
-    });
+    }));
 
     // 5. Fetch Phase 4 Policies
     const { rows: policies } = await query(`
