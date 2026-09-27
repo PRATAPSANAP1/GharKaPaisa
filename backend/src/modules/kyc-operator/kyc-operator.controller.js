@@ -294,10 +294,9 @@ const getKycApplications = async (req, res) => {
         COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status,
         COALESCE(NULLIF(a.ipa_stage, ''), NULLIF(pad.ipa_stage, ''), 'PENDING') as ipa_stage,
         COALESCE(a.kyc_status, a.vkyc_status, 'PENDING') as kyc_status,
-        a.last_operator_id,
-        a.last_operator_name as currently_working_by,
-        a.last_operator_code as admin_code,
-        a.last_operated_at,
+        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(pad.last_operator_name, '')) as currently_working_by,
+        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_code', ''), NULLIF(pad.last_operator_code, '')) as admin_code,
+        COALESCE((to_jsonb(a)->>'last_operated_at')::timestamptz, pad.last_operated_at) as last_operated_at,
         a.created_at,
         a.updated_at
       FROM applications a
@@ -357,8 +356,8 @@ const getKycApplicationById = async (req, res) => {
         COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status,
         COALESCE(NULLIF(a.ipa_stage, ''), NULLIF(pad.ipa_stage, ''), 'PENDING') as ipa_stage,
         COALESCE(a.kyc_status, a.vkyc_status, 'PENDING') as kyc_status,
-        a.last_operator_name as currently_working_by,
-        a.last_operator_code as admin_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(pad.last_operator_name, '')) as currently_working_by,
+        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_code', ''), NULLIF(pad.last_operator_code, '')) as admin_code,
         p.name as product_name,
         b.name as bank_name,
         COALESCE(e.employee_id, u.employee_id, e.full_name, 'Direct') as referred_by

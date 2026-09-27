@@ -140,7 +140,7 @@ async function exportEmployeeReport(req, res) {
     res.end();
   } catch (err) {
     console.error('exportEmployeeReport Error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to export employee report' });
+    return res.status(500).json({ success: false, message: err.message || 'Failed to export employee report', error: err.message });
   }
 }
 
@@ -157,7 +157,7 @@ async function exportCustomerReport(req, res) {
     res.end();
   } catch (err) {
     console.error('exportCustomerReport Error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to export customer report' });
+    return res.status(500).json({ success: false, message: err.message || 'Failed to export customer report', error: err.message });
   }
 }
 
@@ -174,7 +174,7 @@ async function exportAdminReport(req, res) {
     res.end();
   } catch (err) {
     console.error('exportAdminReport Error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to export admin report' });
+    return res.status(500).json({ success: false, message: err.message || 'Failed to export admin report', error: err.message });
   }
 }
 
@@ -191,7 +191,7 @@ async function exportPartnerReport(req, res) {
     res.end();
   } catch (err) {
     console.error('exportPartnerReport Error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to export partner report' });
+    return res.status(500).json({ success: false, message: err.message || 'Failed to export partner report', error: err.message });
   }
 }
 
@@ -208,7 +208,7 @@ async function exportApplicationReport(req, res) {
     res.end();
   } catch (err) {
     console.error('exportApplicationReport Error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to export application report' });
+    return res.status(500).json({ success: false, message: err.message || 'Failed to export application report', error: err.message });
   }
 }
 
@@ -225,7 +225,7 @@ async function exportCompleteSystemReport(req, res) {
     res.end();
   } catch (err) {
     console.error('exportCompleteSystemReport Error:', err);
-    return res.status(500).json({ success: false, message: 'Failed to export complete system report' });
+    return res.status(500).json({ success: false, message: err.message || 'Failed to export complete system report', error: err.message });
   }
 }
 
