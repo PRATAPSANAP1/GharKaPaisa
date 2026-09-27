@@ -1,5 +1,6 @@
 const { query } = require('../../config/database');
 const logger = require('../../config/logger');
+const { processMetaStatusEvent } = require('./whatsapp.service');
 
 /**
  * WhatsApp Webhook Controller
@@ -70,40 +71,7 @@ async function handleWebhookEvent(req, res) {
           const statuses = value.statuses || [];
 
           for (const st of statuses) {
-            const metaMessageId = st.id;
-            const eventStatus = (st.status || '').toUpperCase(); // sent, delivered, read, failed
-            const timestamp = st.timestamp ? new Date(parseInt(st.timestamp, 10) * 1000) : new Date();
-
-            logger.info(`[WhatsApp Webhook] Updating message ${metaMessageId} -> ${eventStatus}`);
-
-            let statusColumnUpdate = '';
-            if (eventStatus === 'DELIVERED') {
-              statusColumnUpdate = `, delivered_at = COALESCE(delivered_at, $2), status = 'DELIVERED'`;
-            } else if (eventStatus === 'READ') {
-              statusColumnUpdate = `, read_at = COALESCE(read_at, $2), status = 'READ'`;
-            } else if (eventStatus === 'FAILED') {
-              statusColumnUpdate = `, failed_at = COALESCE(failed_at, $2), status = 'FAILED', failure_reason = $3`;
-            } else if (eventStatus === 'SENT') {
-              statusColumnUpdate = `, sent_at = COALESCE(sent_at, $2), status = 'SENT'`;
-            }
-
-            if (statusColumnUpdate) {
-              const failureReasonText = st.errors ? JSON.stringify(st.errors) : null;
-              const updateSql = `
-                UPDATE whatsapp_messages
-                SET updated_at = NOW() ${statusColumnUpdate}
-                WHERE meta_message_id = $1
-                RETURNING id;
-              `;
-              const { rows: updatedRows } = await query(updateSql, [metaMessageId, timestamp, failureReasonText]);
-
-              if (updatedRows.length > 0) {
-                await query(`
-                  INSERT INTO whatsapp_delivery_events (message_id, meta_message_id, event_type, event_payload, event_time)
-                  VALUES ($1, $2, $3, $4, $5);
-                `, [updatedRows[0].id, metaMessageId, eventStatus, JSON.stringify(st), timestamp]);
-              }
-            }
+            await processMetaStatusEvent(st);
           }
         }
       }

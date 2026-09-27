@@ -167,7 +167,7 @@ async function sendTemplateMessage(senderUser, {
       $16, $17, $18, $19,
       $20, $21, $22,
       $23, $24, $25,
-      NOW(), CASE WHEN $23::varchar = 'SENT' THEN NOW() ELSE NULL END
+      NOW(), NULL
     ) RETURNING *;
   `;
 
@@ -376,11 +376,142 @@ async function getDashboardMetrics() {
   };
 }
 
+/**
+ * Process incoming Meta Status Event (sent, delivered, read, failed)
+ * Implements strict status hierarchy, idempotent event audit & timestamp handling.
+ */
+async function processMetaStatusEvent(st) {
+  if (!st || !st.id) return null;
+
+  const metaMessageId = st.id;
+  const rawStatus = (st.status || '').toLowerCase(); // sent, delivered, read, failed
+  const recipientId = st.recipient_id || null;
+
+  // 1. Convert Meta Unix timestamp (seconds) to timestamptz Date
+  let eventTimestamp = new Date();
+  if (st.timestamp) {
+    const parsedTs = parseInt(st.timestamp, 10);
+    if (!isNaN(parsedTs) && parsedTs > 0) {
+      eventTimestamp = new Date(parsedTs * 1000);
+    }
+  }
+
+  // 2. Map raw status to uppercase application status
+  let eventStatus = 'SENT';
+  if (rawStatus === 'delivered') eventStatus = 'DELIVERED';
+  else if (rawStatus === 'read') eventStatus = 'READ';
+  else if (rawStatus === 'failed') eventStatus = 'FAILED';
+  else if (rawStatus === 'sent') eventStatus = 'SENT';
+  else eventStatus = rawStatus.toUpperCase();
+
+  // 3. Extract failure details if status is failed
+  let failureReasonText = null;
+  if (eventStatus === 'FAILED') {
+    if (st.errors && Array.isArray(st.errors) && st.errors.length > 0) {
+      const errObj = st.errors[0];
+      failureReasonText = errObj.message || errObj.title || `Error code ${errObj.code}`;
+      if (errObj.error_data && errObj.error_data.details) {
+        failureReasonText += `: ${errObj.error_data.details}`;
+      }
+    } else if (st.errors) {
+      failureReasonText = typeof st.errors === 'string' ? st.errors : JSON.stringify(st.errors);
+    } else {
+      failureReasonText = 'Meta status indicated message failure';
+    }
+  }
+
+  logger.info(`[WhatsApp Webhook] Status received | meta_message_id=${metaMessageId} | status=${rawStatus} | recipient=${recipientId || 'unknown'}`);
+
+  // 4. Query existing record in `whatsapp_messages`
+  const { rows: msgRows } = await query(
+    `SELECT id, status, recipient_mobile FROM whatsapp_messages WHERE meta_message_id = $1 LIMIT 1`,
+    [metaMessageId]
+  );
+
+  let messageId = null;
+  if (msgRows.length > 0) {
+    messageId = msgRows[0].id;
+
+    // Status progression SQL enforcing status hierarchy: READ / FAILED > DELIVERED > SENT
+    const updateSql = `
+      UPDATE whatsapp_messages
+      SET
+        updated_at = NOW(),
+        sent_at = CASE 
+          WHEN $2 IN ('SENT', 'DELIVERED', 'READ') THEN COALESCE(sent_at, $3)
+          ELSE sent_at
+        END,
+        delivered_at = CASE 
+          WHEN $2 IN ('DELIVERED', 'READ') THEN COALESCE(delivered_at, $3)
+          ELSE delivered_at
+        END,
+        read_at = CASE 
+          WHEN $2 = 'READ' THEN COALESCE(read_at, $3)
+          ELSE read_at
+        END,
+        failed_at = CASE 
+          WHEN $2 = 'FAILED' THEN COALESCE(failed_at, $3)
+          ELSE failed_at
+        END,
+        failure_reason = CASE 
+          WHEN $2 = 'FAILED' THEN COALESCE($4, failure_reason)
+          ELSE failure_reason
+        END,
+        status = CASE 
+          WHEN status = 'READ' THEN 'READ'
+          WHEN status = 'FAILED' AND $2 != 'FAILED' THEN 'FAILED'
+          WHEN $2 = 'READ' THEN 'READ'
+          WHEN status = 'DELIVERED' AND $2 = 'SENT' THEN 'DELIVERED'
+          WHEN $2 = 'DELIVERED' THEN 'DELIVERED'
+          WHEN $2 = 'FAILED' THEN 'FAILED'
+          WHEN $2 = 'SENT' THEN COALESCE(status, 'SENT')
+          ELSE status
+        END
+      WHERE meta_message_id = $1
+      RETURNING id, status, recipient_mobile, sent_at, delivered_at, read_at, failed_at;
+    `;
+
+    const { rows: updatedRows } = await query(updateSql, [
+      metaMessageId,
+      eventStatus,
+      eventTimestamp,
+      failureReasonText
+    ]);
+
+    if (updatedRows.length > 0) {
+      logger.info(`[WhatsApp Webhook] Message updated successfully | meta_message_id=${metaMessageId} | status=${updatedRows[0].status}`);
+    }
+  } else {
+    logger.info(`[WhatsApp Webhook] Received webhook for unlinked meta_message_id: ${metaMessageId}`);
+  }
+
+  // 5. Idempotent Audit Event Logging in `whatsapp_delivery_events`
+  try {
+    const { rows: existingEvents } = await query(
+      `SELECT id FROM whatsapp_delivery_events WHERE meta_message_id = $1 AND event_type = $2 AND event_time = $3 LIMIT 1`,
+      [metaMessageId, eventStatus, eventTimestamp]
+    );
+
+    if (existingEvents.length === 0) {
+      await query(
+        `INSERT INTO whatsapp_delivery_events (message_id, meta_message_id, event_type, event_payload, event_time)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [messageId, metaMessageId, eventStatus, JSON.stringify(st), eventTimestamp]
+      );
+    }
+  } catch (auditErr) {
+    logger.warn(`[WhatsApp Webhook] Audit event insertion note: ${auditErr.message}`);
+  }
+
+  return { metaMessageId, status: eventStatus, messageId };
+}
+
 module.exports = {
   getWhatsAppConfig,
   dispatchMetaMessage,
   sendTemplateMessage,
   sendDocumentMessage,
+  processMetaStatusEvent,
   getWhatsAppMessages,
   getDashboardMetrics
 };
