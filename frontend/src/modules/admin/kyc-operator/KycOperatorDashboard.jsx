@@ -38,9 +38,27 @@ export default function KycOperatorDashboard() {
   const [submittingAction, setSubmittingAction] = useState(false);
   const [toast, setToast] = useState(null);
 
-  // Stage options as specified by prompt
-  const VKYC_STAGES = ['Vkyc pending', 'Vkyc approved', 'Vkyc failed'];
-  const BIO_STAGES = ['Bio pending', 'Bio done', 'Bio inprocess'];
+  // KYC Stage options from the Remark Form
+  const KYC_STAGES = [
+    'VKYC Pending',
+    'VKYC Complete',
+    'VKYC Success',
+    'VKYC Failed',
+    'VKYC Link Send',
+    'VKYC Expired',
+    'BIO Pending',
+    'BIO Complete',
+    'BIO Success',
+    'BIO Failed',
+    'BIO Link Send',
+    'ID-COM Pending',
+    'ID-COM Success',
+    'ID-COM Failed',
+    'Awaiting',
+    'KYC Link Not Working',
+    'Error Occured'
+  ];
+  const BIO_STAGES = ['Bio pending', 'Bio done', 'Bio failed'];
   const DIGILOCKER_STAGES = ['Digilocker 1 rup credit/debit pending', 'Digilocker 1 rup credit/debit done'];
 
   // Auto-dismiss toast
@@ -76,6 +94,7 @@ export default function KycOperatorDashboard() {
         limit: pagination.limit,
         search: search.trim() || undefined,
         kyc_status: kycStatusFilter || undefined,
+        kyc_stage: vkycFilter || undefined,
         vkyc_stage: vkycFilter || undefined,
         bio_stage: bioFilter || undefined,
         digilocker_stage: digilockerFilter || undefined,
@@ -111,11 +130,22 @@ export default function KycOperatorDashboard() {
     try {
       const res = await api.post(`/kyc-operator/applications/${appId}/update-stage`, stagePayload);
       if (res.data?.success) {
-        setToast({ type: 'success', text: 'KYC stage updated successfully!' });
-        fetchApplications();
-        if (appDetails && appDetails.id === appId) {
-          handleViewApplication({ id: appId });
+        const stageVal = String(stagePayload.kyc_stage || stagePayload.vkyc_stage || stagePayload.bio_stage || '').toLowerCase();
+        const isTerminal = stageVal.includes('complete') || stageVal.includes('success') || stageVal.includes('approved') || stageVal.includes('done') || stageVal.includes('failed') || stageVal.includes('expired');
+
+        if (isTerminal) {
+          setToast({ type: 'success', text: 'KYC stage updated! Application completed & removed from active queue.' });
+          if (appDetails && appDetails.id === appId) {
+            setSelectedApp(null);
+            setAppDetails(null);
+          }
+        } else {
+          setToast({ type: 'success', text: 'KYC stage updated successfully!' });
+          if (appDetails && appDetails.id === appId) {
+            handleViewApplication({ id: appId });
+          }
         }
+        fetchApplications();
       }
     } catch (err) {
       console.error('Error updating KYC stage:', err);
@@ -243,7 +273,7 @@ export default function KycOperatorDashboard() {
 
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
           <span style={{ fontSize: '12px', fontWeight: 800, color: '#D97706', textTransform: 'uppercase' }}>Pending KYC</span>
-          <div style={{ fontSize: '28px', fontWeight 900, color: '#D97706', marginTop: '6px' }}>{stats.pending_kyc}</div>
+          <div style={{ fontSize: '28px', fontWeight: 900, color: '#D97706', marginTop: '6px' }}>{stats.pending_kyc}</div>
           <span style={{ fontSize: '11.5px', color: C.textMid }}>Awaiting document/stage check</span>
         </div>
 
@@ -307,16 +337,14 @@ export default function KycOperatorDashboard() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>VKYC Stage</label>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>KYC Stage (Remark Form)</label>
             <select 
               value={vkycFilter} 
               onChange={(e) => { setVkycFilter(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
               style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 700 }}
             >
-              <option value="">All VKYC Stages</option>
-              <option value="vkyc approved">VKYC Approved</option>
-              <option value="vkyc pending">VKYC Pending</option>
-              <option value="vkyc failed">VKYC Failed</option>
+              <option value="">All KYC Stages</option>
+              {KYC_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
 
@@ -328,9 +356,9 @@ export default function KycOperatorDashboard() {
               style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 700 }}
             >
               <option value="">All Bio Stages</option>
-              <option value="bio done">Bio Done</option>
               <option value="bio pending">Bio Pending</option>
-              <option value="bio inprocess">Bio Inprocess</option>
+              <option value="bio done">Bio Done</option>
+              <option value="bio failed">Bio Failed</option>
             </select>
           </div>
 
@@ -460,13 +488,13 @@ export default function KycOperatorDashboard() {
                     <td style={{ padding: '14px 18px', minWidth: '220px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11.5px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontWeight: 800, color: C.textMid, minWidth: '75px' }}>VKYC:</span>
+                          <span style={{ fontWeight: 800, color: C.textMid, minWidth: '75px' }}>KYC STAGE:</span>
                           <select
-                            value={app.vkyc_stage || 'Vkyc pending'}
-                            onChange={(e) => handleStageUpdate(app.id, { vkyc_stage: e.target.value })}
-                            style={{ padding: '3px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, border: `1px solid ${C.border}`, background: String(app.vkyc_stage || '').toLowerCase().includes('approved') ? '#D1FAE5' : String(app.vkyc_stage || '').toLowerCase().includes('failed') ? '#FEE2E2' : '#FEF3C7', color: String(app.vkyc_stage || '').toLowerCase().includes('approved') ? '#065F46' : String(app.vkyc_stage || '').toLowerCase().includes('failed') ? '#991B1B' : '#92400E' }}
+                            value={app.kyc_stage || app.vkyc_stage || 'VKYC Pending'}
+                            onChange={(e) => handleStageUpdate(app.id, { kyc_stage: e.target.value, vkyc_stage: e.target.value })}
+                            style={{ padding: '3px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, border: `1px solid ${C.border}`, background: String(app.kyc_stage || app.vkyc_stage || '').toLowerCase().includes('complete') || String(app.kyc_stage || app.vkyc_stage || '').toLowerCase().includes('success') || String(app.kyc_stage || app.vkyc_stage || '').toLowerCase().includes('approved') ? '#D1FAE5' : String(app.kyc_stage || app.vkyc_stage || '').toLowerCase().includes('failed') || String(app.kyc_stage || app.vkyc_stage || '').toLowerCase().includes('expired') ? '#FEE2E2' : '#FEF3C7', color: String(app.kyc_stage || app.vkyc_stage || '').toLowerCase().includes('complete') || String(app.kyc_stage || app.vkyc_stage || '').toLowerCase().includes('success') || String(app.kyc_stage || app.vkyc_stage || '').toLowerCase().includes('approved') ? '#065F46' : String(app.kyc_stage || app.vkyc_stage || '').toLowerCase().includes('failed') || String(app.kyc_stage || app.vkyc_stage || '').toLowerCase().includes('expired') ? '#991B1B' : '#92400E' }}
                           >
-                            {VKYC_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                            {KYC_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
                         </div>
 
@@ -475,7 +503,7 @@ export default function KycOperatorDashboard() {
                           <select
                             value={app.bio_stage || 'Bio pending'}
                             onChange={(e) => handleStageUpdate(app.id, { bio_stage: e.target.value })}
-                            style={{ padding: '3px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, border: `1px solid ${C.border}`, background: String(app.bio_stage || '').toLowerCase().includes('done') ? '#D1FAE5' : '#FEF3C7', color: String(app.bio_stage || '').toLowerCase().includes('done') ? '#065F46' : '#92400E' }}
+                            style={{ padding: '3px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, border: `1px solid ${C.border}`, background: String(app.bio_stage || '').toLowerCase().includes('done') ? '#D1FAE5' : String(app.bio_stage || '').toLowerCase().includes('failed') ? '#FEE2E2' : '#FEF3C7', color: String(app.bio_stage || '').toLowerCase().includes('done') ? '#065F46' : String(app.bio_stage || '').toLowerCase().includes('failed') ? '#991B1B' : '#92400E' }}
                           >
                             {BIO_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
@@ -657,13 +685,13 @@ export default function KycOperatorDashboard() {
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                       <div>
-                        <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '4px' }}>VKYC STAGE</label>
+                        <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '4px' }}>KYC STAGE (REMARK FORM)</label>
                         <select 
-                          value={appDetails.vkyc_stage || 'Vkyc pending'}
-                          onChange={(e) => setAppDetails(prev => ({ ...prev, vkyc_stage: e.target.value }))}
+                          value={appDetails.kyc_stage || appDetails.vkyc_stage || 'VKYC Pending'}
+                          onChange={(e) => setAppDetails(prev => ({ ...prev, kyc_stage: e.target.value, vkyc_stage: e.target.value }))}
                           style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '12px', fontWeight: 800 }}
                         >
-                          {VKYC_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                          {KYC_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
 
@@ -718,7 +746,8 @@ export default function KycOperatorDashboard() {
                         try {
                           setSubmittingAction(true);
                           const res = await api.post(`/kyc-operator/applications/${appDetails.id}/update-stage`, {
-                            vkyc_stage: appDetails.vkyc_stage,
+                            kyc_stage: appDetails.kyc_stage || appDetails.vkyc_stage,
+                            vkyc_stage: appDetails.vkyc_stage || appDetails.kyc_stage,
                             bio_stage: appDetails.bio_stage,
                             digilocker_stage: appDetails.digilocker_stage,
                             bank_application_number: appDetails.bank_application_number,
@@ -728,9 +757,19 @@ export default function KycOperatorDashboard() {
                             pan_number: appDetails.pan_number
                           });
                           if (res.data?.success) {
-                            setToast({ type: 'success', text: 'Application details & stage updated!' });
+                            const kLower = String(appDetails.kyc_stage || appDetails.vkyc_stage || '').toLowerCase();
+                            const bLower = String(appDetails.bio_stage || '').toLowerCase();
+                            const isTerminal = kLower.includes('complete') || kLower.includes('success') || kLower.includes('approved') || kLower.includes('failed') || kLower.includes('expired') || bLower.includes('done') || bLower.includes('failed');
+
+                            if (isTerminal) {
+                              setToast({ type: 'success', text: 'Application completed & removed from active queue!' });
+                              setSelectedApp(null);
+                              setAppDetails(null);
+                            } else {
+                              setToast({ type: 'success', text: 'Application details & stage updated!' });
+                              handleViewApplication({ id: appDetails.id });
+                            }
                             fetchApplications();
-                            handleViewApplication({ id: appDetails.id });
                           }
                         } catch (err) {
                           setToast({ type: 'error', text: err.response?.data?.message || 'Update failed' });

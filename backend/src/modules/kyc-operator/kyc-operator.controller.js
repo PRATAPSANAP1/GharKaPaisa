@@ -125,7 +125,13 @@ const getKycApplications = async (req, res) => {
     const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
 
     let whereConditions = [
-      `LOWER(TRIM(COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), ''))) NOT IN ('declined', 'rejected')`
+      `LOWER(TRIM(COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), ''))) NOT IN ('declined', 'rejected')`,
+      `LOWER(TRIM(COALESCE(a.kyc_stage, a.vkyc_stage, pad.kyc_stage, pad.vkyc_stage, 'vkyc pending'))) NOT IN (
+        'vkyc complete', 'vkyc success', 'vkyc approved', 'vkyc failed', 'vkyc_approved', 'vkyc_failed', 'vkyc expired',
+        'bio complete', 'bio success', 'bio done', 'bio failed', 'bio_done', 'bio_failed',
+        'id-com success', 'id-com failed', 'completed', 'success', 'approved', 'failed'
+      )`,
+      `LOWER(TRIM(COALESCE(a.kyc_status, a.vkyc_status, 'pending'))) NOT IN ('verified', 'rejected', 'approved')`
     ];
     let queryParams = [];
     let paramIdx = 1;
@@ -686,6 +692,22 @@ const updateKycStageAndDetails = async (req, res) => {
       params.push(kyc_stage);
       pIdx++;
       fieldChanges.kyc_stage = { from: currentApp.kyc_stage, to: kyc_stage };
+
+      // Also sync vkyc_stage for legacy compatibility if vkyc_stage isn't set separately
+      if (vkyc_stage === undefined) {
+        updates.push(`vkyc_stage = $${pIdx}`);
+        params.push(kyc_stage);
+        pIdx++;
+      }
+
+      const stageLower = String(kyc_stage).toLowerCase();
+      if (stageLower.includes('approved') || stageLower.includes('complete') || stageLower.includes('success') || stageLower.includes('done')) {
+        updates.push(`vkyc_status = 'APPROVED'`);
+        updates.push(`kyc_status = 'VERIFIED'`);
+      } else if (stageLower.includes('failed') || stageLower.includes('expired') || stageLower.includes('decline') || stageLower.includes('error')) {
+        updates.push(`vkyc_status = 'FAILED'`);
+        updates.push(`kyc_status = 'REJECTED'`);
+      }
     }
 
     if (vkyc_stage !== undefined) {
@@ -695,10 +717,12 @@ const updateKycStageAndDetails = async (req, res) => {
       fieldChanges.vkyc_stage = { from: currentApp.vkyc_stage, to: vkyc_stage };
 
       const stageLower = String(vkyc_stage).toLowerCase();
-      if (stageLower.includes('approved') || stageLower.includes('done')) {
+      if (stageLower.includes('approved') || stageLower.includes('complete') || stageLower.includes('success') || stageLower.includes('done')) {
         updates.push(`vkyc_status = 'APPROVED'`);
-      } else if (stageLower.includes('failed')) {
+        updates.push(`kyc_status = 'VERIFIED'`);
+      } else if (stageLower.includes('failed') || stageLower.includes('expired')) {
         updates.push(`vkyc_status = 'FAILED'`);
+        updates.push(`kyc_status = 'REJECTED'`);
       }
     }
 
@@ -707,6 +731,13 @@ const updateKycStageAndDetails = async (req, res) => {
       params.push(bio_stage);
       pIdx++;
       fieldChanges.bio_stage = { from: currentApp.bio_stage, to: bio_stage };
+
+      const bioLower = String(bio_stage).toLowerCase();
+      if (bioLower.includes('done')) {
+        updates.push(`kyc_status = 'VERIFIED'`);
+      } else if (bioLower.includes('failed')) {
+        updates.push(`kyc_status = 'REJECTED'`);
+      }
     }
 
     if (digilocker_stage !== undefined) {
