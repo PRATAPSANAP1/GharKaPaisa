@@ -15,12 +15,21 @@ async function verifyWebhook(req, res) {
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
 
-    const { rows: [settings] } = await query(`SELECT webhook_verify_token FROM whatsapp_settings LIMIT 1`);
+    let settings = null;
+    try {
+      const { rows } = await query(`SELECT webhook_verify_token FROM whatsapp_settings LIMIT 1`);
+      settings = rows[0];
+    } catch (dbErr) {
+      logger.warn('[WhatsApp Webhook] whatsapp_settings query note:', dbErr.message);
+    }
+
     const configuredToken = process.env.WHATSAPP_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN || settings?.webhook_verify_token || 'gharkapaisa_meta_webhook_secret_2026';
 
     if (mode === 'subscribe' && token === configuredToken) {
       logger.info('[WhatsApp Webhook] Meta challenge verification successful.');
-      await query(`UPDATE whatsapp_settings SET last_webhook_at = NOW()`);
+      try {
+        await query(`UPDATE whatsapp_settings SET last_webhook_at = NOW()`);
+      } catch (e) {}
       return res.status(200).send(challenge);
     }
 
@@ -40,7 +49,9 @@ async function handleWebhookEvent(req, res) {
     const body = req.body;
     logger.info('[WhatsApp Webhook] Received Meta payload:', JSON.stringify(body));
 
-    await query(`UPDATE whatsapp_settings SET last_webhook_at = NOW()`);
+    try {
+      await query(`UPDATE whatsapp_settings SET last_webhook_at = NOW()`);
+    } catch (e) {}
 
     if (body.object === 'whatsapp_business_account') {
       const entries = body.entry || [];

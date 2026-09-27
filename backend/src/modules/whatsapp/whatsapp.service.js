@@ -9,8 +9,13 @@ const { canUserSendWhatsApp, canDesignationSendCategory, validateDataScope } = r
  * Fetch WhatsApp Configuration
  */
 async function getWhatsAppConfig() {
-  const { rows } = await query(`SELECT * FROM whatsapp_settings LIMIT 1`);
-  const dbConfig = rows[0] || {};
+  let dbConfig = {};
+  try {
+    const { rows } = await query(`SELECT * FROM whatsapp_settings LIMIT 1`);
+    dbConfig = rows[0] || {};
+  } catch (err) {
+    logger.warn('[WhatsApp Service] whatsapp_settings query note:', err.message);
+  }
 
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_PHONE_NUMBER_ID || dbConfig.phone_number_id || null;
   const wabaId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || process.env.META_WHATSAPP_BUSINESS_ACCOUNT_ID || dbConfig.waba_id || null;

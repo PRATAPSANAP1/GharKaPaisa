@@ -266,6 +266,14 @@ const startServer = async () => {
       logger.warn('Contest auto migration note:', cErr.message);
     }
 
+    // Always ensure WhatsApp module tables & default templates exist on boot
+    try {
+      const { migrateWhatsApp } = require('./database/migrations/migrate_whatsapp.js');
+      await migrateWhatsApp();
+    } catch (wErr) {
+      logger.warn('WhatsApp auto migration note:', wErr.message);
+    }
+
     // Always ensure Loan on Credit Card & Smart EMI products are seeded on boot
     try {
       const { seedSmartEmiAndLoccProducts } = require('./database/seeds/seed-smart-emi-locc.js');
