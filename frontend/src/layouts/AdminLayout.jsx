@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../app/store/authStore';
@@ -9,7 +9,7 @@ import LanguageSwitcher from '../components/LanguageSwitcher/LanguageSwitcher';
 import Chatbot from '../components/Chatbot/Chatbot';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import api from '../services/api';
-import { MdExpandMore, MdChevronRight, MdAccountBalance, MdShoppingBag, MdSettings, MdMenu, MdClose } from 'react-icons/md';
+import { MdExpandMore, MdChevronRight, MdAccountBalance, MdShoppingBag, MdSettings, MdMenu, MdClose, MdNotifications } from 'react-icons/md';
 
 const DEFAULT_BANKS = [
   { id: 'hdfc', name: 'HDFC Bank', short_code: 'HDFC' },
@@ -117,18 +117,88 @@ const AdminLayout = () => {
   const [openProductsMenu, setOpenProductsMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Notification & Messenger State
+  const [notifMenuOpen, setNotifMenuOpen] = useState(false);
+  const [messengerUnread, setMessengerUnread] = useState(0);
+  const [notificationsList, setNotificationsList] = useState([]);
+  const [systemUnreadCount, setSystemUnreadCount] = useState(0);
+  const notifDropdownRef = useRef(null);
+
+  const fetchNotificationCounts = async () => {
+    try {
+      const [msgRes, notifRes] = await Promise.all([
+        api.get('/messenger/unread-count').catch(() => ({ data: { success: false } })),
+        api.get('/notifications/unread').catch(() => ({ data: { success: false } }))
+      ]);
+
+      if (msgRes?.data?.success && typeof msgRes.data?.data?.unread_count === 'number') {
+        setMessengerUnread(msgRes.data.data.unread_count);
+      }
+      if (notifRes?.data?.success) {
+        setNotificationsList(notifRes.data.data?.notifications || []);
+        setSystemUnreadCount(notifRes.data.data?.unread_count || 0);
+      }
+    } catch (err) {
+      console.error('Error fetching notification counts:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) return;
+    fetchNotificationCounts();
+
+    const interval = setInterval(fetchNotificationCounts, 10000);
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target)) {
+        setNotifMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.post('/notifications/read-all').catch(() => {});
+      setSystemUnreadCount(0);
+      setNotificationsList(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
+
+  const totalUnreadCount = messengerUnread + systemUnreadCount;
+
   // Close mobile menu on route change & restrict navigation based on role designation
   useEffect(() => {
     setMobileMenuOpen(false);
+    
+    // Disallow /admin/reports for all admin designation panels
+    if (location.pathname.startsWith('/admin/reports') && !isSuperAdmin) {
+      navigate('/admin/dashboard', { replace: true });
+      return;
+    }
+
+    // Disallow /admin/kyc-operator for all panels
+    if (location.pathname.startsWith('/admin/kyc-operator')) {
+      const fallback = isSuperAdmin ? '/super-admin/overview' : '/admin/applications';
+      navigate(fallback, { replace: true });
+      return;
+    }
+
     if (isHR) {
       if (!location.pathname.startsWith('/hr')) {
         navigate('/hr/dashboard', { replace: true });
       }
     } else if (isKycOperator) {
-      const allowedPaths = ['/admin/kyc-operator', '/admin/kyc', '/admin/messenger'];
+      const allowedPaths = ['/admin/applications', '/admin/kyc', '/admin/messenger'];
       const isAllowed = allowedPaths.some(p => location.pathname.startsWith(p));
       if (!isAllowed) {
-        navigate('/admin/kyc-operator', { replace: true });
+        navigate('/admin/applications', { replace: true });
       }
     } else if (isRemarkOperator || isQdOperator || isFinalStatusOperator) {
       const allowedPaths = ['/admin/applications', '/admin/messenger'];
@@ -149,7 +219,7 @@ const AdminLayout = () => {
         navigate('/admin/dashboard', { replace: true });
       }
     }
-  }, [location.pathname, isHR, isKycOperator, isRemarkOperator, isQdOperator, isFinalStatusOperator, isSalesExec, isBackend, navigate]);
+  }, [location.pathname, isHR, isKycOperator, isSuperAdmin, isRemarkOperator, isQdOperator, isFinalStatusOperator, isSalesExec, isBackend, navigate]);
 
   const handleLogout = () => {
     logout();
@@ -293,21 +363,11 @@ const AdminLayout = () => {
               </div>
             )}
 
-            {/* KYC Operator Queue */}
-            {(isKycOperator || isSuperAdmin || userRole === 'ADMIN') && (
-              <NavLink to="/admin/kyc-operator" style={navLinkStyle}>
-                <Icons.profile size={18} />
-                <span>KYC Operator Queue</span>
-              </NavLink>
-            )}
-
             {/* Applications */}
-            {!isKycOperator && (
-              <NavLink to="/admin/applications" style={navLinkStyle}>
-                <Icons.creditCard size={18} />
-                <span>{isQdOperator ? 'QD Operator' : isRemarkOperator ? 'Remark Operator' : isPanChecker ? 'PAN Checker' : isFinalStatusOperator ? 'Final Status Operator' : 'Applications'}</span>
-              </NavLink>
-            )}
+            <NavLink to="/admin/applications" style={navLinkStyle}>
+              <Icons.creditCard size={18} />
+              <span>{isKycOperator ? 'KYC Operator' : isQdOperator ? 'QD Operator' : isRemarkOperator ? 'Remark Operator' : isPanChecker ? 'PAN Checker' : isFinalStatusOperator ? 'Final Status Operator' : 'Applications'}</span>
+            </NavLink>
 
             {/* Messenger */}
             <NavLink to="/admin/messenger" style={navLinkStyle}>
@@ -380,12 +440,6 @@ const AdminLayout = () => {
                     <span>Commissions</span>
                   </NavLink>
                 )}
-
-                {/* Reports & Analytics */}
-                <NavLink to="/admin/reports" style={navLinkStyle}>
-                  <Icons.dashboard size={18} />
-                  <span>Reports</span>
-                </NavLink>
 
                 {/* Settings */}
                 {isSuperAdmin && (
@@ -503,6 +557,197 @@ const AdminLayout = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Notification Bell Button & Popover Dropdown */}
+            <div style={{ position: 'relative' }} ref={notifDropdownRef}>
+              <button
+                id="admin-notification-bell"
+                onClick={() => setNotifMenuOpen(!notifMenuOpen)}
+                title="Notifications"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${notifMenuOpen ? '#3b82f6' : C.border}`,
+                  borderRadius: '50%',
+                  width: '38px',
+                  height: '38px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  color: C.text,
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+              >
+                <MdNotifications size={20} color={totalUnreadCount > 0 ? '#3b82f6' : C.text} />
+                {totalUnreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-2px',
+                    right: '-2px',
+                    background: '#EF4444',
+                    color: '#FFFFFF',
+                    fontSize: '10px',
+                    fontWeight: 900,
+                    minWidth: '18px',
+                    height: '18px',
+                    borderRadius: '9px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 4px',
+                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
+                    border: `2px solid ${C.card}`
+                  }}>
+                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Popover Dropdown */}
+              {notifMenuOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '48px',
+                  right: 0,
+                  width: '340px',
+                  background: C.card,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: '16px',
+                  boxShadow: '0 12px 36px rgba(0,0,0,0.25)',
+                  padding: '16px',
+                  zIndex: 1000,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  {/* Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: C.text }}>Notifications</h4>
+                      {totalUnreadCount > 0 && (
+                        <span style={{ background: '#3b82f620', color: '#3b82f6', fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '12px' }}>
+                          {totalUnreadCount} Unread
+                        </span>
+                      )}
+                    </div>
+                    {systemUnreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {/* Messenger Unread Notification Alert Card */}
+                    {messengerUnread > 0 && (
+                      <div
+                        onClick={() => { setNotifMenuOpen(false); navigate('/admin/messenger'); }}
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(37,99,235,0.08) 100%)',
+                          border: '1px solid rgba(59,130,246,0.3)',
+                          borderRadius: '12px',
+                          padding: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#3b82f6', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <MdNotifications size={18} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span>Messenger Alert</span>
+                            <span style={{ fontSize: '10px', background: '#EF4444', color: '#fff', padding: '1px 6px', borderRadius: '8px', fontWeight: 800 }}>NEW</span>
+                          </div>
+                          <p style={{ margin: '2px 0 0', fontSize: '12px', color: C.textMid, fontWeight: 600 }}>
+                            You have <strong style={{ color: '#3b82f6' }}>{messengerUnread}</strong> unread message{messengerUnread > 1 ? 's' : ''} on Messenger.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* System Notifications List */}
+                    {notificationsList.length > 0 ? (
+                      notificationsList.map((notif) => (
+                        <div
+                          key={notif.id}
+                          onClick={async () => {
+                            if (!notif.is_read) {
+                              try {
+                                await api.post('/notifications/read', { id: notif.id, ids: [notif.id] });
+                                setSystemUnreadCount(prev => Math.max(0, prev - 1));
+                                setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n));
+                              } catch (e) {
+                                /* silent */
+                              }
+                            }
+                            if (notif.link || notif.redirect_url) {
+                              setNotifMenuOpen(false);
+                              navigate(notif.link || notif.redirect_url);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            background: notif.is_read ? 'transparent' : C.bgSecondary,
+                            border: `1px solid ${C.border}`,
+                            cursor: notif.link || notif.redirect_url ? 'pointer' : 'default',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px'
+                          }}
+                        >
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>{notif.title || 'Notification'}</span>
+                            {!notif.is_read && (
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }} />
+                            )}
+                          </div>
+                          <p style={{ margin: 0, fontSize: '12px', color: C.textMid, lineHeight: 1.4 }}>
+                            {notif.message}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      messengerUnread === 0 && (
+                        <div style={{ textAlign: 'center', padding: '24px 12px', color: C.textMid, fontSize: '13px' }}>
+                          <MdNotifications style={{ fontSize: '24px', opacity: 0.4, marginBottom: '6px' }} />
+                          <p style={{ margin: 0, fontWeight: 600 }}>No new notifications</p>
+                        </div>
+                      )
+                    )}
+                  </div>
+
+                  {/* Footer Action */}
+                  <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '10px', display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      onClick={() => { setNotifMenuOpen(false); navigate('/admin/messenger'); }}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#3b82f6',
+                        fontSize: '12.5px',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      Go to Messenger
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <ThemeToggle />
             <LanguageSwitcher />
             <button
