@@ -23,6 +23,8 @@ router.get('/messages/:id', controller.getMessageById);
 // Send Actions
 router.post('/send-template', globalLimiter, controller.sendTemplate);
 router.post('/send-document', globalLimiter, controller.sendDocument);
+router.get('/designation-report', controller.getDesignationReport);
+router.post('/send-designation-report', globalLimiter, controller.sendDesignationReport);
 
 // Templates
 router.get('/templates', controller.getTemplates);

@@ -79,6 +79,16 @@ export default function SuperAdminWhatsApp() {
     setShowSendModal(true);
   };
 
+  // Designation Reports State
+  const [reportType, setReportType] = useState('APPROVED_CARDS');
+  const [reportPeriod, setReportPeriod] = useState('THIS_MONTH');
+  const [reportDesignation, setReportDesignation] = useState('ALL');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [reportData, setReportData] = useState(null);
+  const [loadingReportData, setLoadingReportData] = useState(false);
+  const [dispatchingReport, setDispatchingReport] = useState(false);
+
   useEffect(() => {
     fetchDashboardMetrics();
   }, []);
@@ -86,9 +96,62 @@ export default function SuperAdminWhatsApp() {
   useEffect(() => {
     if (activeTab === 'messages') fetchMessages(1);
     else if (activeTab === 'templates') fetchTemplates();
+    else if (activeTab === 'reports') fetchDesignationReport();
     else if (activeTab === 'settings') fetchSettings();
     else if (activeTab === 'webhooks') fetchWebhookLogs();
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'reports') {
+      fetchDesignationReport();
+    }
+  }, [reportType, reportPeriod, reportDesignation, customStartDate, customEndDate]);
+
+  const fetchDesignationReport = async () => {
+    setLoadingReportData(true);
+    try {
+      const res = await api.get('/whatsapp/designation-report', {
+        params: {
+          report_type: reportType,
+          period: reportPeriod,
+          start_date: customStartDate,
+          end_date: customEndDate,
+          designation: reportDesignation
+        }
+      });
+      if (res.data?.success) {
+        setReportData(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load designation report:', err);
+    } finally {
+      setLoadingReportData(false);
+    }
+  };
+
+  const handleDispatchDesignationReport = async () => {
+    if (!reportData) return;
+    setDispatchingReport(true);
+    try {
+      const res = await api.post('/whatsapp/send-designation-report', {
+        report_type: reportType,
+        period: reportPeriod,
+        start_date: customStartDate,
+        end_date: customEndDate,
+        designation: reportDesignation,
+        summary_text: reportData.summaryText,
+        document_url: 'https://gharkapaisa.in/api/v1/whatsapp/delivery-report-download'
+      });
+      if (res.data?.success) {
+        alert(res.data.message || `Report successfully sent via WhatsApp!`);
+        fetchDashboardMetrics();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to dispatch report via WhatsApp.');
+    } finally {
+      setDispatchingReport(false);
+    }
+  };
 
   const fetchDashboardMetrics = async () => {
     setLoadingMetrics(true);
@@ -722,57 +785,239 @@ export default function SuperAdminWhatsApp() {
         </div>
       )}
 
-      {/* ── TAB 4: DELIVERY REPORTS ── */}
+      {/* ── TAB 4: REPORTS & DESIGNATION BROADCAST HUB ── */}
       {activeTab === 'reports' && (
-        <div style={{
-          background: '#FFFFFF',
-          borderRadius: '16px',
-          border: '1px solid #E2E8F0',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '20px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0F172A' }}>
-                Delivery Success Rate & Performance Reports
-              </h3>
-              <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#64748B' }}>
-                Track delivery metrics and dispatch summary reports directly via WhatsApp
-              </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Header Card */}
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
+                  Admin Designation Reports & WhatsApp Broadcast Hub
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#64748B' }}>
+                  Generate periodic reports (Approved Cards, KYC Queue, Operator Summaries) and share directly with target admin staff via WhatsApp
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  disabled={dispatchingReport || !reportData}
+                  onClick={handleDispatchDesignationReport}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '10px',
+                    background: '#059669',
+                    color: '#FFFFFF',
+                    fontWeight: 800,
+                    fontSize: '13px',
+                    border: 'none',
+                    cursor: dispatchingReport ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 2px 10px rgba(5, 150, 105, 0.3)'
+                  }}
+                >
+                  <FaWhatsapp size={15} />
+                  {dispatchingReport ? 'Sending WhatsApp Broadcast...' : `Send Report via WhatsApp to ${reportData?.targetStaff?.length || 0} Staff`}
+                </button>
+              </div>
             </div>
 
-            <button
-              onClick={() => openSendModalWithData({
-                recipient_name: 'Management / Stakeholder',
-                recipient_mobile: '',
-                document_name: `GharKaPaisa_WhatsApp_Delivery_Report_${new Date().toISOString().slice(0,10)}.pdf`,
-                document_url: 'https://gharkapaisa.in/api/v1/whatsapp/delivery-report-download'
-              })}
-              style={{
-                padding: '9px 16px',
-                borderRadius: '10px',
-                background: '#059669',
-                color: '#FFFFFF',
-                fontWeight: 800,
-                fontSize: '13px',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
-              }}
-            >
-              <FaPaperPlane size={11} /> Share Report via WhatsApp
-            </button>
+            {/* Controls Bar: Report Type, Period, Designation */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '16px',
+              background: '#F8FAFC',
+              padding: '16px',
+              borderRadius: '12px',
+              border: '1px solid #E2E8F0'
+            }}>
+              {/* Report Type Selector */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Report Category
+                </label>
+                <select
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    color: '#0F172A',
+                    background: '#FFFFFF',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="APPROVED_CARDS">Approved Cards & Dispatched Report</option>
+                  <option value="EMPLOYEE_PERFORMANCE">Employee Operations & Performance</option>
+                  <option value="KYC_OPERATOR_SUMMARY">KYC & Verification Queue Summary</option>
+                  <option value="PAN_CHECKER_SUMMARY">PAN Checker & Verification Summary</option>
+                  <option value="QD_FINAL_STATUS_SUMMARY">QD & Final Status Approval Report</option>
+                  <option value="APPLICATIONS_OVERVIEW">Overall Applications Overview</option>
+                </select>
+              </div>
+
+              {/* Period Selector */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Time Period
+                </label>
+                <select
+                  value={reportPeriod}
+                  onChange={(e) => setReportPeriod(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    color: '#0F172A',
+                    background: '#FFFFFF',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="TODAY">Today</option>
+                  <option value="YESTERDAY">Yesterday</option>
+                  <option value="THIS_WEEK">This Week</option>
+                  <option value="THIS_MONTH">This Month</option>
+                </select>
+              </div>
+
+              {/* Target Admin Designation Selector */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Target Admin Designation
+                </label>
+                <select
+                  value={reportDesignation}
+                  onChange={(e) => setReportDesignation(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    color: '#0F172A',
+                    background: '#FFFFFF',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="ALL">All Admin & Operations Staff</option>
+                  <option value="KYC Operator">KYC Operator</option>
+                  <option value="PAN Checker">PAN Checker</option>
+                  <option value="Remark Operator">Remark Operator</option>
+                  <option value="QD Operator">QD Operator</option>
+                  <option value="Final Status Operator">Final Status Operator</option>
+                  <option value="Operational Head">Operational Head</option>
+                  <option value="Administrative Operator">Administrative Operator</option>
+                  <option value="Administrative Sales Executive">Administrative Sales Executive</option>
+                  <option value="Verification Officer">Verification Officer</option>
+                  <option value="Super Admin">Super Admin</option>
+                  <option value="Backend Operator">Backend Operator</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Generated Report KPI Summary Grid */}
+            {loadingReportData ? (
+              <div style={{ padding: '30px', textAlign: 'center', color: '#64748B', fontWeight: 600 }}>
+                Computing real-time analytics for {reportType}...
+              </div>
+            ) : reportData ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                  <div style={{ background: '#F0FDF4', padding: '16px', borderRadius: '12px', border: '1px solid #BBF7D0' }}>
+                    <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#166534', textTransform: 'uppercase' }}>Total Volume</span>
+                    <h3 style={{ margin: '4px 0 0', fontSize: '24px', fontWeight: 900, color: '#15803D' }}>
+                      {reportData.metrics?.total_applications || reportData.metrics?.total_processed || reportData.metrics?.total_checked || 0}
+                    </h3>
+                  </div>
+
+                  <div style={{ background: '#EFF6FF', padding: '16px', borderRadius: '12px', border: '1px solid #BFDBFE' }}>
+                    <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#1E40AF', textTransform: 'uppercase' }}>Approved / Cleared</span>
+                    <h3 style={{ margin: '4px 0 0', fontSize: '24px', fontWeight: 900, color: '#1D4ED8' }}>
+                      {reportData.metrics?.approved_cards || reportData.metrics?.final_approved || reportData.metrics?.approved_count || reportData.metrics?.pan_verified || 0}
+                    </h3>
+                  </div>
+
+                  <div style={{ background: '#FEF3C7', padding: '16px', borderRadius: '12px', border: '1px solid #FDE68A' }}>
+                    <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#92400E', textTransform: 'uppercase' }}>Approved Amount</span>
+                    <h3 style={{ margin: '4px 0 0', fontSize: '24px', fontWeight: 900, color: '#B45309' }}>
+                      ₹{Number(reportData.metrics?.approved_amount_sum || reportData.metrics?.total_loan_amount || 0).toLocaleString('en-IN')}
+                    </h3>
+                  </div>
+
+                  <div style={{ background: '#F8FAFC', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>Target Staff Recipients</span>
+                    <h3 style={{ margin: '4px 0 0', fontSize: '24px', fontWeight: 900, color: '#0F172A' }}>
+                      {reportData.targetStaff?.length || 0} Staff
+                    </h3>
+                  </div>
+                </div>
+
+                {/* Target Staff Chips */}
+                {reportData.targetStaff && reportData.targetStaff.length > 0 && (
+                  <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', marginBottom: '8px' }}>
+                      Target Designation Staff Members ({reportData.targetStaff.length}):
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {reportData.targetStaff.map(st => (
+                        <span key={st.id} style={{
+                          background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '4px 10px', borderRadius: '20px',
+                          fontSize: '12px', color: '#334155', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px'
+                        }}>
+                          <span>● {st.full_name || st.email}</span>
+                          <span style={{ color: '#059669', fontSize: '11px' }}>({st.designation || st.role})</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* WhatsApp Message Preview Box */}
+                <div style={{
+                  background: '#0F172A',
+                  color: '#E2E8F0',
+                  padding: '18px',
+                  borderRadius: '12px',
+                  fontFamily: 'monospace',
+                  fontSize: '13px',
+                  whiteSpace: 'pre-wrap',
+                  lineHeight: '1.6',
+                  border: '1px solid #1E293B'
+                }}>
+                  <div style={{ color: '#10B981', fontWeight: 800, marginBottom: '8px', fontFamily: 'sans-serif', textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.5px' }}>
+                    WhatsApp Broadcast Message Preview
+                  </div>
+                  {reportData.summaryText}
+                </div>
+              </div>
+            ) : null}
           </div>
 
+          {/* Delivery Stats & Compliance Breakdown */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <div style={{ background: '#F8FAFC', padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
               <h4 style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 800, color: '#334155' }}>
-                Delivery Breakdown
+                WhatsApp Delivery Performance
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div>
@@ -797,12 +1042,12 @@ export default function SuperAdminWhatsApp() {
               </div>
             </div>
 
-            <div style={{ background: '#F8FAFC', padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
               <h4 style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 800, color: '#334155' }}>
-                Compliance & Verification
+                Meta WhatsApp Compliance & Verification
               </h4>
               <p style={{ margin: 0, fontSize: '13px', color: '#64748B', lineHeight: '1.6' }}>
-                All outgoing messages are routed strictly through the official GharKaPaisa WhatsApp Business account via Meta Cloud API. Full internal audit trails preserve the initiating operator identity while customers receive authorized, branded communications.
+                All periodic designation reports and operational summaries are dispatched via official Meta WhatsApp Business API channels. Comprehensive delivery logs and audit records are maintained centrally for compliance and administrative tracking.
               </p>
             </div>
           </div>
