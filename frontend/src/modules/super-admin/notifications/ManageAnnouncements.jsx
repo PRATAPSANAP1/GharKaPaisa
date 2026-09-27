@@ -10,15 +10,17 @@ import {
 } from 'react-icons/md';
 
 const ADMIN_DESIGNATIONS = [
-  { value: 'Administrative Operator', label: 'Administrative Operator' },
-  { value: 'Operational Head', label: 'Operational Head' },
-  { value: 'Administrative Sales Executive', label: 'Administrative Sales Executive' },
   { value: 'KYC Operator', label: 'KYC Operator' },
-  { value: 'Final Status Operator', label: 'Final Status Operator' },
-  { value: 'QD Operator', label: 'QD Operator' },
-  { value: 'Remark Operator', label: 'Remark Operator' },
   { value: 'PAN Checker', label: 'PAN Checker' },
-  { value: 'Backend', label: 'Backend' }
+  { value: 'Remark Operator', label: 'Remark Operator' },
+  { value: 'QD Operator', label: 'QD Operator' },
+  { value: 'Final Status Operator', label: 'Final Status Operator' },
+  { value: 'Operational Head', label: 'Operational Head' },
+  { value: 'Administrative Operator', label: 'Administrative Operator' },
+  { value: 'Administrative Sales Executive', label: 'Administrative Sales Executive' },
+  { value: 'Verification Officer', label: 'Verification Officer' },
+  { value: 'Super Admin', label: 'Super Admin' },
+  { value: 'Backend', label: 'Backend Operator' }
 ];
 
 const EMPLOYEE_DESIGNATIONS = [
@@ -906,17 +908,79 @@ export default function ManageAnnouncements() {
                   <label style={S.label}>Target Audience *</label>
                   <select 
                     style={S.input} 
-                    value={formData.audience_type} 
-                    onChange={e => setFormData({ ...formData, audience_type: e.target.value, target_designations: [] })}
+                    value={
+                      formData.audience_type === 'ADMIN_DESIGNATION' && formData.target_designations?.length === 1
+                        ? ({
+                            'KYC Operator': 'PRESET_ADMIN_KYC',
+                            'PAN Checker': 'PRESET_ADMIN_PAN',
+                            'Remark Operator': 'PRESET_ADMIN_REMARK',
+                            'QD Operator': 'PRESET_ADMIN_QD',
+                            'Final Status Operator': 'PRESET_ADMIN_FINAL',
+                            'Operational Head': 'PRESET_ADMIN_OPS_HEAD',
+                            'Administrative Operator': 'PRESET_ADMIN_ADMIN_OP',
+                            'Administrative Sales Executive': 'PRESET_ADMIN_SALES_EXEC',
+                            'Verification Officer': 'PRESET_ADMIN_VERIFICATION',
+                            'Super Admin': 'PRESET_ADMIN_SUPER',
+                            'Backend': 'PRESET_ADMIN_BACKEND'
+                          }[formData.target_designations[0]] || 'ADMIN_DESIGNATION')
+                        : formData.audience_type
+                    } 
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val.startsWith('PRESET_ADMIN_')) {
+                        const desigMap = {
+                          PRESET_ADMIN_KYC: 'KYC Operator',
+                          PRESET_ADMIN_PAN: 'PAN Checker',
+                          PRESET_ADMIN_REMARK: 'Remark Operator',
+                          PRESET_ADMIN_QD: 'QD Operator',
+                          PRESET_ADMIN_FINAL: 'Final Status Operator',
+                          PRESET_ADMIN_OPS_HEAD: 'Operational Head',
+                          PRESET_ADMIN_ADMIN_OP: 'Administrative Operator',
+                          PRESET_ADMIN_SALES_EXEC: 'Administrative Sales Executive',
+                          PRESET_ADMIN_VERIFICATION: 'Verification Officer',
+                          PRESET_ADMIN_SUPER: 'Super Admin',
+                          PRESET_ADMIN_BACKEND: 'Backend'
+                        };
+                        setFormData({
+                          ...formData,
+                          audience_type: 'ADMIN_DESIGNATION',
+                          target_designations: [desigMap[val]]
+                        });
+                      } else {
+                        setFormData({
+                          ...formData,
+                          audience_type: val,
+                          target_designations: []
+                        });
+                      }
+                    }}
                   >
-                    <option value="ALL_USERS">All Users (Employees, Partners, Admins)</option>
-                    <option value="ADMIN_DESIGNATION">Admin Designation (KYC, PAN, QD, etc.)</option>
-                    <option value="EMPLOYEE_DESIGNATION">Employee Designation</option>
-                    <option value="EMPLOYEES">All Employees</option>
-                    <option value="MANAGERS">Managers</option>
-                    <option value="TEAM_LEADERS">Team Leaders (TL)</option>
-                    <option value="TELECALLERS">Telecallers (TC)</option>
-                    <option value="PARTNERS">DSA Partners</option>
+                    <option value="ALL_USERS">All System Users (Employees, Partners, Admins)</option>
+                    <optgroup label="Admin Roles & Designations">
+                      <option value="ADMINS">All Admin Staff</option>
+                      <option value="ADMIN_DESIGNATION">Custom Admin Designations (Multi-Select)</option>
+                      <option value="PRESET_ADMIN_KYC">KYC Operator</option>
+                      <option value="PRESET_ADMIN_PAN">PAN Checker</option>
+                      <option value="PRESET_ADMIN_REMARK">Remark Operator</option>
+                      <option value="PRESET_ADMIN_QD">QD Operator</option>
+                      <option value="PRESET_ADMIN_FINAL">Final Status Operator</option>
+                      <option value="PRESET_ADMIN_OPS_HEAD">Operational Head</option>
+                      <option value="PRESET_ADMIN_ADMIN_OP">Administrative Operator</option>
+                      <option value="PRESET_ADMIN_SALES_EXEC">Administrative Sales Executive</option>
+                      <option value="PRESET_ADMIN_VERIFICATION">Verification Officer</option>
+                      <option value="PRESET_ADMIN_SUPER">Super Admin</option>
+                      <option value="PRESET_ADMIN_BACKEND">Backend Operator</option>
+                    </optgroup>
+                    <optgroup label="Employee Roles & Designations">
+                      <option value="EMPLOYEES">All Employees</option>
+                      <option value="EMPLOYEE_DESIGNATION">Custom Employee Designations (Multi-Select)</option>
+                      <option value="MANAGERS">Managers</option>
+                      <option value="TEAM_LEADERS">Team Leaders (TL)</option>
+                      <option value="TELECALLERS">Telecallers (TC)</option>
+                    </optgroup>
+                    <optgroup label="Partner Roles">
+                      <option value="PARTNERS">DSA Partners</option>
+                    </optgroup>
                   </select>
                 </div>
 
@@ -934,9 +998,27 @@ export default function ManageAnnouncements() {
               {/* ADMIN DESIGNATIONS MULTI-SELECT */}
               {formData.audience_type === 'ADMIN_DESIGNATION' && (
                 <div style={{ background: C.bgSecondary, padding: '14px 16px', borderRadius: '12px', border: `1px solid ${C.primary}40` }}>
-                  <label style={{ ...S.label, marginBottom: '8px', display: 'block', fontWeight: 750, color: C.primary }}>
-                    Select Target Admin Designations *
-                  </label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <label style={{ ...S.label, margin: 0, fontWeight: 750, color: C.primary }}>
+                      Target Admin Designations ({formData.target_designations?.length || 0} selected) *
+                    </label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button 
+                        type="button" 
+                        onClick={() => setFormData({ ...formData, target_designations: ADMIN_DESIGNATIONS.map(d => d.value) })}
+                        style={{ background: 'none', border: 'none', color: C.primary, fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Select All
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => setFormData({ ...formData, target_designations: [] })}
+                        style={{ background: 'none', border: 'none', color: C.textLight, fontSize: '11.5px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
                     {ADMIN_DESIGNATIONS.map((desig) => {
                       const checked = (formData.target_designations || []).includes(desig.value);

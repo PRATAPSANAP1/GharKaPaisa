@@ -341,14 +341,19 @@ async function resolveAnnouncementTargetUsers(audienceType, targetRole, targetUs
         ]));
 
         const { rows } = await query(`
-          SELECT id FROM users 
-          WHERE UPPER(role::text) = 'ADMIN'
-            AND is_active = true
+          SELECT DISTINCT u.id 
+          FROM users u
+          LEFT JOIN employees e ON e.user_id = u.id OR e.employee_id = u.employee_id
+          WHERE u.is_active = true
             AND (
-              designation = ANY($1::text[])
-              OR UPPER(COALESCE(designation::text, '')) = ANY($1::text[])
-              OR REPLACE(UPPER(COALESCE(designation::text, '')), '_', ' ') = ANY($1::text[])
-              OR REPLACE(UPPER(COALESCE(designation::text, '')), ' ', '_') = ANY($1::text[])
+              u.designation = ANY($1::text[])
+              OR e.designation = ANY($1::text[])
+              OR UPPER(COALESCE(u.designation::text, '')) = ANY($1::text[])
+              OR UPPER(COALESCE(e.designation::text, '')) = ANY($1::text[])
+              OR REPLACE(UPPER(COALESCE(u.designation::text, '')), '_', ' ') = ANY($1::text[])
+              OR REPLACE(UPPER(COALESCE(e.designation::text, '')), '_', ' ') = ANY($1::text[])
+              OR REPLACE(UPPER(COALESCE(u.designation::text, '')), ' ', '_') = ANY($1::text[])
+              OR REPLACE(UPPER(COALESCE(e.designation::text, '')), ' ', '_') = ANY($1::text[])
             )
         `, [allVariants]);
         return rows.map(r => r.id);
