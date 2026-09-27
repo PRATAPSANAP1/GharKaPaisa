@@ -21,6 +21,14 @@ function maskValue(val, type = 'general') {
   return str;
 }
 
+function formatDateFilter(dateVal, defaultTime = '00:00:00') {
+  if (!dateVal) return null;
+  const str = String(dateVal).trim();
+  if (!str) return null;
+  if (str.includes(' ') || str.includes('T')) return str;
+  return `${str} ${defaultTime}`;
+}
+
 /**
  * Build dynamic WHERE clause based on filters
  */
@@ -60,15 +68,17 @@ function buildWhereClause(filters = {}, prefix = '') {
     paramIdx++;
   }
 
-  if (filters.date_from) {
+  const dateFrom = formatDateFilter(filters.date_from || filters.from_date || filters.startDate, '00:00:00');
+  if (dateFrom) {
     conditions.push(`${colPrefix}created_at >= $${paramIdx}`);
-    params.push(`${filters.date_from} 00:00:00`);
+    params.push(dateFrom);
     paramIdx++;
   }
 
-  if (filters.date_to) {
+  const dateTo = formatDateFilter(filters.date_to || filters.to_date || filters.endDate, '23:59:59');
+  if (dateTo) {
     conditions.push(`${colPrefix}created_at <= $${paramIdx}`);
-    params.push(`${filters.date_to} 23:59:59`);
+    params.push(dateTo);
     paramIdx++;
   }
 
@@ -173,15 +183,17 @@ async function getEmployeeCustomerDetailedReportData(filters = {}) {
     paramIdx++;
   }
 
-  if (filters.date_from) {
+  const dateFrom = formatDateFilter(filters.date_from || filters.from_date || filters.startDate, '00:00:00');
+  if (dateFrom) {
     whereClauses.push(`a.created_at >= $${paramIdx}`);
-    params.push(`${filters.date_from} 00:00:00`);
+    params.push(dateFrom);
     paramIdx++;
   }
 
-  if (filters.date_to) {
+  const dateTo = formatDateFilter(filters.date_to || filters.to_date || filters.endDate, '23:59:59');
+  if (dateTo) {
     whereClauses.push(`a.created_at <= $${paramIdx}`);
-    params.push(`${filters.date_to} 23:59:59`);
+    params.push(dateTo);
     paramIdx++;
   }
 
@@ -239,15 +251,17 @@ async function getCustomerReportData(filters = {}, maskSensitive = true) {
     paramIdx++;
   }
 
-  if (filters.date_from) {
+  const dateFrom = formatDateFilter(filters.date_from || filters.from_date || filters.startDate, '00:00:00');
+  if (dateFrom) {
     whereClauses.push(`c.created_at >= $${paramIdx}`);
-    params.push(`${filters.date_from} 00:00:00`);
+    params.push(dateFrom);
     paramIdx++;
   }
 
-  if (filters.date_to) {
+  const dateTo = formatDateFilter(filters.date_to || filters.to_date || filters.endDate, '23:59:59');
+  if (dateTo) {
     whereClauses.push(`c.created_at <= $${paramIdx}`);
-    params.push(`${filters.date_to} 23:59:59`);
+    params.push(dateTo);
     paramIdx++;
   }
 
@@ -335,15 +349,17 @@ async function getAdminReportData(filters = {}) {
     paramIdx++;
   }
 
-  if (filters.date_from) {
+  const dateFromAdmin = formatDateFilter(filters.date_from || filters.from_date || filters.startDate, '00:00:00');
+  if (dateFromAdmin) {
     whereClauses.push(`u.created_at >= $${paramIdx}`);
-    params.push(`${filters.date_from} 00:00:00`);
+    params.push(dateFromAdmin);
     paramIdx++;
   }
 
-  if (filters.date_to) {
+  const dateToAdmin = formatDateFilter(filters.date_to || filters.to_date || filters.endDate, '23:59:59');
+  if (dateToAdmin) {
     whereClauses.push(`u.created_at <= $${paramIdx}`);
-    params.push(`${filters.date_to} 23:59:59`);
+    params.push(dateToAdmin);
     paramIdx++;
   }
 
@@ -400,15 +416,17 @@ async function getPartnerReportData(filters = {}) {
     paramIdx++;
   }
 
-  if (filters.date_from) {
+  const dateFromPartner = formatDateFilter(filters.date_from || filters.from_date || filters.startDate, '00:00:00');
+  if (dateFromPartner) {
     whereClauses.push(`p.created_at >= $${paramIdx}`);
-    params.push(`${filters.date_from} 00:00:00`);
+    params.push(dateFromPartner);
     paramIdx++;
   }
 
-  if (filters.date_to) {
+  const dateToPartner = formatDateFilter(filters.date_to || filters.to_date || filters.endDate, '23:59:59');
+  if (dateToPartner) {
     whereClauses.push(`p.created_at <= $${paramIdx}`);
-    params.push(`${filters.date_to} 23:59:59`);
+    params.push(dateToPartner);
     paramIdx++;
   }
 
@@ -475,15 +493,17 @@ async function getApplicationReportData(filters = {}) {
     paramIdx++;
   }
 
-  if (filters.date_from) {
+  const dateFromApp = formatDateFilter(filters.date_from || filters.from_date || filters.startDate, '00:00:00');
+  if (dateFromApp) {
     whereClauses.push(`a.created_at >= $${paramIdx}`);
-    params.push(`${filters.date_from} 00:00:00`);
+    params.push(dateFromApp);
     paramIdx++;
   }
 
-  if (filters.date_to) {
+  const dateToApp = formatDateFilter(filters.date_to || filters.to_date || filters.endDate, '23:59:59');
+  if (dateToApp) {
     whereClauses.push(`a.created_at <= $${paramIdx}`);
-    params.push(`${filters.date_to} 23:59:59`);
+    params.push(dateToApp);
     paramIdx++;
   }
 
