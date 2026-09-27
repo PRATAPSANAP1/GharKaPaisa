@@ -114,8 +114,8 @@ async function getEmployeeReportData(filters = {}, maskSensitive = true) {
       COUNT(DISTINCT a.id) AS total_applications,
       COUNT(DISTINCT CASE WHEN a.status::text IN ('approved', 'commission_received') OR a.final_status ILIKE '%approve%' THEN a.id END) AS approved_applications,
       COUNT(DISTINCT CASE WHEN a.status::text = 'disbursed' OR a.final_status ILIKE '%disbursed%' THEN a.id END) AS disbursed_applications,
-      COALESCE(SUM(CASE WHEN a.status::text IN ('approved', 'disbursed', 'commission_received') THEN COALESCE(a.approved_amount, a.loan_amount, a.final_loan_disbursed, 0) ELSE 0 END), 0) AS total_business,
-      COALESCE(SUM(CASE WHEN a.status::text IN ('approved', 'disbursed', 'commission_received') THEN COALESCE(a.commission_amount, 0) ELSE 0 END), 0) AS total_commission
+      COALESCE(SUM(CASE WHEN a.status::text IN ('approved', 'disbursed', 'commission_received') THEN COALESCE(NULLIF(a.approved_amount::text, '')::numeric, NULLIF(a.loan_amount::text, '')::numeric, NULLIF((to_jsonb(a)->>'final_loan_disbursed'), '')::numeric, 0) ELSE 0 END), 0) AS total_business,
+      COALESCE(SUM(CASE WHEN a.status::text IN ('approved', 'disbursed', 'commission_received') THEN COALESCE(NULLIF(a.commission_amount::text, '')::numeric, 0) ELSE 0 END), 0) AS total_commission
     FROM users u
     LEFT JOIN employees e ON e.user_id = u.id OR e.employee_id = u.employee_id
     LEFT JOIN customers c ON c.created_by = u.id
@@ -197,8 +197,8 @@ async function getEmployeeCustomerDetailedReportData(filters = {}) {
       COALESCE(p.name, 'N/A') AS product_name,
       COALESCE(b.name, 'N/A') AS bank_name,
       a.status AS application_status,
-      COALESCE(a.approved_amount, a.disbursed_amount, a.final_loan_disbursed, a.loan_amount, 0) AS disbursed_amount,
-      COALESCE(a.commission_amount, 0) AS commission
+      COALESCE(NULLIF(a.approved_amount::text, '')::numeric, NULLIF((to_jsonb(a)->>'disbursed_amount'), '')::numeric, NULLIF((to_jsonb(a)->>'final_loan_disbursed'), '')::numeric, NULLIF(a.loan_amount::text, '')::numeric, 0) AS disbursed_amount,
+      COALESCE(NULLIF(a.commission_amount::text, '')::numeric, 0) AS commission
     FROM users u
     JOIN customers c ON c.created_by = u.id
     LEFT JOIN applications a ON a.customer_id = c.id
@@ -273,7 +273,7 @@ async function getCustomerReportData(filters = {}, maskSensitive = true) {
       COUNT(DISTINCT a.id) AS application_count,
       COUNT(DISTINCT CASE WHEN a.status::text IN ('approved', 'commission_received') THEN a.id END) AS approved_applications,
       COUNT(DISTINCT CASE WHEN a.status::text = 'disbursed' THEN a.id END) AS disbursed_applications,
-      COALESCE(SUM(CASE WHEN a.status::text IN ('approved', 'disbursed') THEN COALESCE(a.approved_amount, a.loan_amount, 0) ELSE 0 END), 0) AS total_loan_amount,
+      COALESCE(SUM(CASE WHEN a.status::text IN ('approved', 'disbursed') THEN COALESCE(NULLIF(a.approved_amount::text, '')::numeric, NULLIF(a.loan_amount::text, '')::numeric, 0) ELSE 0 END), 0) AS total_loan_amount,
       MAX(a.status::text) AS latest_application_status,
       MAX(p.name) AS product_name
     FROM customers c
@@ -504,10 +504,10 @@ async function getApplicationReportData(filters = {}) {
       a.status AS application_status,
       COALESCE(a.soft_approval_status, 'N/A') AS soft_approval_status,
       COALESCE(a.vkyc_status, 'pending') AS kyc_status,
-      COALESCE(a.approved_amount, a.loan_amount, 0) AS sanction_amount,
-      COALESCE(a.final_loan_disbursed, a.final_smart_emi_disbursed, a.disbursed_amount, 0) AS disbursed_amount,
+      COALESCE(NULLIF(a.approved_amount::text, '')::numeric, NULLIF(a.loan_amount::text, '')::numeric, 0) AS sanction_amount,
+      COALESCE(NULLIF((to_jsonb(a)->>'final_loan_disbursed'), '')::numeric, NULLIF((to_jsonb(a)->>'final_smart_emi_disbursed'), '')::numeric, NULLIF((to_jsonb(a)->>'disbursed_amount'), '')::numeric, 0) AS disbursed_amount,
       a.disbursal_date,
-      COALESCE(a.commission_amount, 0) AS commission,
+      COALESCE(NULLIF(a.commission_amount::text, '')::numeric, 0) AS commission,
       COALESCE(a.commission_status, 'pending') AS commission_status,
       a.created_at,
       a.updated_at
@@ -557,8 +557,8 @@ async function getCompleteSystemSummaryMetrics() {
   const appRes = await query(`SELECT COUNT(*) FROM applications`);
   const approvedRes = await query(`SELECT COUNT(*) FROM applications WHERE status::text IN ('approved', 'commission_received')`);
   const disbursedRes = await query(`SELECT COUNT(*) FROM applications WHERE status::text = 'disbursed'`);
-  const businessRes = await query(`SELECT COALESCE(SUM(COALESCE(final_loan_disbursed, final_smart_emi_disbursed, approved_amount, loan_amount, 0)), 0) FROM applications WHERE status::text IN ('approved', 'disbursed', 'commission_received')`);
-  const commissionRes = await query(`SELECT COALESCE(SUM(commission_amount), 0) FROM applications WHERE status::text IN ('approved', 'disbursed', 'commission_received')`);
+  const businessRes = await query(`SELECT COALESCE(SUM(COALESCE(NULLIF((to_jsonb(a)->>'final_loan_disbursed'), '')::numeric, NULLIF((to_jsonb(a)->>'final_smart_emi_disbursed'), '')::numeric, NULLIF(a.approved_amount::text, '')::numeric, NULLIF(a.loan_amount::text, '')::numeric, 0)), 0) FROM applications a WHERE a.status::text IN ('approved', 'disbursed', 'commission_received')`);
+  const commissionRes = await query(`SELECT COALESCE(SUM(COALESCE(NULLIF(a.commission_amount::text, '')::numeric, 0)), 0) FROM applications a WHERE a.status::text IN ('approved', 'disbursed', 'commission_received')`);
 
   return {
     total_employees: parseInt(totalEmpRes.rows[0]?.count || 0),
