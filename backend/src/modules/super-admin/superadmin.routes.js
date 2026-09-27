@@ -36,6 +36,12 @@ router.get('/working-hours', workingHoursCtrl.getWorkingHoursConfig);
 router.put('/working-hours', workingHoursCtrl.updateWorkingHours);
 router.post('/working-hours/extend', workingHoursCtrl.extendWorkingHours);
 router.get('/working-hours/extensions', workingHoursCtrl.getExtensionHistory);
+router.get('/working-hours/policies', workingHoursCtrl.getPolicies);
+router.post('/working-hours/policy', workingHoursCtrl.savePolicy);
+router.delete('/working-hours/policy/:id', workingHoursCtrl.deletePolicy);
+router.get('/working-hours/holidays', workingHoursCtrl.getHolidays);
+router.post('/working-hours/holiday', workingHoursCtrl.saveHoliday);
+router.delete('/working-hours/holiday/:id', workingHoursCtrl.deleteHoliday);
 
 // Dynamic Product Link Management endpoints
 router.post('/products/link', linkCtrl.saveProductLink);

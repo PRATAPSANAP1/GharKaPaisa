@@ -6,7 +6,7 @@ const logger = require('../../config/logger');
 
 /**
  * GET /api/v1/superadmin/working-hours
- * Fetch current working hours configuration, user statuses, and active extensions.
+ * Fetch current working hours configuration, user statuses, active extensions, policies, and holidays.
  */
 const getWorkingHoursConfig = async (req, res, next) => {
   try {
@@ -71,7 +71,6 @@ const getWorkingHoursConfig = async (req, res, next) => {
       const startTime = u.start_time || defaultConfig.start_time || '09:30 AM';
       const baseEndTime = u.end_time || defaultConfig.end_time || '08:00 PM';
 
-      // Check specific extension or global extension
       const specificExt = extensionsToday.find(e => e.apply_to === 'SPECIFIC' && String(e.user_id) === String(u.id));
       const activeExt = specificExt || globalExtension || null;
 
@@ -112,11 +111,40 @@ const getWorkingHoursConfig = async (req, res, next) => {
       };
     });
 
+    // 5. Fetch Phase 4 Policies
+    const { rows: policies } = await query(`
+      SELECT p.*, u.full_name as user_name, u.email as user_email
+      FROM admin_working_hour_policies p
+      LEFT JOIN users u ON u.id = p.user_id
+      ORDER BY p.priority DESC, p.created_at DESC
+    `);
+
+    // 6. Fetch Phase 4 Holidays
+    const { rows: holidays } = await query(`
+      SELECT h.*, u.full_name as user_name, u.email as user_email, c.full_name as created_by_name
+      FROM admin_working_hour_holidays h
+      LEFT JOIN users u ON u.id = h.user_id
+      LEFT JOIN users c ON c.id = h.created_by
+      ORDER BY h.holiday_date ASC, h.created_at DESC
+    `);
+
+    // 7. Fetch distinct designations for dropdowns
+    const { rows: desigRows } = await query(`
+      SELECT DISTINCT designation FROM users WHERE designation IS NOT NULL AND TRIM(designation) != '' ORDER BY designation ASC
+    `);
+    const distinctDesignations = desigRows.map(r => r.designation);
+
+    const distinctRoles = ['ADMIN', 'EMPLOYEE', 'HR', 'SUPER_ADMIN', 'PARTNER', 'TEAM_MEMBER'];
+
     return success(res, {
       defaultConfig,
       dateToday: dateStr,
       users: userList,
-      extensionsToday
+      extensionsToday,
+      policies,
+      holidays,
+      distinctDesignations,
+      distinctRoles
     });
   } catch (err) {
     next(err);
@@ -261,7 +289,6 @@ const extendWorkingHours = async (req, res, next) => {
       RETURNING *
     `, [applyScope === 'SPECIFIC' ? userId : null, applyScope, targetDate, originalEndTime, extendedEndTime, reason || 'Special operational extension', req.user.id]);
 
-    // Record audit log entry
     await logAction(req, 'WORKING_HOURS_EXTENDED', applyScope === 'SPECIFIC' ? userId : null, {
       applyTo: applyScope === 'ALL' ? 'All Users' : targetUserName,
       extensionDate: targetDate,
@@ -271,8 +298,6 @@ const extendWorkingHours = async (req, res, next) => {
       changedBy: req.user.full_name || req.user.email || 'Super Admin'
     });
 
-    logger.info(`[Working Hours Extension] Created by ${req.user.email} for ${targetUserName} until ${extendedEndTime} on ${targetDate}`);
-
     return success(res, ext, `Working hours extended to ${extendedEndTime} successfully for ${targetUserName}.`);
   } catch (err) {
     next(err);
@@ -281,7 +306,6 @@ const extendWorkingHours = async (req, res, next) => {
 
 /**
  * GET /api/v1/superadmin/working-hours/extensions
- * Fetch extension audit logs / history.
  */
 const getExtensionHistory = async (req, res, next) => {
   try {
@@ -305,9 +329,232 @@ const getExtensionHistory = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/superadmin/working-hours/policy
+ * Create or Update a Day-Wise Working Hours Schedule Policy.
+ */
+const savePolicy = async (req, res, next) => {
+  try {
+    await ensureWorkingHoursTables();
+    const { id, name, scopeType, roles, designations, userId, scheduleConfig, isEnabled } = req.body;
+
+    const scope = scopeType || 'GLOBAL';
+    const roleArr = Array.isArray(roles) ? roles : (roles ? [roles] : []);
+    const desigArr = Array.isArray(designations) ? designations : (designations ? [designations] : []);
+    const targetUserId = scope === 'USER' ? (userId || null) : null;
+
+    const priorityMap = { USER: 100, DESIGNATION: 50, ROLE: 20, GLOBAL: 10 };
+    const priority = priorityMap[scope] || 0;
+
+    const defaultConfig = {
+      monday:    { is_working: true,  start_time: '09:30 AM', end_time: '08:00 PM' },
+      tuesday:   { is_working: true,  start_time: '09:30 AM', end_time: '08:00 PM' },
+      wednesday: { is_working: true,  start_time: '09:30 AM', end_time: '08:00 PM' },
+      thursday:  { is_working: true,  start_time: '09:30 AM', end_time: '08:00 PM' },
+      friday:    { is_working: true,  start_time: '09:30 AM', end_time: '08:00 PM' },
+      saturday:  { is_working: true,  start_time: '09:30 AM', end_time: '08:00 PM' },
+      sunday:    { is_working: false, start_time: '09:30 AM', end_time: '08:00 PM' }
+    };
+
+    const finalConfig = scheduleConfig || defaultConfig;
+    let resultPolicy = null;
+
+    if (id) {
+      const { rows: [updated] } = await query(`
+        UPDATE admin_working_hour_policies
+        SET name = COALESCE($1, name),
+            scope_type = $2,
+            roles = $3,
+            designations = $4,
+            user_id = $5,
+            schedule_config = $6::jsonb,
+            is_enabled = $7,
+            priority = $8,
+            updated_at = NOW()
+        WHERE id = $9
+        RETURNING *
+      `, [name || 'Working Hours Policy', scope, roleArr, desigArr, targetUserId, JSON.stringify(finalConfig), isEnabled !== false, priority, id]);
+      resultPolicy = updated;
+    } else {
+      const { rows: [created] } = await query(`
+        INSERT INTO admin_working_hour_policies (name, scope_type, roles, designations, user_id, schedule_config, is_enabled, priority, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9)
+        RETURNING *
+      `, [name || 'Working Hours Policy', scope, roleArr, desigArr, targetUserId, JSON.stringify(finalConfig), isEnabled !== false, priority, req.user.id]);
+      resultPolicy = created;
+    }
+
+    // Sync child table admin_working_hour_schedule_days
+    if (resultPolicy && resultPolicy.id && finalConfig) {
+      const days = [
+        { day: 'MONDAY', num: 1, key: 'monday' },
+        { day: 'TUESDAY', num: 2, key: 'tuesday' },
+        { day: 'WEDNESDAY', num: 3, key: 'wednesday' },
+        { day: 'THURSDAY', num: 4, key: 'thursday' },
+        { day: 'FRIDAY', num: 5, key: 'friday' },
+        { day: 'SATURDAY', num: 6, key: 'saturday' },
+        { day: 'SUNDAY', num: 7, key: 'sunday' }
+      ];
+
+      for (const d of days) {
+        const item = finalConfig[d.key] || { is_working: true, start_time: '09:30 AM', end_time: '08:00 PM' };
+        await query(`
+          INSERT INTO admin_working_hour_schedule_days (policy_id, day_of_week, day_number, is_working, start_time, end_time)
+          VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (policy_id, day_of_week) DO UPDATE SET
+            is_working = EXCLUDED.is_working,
+            start_time = EXCLUDED.start_time,
+            end_time = EXCLUDED.end_time,
+            updated_at = NOW()
+        `, [resultPolicy.id, d.day, d.num, item.is_working !== false, item.start_time || '09:30 AM', item.end_time || '08:00 PM']);
+      }
+    }
+
+    await logAction(req, 'WORKING_HOURS_POLICY_SAVED', targetUserId, {
+      policyName: name || 'Working Hours Policy',
+      scopeType: scope,
+      roles: roleArr,
+      designations: desigArr,
+      isEnabled: isEnabled !== false,
+      changedBy: req.user.full_name || req.user.email
+    });
+
+    return success(res, resultPolicy, 'Working hours policy saved successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/superadmin/working-hours/policies
+ */
+const getPolicies = async (req, res, next) => {
+  try {
+    await ensureWorkingHoursTables();
+    const { rows } = await query(`
+      SELECT p.*, u.full_name as user_name, u.email as user_email
+      FROM admin_working_hour_policies p
+      LEFT JOIN users u ON u.id = p.user_id
+      ORDER BY p.priority DESC, p.created_at DESC
+    `);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/v1/superadmin/working-hours/policy/:id
+ */
+const deletePolicy = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await query(`DELETE FROM admin_working_hour_policies WHERE id = $1`, [id]);
+    return success(res, {}, 'Policy deleted successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/v1/superadmin/working-hours/holiday
+ * Create or Update a Holiday record.
+ */
+const saveHoliday = async (req, res, next) => {
+  try {
+    await ensureWorkingHoursTables();
+    const { id, holidayName, holidayDate, scopeType, roles, designations, userId, reason, isActive } = req.body;
+
+    if (!holidayName || !holidayDate) {
+      return error(res, 'Holiday name and date are required', 400);
+    }
+
+    const scope = scopeType || 'GLOBAL';
+    const roleArr = Array.isArray(roles) ? roles : (roles ? [roles] : []);
+    const desigArr = Array.isArray(designations) ? designations : (designations ? [designations] : []);
+    const targetUserId = scope === 'USER' ? (userId || null) : null;
+
+    let result = null;
+    if (id) {
+      const { rows: [updated] } = await query(`
+        UPDATE admin_working_hour_holidays
+        SET holiday_name = $1,
+            holiday_date = $2::date,
+            scope_type = $3,
+            roles = $4,
+            designations = $5,
+            user_id = $6,
+            reason = $7,
+            is_active = $8,
+            updated_at = NOW()
+        WHERE id = $9
+        RETURNING *
+      `, [holidayName, holidayDate, scope, roleArr, desigArr, targetUserId, reason || null, isActive !== false, id]);
+      result = updated;
+    } else {
+      const { rows: [created] } = await query(`
+        INSERT INTO admin_working_hour_holidays (holiday_name, holiday_date, scope_type, roles, designations, user_id, reason, is_active, created_by)
+        VALUES ($1, $2::date, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+      `, [holidayName, holidayDate, scope, roleArr, desigArr, targetUserId, reason || null, isActive !== false, req.user.id]);
+      result = created;
+    }
+
+    await logAction(req, 'WORKING_HOURS_HOLIDAY_SAVED', targetUserId, {
+      holidayName,
+      holidayDate,
+      scopeType: scope,
+      isActive: isActive !== false,
+      changedBy: req.user.full_name || req.user.email
+    });
+
+    return success(res, result, 'Holiday saved successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/v1/superadmin/working-hours/holidays
+ */
+const getHolidays = async (req, res, next) => {
+  try {
+    await ensureWorkingHoursTables();
+    const { rows } = await query(`
+      SELECT h.*, u.full_name as user_name, u.email as user_email, c.full_name as created_by_name
+      FROM admin_working_hour_holidays h
+      LEFT JOIN users u ON u.id = h.user_id
+      LEFT JOIN users c ON c.id = h.created_by
+      ORDER BY h.holiday_date ASC, h.created_at DESC
+    `);
+    return success(res, rows);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/v1/superadmin/working-hours/holiday/:id
+ */
+const deleteHoliday = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await query(`DELETE FROM admin_working_hour_holidays WHERE id = $1`, [id]);
+    return success(res, {}, 'Holiday deleted successfully.');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getWorkingHoursConfig,
   updateWorkingHours,
   extendWorkingHours,
-  getExtensionHistory
+  getExtensionHistory,
+  savePolicy,
+  getPolicies,
+  deletePolicy,
+  saveHoliday,
+  getHolidays,
+  deleteHoliday
 };

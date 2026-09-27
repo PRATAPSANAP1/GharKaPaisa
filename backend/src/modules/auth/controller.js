@@ -200,7 +200,11 @@ const sendOtp = async (req, res, next) => {
     const workingHoursService = require('./workingHours.service.js');
     const workingHoursCheck = await workingHoursService.checkUserWorkingHours(user);
     if (!workingHoursCheck.allowed) {
-      return error(res, workingHoursCheck.message, 403);
+      return res.status(403).json({
+        success: false,
+        message: workingHoursCheck.message,
+        ...workingHoursCheck
+      });
     }
 
     const emailIdentity = user.email ? normalizeIdentity(user.email) : null;
@@ -446,7 +450,11 @@ const login = async (req, res, next) => {
     const workingHoursService = require('./workingHours.service.js');
     const workingHoursCheck = await workingHoursService.checkUserWorkingHours(user);
     if (!workingHoursCheck.allowed) {
-      return error(res, workingHoursCheck.message, 403);
+      return res.status(403).json({
+        success: false,
+        message: workingHoursCheck.message,
+        ...workingHoursCheck
+      });
     }
 
     // Validate OTP
@@ -570,7 +578,11 @@ const loginWithMsg91 = async (req, res, next) => {
     const workingHoursService = require('./workingHours.service.js');
     const workingHoursCheck = await workingHoursService.checkUserWorkingHours(user);
     if (!workingHoursCheck.allowed) {
-      return error(res, workingHoursCheck.message, 403);
+      return res.status(403).json({
+        success: false,
+        message: workingHoursCheck.message,
+        ...workingHoursCheck
+      });
     }
 
     try {
@@ -1123,7 +1135,11 @@ const loginPassword = async (req, res, next) => {
     const workingHoursService = require('./workingHours.service.js');
     const workingHoursCheck = await workingHoursService.checkUserWorkingHours(user);
     if (!workingHoursCheck.allowed) {
-      return error(res, workingHoursCheck.message, 403);
+      return res.status(403).json({
+        success: false,
+        message: workingHoursCheck.message,
+        ...workingHoursCheck
+      });
     }
 
     // Generate JWT (15-minute access token)

@@ -4816,6 +4816,14 @@ const migrate = async () => {
     logger.error('Admin Working Hours migration note:', whErr.message);
   }
 
+  // ── Admin Working Hours Phase 2 Migration ──
+  try {
+    const migrateWorkingHoursPhase2 = require('./migrate_working_hours_phase2');
+    await migrateWorkingHoursPhase2();
+  } catch (whPhase2Err) {
+    logger.error('Admin Working Hours Phase 2 migration note:', whPhase2Err.message);
+  }
+
   // ── High Performance Composite Indexes ──────────────────────────
   try {
     await query(`CREATE INDEX IF NOT EXISTS idx_applications_app_num_status ON applications(app_number, status, created_at)`);
@@ -5025,6 +5033,13 @@ const migrate = async () => {
 
   const { migrateSmartEmiAndLoccSchema } = require('./migrate_smart_emi_locc_and_reports');
   await migrateSmartEmiAndLoccSchema();
+
+  try {
+    const { migrateWhatsApp } = require('./migrate_whatsapp');
+    await migrateWhatsApp();
+  } catch (waErr) {
+    logger.error('WhatsApp migration error note:', waErr.message);
+  }
 
   if (require.main === module) {
     process.exit(0);
