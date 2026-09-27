@@ -282,7 +282,7 @@ const toggleMute = async (req, res, next) => {
 };
 
 // Helper to resolve user IDs based on audience selection, target role, user IDs, and team IDs
-async function resolveAnnouncementTargetUsers(audienceType, targetRole, targetUserIds = [], targetTeamIds = []) {
+async function resolveAnnouncementTargetUsers(audienceType, targetRole, targetUserIds = [], targetTeamIds = [], targetDesignations = []) {
   try {
     let specificUserIds = [];
 
@@ -322,6 +322,63 @@ async function resolveAnnouncementTargetUsers(audienceType, targetRole, targetUs
     }
 
     const type = (audienceType || targetRole || 'ALL_USERS').toUpperCase();
+
+    // Parse target designations array if passed
+    const rawDesigs = Array.isArray(targetDesignations)
+      ? targetDesignations
+      : (typeof targetDesignations === 'string' ? JSON.parse(targetDesignations || '[]') : []);
+
+    if (type === 'ADMIN_DESIGNATION' || (rawDesigs.length > 0 && (type === 'ADMIN' || type === 'ADMINS'))) {
+      if (rawDesigs.length > 0) {
+        const uppercaseDesigs = rawDesigs.map(d => String(d).toUpperCase());
+        const spaceDesigs = rawDesigs.map(d => String(d).replace(/_/g, ' '));
+        const spaceUpperDesigs = spaceDesigs.map(d => d.toUpperCase());
+        const underscoreDesigs = rawDesigs.map(d => String(d).replace(/\s+/g, '_'));
+        const underscoreUpperDesigs = underscoreDesigs.map(d => d.toUpperCase());
+
+        const allVariants = Array.from(new Set([
+          ...rawDesigs, ...uppercaseDesigs, ...spaceDesigs, ...spaceUpperDesigs, ...underscoreDesigs, ...underscoreUpperDesigs
+        ]));
+
+        const { rows } = await query(`
+          SELECT id FROM users 
+          WHERE UPPER(role::text) = 'ADMIN'
+            AND is_active = true
+            AND (
+              designation = ANY($1::text[])
+              OR UPPER(COALESCE(designation::text, '')) = ANY($1::text[])
+              OR REPLACE(UPPER(COALESCE(designation::text, '')), '_', ' ') = ANY($1::text[])
+              OR REPLACE(UPPER(COALESCE(designation::text, '')), ' ', '_') = ANY($1::text[])
+            )
+        `, [allVariants]);
+        return rows.map(r => r.id);
+      }
+    }
+
+    if (type === 'EMPLOYEE_DESIGNATION' && rawDesigs.length > 0) {
+      const uppercaseDesigs = rawDesigs.map(d => String(d).toUpperCase());
+      const spaceDesigs = rawDesigs.map(d => String(d).replace(/_/g, ' '));
+      const spaceUpperDesigs = spaceDesigs.map(d => d.toUpperCase());
+      const underscoreDesigs = rawDesigs.map(d => String(d).replace(/\s+/g, '_'));
+      const underscoreUpperDesigs = underscoreDesigs.map(d => d.toUpperCase());
+
+      const allVariants = Array.from(new Set([
+        ...rawDesigs, ...uppercaseDesigs, ...spaceDesigs, ...spaceUpperDesigs, ...underscoreDesigs, ...underscoreUpperDesigs
+      ]));
+
+      const { rows } = await query(`
+        SELECT id FROM users 
+        WHERE UPPER(role::text) = 'EMPLOYEE'
+          AND is_active = true
+          AND (
+            designation = ANY($1::text[])
+            OR UPPER(COALESCE(designation::text, '')) = ANY($1::text[])
+            OR REPLACE(UPPER(COALESCE(designation::text, '')), '_', ' ') = ANY($1::text[])
+            OR REPLACE(UPPER(COALESCE(designation::text, '')), ' ', '_') = ANY($1::text[])
+          )
+      `, [allVariants]);
+      return rows.map(r => r.id);
+    }
     
     if (type === 'ALL_USERS' || type === 'ALL') {
       const { rows } = await query(`SELECT id FROM users WHERE is_active = true`);
@@ -332,8 +389,8 @@ async function resolveAnnouncementTargetUsers(audienceType, targetRole, targetUs
     } else if (type === 'EMPLOYEES' || type === 'EMPLOYEE') {
       const { rows } = await query(`SELECT id FROM users WHERE UPPER(role::text) = 'EMPLOYEE' AND is_active = true`);
       return rows.map(r => r.id);
-    } else if (type === 'ADMIN' || type === 'ADMINS' || type === 'ADMINISTRATIVE_OPERATOR' || type === 'QD_OPERATOR' || type === 'PAN_CHECKER' || type === 'REMARK_OPERATOR') {
-      const { rows } = await query(`SELECT id FROM users WHERE UPPER(role::text) IN ('ADMIN','SUPER_ADMIN','ADMINISTRATIVE_OPERATOR','QD_OPERATOR','PAN_CHECKER','REMARK_OPERATOR') AND is_active = true`);
+    } else if (type === 'ADMIN' || type === 'ADMINS') {
+      const { rows } = await query(`SELECT id FROM users WHERE UPPER(role::text) IN ('ADMIN','SUPER_ADMIN') AND is_active = true`);
       return rows.map(r => r.id);
     } else if (type === 'MANAGERS' || type === 'MANAGER') {
       const { rows } = await query(`
@@ -669,7 +726,7 @@ const createAnnouncement = async (req, res, next) => {
     const { 
       title, short_description, message, description, banner_image, 
       audience_type, target_role, priority, delivery_channels, 
-      target_user_ids, target_team_ids, scheduled_at, published_at, 
+      target_user_ids, target_team_ids, target_designations, scheduled_at, published_at, 
       expires_at, start_date, end_date, redirect_url, status 
     } = req.body;
 
@@ -699,15 +756,15 @@ const createAnnouncement = async (req, res, next) => {
       INSERT INTO announcements (
         announcement_id, title, short_description, message, description, banner_image, 
         audience_type, target_role, priority, status, delivery_channels, target_user_ids, 
-        target_team_ids, scheduled_at, published_at, expires_at, start_date, end_date, redirect_url, created_by
+        target_team_ids, target_designations, scheduled_at, published_at, expires_at, start_date, end_date, redirect_url, created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21) 
       RETURNING *
     `, [
       annCode, title, finalShortDesc, finalMessage, finalMessage, banner_image || null, 
       finalAudience, finalAudience.toLowerCase(), finalPriority, finalStatus, finalChannels, 
       JSON.stringify(target_user_ids || []), JSON.stringify(target_team_ids || []), 
-      scheduled_at || null, finalPublishedAt, expires_at || null, 
+      JSON.stringify(target_designations || []), scheduled_at || null, finalPublishedAt, expires_at || null, 
       start_date || null, end_date || null, redirect_url || null, req.user.id
     ]);
 
@@ -719,7 +776,7 @@ const createAnnouncement = async (req, res, next) => {
 
     let targetUsers = [];
     if (finalStatus === 'PUBLISHED' || finalStatus === 'PUBLISH') {
-      targetUsers = await resolveAnnouncementTargetUsers(finalAudience, target_role, target_user_ids, target_team_ids);
+      targetUsers = await resolveAnnouncementTargetUsers(finalAudience, target_role, target_user_ids, target_team_ids, target_designations);
       if (targetUsers.length > 0) {
         const chunkSize = 500;
         for (let i = 0; i < targetUsers.length; i += chunkSize) {
@@ -779,7 +836,7 @@ const updateAnnouncement = async (req, res, next) => {
     const { 
       title, short_description, message, description, banner_image, 
       audience_type, target_role, priority, delivery_channels, 
-      target_user_ids, target_team_ids, scheduled_at, published_at, 
+      target_user_ids, target_team_ids, target_designations, scheduled_at, published_at, 
       expires_at, start_date, end_date, redirect_url, status 
     } = body;
 
@@ -819,6 +876,7 @@ const updateAnnouncement = async (req, res, next) => {
     if (body.hasOwnProperty('delivery_channels')) addField('delivery_channels', delivery_channels ? JSON.stringify(delivery_channels) : null);
     if (body.hasOwnProperty('target_user_ids')) addField('target_user_ids', target_user_ids ? JSON.stringify(target_user_ids) : null);
     if (body.hasOwnProperty('target_team_ids')) addField('target_team_ids', target_team_ids ? JSON.stringify(target_team_ids) : null);
+    if (body.hasOwnProperty('target_designations')) addField('target_designations', target_designations ? JSON.stringify(target_designations) : null);
     if (body.hasOwnProperty('scheduled_at')) addField('scheduled_at', scheduled_at);
     if (body.hasOwnProperty('expires_at')) addField('expires_at', expires_at);
     if (body.hasOwnProperty('start_date')) addField('start_date', start_date);
@@ -854,7 +912,8 @@ const updateAnnouncement = async (req, res, next) => {
         updated.audience_type, 
         updated.target_role, 
         target_user_ids || (typeof updated.target_user_ids === 'string' ? JSON.parse(updated.target_user_ids) : updated.target_user_ids), 
-        target_team_ids || (typeof updated.target_team_ids === 'string' ? JSON.parse(updated.target_team_ids) : updated.target_team_ids)
+        target_team_ids || (typeof updated.target_team_ids === 'string' ? JSON.parse(updated.target_team_ids) : updated.target_team_ids),
+        target_designations || (typeof updated.target_designations === 'string' ? JSON.parse(updated.target_designations) : updated.target_designations)
       );
 
       if (targetUsers.length > 0) {

@@ -17,8 +17,8 @@ const {
   exportCompleteSystemReport
 } = require('./reports.controller');
 
-// Enforce authentication & Super Admin role authorization
-router.use(authenticate, syncUser, authorize('SUPER_ADMIN'));
+// Enforce authentication & Super Admin / Admin role authorization
+router.use(authenticate, syncUser, authorize('SUPER_ADMIN', 'ADMIN', 'SUPERADMIN', 'OPERATIONAL_HEAD'));
 
 // ── Preview Data Endpoints ─────────────────────────────────────
 router.get('/employees', getEmployeeReport);

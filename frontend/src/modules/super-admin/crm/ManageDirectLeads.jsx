@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  FaDownload, FaPlus, FaCreditCard, FaFire, FaBuilding, 
+  FaDownload, FaPlus, FaCreditCard, FaFire, 
   FaShieldAlt, FaClipboardList, FaSyncAlt, FaExclamationTriangle, 
-  FaCheck, FaMobileAlt, FaTimes 
+  FaCheck, FaMobileAlt, FaTimes, FaWhatsapp 
 } from 'react-icons/fa';
 import api from "../../../services/api";
 import { useTheme, makeS } from "../../../contexts/ThemeContext";
+import SendWhatsAppModal from '../../../components/whatsapp/SendWhatsAppModal';
 
 export default function ManageDirectLeads() {
   const { C, isDark } = useTheme();
@@ -27,6 +28,7 @@ export default function ManageDirectLeads() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [whatsAppData, setWhatsAppData] = useState(null);
 
   // Modal State for Manual Lead Entry
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -144,14 +146,12 @@ export default function ManageDirectLeads() {
 
   const categoryCounts = {
     credit_card: leads.filter(l => !l.category || l.category === 'credit_card').length,
-    loan: leads.filter(l => l.category === 'loan' || l.category === 'personal_loan').length,
     insurance: leads.filter(l => l.category === 'insurance').length,
   };
 
   const categories = [
     { id: "all", label: "All Direct Leads", icon: <FaClipboardList size={14} /> },
     { id: "credit_card", label: "Credit Cards", icon: <FaCreditCard size={14} /> },
-    { id: "loan", label: "Loans", icon: <FaBuilding size={14} /> },
     { id: "insurance", label: "Insurance", icon: <FaShieldAlt size={14} /> },
   ];
 
@@ -162,7 +162,7 @@ export default function ManageDirectLeads() {
         <div>
           <h2 style={{ fontSize: "26px", fontWeight: 800, color: C.text, margin: 0, letterSpacing: "-0.5px" }}>Direct Product Leads</h2>
           <p style={{ fontSize: "13.5px", color: C.textLight, margin: "6px 0 0 0", lineHeight: 1.4 }}>
-            Manage direct customer leads and verified OTP applications for Credit Cards, Loans, and Insurance.
+            Manage direct customer leads and verified OTP applications for Credit Cards and Insurance.
           </p>
         </div>
 
@@ -221,11 +221,11 @@ export default function ManageDirectLeads() {
 
         <div style={{ ...S.card, display: "flex", alignItems: "center", gap: "12px", padding: isMobile ? "12px" : "18px" }}>
           <div style={{ width: "38px", height: "38px", background: `${C.teal}15`, borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", color: C.teal, fontSize: "18px", flexShrink: 0 }}>
-            <FaBuilding size={18} />
+            <FaCreditCard size={18} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: isMobile ? "18px" : "22px", fontWeight: 800, color: C.text }}>{categoryCounts.loan}</div>
-            <div style={{ fontSize: "10.5px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Loan Leads</div>
+            <div style={{ fontSize: isMobile ? "18px" : "22px", fontWeight: 800, color: C.text }}>{categoryCounts.credit_card}</div>
+            <div style={{ fontSize: "10.5px", fontWeight: 700, color: C.textLight, textTransform: "uppercase", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Credit Card Leads</div>
           </div>
         </div>
 
@@ -327,7 +327,7 @@ export default function ManageDirectLeads() {
               </thead>
               <tbody style={{ fontSize: "13.5px", color: C.text }}>
                 {leads.map((lead) => {
-                  const catLabel = !lead.category || lead.category === 'credit_card' ? 'Credit Card' : (lead.category === 'insurance' ? 'Insurance' : 'Loan');
+                  const catLabel = !lead.category || lead.category === 'credit_card' ? 'Credit Card' : (lead.category === 'insurance' ? 'Insurance' : String(lead.category).replace(/_/g, ' '));
                   return (
                     <tr key={lead.id} style={{ borderBottom: `1px solid ${C.border}50` }}>
                       <td style={{ padding: "16px 20px", color: C.textLight }}>
@@ -354,20 +354,41 @@ export default function ManageDirectLeads() {
                       </td>
                       <td style={{ padding: "16px 20px", fontWeight: 600 }}>{lead.card_name}</td>
                       <td style={{ padding: "16px 20px" }}>
-                        <select
-                          value={lead.status || 'verified'}
-                          onChange={(e) => handleStatusUpdate(lead.id, e.target.value)}
-                          style={{
-                            padding: "6px 10px", borderRadius: "8px",
-                            border: `1px solid ${C.border}`, background: C.inputBg,
-                            color: C.text, fontSize: "12px", fontWeight: 700, cursor: "pointer"
-                          }}
-                        >
-                          <option value="verified">Verified</option>
-                          <option value="contacted">Contacted</option>
-                          <option value="converted">Converted</option>
-                          <option value="rejected">Rejected</option>
-                        </select>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <select
+                            value={lead.status || 'verified'}
+                            onChange={(e) => handleStatusUpdate(lead.id, e.target.value)}
+                            style={{
+                              padding: "6px 10px", borderRadius: "8px",
+                              border: `1px solid ${C.border}`, background: C.inputBg,
+                              color: C.text, fontSize: "12px", fontWeight: 700, cursor: "pointer"
+                            }}
+                          >
+                            <option value="verified">Verified</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="converted">Converted</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={() => setWhatsAppData({
+                              recipientMobile: lead.mobile,
+                              recipientName: lead.customer_name,
+                              leadId: lead.id,
+                              initialTemplateCategory: 'lead'
+                            })}
+                            title="Send WhatsApp Message"
+                            style={{
+                              width: '32px', height: '32px', borderRadius: '8px',
+                              background: '#ECFDF5', border: '1px solid #A7F3D0',
+                              color: '#059669', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}
+                          >
+                            <FaWhatsapp size={15} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -423,7 +444,6 @@ export default function ManageDirectLeads() {
                   style={{ ...S.input }}
                 >
                   <option value="credit_card">Credit Card</option>
-                  <option value="loan">Loan (Personal / Home / Business)</option>
                   <option value="insurance">Insurance</option>
                 </select>
               </div>
@@ -481,6 +501,19 @@ export default function ManageDirectLeads() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Reusable Send WhatsApp Modal */}
+      {whatsAppData && (
+        <SendWhatsAppModal
+          isOpen={Boolean(whatsAppData)}
+          onClose={() => setWhatsAppData(null)}
+          recipientMobile={whatsAppData.recipientMobile}
+          recipientName={whatsAppData.recipientName}
+          leadId={whatsAppData.leadId}
+          initialTemplateCategory={whatsAppData.initialTemplateCategory}
+          onSuccess={() => setWhatsAppData(null)}
+        />
       )}
     </div>
   );

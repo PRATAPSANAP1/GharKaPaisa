@@ -105,6 +105,7 @@ import ManageAnnouncements from '../modules/super-admin/notifications/ManageAnno
 import AdminProfilePage from '../modules/super-admin/profile/AdminProfilePage';
 import AdminWorkingHours from '../modules/super-admin/working-hours/AdminWorkingHours';
 import SuperAdminViewMessages from '../modules/super-admin/messenger/SuperAdminViewMessages';
+import SuperAdminWhatsApp from '../modules/super-admin/whatsapp/SuperAdminWhatsApp';
 
 
 // Partner Pages
@@ -387,6 +388,7 @@ const AppRoutes = () => {
             <Route path="/admin/crm" element={<ManageApplications />} />
             <Route path="/admin/wallet" element={<ManageWallet />} />
             <Route path="/admin/messenger" element={<MessengerView />} />
+            <Route path="/admin/whatsapp" element={<SuperAdminWhatsApp />} />
           </Route>
         </Route>
       </Route>
@@ -429,6 +431,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/announcements" element={<ManageAnnouncements />} />
             <Route path="/super-admin/messenger" element={<MessengerView />} />
             <Route path="/super-admin/view-messages" element={<SuperAdminViewMessages />} />
+            <Route path="/super-admin/whatsapp" element={<SuperAdminWhatsApp />} />
             <Route path="/super-admin/profile" element={<AdminProfilePage />} />
             <Route path="/super-admin/support" element={<ManageSupportTickets />} />
 

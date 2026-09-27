@@ -9,6 +9,26 @@ import {
   MdNotificationsActive, MdArrowForward, MdInfo, MdRefresh
 } from 'react-icons/md';
 
+const ADMIN_DESIGNATIONS = [
+  { value: 'Administrative Operator', label: 'Administrative Operator' },
+  { value: 'Operational Head', label: 'Operational Head' },
+  { value: 'Administrative Sales Executive', label: 'Administrative Sales Executive' },
+  { value: 'KYC Operator', label: 'KYC Operator' },
+  { value: 'Final Status Operator', label: 'Final Status Operator' },
+  { value: 'QD Operator', label: 'QD Operator' },
+  { value: 'Remark Operator', label: 'Remark Operator' },
+  { value: 'PAN Checker', label: 'PAN Checker' },
+  { value: 'Backend', label: 'Backend' }
+];
+
+const EMPLOYEE_DESIGNATIONS = [
+  { value: 'Branch Head', label: 'Branch Head' },
+  { value: 'Senior Manager', label: 'Senior Manager' },
+  { value: 'Manager', label: 'Manager' },
+  { value: 'Team Leader', label: 'Team Leader' },
+  { value: 'Telecaller', label: 'Telecaller' }
+];
+
 export default function ManageAnnouncements() {
   const { C } = useTheme();
   const S = makeS(C);
@@ -43,6 +63,7 @@ export default function ManageAnnouncements() {
     short_description: '',
     message: '',
     audience_type: 'ALL_USERS',
+    target_designations: [],
     priority: 'MEDIUM',
     delivery_channels: ['in-app'],
     schedule_option: 'now',
@@ -107,6 +128,7 @@ export default function ManageAnnouncements() {
       short_description: '',
       message: '',
       audience_type: 'ALL_USERS',
+      target_designations: [],
       priority: 'MEDIUM',
       delivery_channels: ['in-app'],
       schedule_option: 'now',
@@ -123,11 +145,19 @@ export default function ManageAnnouncements() {
   const openEditModal = (ann) => {
     setFormMode('edit');
     setEditingId(ann.id);
+    let desigArr = [];
+    if (Array.isArray(ann.target_designations)) {
+      desigArr = ann.target_designations;
+    } else if (typeof ann.target_designations === 'string') {
+      try { desigArr = JSON.parse(ann.target_designations); } catch (e) { desigArr = []; }
+    }
+
     setFormData({
       title: ann.title || '',
       short_description: ann.short_description || '',
       message: ann.message || ann.description || '',
       audience_type: (ann.audience_type || ann.target_role || 'ALL_USERS').toUpperCase(),
+      target_designations: desigArr,
       priority: (ann.priority || 'MEDIUM').toUpperCase(),
       delivery_channels: Array.isArray(ann.delivery_channels) ? ann.delivery_channels : ['in-app'],
       schedule_option: ann.status === 'SCHEDULED' ? 'schedule' : 'now',
@@ -144,6 +174,10 @@ export default function ManageAnnouncements() {
   const handleSaveAnnouncement = async (actionType = 'save') => {
     if (!formData.title || !formData.message) {
       alert('Please fill in the announcement title and message content.');
+      return;
+    }
+    if ((formData.audience_type === 'ADMIN_DESIGNATION' || formData.audience_type === 'EMPLOYEE_DESIGNATION') && (!formData.target_designations || formData.target_designations.length === 0)) {
+      alert('Please select at least one target designation.');
       return;
     }
     setSaving(true);
@@ -499,7 +533,20 @@ export default function ManageAnnouncements() {
                         {/* Audience */}
                         <td style={{ padding: '14px 12px' }}>
                           <span style={{ fontSize: '12px', fontWeight: 700, background: C.bgSecondary, padding: '4px 10px', borderRadius: '8px', color: C.text }}>
-                            {(ann.audience_type || ann.target_role || 'ALL_USERS').replace('_', ' ')}
+                            {(() => {
+                              const aud = (ann.audience_type || ann.target_role || 'ALL_USERS').toUpperCase();
+                              if (aud === 'ADMIN_DESIGNATION' || aud === 'EMPLOYEE_DESIGNATION') {
+                                let desigArr = [];
+                                if (Array.isArray(ann.target_designations)) {
+                                  desigArr = ann.target_designations;
+                                } else if (typeof ann.target_designations === 'string') {
+                                  try { desigArr = JSON.parse(ann.target_designations); } catch (e) { desigArr = []; }
+                                }
+                                const prefix = aud === 'ADMIN_DESIGNATION' ? 'Admin' : 'Emp';
+                                return desigArr.length > 0 ? `${prefix}: ${desigArr.join(', ')}` : aud.replace('_', ' ');
+                              }
+                              return aud.replace('_', ' ');
+                            })()}
                           </span>
                         </td>
 
@@ -857,8 +904,14 @@ export default function ManageAnnouncements() {
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={S.label}>Target Audience *</label>
-                  <select style={S.input} value={formData.audience_type} onChange={e => setFormData({ ...formData, audience_type: e.target.value })}>
+                  <select 
+                    style={S.input} 
+                    value={formData.audience_type} 
+                    onChange={e => setFormData({ ...formData, audience_type: e.target.value, target_designations: [] })}
+                  >
                     <option value="ALL_USERS">All Users (Employees, Partners, Admins)</option>
+                    <option value="ADMIN_DESIGNATION">Admin Designation (KYC, PAN, QD, etc.)</option>
+                    <option value="EMPLOYEE_DESIGNATION">Employee Designation</option>
                     <option value="EMPLOYEES">All Employees</option>
                     <option value="MANAGERS">Managers</option>
                     <option value="TEAM_LEADERS">Team Leaders (TL)</option>
@@ -877,6 +930,100 @@ export default function ManageAnnouncements() {
                   </select>
                 </div>
               </div>
+
+              {/* ADMIN DESIGNATIONS MULTI-SELECT */}
+              {formData.audience_type === 'ADMIN_DESIGNATION' && (
+                <div style={{ background: C.bgSecondary, padding: '14px 16px', borderRadius: '12px', border: `1px solid ${C.primary}40` }}>
+                  <label style={{ ...S.label, marginBottom: '8px', display: 'block', fontWeight: 750, color: C.primary }}>
+                    Select Target Admin Designations *
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                    {ADMIN_DESIGNATIONS.map((desig) => {
+                      const checked = (formData.target_designations || []).includes(desig.value);
+                      return (
+                        <label 
+                          key={desig.value} 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            fontSize: '12.5px', 
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            background: checked ? `${C.primary}15` : C.cardBg,
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            border: checked ? `1.5px solid ${C.primary}` : `1px solid ${C.border}`,
+                            color: C.text,
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <input 
+                            type="checkbox"
+                            checked={checked}
+                            onChange={e => {
+                              const current = formData.target_designations || [];
+                              if (e.target.checked) {
+                                setFormData({ ...formData, target_designations: [...current, desig.value] });
+                              } else {
+                                setFormData({ ...formData, target_designations: current.filter(d => d !== desig.value) });
+                              }
+                            }}
+                          />
+                          {desig.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* EMPLOYEE DESIGNATIONS MULTI-SELECT */}
+              {formData.audience_type === 'EMPLOYEE_DESIGNATION' && (
+                <div style={{ background: C.bgSecondary, padding: '14px 16px', borderRadius: '12px', border: `1px solid ${C.primary}40` }}>
+                  <label style={{ ...S.label, marginBottom: '8px', display: 'block', fontWeight: 750, color: C.primary }}>
+                    Select Target Employee Designations *
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
+                    {EMPLOYEE_DESIGNATIONS.map((desig) => {
+                      const checked = (formData.target_designations || []).includes(desig.value);
+                      return (
+                        <label 
+                          key={desig.value} 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            fontSize: '12.5px', 
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            background: checked ? `${C.primary}15` : C.cardBg,
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            border: checked ? `1.5px solid ${C.primary}` : `1px solid ${C.border}`,
+                            color: C.text,
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <input 
+                            type="checkbox"
+                            checked={checked}
+                            onChange={e => {
+                              const current = formData.target_designations || [];
+                              if (e.target.checked) {
+                                setFormData({ ...formData, target_designations: [...current, desig.value] });
+                              } else {
+                                setFormData({ ...formData, target_designations: current.filter(d => d !== desig.value) });
+                              }
+                            }}
+                          />
+                          {desig.label}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Delivery Channels */}
               <div>

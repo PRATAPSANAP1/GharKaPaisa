@@ -49,9 +49,9 @@ export default function MyIncentives() {
 
   const renderStatusBadge = (st) => {
     const s = String(st || 'PENDING').toUpperCase();
-    if (s === 'PAID' || s === 'COMPLETED') {
-      return <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800, background: '#10B98120', color: '#10B981', border: '1px solid #10B98140' }}>PAID</span>;
-    } else if (s === 'PENDING') {
+    if (['PAID', 'COMPLETED', 'RELEASE', 'RELEASED'].includes(s)) {
+      return <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800, background: '#10B98120', color: '#10B981', border: '1px solid #10B98140' }}>PAID / RELEASED</span>;
+    } else if (['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING'].includes(s)) {
       return <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800, background: '#F59E0B20', color: '#F59E0B', border: '1px solid #F59E0B40' }}>PENDING</span>;
     } else if (s === 'IN_REVIEW') {
       return <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800, background: '#3B82F620', color: '#3B82F6', border: '1px solid #3B82F640' }}>IN REVIEW</span>;

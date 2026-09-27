@@ -244,7 +244,7 @@ const topPartners = async (req, res, next) => {
         GROUP BY e.id, e.employee_id, e.full_name, e.designation, u.designation
       ) combined_performers
       ${searchSql}
-      ORDER BY total_apps DESC, commission_earned DESC
+      ORDER BY approved DESC, total_apps DESC, commission_earned DESC
       LIMIT $${pIdx}
     `;
 

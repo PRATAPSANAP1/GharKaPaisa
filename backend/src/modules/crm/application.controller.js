@@ -1770,7 +1770,29 @@ const listApplications = async (req, res, next) => {
           )
         )
       )`;
-      finalStatusOperatorFilterSQL = ` AND ${bankAssignmentFilter}`;
+
+      const eligibleDispatchFilter = `(
+        LOWER(COALESCE(combined.dispatch_status, '')) IN (
+          'dispatch complete', 'physical dispatch', 'digital dispatch',
+          'e-sign complete', 'e-sign pending', 'esign complete', 'esign pending',
+          'dispatch_complete', 'physical_dispatch', 'digital_dispatch',
+          'e_sign_complete', 'e_sign_pending', 'esign_complete', 'esign_pending',
+          'e-sign completed', 'esign completed', 'e_sign_completed'
+        )
+      )`;
+
+      const inProcessFinalStatusFilter = `(
+        COALESCE(combined.final_status, '') = ''
+        OR LOWER(combined.final_status) IN ('in process', 'in_process', 'pending', 'n/a', 'na', 'none')
+        OR (
+          LOWER(combined.final_status) NOT IN ('approved', 'decline', 'declined', 'rejected', 'sanctioned', 'disbursed', 'commission received', 'commission_received')
+          AND LOWER(combined.final_status) NOT LIKE '%approve%'
+          AND LOWER(combined.final_status) NOT LIKE '%decline%'
+          AND LOWER(combined.final_status) NOT LIKE '%reject%'
+        )
+      )`;
+
+      finalStatusOperatorFilterSQL = ` AND ${bankAssignmentFilter} AND ${eligibleDispatchFilter} AND ${inProcessFinalStatusFilter}`;
     }
 
     if (!isPartnerOrTeam && req.user?.id) {
@@ -1849,6 +1871,13 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(a.app_file_generated, ''), NULLIF(pad.app_file_generated, '')) as app_file_generated,
           COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
           COALESCE(NULLIF(a.eligible_reqd, ''), NULLIF(pad.eligible_reqd, '')) as eligible_reqd,
+          COALESCE(NULLIF(a.last_operator_name, ''), NULLIF(pad.last_operator_name, '')) as last_operator_name,
+          COALESCE(NULLIF(a.last_operator_role, ''), NULLIF(pad.last_operator_role, '')) as last_operator_role,
+          COALESCE(NULLIF(a.last_operator_designation, ''), NULLIF(pad.last_operator_designation, '')) as last_operator_designation,
+          COALESCE(NULLIF(a.last_operator_code, ''), NULLIF(pad.last_operator_code, '')) as last_operator_code,
+          COALESCE(NULLIF(a.final_status_operator_code, ''), NULLIF(pad.final_status_operator_code, '')) as final_status_operator_code,
+          COALESCE(a.last_operated_at, pad.last_operated_at) as last_operated_at,
+          COALESCE(NULLIF(a.last_operator_name, ''), NULLIF(a.last_operator_code, ''), NULLIF(pad.last_operator_name, ''), 'Not Assigned') as currently_working_by,
           a.submitted_at,
           a.approved_at,
           a.approved_by,
@@ -2654,10 +2683,12 @@ const updateBankProcessingStatus = async (req, res, next) => {
       : null;
 
     const userRole = (req.user?.role || '').toUpperCase();
+    const userDesignation = (req.user?.designation || '').toUpperCase();
+    const isFinalStatusOperatorUser = ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole) || ['FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userDesignation);
 
-    // Backend RBAC enforcement: Final Status & Approval updates restricted to OPERATIONS_HEAD, ADMIN, SUPER_ADMIN, ADMINISTRATIVE_OPERATOR
-    if (final_status && !['OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN', 'ADMINISTRATIVE_OPERATOR'].includes(userRole)) {
-      return forbidden(res, 'Access denied. Only Operation Head, Admin, Super Admin, or Administrative Operator can update Final Status.');
+    // Backend RBAC enforcement: Final Status & Approval updates restricted to OPERATIONS_HEAD, ADMIN, SUPER_ADMIN, ADMINISTRATIVE_OPERATOR, FINAL_STATUS_OPERATOR
+    if (final_status && !['OPERATIONS_HEAD', 'ADMIN', 'SUPER_ADMIN', 'ADMINISTRATIVE_OPERATOR', 'FINAL STATUS OPERATOR', 'FINAL_STATUS_OPERATOR'].includes(userRole) && !isFinalStatusOperatorUser) {
+      return forbidden(res, 'Access denied. Only Operation Head, Admin, Super Admin, Administrative Operator, or Final Status Operator can update Final Status.');
     }
 
     // Ensure columns exist
@@ -2675,7 +2706,14 @@ const updateBankProcessingStatus = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS user_remark TEXT,
         ADD COLUMN IF NOT EXISTS notes TEXT,
         ADD COLUMN IF NOT EXISTS operational_remarks TEXT,
-        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50)
+        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS last_operator_id UUID,
+        ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ
       `);
       await query(`
         ALTER TABLE physical_application_details 
@@ -2690,7 +2728,14 @@ const updateBankProcessingStatus = async (req, res, next) => {
         ADD COLUMN IF NOT EXISTS user_remark TEXT,
         ADD COLUMN IF NOT EXISTS notes TEXT,
         ADD COLUMN IF NOT EXISTS operational_remarks TEXT,
-        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50)
+        ADD COLUMN IF NOT EXISTS app_file_generated VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS last_operator_id UUID,
+        ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ
       `);
     } catch (_) { }
 
@@ -2699,6 +2744,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
       FROM applications a
       LEFT JOIN products p ON p.id = a.product_id
       WHERE a.id = $1
+      FOR UPDATE
     `, [id]);
 
     if (appRes.rows.length === 0) {
@@ -2763,6 +2809,12 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
     const app = appRes.rows[0];
 
+    const opId = req.user?.id || null;
+    const opName = req.user?.full_name || req.user?.email || 'Operator';
+    const opRole = userRole || 'OPERATOR';
+    const opDesig = userDesignation || userRole || 'OPERATOR';
+    const opCode = req.user?.employee_code || req.user?.code || req.user?.id || 'OP';
+
     await query(`
       UPDATE applications 
       SET status = $1, 
@@ -2795,6 +2847,13 @@ const updateBankProcessingStatus = async (req, res, next) => {
           income_details = COALESCE(NULLIF($26, 'None'), NULLIF($26, ''), income_details),
           mail_status = COALESCE(NULLIF($27, 'None'), NULLIF($27, ''), mail_status),
           approved_at = CASE WHEN $1 = 'approved' AND approved_at IS NULL THEN NOW() ELSE approved_at END,
+          last_operator_id = $29,
+          last_operator_name = $30,
+          last_operator_role = $31,
+          last_operator_designation = $32,
+          last_operator_code = $33,
+          final_status_operator_code = CASE WHEN $34 = true THEN $33 ELSE final_status_operator_code END,
+          last_operated_at = NOW(),
           updated_at = NOW()
       WHERE id = $28
     `, [
@@ -2804,8 +2863,38 @@ const updateBankProcessingStatus = async (req, res, next) => {
       eligible_reqd || null, dob || null, designation || null, company_address || null,
       mother_name || null, vkyc_url || null, userRemarkVal, appFileGenVal,
       ipa_stage || null, kyc_stage || null, card_approval_stage || null, digital_card_issued || null,
-      income_details || null, mail_status || null, id
+      income_details || null, mail_status || null, id,
+      opId, opName, opRole, opDesig, opCode, isFinalStatusOperatorUser
     ]);
+
+    if (opId) {
+      try {
+        await query(`
+          INSERT INTO application_operator_history (
+            application_id, operator_id, operator_name, operator_role, operator_designation, operator_code, action_type, field_changes, notes, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+        `, [
+          id,
+          opId,
+          opName,
+          opRole,
+          opDesig,
+          opCode,
+          final_status ? `FINAL_STATUS_${String(final_status).toUpperCase().replace(/\s+/g, '_')}` : 'OPERATOR_UPDATE',
+          JSON.stringify({
+            final_status: final_status || null,
+            status: currentStatus,
+            bank_remark: bank_remark || null,
+            user_remark: userRemarkVal,
+            dispatch_status: dispatch_status || null,
+            appcode_status: appcode_status || null
+          }),
+          userRemarkVal || bank_remark || 'Application updated by operator'
+        ]);
+      } catch (histErr) {
+        logger.error('Error recording application operator history:', histErr);
+      }
+    }
 
     try {
       await query(`
@@ -5717,6 +5806,34 @@ const getRemarkOperatorDashboard = async (req, res, next) => {
   }
 };
 
+// GET /applications/:id/operator-history — Fetch full operator audit trail
+const getApplicationOperatorHistory = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { rows } = await query(`
+      SELECT 
+        h.id,
+        h.application_id,
+        h.operator_id,
+        h.operator_name,
+        h.operator_role,
+        h.operator_designation,
+        h.operator_code,
+        h.action_type,
+        h.field_changes,
+        h.notes,
+        h.created_at
+      FROM application_operator_history h
+      WHERE h.application_id = $1
+      ORDER BY h.created_at DESC
+    `, [id]);
+
+    return success(res, rows, 'Operator history fetched successfully');
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   submitApplication,
   submitPublicApplication,
@@ -5759,7 +5876,8 @@ module.exports = {
   holdCommission,
   get360ApplicationTrace,
   updateRemarkOperatorApplication,
-  getRemarkOperatorDashboard
+  getRemarkOperatorDashboard,
+  getApplicationOperatorHistory
 };
 
 

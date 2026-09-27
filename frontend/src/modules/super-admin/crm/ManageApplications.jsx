@@ -15,8 +15,9 @@ import {
 import { 
   FaUniversity, FaCreditCard, 
   FaShieldAlt, FaUser, FaFileAlt, 
-  FaLink, FaShareAlt, FaCalendarAlt, FaSlidersH
+  FaLink, FaShareAlt, FaCalendarAlt, FaSlidersH, FaWhatsapp
 } from 'react-icons/fa';
+import SendWhatsAppModal from '../../../components/whatsapp/SendWhatsAppModal';
 
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../app/store/authStore';
@@ -56,6 +57,7 @@ export default function ManageApplications() {
   // Verification modal state
   const [verifyModalApp, setVerifyModalApp] = useState(null);
   const [verifyModalTab, setVerifyModalTab] = useState('qd');
+  const [whatsAppData, setWhatsAppData] = useState(null);
 
   // Active Main Tab: 'applications' | 'partner_share'
   const [activeTab, setActiveTab] = useState('applications');
@@ -953,6 +955,9 @@ export default function ManageApplications() {
                             <button onClick={() => setVerifyModalApp(app)} style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: C.text, fontSize: '12px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <FaFileAlt /> Verify Documents
                             </button>
+                            <button onClick={() => { setWhatsAppData({ recipientMobile: app.customer_mobile || app.mobile, recipientName: app.customer_name || app.full_name, applicationId: app.app_number || app.id, customerId: app.customer_id }); setActionMenuAppId(null); }} style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: 'none', background: 'transparent', color: '#059669', fontSize: '12px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <FaWhatsapp size={14} color="#059669" /> Send WhatsApp
+                            </button>
                             <button onClick={() => handleDeleteApplication(app.id, app.app_number)} style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: 'none', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', fontSize: '12px', fontWeight: 700, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                               <MdDelete /> Delete Record
                             </button>
@@ -1260,6 +1265,19 @@ export default function ManageApplications() {
         <ExportApplicationsModal
           isOpen={isExportModalOpen}
           onClose={() => setIsExportModalOpen(false)}
+        />
+      )}
+
+      {/* SEND WHATSAPP MODAL */}
+      {whatsAppData && (
+        <SendWhatsAppModal
+          isOpen={Boolean(whatsAppData)}
+          onClose={() => setWhatsAppData(null)}
+          recipientMobile={whatsAppData.recipientMobile}
+          recipientName={whatsAppData.recipientName}
+          applicationId={whatsAppData.applicationId}
+          customerId={whatsAppData.customerId}
+          onSuccess={() => setWhatsAppData(null)}
         />
       )}
 

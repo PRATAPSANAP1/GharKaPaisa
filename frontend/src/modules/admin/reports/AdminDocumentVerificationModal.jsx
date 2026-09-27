@@ -337,14 +337,21 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
     }
   };
 
+  const [operatorHistory, setOperatorHistory] = useState([]);
+
   const fetchData = useCallback(async () => {
     if (!application?.id) return;
     try {
       setLoading(true);
-      const [appRes, timelineRes] = await Promise.all([
+      const [appRes, timelineRes, opHistRes] = await Promise.all([
         api.get(`/applications/${application.id}`).catch(() => null),
-        api.get(`/applications/${application.id}/timeline`).catch(() => ({ data: { data: [] } }))
+        api.get(`/applications/${application.id}/timeline`).catch(() => ({ data: { data: [] } })),
+        api.get(`/applications/${application.id}/operator-history`).catch(() => ({ data: { data: [] } }))
       ]);
+
+      if (opHistRes?.data) {
+        setOperatorHistory(Array.isArray(opHistRes.data.data) ? opHistRes.data.data : Array.isArray(opHistRes.data) ? opHistRes.data : []);
+      }
 
       if (appRes?.data?.success && appRes.data.data) {
         const app = appRes.data.data;
@@ -3069,35 +3076,70 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
                       </button>
 
                       {(isFinalStatusOperator || isOpsHead || isSuperAdminOrAdmin) && currentStatus !== 'approved' && currentStatus !== 'super_admin_approved' && (
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            setActionLoading(true);
-                            try {
-                              const targetId = application.app_number || application.id || application.application_id || application.lead_id;
-                              const res = await api.put(`/applications/${targetId}/verification`, {
-                                status: 'approved',
-                                final_status: 'Approved',
-                                super_admin_remark: 'Approved by Final Status Operator / Admin',
-                                bank_remark: bankRemark || 'Approved by Final Status Operator'
-                              });
-                              if (res.data?.success) {
-                                alert('Application status updated to APPROVED successfully!');
-                                setCurrentStatus('approved');
-                                await fetchData();
-                                if (onRefresh) onRefresh();
+                        <>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setActionLoading(true);
+                              try {
+                                const targetId = application.app_number || application.id || application.application_id || application.lead_id;
+                                const res = await api.put(`/applications/${targetId}/verification`, {
+                                  status: 'approved',
+                                  final_status: 'Approved',
+                                  super_admin_remark: 'Approved by Final Status Operator / Admin',
+                                  bank_remark: bankRemark || 'Approved by Final Status Operator'
+                                });
+                                if (res.data?.success) {
+                                  alert('Application status updated to APPROVED successfully!');
+                                  setCurrentStatus('approved');
+                                  setFinalStatus('Approved');
+                                  await fetchData();
+                                  if (onRefresh) onRefresh();
+                                }
+                              } catch (err) {
+                                alert(err.response?.data?.message || 'Failed to approve application');
+                              } finally {
+                                setActionLoading(false);
                               }
-                            } catch (err) {
-                              alert(err.response?.data?.message || 'Failed to approve application');
-                            } finally {
-                              setActionLoading(false);
-                            }
-                          }}
-                          disabled={actionLoading}
-                          style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                        >
-                          <CheckCircle size={16} /> Approve Application
-                        </button>
+                            }}
+                            disabled={actionLoading}
+                            style={{ background: '#16a34a', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                          >
+                            <CheckCircle size={16} /> Approve Application
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!window.confirm('Are you sure you want to decline this application?')) return;
+                              setActionLoading(true);
+                              try {
+                                const targetId = application.app_number || application.id || application.application_id || application.lead_id;
+                                const res = await api.put(`/applications/${targetId}/verification`, {
+                                  status: 'rejected',
+                                  final_status: 'Declined',
+                                  decline_reason: declineReason || bankRemark || 'Declined by Final Status Operator',
+                                  bank_remark: bankRemark || 'Declined by Final Status Operator'
+                                });
+                                if (res.data?.success) {
+                                  alert('Application status updated to DECLINED successfully!');
+                                  setCurrentStatus('rejected');
+                                  setFinalStatus('Declined');
+                                  await fetchData();
+                                  if (onRefresh) onRefresh();
+                                }
+                              } catch (err) {
+                                alert(err.response?.data?.message || 'Failed to decline application');
+                              } finally {
+                                setActionLoading(false);
+                              }
+                            }}
+                            disabled={actionLoading}
+                            style={{ background: '#dc2626', color: '#fff', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 800, fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                          >
+                            <XCircle size={16} /> Decline Application
+                          </button>
+                        </>
                       )}
                     </div>
                   ) : (
@@ -3110,40 +3152,80 @@ const AdminDocumentVerificationModal = ({ application: rawApplication, app: rawA
             </div>
           )}
 
-          {/* ═════════ TAB 4: AUDIT LOG / TIMELINE ═════════ */}
+          {/* ═════════ TAB 4: AUDIT LOG & OPERATOR HISTORY ═════════ */}
           {activeTab === 'timeline' && (
-            <div>
-              <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>Application Timeline &amp; Audit Log</span>
-                <span style={{ fontSize: '12px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309' }}>
-                  🔄 Total Updates: {timeline.length > 0 ? timeline.length : (application?.update_count || 1)}
-                </span>
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {timeline.length === 0 ? (
-                  <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '24px' }}>No timeline events recorded yet.</div>
-                ) : (
-                  timeline.map((event, idx) => (
-                    <div key={event.id || idx} style={{ display: 'flex', gap: '14px', padding: '12px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ea580c', marginTop: '4px', flexShrink: 0 }} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
-                          <div style={{ fontWeight: 800, fontSize: '13.5px', color: '#0f172a' }}>{event.title || event.event_type || 'Application Updated'}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              
+              {/* Section 1: Immutable Operator Audit Trail */}
+              {operatorHistory.length > 0 && (
+                <div style={{ background: '#f8fafc', borderRadius: '14px', padding: '20px', border: '1px solid #cbd5e1' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#1e3a8a', margin: '0 0 16px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <ShieldCheck size={18} color="#2563eb" /> Immutable Operator Modification History
+                    </span>
+                    <span style={{ fontSize: '12px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: '#dbeafe', color: '#1e40af' }}>
+                      {operatorHistory.length} Record(s)
+                    </span>
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {operatorHistory.map((h, idx) => (
+                      <div key={h.id || idx} style={{ background: '#ffffff', borderRadius: '10px', padding: '12px 16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '13px' }}>{h.operator_name || 'Operator'}</span>
+                            <span style={{ fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', background: '#f1f5f9', color: '#475569' }}>
+                              {h.operator_code ? `Code: ${h.operator_code}` : h.operator_designation || h.operator_role}
+                            </span>
+                            <span style={{ fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', background: h.action_type?.includes('APPROVED') ? '#dcfce7' : h.action_type?.includes('DECLINED') ? '#fee2e2' : '#e0f2fe', color: h.action_type?.includes('APPROVED') ? '#15803d' : h.action_type?.includes('DECLINED') ? '#b91c1c' : '#0369a1' }}>
+                              {h.action_type}
+                            </span>
+                          </div>
                           <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
-                            📅 {new Date(event.performed_at || event.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} 🕒 {new Date(event.performed_at || event.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                            📅 {new Date(h.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} 🕒 {new Date(h.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                           </div>
                         </div>
-                        <div style={{ fontSize: '12.5px', color: '#475569', marginTop: '4px' }}>{event.description || event.remarks || event.activity || 'Application modified.'}</div>
-                        {event.performed_by_name && (
-                          <div style={{ fontSize: '11px', color: '#0284c7', marginTop: '4px', fontWeight: 600 }}>
-                            By: {event.performed_by_name}
-                          </div>
-                        )}
+                        {h.notes && <div style={{ fontSize: '12px', color: '#334155', marginTop: '6px', fontWeight: 600 }}>Note: {h.notes}</div>}
                       </div>
-                    </div>
-                  ))
-                )}
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Section 2: Standard Application Activity Timeline */}
+              <div>
+                <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#1e293b', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Application Timeline &amp; Activity Log</span>
+                  <span style={{ fontSize: '12px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309' }}>
+                    🔄 Total Updates: {timeline.length > 0 ? timeline.length : (application?.update_count || 1)}
+                  </span>
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {timeline.length === 0 ? (
+                    <div style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '24px' }}>No timeline events recorded yet.</div>
+                  ) : (
+                    timeline.map((event, idx) => (
+                      <div key={event.id || idx} style={{ display: 'flex', gap: '14px', padding: '12px 16px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ea580c', marginTop: '4px', flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                            <div style={{ fontWeight: 800, fontSize: '13.5px', color: '#0f172a' }}>{event.title || event.event_type || 'Application Updated'}</div>
+                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                              📅 {new Date(event.performed_at || event.created_at || Date.now()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} 🕒 {new Date(event.performed_at || event.created_at || Date.now()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                            </div>
+                          </div>
+                          <div style={{ fontSize: '12.5px', color: '#475569', marginTop: '4px' }}>{event.description || event.remarks || event.activity || 'Application modified.'}</div>
+                          {event.performed_by_name && (
+                            <div style={{ fontSize: '11px', color: '#0284c7', marginTop: '4px', fontWeight: 600 }}>
+                              By: {event.performed_by_name}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
+
             </div>
           )}
           </>

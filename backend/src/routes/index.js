@@ -115,10 +115,12 @@ router.use('/marketing/materials', marketingRoute);
 
 const teamRoute                             = require('../modules/team/team.routes.js');
 const messengerRoute                        = require('../modules/messenger/messenger.routes.js');
+const whatsappRoute                         = require('../modules/whatsapp/whatsapp.routes.js');
 
 // ── Referrals & Team Routes ──
 router.use('/team', teamRoute);
 router.use('/partner/team-dashboard', teamRoute);
 router.use('/messenger', messengerRoute);
+router.use('/whatsapp', whatsappRoute);
 
 module.exports = router;

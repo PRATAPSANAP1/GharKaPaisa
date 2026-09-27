@@ -153,7 +153,17 @@ export default function SuperAdminReports() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Failed to export Excel report:", err);
-      alert("Export failed. Please check network connection or permissions.");
+      let errMsg = "Export failed. Please check network connection or permissions.";
+      if (err.response && err.response.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const json = JSON.parse(text);
+          if (json.message) errMsg = `Export failed: ${json.message}`;
+        } catch (e) {}
+      } else if (err.response?.data?.message) {
+        errMsg = `Export failed: ${err.response.data.message}`;
+      }
+      alert(errMsg);
     } finally {
       setExportingExcel(false);
     }
@@ -223,17 +233,19 @@ export default function SuperAdminReports() {
   ];
 
   const topEmployeesList = Array.isArray(topPerformersData) && topPerformersData.length > 0
-    ? topPerformersData.map((p, idx) => ({
-        id: p.partner_code || p.code || p.employee_id || `AG${10019 + idx}`,
-        rank: idx + 1,
-        name: p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.name || 'Performer',
-        role: p.designation || p.role || (idx % 2 === 0 ? 'Team Leader' : 'Telecaller'),
-        performerType: p.performer_type || (p.partner_code?.startsWith('AG') ? 'PARTNER' : 'EMPLOYEE'),
-        avatarBg: ['#3B82F6', '#EC4899', '#8B5CF6', '#10B981', '#F59E0B'][idx % 5],
-        applications: parseInt(p.total_apps || p.applications_count || 0, 10),
-        approved: parseInt(p.approved || p.approved_count || 0, 10),
-        incentives: Number(p.commission_earned || p.total_incentives || 0).toLocaleString('en-IN')
-      }))
+    ? [...topPerformersData]
+        .sort((a, b) => (parseInt(b.approved || b.approved_count || 0, 10) - parseInt(a.approved || a.approved_count || 0, 10)) || (parseInt(b.total_apps || 0, 10) - parseInt(a.total_apps || 0, 10)))
+        .map((p, idx) => ({
+          id: p.partner_code || p.code || p.employee_id || `AG${10019 + idx}`,
+          rank: idx + 1,
+          name: p.full_name || `${p.first_name || ''} ${p.last_name || ''}`.trim() || p.name || 'Performer',
+          role: p.designation || p.role || (idx % 2 === 0 ? 'Team Leader' : 'Telecaller'),
+          performerType: p.performer_type || (p.partner_code?.startsWith('AG') ? 'PARTNER' : 'EMPLOYEE'),
+          avatarBg: ['#3B82F6', '#EC4899', '#8B5CF6', '#10B981', '#F59E0B'][idx % 5],
+          applications: parseInt(p.total_apps || p.applications_count || 0, 10),
+          approved: parseInt(p.approved || p.approved_count || 0, 10),
+          incentives: Number(p.commission_earned || p.total_incentives || 0).toLocaleString('en-IN')
+        }))
     : [];
 
   return (

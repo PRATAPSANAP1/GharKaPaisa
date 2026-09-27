@@ -272,6 +272,17 @@ export default function ApplicationsScreen({ route, navigation }) {
                     <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>REMARKS / VERIFICATION NOTES</Text>
                     <Text style={{ fontSize: 13, color: '#334155', marginTop: 4 }}>{selectedApp.notes || 'Application is being processed by the bank desk.'}</Text>
                   </View>
+
+                  <TouchableOpacity
+                    style={{ backgroundColor: '#0F172A', padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 10 }}
+                    onPress={() => {
+                      const appToVerify = selectedApp;
+                      setSelectedApp(null);
+                      navigation.navigate('AdminOperatorVerification', { app: appToVerify });
+                    }}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>Open Admin Operator Verification Desk ⚡</Text>
+                  </TouchableOpacity>
                 </ScrollView>
               </>
             )}

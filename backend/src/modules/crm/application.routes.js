@@ -59,9 +59,10 @@ router.patch('/:id/vkyc', requireApprovedPartnerOrAdmin, appCtrl.updateVkyc);
 router.post('/:id/release-commission', authorize('SUPER_ADMIN'), appCtrl.releaseCommission);
 router.post('/:id/hold-commission', authorize('SUPER_ADMIN'), appCtrl.holdCommission);
 
-// Timeline & logs & 360 Traceability
+// Timeline & logs & 360 Traceability & Operator Audit History
 router.get('/:id/timeline', requireApprovedPartnerOrAdmin, appCtrl.getTimeline);
 router.get('/:id/trace', requireApprovedPartnerOrAdmin, appCtrl.get360ApplicationTrace);
+router.get('/:id/operator-history', requireApprovedPartnerOrAdmin, appCtrl.getApplicationOperatorHistory);
 
 // Notes & Comments
 router.post('/:id/notes', requireApprovedPartnerOrAdmin, appCtrl.addNote);

@@ -31,6 +31,8 @@ import PartnerResourcesScreen from './screens/PartnerResourcesScreen';
 import EmployeeToolsScreen from './screens/EmployeeToolsScreen';
 import HrDashboardScreen from './screens/HrDashboardScreen';
 
+import AdminOperatorVerificationScreen from './screens/AdminOperatorVerificationScreen';
+
 const Stack = createNativeStackNavigator();
 
 function MainNavigator() {
@@ -67,6 +69,7 @@ function MainNavigator() {
           <Stack.Screen name="PartnerDashboard" component={PartnerDashboardScreen} />
           <Stack.Screen name="PartnerKyc" component={PartnerKycScreen} />
           <Stack.Screen name="SuperAdminDashboard" component={SuperAdminDashboardScreen} />
+          <Stack.Screen name="AdminOperatorVerification" component={AdminOperatorVerificationScreen} />
           <Stack.Screen name="EmployeeDashboard" component={EmployeeDashboardScreen} />
           <Stack.Screen name="CustomerTracking" component={CustomerTrackingScreen} />
           <Stack.Screen name="Chatbot" component={ChatbotScreen} />

@@ -898,7 +898,7 @@ export default function ManageEmployeeIncentives() {
                       <th style={{ padding: '10px 12px' }}>Customer</th>
                       <th style={{ padding: '10px 12px' }}>Employee</th>
                       <th style={{ padding: '10px 12px' }}>Process Type</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Commission</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Incentive</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Status</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Action</th>
                     </tr>
@@ -960,7 +960,7 @@ export default function ManageEmployeeIncentives() {
                             </span>
                           </td>
 
-                          {/* 5. Commission */}
+                          {/* 5. Incentive */}
                           <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 900, color: '#10B981', fontSize: '13.5px' }}>
                             {formatINR(row.incentive_earned)}
                           </td>
@@ -1029,7 +1029,7 @@ export default function ManageEmployeeIncentives() {
                       <th style={{ padding: '10px 12px' }}>Customer</th>
                       <th style={{ padding: '10px 12px' }}>Employee</th>
                       <th style={{ padding: '10px 12px' }}>Process Type</th>
-                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Commission</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Incentive</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Status</th>
                       <th style={{ padding: '10px 12px', textAlign: 'center' }}>Action</th>
                     </tr>
@@ -1289,7 +1289,7 @@ export default function ManageEmployeeIncentives() {
               </div>
 
               <div>
-                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Commission Amount</span>
+                <span style={{ color: C.textMid, fontWeight: 700, fontSize: '11px', textTransform: 'uppercase' }}>Incentive Amount</span>
                 <div style={{ color: '#10B981', fontWeight: 900, fontSize: '15px', marginTop: '2px' }}>
                   {formatINR(selectedTransaction.incentive_earned)}
                 </div>

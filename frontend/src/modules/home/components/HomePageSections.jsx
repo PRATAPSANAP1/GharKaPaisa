@@ -1065,13 +1065,25 @@ export function FooterSection({ C, navigate }) {
   const isMobile = useIsMobile();
   const { t } = useTranslation();
 
+  const isDark = C?.isDark || C?.bg === '#000000' || C?.text === '#F8FAFC';
+
+  const footerBg = isDark ? "#081424" : "#F1F5F9";
+  const textColor = isDark ? "#ffffff" : "#0F172A";
+  const accentColor = isDark ? "#2DD4BF" : "#0D5CAB";
+  const subTextColor = isDark ? "rgba(255, 255, 255, 0.85)" : "#475569";
+  const borderColor = isDark ? "rgba(255, 255, 255, 0.15)" : "#E2E8F0";
+  const btnBg = isDark ? "#2DD4BF" : "#0D5CAB";
+  const btnText = isDark ? "#081424" : "#ffffff";
+
   return (
     <div style={{
       marginTop: isMobile ? "24px" : "32px",
       padding: isMobile ? "32px 20px" : "48px 48px",
-      background: "#081424",
-      color: "#ffffff",
-      borderRadius: "24px"
+      background: footerBg,
+      color: textColor,
+      borderRadius: "24px",
+      border: `1px solid ${borderColor}`,
+      transition: "background 0.3s, color 0.3s"
     }}>
       <div style={{
         display: "grid",
@@ -1080,58 +1092,58 @@ export function FooterSection({ C, navigate }) {
         marginBottom: "32px"
       }}>
         <div style={{ gridColumn: isMobile ? "1 / -1" : "auto" }}>
-          <h2 style={{ margin: "0 0 4px 0", fontSize: "28px", fontWeight: 900, letterSpacing: "-0.5px", color: "#ffffff" }}>
+          <h2 style={{ margin: "0 0 4px 0", fontSize: "28px", fontWeight: 900, letterSpacing: "-0.5px", color: textColor }}>
             GharKaPaisa
           </h2>
-          <p style={{ margin: "0 0 12px 0", fontSize: "13px", fontWeight: 700, color: "#2DD4BF" }}>
+          <p style={{ margin: "0 0 12px 0", fontSize: "13px", fontWeight: 700, color: accentColor }}>
             Financial Product Discovery & Application Platform
           </p>
-          <p style={{ margin: "0 0 20px 0", fontSize: "13.5px", color: "#ffffff", opacity: 0.85, lineHeight: 1.5 }}>
+          <p style={{ margin: "0 0 20px 0", fontSize: "13.5px", color: subTextColor, lineHeight: 1.5 }}>
             {t('footer.desc', "India's trusted platform for Credit Cards, Loans, Insurance & Financial Services.")}
           </p>
         </div>
 
         <div>
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>
+          <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: textColor }}>
             {t('footer.products', 'Products')}
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <span onClick={() => navigate?.("/credit-cards")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>
+            <span onClick={() => navigate?.("/credit-cards")} style={{ fontSize: "13px", color: subTextColor, cursor: "pointer" }}>
               {t('footer.creditCards', 'Credit Cards')}
             </span>
-            <span onClick={() => navigate?.("/loans")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>
+            <span onClick={() => navigate?.("/loans")} style={{ fontSize: "13px", color: subTextColor, cursor: "pointer" }}>
               {t('footer.loans', 'Loans')}
             </span>
-            <span onClick={() => navigate?.("/insurance")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>
+            <span onClick={() => navigate?.("/insurance")} style={{ fontSize: "13px", color: subTextColor, cursor: "pointer" }}>
               {t('footer.insurance', 'Insurance')}
             </span>
           </div>
         </div>
 
         <div>
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>
+          <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: textColor }}>
             {t('footer.contactUs', 'Contact Us')}
           </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px", color: "#ffffff", opacity: 0.85 }}>
-            <span style={{ fontWeight: 700 }}>Phone:</span>
-            <a href="tel:9270319438" style={{ color: "#ffffff", textDecoration: "none" }}>9270319438</a>
-            <span style={{ fontWeight: 700, marginTop: "4px" }}>Email:</span>
-            <a href="mailto:support@gharkapaisa.in" style={{ color: "#ffffff", textDecoration: "none" }}>support@gharkapaisa.in</a>
-            <span style={{ fontWeight: 700, marginTop: "4px" }}>Address:</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px", color: subTextColor }}>
+            <span style={{ fontWeight: 700, color: textColor }}>Phone:</span>
+            <a href="tel:9270319438" style={{ color: subTextColor, textDecoration: "none" }}>9270319438</a>
+            <span style={{ fontWeight: 700, color: textColor, marginTop: "4px" }}>Email:</span>
+            <a href="mailto:support@gharkapaisa.in" style={{ color: subTextColor, textDecoration: "none" }}>support@gharkapaisa.in</a>
+            <span style={{ fontWeight: 700, color: textColor, marginTop: "4px" }}>Address:</span>
             <span style={{ lineHeight: 1.4 }}>Rajnandini Tower Dighi, Pune 411015</span>
           </div>
         </div>
 
         <div>
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: "#ffffff" }}>
+          <h3 style={{ margin: "0 0 16px 0", fontSize: "15px", fontWeight: 800, color: textColor }}>
             Policies & Company
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             <button 
               onClick={() => navigate?.("/careers")} 
               style={{ 
-                background: "#2DD4BF", 
-                color: "#081424", 
+                background: btnBg, 
+                color: btnText, 
                 border: "none", 
                 padding: "8px 16px", 
                 borderRadius: "10px", 
@@ -1142,38 +1154,36 @@ export function FooterSection({ C, navigate }) {
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "6px",
-                boxShadow: "0 4px 12px rgba(45, 212, 191, 0.3)"
+                boxShadow: `0 4px 12px ${btnBg}40`
               }}
             >
               Careers / Jobs
             </button>
-            <span onClick={() => navigate?.("/careers")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Career Opportunities</span>
-            <span onClick={() => navigate?.("/terms-and-conditions")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Terms & Conditions</span>
-            <span onClick={() => navigate?.("/privacy-policy")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Privacy Policy</span>
-            <span onClick={() => navigate?.("/shipping-and-delivery-policy")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Shipping & Delivery Policy</span>
-            <span onClick={() => navigate?.("/cancellation-and-refund-policy")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Cancellation & Refund Policy</span>
-            <span onClick={() => navigate?.("/contact")} style={{ fontSize: "13px", color: "#ffffff", opacity: 0.85, cursor: "pointer" }}>Contact Us</span>
+            <span onClick={() => navigate?.("/careers")} style={{ fontSize: "13px", color: subTextColor, cursor: "pointer" }}>Career Opportunities</span>
+            <span onClick={() => navigate?.("/terms-and-conditions")} style={{ fontSize: "13px", color: subTextColor, cursor: "pointer" }}>Terms & Conditions</span>
+            <span onClick={() => navigate?.("/privacy-policy")} style={{ fontSize: "13px", color: subTextColor, cursor: "pointer" }}>Privacy Policy</span>
+            <span onClick={() => navigate?.("/shipping-and-delivery-policy")} style={{ fontSize: "13px", color: subTextColor, cursor: "pointer" }}>Shipping & Delivery Policy</span>
+            <span onClick={() => navigate?.("/cancellation-and-refund-policy")} style={{ fontSize: "13px", color: subTextColor, cursor: "pointer" }}>Cancellation & Refund Policy</span>
+            <span onClick={() => navigate?.("/contact")} style={{ fontSize: "13px", color: subTextColor, cursor: "pointer" }}>Contact Us</span>
           </div>
         </div>
       </div>
 
       {/* Quick Links Strip */}
-      <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "16px", marginBottom: "16px", fontSize: "12px", color: "rgba(255,255,255,0.75)", display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
-        <span style={{ fontWeight: 700, color: "#ffffff" }}>Quick Links:</span>
-        <span onClick={() => navigate?.("/")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Home</span> |
-        <span onClick={() => navigate?.("/credit-cards")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Products</span> |
-        <span onClick={() => navigate?.("/careers")} style={{ cursor: "pointer", color: "#2DD4BF", fontWeight: 800, textDecoration: "underline" }}>Career</span> |
-        <span onClick={() => navigate?.("/contact")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Contact Us</span> |
-        <span onClick={() => navigate?.("/terms-and-conditions")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Terms & Conditions</span> |
-        <span onClick={() => navigate?.("/privacy-policy")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Privacy Policy</span> |
-        <span onClick={() => navigate?.("/shipping-and-delivery-policy")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Shipping & Delivery Policy</span> |
-        <span onClick={() => navigate?.("/cancellation-and-refund-policy")} style={{ cursor: "pointer", color: "#2DD4BF" }}>Cancellation & Refund Policy</span>
+      <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: "16px", marginBottom: "16px", fontSize: "12px", color: subTextColor, display: "flex", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+        <span style={{ fontWeight: 700, color: textColor }}>Quick Links:</span>
+        <span onClick={() => navigate?.("/")} style={{ cursor: "pointer", color: accentColor }}>Home</span> |
+        <span onClick={() => navigate?.("/credit-cards")} style={{ cursor: "pointer", color: accentColor }}>Products</span> |
+        <span onClick={() => navigate?.("/careers")} style={{ cursor: "pointer", color: accentColor, fontWeight: 800, textDecoration: "underline" }}>Career</span> |
+        <span onClick={() => navigate?.("/contact")} style={{ cursor: "pointer", color: accentColor }}>Contact Us</span> |
+        <span onClick={() => navigate?.("/terms-and-conditions")} style={{ cursor: "pointer", color: accentColor }}>Terms & Conditions</span> |
+        <span onClick={() => navigate?.("/privacy-policy")} style={{ cursor: "pointer", color: accentColor }}>Privacy Policy</span> |
+        <span onClick={() => navigate?.("/shipping-and-delivery-policy")} style={{ cursor: "pointer", color: accentColor }}>Shipping & Delivery Policy</span> |
+        <span onClick={() => navigate?.("/cancellation-and-refund-policy")} style={{ cursor: "pointer", color: accentColor }}>Cancellation & Refund Policy</span>
       </div>
 
-
-
-      <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: "16px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: "#ffffff", opacity: 0.7 }}>
-        <span>© 2026 OIT_Stack. All Rights Reserved.</span>
+      <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: "16px", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", fontSize: "12px", color: subTextColor }}>
+        <span>© 2026 GharKaPaisa. All Rights Reserved.</span>
       </div>
     </div>
   );

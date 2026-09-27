@@ -1938,6 +1938,7 @@ const migrate = async () => {
       ALTER TABLE announcements ADD COLUMN IF NOT EXISTS delivery_channels JSONB DEFAULT '["in-app"]';
       ALTER TABLE announcements ADD COLUMN IF NOT EXISTS target_user_ids JSONB DEFAULT '[]';
       ALTER TABLE announcements ADD COLUMN IF NOT EXISTS target_team_ids JSONB DEFAULT '[]';
+      ALTER TABLE announcements ADD COLUMN IF NOT EXISTS target_designations JSONB DEFAULT '[]';
       ALTER TABLE announcements ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMPTZ NULL;
       ALTER TABLE announcements ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ DEFAULT NOW();
       ALTER TABLE announcements ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ NULL;
@@ -5039,6 +5040,49 @@ const migrate = async () => {
     await migrateWhatsApp();
   } catch (waErr) {
     logger.error('WhatsApp migration error note:', waErr.message);
+  }
+
+  try {
+    logger.info('Starting Final Status Operator & Audit History migration...');
+    await query(`
+      CREATE TABLE IF NOT EXISTS application_operator_history (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        application_id UUID NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+        operator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        operator_name VARCHAR(255),
+        operator_role VARCHAR(100),
+        operator_designation VARCHAR(100),
+        operator_code VARCHAR(100),
+        action_type VARCHAR(100) NOT NULL,
+        field_changes JSONB DEFAULT '{}',
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_app_op_hist_app_id ON application_operator_history(application_id);
+      CREATE INDEX IF NOT EXISTS idx_app_op_hist_op_id ON application_operator_history(operator_id);
+      CREATE INDEX IF NOT EXISTS idx_app_op_hist_created ON application_operator_history(created_at DESC);
+
+      ALTER TABLE applications 
+      ADD COLUMN IF NOT EXISTS last_operator_id UUID,
+      ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ;
+
+      ALTER TABLE physical_application_details 
+      ADD COLUMN IF NOT EXISTS last_operator_id UUID,
+      ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ;
+    `);
+    logger.info('Final Status Operator & Audit History migration completed successfully.');
+  } catch (fsoErr) {
+    logger.error('Final Status Operator migration error note:', fsoErr.message);
   }
 
   if (require.main === module) {

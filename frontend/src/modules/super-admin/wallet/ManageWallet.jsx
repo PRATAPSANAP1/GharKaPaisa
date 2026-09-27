@@ -149,8 +149,8 @@ export default function ManageWallet() {
       if (rzData) setRazorpayBalance(rzData);
       if (incPayload) {
         const tableData = incPayload.table?.data || [];
-        const pending = tableData.filter(r => (r.status || '').toUpperCase() === 'PENDING');
-        const paid = tableData.filter(r => ['PAID', 'COMPLETED'].includes((r.status || '').toUpperCase()));
+        const pending = tableData.filter(r => ['PENDING', 'HOLD', 'ON_HOLD', 'HELD', 'HELD_APPFILE_PENDING', 'HELD_TARGET_PENDING', 'IN_REVIEW'].includes((r.status || '').toUpperCase()));
+        const paid = tableData.filter(r => ['RELEASE', 'RELEASED', 'PAID', 'COMPLETED'].includes((r.status || '').toUpperCase()));
         setEmployeeIncentives({ kpi: incPayload.kpi || {}, pending, paid, all: tableData });
       }
 
