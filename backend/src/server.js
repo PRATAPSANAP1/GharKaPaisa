@@ -158,8 +158,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 // ── Data Sanitization ──────────────────────────────────────────
-// Data sanitization against NoSQL query injection (included as per request)
-app.use(mongoSanitize());
+// Data sanitization against NoSQL query injection (allowDots: true preserves dotted query parameters like hub.mode)
+app.use(mongoSanitize({ allowDots: true }));
 // Data sanitization against XSS
 app.use(xss());
 

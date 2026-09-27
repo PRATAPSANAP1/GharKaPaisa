@@ -24,6 +24,14 @@ async function verifyWebhook(req, res) {
     }
 
     const configuredToken = process.env.WHATSAPP_VERIFY_TOKEN || process.env.META_WEBHOOK_VERIFY_TOKEN || settings?.webhook_verify_token || 'gharkapaisa_meta_webhook_secret_2026';
+    const tokenMatchesEnv = token === configuredToken;
+
+    logger.info('[WhatsApp Webhook DEBUG] Query received:', JSON.stringify({
+      query: req.query,
+      tokenExists: Boolean(token),
+      tokenLength: token ? token.length : 0,
+      tokenMatchesEnv
+    }));
 
     if (mode === 'subscribe' && token === configuredToken) {
       logger.info('[WhatsApp Webhook] Meta challenge verification successful.');
