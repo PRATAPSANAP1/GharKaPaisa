@@ -146,13 +146,9 @@ export default function SuperAdminDashboard() {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await api.get('/superadmin/admins?role=ADMIN');
+      const res = await api.get('/superadmin/admins');
       if (res.data && res.data.success) {
         const adminUsers = (res.data.data || [])
-          .filter(a => {
-            const r = String(a.role || '').toUpperCase();
-            return r === 'ADMIN' || r === 'SUPER_ADMIN';
-          })
           .map(a => ({ ...a, _id: a.id, fullName: a.fullName || a.full_name, employeeId: a.employeeId || a.employee_id }));
         setAdmins(adminUsers);
       } else {
@@ -358,17 +354,24 @@ export default function SuperAdminDashboard() {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
-  // Filter admins based on search query (excluding EMPLOYEE role)
+  // Filter admins based on search query (including all admin designation users)
   const filteredAdmins = admins.filter(admin => {
-    if (String(admin.role || '').toUpperCase() === 'EMPLOYEE') return false;
+    const r = String(admin.role || '').toUpperCase();
+    const desig = String(admin.designation || '').toLowerCase();
+    
+    // Check if user is an admin or has an admin designation
+    const isAdminRoleOrDesig = ['ADMIN', 'SUPER_ADMIN', 'KYC_OPERATOR', 'HR'].includes(r) ||
+      ['operational head', 'backend', 'administrative operator', 'administrative sales executive', 'pan checker', 'remark operator', 'qd operator', 'kyc operator', 'final status operator'].some(d => desig.includes(d));
+    
+    if (!isAdminRoleOrDesig && r === 'EMPLOYEE') return false;
+
     if (!adminSearch.trim()) return true;
     const q = adminSearch.toLowerCase().trim();
     const name = String(admin.fullName || '').toLowerCase();
     const email = String(admin.email || '').toLowerCase();
     const mobile = String(admin.mobile || '').toLowerCase();
     const empId = String(admin.employeeId || admin.employee_id || '').toLowerCase();
-    const desig = String(admin.designation || '').toLowerCase();
-    return name.includes(q) || email.includes(q) || mobile.includes(q) || empId.includes(q) || desig.includes(q);
+    return name.includes(q) || email.includes(q) || mobile.includes(q) || empId.includes(q) || desig.includes(q) || r.toLowerCase().includes(q);
   });
 
   // Pagination logic
@@ -518,7 +521,9 @@ export default function SuperAdminDashboard() {
                         </div>
                       </td>
                       <td style={{ padding: "16px 24px" }}>
-                        <span style={{ fontSize: "11px", fontWeight: 800, color: "#2563EB", background: "#DBEAFE", padding: "2px 8px", borderRadius: "4px", textTransform: "uppercase", display: "inline-block", marginBottom: "4px" }}>{admin.role}</span>
+                        <span style={{ fontSize: "11px", fontWeight: 800, color: "#2563EB", background: "#DBEAFE", padding: "2px 8px", borderRadius: "4px", textTransform: "uppercase", display: "inline-block", marginBottom: "4px" }}>
+                          {String(admin.role || 'ADMIN').replace(/_/g, ' ')}
+                        </span>
                         <div style={{ fontFamily: "monospace", fontSize: "13px", color: "#4B5563", fontWeight: 600 }}>
                           {admin.employeeId}
                         </div>
