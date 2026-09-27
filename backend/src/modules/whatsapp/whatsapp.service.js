@@ -167,7 +167,7 @@ async function sendTemplateMessage(senderUser, {
       $16, $17, $18, $19,
       $20, $21, $22,
       $23, $24, $25,
-      NOW(), CASE WHEN $23 = 'SENT' THEN NOW() ELSE NULL END
+      NOW(), CASE WHEN $23::text = 'SENT' THEN NOW() ELSE NULL END
     ) RETURNING *;
   `;
 
