@@ -12,16 +12,23 @@ const {
 } = require('./kyc-operator.controller.js');
 
 /**
- * Middleware: Require KYC_OPERATOR, ADMIN, or SUPER_ADMIN access
+ * Middleware: Require KYC_OPERATOR designation or SUPER_ADMIN access
+ * Enforces strict server-side RBAC for ADMIN + KYC_OPERATOR
  */
 const requireKycOperator = (req, res, next) => {
   const role = String(req.user?.role || '').toUpperCase();
   const designation = String(req.user?.designation || '').toUpperCase();
 
-  if (role !== 'KYC_OPERATOR' && role !== 'SUPER_ADMIN' && role !== 'ADMIN' && designation !== 'KYC OPERATOR') {
+  const isSuperAdmin = role === 'SUPER_ADMIN' || role === 'SUPERADMIN';
+  const isKycOperator = role === 'KYC_OPERATOR' || 
+                        designation === 'KYC_OPERATOR' || 
+                        designation === 'KYC OPERATOR' ||
+                        (role === 'ADMIN' && (designation === 'KYC_OPERATOR' || designation === 'KYC OPERATOR'));
+
+  if (!isSuperAdmin && !isKycOperator) {
     return res.status(403).json({
       success: false,
-      message: 'KYC Operator access required'
+      message: 'Access Denied: Only users with KYC Operator designation can access the KYC Operator queue.'
     });
   }
 

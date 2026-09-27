@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { 
-  FaIdCard, FaSearch, FaFilter, FaCheckCircle, FaTimesCircle, 
+  FaSearch, FaCheckCircle, FaTimesCircle, 
   FaExclamationTriangle, FaEye, FaSync, FaFileAlt, FaUserCheck, 
-  FaBuilding, FaCalendarAlt, FaExternalLinkAlt, FaShieldAlt, FaComments
+  FaExternalLinkAlt, FaShieldAlt, FaHistory
 } from 'react-icons/fa';
 import api from '../../../services/api';
 
 export default function KycOperatorDashboard() {
-  const { C, isDark } = useTheme();
+  const { C } = useTheme();
 
   // State Management
   const [loading, setLoading] = useState(true);
@@ -16,9 +16,16 @@ export default function KycOperatorDashboard() {
   const [stats, setStats] = useState({ total_kyc: 0, pending_kyc: 0, verified_kyc: 0, rejected_kyc: 0 });
   const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, totalPages: 1 });
 
+  // Assigned Banks & Products for filtering
+  const [assignedBanks, setAssignedBanks] = useState([]);
+  const [assignedProducts, setAssignedProducts] = useState([]);
+
   // Filters
   const [search, setSearch] = useState('');
   const [kycStatusFilter, setKycStatusFilter] = useState('');
+  const [vkycFilter, setVkycFilter] = useState('');
+  const [bioFilter, setBioFilter] = useState('');
+  const [digilockerFilter, setDigilockerFilter] = useState('');
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedBank, setSelectedBank] = useState('');
 
@@ -31,33 +38,10 @@ export default function KycOperatorDashboard() {
   const [submittingAction, setSubmittingAction] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const KYC_STAGES = [
-    'Vkyc approved',
-    'Vkyc pending',
-    'Vkyc failed',
-    'Bio done',
-    'Bio pending',
-    'Bio inprocess',
-    'Digilocker 1 rup credit/debit done',
-    'Digilocker 1 rup credit/debit pending'
-  ];
-
-  const handleStageChange = async (appId, newStage) => {
-    try {
-      setApplications(prev => prev.map(a => a.id === appId ? { ...a, kyc_stage: newStage } : a));
-      if (appDetails && appDetails.id === appId) {
-        setAppDetails(prev => ({ ...prev, kyc_stage: newStage }));
-      }
-      const res = await api.post(`/kyc-operator/applications/${appId}/update-stage`, { kyc_stage: newStage });
-      if (res.data?.success) {
-        setToast({ type: 'success', text: `KYC Stage updated to "${newStage}"` });
-      }
-    } catch (err) {
-      console.error("Error updating stage:", err);
-      setToast({ type: 'error', text: err.response?.data?.message || 'Failed to update KYC stage' });
-      fetchApplications();
-    }
-  };
+  // Stage options as specified by prompt
+  const VKYC_STAGES = ['Vkyc pending', 'Vkyc approved', 'Vkyc failed'];
+  const BIO_STAGES = ['Bio pending', 'Bio done', 'Bio inprocess'];
+  const DIGILOCKER_STAGES = ['Digilocker 1 rup credit/debit pending', 'Digilocker 1 rup credit/debit done'];
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -67,7 +51,24 @@ export default function KycOperatorDashboard() {
     }
   }, [toast]);
 
-  const fetchApplications = async () => {
+  // Fetch assigned banks and products for dropdown filters
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      try {
+        const [banksRes, prodsRes] = await Promise.all([
+          api.get('/banks').catch(() => null),
+          api.get('/products').catch(() => null)
+        ]);
+        if (banksRes?.data?.data) setAssignedBanks(banksRes.data.data);
+        if (prodsRes?.data?.data) setAssignedProducts(prodsRes.data.data);
+      } catch (err) {
+        console.error('Error fetching bank/product assignments:', err);
+      }
+    };
+    fetchAssignments();
+  }, []);
+
+  const fetchApplications = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -75,6 +76,9 @@ export default function KycOperatorDashboard() {
         limit: pagination.limit,
         search: search.trim() || undefined,
         kyc_status: kycStatusFilter || undefined,
+        vkyc_stage: vkycFilter || undefined,
+        bio_stage: bioFilter || undefined,
+        digilocker_stage: digilockerFilter || undefined,
         product_id: selectedProduct || undefined,
         bank_id: selectedBank || undefined
       };
@@ -91,16 +95,32 @@ export default function KycOperatorDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, search, kycStatusFilter, vkycFilter, bioFilter, digilockerFilter, selectedProduct, selectedBank]);
 
   useEffect(() => {
     fetchApplications();
-  }, [pagination.page, kycStatusFilter, selectedProduct, selectedBank]);
+  }, [fetchApplications]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     setPagination(p => ({ ...p, page: 1 }));
     fetchApplications();
+  };
+
+  const handleStageUpdate = async (appId, stagePayload) => {
+    try {
+      const res = await api.post(`/kyc-operator/applications/${appId}/update-stage`, stagePayload);
+      if (res.data?.success) {
+        setToast({ type: 'success', text: 'KYC stage updated successfully!' });
+        fetchApplications();
+        if (appDetails && appDetails.id === appId) {
+          handleViewApplication({ id: appId });
+        }
+      }
+    } catch (err) {
+      console.error('Error updating KYC stage:', err);
+      setToast({ type: 'error', text: err.response?.data?.message || 'Failed to update KYC stage' });
+    }
   };
 
   const handleViewApplication = async (app) => {
@@ -151,7 +171,7 @@ export default function KycOperatorDashboard() {
     }
   };
 
-  // Badge styles
+  // Badge helper
   const getKycBadge = (status) => {
     const st = String(status || 'PENDING').toUpperCase();
     if (st === 'VERIFIED' || st === 'APPROVED') {
@@ -167,7 +187,7 @@ export default function KycOperatorDashboard() {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1280px', margin: '0 auto', fontFamily: "'Inter', sans-serif", color: C.text }}>
+    <div style={{ padding: '24px', maxWidth: '1380px', margin: '0 auto', fontFamily: "'Inter', sans-serif", color: C.text }}>
       
       {/* Toast Notification */}
       {toast && (
@@ -190,14 +210,14 @@ export default function KycOperatorDashboard() {
               <FaShieldAlt /> KYC Operator Panel
             </span>
             <span style={{ fontSize: '12px', fontWeight: 700, color: '#10B981', background: '#D1FAE5', padding: '4px 10px', borderRadius: '6px' }}>
-              ✓ Soft Approvals Filter Active
+              ✓ Bank-Specific Eligibility Active (SBI / HDFC)
             </span>
           </div>
           <h1 style={{ fontSize: '26px', fontWeight: 900, margin: '8px 0 4px 0', color: C.text }}>
-            KYC Document & Identity Verification
+            KYC Document & Stage Verification Desk
           </h1>
           <p style={{ margin: 0, fontSize: '13px', color: C.textMid }}>
-            Only non-declined soft approval applications are visible for KYC verification and document checks.
+            Only applications matching assigned bank soft-approval & IPA eligibility rules are visible in your queue.
           </p>
         </div>
 
@@ -218,19 +238,19 @@ export default function KycOperatorDashboard() {
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
           <span style={{ fontSize: '12px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase' }}>Eligible KYC Applications</span>
           <div style={{ fontSize: '28px', fontWeight: 900, color: C.text, marginTop: '6px' }}>{stats.total_kyc}</div>
-          <span style={{ fontSize: '11.5px', color: C.teal, fontWeight: 700 }}>Soft Approval Non-Declined</span>
+          <span style={{ fontSize: '11.5px', color: C.teal, fontWeight: 700 }}>SBI Soft Approval & HDFC IPA Active</span>
         </div>
 
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
           <span style={{ fontSize: '12px', fontWeight: 800, color: '#D97706', textTransform: 'uppercase' }}>Pending KYC</span>
-          <div style={{ fontSize: '28px', fontWeight: 900, color: '#D97706', marginTop: '6px' }}>{stats.pending_kyc}</div>
-          <span style={{ fontSize: '11.5px', color: C.textMid }}>Awaiting document check</span>
+          <div style={{ fontSize: '28px', fontWeight 900, color: '#D97706', marginTop: '6px' }}>{stats.pending_kyc}</div>
+          <span style={{ fontSize: '11.5px', color: C.textMid }}>Awaiting document/stage check</span>
         </div>
 
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
           <span style={{ fontSize: '12px', fontWeight: 800, color: '#059669', textTransform: 'uppercase' }}>Verified KYC</span>
           <div style={{ fontSize: '28px', fontWeight: 900, color: '#059669', marginTop: '6px' }}>{stats.verified_kyc}</div>
-          <span style={{ fontSize: '11.5px', color: '#059669', fontWeight: 700 }}>✓ Documents Approved</span>
+          <span style={{ fontSize: '11.5px', color: '#059669', fontWeight: 700 }}>✓ Stage & Docs Approved</span>
         </div>
 
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
@@ -242,14 +262,15 @@ export default function KycOperatorDashboard() {
 
       {/* Filter Bar */}
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px', marginBottom: '24px' }}>
-        <form onSubmit={handleSearchSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+        <form onSubmit={handleSearchSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+          
           <div>
             <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>Search Queue</label>
             <div style={{ position: 'relative' }}>
               <FaSearch style={{ position: 'absolute', left: '12px', top: '12px', color: C.textMid }} />
               <input 
                 type="text" 
-                placeholder="App ID / Customer / Mobile..." 
+                placeholder="App # / Customer / Mobile / PAN..." 
                 value={search} 
                 onChange={(e) => setSearch(e.target.value)}
                 style={{ width: '100%', padding: '10px 12px 10px 34px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 600 }}
@@ -258,17 +279,58 @@ export default function KycOperatorDashboard() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>KYC Verification Status</label>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>Bank Filter</label>
             <select 
-              value={kycStatusFilter} 
-              onChange={(e) => setKycStatusFilter(e.target.value)}
+              value={selectedBank} 
+              onChange={(e) => { setSelectedBank(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
               style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 700 }}
             >
-              <option value="">All KYC Statuses</option>
-              <option value="pending">Pending KYC</option>
-              <option value="verified">Verified</option>
-              <option value="rejected">Rejected</option>
-              <option value="pending_more_info">Need More Info</option>
+              <option value="">All Assigned Banks</option>
+              {assignedBanks.map(b => (
+                <option key={b.id} value={b.id}>{b.name || b.short_code}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>Product Filter</label>
+            <select 
+              value={selectedProduct} 
+              onChange={(e) => { setSelectedProduct(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
+              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 700 }}
+            >
+              <option value="">All Assigned Products</option>
+              {assignedProducts.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>VKYC Stage</label>
+            <select 
+              value={vkycFilter} 
+              onChange={(e) => { setVkycFilter(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
+              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 700 }}
+            >
+              <option value="">All VKYC Stages</option>
+              <option value="vkyc approved">VKYC Approved</option>
+              <option value="vkyc pending">VKYC Pending</option>
+              <option value="vkyc failed">VKYC Failed</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: C.textMid, textTransform: 'uppercase', marginBottom: '4px' }}>Bio Stage</label>
+            <select 
+              value={bioFilter} 
+              onChange={(e) => { setBioFilter(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
+              style={{ width: '100%', padding: '10px', borderRadius: '10px', border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.text, fontSize: '13px', fontWeight: 700 }}
+            >
+              <option value="">All Bio Stages</option>
+              <option value="bio done">Bio Done</option>
+              <option value="bio pending">Bio Pending</option>
+              <option value="bio inprocess">Bio Inprocess</option>
             </select>
           </div>
 
@@ -277,7 +339,7 @@ export default function KycOperatorDashboard() {
               type="submit" 
               style={{ width: '100%', background: C.teal, color: '#FFF', border: 'none', padding: '10px 16px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', fontSize: '13px' }}
             >
-              Apply Filter
+              Apply Filters
             </button>
           </div>
         </form>
@@ -289,31 +351,32 @@ export default function KycOperatorDashboard() {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: C.bgSecondary, borderBottom: `1px solid ${C.border}`, color: C.textMid, textTransform: 'uppercase', fontSize: '11px', fontWeight: 900 }}>
-                <th style={{ padding: '14px 18px' }}>App ID & Date</th>
-                <th style={{ padding: '14px 18px' }}>Customer Name & Number</th>
-                <th style={{ padding: '14px 18px' }}>PAN Number</th>
+                <th style={{ padding: '14px 18px' }}>App ID & Bank</th>
+                <th style={{ padding: '14px 18px' }}>Customer & Mobile</th>
+                <th style={{ padding: '14px 18px' }}>Customer PAN</th>
                 <th style={{ padding: '14px 18px' }}>Bank App No.</th>
                 <th style={{ padding: '14px 18px' }}>VKYC Link</th>
-                <th style={{ padding: '14px 18px' }}>Remarks</th>
-                <th style={{ padding: '14px 18px' }}>KYC Stage</th>
+                <th style={{ padding: '14px 18px' }}>User & KYC Remarks</th>
+                <th style={{ padding: '14px 18px' }}>KYC Stage Breakdown</th>
+                <th style={{ padding: '14px 18px' }}>Current Operator</th>
                 <th style={{ padding: '14px 18px', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: C.textMid }}>
+                  <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: C.textMid }}>
                     <FaSync className="fa-spin" style={{ fontSize: '24px', color: C.teal, marginBottom: '8px' }} />
                     <div style={{ fontWeight: 700 }}>Loading eligible KYC queue...</div>
                   </td>
                 </tr>
               ) : applications.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: C.textMid }}>
+                  <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: C.textMid }}>
                     <FaShieldAlt style={{ fontSize: '32px', color: C.teal, marginBottom: '8px' }} />
                     <div style={{ fontWeight: 800, fontSize: '15px', color: C.text }}>No Eligible KYC Applications Found</div>
                     <p style={{ margin: '4px 0 0 0', fontSize: '12.5px' }}>
-                      All non-declined soft approval applications are clear or match your search criteria.
+                      All non-declined soft approval / IPA eligible applications match your active search filters.
                     </p>
                   </td>
                 </tr>
@@ -327,7 +390,7 @@ export default function KycOperatorDashboard() {
                         {app.application_number || app.id}
                       </div>
                       <div style={{ fontSize: '11px', color: C.teal, fontWeight: 800, marginTop: '2px' }}>
-                        {app.product_name} • {app.bank_name}
+                        {app.bank_name} • {app.product_name}
                       </div>
                       <div style={{ fontSize: '10.5px', color: C.textMid, marginTop: '2px' }}>
                         {new Date(app.created_at).toLocaleDateString()}
@@ -369,10 +432,10 @@ export default function KycOperatorDashboard() {
                           rel="noopener noreferrer"
                           style={{ background: '#0284C7', color: '#FFF', padding: '6px 10px', borderRadius: '8px', fontSize: '11.5px', fontWeight: 800, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px', boxShadow: '0 2px 6px rgba(2, 132, 199, 0.2)' }}
                         >
-                          <FaExternalLinkAlt /> Launch VKYC
+                          <FaExternalLinkAlt /> Open VKYC
                         </a>
                       ) : (
-                        <span style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 600, fontStyle: 'italic' }}>No VKYC Link</span>
+                        <span style={{ fontSize: '11.5px', color: C.textMid, fontWeight: 600, fontStyle: 'italic' }}>Not Available</span>
                       )}
                     </td>
 
@@ -393,28 +456,56 @@ export default function KycOperatorDashboard() {
                       )}
                     </td>
 
-                    {/* KYC Stage Dropdown */}
+                    {/* KYC Stages breakdown */}
+                    <td style={{ padding: '14px 18px', minWidth: '220px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '11.5px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 800, color: C.textMid, minWidth: '75px' }}>VKYC:</span>
+                          <select
+                            value={app.vkyc_stage || 'Vkyc pending'}
+                            onChange={(e) => handleStageUpdate(app.id, { vkyc_stage: e.target.value })}
+                            style={{ padding: '3px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, border: `1px solid ${C.border}`, background: String(app.vkyc_stage || '').toLowerCase().includes('approved') ? '#D1FAE5' : String(app.vkyc_stage || '').toLowerCase().includes('failed') ? '#FEE2E2' : '#FEF3C7', color: String(app.vkyc_stage || '').toLowerCase().includes('approved') ? '#065F46' : String(app.vkyc_stage || '').toLowerCase().includes('failed') ? '#991B1B' : '#92400E' }}
+                          >
+                            {VKYC_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 800, color: C.textMid, minWidth: '75px' }}>BIO:</span>
+                          <select
+                            value={app.bio_stage || 'Bio pending'}
+                            onChange={(e) => handleStageUpdate(app.id, { bio_stage: e.target.value })}
+                            style={{ padding: '3px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, border: `1px solid ${C.border}`, background: String(app.bio_stage || '').toLowerCase().includes('done') ? '#D1FAE5' : '#FEF3C7', color: String(app.bio_stage || '').toLowerCase().includes('done') ? '#065F46' : '#92400E' }}
+                          >
+                            {BIO_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 800, color: C.textMid, minWidth: '75px' }}>DIGILOCKER:</span>
+                          <select
+                            value={app.digilocker_stage || 'Digilocker 1 rup credit/debit pending'}
+                            onChange={(e) => handleStageUpdate(app.id, { digilocker_stage: e.target.value })}
+                            style={{ padding: '3px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, border: `1px solid ${C.border}`, background: String(app.digilocker_stage || '').toLowerCase().includes('done') ? '#D1FAE5' : '#FEF3C7', color: String(app.digilocker_stage || '').toLowerCase().includes('done') ? '#065F46' : '#92400E' }}
+                          >
+                            {DIGILOCKER_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Currently Working By */}
                     <td style={{ padding: '14px 18px' }}>
-                      <select
-                        value={app.kyc_stage || 'Vkyc pending'}
-                        onChange={(e) => handleStageChange(app.id, e.target.value)}
-                        style={{
-                          padding: '6px 10px',
-                          borderRadius: '10px',
-                          fontWeight: 800,
-                          fontSize: '12px',
-                          border: `1px solid ${C.border}`,
-                          background: String(app.kyc_stage || '').toLowerCase().includes('approved') || String(app.kyc_stage || '').toLowerCase().includes('done') ? '#D1FAE5' : String(app.kyc_stage || '').toLowerCase().includes('failed') ? '#FEE2E2' : '#FEF3C7',
-                          color: String(app.kyc_stage || '').toLowerCase().includes('approved') || String(app.kyc_stage || '').toLowerCase().includes('done') ? '#065F46' : String(app.kyc_stage || '').toLowerCase().includes('failed') ? '#991B1B' : '#92400E',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {KYC_STAGES.map((stg) => (
-                          <option key={stg} value={stg} style={{ background: C.card, color: C.text, fontWeight: 700 }}>
-                            {stg}
-                          </option>
-                        ))}
-                      </select>
+                      {app.currently_working_by ? (
+                        <div>
+                          <div style={{ fontWeight: 800, color: C.text, fontSize: '12px' }}>{app.currently_working_by}</div>
+                          <div style={{ fontSize: '10.5px', color: C.teal, fontWeight: 700, fontFamily: 'monospace' }}>
+                            {app.admin_code || 'ADM-KYC-OPERATOR'}
+                          </div>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: C.textMid, fontStyle: 'italic' }}>Unassigned</span>
+                      )}
                     </td>
 
                     {/* Actions */}
@@ -442,14 +533,14 @@ export default function KycOperatorDashboard() {
           display: 'flex', justifyContent: 'flex-end'
         }}>
           <div style={{
-            width: '100%', maxWidth: '640px', background: C.card, height: '100%',
+            width: '100%', maxWidth: '680px', background: C.card, height: '100%',
             boxShadow: '-8px 0 32px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column',
             overflowY: 'auto', padding: '24px'
           }}>
             {/* Drawer Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: `1px solid ${C.border}`, paddingBottom: '16px' }}>
               <div>
-                <span style={{ fontSize: '11px', fontWeight: 900, color: C.teal, textTransform: 'uppercase' }}>KYC Verification Workflow</span>
+                <span style={{ fontSize: '11px', fontWeight: 900, color: C.teal, textTransform: 'uppercase' }}>KYC Operator Verification Desk</span>
                 <h2 style={{ fontSize: '20px', fontWeight: 900, margin: '2px 0 0 0', color: C.text }}>
                   Application #{selectedApp?.application_number || selectedApp?.id}
                 </h2>
@@ -470,13 +561,13 @@ export default function KycOperatorDashboard() {
             ) : appDetails ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 
-                {/* Status Cards */}
+                {/* Status & Eligibility Banner */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
-                    <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Soft Approval Status</span>
+                    <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 800, textTransform: 'uppercase' }}>Soft Approval / IPA Status</span>
                     <div style={{ marginTop: '4px' }}>
                       <span style={{ background: '#D1FAE5', color: '#065F46', padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 900 }}>
-                        ✓ {appDetails.soft_approval_status}
+                        ✓ {appDetails.soft_approval_status !== 'PENDING' ? appDetails.soft_approval_status : appDetails.ipa_stage}
                       </span>
                     </div>
                   </div>
@@ -492,7 +583,7 @@ export default function KycOperatorDashboard() {
                 {/* Customer & Application Core Details Card */}
                 <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
                   <h3 style={{ fontSize: '14px', fontWeight: 900, margin: '0 0 12px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FaUserCheck /> Application & Identity Information
+                    <FaUserCheck /> Application & Customer Identity
                   </h3>
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12.5px', marginBottom: '14px' }}>
@@ -529,9 +620,9 @@ export default function KycOperatorDashboard() {
                   </div>
 
                   {/* Editable Fields: Bank App #, VKYC Link, Remarks */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '10px', borderTop: `1px dashed ${C.border}` }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '12px', borderTop: `1px dashed ${C.border}` }}>
                     <div>
-                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '3px' }}>BANK APPLICATION NUMBER</label>
+                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '4px' }}>BANK APPLICATION NUMBER</label>
                       <input 
                         type="text"
                         value={appDetails.bank_application_number || ''}
@@ -542,7 +633,7 @@ export default function KycOperatorDashboard() {
                     </div>
 
                     <div>
-                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '3px' }}>VKYC LINK</label>
+                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '4px' }}>VKYC LINK</label>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <input 
                           type="text"
@@ -564,8 +655,43 @@ export default function KycOperatorDashboard() {
                       </div>
                     </div>
 
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                      <div>
+                        <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '4px' }}>VKYC STAGE</label>
+                        <select 
+                          value={appDetails.vkyc_stage || 'Vkyc pending'}
+                          onChange={(e) => setAppDetails(prev => ({ ...prev, vkyc_stage: e.target.value }))}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '12px', fontWeight: 800 }}
+                        >
+                          {VKYC_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '4px' }}>BIO STAGE</label>
+                        <select 
+                          value={appDetails.bio_stage || 'Bio pending'}
+                          onChange={(e) => setAppDetails(prev => ({ ...prev, bio_stage: e.target.value }))}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '12px', fontWeight: 800 }}
+                        >
+                          {BIO_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '4px' }}>DIGILOCKER STAGE</label>
+                        <select 
+                          value={appDetails.digilocker_stage || 'Digilocker 1 rup credit/debit pending'}
+                          onChange={(e) => setAppDetails(prev => ({ ...prev, digilocker_stage: e.target.value }))}
+                          style={{ width: '100%', padding: '8px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '12px', fontWeight: 800 }}
+                        >
+                          {DIGILOCKER_STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
                     <div>
-                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '3px' }}>USER REMARK</label>
+                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '4px' }}>USER REMARK</label>
                       <input 
                         type="text"
                         value={appDetails.user_remark || ''}
@@ -576,7 +702,7 @@ export default function KycOperatorDashboard() {
                     </div>
 
                     <div>
-                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '3px' }}>KYC REMARK</label>
+                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '4px' }}>KYC REMARK</label>
                       <input 
                         type="text"
                         value={appDetails.kyc_remarks || ''}
@@ -586,26 +712,15 @@ export default function KycOperatorDashboard() {
                       />
                     </div>
 
-                    <div>
-                      <label style={{ color: C.textMid, fontSize: '11px', display: 'block', fontWeight: 800, marginBottom: '3px' }}>KYC STAGE</label>
-                      <select 
-                        value={appDetails.kyc_stage || 'Vkyc pending'}
-                        onChange={(e) => setAppDetails(prev => ({ ...prev, kyc_stage: e.target.value }))}
-                        style={{ width: '100%', padding: '9px 10px', borderRadius: '8px', border: `1px solid ${C.border}`, background: C.card, color: C.text, fontSize: '13px', fontWeight: 800 }}
-                      >
-                        {KYC_STAGES.map(stg => (
-                          <option key={stg} value={stg}>{stg}</option>
-                        ))}
-                      </select>
-                    </div>
-
                     <button
                       type="button"
                       onClick={async () => {
                         try {
                           setSubmittingAction(true);
                           const res = await api.post(`/kyc-operator/applications/${appDetails.id}/update-stage`, {
-                            kyc_stage: appDetails.kyc_stage,
+                            vkyc_stage: appDetails.vkyc_stage,
+                            bio_stage: appDetails.bio_stage,
+                            digilocker_stage: appDetails.digilocker_stage,
                             bank_application_number: appDetails.bank_application_number,
                             vkyc_link: appDetails.vkyc_link,
                             user_remark: appDetails.user_remark,
@@ -613,8 +728,9 @@ export default function KycOperatorDashboard() {
                             pan_number: appDetails.pan_number
                           });
                           if (res.data?.success) {
-                            setToast({ type: 'success', text: 'Application details updated!' });
+                            setToast({ type: 'success', text: 'Application details & stage updated!' });
                             fetchApplications();
+                            handleViewApplication({ id: appDetails.id });
                           }
                         } catch (err) {
                           setToast({ type: 'error', text: err.response?.data?.message || 'Update failed' });
@@ -624,7 +740,7 @@ export default function KycOperatorDashboard() {
                       }}
                       style={{ marginTop: '6px', background: C.teal, color: '#FFF', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 800, cursor: 'pointer', fontSize: '12.5px' }}
                     >
-                      💾 Save KYC Details & Stage
+                      💾 Save KYC Details & Stages
                     </button>
                   </div>
 
@@ -670,10 +786,40 @@ export default function KycOperatorDashboard() {
                   )}
                 </div>
 
+                {/* Immutable Operator Audit History */}
+                {appDetails.operator_history && appDetails.operator_history.length > 0 && (
+                  <div style={{ background: C.bgSecondary, padding: '16px', borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: 900, margin: '0 0 12px 0', color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FaHistory color="#2563EB" /> Immutable Operator Action Audit ({appDetails.operator_history.length})
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {appDetails.operator_history.map(h => (
+                        <div key={h.id} style={{ background: C.card, padding: '10px 12px', borderRadius: '8px', border: `1px solid ${C.border}`, fontSize: '12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <strong style={{ color: C.text }}>{h.operator_name || 'Operator'}</strong>
+                            <span style={{ fontSize: '10.5px', color: C.textMid }}>
+                              {new Date(h.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '4px' }}>
+                            <span style={{ background: C.bgSecondary, padding: '2px 6px', borderRadius: '4px', fontSize: '10.5px', fontWeight: 800, color: C.teal }}>
+                              {h.operator_code || h.operator_designation}
+                            </span>
+                            <span style={{ background: '#E0F2FE', color: '#0369A1', padding: '2px 6px', borderRadius: '4px', fontSize: '10.5px', fontWeight: 800 }}>
+                              {h.action_type}
+                            </span>
+                          </div>
+                          {h.notes && <div style={{ fontSize: '11.5px', color: C.textMid, marginTop: '4px' }}>Note: {h.notes}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Verification Actions Bar */}
                 <div style={{ marginTop: 'auto', paddingTop: '20px', borderTop: `1px solid ${C.border}`, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                   <button 
-                    onClick={() => { setActionModalType('VERIFY'); setActionRemarks('KYC documents verified and approved.'); }}
+                    onClick={() => { setActionModalType('VERIFY'); setActionRemarks('KYC documents & stages verified and approved.'); }}
                     style={{ background: '#059669', color: '#FFF', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', fontSize: '12.5px' }}
                   >
                     ✓ Verify KYC

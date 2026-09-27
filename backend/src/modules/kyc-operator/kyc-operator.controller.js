@@ -3,10 +3,10 @@ const logger = require('../../config/logger');
 
 /**
  * Controller: KYC Operator
- * Restricts access exclusively to non-declined soft approval applications.
+ * Restricts access exclusively to authorized KYC Operators and eligible bank applications.
  */
 
-// Helper to ensure kyc_status and kyc_remarks columns exist on applications table
+// Helper to ensure all required KYC and operator tracking columns exist
 let columnsChecked = false;
 const ensureKycColumns = async () => {
   if (columnsChecked) return;
@@ -19,13 +19,89 @@ const ensureKycColumns = async () => {
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_link TEXT`).catch(() => {});
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS user_remark TEXT`).catch(() => {});
     await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100) DEFAULT 'Vkyc pending'`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100) DEFAULT 'Vkyc pending'`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS bio_stage VARCHAR(100) DEFAULT 'Bio pending'`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS digilocker_stage VARCHAR(100) DEFAULT 'Digilocker 1 Rupee Credit/Debit Pending'`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS ipa_stage VARCHAR(100)`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS soft_approval_status VARCHAR(100)`).catch(() => {});
+    
+    // Operator tracking columns
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_id UUID`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255)`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100)`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100)`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100)`).catch(() => {});
+    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMP WITH TIME ZONE`).catch(() => {});
+
+    // Physical details columns fallback
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS kyc_stage VARCHAR(100)`).catch(() => {});
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_stage VARCHAR(100)`).catch(() => {});
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS bio_stage VARCHAR(100)`).catch(() => {});
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS digilocker_stage VARCHAR(100)`).catch(() => {});
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_url TEXT`).catch(() => {});
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS user_remark TEXT`).catch(() => {});
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`).catch(() => {});
+
+    // Immutable operator history table
+    await query(`
+      CREATE TABLE IF NOT EXISTS application_operator_history (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        application_id UUID NOT NULL,
+        operator_id UUID,
+        operator_name VARCHAR(255),
+        operator_role VARCHAR(100),
+        operator_designation VARCHAR(100),
+        operator_code VARCHAR(100),
+        action_type VARCHAR(100),
+        field_changes JSONB,
+        notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `).catch(() => {});
+
     columnsChecked = true;
   } catch (err) {
-    logger.warn('Failed ensuring kyc columns on applications table:', err.message);
+    logger.warn('Failed ensuring KYC and operator history columns:', err.message);
   }
 };
 
-// Helper to check if application is soft approval declined
+// Helper to format operator code
+const getOperatorCode = (user) => {
+  if (!user) return 'ADM-KYC-0000';
+  return user.employee_code || user.admin_code || user.employee_id || user.code || `ADM-KYC-${String(user.id || '0000').slice(0, 6)}`;
+};
+
+// Helper to record operator audit log
+const recordOperatorAudit = async (appId, user, actionType, changes, notes) => {
+  try {
+    const operatorCode = getOperatorCode(user);
+    const opId = user.id || null;
+    const opName = user.full_name || user.name || user.email || 'KYC Operator';
+    const opRole = user.role || 'ADMIN';
+    const opDesignation = user.designation || 'KYC_OPERATOR';
+
+    await query(`
+      INSERT INTO application_operator_history 
+        (application_id, operator_id, operator_name, operator_role, operator_designation, operator_code, action_type, field_changes, notes, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+    `, [appId, opId, opName, opRole, opDesignation, operatorCode, actionType, JSON.stringify(changes || {}), notes || null]);
+
+    await query(`
+      UPDATE applications 
+      SET last_operator_id = $1,
+          last_operator_name = $2,
+          last_operator_code = $3,
+          last_operator_role = $4,
+          last_operator_designation = $5,
+          last_operated_at = NOW()
+      WHERE id = $6
+    `, [opId, opName, operatorCode, opRole, opDesignation, appId]).catch(() => {});
+  } catch (err) {
+    logger.error('Failed to record KYC operator audit log:', err.message);
+  }
+};
+
+// Helper to check soft approval decline
 const isSoftApprovalDeclined = (softApprovalStatus) => {
   const status = String(softApprovalStatus || '').trim().toLowerCase();
   return status === 'declined' || status === 'rejected';
@@ -33,7 +109,7 @@ const isSoftApprovalDeclined = (softApprovalStatus) => {
 
 /**
  * GET /api/v1/kyc-operator/applications
- * Retrieves applications eligible for KYC verification (soft approval NOT declined).
+ * Retrieves applications eligible for KYC Operator queue based on bank-specific business rules.
  */
 const getKycApplications = async (req, res) => {
   try {
@@ -42,7 +118,11 @@ const getKycApplications = async (req, res) => {
     const limit = parseInt(req.query.limit || '20', 10);
     const offset = (page - 1) * limit;
 
-    const { search, product_id, bank_id, kyc_status, start_date, end_date } = req.query;
+    const { search, product_id, bank_id, kyc_status, vkyc_stage, bio_stage, digilocker_stage, start_date, end_date } = req.query;
+
+    const userId = req.user.id;
+    const userRole = String(req.user.role || '').toUpperCase();
+    const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPERADMIN';
 
     let whereConditions = [
       `LOWER(TRIM(COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), ''))) NOT IN ('declined', 'rejected')`
@@ -50,6 +130,45 @@ const getKycApplications = async (req, res) => {
     let queryParams = [];
     let paramIdx = 1;
 
+    // 1. Bank/Product Assignment Security Filter
+    if (!isSuperAdmin) {
+      whereConditions.push(`(
+        EXISTS (
+          SELECT 1 FROM admin_bank_assignments aba 
+          WHERE aba.admin_id = $${paramIdx}::uuid 
+          AND (aba.bank_id = a.bank_id OR aba.bank_id::text = a.bank_id::text OR aba.bank_id = b.id)
+        ) OR NOT EXISTS (
+          SELECT 1 FROM admin_bank_assignments WHERE admin_id = $${paramIdx}::uuid
+        )
+      )`);
+      queryParams.push(userId);
+      paramIdx++;
+    }
+
+    // 2. Bank-Specific Eligibility Rules:
+    // SBI -> Soft Approval Status: Approval Income 25K, Approval Income 30K, Approval NSDP Cibil Base
+    // HDFC -> IPA Status: IPA Approval CIBIL, IPA Approve Income
+    whereConditions.push(`(
+      (
+        (LOWER(COALESCE(b.short_code, '')) LIKE '%sbi%' OR LOWER(COALESCE(b.name, '')) LIKE '%sbi%' OR LOWER(COALESCE(a.bank_name, '')) LIKE '%sbi%')
+        AND LOWER(TRIM(COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), ''))) IN (
+          'approval income 25k', 'approval income 30k', 'approval nsdp cibil base',
+          'approval_income_25k', 'approval_income_30k', 'approval_nsdp_cibil_base',
+          'income 25k', 'income 30k', 'nsdp cibil base'
+        )
+      )
+      OR
+      (
+        (LOWER(COALESCE(b.short_code, '')) LIKE '%hdfc%' OR LOWER(COALESCE(b.name, '')) LIKE '%hdfc%' OR LOWER(COALESCE(a.bank_name, '')) LIKE '%hdfc%')
+        AND LOWER(TRIM(COALESCE(NULLIF(a.ipa_stage, ''), NULLIF(pad.ipa_stage, ''), NULLIF(a.soft_approval_status, ''), ''))) IN (
+          'ipa approval cibil', 'ipa approve income',
+          'ipa_approval_cibil', 'ipa_approve_income',
+          'approval cibil', 'approve income'
+        )
+      )
+    )`);
+
+    // 3. Optional Search Filter across App #, Bank App #, Customer Name, Mobile, PAN
     if (search && search.trim()) {
       const term = `%${search.trim()}%`;
       whereConditions.push(`(
@@ -61,20 +180,21 @@ const getKycApplications = async (req, res) => {
         a.bank_application_number ILIKE $${paramIdx} OR
         pad.full_name ILIKE $${paramIdx} OR
         pad.mobile ILIKE $${paramIdx} OR
-        pad.pan_number ILIKE $${paramIdx}
+        pad.pan_number ILIKE $${paramIdx} OR
+        pad.bank_application_number ILIKE $${paramIdx}
       )`);
       queryParams.push(term);
       paramIdx++;
     }
 
     if (product_id) {
-      whereConditions.push(`a.product_id = $${paramIdx}`);
+      whereConditions.push(`(a.product_id = $${paramIdx} OR a.product_id::text = $${paramIdx}::text)`);
       queryParams.push(product_id);
       paramIdx++;
     }
 
     if (bank_id) {
-      whereConditions.push(`a.bank_id = $${paramIdx}`);
+      whereConditions.push(`(a.bank_id = $${paramIdx} OR a.bank_id::text = $${paramIdx}::text OR b.id = $${paramIdx} OR b.id::text = $${paramIdx}::text)`);
       queryParams.push(bank_id);
       paramIdx++;
     }
@@ -82,6 +202,24 @@ const getKycApplications = async (req, res) => {
     if (kyc_status) {
       whereConditions.push(`LOWER(COALESCE(a.kyc_status, a.vkyc_status, 'pending')) = $${paramIdx}`);
       queryParams.push(kyc_status.toLowerCase());
+      paramIdx++;
+    }
+
+    if (vkyc_stage) {
+      whereConditions.push(`LOWER(COALESCE(a.vkyc_stage, pad.vkyc_stage, 'vkyc pending')) ILIKE $${paramIdx}`);
+      queryParams.push(`%${vkyc_stage.toLowerCase()}%`);
+      paramIdx++;
+    }
+
+    if (bio_stage) {
+      whereConditions.push(`LOWER(COALESCE(a.bio_stage, pad.bio_stage, 'bio pending')) ILIKE $${paramIdx}`);
+      queryParams.push(`%${bio_stage.toLowerCase()}%`);
+      paramIdx++;
+    }
+
+    if (digilocker_stage) {
+      whereConditions.push(`LOWER(COALESCE(a.digilocker_stage, pad.digilocker_stage, 'digilocker 1 rupee credit/debit pending')) ILIKE $${paramIdx}`);
+      queryParams.push(`%${digilocker_stage.toLowerCase()}%`);
       paramIdx++;
     }
 
@@ -108,9 +246,10 @@ const getKycApplications = async (req, res) => {
         COUNT(CASE WHEN LOWER(COALESCE(a.kyc_status, a.vkyc_status, 'pending')) = 'rejected' THEN 1 END)::int as rejected_kyc
       FROM applications a
       LEFT JOIN physical_application_details pad ON (pad.application_id = a.id OR pad.application_id::text = a.id::text)
-      WHERE ${whereConditions[0]}
+      LEFT JOIN banks b ON (b.id = a.bank_id OR b.id::text = a.bank_id::text)
+      WHERE ${whereClause}
     `;
-    const statsRes = await query(statsQuery).catch(() => ({ rows: [{ total_kyc: 0, pending_kyc: 0, verified_kyc: 0, rejected_kyc: 0 }] }));
+    const statsRes = await query(statsQuery, queryParams).catch(() => ({ rows: [{ total_kyc: 0, pending_kyc: 0, verified_kyc: 0, rejected_kyc: 0 }] }));
     const stats = statsRes.rows[0] || { total_kyc: 0, pending_kyc: 0, verified_kyc: 0, rejected_kyc: 0 };
 
     // 2. Count Total Filtered Applications
@@ -118,6 +257,7 @@ const getKycApplications = async (req, res) => {
       SELECT COUNT(*)::int as total
       FROM applications a
       LEFT JOIN physical_application_details pad ON (pad.application_id = a.id OR pad.application_id::text = a.id::text)
+      LEFT JOIN banks b ON (b.id = a.bank_id OR b.id::text = a.bank_id::text)
       WHERE ${whereClause}
     `;
     const countRes = await query(countQuery, queryParams);
@@ -133,9 +273,12 @@ const getKycApplications = async (req, res) => {
         COALESCE(NULLIF(a.pan_number, ''), NULLIF(pad.pan_number, ''), 'N/A') as pan_number,
         COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(pad.bank_application_number, ''), 'N/A') as bank_application_number,
         COALESCE(NULLIF(a.vkyc_link, ''), NULLIF(pad.vkyc_url, ''), '') as vkyc_link,
-        COALESCE(NULLIF(a.user_remark, ''), NULLIF(a.notes, ''), '') as user_remark,
-        COALESCE(NULLIF(a.kyc_remarks, ''), '') as kyc_remarks,
-        COALESCE(NULLIF(a.kyc_stage, ''), NULLIF(pad.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), 'Vkyc pending') as kyc_stage,
+        COALESCE(NULLIF(a.user_remark, ''), NULLIF(pad.user_remark, ''), NULLIF(a.notes, ''), '') as user_remark,
+        COALESCE(NULLIF(a.kyc_remarks, ''), NULLIF(pad.kyc_remarks, ''), '') as kyc_remarks,
+        COALESCE(NULLIF(a.kyc_stage, ''), NULLIF(pad.kyc_stage, ''), 'Vkyc pending') as kyc_stage,
+        COALESCE(NULLIF(a.vkyc_stage, ''), NULLIF(pad.vkyc_stage, ''), 'Vkyc pending') as vkyc_stage,
+        COALESCE(NULLIF(a.bio_stage, ''), NULLIF(pad.bio_stage, ''), 'Bio pending') as bio_stage,
+        COALESCE(NULLIF(a.digilocker_stage, ''), NULLIF(pad.digilocker_stage, ''), 'Digilocker 1 Rupee Credit/Debit Pending') as digilocker_stage,
         a.product_id,
         COALESCE(p.name, 'Product') as product_name,
         a.bank_id,
@@ -143,7 +286,12 @@ const getKycApplications = async (req, res) => {
         COALESCE(e.employee_id, u.employee_id, e.full_name, 'Direct') as referred_by,
         a.status as application_status,
         COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status,
+        COALESCE(NULLIF(a.ipa_stage, ''), NULLIF(pad.ipa_stage, ''), 'PENDING') as ipa_stage,
         COALESCE(a.kyc_status, a.vkyc_status, 'PENDING') as kyc_status,
+        a.last_operator_id,
+        a.last_operator_name as currently_working_by,
+        a.last_operator_code as admin_code,
+        a.last_operated_at,
         a.created_at,
         a.updated_at
       FROM applications a
@@ -156,9 +304,8 @@ const getKycApplications = async (req, res) => {
       ORDER BY a.created_at DESC
       LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
     `;
-    queryParams.push(limit, offset);
-
-    const appsRes = await query(dataQuery, queryParams);
+    const finalParams = [...queryParams, limit, offset];
+    const appsRes = await query(dataQuery, finalParams);
 
     return res.json({
       success: true,
@@ -180,7 +327,7 @@ const getKycApplications = async (req, res) => {
 
 /**
  * GET /api/v1/kyc-operator/applications/:id
- * Fetches details of a specific application. Enforces non-declined soft approval rule.
+ * Fetches details of a specific application including operator audit history.
  */
 const getKycApplicationById = async (req, res) => {
   try {
@@ -195,11 +342,17 @@ const getKycApplicationById = async (req, res) => {
         COALESCE(NULLIF(a.pan_number, ''), NULLIF(pad.pan_number, ''), 'N/A') as pan_number,
         COALESCE(NULLIF(a.bank_application_number, ''), NULLIF(pad.bank_application_number, ''), 'N/A') as bank_application_number,
         COALESCE(NULLIF(a.vkyc_link, ''), NULLIF(pad.vkyc_url, ''), '') as vkyc_link,
-        COALESCE(NULLIF(a.user_remark, ''), NULLIF(a.notes, ''), '') as user_remark,
-        COALESCE(NULLIF(a.kyc_remarks, ''), '') as kyc_remarks,
-        COALESCE(NULLIF(a.kyc_stage, ''), NULLIF(pad.vkyc_stage, ''), NULLIF(a.vkyc_status, ''), 'Vkyc pending') as kyc_stage,
+        COALESCE(NULLIF(a.user_remark, ''), NULLIF(pad.user_remark, ''), NULLIF(a.notes, ''), '') as user_remark,
+        COALESCE(NULLIF(a.kyc_remarks, ''), NULLIF(pad.kyc_remarks, ''), '') as kyc_remarks,
+        COALESCE(NULLIF(a.kyc_stage, ''), NULLIF(pad.kyc_stage, ''), 'Vkyc pending') as kyc_stage,
+        COALESCE(NULLIF(a.vkyc_stage, ''), NULLIF(pad.vkyc_stage, ''), 'Vkyc pending') as vkyc_stage,
+        COALESCE(NULLIF(a.bio_stage, ''), NULLIF(pad.bio_stage, ''), 'Bio pending') as bio_stage,
+        COALESCE(NULLIF(a.digilocker_stage, ''), NULLIF(pad.digilocker_stage, ''), 'Digilocker 1 Rupee Credit/Debit Pending') as digilocker_stage,
         COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status,
+        COALESCE(NULLIF(a.ipa_stage, ''), NULLIF(pad.ipa_stage, ''), 'PENDING') as ipa_stage,
         COALESCE(a.kyc_status, a.vkyc_status, 'PENDING') as kyc_status,
+        a.last_operator_name as currently_working_by,
+        a.last_operator_code as admin_code,
         p.name as product_name,
         b.name as bank_name,
         COALESCE(e.employee_id, u.employee_id, e.full_name, 'Direct') as referred_by
@@ -209,7 +362,7 @@ const getKycApplicationById = async (req, res) => {
       LEFT JOIN banks b ON (b.id = a.bank_id OR b.id::text = a.bank_id::text)
       LEFT JOIN users u ON u.id = a.partner_id
       LEFT JOIN employees e ON e.user_id = u.id
-      WHERE a.id = $1 OR a.application_number = $1
+      WHERE a.id::text = $1 OR a.application_number = $1
     `, [id]);
 
     if (appRes.rows.length === 0) {
@@ -218,7 +371,7 @@ const getKycApplicationById = async (req, res) => {
 
     const application = appRes.rows[0];
 
-    // STRICT BACKEND CHECK: Deny access if soft approval is declined or rejected
+    // STRICT CHECK: Deny access if soft approval is declined or rejected
     if (isSoftApprovalDeclined(application.soft_approval_status)) {
       return res.status(403).json({
         success: false,
@@ -233,11 +386,19 @@ const getKycApplicationById = async (req, res) => {
       ORDER BY uploaded_at DESC
     `, [application.id]).catch(() => ({ rows: [] }));
 
+    // Fetch immutable operator audit trail
+    const auditRes = await query(`
+      SELECT * FROM application_operator_history
+      WHERE application_id = $1 OR application_id::text = $1
+      ORDER BY created_at DESC
+    `, [application.id]).catch(() => ({ rows: [] }));
+
     return res.json({
       success: true,
       data: {
         ...application,
-        documents: docRes.rows
+        documents: docRes.rows,
+        operator_history: auditRes.rows
       }
     });
 
@@ -259,7 +420,7 @@ const getKycApplicationDocuments = async (req, res) => {
       SELECT a.id, COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status
       FROM applications a
       LEFT JOIN physical_application_details pad ON (pad.application_id = a.id OR pad.application_id::text = a.id::text)
-      WHERE a.id = $1 OR a.application_number = $1
+      WHERE a.id::text = $1 OR a.application_number = $1
     `, [id]);
 
     if (appRes.rows.length === 0) {
@@ -293,18 +454,19 @@ const getKycApplicationDocuments = async (req, res) => {
 
 /**
  * POST /api/v1/kyc-operator/applications/:id/verify
- * Approves / Verifies KYC for an application.
+ * Approves / Verifies KYC for an application and records immutable audit log.
  */
 const verifyKycApplication = async (req, res) => {
   try {
+    await ensureKycColumns();
     const { id } = req.params;
     const { remarks } = req.body;
 
     const appRes = await query(`
-      SELECT a.id, COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status
+      SELECT a.id, a.kyc_status, COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status
       FROM applications a
       LEFT JOIN physical_application_details pad ON (pad.application_id = a.id OR pad.application_id::text = a.id::text)
-      WHERE a.id = $1 OR a.application_number = $1
+      WHERE a.id::text = $1 OR a.application_number = $1
     `, [id]);
 
     if (appRes.rows.length === 0) {
@@ -316,18 +478,23 @@ const verifyKycApplication = async (req, res) => {
     }
 
     const appId = appRes.rows[0].id;
-
-    // Ensure columns exist safely
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(50) DEFAULT 'PENDING'`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`).catch(() => {});
+    const prevStatus = appRes.rows[0].kyc_status || 'PENDING';
+    const noteText = remarks || 'KYC Verified successfully by KYC Operator';
 
     await query(`
       UPDATE applications 
       SET kyc_status = 'VERIFIED',
+          vkyc_status = 'APPROVED',
           kyc_remarks = $1,
           updated_at = NOW()
       WHERE id = $2
-    `, [remarks || 'KYC Verified successfully by KYC Operator', appId]);
+    `, [noteText, appId]);
+
+    // Record immutable audit history
+    await recordOperatorAudit(appId, req.user, 'KYC_VERIFIED', {
+      previous_kyc_status: prevStatus,
+      new_kyc_status: 'VERIFIED'
+    }, noteText);
 
     // Also update all pending documents to VERIFIED
     await query(`
@@ -349,10 +516,11 @@ const verifyKycApplication = async (req, res) => {
 
 /**
  * POST /api/v1/kyc-operator/applications/:id/reject
- * Rejects KYC for an application.
+ * Rejects KYC for an application and records immutable audit log.
  */
 const rejectKycApplication = async (req, res) => {
   try {
+    await ensureKycColumns();
     const { id } = req.params;
     const { remarks } = req.body;
 
@@ -361,10 +529,10 @@ const rejectKycApplication = async (req, res) => {
     }
 
     const appRes = await query(`
-      SELECT a.id, COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status
+      SELECT a.id, a.kyc_status, COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status
       FROM applications a
       LEFT JOIN physical_application_details pad ON (pad.application_id = a.id OR pad.application_id::text = a.id::text)
-      WHERE a.id = $1 OR a.application_number = $1
+      WHERE a.id::text = $1 OR a.application_number = $1
     `, [id]);
 
     if (appRes.rows.length === 0) {
@@ -376,17 +544,22 @@ const rejectKycApplication = async (req, res) => {
     }
 
     const appId = appRes.rows[0].id;
-
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(50) DEFAULT 'PENDING'`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`).catch(() => {});
+    const prevStatus = appRes.rows[0].kyc_status || 'PENDING';
 
     await query(`
       UPDATE applications 
       SET kyc_status = 'REJECTED',
+          vkyc_status = 'FAILED',
           kyc_remarks = $1,
           updated_at = NOW()
       WHERE id = $2
     `, [remarks, appId]);
+
+    // Record immutable audit history
+    await recordOperatorAudit(appId, req.user, 'KYC_REJECTED', {
+      previous_kyc_status: prevStatus,
+      new_kyc_status: 'REJECTED'
+    }, remarks);
 
     return res.json({
       success: true,
@@ -405,6 +578,7 @@ const rejectKycApplication = async (req, res) => {
  */
 const requestInfoKycApplication = async (req, res) => {
   try {
+    await ensureKycColumns();
     const { id } = req.params;
     const { remarks } = req.body;
 
@@ -413,10 +587,10 @@ const requestInfoKycApplication = async (req, res) => {
     }
 
     const appRes = await query(`
-      SELECT a.id, COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status
+      SELECT a.id, a.kyc_status, COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status
       FROM applications a
       LEFT JOIN physical_application_details pad ON (pad.application_id = a.id OR pad.application_id::text = a.id::text)
-      WHERE a.id = $1 OR a.application_number = $1
+      WHERE a.id::text = $1 OR a.application_number = $1
     `, [id]);
 
     if (appRes.rows.length === 0) {
@@ -428,9 +602,7 @@ const requestInfoKycApplication = async (req, res) => {
     }
 
     const appId = appRes.rows[0].id;
-
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_status VARCHAR(50) DEFAULT 'PENDING'`).catch(() => {});
-    await query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`).catch(() => {});
+    const prevStatus = appRes.rows[0].kyc_status || 'PENDING';
 
     await query(`
       UPDATE applications 
@@ -439,6 +611,12 @@ const requestInfoKycApplication = async (req, res) => {
           updated_at = NOW()
       WHERE id = $2
     `, [remarks, appId]);
+
+    // Record immutable audit history
+    await recordOperatorAudit(appId, req.user, 'KYC_REQUESTED_INFO', {
+      previous_kyc_status: prevStatus,
+      new_kyc_status: 'PENDING_MORE_INFO'
+    }, remarks);
 
     return res.json({
       success: true,
@@ -453,19 +631,38 @@ const requestInfoKycApplication = async (req, res) => {
 
 /**
  * POST /api/v1/kyc-operator/applications/:id/update-stage
- * Updates application KYC stage, VKYC link, bank application number, user remark, kyc remarks, and PAN.
+ * Updates application KYC stages (VKYC, Bio, Digilocker), remarks, VKYC link, bank app #, and records audit trail.
  */
 const updateKycStageAndDetails = async (req, res) => {
   try {
     await ensureKycColumns();
     const { id } = req.params;
-    const { kyc_stage, bank_application_number, vkyc_link, user_remark, kyc_remarks, pan_number, kyc_status } = req.body;
+    const { 
+      kyc_stage, 
+      vkyc_stage, 
+      bio_stage, 
+      digilocker_stage, 
+      bank_application_number, 
+      vkyc_link, 
+      user_remark, 
+      kyc_remarks, 
+      pan_number, 
+      kyc_status 
+    } = req.body;
 
     const appRes = await query(`
-      SELECT a.id, COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status
+      SELECT 
+        a.id, 
+        a.kyc_stage, 
+        a.vkyc_stage, 
+        a.bio_stage, 
+        a.digilocker_stage,
+        a.kyc_remarks,
+        a.user_remark,
+        COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status
       FROM applications a
       LEFT JOIN physical_application_details pad ON (pad.application_id = a.id OR pad.application_id::text = a.id::text)
-      WHERE a.id = $1 OR a.application_number = $1
+      WHERE a.id::text = $1 OR a.application_number = $1
     `, [id]);
 
     if (appRes.rows.length === 0) {
@@ -476,65 +673,103 @@ const updateKycStageAndDetails = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access Denied: Soft approval is declined.' });
     }
 
-    const appId = appRes.rows[0].id;
+    const currentApp = appRes.rows[0];
+    const appId = currentApp.id;
 
     let updates = [];
     let params = [];
     let pIdx = 1;
+    let fieldChanges = {};
 
     if (kyc_stage !== undefined) {
       updates.push(`kyc_stage = $${pIdx}`);
       params.push(kyc_stage);
       pIdx++;
+      fieldChanges.kyc_stage = { from: currentApp.kyc_stage, to: kyc_stage };
+    }
 
-      const stageLower = String(kyc_stage).toLowerCase();
-      if (stageLower.includes('vkyc approved') || stageLower.includes('bio done') || stageLower.includes('digilocker 1 rup credit/debit done')) {
+    if (vkyc_stage !== undefined) {
+      updates.push(`vkyc_stage = $${pIdx}`);
+      params.push(vkyc_stage);
+      pIdx++;
+      fieldChanges.vkyc_stage = { from: currentApp.vkyc_stage, to: vkyc_stage };
+
+      const stageLower = String(vkyc_stage).toLowerCase();
+      if (stageLower.includes('approved') || stageLower.includes('done')) {
         updates.push(`vkyc_status = 'APPROVED'`);
-      } else if (stageLower.includes('vkyc failed')) {
+      } else if (stageLower.includes('failed')) {
         updates.push(`vkyc_status = 'FAILED'`);
       }
+    }
+
+    if (bio_stage !== undefined) {
+      updates.push(`bio_stage = $${pIdx}`);
+      params.push(bio_stage);
+      pIdx++;
+      fieldChanges.bio_stage = { from: currentApp.bio_stage, to: bio_stage };
+    }
+
+    if (digilocker_stage !== undefined) {
+      updates.push(`digilocker_stage = $${pIdx}`);
+      params.push(digilocker_stage);
+      pIdx++;
+      fieldChanges.digilocker_stage = { from: currentApp.digilocker_stage, to: digilocker_stage };
     }
 
     if (bank_application_number !== undefined) {
       updates.push(`bank_application_number = $${pIdx}`);
       params.push(bank_application_number);
       pIdx++;
+      fieldChanges.bank_application_number = bank_application_number;
     }
 
     if (vkyc_link !== undefined) {
       updates.push(`vkyc_link = $${pIdx}`);
       params.push(vkyc_link);
       pIdx++;
+      fieldChanges.vkyc_link = vkyc_link;
     }
 
     if (user_remark !== undefined) {
       updates.push(`user_remark = $${pIdx}`);
       params.push(user_remark);
       pIdx++;
+      fieldChanges.user_remark = user_remark;
     }
 
     if (kyc_remarks !== undefined) {
       updates.push(`kyc_remarks = $${pIdx}`);
       params.push(kyc_remarks);
       pIdx++;
+      fieldChanges.kyc_remarks = kyc_remarks;
     }
 
     if (pan_number !== undefined) {
       updates.push(`pan_number = $${pIdx}`);
       params.push(pan_number);
       pIdx++;
+      fieldChanges.pan_number = pan_number;
     }
 
     if (kyc_status !== undefined) {
       updates.push(`kyc_status = $${pIdx}`);
       params.push(kyc_status);
       pIdx++;
+      fieldChanges.kyc_status = kyc_status;
     }
 
     if (updates.length > 0) {
       updates.push(`updated_at = NOW()`);
       params.push(appId);
       await query(`UPDATE applications SET ${updates.join(', ')} WHERE id = $${pIdx}`, params);
+
+      // Record immutable audit history for this update
+      let actionName = 'KYC_DETAILS_UPDATED';
+      if (vkyc_stage !== undefined) actionName = 'VKYC_STAGE_UPDATED';
+      if (bio_stage !== undefined) actionName = 'BIO_STAGE_UPDATED';
+      if (digilocker_stage !== undefined) actionName = 'DIGILOCKER_STAGE_UPDATED';
+
+      await recordOperatorAudit(appId, req.user, actionName, fieldChanges, kyc_remarks || user_remark || 'KYC stage updated.');
     }
 
     return res.json({
