@@ -629,20 +629,20 @@ async function searchStaff(req, res, next) {
         COALESCE(e.designation, u.designation, 'Team Coordinator') as designation,
         COALESCE(u.role, 'EMPLOYEE') as role,
         COALESCE(e.department, 'Operations') as department,
-        COALESCE(e.branch_location, 'Pune') as branch,
-        COALESCE(u.mobile, e.mobile, '') as mobile,
-        COALESCE(u.email, e.email, '') as email
+        COALESCE(to_jsonb(e)->>'work_location', to_jsonb(e)->>'branch_location', 'Pune') as branch,
+        COALESCE(u.mobile, to_jsonb(e)->>'mobile_number', to_jsonb(e)->>'mobile', '') as mobile,
+        COALESCE(u.email, to_jsonb(e)->>'email_id', to_jsonb(e)->>'email', '') as email
       FROM employees e
       LEFT JOIN users u ON u.id = e.user_id OR u.employee_id = e.employee_id
-      WHERE (UPPER(COALESCE(e.status::text, 'ACTIVE')) IN ('ACTIVE', 'ENABLED', 'TRUE') OR e.status IS NULL)
+      WHERE (UPPER(COALESCE(to_jsonb(e)->>'employee_status', to_jsonb(e)->>'status', 'ACTIVE')) IN ('ACTIVE', 'ENABLED', 'TRUE', 'ONBOARDING'))
         AND ($1 = '' OR (
           e.full_name ILIKE '%' || $1 || '%' OR
           u.full_name ILIKE '%' || $1 || '%' OR
           e.employee_id ILIKE '%' || $1 || '%' OR
           u.employee_id ILIKE '%' || $1 || '%' OR
           e.designation ILIKE '%' || $1 || '%' OR
-          COALESCE(u.mobile, e.mobile) ILIKE '%' || $1 || '%' OR
-          COALESCE(u.email, e.email) ILIKE '%' || $1 || '%'
+          COALESCE(u.mobile, to_jsonb(e)->>'mobile_number') ILIKE '%' || $1 || '%' OR
+          COALESCE(u.email, to_jsonb(e)->>'email_id') ILIKE '%' || $1 || '%'
         ))
       ORDER BY e.full_name ASC
       LIMIT $2;
@@ -694,7 +694,7 @@ async function searchProducts(req, res, next) {
         AND ($1 = '' OR (
           p.name ILIKE '%' || $1 || '%' OR
           b.name ILIKE '%' || $1 || '%' OR
-          p.category ILIKE '%' || $1 || '%'
+          p.category::text ILIKE '%' || $1 || '%'
         ))
       ORDER BY p.name ASC
       LIMIT $2;
@@ -807,9 +807,9 @@ async function getStaffRecipientContext(req, res, next) {
         COALESCE(e.designation, u.designation, 'Team Coordinator') as designation,
         COALESCE(u.role, 'EMPLOYEE') as role,
         COALESCE(e.department, 'Operations') as department,
-        COALESCE(e.branch_location, 'Pune') as branch,
-        COALESCE(u.mobile, e.mobile, '') as mobile,
-        COALESCE(u.email, e.email, '') as email
+        COALESCE(to_jsonb(e)->>'work_location', to_jsonb(e)->>'branch_location', 'Pune') as branch,
+        COALESCE(u.mobile, to_jsonb(e)->>'mobile_number', to_jsonb(e)->>'mobile', '') as mobile,
+        COALESCE(u.email, to_jsonb(e)->>'email_id', to_jsonb(e)->>'email', '') as email
       FROM employees e
       LEFT JOIN users u ON u.id = e.user_id OR u.employee_id = e.employee_id
       WHERE ${isUuid ? 'e.id = $1 OR e.employee_id = $1' : 'e.employee_id = $1 OR e.id::text = $1 OR e.full_name ILIKE $1'}
