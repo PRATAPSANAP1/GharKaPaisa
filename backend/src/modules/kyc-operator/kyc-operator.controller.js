@@ -41,6 +41,9 @@ const ensureKycColumns = async () => {
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS vkyc_url TEXT`).catch(() => {});
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS user_remark TEXT`).catch(() => {});
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`).catch(() => {});
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255)`).catch(() => {});
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100)`).catch(() => {});
+    await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMP WITH TIME ZONE`).catch(() => {});
 
     // Immutable operator history table
     await query(`
@@ -294,9 +297,9 @@ const getKycApplications = async (req, res) => {
         COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status,
         COALESCE(NULLIF(a.ipa_stage, ''), NULLIF(pad.ipa_stage, ''), 'PENDING') as ipa_stage,
         COALESCE(a.kyc_status, a.vkyc_status, 'PENDING') as kyc_status,
-        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(pad.last_operator_name, '')) as currently_working_by,
-        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_code', ''), NULLIF(pad.last_operator_code, '')) as admin_code,
-        COALESCE((to_jsonb(a)->>'last_operated_at')::timestamptz, pad.last_operated_at) as last_operated_at,
+        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(to_jsonb(pad)->>'last_operator_name', '')) as currently_working_by,
+        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_code', ''), NULLIF(to_jsonb(pad)->>'last_operator_code', '')) as admin_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'last_operated_at', '')::timestamptz, NULLIF(to_jsonb(pad)->>'last_operated_at', '')::timestamptz) as last_operated_at,
         a.created_at,
         a.updated_at
       FROM applications a
@@ -356,8 +359,8 @@ const getKycApplicationById = async (req, res) => {
         COALESCE(NULLIF(a.soft_approval_status, ''), NULLIF(pad.soft_approval_status, ''), 'PENDING') as soft_approval_status,
         COALESCE(NULLIF(a.ipa_stage, ''), NULLIF(pad.ipa_stage, ''), 'PENDING') as ipa_stage,
         COALESCE(a.kyc_status, a.vkyc_status, 'PENDING') as kyc_status,
-        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(pad.last_operator_name, '')) as currently_working_by,
-        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_code', ''), NULLIF(pad.last_operator_code, '')) as admin_code,
+        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(to_jsonb(pad)->>'last_operator_name', '')) as currently_working_by,
+        COALESCE(NULLIF(to_jsonb(a)->>'last_operator_code', ''), NULLIF(to_jsonb(pad)->>'last_operator_code', '')) as admin_code,
         p.name as product_name,
         b.name as bank_name,
         COALESCE(e.employee_id, u.employee_id, e.full_name, 'Direct') as referred_by
