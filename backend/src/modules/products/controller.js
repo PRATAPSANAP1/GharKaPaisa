@@ -371,7 +371,8 @@ const updateProduct = async (req, res, next) => {
       eligibility_criteria, documents_required, benefits, fees_charges, apply_button_text,
       seo_title, seo_description, seo_keywords, priority, status,
       public_url, partner_url, sub_category,
-      card_network, card_variant, best_for, welcome_benefits, badge
+      card_network, card_variant, best_for, welcome_benefits, badge,
+      joining_fee, processing_fee
     } = req.body;
     let image_url = req.body.image_url;
 
@@ -530,7 +531,7 @@ const updateProduct = async (req, res, next) => {
       max_age ? parseInt(max_age) : null,
       min_income ? parseFloat(min_income) : null,
       validOpHeadId,
-      req.body.joining_fee || null,
+      joining_fee || null,
       processing_fee || null
     ]);
 
