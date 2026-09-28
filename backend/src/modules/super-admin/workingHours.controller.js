@@ -84,6 +84,7 @@ const getWorkingHoursConfig = async (req, res, next) => {
         baseEndTime = defaultConfig.end_time || '08:00 PM';
       }
 
+      const globalExtension = extensionsToday.find(e => e.apply_to === 'ALL');
       const specificExt = extensionsToday.find(e => e.apply_to === 'SPECIFIC' && String(e.user_id) === String(u.id));
       const activeExt = specificExt || globalExtension || null;
 
