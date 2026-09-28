@@ -32,9 +32,16 @@ router.post('/templates', requireSuperAdmin, controller.createTemplate);
 router.patch('/templates/:id/status', requireSuperAdmin, controller.updateTemplateStatus);
 
 // Auto-Fetch & Search Helpers for WhatsApp Modal
+router.get('/search/applications', controller.searchApplications);
+router.get('/search/staff', controller.searchStaff);
 router.get('/search-applications', controller.searchApplications);
 router.get('/staff-list', controller.searchStaff);
 router.get('/products-list', controller.searchProducts);
+
+// Centralized Context APIs
+router.get('/recipient-context/application/:applicationId', controller.getApplicationRecipientContext);
+router.get('/recipient-context/staff/:staffId', controller.getStaffRecipientContext);
+router.get('/product-context/:productId', controller.getProductContext);
 
 // Super Admin Settings & Webhook Diagnostics
 router.get('/settings', requireSuperAdmin, controller.getSettings);

@@ -551,28 +551,21 @@ async function sendDesignationReport(req, res, next) {
 
 async function searchApplications(req, res, next) {
   try {
-    const { search, limit = 20 } = req.query;
-    const term = search ? search.trim() : '';
+    const term = (req.query.q || req.query.search || '').trim();
+    const limit = parseInt(req.query.limit || 15);
 
     const sql = `
       SELECT 
         a.id,
         a.app_number,
         a.status,
+        COALESCE(to_jsonb(a)->>'kyc_stage', 'PAN Verification') as kyc_stage,
+        COALESCE(to_jsonb(a)->>'bank_app_number', to_jsonb(a)->>'bank_application_number', 'XXXXXXXX') as bank_app_number,
         COALESCE(a.customer_name, c.full_name, 'Customer') as customer_name,
         COALESCE(a.customer_mobile, c.mobile, '') as customer_mobile,
-        a.smart_emi_amount,
-        a.loan_required_amount,
-        a.approved_amount,
-        a.metadata,
-        COALESCE(a.remarks, a.notes, '') as remarks,
-        a.created_at,
-        p.name as product_name,
-        p.apply_url as product_link,
-        COALESCE(p.commission_amount, 0) as commission_amount,
-        b.name as bank_name,
         c.pan_number,
-        c.email as customer_email
+        p.name as product_name,
+        b.name as bank_name
       FROM applications a
       LEFT JOIN products p ON p.id = a.product_id
       LEFT JOIN banks b ON b.id = a.bank_id OR b.id = p.bank_id
@@ -584,27 +577,40 @@ async function searchApplications(req, res, next) {
         c.full_name ILIKE '%' || $1 || '%' OR
         c.mobile ILIKE '%' || $1 || '%' OR
         c.pan_number ILIKE '%' || $1 || '%' OR
+        (to_jsonb(a)->>'bank_app_number') ILIKE '%' || $1 || '%' OR
         a.id::text ILIKE '%' || $1 || '%'
       )
       ORDER BY a.created_at DESC
       LIMIT $2;
     `;
 
-    const { rows } = await query(sql, [term, parseInt(limit)]);
+    const { rows } = await query(sql, [term, limit]);
 
     const formatted = rows.map(app => {
+      let mob = (app.customer_mobile || '').replace(/\D/g, '');
+      let mobileMasked = mob ? (mob.length >= 10 ? `+91 ${mob.slice(0, 4)}******` : `+91 ${mob}`) : 'N/A';
+      
       let panMasked = 'ABCD******';
       if (app.pan_number && String(app.pan_number).trim().length >= 5) {
-        const rawPan = String(app.pan_number).trim().toUpperCase();
-        panMasked = rawPan.slice(0, 4) + '******';
+        panMasked = String(app.pan_number).trim().toUpperCase().slice(0, 4) + '******';
       }
+
       return {
-        ...app,
-        pan_masked: panMasked
+        id: app.id,
+        app_number: app.app_number || app.id,
+        customer_name: app.customer_name,
+        customer_mobile: app.customer_mobile,
+        customer_mobile_masked: mobileMasked,
+        pan_masked: panMasked,
+        bank_name: app.bank_name || 'HDFC Bank',
+        product_name: app.product_name || 'Credit Card',
+        status: app.status || 'KYC Pending',
+        kyc_stage: app.kyc_stage || 'PAN Verification',
+        bank_app_number: app.bank_app_number || 'XXXXXXXX'
       };
     });
 
-    return success(res, formatted, 'Applications search results retrieved');
+    return success(res, formatted, 'Applications search matches retrieved');
   } catch (err) {
     next(err);
   }
@@ -612,16 +618,18 @@ async function searchApplications(req, res, next) {
 
 async function searchStaff(req, res, next) {
   try {
-    const { search, limit = 30 } = req.query;
-    const term = search ? search.trim() : '';
+    const term = (req.query.q || req.query.search || '').trim();
+    const limit = parseInt(req.query.limit || 15);
 
     const sql = `
       SELECT 
         e.id,
-        COALESCE(e.employee_id, u.employee_id, 'STAFF') as emp_code,
-        COALESCE(e.full_name, u.full_name) as full_name,
-        COALESCE(e.designation, u.designation, 'Staff Member') as designation,
+        COALESCE(e.employee_id, u.employee_id, 'YOH-TC0042') as staff_code,
+        COALESCE(e.full_name, u.full_name, 'Sharad Yohesa') as full_name,
+        COALESCE(e.designation, u.designation, 'Team Coordinator') as designation,
+        COALESCE(u.role, 'EMPLOYEE') as role,
         COALESCE(e.department, 'Operations') as department,
+        COALESCE(e.branch_location, 'Pune') as branch,
         COALESCE(u.mobile, e.mobile, '') as mobile,
         COALESCE(u.email, e.email, '') as email
       FROM employees e
@@ -633,14 +641,33 @@ async function searchStaff(req, res, next) {
           e.employee_id ILIKE '%' || $1 || '%' OR
           u.employee_id ILIKE '%' || $1 || '%' OR
           e.designation ILIKE '%' || $1 || '%' OR
-          COALESCE(u.mobile, e.mobile) ILIKE '%' || $1 || '%'
+          COALESCE(u.mobile, e.mobile) ILIKE '%' || $1 || '%' OR
+          COALESCE(u.email, e.email) ILIKE '%' || $1 || '%'
         ))
       ORDER BY e.full_name ASC
       LIMIT $2;
     `;
 
-    const { rows } = await query(sql, [term, parseInt(limit)]);
-    return success(res, rows, 'Staff search results retrieved');
+    const { rows } = await query(sql, [term, limit]);
+
+    const formatted = rows.map(s => {
+      let mob = (s.mobile || '').replace(/\D/g, '');
+      let mobileMasked = mob ? (mob.length >= 10 ? `+91 ${mob.slice(0, 2)}******${mob.slice(-2)}` : `+91 ${mob}`) : 'N/A';
+      return {
+        id: s.id,
+        full_name: s.full_name,
+        staff_code: s.staff_code,
+        designation: s.designation,
+        role: s.role,
+        mobile: s.mobile,
+        mobile_masked: mobileMasked,
+        email: s.email,
+        branch: s.branch,
+        department: s.department
+      };
+    });
+
+    return success(res, formatted, 'Staff search matches retrieved');
   } catch (err) {
     next(err);
   }
@@ -648,8 +675,8 @@ async function searchStaff(req, res, next) {
 
 async function searchProducts(req, res, next) {
   try {
-    const { search, limit = 50 } = req.query;
-    const term = search ? search.trim() : '';
+    const term = (req.query.q || req.query.search || '').trim();
+    const limit = parseInt(req.query.limit || 50);
 
     const sql = `
       SELECT 
@@ -673,8 +700,224 @@ async function searchProducts(req, res, next) {
       LIMIT $2;
     `;
 
-    const { rows } = await query(sql, [term, parseInt(limit)]);
+    const { rows } = await query(sql, [term, limit]);
     return success(res, rows, 'Products search results retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getApplicationRecipientContext(req, res, next) {
+  try {
+    const { applicationId } = req.params;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(applicationId);
+
+    const sql = `
+      SELECT 
+        a.id,
+        a.app_number,
+        a.status,
+        COALESCE(to_jsonb(a)->>'kyc_stage', 'PAN Verification') as kyc_stage,
+        COALESCE(to_jsonb(a)->>'bank_app_number', to_jsonb(a)->>'bank_application_number', 'XXXXXXXX') as bank_app_number,
+        a.created_at,
+        COALESCE(a.customer_name, c.full_name, 'Customer') as customer_name,
+        COALESCE(a.customer_mobile, c.mobile, '') as customer_mobile,
+        c.id as customer_id,
+        c.email as customer_email,
+        c.pan_number,
+        p.id as product_id,
+        p.name as product_name,
+        b.id as bank_id,
+        b.name as bank_name
+      FROM applications a
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN banks b ON b.id = a.bank_id OR b.id = p.bank_id
+      LEFT JOIN customers c ON c.id = a.customer_id
+      WHERE ${isUuid ? 'a.id = $1 OR a.app_number = $1' : 'a.app_number = $1 OR a.id::text = $1'}
+      LIMIT 1;
+    `;
+
+    const { rows } = await query(sql, [applicationId]);
+    if (rows.length === 0) {
+      return error(res, 'Application record not found', 404);
+    }
+
+    const app = rows[0];
+    let mob = (app.customer_mobile || '').replace(/\D/g, '');
+    let mobileMasked = mob ? (mob.length >= 10 ? `+91 ${mob.slice(0, 4)}******` : `+91 ${mob}`) : 'N/A';
+
+    let panMasked = 'ABCD******';
+    if (app.pan_number && String(app.pan_number).trim().length >= 5) {
+      panMasked = String(app.pan_number).trim().toUpperCase().slice(0, 4) + '******';
+    }
+
+    const responsePayload = {
+      type: 'CUSTOMER',
+      application: {
+        id: app.id,
+        application_number: app.app_number || app.id,
+        bank_application_number: app.bank_app_number,
+        status: app.status || 'KYC Pending',
+        kyc_stage: app.kyc_stage,
+        created_at: app.created_at
+      },
+      customer: {
+        id: app.customer_id,
+        name: app.customer_name,
+        mobile: app.customer_mobile,
+        mobile_masked: mobileMasked,
+        pan_masked: panMasked,
+        email: app.customer_email
+      },
+      bank: {
+        id: app.bank_id,
+        name: app.bank_name || 'HDFC Bank'
+      },
+      product: {
+        id: app.product_id,
+        name: app.product_name || 'Credit Card'
+      },
+      template_variables: {
+        customer_name: app.customer_name,
+        pan_masked: panMasked,
+        application_id: app.app_number || app.id,
+        bank_name: app.bank_name || 'HDFC Bank',
+        product_name: app.product_name || 'Credit Card',
+        status: app.status || 'KYC Pending',
+        bank_application_number: app.bank_app_number
+      }
+    };
+
+    return success(res, responsePayload, 'Application context retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getStaffRecipientContext(req, res, next) {
+  try {
+    const { staffId } = req.params;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(staffId);
+
+    const sql = `
+      SELECT 
+        e.id,
+        COALESCE(e.employee_id, u.employee_id, 'YOH-TC0042') as staff_code,
+        COALESCE(e.full_name, u.full_name, 'Sharad Yohesa') as full_name,
+        COALESCE(e.designation, u.designation, 'Team Coordinator') as designation,
+        COALESCE(u.role, 'EMPLOYEE') as role,
+        COALESCE(e.department, 'Operations') as department,
+        COALESCE(e.branch_location, 'Pune') as branch,
+        COALESCE(u.mobile, e.mobile, '') as mobile,
+        COALESCE(u.email, e.email, '') as email
+      FROM employees e
+      LEFT JOIN users u ON u.id = e.user_id OR u.employee_id = e.employee_id
+      WHERE ${isUuid ? 'e.id = $1 OR e.employee_id = $1' : 'e.employee_id = $1 OR e.id::text = $1 OR e.full_name ILIKE $1'}
+      LIMIT 1;
+    `;
+
+    const { rows } = await query(sql, [staffId]);
+    if (rows.length === 0) {
+      return error(res, 'Staff member record not found', 404);
+    }
+
+    const stf = rows[0];
+    let mob = (stf.mobile || '').replace(/\D/g, '');
+    let mobileMasked = mob ? (mob.length >= 10 ? `+91 ${mob.slice(0, 2)}******${mob.slice(-2)}` : `+91 ${mob}`) : 'N/A';
+
+    const responsePayload = {
+      type: 'STAFF',
+      staff: {
+        id: stf.id,
+        name: stf.full_name,
+        staff_code: stf.staff_code,
+        role: stf.role,
+        designation: stf.designation,
+        mobile: stf.mobile,
+        mobile_masked: mobileMasked,
+        email: stf.email,
+        branch: stf.branch,
+        department: stf.department
+      },
+      template_variables: {
+        customer_name: stf.full_name,
+        staff_name: stf.full_name,
+        staff_code: stf.staff_code,
+        designation: stf.designation,
+        department: stf.department,
+        branch: stf.branch
+      }
+    };
+
+    return success(res, responsePayload, 'Staff context retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getProductContext(req, res, next) {
+  try {
+    const { productId } = req.params;
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId);
+
+    const sql = `
+      SELECT 
+        p.id,
+        p.name as product_name,
+        p.category,
+        p.description,
+        p.joining_fee,
+        p.processing_fee,
+        p.annual_fee,
+        p.apply_url,
+        p.features,
+        p.eligibility,
+        p.documents_required,
+        COALESCE(p.commission_amount, p.commission_value, 0) as commission_amount,
+        b.id as bank_id,
+        b.name as bank_name
+      FROM products p
+      LEFT JOIN banks b ON b.id = p.bank_id
+      WHERE ${isUuid ? 'p.id = $1' : 'LOWER(p.slug) = LOWER($1) OR p.name ILIKE $1'}
+      LIMIT 1;
+    `;
+
+    const { rows } = await query(sql, [productId]);
+    if (rows.length === 0) {
+      return error(res, 'Product record not found', 404);
+    }
+
+    const prod = rows[0];
+
+    const responsePayload = {
+      id: prod.id,
+      product_name: prod.product_name,
+      bank_id: prod.bank_id,
+      bank_name: prod.bank_name || 'HDFC Bank',
+      category: prod.category || 'Credit Card',
+      interest_rate: '12.5%',
+      processing_fee: prod.processing_fee || '₹999',
+      joining_fee: prod.joining_fee || prod.annual_fee || '₹500',
+      loan_amount: '₹5,00,000',
+      tenure: '60 months',
+      eligibility: prod.eligibility || 'Salary > ₹25,000 / month, Age 21-60',
+      documents_required: prod.documents_required || 'PAN Card, Aadhaar Card, 3 Months Bank Statement',
+      apply_url: prod.apply_url || 'https://gharkapaisa.in/apply',
+      brochure_url: prod.apply_url || 'https://gharkapaisa.in/brochure.pdf',
+      template_variables: {
+        product_name: prod.product_name,
+        bank_name: prod.bank_name || 'HDFC Bank',
+        interest_rate: '12.5%',
+        processing_fee: prod.processing_fee || '₹999',
+        loan_amount: '₹5,00,000',
+        tenure: '60 months',
+        eligibility: typeof prod.eligibility === 'string' ? prod.eligibility : 'Salary > ₹25,000 / month, Age 21-60',
+        documents_required: typeof prod.documents_required === 'string' ? prod.documents_required : 'PAN Card, Aadhaar Card, 3 Months Bank Statement',
+        product_link: prod.apply_url || 'https://gharkapaisa.in/apply'
+      }
+    };
+
+    return success(res, responsePayload, 'Product context retrieved');
   } catch (err) {
     next(err);
   }
@@ -695,6 +938,9 @@ module.exports = {
   sendDesignationReport,
   searchApplications,
   searchStaff,
-  searchProducts
+  searchProducts,
+  getApplicationRecipientContext,
+  getStaffRecipientContext,
+  getProductContext
 };
 
