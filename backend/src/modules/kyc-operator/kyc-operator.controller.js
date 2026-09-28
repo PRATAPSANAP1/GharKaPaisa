@@ -381,7 +381,7 @@ const getKycApplicationById = async (req, res) => {
     // Fetch immutable operator audit trail
     const auditRes = await query(`
       SELECT * FROM application_operator_history
-      WHERE application_id = $1 OR application_id::text = $1
+      WHERE application_id::text = $1::text
       ORDER BY created_at DESC
     `, [application.id]).catch(() => ({ rows: [] }));
 

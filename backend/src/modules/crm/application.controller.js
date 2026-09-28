@@ -5838,7 +5838,7 @@ const getApplicationOperatorHistory = async (req, res, next) => {
         h.notes,
         h.created_at
       FROM application_operator_history h
-      WHERE h.application_id = $1 OR h.application_id::text = $1
+      WHERE h.application_id::text = $1::text
       ORDER BY h.created_at DESC
     `, [id]).catch(err => {
       logger.warn('Error querying application_operator_history:', err.message);
