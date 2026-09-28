@@ -31,6 +31,11 @@ router.get('/templates', controller.getTemplates);
 router.post('/templates', requireSuperAdmin, controller.createTemplate);
 router.patch('/templates/:id/status', requireSuperAdmin, controller.updateTemplateStatus);
 
+// Auto-Fetch & Search Helpers for WhatsApp Modal
+router.get('/search-applications', controller.searchApplications);
+router.get('/staff-list', controller.searchStaff);
+router.get('/products-list', controller.searchProducts);
+
 // Super Admin Settings & Webhook Diagnostics
 router.get('/settings', requireSuperAdmin, controller.getSettings);
 router.put('/settings', requireSuperAdmin, controller.updateSettings);

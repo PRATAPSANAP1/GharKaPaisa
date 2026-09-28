@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaWhatsapp, FaTimes, FaPaperPlane, FaFileAlt, FaCheckCircle, 
-  FaExclamationTriangle, FaEye, FaUser, FaPhone, FaShieldAlt, FaSearch, FaSync, FaLink, FaPaperclip
+  FaExclamationTriangle, FaEye, FaUser, FaPhone, FaShieldAlt, FaSearch, FaSync, FaLink, FaPaperclip, FaUserTie, FaBoxOpen
 } from 'react-icons/fa';
 import api from '../../services/api';
 import { useAuthStore } from '../../app/store/authStore';
@@ -22,6 +22,8 @@ export default function SendWhatsAppModal({
   onSuccess = null
 }) {
   const { user } = useAuthStore();
+  const [recipientCategory, setRecipientCategory] = useState('CUSTOMER'); // CUSTOMER | STAFF
+
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -48,6 +50,18 @@ export default function SendWhatsAppModal({
   const [selectedApp, setSelectedApp] = useState(null);
   const [showAppDropdown, setShowAppDropdown] = useState(false);
 
+  // Staff Search & Auto-Populate State
+  const [staffSearchQuery, setStaffSearchQuery] = useState('');
+  const [staffList, setStaffList] = useState([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState(null);
+  const [showStaffDropdown, setShowStaffDropdown] = useState(false);
+
+  // Product Sharing for Staff & Admins State
+  const [productsList, setProductsList] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       setMobile(recipientMobile || '');
@@ -60,11 +74,16 @@ export default function SendWhatsAppModal({
       setDocType(documentType || 'PDF');
       setShowAttachDoc(Boolean(documentName || documentUrl));
       setSelectedApp(null);
+      setSelectedStaff(null);
+      setSelectedProduct(null);
       setAppSearchQuery('');
+      setStaffSearchQuery('');
       setSuccessResult(null);
       setErrorMsg(null);
       fetchTemplates();
       fetchInitialApplications();
+      fetchInitialStaff();
+      fetchInitialProducts();
     }
   }, [isOpen, recipientMobile, recipientName, applicationId, leadId, customerId, documentName, documentUrl, documentType]);
 
@@ -72,8 +91,8 @@ export default function SendWhatsAppModal({
   const fetchInitialApplications = async () => {
     setLoadingApps(true);
     try {
-      const res = await api.get('/crm/applications', { params: { limit: 10 } });
-      const apps = res.data?.data?.applications || res.data?.data || [];
+      const res = await api.get('/whatsapp/search-applications', { params: { limit: 10 } });
+      const apps = res.data?.data || [];
       if (Array.isArray(apps)) setApplicationsList(apps);
     } catch (err) {
       console.warn('Initial applications fetch note:', err.message);
@@ -94,8 +113,8 @@ export default function SendWhatsAppModal({
 
     setLoadingApps(true);
     try {
-      const res = await api.get('/crm/applications', { params: { search: queryStr.trim(), limit: 15 } });
-      const apps = res.data?.data?.applications || res.data?.data || [];
+      const res = await api.get('/whatsapp/search-applications', { params: { search: queryStr.trim(), limit: 15 } });
+      const apps = res.data?.data || [];
       if (Array.isArray(apps)) setApplicationsList(apps);
     } catch (err) {
       console.error('Failed to search applications:', err);
@@ -109,11 +128,12 @@ export default function SendWhatsAppModal({
     setSelectedApp(app);
     setShowAppDropdown(false);
 
-    const appNumber = app.app_number || app.application_number || app.id || '';
-    const custName = app.customer_name || app.full_name || app.customer?.full_name || 'Customer';
-    const custMobile = app.customer_mobile || app.mobile || app.customer?.mobile || '';
-    const appStatus = app.status || app.bank_status || 'Under Review';
+    const appNumber = app.app_number || app.id || '';
+    const custName = app.customer_name || 'Customer';
+    const custMobile = app.customer_mobile || '';
+    const appStatus = app.status || 'Under Review';
     const productName = app.product_name || app.bank_name || 'Financial Product';
+    const panMasked = app.pan_masked || 'ABCD******';
 
     // Auto populate recipient name & mobile
     setName(custName);
@@ -123,21 +143,130 @@ export default function SendWhatsAppModal({
     setCurrentLeadId(app.lead_id || null);
     setCurrentCustomerId(app.customer_id || null);
 
-    // Auto populate template variables if template is selected
+    // Auto populate template variables
+    const overrides = {
+      customer_name: custName,
+      application_id: appNumber,
+      pan_masked: panMasked,
+      status: appStatus,
+      product_name: productName,
+      remarks: app.remarks || ''
+    };
+
     if (selectedTemplate) {
-      populateTemplateVariables(selectedTemplate, {
-        customer_name: custName,
-        application_id: appNumber,
-        status: appStatus,
-        product_name: productName,
-        remarks: app.remarks || app.notes || ''
-      });
+      populateTemplateVariables(selectedTemplate, overrides);
     }
   };
 
   const clearSelectedApp = () => {
     setSelectedApp(null);
     setAppSearchQuery('');
+  };
+
+  // Fetch initial staff list
+  const fetchInitialStaff = async () => {
+    setLoadingStaff(true);
+    try {
+      const res = await api.get('/whatsapp/staff-list', { params: { limit: 10 } });
+      const staff = res.data?.data || [];
+      if (Array.isArray(staff)) setStaffList(staff);
+    } catch (err) {
+      console.warn('Initial staff fetch note:', err.message);
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
+
+  // Dynamic staff search by name or staff code
+  const handleStaffSearch = async (queryStr) => {
+    setStaffSearchQuery(queryStr);
+    setShowStaffDropdown(true);
+
+    if (!queryStr || queryStr.trim().length === 0) {
+      fetchInitialStaff();
+      return;
+    }
+
+    setLoadingStaff(true);
+    try {
+      const res = await api.get('/whatsapp/staff-list', { params: { search: queryStr.trim(), limit: 15 } });
+      const staff = res.data?.data || [];
+      if (Array.isArray(staff)) setStaffList(staff);
+    } catch (err) {
+      console.error('Failed to search staff:', err);
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
+
+  // Select Staff Member from Dropdown and Auto-Populate details
+  const handleSelectStaff = (stf) => {
+    setSelectedStaff(stf);
+    setShowStaffDropdown(false);
+
+    const stfName = stf.full_name || 'Staff Member';
+    const stfMobile = stf.mobile || '';
+    const stfCode = stf.emp_code || 'STAFF';
+
+    setName(stfName);
+    if (stfMobile) setMobile(stfMobile);
+
+    const overrides = {
+      customer_name: stfName,
+      staff_name: stfName,
+      staff_code: stfCode,
+      designation: stf.designation || 'Staff',
+      department: stf.department || 'Operations'
+    };
+
+    if (selectedTemplate) {
+      populateTemplateVariables(selectedTemplate, overrides);
+    }
+  };
+
+  const clearSelectedStaff = () => {
+    setSelectedStaff(null);
+    setStaffSearchQuery('');
+  };
+
+  // Fetch Active Products List
+  const fetchInitialProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      const res = await api.get('/whatsapp/products-list');
+      const prods = res.data?.data || [];
+      if (Array.isArray(prods)) setProductsList(prods);
+    } catch (err) {
+      console.warn('Initial products fetch note:', err.message);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  // Select Product to Share with Staff / Recipient
+  const handleSelectProduct = (prod) => {
+    setSelectedProduct(prod);
+
+    const prodName = prod.product_name || 'Product';
+    const bankName = prod.bank_name || 'Partner Bank';
+    const applyUrl = prod.apply_url || '';
+
+    if (applyUrl) {
+      setDocName(`${prodName} Details & Brochure`);
+      setDocUrl(applyUrl);
+      setShowAttachDoc(true);
+    }
+
+    const overrides = {
+      product_name: prodName,
+      bank_name: bankName,
+      product_link: applyUrl,
+      commission_amount: prod.commission_amount ? `₹${prod.commission_amount}` : 'Standard Incentive'
+    };
+
+    if (selectedTemplate) {
+      populateTemplateVariables(selectedTemplate, overrides);
+    }
   };
 
   const fetchTemplates = async () => {
@@ -171,20 +300,39 @@ export default function SendWhatsAppModal({
 
     const custName = overrides.customer_name || name || recipientName || 'Customer';
     const appNum = overrides.application_id || currentAppId || applicationId || 'N/A';
-    const statusVal = overrides.status || 'Under Review';
-    const prodName = overrides.product_name || 'Financial Product';
+    const panMaskedVal = overrides.pan_masked || selectedApp?.pan_masked || 'ABCD******';
+    const statusVal = overrides.status || (selectedApp?.status) || 'Under Review';
+    const prodName = overrides.product_name || (selectedApp?.product_name) || (selectedProduct?.product_name) || 'Financial Product';
     const documentNameVal = docName || overrides.document_name || 'Attached Report / Document';
 
     tplVars.forEach(v => {
-      if (initialVariables[v]) initialVars[v] = initialVariables[v];
-      else if (v === 'customer_name') initialVars[v] = custName;
-      else if (v === 'application_id') initialVars[v] = appNum;
-      else if (v === 'document_name') initialVars[v] = documentNameVal;
-      else if (v === 'status') initialVars[v] = statusVal;
-      else if (v === 'product_name') initialVars[v] = prodName;
-      else if (v === 'report_url' || v === 'document_url') initialVars[v] = docUrl || 'https://gharkapaisa.in/reports';
-      else if (overrides[v]) initialVars[v] = overrides[v];
-      else initialVars[v] = tpl.sample_values?.[v] || '';
+      if (overrides[v] !== undefined) {
+        initialVars[v] = overrides[v];
+      } else if (initialVariables[v]) {
+        initialVars[v] = initialVariables[v];
+      } else if (v === 'customer_name') {
+        initialVars[v] = custName;
+      } else if (v === 'application_id') {
+        initialVars[v] = appNum;
+      } else if (v === 'pan_masked') {
+        initialVars[v] = panMaskedVal;
+      } else if (v === 'document_name' || v === 'document_type') {
+        initialVars[v] = documentNameVal;
+      } else if (v === 'status') {
+        initialVars[v] = statusVal;
+      } else if (v === 'product_name') {
+        initialVars[v] = prodName;
+      } else if (v === 'staff_name') {
+        initialVars[v] = selectedStaff?.full_name || custName;
+      } else if (v === 'staff_code') {
+        initialVars[v] = selectedStaff?.emp_code || 'STAFF';
+      } else if (v === 'designation') {
+        initialVars[v] = selectedStaff?.designation || 'Staff';
+      } else if (v === 'report_url' || v === 'document_url') {
+        initialVars[v] = docUrl || overrides.product_link || 'https://gharkapaisa.in/reports';
+      } else {
+        initialVars[v] = tpl.sample_values?.[v] || '';
+      }
     });
     setVariables(initialVars);
   };
@@ -193,10 +341,22 @@ export default function SendWhatsAppModal({
     setSelectedTemplate(tpl);
     const overrides = {};
     if (selectedApp) {
-      overrides.customer_name = selectedApp.customer_name || selectedApp.full_name || name;
-      overrides.application_id = selectedApp.app_number || selectedApp.application_number || currentAppId;
-      overrides.status = selectedApp.status || selectedApp.bank_status || 'Under Review';
+      overrides.customer_name = selectedApp.customer_name || name;
+      overrides.application_id = selectedApp.app_number || currentAppId;
+      overrides.pan_masked = selectedApp.pan_masked || 'ABCD******';
+      overrides.status = selectedApp.status || 'Under Review';
       overrides.product_name = selectedApp.product_name || selectedApp.bank_name || 'Financial Product';
+    }
+    if (selectedStaff) {
+      overrides.customer_name = selectedStaff.full_name;
+      overrides.staff_name = selectedStaff.full_name;
+      overrides.staff_code = selectedStaff.emp_code;
+      overrides.designation = selectedStaff.designation;
+    }
+    if (selectedProduct) {
+      overrides.product_name = selectedProduct.product_name;
+      overrides.bank_name = selectedProduct.bank_name;
+      overrides.product_link = selectedProduct.apply_url;
     }
     populateTemplateVariables(tpl, overrides);
   };
@@ -236,15 +396,16 @@ export default function SendWhatsAppModal({
       const payload = {
         template_name: selectedTemplate.template_name,
         recipient_mobile: mobile.trim(),
-        recipient_name: name.trim() || 'Customer',
-        recipient_type: 'CUSTOMER',
+        recipient_name: name.trim() || 'Recipient',
+        recipient_type: recipientCategory === 'STAFF' ? 'EMPLOYEE' : 'CUSTOMER',
         variables: variables,
         document_name: docName.trim() || null,
         document_url: docUrl.trim() || null,
         document_type: docType || 'PDF',
         application_id: currentAppId || applicationId,
         lead_id: currentLeadId || leadId,
-        customer_id: currentCustomerId || customerId
+        customer_id: currentCustomerId || customerId,
+        employee_id: selectedStaff?.id || null
       };
 
       const res = await api.post('/whatsapp/send-template', payload);
@@ -278,8 +439,8 @@ export default function SendWhatsAppModal({
         background: '#FFFFFF',
         borderRadius: '18px',
         width: '100%',
-        maxWidth: '740px',
-        maxHeight: '92vh',
+        maxWidth: '760px',
+        maxHeight: '94vh',
         overflowY: 'auto',
         boxShadow: '0 20px 40px -15px rgba(0, 0, 0, 0.25)',
         display: 'flex',
@@ -311,7 +472,7 @@ export default function SendWhatsAppModal({
                 Send Official WhatsApp Message
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.85)' }}>
-                Official GharKaPaisa Business Channel • Application Auto-Fetch & Document/Report Sharing
+                Official GharKaPaisa Business Channel • Application Auto-Fetch & Staff/Product Sharing
               </p>
             </div>
           </div>
@@ -337,7 +498,8 @@ export default function SendWhatsAppModal({
 
         {/* Modal Body */}
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Sender Identity Attribution Badge */}
+          
+          {/* Sender Attribution & Audit Badge */}
           <div style={{
             background: '#F0FDF4',
             border: '1px solid #BBF7D0',
@@ -352,12 +514,67 @@ export default function SendWhatsAppModal({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FaShieldAlt size={14} color="#15803D" />
               <span>
-                Sending as <strong>GharKaPaisa Official</strong> (Initiated by {user?.full_name || 'Staff'} - {user?.designation || user?.role})
+                Sending as <strong>GharKaPaisa Official</strong> (Initiated by {user?.full_name || 'Sharad Yohesa'} - {user?.designation || 'TC'})
               </span>
             </div>
             <span style={{ fontSize: '11px', background: '#DCFCE7', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
               Audit Logged
             </span>
+          </div>
+
+          {/* Mode Switcher Tabs: Customer Application vs Staff / Employee */}
+          <div style={{ display: 'flex', gap: '10px', borderBottom: '1px solid #E2E8F0', paddingBottom: '10px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setRecipientCategory('CUSTOMER');
+                setSelectedStaff(null);
+              }}
+              style={{
+                flex: 1,
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: 'none',
+                background: recipientCategory === 'CUSTOMER' ? '#059669' : '#F1F5F9',
+                color: recipientCategory === 'CUSTOMER' ? '#FFFFFF' : '#475569',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <FaFileAlt size={14} /> Customer Application Mode
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setRecipientCategory('STAFF');
+                setSelectedApp(null);
+              }}
+              style={{
+                flex: 1,
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: 'none',
+                background: recipientCategory === 'STAFF' ? '#059669' : '#F1F5F9',
+                color: recipientCategory === 'STAFF' ? '#FFFFFF' : '#475569',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <FaUserTie size={14} /> Staff / Employee Member Mode
+            </button>
           </div>
 
           {errorMsg && (
@@ -395,10 +612,10 @@ export default function SendWhatsAppModal({
                 <FaCheckCircle />
               </div>
               <h4 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
-                WhatsApp Message & Report Dispatched!
+                WhatsApp Message & Details Dispatched!
               </h4>
               <p style={{ margin: 0, fontSize: '13.5px', color: '#64748B', maxWidth: '420px' }}>
-                Message <strong>{successResult.message_uuid}</strong> sent to <strong>{successResult.recipient_mobile}</strong> using template <strong>{successResult.template_name}</strong>.
+                Message sent to <strong>{successResult.recipient_mobile}</strong> using template <strong>{successResult.template_name}</strong>.
               </p>
               <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
                 <button
@@ -420,153 +637,292 @@ export default function SendWhatsAppModal({
           ) : (
             <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
               
-              {/* Application Selector & Auto-Fetch Card */}
-              <div style={{ position: 'relative' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 800, color: '#0F172A', marginBottom: '6px' }}>
-                  <FaFileAlt color="#059669" size={13} /> Select Application (Auto-Fetch Customer & Status Details)
-                </label>
+              {/* SECTION: CUSTOMER APPLICATION AUTO-FETCH */}
+              {recipientCategory === 'CUSTOMER' && (
+                <div style={{ position: 'relative' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 800, color: '#0F172A', marginBottom: '6px' }}>
+                    <FaFileAlt color="#059669" size={13} /> Select Application (Auto-Fetch Customer & Status Details)
+                  </label>
 
-                {selectedApp ? (
-                  /* Highlighted Selected Application Summary Card */
-                  <div style={{
-                    background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
-                    border: '1px solid #BFDBFE',
-                    borderRadius: '12px',
-                    padding: '14px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 800, color: '#1E40AF' }}>
-                          #{selectedApp.app_number || selectedApp.application_number || selectedApp.id}
-                        </span>
-                        <span style={{ background: '#2563EB', color: '#FFFFFF', padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
-                          {selectedApp.status || selectedApp.bank_status || 'Under Review'}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '13px', color: '#1E293B', fontWeight: 700 }}>
-                        Customer: {selectedApp.customer_name || selectedApp.full_name || 'N/A'} ({selectedApp.customer_mobile || selectedApp.mobile || 'N/A'})
-                      </div>
-                      <div style={{ fontSize: '11.5px', color: '#475569' }}>
-                        Product: <strong>{selectedApp.product_name || selectedApp.bank_name || 'Financial Product'}</strong> {selectedApp.loan_amount ? `• Amount: ₹${selectedApp.loan_amount}` : ''}
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={clearSelectedApp}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '8px',
-                        background: '#FFFFFF',
-                        border: '1px solid #93C5FD',
-                        color: '#1D4ED8',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <FaTimes size={10} /> Change
-                    </button>
-                  </div>
-                ) : (
-                  /* Interactive Search Dropdown Input */
-                  <div style={{ position: 'relative' }}>
+                  {selectedApp ? (
+                    /* Highlighted Selected Application Summary Card */
                     <div style={{
-                      display: 'flex', alignItems: 'center', background: '#F8FAFC',
-                      border: '1px solid #CBD5E1', borderRadius: '10px', padding: '10px 14px'
+                      background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+                      border: '1px solid #BFDBFE',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
                     }}>
-                      <FaSearch color="#64748B" size={13} style={{ marginRight: '8px' }} />
-                      <input
-                        type="text"
-                        value={appSearchQuery}
-                        onFocus={() => setShowAppDropdown(true)}
-                        onChange={(e) => handleAppSearch(e.target.value)}
-                        placeholder="Search Application #, Customer Name, Mobile Number..."
-                        style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '13.5px', fontWeight: 600, color: '#0F172A' }}
-                      />
-                      {loadingApps && <FaSync color="#059669" size={13} />}
-                    </div>
-
-                    {/* Auto-Complete Dropdown Menu */}
-                    {showAppDropdown && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '105%',
-                        left: 0,
-                        right: 0,
-                        background: '#FFFFFF',
-                        border: '1px solid #E2E8F0',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-                        maxHeight: '230px',
-                        overflowY: 'auto',
-                        zIndex: 10,
-                        padding: '6px'
-                      }}>
-                        {loadingApps ? (
-                          <div style={{ padding: '12px', fontSize: '12.5px', color: '#64748B', textAlign: 'center' }}>
-                            Searching database...
-                          </div>
-                        ) : applicationsList.length === 0 ? (
-                          <div style={{ padding: '12px', fontSize: '12.5px', color: '#64748B', textAlign: 'center' }}>
-                            No application records found matching "{appSearchQuery}"
-                          </div>
-                        ) : (
-                          applicationsList.map(app => (
-                            <div
-                              key={app.id}
-                              onClick={() => handleSelectApplication(app)}
-                              style={{
-                                padding: '10px 12px',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                borderBottom: '1px solid #F1F5F9',
-                                transition: 'background 0.15s ease'
-                              }}
-                              onMouseEnter={(e) => e.currentTarget.style.background = '#F0FDF4'}
-                              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                            >
-                              <div>
-                                <div style={{ fontWeight: 800, fontSize: '13px', color: '#0F172A' }}>
-                                  #{app.app_number || app.application_number || app.id} — {app.customer_name || app.full_name || 'Customer'}
-                                </div>
-                                <div style={{ fontSize: '11.5px', color: '#64748B' }}>
-                                  Mobile: {app.customer_mobile || app.mobile || 'N/A'} • Product: {app.product_name || app.bank_name || 'Product'}
-                                </div>
-                              </div>
-                              <span style={{
-                                background: '#E0E7FF',
-                                color: '#3730A3',
-                                padding: '2px 8px',
-                                borderRadius: '6px',
-                                fontSize: '11px',
-                                fontWeight: 800
-                              }}>
-                                {app.status || 'Active'}
-                              </span>
-                            </div>
-                          ))
-                        )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 800, color: '#1E40AF' }}>
+                            #{selectedApp.app_number || selectedApp.id}
+                          </span>
+                          <span style={{ background: '#2563EB', color: '#FFFFFF', padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
+                            {selectedApp.status || 'Under Review'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#1E293B', fontWeight: 700 }}>
+                          Customer: {selectedApp.customer_name} ({selectedApp.customer_mobile})
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: '#475569' }}>
+                          Product: <strong>{selectedApp.product_name || selectedApp.bank_name || 'Financial Product'}</strong> • PAN: <strong>{selectedApp.pan_masked || 'ABCD******'}</strong>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
 
-              {/* Recipient Details Row */}
+                      <button
+                        type="button"
+                        onClick={clearSelectedApp}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          background: '#FFFFFF',
+                          border: '1px solid #93C5FD',
+                          color: '#1D4ED8',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <FaTimes size={10} /> Change
+                      </button>
+                    </div>
+                  ) : (
+                    /* Search Application Auto-Complete Field */
+                    <div style={{ position: 'relative' }}>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', background: '#F8FAFC',
+                        border: '1px solid #CBD5E1', borderRadius: '10px', padding: '10px 14px'
+                      }}>
+                        <FaSearch color="#64748B" size={13} style={{ marginRight: '8px' }} />
+                        <input
+                          type="text"
+                          value={appSearchQuery}
+                          onFocus={() => setShowAppDropdown(true)}
+                          onChange={(e) => handleAppSearch(e.target.value)}
+                          placeholder="Search Application #, Customer Name, Mobile Number..."
+                          style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '13.5px', fontWeight: 600, color: '#0F172A' }}
+                        />
+                        {loadingApps && <FaSync color="#059669" size={13} />}
+                      </div>
+
+                      {/* Application Suggestion Dropdown */}
+                      {showAppDropdown && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '105%',
+                          left: 0, right: 0,
+                          background: '#FFFFFF',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '12px',
+                          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                          maxHeight: '230px',
+                          overflowY: 'auto',
+                          zIndex: 10,
+                          padding: '6px'
+                        }}>
+                          {loadingApps ? (
+                            <div style={{ padding: '12px', fontSize: '12.5px', color: '#64748B', textAlign: 'center' }}>
+                              Searching applications database...
+                            </div>
+                          ) : applicationsList.length === 0 ? (
+                            <div style={{ padding: '12px', fontSize: '12.5px', color: '#64748B', textAlign: 'center' }}>
+                              No applications found matching "{appSearchQuery}"
+                            </div>
+                          ) : (
+                            applicationsList.map(app => (
+                              <div
+                                key={app.id}
+                                onClick={() => handleSelectApplication(app)}
+                                style={{
+                                  padding: '10px 12px',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  borderBottom: '1px solid #F1F5F9'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#F0FDF4'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <div>
+                                  <div style={{ fontWeight: 800, fontSize: '13px', color: '#0F172A' }}>
+                                    #{app.app_number} — {app.customer_name}
+                                  </div>
+                                  <div style={{ fontSize: '11.5px', color: '#64748B' }}>
+                                    Mobile: {app.customer_mobile || 'N/A'} • Product: {app.product_name || app.bank_name || 'Product'} • PAN: {app.pan_masked || 'ABCD******'}
+                                  </div>
+                                </div>
+                                <span style={{
+                                  background: '#E0E7FF',
+                                  color: '#3730A3',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 800
+                                }}>
+                                  {app.status || 'Active'}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SECTION: STAFF MEMBER AUTO-FETCH */}
+              {recipientCategory === 'STAFF' && (
+                <div style={{ position: 'relative' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 800, color: '#0F172A', marginBottom: '6px' }}>
+                    <FaUserTie color="#059669" size={13} /> Select Staff Member (Search by Name or Staff Code)
+                  </label>
+
+                  {selectedStaff ? (
+                    /* Highlighted Selected Staff Summary Card */
+                    <div style={{
+                      background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
+                      border: '1px solid #6EE7B7',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 800, color: '#065F46' }}>
+                            {selectedStaff.full_name} ({selectedStaff.emp_code})
+                          </span>
+                          <span style={{ background: '#059669', color: '#FFFFFF', padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
+                            {selectedStaff.designation || 'Staff'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#047857', fontWeight: 700 }}>
+                          Mobile: {selectedStaff.mobile || 'N/A'} • Dept: {selectedStaff.department || 'Operations'}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={clearSelectedStaff}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          background: '#FFFFFF',
+                          border: '1px solid #A7F3D0',
+                          color: '#047857',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <FaTimes size={10} /> Change
+                      </button>
+                    </div>
+                  ) : (
+                    /* Search Staff Auto-Complete Field */
+                    <div style={{ position: 'relative' }}>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', background: '#F8FAFC',
+                        border: '1px solid #CBD5E1', borderRadius: '10px', padding: '10px 14px'
+                      }}>
+                        <FaSearch color="#64748B" size={13} style={{ marginRight: '8px' }} />
+                        <input
+                          type="text"
+                          value={staffSearchQuery}
+                          onFocus={() => setShowStaffDropdown(true)}
+                          onChange={(e) => handleStaffSearch(e.target.value)}
+                          placeholder="Search Staff by Name or Staff Code (e.g. EMP001, Sharad Yohesa)..."
+                          style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '13.5px', fontWeight: 600, color: '#0F172A' }}
+                        />
+                        {loadingStaff && <FaSync color="#059669" size={13} />}
+                      </div>
+
+                      {/* Staff Suggestion Dropdown */}
+                      {showStaffDropdown && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '105%',
+                          left: 0, right: 0,
+                          background: '#FFFFFF',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '12px',
+                          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+                          maxHeight: '230px',
+                          overflowY: 'auto',
+                          zIndex: 10,
+                          padding: '6px'
+                        }}>
+                          {loadingStaff ? (
+                            <div style={{ padding: '12px', fontSize: '12.5px', color: '#64748B', textAlign: 'center' }}>
+                              Searching staff database...
+                            </div>
+                          ) : staffList.length === 0 ? (
+                            <div style={{ padding: '12px', fontSize: '12.5px', color: '#64748B', textAlign: 'center' }}>
+                              No staff records found matching "{staffSearchQuery}"
+                            </div>
+                          ) : (
+                            staffList.map(stf => (
+                              <div
+                                key={stf.id}
+                                onClick={() => handleSelectStaff(stf)}
+                                style={{
+                                  padding: '10px 12px',
+                                  borderRadius: '8px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  borderBottom: '1px solid #F1F5F9'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#ECFDF5'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <div>
+                                  <div style={{ fontWeight: 800, fontSize: '13px', color: '#0F172A' }}>
+                                    {stf.full_name} ({stf.emp_code})
+                                  </div>
+                                  <div style={{ fontSize: '11.5px', color: '#64748B' }}>
+                                    Mobile: {stf.mobile || 'N/A'} • Designation: {stf.designation || 'Staff'} • Dept: {stf.department || 'Operations'}
+                                  </div>
+                                </div>
+                                <span style={{
+                                  background: '#D1FAE5',
+                                  color: '#065F46',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '11px',
+                                  fontWeight: 800
+                                }}>
+                                  Select Staff
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Recipient Input Fields */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                    Recipient Customer / Staff Name *
+                    Recipient {recipientCategory === 'STAFF' ? 'Staff' : 'Customer'} Name *
                   </label>
                   <div style={{
                     display: 'flex', alignItems: 'center', background: '#F8FAFC',
@@ -579,8 +935,9 @@ export default function SendWhatsAppModal({
                       onChange={(e) => {
                         setName(e.target.value);
                         handleVariableChange('customer_name', e.target.value);
+                        handleVariableChange('staff_name', e.target.value);
                       }}
-                      placeholder="Customer Name"
+                      placeholder={recipientCategory === 'STAFF' ? "Staff Name" : "Customer Name"}
                       required
                       style={{ border: 'none', background: 'transparent', outline: 'none', width: '100%', fontSize: '13.5px', fontWeight: 600, color: '#0F172A' }}
                     />
@@ -608,7 +965,51 @@ export default function SendWhatsAppModal({
                 </div>
               </div>
 
-              {/* Document / Report Sharing Section Toggle */}
+              {/* Product Information Sharing for Staff / Super Admin */}
+              <div style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '12px',
+                padding: '14px 16px'
+              }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 800, color: '#1E293B', marginBottom: '8px' }}>
+                  <FaBoxOpen color="#059669" size={14} /> Select Financial Product to Share Details & Commission with Staff
+                </label>
+
+                <select
+                  value={selectedProduct?.id || ''}
+                  onChange={(e) => {
+                    const found = productsList.find(p => p.id === e.target.value);
+                    if (found) handleSelectProduct(found);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#0F172A',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="">-- Choose Product (Optional Product Sharing) --</option>
+                  {productsList.map(prod => (
+                    <option key={prod.id} value={prod.id}>
+                      {prod.product_name} ({prod.bank_name || 'Bank'}) — Incentive: ₹{prod.commission_amount || '0'}
+                    </option>
+                  ))}
+                </select>
+
+                {selectedProduct && (
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#047857', background: '#D1FAE5', padding: '8px 12px', borderRadius: '8px', fontWeight: 700 }}>
+                    Selected Product: {selectedProduct.product_name} • Bank: {selectedProduct.bank_name} • Commission: ₹{selectedProduct.commission_amount} {selectedProduct.apply_url ? `• Link Attached` : ''}
+                  </div>
+                )}
+              </div>
+
+              {/* Document / Report Sharing Section */}
               <div style={{
                 background: '#F8FAFC',
                 border: '1px solid #E2E8F0',
@@ -645,13 +1046,13 @@ export default function SendWhatsAppModal({
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. Delivery_Analytics_Report.pdf"
+                        placeholder="e.g. Approved_Cards_Report.pdf"
                         value={docName}
                         onChange={(e) => {
                           setDocName(e.target.value);
                           handleVariableChange('document_name', e.target.value);
                         }}
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+                        style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', boxSizing: 'border-box' }}
                       />
                     </div>
 
@@ -718,7 +1119,7 @@ export default function SendWhatsAppModal({
                   padding: '14px 16px'
                 }}>
                   <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#1E293B', marginBottom: '10px' }}>
-                    Template Variables (Auto-Populated from Application / Report)
+                    Template Variables (Auto-Populated from DB)
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     {selectedTemplate.variables.map(varKey => (
@@ -802,19 +1203,26 @@ export default function SendWhatsAppModal({
                   style={{
                     padding: '10px 22px',
                     borderRadius: '10px',
-                    background: '#059669',
-                    border: 'none',
+                    background: sending ? '#9CA3AF' : '#059669',
                     color: '#FFFFFF',
-                    fontWeight: 700,
+                    fontWeight: 800,
                     fontSize: '13.5px',
-                    cursor: 'pointer',
+                    border: 'none',
+                    cursor: sending ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)'
+                    gap: '8px'
                   }}
                 >
-                  <FaPaperPlane size={12} /> {sending ? 'Sending WhatsApp...' : 'Send WhatsApp'}
+                  {sending ? (
+                    <>
+                      <FaSync className="fa-spin" /> Sending...
+                    </>
+                  ) : (
+                    <>
+                      <FaPaperPlane /> Send WhatsApp
+                    </>
+                  )}
                 </button>
               </div>
             </form>

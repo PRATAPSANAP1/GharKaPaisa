@@ -549,6 +549,137 @@ async function sendDesignationReport(req, res, next) {
   }
 }
 
+async function searchApplications(req, res, next) {
+  try {
+    const { search, limit = 20 } = req.query;
+    const term = search ? search.trim() : '';
+
+    const sql = `
+      SELECT 
+        a.id,
+        a.app_number,
+        a.status,
+        COALESCE(a.customer_name, c.full_name, 'Customer') as customer_name,
+        COALESCE(a.customer_mobile, c.mobile, '') as customer_mobile,
+        a.smart_emi_amount,
+        a.loan_required_amount,
+        a.approved_amount,
+        a.metadata,
+        COALESCE(a.remarks, a.notes, '') as remarks,
+        a.created_at,
+        p.name as product_name,
+        p.apply_url as product_link,
+        COALESCE(p.commission_amount, 0) as commission_amount,
+        b.name as bank_name,
+        c.pan_number,
+        c.email as customer_email
+      FROM applications a
+      LEFT JOIN products p ON p.id = a.product_id
+      LEFT JOIN banks b ON b.id = a.bank_id OR b.id = p.bank_id
+      LEFT JOIN customers c ON c.id = a.customer_id
+      WHERE $1 = '' OR (
+        a.app_number ILIKE '%' || $1 || '%' OR
+        a.customer_name ILIKE '%' || $1 || '%' OR
+        a.customer_mobile ILIKE '%' || $1 || '%' OR
+        c.full_name ILIKE '%' || $1 || '%' OR
+        c.mobile ILIKE '%' || $1 || '%' OR
+        c.pan_number ILIKE '%' || $1 || '%' OR
+        a.id::text ILIKE '%' || $1 || '%'
+      )
+      ORDER BY a.created_at DESC
+      LIMIT $2;
+    `;
+
+    const { rows } = await query(sql, [term, parseInt(limit)]);
+
+    const formatted = rows.map(app => {
+      let panMasked = 'ABCD******';
+      if (app.pan_number && String(app.pan_number).trim().length >= 5) {
+        const rawPan = String(app.pan_number).trim().toUpperCase();
+        panMasked = rawPan.slice(0, 4) + '******';
+      }
+      return {
+        ...app,
+        pan_masked: panMasked
+      };
+    });
+
+    return success(res, formatted, 'Applications search results retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function searchStaff(req, res, next) {
+  try {
+    const { search, limit = 30 } = req.query;
+    const term = search ? search.trim() : '';
+
+    const sql = `
+      SELECT 
+        e.id,
+        COALESCE(e.employee_id, u.employee_id, 'STAFF') as emp_code,
+        COALESCE(e.full_name, u.full_name) as full_name,
+        COALESCE(e.designation, u.designation, 'Staff Member') as designation,
+        COALESCE(e.department, 'Operations') as department,
+        COALESCE(u.mobile, e.mobile, '') as mobile,
+        COALESCE(u.email, e.email, '') as email
+      FROM employees e
+      LEFT JOIN users u ON u.id = e.user_id OR u.employee_id = e.employee_id
+      WHERE (UPPER(COALESCE(e.status::text, 'ACTIVE')) IN ('ACTIVE', 'ENABLED', 'TRUE') OR e.status IS NULL)
+        AND ($1 = '' OR (
+          e.full_name ILIKE '%' || $1 || '%' OR
+          u.full_name ILIKE '%' || $1 || '%' OR
+          e.employee_id ILIKE '%' || $1 || '%' OR
+          u.employee_id ILIKE '%' || $1 || '%' OR
+          e.designation ILIKE '%' || $1 || '%' OR
+          COALESCE(u.mobile, e.mobile) ILIKE '%' || $1 || '%'
+        ))
+      ORDER BY e.full_name ASC
+      LIMIT $2;
+    `;
+
+    const { rows } = await query(sql, [term, parseInt(limit)]);
+    return success(res, rows, 'Staff search results retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function searchProducts(req, res, next) {
+  try {
+    const { search, limit = 50 } = req.query;
+    const term = search ? search.trim() : '';
+
+    const sql = `
+      SELECT 
+        p.id,
+        p.name as product_name,
+        p.category,
+        p.apply_url,
+        COALESCE(p.commission_amount, p.commission_value, 0) as commission_amount,
+        p.description,
+        b.name as bank_name,
+        b.logo_url as bank_logo
+      FROM products p
+      LEFT JOIN banks b ON b.id = p.bank_id
+      WHERE (p.is_active = true OR p.is_active IS NULL)
+        AND ($1 = '' OR (
+          p.name ILIKE '%' || $1 || '%' OR
+          b.name ILIKE '%' || $1 || '%' OR
+          p.category ILIKE '%' || $1 || '%'
+        ))
+      ORDER BY p.name ASC
+      LIMIT $2;
+    `;
+
+    const { rows } = await query(sql, [term, parseInt(limit)]);
+    return success(res, rows, 'Products search results retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboard,
   getMessages,
@@ -561,5 +692,9 @@ module.exports = {
   getSettings,
   updateSettings,
   getDesignationReport,
-  sendDesignationReport
+  sendDesignationReport,
+  searchApplications,
+  searchStaff,
+  searchProducts
 };
+
