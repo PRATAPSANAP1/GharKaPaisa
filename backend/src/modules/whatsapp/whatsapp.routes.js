@@ -43,6 +43,11 @@ router.get('/recipient-context/application/:applicationId', controller.getApplic
 router.get('/recipient-context/staff/:staffId', controller.getStaffRecipientContext);
 router.get('/product-context/:productId', controller.getProductContext);
 
+// Staff-Aware Report Generator & Product Doc Generation APIs
+router.get('/staff-reports/available/:staffId', controller.getAvailableStaffReports);
+router.post('/staff-reports/generate', globalLimiter, controller.generateStaffReport);
+router.post('/generate-product-info-doc', globalLimiter, controller.generateProductInfoDoc);
+
 // Super Admin Settings & Webhook Diagnostics
 router.get('/settings', requireSuperAdmin, controller.getSettings);
 router.put('/settings', requireSuperAdmin, controller.updateSettings);

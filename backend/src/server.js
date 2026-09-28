@@ -217,6 +217,9 @@ app.post('/api/v1/partner/referral-click', partnerCtrl.invitePartnerClick);
 app.post('/api/v1/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
 app.post('/api/v1/webhooks/razorpay', walletCtrl.handleRazorpayWebhook);
 
+// ── Static Files (Generated Reports & Documents) ────────────
+app.use('/reports', express.static(path.join(__dirname, '../public/reports')));
+
 // ── API Routes ─────────────────────────────────────────────────
 const apiRouter = require('./routes/index');
 app.use('/api/v1', apiRouter);
