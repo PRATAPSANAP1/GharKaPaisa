@@ -733,7 +733,7 @@ async function getApplicationRecipientContext(req, res, next) {
       LEFT JOIN products p ON p.id = a.product_id
       LEFT JOIN banks b ON b.id = a.bank_id OR b.id = p.bank_id
       LEFT JOIN customers c ON c.id = a.customer_id
-      WHERE ${isUuid ? 'a.id = $1 OR a.app_number = $1' : 'a.app_number = $1 OR a.id::text = $1'}
+      WHERE a.id::text = $1 OR a.app_number = $1
       LIMIT 1;
     `;
 
@@ -797,7 +797,6 @@ async function getApplicationRecipientContext(req, res, next) {
 async function getStaffRecipientContext(req, res, next) {
   try {
     const { staffId } = req.params;
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(staffId);
 
     const sql = `
       SELECT 
@@ -812,7 +811,7 @@ async function getStaffRecipientContext(req, res, next) {
         COALESCE(u.email, to_jsonb(e)->>'email_id', to_jsonb(e)->>'email', '') as email
       FROM employees e
       LEFT JOIN users u ON u.id = e.user_id OR u.employee_id = e.employee_id
-      WHERE ${isUuid ? 'e.id = $1 OR e.employee_id = $1' : 'e.employee_id = $1 OR e.id::text = $1 OR e.full_name ILIKE $1'}
+      WHERE e.id::text = $1 OR e.employee_id = $1 OR e.full_name ILIKE $1
       LIMIT 1;
     `;
 
