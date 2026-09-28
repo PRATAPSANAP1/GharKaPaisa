@@ -80,6 +80,7 @@ router.post('/application/manual-commission', appCtrl.manualCommission);
 // Announcements & Broadcast Notifications
 router.get('/announcements', notifCtrl.getAnnouncements);
 router.get('/announcements/stats', notifCtrl.getAnnouncementStats);
+router.get('/announcements/history', notifCtrl.getAnnouncementHistoryController);
 router.get('/announcement/:id/analytics', notifCtrl.getAnnouncementAnalytics);
 router.post('/announcement', notifCtrl.createAnnouncement);
 router.put('/announcement/:id', notifCtrl.updateAnnouncement);

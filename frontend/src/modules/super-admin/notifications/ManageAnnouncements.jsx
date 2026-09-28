@@ -92,6 +92,14 @@ export default function ManageAnnouncements() {
   });
   const [broadcasting, setBroadcasting] = useState(false);
 
+  // History & Audit Logs State
+  const [historyData, setHistoryData] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [historyActionFilter, setHistoryActionFilter] = useState('all');
+  const [selectedAuditLog, setSelectedAuditLog] = useState(null);
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+
   // Load All Dynamic Data from Database REST APIs
   const loadAnnouncementsData = async () => {
     setLoading(true);
@@ -118,8 +126,25 @@ export default function ManageAnnouncements() {
     }
   };
 
+  const loadHistoryData = async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await api.get('/superadmin/announcements/history');
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setHistoryData(res.data.data);
+      }
+    } catch (e) {
+      console.error('Error fetching announcement history:', e);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   useEffect(() => {
     loadAnnouncementsData();
+    if (activeTab === 'history') {
+      loadHistoryData();
+    }
   }, [activeTab]);
 
   const openCreateModal = () => {
@@ -447,6 +472,7 @@ export default function ManageAnnouncements() {
       <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}`, gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
         {[
           { id: 'announcements', label: 'Announcements', icon: <MdAnnouncement size={18} /> },
+          { id: 'history', label: 'History & Audit Logs', icon: <MdHistory size={18} /> },
           { id: 'broadcast', label: 'Direct Broadcast Alert', icon: <MdSend size={18} /> }
         ].map(tab => {
           const active = activeTab === tab.id;
@@ -624,6 +650,10 @@ export default function ManageAnnouncements() {
 
                 <button onClick={() => setFilterStatus('draft')} style={{ ...S.btn('outline'), width: '100%', justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
                   <MdDrafts /> View Drafts ({draftCount})
+                </button>
+
+                <button onClick={() => setActiveTab('history')} style={{ ...S.btn('outline'), width: '100%', justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
+                  <MdHistory /> View History & Audit Logs
                 </button>
 
                 <button onClick={() => setActiveTab('broadcast')} style={{ ...S.btn('outline'), width: '100%', justifyContent: 'flex-start', gap: '8px', fontSize: '13px' }}>
@@ -820,6 +850,146 @@ export default function ManageAnnouncements() {
             </div>
 
           </form>
+        </div>
+      )}
+
+      {/* TAB: HISTORY & AUDIT LOGS */}
+      {activeTab === 'history' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          <div style={{ ...S.card, padding: '24px', borderRadius: '16px' }}>
+            
+            {/* Header & Controls */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: C.text }}>Announcement Audit History</h3>
+                <p style={{ fontSize: '12.5px', color: C.textLight, margin: '2px 0 0' }}>Real-time audit trail of announcement creations, updates, broadcasts & deletions</p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end' }}>
+                <div style={{ position: 'relative', minWidth: '220px' }}>
+                  <MdSearch size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: C.textLight }} />
+                  <input 
+                    type="text" 
+                    placeholder="Search action, title, ID, operator..."
+                    style={{ ...S.input, paddingLeft: '36px', height: '38px', borderRadius: '10px', fontSize: '12.5px' }}
+                    value={historySearchQuery}
+                    onChange={e => setHistorySearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <select 
+                  style={{ ...S.input, height: '38px', width: 'auto', borderRadius: '10px', fontSize: '12.5px' }} 
+                  value={historyActionFilter} 
+                  onChange={e => setHistoryActionFilter(e.target.value)}
+                >
+                  <option value="all">All Action Types</option>
+                  <option value="created">Created</option>
+                  <option value="published">Published</option>
+                  <option value="updated">Updated</option>
+                  <option value="deleted">Deleted</option>
+                  <option value="broadcast">Broadcast</option>
+                </select>
+
+                <button 
+                  onClick={loadHistoryData}
+                  style={{ ...S.btn('outline'), display: 'flex', alignItems: 'center', gap: '6px', height: '38px', fontSize: '12.5px' }}
+                >
+                  <MdRefresh size={16} /> Refresh History
+                </button>
+              </div>
+            </div>
+
+            {/* History Table */}
+            {loadingHistory ? (
+              <div style={{ textAlign: 'center', padding: '48px', color: C.textLight }}>
+                Loading announcement audit history...
+              </div>
+            ) : (() => {
+              const filteredHistory = historyData.filter(log => {
+                const q = historySearchQuery.toLowerCase();
+                const matchesSearch = !q || (
+                  log.action?.toLowerCase().includes(q) ||
+                  log.announcement_title?.toLowerCase().includes(q) ||
+                  log.announcement_code?.toLowerCase().includes(q) ||
+                  log.performed_by_name?.toLowerCase().includes(q)
+                );
+                const matchesAction = historyActionFilter === 'all' || (log.action || '').toLowerCase().includes(historyActionFilter.toLowerCase());
+                return matchesSearch && matchesAction;
+              });
+
+              if (filteredHistory.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '48px', color: C.textLight }}>
+                    No announcement history records found.
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: `2px solid ${C.border}`, textAlign: 'left', color: C.textLight }}>
+                        <th style={{ padding: '12px' }}>Date & Time</th>
+                        <th style={{ padding: '12px' }}>Announcement</th>
+                        <th style={{ padding: '12px' }}>Action</th>
+                        <th style={{ padding: '12px' }}>Performed By</th>
+                        <th style={{ padding: '12px' }}>Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredHistory.map((log) => {
+                        const act = (log.action || '').toLowerCase();
+                        let badgeStyle = { bg: '#e0f2fe', color: '#0284c7' };
+                        if (act.includes('created') || act.includes('published')) {
+                          badgeStyle = { bg: '#dcfce7', color: '#16a34a' };
+                        } else if (act.includes('deleted')) {
+                          badgeStyle = { bg: '#fee2e2', color: '#dc2626' };
+                        } else if (act.includes('broadcast')) {
+                          badgeStyle = { bg: '#f3e8ff', color: '#8b5cf6' };
+                        }
+
+                        return (
+                          <tr key={log.id} style={{ borderBottom: `1px solid ${C.border}60` }}>
+                            <td style={{ padding: '12px', whiteSpace: 'nowrap', fontSize: '12px', color: C.textLight }}>
+                              {new Date(log.created_at).toLocaleString()}
+                            </td>
+                            <td style={{ padding: '12px', maxWidth: '240px' }}>
+                              <div style={{ fontSize: '10px', fontWeight: 800, color: C.primary, textTransform: 'uppercase' }}>
+                                {log.announcement_code || 'ANN-EVENT'}
+                              </div>
+                              <div style={{ fontWeight: 700, color: C.text, fontSize: '13px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                {log.announcement_title}
+                              </div>
+                            </td>
+                            <td style={{ padding: '12px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '12px', background: badgeStyle.bg, color: badgeStyle.color }}>
+                                {log.action}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px', fontWeight: 650, color: C.text }}>
+                              {log.performed_by_name || 'Super Admin'}
+                            </td>
+                            <td style={{ padding: '12px' }}>
+                              <button
+                                onClick={() => { setSelectedAuditLog(log); setAuditModalOpen(true); }}
+                                style={{ border: `1px solid ${C.border}`, background: C.bgSecondary, color: C.primary, padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '11.5px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <MdVisibility size={14} /> View Log
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+
+          </div>
+
         </div>
       )}
 
@@ -1276,6 +1446,51 @@ export default function ManageAnnouncements() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '24px' }}>
               <button onClick={() => setDetailModalOpen(false)} style={S.btn('primary')}>
                 Close 360° Report
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: AUDIT LOG DETAILS */}
+      {auditModalOpen && selectedAuditLog && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '8px' : '16px' }}>
+          <div style={{ ...S.card, width: '100%', maxWidth: '650px', maxHeight: '90vh', overflowY: 'auto', padding: isMobile ? '16px' : '24px', position: 'relative', borderRadius: '20px' }}>
+            
+            <button 
+              onClick={() => setAuditModalOpen(false)}
+              style={{ position: 'absolute', top: '16px', right: '16px', background: C.bgSecondary, border: 'none', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textLight }}
+            >
+              <MdClose size={22} />
+            </button>
+
+            <h3 style={{ fontSize: '18px', fontWeight: 850, color: C.text, margin: '0 0 16px' }}>
+              Audit Log Record Details
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', background: C.bgSecondary, padding: '14px', borderRadius: '12px', fontSize: '12.5px' }}>
+              <div><strong>Action:</strong> {selectedAuditLog.action}</div>
+              <div><strong>Performed By:</strong> {selectedAuditLog.performed_by_name}</div>
+              <div><strong>Code:</strong> {selectedAuditLog.announcement_code}</div>
+              <div><strong>Timestamp:</strong> {new Date(selectedAuditLog.created_at).toLocaleString()}</div>
+            </div>
+
+            <h4 style={{ fontSize: '13.5px', fontWeight: 800, margin: '12px 0 6px', color: C.text }}>Announcement Title</h4>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: C.primary, marginBottom: '16px' }}>{selectedAuditLog.announcement_title}</div>
+
+            {selectedAuditLog.new_value && Object.keys(selectedAuditLog.new_value).length > 0 && (
+              <>
+                <h4 style={{ fontSize: '13px', fontWeight: 800, margin: '10px 0 6px', color: C.text }}>Event Payload & Logged Data</h4>
+                <pre style={{ background: '#1e293b', color: '#f8fafc', padding: '12px', borderRadius: '10px', fontSize: '11.5px', overflowX: 'auto', maxHeight: '200px' }}>
+                  {JSON.stringify(selectedAuditLog.new_value, null, 2)}
+                </pre>
+              </>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button onClick={() => setAuditModalOpen(false)} style={S.btn('primary')}>
+                Close Log
               </button>
             </div>
 

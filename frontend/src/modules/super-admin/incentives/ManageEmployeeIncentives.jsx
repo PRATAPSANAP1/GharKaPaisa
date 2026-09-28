@@ -83,7 +83,7 @@ export default function ManageEmployeeIncentives() {
 
       const params = {
         page,
-        limit: activeTab === 'OVERVIEW' ? 20 : 500,
+        limit: 20,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
         role: roleFilter || undefined,
@@ -129,6 +129,10 @@ export default function ManageEmployeeIncentives() {
     };
     fetchOptions();
   }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab]);
 
   useEffect(() => {
     fetchData();
@@ -845,6 +849,29 @@ export default function ManageEmployeeIncentives() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination Bar for EMPLOYEES */}
+              {data.table?.pagination?.totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: `1px solid ${C.border}` }}>
+                  <button
+                    disabled={page <= 1}
+                    onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                    style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: page > 1 ? C.bgSecondary : C.card, color: page > 1 ? C.text : C.textMid, fontSize: '12px', fontWeight: 800, cursor: page > 1 ? 'pointer' : 'not-allowed' }}
+                  >
+                    ← Previous
+                  </button>
+                  <span style={{ fontSize: '12.5px', fontWeight: 800, color: C.textMid }}>
+                    Page <strong style={{ color: C.teal }}>{page}</strong> of <strong style={{ color: C.text }}>{data.table.pagination.totalPages}</strong> ({data.table.pagination.total} total)
+                  </span>
+                  <button
+                    disabled={page >= data.table.pagination.totalPages}
+                    onClick={() => setPage(prev => Math.min(data.table.pagination.totalPages, prev + 1))}
+                    style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: page < data.table.pagination.totalPages ? C.bgSecondary : C.card, color: page < data.table.pagination.totalPages ? C.text : C.textMid, fontSize: '12px', fontWeight: 800, cursor: page < data.table.pagination.totalPages ? 'pointer' : 'not-allowed' }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -999,6 +1026,29 @@ export default function ManageEmployeeIncentives() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Bar for PAYOUTS */}
+              {data.table?.pagination?.totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: `1px solid ${C.border}` }}>
+                  <button
+                    disabled={page <= 1}
+                    onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                    style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: page > 1 ? C.bgSecondary : C.card, color: page > 1 ? C.text : C.textMid, fontSize: '12px', fontWeight: 800, cursor: page > 1 ? 'pointer' : 'not-allowed' }}
+                  >
+                    ← Previous
+                  </button>
+                  <span style={{ fontSize: '12.5px', fontWeight: 800, color: C.textMid }}>
+                    Page <strong style={{ color: C.teal }}>{page}</strong> of <strong style={{ color: C.text }}>{data.table.pagination.totalPages}</strong> ({data.table.pagination.total} total)
+                  </span>
+                  <button
+                    disabled={page >= data.table.pagination.totalPages}
+                    onClick={() => setPage(prev => Math.min(data.table.pagination.totalPages, prev + 1))}
+                    style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: page < data.table.pagination.totalPages ? C.bgSecondary : C.card, color: page < data.table.pagination.totalPages ? C.text : C.textMid, fontSize: '12px', fontWeight: 800, cursor: page < data.table.pagination.totalPages ? 'pointer' : 'not-allowed' }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1113,6 +1163,29 @@ export default function ManageEmployeeIncentives() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Bar for RELEASED */}
+              {data.table?.pagination?.totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: `1px solid ${C.border}` }}>
+                  <button
+                    disabled={page <= 1}
+                    onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                    style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: page > 1 ? C.bgSecondary : C.card, color: page > 1 ? C.text : C.textMid, fontSize: '12px', fontWeight: 800, cursor: page > 1 ? 'pointer' : 'not-allowed' }}
+                  >
+                    ← Previous
+                  </button>
+                  <span style={{ fontSize: '12.5px', fontWeight: 800, color: C.textMid }}>
+                    Page <strong style={{ color: C.teal }}>{page}</strong> of <strong style={{ color: C.text }}>{data.table.pagination.totalPages}</strong> ({data.table.pagination.total} total)
+                  </span>
+                  <button
+                    disabled={page >= data.table.pagination.totalPages}
+                    onClick={() => setPage(prev => Math.min(data.table.pagination.totalPages, prev + 1))}
+                    style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, background: page < data.table.pagination.totalPages ? C.bgSecondary : C.card, color: page < data.table.pagination.totalPages ? C.text : C.textMid, fontSize: '12px', fontWeight: 800, cursor: page < data.table.pagination.totalPages ? 'pointer' : 'not-allowed' }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           )}
 

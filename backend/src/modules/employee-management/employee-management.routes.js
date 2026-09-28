@@ -1923,7 +1923,7 @@ router.get('/incentive-history', async (req, res, next) => {
     const lastDay = new Date(targetYear, targetMonth, 0).getDate();
     const endDateStr = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-    let empWhere = "WHERE e.status = 'active'";
+    let empWhere = "WHERE (UPPER(COALESCE(e.status::text, 'ACTIVE')) IN ('ACTIVE', 'ENABLED', 'TRUE') OR e.status IS NULL)";
     const empParams = [];
     if (employee_id && employee_id !== 'all') {
       empParams.push(employee_id);
@@ -1965,7 +1965,7 @@ router.get('/incentive-history', async (req, res, next) => {
             if (department_filter === 'assigned' && !bm.is_department) return;
             if (department_filter === 'non_assigned' && bm.is_department) return;
 
-            if (bm.approved_cards_count > 0 || bm.earned_incentive > 0 || bm.is_department) {
+            if (bm.approved_cards_count > 0 || bm.earned_incentive > 0 || bm.is_department || bm.total_apps > 0) {
               activeEmployeesSet.add(emp.id);
               grandApprovedCards += bm.approved_cards_count;
               grandTotalIncentive += bm.earned_incentive;

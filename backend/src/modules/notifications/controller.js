@@ -722,6 +722,35 @@ const getAnnouncementAnalytics = async (req, res, next) => {
   }
 };
 
+// GET /superadmin/announcements/history (fetch full audit history of announcement operations)
+const getAnnouncementHistoryController = async (req, res, next) => {
+  try {
+    const { rows } = await query(`
+      SELECT 
+        l.id,
+        l.announcement_id,
+        l.action,
+        l.performed_by,
+        COALESCE(l.performed_by_name, u.full_name, 'Super Admin') as performed_by_name,
+        l.old_value,
+        l.new_value,
+        l.created_at,
+        COALESCE(a.title, l.new_value->>'title', l.old_value->>'title', 'Announcement Event') as announcement_title,
+        COALESCE(a.announcement_id, l.new_value->>'announcement_id', 'ANN-EVENT') as announcement_code,
+        COALESCE(a.status, l.new_value->>'status', 'PUBLISHED') as announcement_status
+      FROM announcement_audit_logs l
+      LEFT JOIN announcements a ON a.id = l.announcement_id
+      LEFT JOIN users u ON u.id = l.performed_by
+      ORDER BY l.created_at DESC
+      LIMIT 300
+    `);
+
+    return success(res, rows, 'Announcement audit history loaded');
+  } catch (err) {
+    next(err);
+  }
+};
+
 // SUPER ADMIN announcement methods
 const createAnnouncement = async (req, res, next) => {
   const client = await getClient();
@@ -1242,5 +1271,6 @@ module.exports = {
   broadcastNotification,
   getNotificationReports,
   getActivityLogsController,
-  getAuditLogsController
+  getAuditLogsController,
+  getAnnouncementHistoryController
 };
