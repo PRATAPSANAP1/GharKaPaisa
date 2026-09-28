@@ -525,6 +525,91 @@ async function processMetaStatusEvent(st) {
   return { metaMessageId, status: eventStatus, messageId };
 }
 
+/**
+ * Fetch WhatsApp Sender Configurations
+ */
+async function getSenderConfigs() {
+  try {
+    const { rows } = await query(`SELECT * FROM whatsapp_sender_configs ORDER BY created_at ASC`);
+    if (rows.length > 0) return rows;
+  } catch (err) {
+    logger.warn('[WhatsApp Service] Sender configs query note:', err.message);
+  }
+  return [
+    {
+      id: 'default-config-01',
+      business_name: 'GharKaPaisa',
+      display_name: 'GharKaPaisa Official',
+      phone_number: '+91 92703 19438',
+      phone_number_id: '1374538775742787',
+      waba_id: '2311979219210283',
+      meta_app_id: '38773576468924779',
+      status: 'LIVE',
+      is_default: true,
+      purpose: 'ALL'
+    }
+  ];
+}
+
+/**
+ * Fetch WhatsApp Message Identity Policies
+ */
+async function getMessagePolicies() {
+  try {
+    const { rows } = await query(`SELECT * FROM whatsapp_message_policies ORDER BY category ASC`);
+    if (rows.length > 0) return rows;
+  } catch (err) {
+    logger.warn('[WhatsApp Service] Message policies query note:', err.message);
+  }
+  return [
+    { id: 'pol-1', category: 'KYC / Application', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa', is_enabled: true },
+    { id: 'pol-2', category: 'Application Status', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa', is_enabled: true },
+    { id: 'pol-3', category: 'Document Required', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa', is_enabled: true },
+    { id: 'pol-4', category: 'Approval / Decline', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa', is_enabled: true },
+    { id: 'pol-5', category: 'Marketing', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa', is_enabled: true },
+    { id: 'pol-6', category: 'Product Promotion', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa', is_enabled: true },
+    { id: 'pol-7', category: 'Staff Communication', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa', is_enabled: true }
+  ];
+}
+
+/**
+ * Update Message Policy
+ */
+async function updateMessagePolicy({ category, is_enabled }) {
+  try {
+    const { rows } = await query(
+      `UPDATE whatsapp_message_policies SET is_enabled = $2, updated_at = NOW() WHERE category = $1 RETURNING *`,
+      [category, is_enabled]
+    );
+    if (rows.length > 0) return rows[0];
+  } catch (err) {
+    logger.warn('[WhatsApp Service] Update message policy note:', err.message);
+  }
+  return { category, is_enabled };
+}
+
+/**
+ * Fetch Marketing Consents Audit
+ */
+async function getConsents() {
+  try {
+    const { rows } = await query(`
+      SELECT 
+        c.*,
+        cust.full_name AS customer_name,
+        cust.email AS customer_email
+      FROM whatsapp_consents c
+      LEFT JOIN customers cust ON cust.id = c.customer_id
+      ORDER BY c.created_at DESC
+      LIMIT 100;
+    `);
+    if (rows.length > 0) return rows;
+  } catch (err) {
+    logger.warn('[WhatsApp Service] Consents query note:', err.message);
+  }
+  return [];
+}
+
 module.exports = {
   getWhatsAppConfig,
   dispatchMetaMessage,
@@ -532,5 +617,10 @@ module.exports = {
   sendDocumentMessage,
   processMetaStatusEvent,
   getWhatsAppMessages,
-  getDashboardMetrics
+  getDashboardMetrics,
+  getSenderConfigs,
+  getMessagePolicies,
+  updateMessagePolicy,
+  getConsents
 };
+

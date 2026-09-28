@@ -10,7 +10,37 @@ const migrateWhatsApp = async () => {
     // 1. Extensions
     await query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
 
-    // 2. WhatsApp Settings Table
+    // 2. WhatsApp Sender Configuration Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS whatsapp_sender_configs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        business_name VARCHAR(100) DEFAULT 'GharKaPaisa',
+        display_name VARCHAR(100) DEFAULT 'GharKaPaisa Official',
+        phone_number VARCHAR(50) DEFAULT '+91 92703 19438',
+        phone_number_id VARCHAR(100) DEFAULT '1374538775742787',
+        waba_id VARCHAR(100) DEFAULT '2311979219210283',
+        meta_app_id VARCHAR(100) DEFAULT '38773576468924779',
+        status VARCHAR(20) DEFAULT 'LIVE',
+        is_default BOOLEAN DEFAULT TRUE,
+        purpose VARCHAR(50) DEFAULT 'ALL',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // Ensure default sender config row exists
+    const { rows: senderRows } = await query(`SELECT id FROM whatsapp_sender_configs LIMIT 1`);
+    if (senderRows.length === 0) {
+      await query(`
+        INSERT INTO whatsapp_sender_configs (
+          business_name, display_name, phone_number, phone_number_id, waba_id, meta_app_id, status, is_default, purpose
+        ) VALUES (
+          'GharKaPaisa', 'GharKaPaisa Official', '+91 92703 19438', '1374538775742787', '2311979219210283', '38773576468924779', 'LIVE', true, 'ALL'
+        );
+      `);
+    }
+
+    // 3. WhatsApp Settings Table
     await query(`
       CREATE TABLE IF NOT EXISTS whatsapp_settings (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -43,18 +73,67 @@ const migrateWhatsApp = async () => {
       `);
     }
 
-    // 3. WhatsApp Templates Table
+    // 4. WhatsApp Consent Tracking Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS whatsapp_consents (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
+        mobile VARCHAR(20) NOT NULL,
+        marketing_opt_in BOOLEAN DEFAULT TRUE,
+        utility_opt_in BOOLEAN DEFAULT TRUE,
+        product_offer_opt_in BOOLEAN DEFAULT TRUE,
+        consent_source VARCHAR(100) DEFAULT 'APPLICATION_FORM',
+        consent_at TIMESTAMPTZ DEFAULT NOW(),
+        opted_out_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // 5. WhatsApp Message Identity Policies Table
+    await query(`
+      CREATE TABLE IF NOT EXISTS whatsapp_message_policies (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        category VARCHAR(50) NOT NULL UNIQUE,
+        sender_presentation VARCHAR(100) DEFAULT 'GharKaPaisa Official',
+        template_header VARCHAR(100) DEFAULT 'GharKaPaisa',
+        is_enabled BOOLEAN DEFAULT TRUE,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // Seed default message policies
+    const defaultPolicies = [
+      { category: 'KYC / Application', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa' },
+      { category: 'Application Status', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa' },
+      { category: 'Document Required', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa' },
+      { category: 'Approval / Decline', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa' },
+      { category: 'Marketing', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa' },
+      { category: 'Product Promotion', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa' },
+      { category: 'Staff Communication', sender_presentation: 'GharKaPaisa Official', template_header: 'GharKaPaisa' }
+    ];
+
+    for (const p of defaultPolicies) {
+      await query(`
+        INSERT INTO whatsapp_message_policies (category, sender_presentation, template_header, is_enabled)
+        VALUES ($1, $2, $3, true)
+        ON CONFLICT (category) DO NOTHING;
+      `, [p.category, p.sender_presentation, p.template_header]);
+    }
+
+    // 6. WhatsApp Templates Table
     await query(`
       CREATE TABLE IF NOT EXISTS whatsapp_templates (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         template_name VARCHAR(100) UNIQUE NOT NULL,
+        meta_template_name VARCHAR(100),
         template_category VARCHAR(50) NOT NULL,
         language VARCHAR(10) DEFAULT 'en',
         meta_template_id VARCHAR(100),
-        header_type VARCHAR(20) DEFAULT 'NONE',
-        header_content TEXT,
+        header_type VARCHAR(20) DEFAULT 'TEXT',
+        header_content TEXT DEFAULT 'GharKaPaisa',
         body TEXT NOT NULL,
-        footer TEXT DEFAULT 'GharKaPaisa • Financial Services Platform',
+        footer TEXT DEFAULT 'GharKaPaisa Financial Services',
         buttons JSONB DEFAULT '[]',
         variables JSONB DEFAULT '[]',
         sample_values JSONB DEFAULT '{}',

@@ -1264,6 +1264,43 @@ async function generateProductInfoDoc(req, res, next) {
   }
 }
 
+async function getSenderConfigs(req, res, next) {
+  try {
+    const data = await service.getSenderConfigs();
+    return success(res, data, 'Sender configs retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getMessagePolicies(req, res, next) {
+  try {
+    const data = await service.getMessagePolicies();
+    return success(res, data, 'Message policies retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateMessagePolicy(req, res, next) {
+  try {
+    const { category, is_enabled } = req.body;
+    const data = await service.updateMessagePolicy({ category, is_enabled });
+    return success(res, data, 'Message policy updated');
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getConsents(req, res, next) {
+  try {
+    const data = await service.getConsents();
+    return success(res, data, 'Marketing consents retrieved');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getDashboard,
   getMessages,
@@ -1285,6 +1322,11 @@ module.exports = {
   getProductContext,
   getAvailableStaffReports,
   generateStaffReport,
-  generateProductInfoDoc
+  generateProductInfoDoc,
+  getSenderConfigs,
+  getMessagePolicies,
+  updateMessagePolicy,
+  getConsents
 };
+
 

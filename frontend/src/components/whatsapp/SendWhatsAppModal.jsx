@@ -620,10 +620,55 @@ export default function SendWhatsAppModal({
             </div>
           ) : (
             <form onSubmit={handleSend}>
+              {/* Sender Channel & Template Header Configuration Strip */}
+              <div style={{
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '10px',
+                padding: '12px 16px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '14px',
+                fontSize: '12.5px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>Sender Channel</span>
+                    <select style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '4px 8px', fontWeight: 800, color: '#0F172A', background: '#FFF', outline: 'none' }}>
+                      <option value="GHARKAPAISA_OFFICIAL">GharKaPaisa Official Channel</option>
+                    </select>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>Sender Number</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#0F172A', fontSize: '13px' }}>+91 92703 19438</span>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>Message Category</span>
+                    <span style={{ background: '#EFF6FF', color: '#1D4ED8', padding: '3px 8px', borderRadius: '4px', fontWeight: 800, fontSize: '11.5px' }}>
+                      {selectedTemplate?.template_category ? selectedTemplate.template_category.toUpperCase() : 'UTILITY'}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ color: '#64748B', display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>Template Header</span>
+                    <span style={{ background: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', padding: '3px 8px', borderRadius: '4px', fontWeight: 800, fontSize: '11.5px' }}>
+                      {selectedTemplate?.header_content || 'GharKaPaisa'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '11.5px', color: '#059669', fontWeight: 800, background: '#ECFDF5', padding: '5px 12px', borderRadius: '6px', border: '1px solid #A7F3D0' }}>
+                  ● Official Business Number Gateway
+                </div>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '20px' }}>
                 
                 {/* ──────────────── LEFT COLUMN ──────────────── */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
                   
                   {/* STEP 1: Select Recipient */}
                   <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>

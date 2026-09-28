@@ -48,9 +48,14 @@ router.get('/staff-reports/available/:staffId', controller.getAvailableStaffRepo
 router.post('/staff-reports/generate', globalLimiter, controller.generateStaffReport);
 router.post('/generate-product-info-doc', globalLimiter, controller.generateProductInfoDoc);
 
-// Super Admin Settings & Webhook Diagnostics
+// Super Admin Settings, Policy & Webhook Diagnostics
 router.get('/settings', requireSuperAdmin, controller.getSettings);
 router.put('/settings', requireSuperAdmin, controller.updateSettings);
+router.get('/sender-configs', requireSuperAdmin, controller.getSenderConfigs);
+router.get('/message-policies', requireSuperAdmin, controller.getMessagePolicies);
+router.post('/message-policies', requireSuperAdmin, controller.updateMessagePolicy);
+router.get('/consents', requireSuperAdmin, controller.getConsents);
 router.get('/webhook-logs', requireSuperAdmin, webhookCtrl.getWebhookLogs);
 
 module.exports = router;
+
