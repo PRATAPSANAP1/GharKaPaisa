@@ -1521,13 +1521,7 @@ const ensureApplicationStageColumns = async () => {
       ADD COLUMN IF NOT EXISTS sales_operator_code VARCHAR(100),
       ADD COLUMN IF NOT EXISTS pan_checker_code VARCHAR(100),
       ADD COLUMN IF NOT EXISTS remark_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS backend_remark TEXT,
-      ADD COLUMN IF NOT EXISTS last_operator_name VARCHAR(255),
-      ADD COLUMN IF NOT EXISTS last_operator_role VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS last_operator_designation VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS last_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS final_status_operator_code VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS last_operated_at TIMESTAMPTZ
+      ADD COLUMN IF NOT EXISTS backend_remark TEXT
     `).catch(() => {});
     stageColumnsEnsured = true;
   } catch (err) {
@@ -1877,13 +1871,13 @@ const listApplications = async (req, res, next) => {
           COALESCE(NULLIF(a.app_file_generated, ''), NULLIF(pad.app_file_generated, '')) as app_file_generated,
           COALESCE(NULLIF(a.decline_reason, ''), NULLIF(pad.decline_reason, '')) as decline_reason,
           COALESCE(NULLIF(a.eligible_reqd, ''), NULLIF(pad.eligible_reqd, '')) as eligible_reqd,
-          COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(to_jsonb(pad)->>'last_operator_name', '')) as last_operator_name,
-          COALESCE(NULLIF(to_jsonb(a)->>'last_operator_role', ''), NULLIF(to_jsonb(pad)->>'last_operator_role', '')) as last_operator_role,
-          COALESCE(NULLIF(to_jsonb(a)->>'last_operator_designation', ''), NULLIF(to_jsonb(pad)->>'last_operator_designation', '')) as last_operator_designation,
-          COALESCE(NULLIF(to_jsonb(a)->>'last_operator_code', ''), NULLIF(to_jsonb(pad)->>'last_operator_code', '')) as last_operator_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'final_status_operator_code', ''), NULLIF(to_jsonb(pad)->>'final_status_operator_code', '')) as final_status_operator_code,
-          COALESCE(NULLIF(to_jsonb(a)->>'last_operated_at', '')::timestamptz, NULLIF(to_jsonb(pad)->>'last_operated_at', '')::timestamptz) as last_operated_at,
-          COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(to_jsonb(a)->>'last_operator_code', ''), NULLIF(to_jsonb(pad)->>'last_operator_name', ''), 'Not Assigned') as currently_working_by,
+          (to_jsonb(a)->>'last_operator_name') as last_operator_name,
+          (to_jsonb(a)->>'last_operator_role') as last_operator_role,
+          (to_jsonb(a)->>'last_operator_designation') as last_operator_designation,
+          (to_jsonb(a)->>'last_operator_code') as last_operator_code,
+          (to_jsonb(a)->>'final_status_operator_code') as final_status_operator_code,
+          NULLIF(to_jsonb(a)->>'last_operated_at', '')::timestamptz as last_operated_at,
+          COALESCE(NULLIF(to_jsonb(a)->>'last_operator_name', ''), NULLIF(to_jsonb(a)->>'last_operator_code', ''), 'Not Assigned') as currently_working_by,
           a.submitted_at,
           a.approved_at,
           a.approved_by,
