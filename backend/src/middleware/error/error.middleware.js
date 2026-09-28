@@ -23,6 +23,12 @@ const errorHandler = (err, req, res, next) => {
     return error(res, 'Invalid URL encoding in request', 400);
   }
 
+  // Gracefully handle aborted requests (e.g., user navigated away or cancelled payload upload)
+  if (err.type === 'request.aborted' || err.code === 'ECONNABORTED' || err.message === 'request aborted') {
+    logger.warn(`Request aborted by client: ${req.method} ${req.originalUrl || req.url}`, { ip: req.ip });
+    return error(res, 'Request aborted by client', 400);
+  }
+
   logger.error(`${err.name}: ${err.message}`, {
     ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
     path: req.path,
