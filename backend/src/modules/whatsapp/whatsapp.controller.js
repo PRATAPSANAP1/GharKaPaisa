@@ -619,32 +619,33 @@ async function searchApplications(req, res, next) {
 async function searchStaff(req, res, next) {
   try {
     const term = (req.query.q || req.query.search || '').trim();
-    const limit = parseInt(req.query.limit || 15);
+    const limit = parseInt(req.query.limit || 20);
 
     const sql = `
       SELECT 
-        e.id,
-        COALESCE(e.employee_id, u.employee_id, 'YOH-TC0042') as staff_code,
-        COALESCE(e.full_name, u.full_name, 'Sharad Yohesa') as full_name,
-        COALESCE(e.designation, u.designation, 'Team Coordinator') as designation,
-        COALESCE(u.role, 'EMPLOYEE') as role,
-        COALESCE(e.department, 'Operations') as department,
-        COALESCE(to_jsonb(e)->>'work_location', to_jsonb(e)->>'branch_location', 'Pune') as branch,
+        u.id,
+        COALESCE(u.employee_id, e.employee_id, 'USR-' || UPPER(SUBSTRING(u.id::text FROM 1 FOR 6))) as staff_code,
+        COALESCE(u.full_name, e.full_name, 'User') as full_name,
+        COALESCE(u.designation, e.designation, u.role::text, 'Staff Member') as designation,
+        COALESCE(u.role::text, 'EMPLOYEE') as role,
+        COALESCE(u.department, e.department, 'Operations') as department,
+        COALESCE(to_jsonb(e)->>'work_location', to_jsonb(e)->>'branch_location', 'Head Office') as branch,
         COALESCE(u.mobile, to_jsonb(e)->>'mobile_number', to_jsonb(e)->>'mobile', '') as mobile,
         COALESCE(u.email, to_jsonb(e)->>'email_id', to_jsonb(e)->>'email', '') as email
-      FROM employees e
-      LEFT JOIN users u ON u.id = e.user_id OR u.employee_id = e.employee_id
-      WHERE (UPPER(COALESCE(to_jsonb(e)->>'employee_status', to_jsonb(e)->>'status', 'ACTIVE')) IN ('ACTIVE', 'ENABLED', 'TRUE', 'ONBOARDING'))
+      FROM users u
+      LEFT JOIN employees e ON e.user_id = u.id OR (u.employee_id IS NOT NULL AND e.employee_id = u.employee_id)
+      WHERE (UPPER(COALESCE(u.status::text, 'ACTIVE')) IN ('ACTIVE', 'ENABLED', 'TRUE', 'PENDING') OR u.status IS NULL)
         AND ($1 = '' OR (
-          e.full_name ILIKE '%' || $1 || '%' OR
           u.full_name ILIKE '%' || $1 || '%' OR
-          e.employee_id ILIKE '%' || $1 || '%' OR
+          e.full_name ILIKE '%' || $1 || '%' OR
           u.employee_id ILIKE '%' || $1 || '%' OR
-          e.designation ILIKE '%' || $1 || '%' OR
+          e.employee_id ILIKE '%' || $1 || '%' OR
+          u.designation ILIKE '%' || $1 || '%' OR
+          u.role::text ILIKE '%' || $1 || '%' OR
           COALESCE(u.mobile, to_jsonb(e)->>'mobile_number') ILIKE '%' || $1 || '%' OR
           COALESCE(u.email, to_jsonb(e)->>'email_id') ILIKE '%' || $1 || '%'
         ))
-      ORDER BY e.full_name ASC
+      ORDER BY u.full_name ASC
       LIMIT $2;
     `;
 
@@ -657,7 +658,7 @@ async function searchStaff(req, res, next) {
         id: s.id,
         full_name: s.full_name,
         staff_code: s.staff_code,
-        designation: s.designation,
+        designation: `${s.designation} (${s.role})`,
         role: s.role,
         mobile: s.mobile,
         mobile_masked: mobileMasked,
@@ -667,7 +668,7 @@ async function searchStaff(req, res, next) {
       };
     });
 
-    return success(res, formatted, 'Staff search matches retrieved');
+    return success(res, formatted, 'Staff and user search matches retrieved');
   } catch (err) {
     next(err);
   }
@@ -800,24 +801,24 @@ async function getStaffRecipientContext(req, res, next) {
 
     const sql = `
       SELECT 
-        e.id,
-        COALESCE(e.employee_id, u.employee_id, 'YOH-TC0042') as staff_code,
-        COALESCE(e.full_name, u.full_name, 'Sharad Yohesa') as full_name,
-        COALESCE(e.designation, u.designation, 'Team Coordinator') as designation,
-        COALESCE(u.role, 'EMPLOYEE') as role,
-        COALESCE(e.department, 'Operations') as department,
-        COALESCE(to_jsonb(e)->>'work_location', to_jsonb(e)->>'branch_location', 'Pune') as branch,
+        u.id,
+        COALESCE(u.employee_id, e.employee_id, 'USR-' || UPPER(SUBSTRING(u.id::text FROM 1 FOR 6))) as staff_code,
+        COALESCE(u.full_name, e.full_name, 'User') as full_name,
+        COALESCE(u.designation, e.designation, u.role::text, 'Staff Member') as designation,
+        COALESCE(u.role::text, 'EMPLOYEE') as role,
+        COALESCE(u.department, e.department, 'Operations') as department,
+        COALESCE(to_jsonb(e)->>'work_location', to_jsonb(e)->>'branch_location', 'Head Office') as branch,
         COALESCE(u.mobile, to_jsonb(e)->>'mobile_number', to_jsonb(e)->>'mobile', '') as mobile,
         COALESCE(u.email, to_jsonb(e)->>'email_id', to_jsonb(e)->>'email', '') as email
-      FROM employees e
-      LEFT JOIN users u ON u.id = e.user_id OR u.employee_id = e.employee_id
-      WHERE e.id::text = $1 OR e.employee_id = $1 OR e.full_name ILIKE $1
+      FROM users u
+      LEFT JOIN employees e ON e.user_id = u.id OR (u.employee_id IS NOT NULL AND e.employee_id = u.employee_id)
+      WHERE u.id::text = $1 OR u.employee_id = $1 OR e.employee_id = $1 OR u.full_name ILIKE $1
       LIMIT 1;
     `;
 
     const { rows } = await query(sql, [staffId]);
     if (rows.length === 0) {
-      return error(res, 'Staff member record not found', 404);
+      return error(res, 'Staff/User member record not found', 404);
     }
 
     const stf = rows[0];
@@ -831,7 +832,7 @@ async function getStaffRecipientContext(req, res, next) {
         name: stf.full_name,
         staff_code: stf.staff_code,
         role: stf.role,
-        designation: stf.designation,
+        designation: `${stf.designation} (${stf.role})`,
         mobile: stf.mobile,
         mobile_masked: mobileMasked,
         email: stf.email,
