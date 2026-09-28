@@ -274,6 +274,14 @@ const startServer = async () => {
       logger.warn('WhatsApp auto migration note:', wErr.message);
     }
 
+    // Always ensure Application Operator History table & audit columns exist on boot
+    try {
+      const { migrateOperatorHistory } = require('./database/migrations/migrate_operator_history.js');
+      await migrateOperatorHistory();
+    } catch (opErr) {
+      logger.warn('Operator History auto migration note:', opErr.message);
+    }
+
     // Always ensure Loan on Credit Card & Smart EMI products are seeded on boot
     try {
       const { seedSmartEmiAndLoccProducts } = require('./database/seeds/seed-smart-emi-locc.js');

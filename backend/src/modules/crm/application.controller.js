@@ -2869,6 +2869,7 @@ const updateBankProcessingStatus = async (req, res, next) => {
 
     if (opId) {
       try {
+        await ensureOperatorHistoryTable();
         await query(`
           INSERT INTO application_operator_history (
             application_id, operator_id, operator_name, operator_role, operator_designation, operator_code, action_type, field_changes, notes, created_at
@@ -5806,9 +5807,22 @@ const getRemarkOperatorDashboard = async (req, res, next) => {
   }
 };
 
+let operatorHistoryChecked = false;
+const ensureOperatorHistoryTable = async () => {
+  if (operatorHistoryChecked) return;
+  try {
+    const { migrateOperatorHistory } = require('../../database/migrations/migrate_operator_history');
+    await migrateOperatorHistory();
+    operatorHistoryChecked = true;
+  } catch (err) {
+    logger.warn('Failed ensuring operator history table:', err.message);
+  }
+};
+
 // GET /applications/:id/operator-history — Fetch full operator audit trail
 const getApplicationOperatorHistory = async (req, res, next) => {
   try {
+    await ensureOperatorHistoryTable();
     const { id } = req.params;
     const { rows } = await query(`
       SELECT 
@@ -5824,9 +5838,12 @@ const getApplicationOperatorHistory = async (req, res, next) => {
         h.notes,
         h.created_at
       FROM application_operator_history h
-      WHERE h.application_id = $1
+      WHERE h.application_id = $1 OR h.application_id::text = $1
       ORDER BY h.created_at DESC
-    `, [id]);
+    `, [id]).catch(err => {
+      logger.warn('Error querying application_operator_history:', err.message);
+      return { rows: [] };
+    });
 
     return success(res, rows, 'Operator history fetched successfully');
   } catch (err) {

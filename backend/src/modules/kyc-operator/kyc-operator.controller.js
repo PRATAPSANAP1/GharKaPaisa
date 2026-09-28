@@ -43,21 +43,8 @@ const ensureKycColumns = async () => {
     await query(`ALTER TABLE physical_application_details ADD COLUMN IF NOT EXISTS kyc_remarks TEXT`).catch(() => {});
 
     // Immutable operator history table
-    await query(`
-      CREATE TABLE IF NOT EXISTS application_operator_history (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        application_id UUID NOT NULL,
-        operator_id UUID,
-        operator_name VARCHAR(255),
-        operator_role VARCHAR(100),
-        operator_designation VARCHAR(100),
-        operator_code VARCHAR(100),
-        action_type VARCHAR(100),
-        field_changes JSONB,
-        notes TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `).catch(() => {});
+    const { migrateOperatorHistory } = require('../../database/migrations/migrate_operator_history');
+    await migrateOperatorHistory().catch(() => {});
 
     columnsChecked = true;
   } catch (err) {
