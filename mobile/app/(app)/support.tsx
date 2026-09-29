@@ -191,11 +191,11 @@ export default function SupportScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.bg
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.bg
   },
   header: {
     flexDirection: 'row',
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     marginTop: 8
   },
   textInput: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: 6,
     alignItems: 'center',
-    backgroundColor: colors.background
+    backgroundColor: colors.bg
   },
   priorityActive: {
     backgroundColor: colors.primary,

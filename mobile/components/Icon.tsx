@@ -7,6 +7,10 @@ export type IconName =
   | 'credit-card'
   | 'chevron-right'
   | 'user-plus'
+  | 'user-check'
+  | 'user'
+  | 'award'
+  | 'copy'
   | 'link-2'
   | 'users'
   | 'list'
@@ -39,6 +43,10 @@ export const Icon: React.FC<IconProps> = ({ name, size = 16, color = '#000', sty
       case 'credit-card': return '💳';
       case 'chevron-right': return '›';
       case 'user-plus': return '👤+';
+      case 'user-check': return '👤✓';
+      case 'user': return '👤';
+      case 'award': return '🎗️';
+      case 'copy': return '📋';
       case 'link-2': return '🔗';
       case 'users': return '👥';
       case 'list': return '📋';

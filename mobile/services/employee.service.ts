@@ -62,6 +62,41 @@ export interface EmployeeApplicationItem {
   created_at: string;
 }
 
+export interface EmployeeTeamMember {
+  id: string;
+  employee_id: string;
+  full_name: string;
+  designation: string;
+  mobile_number?: string;
+  hierarchy_level?: string;
+  overall_progress?: number;
+  manager_name?: string;
+  team_leader_name?: string;
+}
+
+export interface EmployeeTeamResponse {
+  success: boolean;
+  designation?: string;
+  team: EmployeeTeamMember[];
+}
+
+export interface EmployeeProductLink {
+  product_id: string;
+  bank_id?: string;
+  product_name: string;
+  category?: string;
+  image_url?: string;
+  logo?: string;
+  description?: string;
+  bank_name?: string;
+  bank_logo?: string;
+  base_incentive?: number;
+  employee_incentive?: number;
+  referral_url: string;
+  link_status?: string;
+  is_bank_assigned?: boolean;
+}
+
 export const fetchEmployeeProfile = async (): Promise<EmployeeProfileData | null> => {
   try {
     const res = await apiClient.get('/employee/profile');
@@ -97,6 +132,32 @@ export const fetchEmployeeApplications = async (): Promise<EmployeeApplicationIt
     return [];
   } catch (err) {
     console.error('Failed to fetch employee applications:', err);
+    return [];
+  }
+};
+
+export const fetchEmployeeTeam = async (): Promise<EmployeeTeamResponse | null> => {
+  try {
+    const res = await apiClient.get('/employee/team');
+    if (res.data?.success) {
+      return res.data;
+    }
+    return null;
+  } catch (err) {
+    console.error('Failed to fetch employee team data:', err);
+    return null;
+  }
+};
+
+export const fetchEmployeeCreditCards = async (): Promise<EmployeeProductLink[]> => {
+  try {
+    const res = await apiClient.get('/employee/credit-cards');
+    if (res.data?.success && Array.isArray(res.data?.data)) {
+      return res.data.data;
+    }
+    return [];
+  } catch (err) {
+    console.error('Failed to fetch employee credit cards / referral links:', err);
     return [];
   }
 };

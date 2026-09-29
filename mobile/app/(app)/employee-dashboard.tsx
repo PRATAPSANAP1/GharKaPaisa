@@ -205,6 +205,18 @@ export default function EmployeeDashboardScreen() {
             style={styles.actionBtn}
           />
           <Button
+            title="My Team & Hierarchy"
+            onPress={() => router.push('/(app)/employee-team')}
+            variant="secondary"
+            style={styles.actionBtn}
+          />
+          <Button
+            title="My Referrals & Links"
+            onPress={() => router.push('/(app)/employee-referrals')}
+            variant="secondary"
+            style={styles.actionBtn}
+          />
+          <Button
             title="Customers & Leads"
             onPress={() => router.push('/(app)/leads')}
             variant="secondary"

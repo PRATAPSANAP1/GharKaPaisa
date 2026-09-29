@@ -99,11 +99,11 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.bg
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.bg
   },
   content: {
     padding: spacing.md

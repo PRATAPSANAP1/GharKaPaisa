@@ -175,11 +175,11 @@ export default function MoreScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.bg
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.bg
   },
   content: {
     padding: spacing.md,
@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,

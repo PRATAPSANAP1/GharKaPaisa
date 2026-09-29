@@ -252,11 +252,11 @@ export default function MessengerScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.bg
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background
+    backgroundColor: colors.bg
   },
   listHeader: {
     padding: spacing.md,
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   },
   composerInput: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bg,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 20,
