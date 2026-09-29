@@ -347,31 +347,6 @@ const startServer = async () => {
         credentials: true
       }
     });
-    // ── Optional Socket.IO Redis Adapter for Multi-Node Scaling ──
-    const redisUrl = process.env.REDIS_URL || (process.env.REDIS_HOST ? `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}` : null);
-    if (redisUrl) {
-      try {
-        const { createClient } = require('redis');
-        const { createAdapter } = require('@socket.io/redis-adapter');
-        const pubClient = createClient({ url: redisUrl });
-        const subClient = pubClient.duplicate();
-
-        pubClient.on('error', (err) => logger.warn('[Socket.IO Redis] Pub client error:', err.message));
-        subClient.on('error', (err) => logger.warn('[Socket.IO Redis] Sub client error:', err.message));
-
-        Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
-          io.adapter(createAdapter(pubClient, subClient));
-          logger.info('[Socket.IO] Redis adapter connected and initialized for multi-instance scaling.');
-        }).catch((err) => {
-          logger.warn('[Socket.IO] Redis adapter connection failed, using default in-memory adapter:', err.message);
-        });
-      } catch (redisErr) {
-        logger.warn('[Socket.IO] Redis adapter initialization error, using default adapter:', redisErr.message);
-      }
-    } else {
-      logger.info('[Socket.IO] No REDIS_URL/REDIS_HOST configured — running single-node / ALB-stickiness mode.');
-    }
-
     messengerSocket.init(io);
 
     server.listen(PORT, () => {
