@@ -353,20 +353,87 @@ export default function MessengerCallModal({
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.95)',
-        backdropFilter: 'blur(16px)', zIndex: 999999, display: 'flex',
-        flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        position: 'fixed', inset: 0, background: callState === 'INCOMING_RINGING' ? 'rgba(15, 23, 42, 0.65)' : 'rgba(15, 23, 42, 0.95)',
+        backdropFilter: 'blur(12px)', zIndex: 999999, display: 'flex',
+        flexDirection: 'column', alignItems: 'center', justifyContent: callState === 'INCOMING_RINGING' ? 'flex-start' : 'center',
         padding: '24px', fontFamily: "'Inter', sans-serif"
       }}
     >
-      <div
-        style={{
-          width: '100%', maxWidth: isVideoCall ? '880px' : '420px',
-          background: '#1E293B', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.12)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.6)', overflow: 'hidden',
-          display: 'flex', flexDirection: 'column', position: 'relative'
-        }}
-      >
+      {/* ── TOP FLOATING INCOMING CALL BANNER ── */}
+      {callState === 'INCOMING_RINGING' ? (
+        <div
+          style={{
+            marginTop: '20px', width: '100%', maxWidth: '440px',
+            background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+            borderRadius: '24px', border: '2px solid rgba(16, 185, 129, 0.5)',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.7), 0 0 25px rgba(16, 185, 129, 0.25)',
+            padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px',
+            animation: 'slideDown 0.3s ease-out'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div
+              style={{
+                width: '56px', height: '56px', borderRadius: '50%', background: '#2563EB',
+                color: '#FFFFFF', fontSize: '22px', fontWeight: 900, display: 'flex',
+                alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(37,99,235,0.4)',
+                border: '3px solid rgba(255,255,255,0.2)'
+              }}
+            >
+              {peerName.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '18px', fontWeight: 900, color: '#F8FAFC', marginBottom: '2px' }}>
+                {peerName}
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#10B981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
+                Incoming {isVideoCall ? 'Video' : 'Audio'} Call...
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', width: '100%' }}>
+            {/* Green Accept Button */}
+            <button
+              type="button"
+              onClick={acceptIncomingCall}
+              style={{
+                flex: 1, background: '#10B981', color: '#FFFFFF', border: 'none',
+                borderRadius: '16px', padding: '14px', fontSize: '15px',
+                fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', gap: '10px', boxShadow: '0 6px 20px rgba(16,185,129,0.5)',
+                transition: 'all 0.2s'
+              }}
+            >
+              <FaPhone size={18} /> Receive Call
+            </button>
+
+            {/* Red Reject Button */}
+            <button
+              type="button"
+              onClick={rejectIncomingCall}
+              style={{
+                flex: 1, background: '#EF4444', color: '#FFFFFF', border: 'none',
+                borderRadius: '16px', padding: '14px', fontSize: '15px',
+                fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', gap: '10px', boxShadow: '0 6px 20px rgba(239,68,68,0.5)',
+                transition: 'all 0.2s'
+              }}
+            >
+              <FaPhoneSlash size={18} /> Reject
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            width: '100%', maxWidth: isVideoCall ? '880px' : '420px',
+            background: '#1E293B', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.12)',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.6)', overflow: 'hidden',
+            display: 'flex', flexDirection: 'column', position: 'relative'
+          }}
+        >
         {/* Error / Status Warning Banner */}
         {errorMessage && (
           <div style={{
@@ -536,6 +603,7 @@ export default function MessengerCallModal({
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

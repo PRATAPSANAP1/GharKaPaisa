@@ -588,19 +588,164 @@ const SuperAdminLayout = () => {
               <img src={logo} alt="Logo" style={{ height: '28px' }} />
               <span style={{ fontSize: '14px', fontWeight: 800, color: C.text }}>Super Admin</span>
             </div>
-            <button onClick={toggleLink} style={{ background: 'none', border: 'none', color: C.text, fontSize: '24px', cursor: 'pointer' }}>
-              {menuOpen ? '✕' : '☰'}
-            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* Messenger Button (Mobile Header) */}
+              <button 
+                onClick={() => navigate("/super-admin/messenger")}
+                title="Messenger"
+                style={{
+                  background: C.bgSecondary, border: `1px solid ${C.border}`,
+                  width: '36px', height: '36px', borderRadius: '10px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', position: 'relative'
+                }}
+              >
+                <FaComments size={16} color={C.teal} />
+                {messengerUnread > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '-4px', right: '-4px',
+                    background: C.red, color: '#fff', fontSize: '9px', fontWeight: 900,
+                    minWidth: '15px', height: '15px', borderRadius: '8px', padding: '0 2px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {messengerUnread > 99 ? '99+' : messengerUnread}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Button (Mobile Header) */}
+              <button 
+                onClick={() => navigate("/super-admin/notifications")}
+                title="Notifications"
+                style={{
+                  background: C.bgSecondary, border: `1px solid ${C.border}`,
+                  width: '36px', height: '36px', borderRadius: '10px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', position: 'relative'
+                }}
+              >
+                <MdNotifications size={18} color={C.text} />
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '-4px', right: '-4px',
+                    background: C.red, color: '#fff', fontSize: '9px', fontWeight: 900,
+                    minWidth: '15px', height: '15px', borderRadius: '8px', padding: '0 2px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Hamburger Menu Toggle Button */}
+              <button onClick={toggleLink} style={{ background: 'none', border: 'none', color: C.text, fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                {menuOpen ? '✕' : '☰'}
+              </button>
+            </div>
           </header>
 
           {menuOpen && (
             <div style={{
-              position: 'fixed', inset: 0, top: '60px', background: C.card,
+              position: 'fixed', inset: 0, top: '60px', bottom: '60px', background: C.card,
               zIndex: 40, padding: '20px', overflowY: 'auto'
             }}>
               {renderNavigationList(() => setMenuOpen(false))}
             </div>
           )}
+
+          {/* ── MOBILE BOTTOM NAVIGATION BAR ── */}
+          <nav
+            style={{
+              position: 'fixed', bottom: 0, left: 0, right: 0, height: '62px',
+              background: C.card, borderTop: `1px solid ${C.border}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+              zIndex: 50, boxShadow: '0 -4px 15px rgba(0,0,0,0.08)'
+            }}
+          >
+            {/* Home */}
+            <NavLink
+              to="/super-admin/overview"
+              onClick={() => setMenuOpen(false)}
+              style={({ isActive }) => ({
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '3px', textDecoration: 'none', color: isActive ? C.teal : C.textSecondary,
+                fontSize: '11px', fontWeight: isActive ? 800 : 600, flex: 1
+              })}
+            >
+              <Icons.dashboard size={18} />
+              <span>Home</span>
+            </NavLink>
+
+            {/* Applications */}
+            <NavLink
+              to="/super-admin/crm"
+              onClick={() => setMenuOpen(false)}
+              style={({ isActive }) => ({
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '3px', textDecoration: 'none', color: isActive ? C.teal : C.textSecondary,
+                fontSize: '11px', fontWeight: isActive ? 800 : 600, flex: 1
+              })}
+            >
+              <Icons.trending size={18} />
+              <span>Applications</span>
+            </NavLink>
+
+            {/* Message */}
+            <NavLink
+              to="/super-admin/messenger"
+              onClick={() => setMenuOpen(false)}
+              style={({ isActive }) => ({
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '3px', textDecoration: 'none', color: isActive ? C.teal : C.textSecondary,
+                fontSize: '11px', fontWeight: isActive ? 800 : 600, flex: 1, position: 'relative'
+              })}
+            >
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <FaComments size={18} />
+                {messengerUnread > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '-6px', right: '-8px',
+                    background: C.red, color: '#fff', fontSize: '9px', fontWeight: 900,
+                    minWidth: '14px', height: '14px', borderRadius: '7px', padding: '0 2px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {messengerUnread > 99 ? '99+' : messengerUnread}
+                  </span>
+                )}
+              </div>
+              <span>Message</span>
+            </NavLink>
+
+            {/* Support */}
+            <NavLink
+              to="/super-admin/support"
+              onClick={() => setMenuOpen(false)}
+              style={({ isActive }) => ({
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '3px', textDecoration: 'none', color: isActive ? C.teal : C.textSecondary,
+                fontSize: '11px', fontWeight: isActive ? 800 : 600, flex: 1
+              })}
+            >
+              <Icons.profile size={18} />
+              <span>Support</span>
+            </NavLink>
+
+            {/* More */}
+            <button
+              type="button"
+              onClick={toggleLink}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '3px', background: 'none', border: 'none', cursor: 'pointer',
+                color: menuOpen ? C.teal : C.textSecondary, fontSize: '11px', fontWeight: menuOpen ? 800 : 600,
+                flex: 1
+              }}
+            >
+              <div style={{ fontSize: '16px', fontWeight: 900, lineHeight: 1 }}>☰</div>
+              <span>More</span>
+            </button>
+          </nav>
         </>
       )}
 
