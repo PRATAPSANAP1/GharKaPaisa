@@ -395,6 +395,68 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
   const messagesEndRef = useRef(null);
 
+  // Copy & Emoji State
+  const [copiedMsgId, setCopiedMsgId] = useState(null);
+  const [activeEmojiTab, setActiveEmojiTab] = useState('DIGITS');
+  const [emojiSearch, setEmojiSearch] = useState('');
+
+  // Reaction Emoji State
+  const [reactionsMap, setReactionsMap] = useState({}); // { [msgId]: emojiSymbol }
+  const [activeReactionPickerMsgId, setActiveReactionPickerMsgId] = useState(null);
+  const [hoveredMsgId, setHoveredMsgId] = useState(null);
+
+  const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
+
+  const handleToggleReaction = (msgId, emoji) => {
+    setReactionsMap(prev => {
+      const current = prev[msgId];
+      if (current === emoji) {
+        const copy = { ...prev };
+        delete copy[msgId];
+        return copy;
+      }
+      return { ...prev, [msgId]: emoji };
+    });
+    setActiveReactionPickerMsgId(null);
+  };
+
+  const isMessageWithin5Minutes = (msg) => {
+    if (!msg || !msg.created_at) return false;
+    const createdAt = new Date(msg.created_at).getTime();
+    if (isNaN(createdAt)) return false;
+    const diffMinutes = (Date.now() - createdAt) / (1000 * 60);
+    return diffMinutes <= 5;
+  };
+
+  // Comprehensive Emojis including 0-9 Digits
+  const EMOJI_CATEGORIES = [
+    {
+      id: 'DIGITS',
+      name: '0-9 Digits',
+      emojis: ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '#️⃣', '*️⃣', '🔢', '🔣', '1️⃣0️⃣']
+    },
+    {
+      id: 'SMILEYS',
+      name: 'Smileys',
+      emojis: ['😊', '😂', '😍', '🥰', '😎', '😭', '🤔', '😅', '🥳', '🤩', '😇', '😃', '🙄', '😬', '🙌', '😴', '😷', '🤖', '👻']
+    },
+    {
+      id: 'HANDS',
+      name: 'Hands & People',
+      emojis: ['👍', '👎', '🙏', '👏', '🤝', '👋', '✌️', '🤞', '💪', '👈', '👉', '👆', '👇', '👊', '👤', '👥']
+    },
+    {
+      id: 'SYMBOLS',
+      name: 'Symbols & Hearts',
+      emojis: ['❤️', '💙', '💚', '💛', '💜', '🧡', '🖤', '💔', '🔥', '✨', '🎉', '💯', '✅', '❌', '⭐', '⚡', '🔔', '📢', '💬']
+    },
+    {
+      id: 'OBJECTS',
+      name: 'Objects & Work',
+      emojis: ['📱', '💻', '📞', '📄', '📝', '💼', '💰', '💳', '📊', '📈', '🏠', '🚗', '📌', '📍', '💡', '🚀', '🎁', '🏆', '🎯']
+    }
+  ];
+
   // ── Object URL & Blob Lifecycle Management ──────────────────────
   const createdBlobUrlsRef = useRef(new Set());
 
