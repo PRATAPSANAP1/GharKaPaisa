@@ -26,7 +26,7 @@ export function getMessengerSocket() {
   socket = io(serverOrigin, {
     path: '/socket.io',
     auth: { token },
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
     withCredentials: true,
     autoConnect: true,
     reconnection: true,

@@ -65,6 +65,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
       )::INT AS unread_count,
       (
         SELECT json_agg(json_build_object(
+          'id', u.id,
           'user_id', u.id,
           'full_name', COALESCE(NULLIF(TRIM(emp.full_name), ''), NULLIF(TRIM(CONCAT(pp.first_name, ' ', pp.last_name)), ''), NULLIF(TRIM(u.full_name), ''), u.email, 'User Profile'),
           'role', u.role,
@@ -225,7 +226,9 @@ async function isParticipant(conversationId, userId) {
  * Get message history for a conversation
  */
 async function getMessages(conversationId, userId = null, limit = 5000, offset = 0) {
-  const params = [conversationId, limit, offset];
+  const safeLimit = Math.max(1, Math.min(parseInt(limit, 10) || 5000, 5000));
+  const safeOffset = Math.max(0, parseInt(offset, 10) || 0);
+  const params = [conversationId, safeLimit, safeOffset];
   let clearedFilter = '';
   if (userId) {
     params.push(userId);
@@ -272,11 +275,11 @@ async function getMessages(conversationId, userId = null, limit = 5000, offset =
           SELECT json_build_object(
             'id', rm.id,
             'sender_id', rm.sender_id,
-            'sender_name', ru.full_name,
+            'sender_name', COALESCE(ru.full_name, 'User'),
             'message_text', rm.message_text
           )
           FROM messages rm
-          JOIN users ru ON ru.id = rm.sender_id
+          LEFT JOIN users ru ON ru.id = rm.sender_id
           WHERE rm.id = m.reply_to_message_id
         ) AS reply_to,
         (
@@ -294,7 +297,7 @@ async function getMessages(conversationId, userId = null, limit = 5000, offset =
           )
         ) AS is_read
       FROM messages m
-      JOIN users u ON u.id = m.sender_id
+      LEFT JOIN users u ON u.id = m.sender_id
       LEFT JOIN partner_profiles pp ON pp.user_id = u.id
       LEFT JOIN employees emp ON emp.user_id = u.id
       WHERE m.conversation_id = $1 AND m.deleted_at IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
