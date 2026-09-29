@@ -1,23 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuthStore } from '../../../app/store/authStore';
-import { isAttendanceEnabled } from '../../../config/attendanceRollout';
-import AttendanceComingSoon from './AttendanceComingSoon';
 import { 
   FaCalendarCheck, FaClock, FaCheckCircle, FaUserClock, FaHistory, 
-  FaSync, FaExclamationCircle, FaShieldAlt, FaCamera
+  FaSync, FaCamera, FaDownload, FaShieldAlt, FaCalendarAlt, FaTimes, FaCheck
 } from 'react-icons/fa';
 import attendanceService from '../../../services/attendance.service';
 import AttendanceVerificationModal from './AttendanceVerificationModal';
-import axios from 'axios';
-import { getApiV1Url } from '../../../config/api';
 
 export default function EmployeeAttendance() {
   const { C } = useTheme();
   const { user, isInitializing } = useAuthStore();
-
-  const [profileEmployee, setProfileEmployee] = useState(null);
-  const [profileLoading, setProfileLoading] = useState(true);
 
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -31,43 +24,12 @@ export default function EmployeeAttendance() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
 
-  // Modal State
+  // Check-In / Check-Out Verification Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [modalAction, setModalAction] = useState('CHECK_IN');
 
-  // Fetch employee profile if user state doesn't have employee_id directly
-  useEffect(() => {
-    let isMounted = true;
-    const loadProfile = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          const res = await axios.get(`${getApiV1Url()}/employee/profile`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          if (res.data?.success && res.data?.data?.employee && isMounted) {
-            setProfileEmployee(res.data.data.employee);
-          }
-        }
-      } catch (err) {
-        // Fallback silently if fetch error
-      } finally {
-        if (isMounted) setProfileLoading(false);
-      }
-    };
-    loadProfile();
-    return () => { isMounted = false; };
-  }, []);
-
-  // Determine effective employee code
-  const employeeCode = user?.employee_id || 
-                       user?.emp_code || 
-                       user?.employee_code || 
-                       profileEmployee?.employee_id || 
-                       profileEmployee?.emp_code || 
-                       '';
-
-  const hasAttendanceAccess = isAttendanceEnabled(employeeCode);
+  // Verification Details Popover Modal
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   const loadAttendanceData = async () => {
     setLoading(true);
@@ -98,24 +60,15 @@ export default function EmployeeAttendance() {
   };
 
   useEffect(() => {
-    // Only load attendance APIs if employee code is verified and allowed
-    if (hasAttendanceAccess) {
-      loadAttendanceData();
-    }
-  }, [hasAttendanceAccess, selectedMonth, selectedYear]);
+    loadAttendanceData();
+  }, [selectedMonth, selectedYear]);
 
-  // If auth or profile is still initializing, show clean loading state
-  if (isInitializing || profileLoading) {
+  if (isInitializing) {
     return (
       <div style={{ padding: '60px 16px', textAlign: 'center', color: C.textMid, fontSize: '14px' }}>
         Loading attendance workspace...
       </div>
     );
-  }
-
-  // ROLLOUT ACCESS GATE: If employee code is NOT CAND10001 (or missing/unapproved), render Coming Soon Page
-  if (!hasAttendanceAccess) {
-    return <AttendanceComingSoon />;
   }
 
   const handleRefresh = () => {
@@ -138,7 +91,7 @@ export default function EmployeeAttendance() {
     loadAttendanceData();
   };
 
-  // Format Helper
+  // Helper formatting routines
   const formatTime = (timeStr) => {
     if (!timeStr) return '--';
     try {
@@ -153,18 +106,61 @@ export default function EmployeeAttendance() {
   };
 
   const formatDuration = (inTime, outTime) => {
-    if (!inTime || !outTime) return '--';
+    if (!inTime || !outTime) return '00h 00m';
     try {
       const start = new Date(inTime).getTime();
       const end = new Date(outTime).getTime();
       const diffMs = end - start;
-      if (diffMs <= 0) return '--';
+      if (diffMs <= 0) return '00h 00m';
       const hours = Math.floor(diffMs / (1000 * 60 * 60));
       const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      return `${hours}h ${mins}m`;
+      return `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m`;
     } catch (e) {
-      return '--';
+      return '00h 00m';
     }
+  };
+
+  const formatDateDisplay = (dateStr) => {
+    if (!dateStr) return { date: '--', day: '--', fullDate: '--' };
+    try {
+      const d = new Date(dateStr);
+      return {
+        date: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+        day: d.toLocaleDateString('en-IN', { weekday: 'short' }),
+        fullDate: d.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+      };
+    } catch (e) {
+      return { date: dateStr, day: '', fullDate: dateStr };
+    }
+  };
+
+  // CSV Export Helper
+  const handleExportCSV = () => {
+    if (history.length === 0) return;
+    const headers = ['Date', 'Day', 'Status', 'Check-In', 'Check-Out', 'Working Hours', 'Verification Ref', 'Source'];
+    const rows = history.map(row => {
+      const dt = formatDateDisplay(row.attendance_date);
+      return [
+        dt.date,
+        dt.day,
+        row.status || 'PRESENT',
+        formatTime(row.check_in_time),
+        formatTime(row.check_out_time),
+        formatDuration(row.check_in_time, row.check_out_time),
+        row.verification_reference || 'VERIFIED',
+        row.source || 'WEB'
+      ];
+    });
+
+    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Attendance_Report_${selectedMonth}_${selectedYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const months = [
@@ -187,17 +183,32 @@ export default function EmployeeAttendance() {
   const isCheckedIn = !!todayAttendance?.check_in_time;
   const isCheckedOut = !!todayAttendance?.check_out_time;
 
+  // Calculate dynamic Quick Statistics from actual attendance summary / records
+  const presentDays = summary?.totalPresent || history.filter(r => r.status === 'PRESENT' || r.status === 'VERIFIED').length || (isCheckedIn ? 1 : 0);
+  const absentDays = summary?.totalAbsent || history.filter(r => r.status === 'ABSENT').length || 0;
+  const totalWorkingHours = summary?.totalWorkingHoursFormatted || '00h 00m';
+  
+  const totalMarked = summary?.totalMarkedDays || (presentDays + absentDays);
+  const attendanceRate = totalMarked > 0 ? Math.round((presentDays / totalMarked) * 100) : (isCheckedIn ? 100 : 0);
+
+  const todayDateFormatted = now.toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      {/* Page Header */}
+      {/* 1. Page Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <FaCalendarCheck style={{ color: C.employeePrimary || '#0F766E' }} /> My Attendance Workspace
+          <h1 style={{ fontSize: '26px', fontWeight: 900, color: C.text, margin: 0 }}>
+            My Attendance
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: C.textMid }}>
-            Face & Office Environment Biometric Verification Attendance (Asia/Kolkata Business Hours)
+          <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: C.textMid }}>
+            Track your daily attendance, working hours and verification history.
           </p>
         </div>
 
@@ -206,44 +217,66 @@ export default function EmployeeAttendance() {
           disabled={refreshing}
           style={{
             background: C.card, border: `1px solid ${C.border}`, borderRadius: '12px',
-            padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px',
-            color: C.text, fontSize: '13px', fontWeight: 700, cursor: 'pointer'
+            padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '8px',
+            color: C.text, fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
           }}
         >
           <FaSync className={refreshing ? 'spin' : ''} /> {refreshing ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 
-      {/* Action Banner & Today's Overview */}
+      {/* 2. Full-Width Workspace Banner */}
       <div style={{
-        background: `linear-gradient(135deg, ${C.card} 0%, ${C.bgSecondary} 100%)`,
-        border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px',
-        display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.06)'
+        position: 'relative', width: '100%', borderRadius: '20px', overflow: 'hidden',
+        border: `1px solid ${C.border}`, boxShadow: '0 8px 24px rgba(0,0,0,0.06)'
+      }}>
+        <img
+          src="/attendance/attendance-workspace-banner.png"
+          alt="My Attendance Workspace"
+          style={{ width: '100%', display: 'block', height: 'auto', maxHeight: '260px', objectFit: 'cover' }}
+          onError={(e) => {
+            e.target.style.display = 'none';
+          }}
+        />
+      </div>
+
+      {/* 3. Today's Attendance Card */}
+      <div style={{
+        background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px',
+        display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.04)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <span style={{ fontSize: '12px', fontWeight: 800, color: C.employeePrimary || '#0F766E', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              TODAY'S ATTENDANCE STATUS
+            <span style={{ fontSize: '11px', fontWeight: 900, color: C.employeePrimary || '#0F766E', textTransform: 'uppercase', letterSpacing: '1px' }}>
+              TODAY'S ATTENDANCE
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 900, margin: 0, color: C.text }}>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px' }}>
+              <h2 style={{ fontSize: '22px', fontWeight: 900, margin: 0, color: C.text }}>
                 {isCheckedOut
-                  ? 'Attendance Completed Today'
+                  ? 'Attendance Completed'
                   : isCheckedIn
-                  ? 'Checked In — Active Session'
+                  ? 'Checked In'
                   : 'Not Checked In Yet'}
               </h2>
+
               <span style={{
-                padding: '4px 12px', borderRadius: '16px', fontSize: '12px', fontWeight: 800,
-                background: isCheckedOut ? '#D1FAE5' : isCheckedIn ? '#FEF3C7' : '#F3F4F6',
-                color: isCheckedOut ? '#065F46' : isCheckedIn ? '#92400E' : '#4B5563'
+                padding: '4px 14px', borderRadius: '16px', fontSize: '12px', fontWeight: 800,
+                background: isCheckedOut || isCheckedIn ? '#D1FAE5' : '#F3F4F6',
+                color: isCheckedOut || isCheckedIn ? '#065F46' : '#6B7280',
+                border: `1px solid ${isCheckedOut || isCheckedIn ? '#A7F3D0' : '#E5E7EB'}`
               }}>
-                {isCheckedOut ? 'COMPLETED' : isCheckedIn ? 'PRESENT' : 'NOT MARKED'}
+                {isCheckedOut || isCheckedIn ? 'PRESENT' : 'NOT MARKED'}
               </span>
             </div>
+
+            <p style={{ margin: '6px 0 0', fontSize: '13px', color: C.textMid, fontWeight: 600 }}>
+              {todayDateFormatted}
+            </p>
           </div>
 
-          {/* Action Button */}
+          {/* Dynamic Interactive Action Buttons */}
           <div>
             {!isCheckedIn ? (
               <button
@@ -253,10 +286,10 @@ export default function EmployeeAttendance() {
                   color: '#ffffff', border: 'none', borderRadius: '14px',
                   padding: '14px 28px', fontSize: '15px', fontWeight: 900,
                   cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                  boxShadow: '0 4px 16px rgba(15, 118, 110, 0.35)'
+                  boxShadow: '0 6px 20px rgba(15, 118, 110, 0.35)', transition: 'transform 0.15s ease'
                 }}
               >
-                <FaCamera size={18} /> Mark Check-In
+                <FaCamera size={18} /> 📷 Mark Check-In
               </button>
             ) : !isCheckedOut ? (
               <button
@@ -266,112 +299,108 @@ export default function EmployeeAttendance() {
                   color: '#ffffff', border: 'none', borderRadius: '14px',
                   padding: '14px 28px', fontSize: '15px', fontWeight: 900,
                   cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                  boxShadow: '0 4px 16px rgba(217, 119, 6, 0.35)'
+                  boxShadow: '0 6px 20px rgba(217, 119, 6, 0.35)', transition: 'transform 0.15s ease'
                 }}
               >
                 <FaCamera size={18} /> Mark Check-Out
               </button>
             ) : (
               <div style={{
-                background: '#D1FAE5', border: '1px solid #A7F3D0', color: '#065F46',
-                borderRadius: '14px', padding: '12px 20px', fontWeight: 800, fontSize: '14px',
+                background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46',
+                borderRadius: '14px', padding: '12px 20px', fontWeight: 800, fontSize: '13.5px',
                 display: 'flex', alignItems: 'center', gap: '8px'
               }}>
-                <FaCheckCircle size={18} /> Attendance Marked for Today
+                <FaCheckCircle size={16} color="#059669" /> ✓ Biometric Verified
               </div>
             )}
           </div>
         </div>
 
-        {/* 4 Cards Row for Today */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, marginBottom: '6px' }}>Check-In Time</div>
-            <div style={{ fontSize: '18px', fontWeight: 900, color: isCheckedIn ? (C.employeePrimary || '#0F766E') : C.textMid }}>
-              {formatTime(todayAttendance?.check_in_time)}
+        {/* Attendance Metrics Grid for Today */}
+        {isCheckedIn && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', paddingTop: '8px', borderTop: `1px solid ${C.border}` }}>
+            <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px 18px' }}>
+              <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Check-In</div>
+              <div style={{ fontSize: '17px', fontWeight: 900, color: C.employeePrimary || '#0F766E', marginTop: '4px' }}>
+                {formatTime(todayAttendance?.check_in_time)}
+              </div>
+            </div>
+
+            <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px 18px' }}>
+              <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Check-Out</div>
+              <div style={{ fontSize: '17px', fontWeight: 900, color: isCheckedOut ? '#D97706' : C.textMid, marginTop: '4px' }}>
+                {formatTime(todayAttendance?.check_out_time)}
+              </div>
+            </div>
+
+            <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px 18px' }}>
+              <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Working Hours</div>
+              <div style={{ fontSize: '17px', fontWeight: 900, color: C.text, marginTop: '4px' }}>
+                {formatDuration(todayAttendance?.check_in_time, todayAttendance?.check_out_time)}
+              </div>
+            </div>
+
+            <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '14px 18px' }}>
+              <div style={{ fontSize: '11px', color: C.textMid, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Verification Status</div>
+              <div style={{ fontSize: '14px', fontWeight: 900, color: '#059669', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FaCheckCircle size={14} /> Biometric Verified
+              </div>
             </div>
           </div>
+        )}
+      </div>
 
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, marginBottom: '6px' }}>Check-Out Time</div>
-            <div style={{ fontSize: '18px', fontWeight: 900, color: isCheckedOut ? '#D97706' : C.textMid }}>
-              {formatTime(todayAttendance?.check_out_time)}
-            </div>
+      {/* 4. Quick Statistics Cards (Calculated dynamically) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+          <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, textTransform: 'uppercase' }}>Present Days</div>
+          <div style={{ fontSize: '28px', fontWeight: 900, color: '#059669', marginTop: '6px' }}>
+            {presentDays}
           </div>
+        </div>
 
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, marginBottom: '6px' }}>Working Duration</div>
-            <div style={{ fontSize: '18px', fontWeight: 900, color: C.text }}>
-              {formatDuration(todayAttendance?.check_in_time, todayAttendance?.check_out_time)}
-            </div>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+          <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, textTransform: 'uppercase' }}>Absent Days</div>
+          <div style={{ fontSize: '28px', fontWeight: 900, color: '#DC2626', marginTop: '6px' }}>
+            {absentDays}
           </div>
+        </div>
 
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '14px', padding: '16px' }}>
-            <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, marginBottom: '6px' }}>Verification Ref</div>
-            <div style={{ fontSize: '14px', fontWeight: 800, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {todayAttendance?.verification_reference || 'VERIFIED'}
-            </div>
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+          <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, textTransform: 'uppercase' }}>Total Working Hours</div>
+          <div style={{ fontSize: '24px', fontWeight: 900, color: C.text, marginTop: '6px' }}>
+            {totalWorkingHours}
+          </div>
+        </div>
+
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
+          <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700, textTransform: 'uppercase' }}>Attendance Rate</div>
+          <div style={{ fontSize: '28px', fontWeight: 900, color: '#2563EB', marginTop: '6px' }}>
+            {attendanceRate}%
           </div>
         </div>
       </div>
 
-      {/* Monthly Summary Statistics */}
-      {summary && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px' }}>
-            <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Total Days Present</div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: '#10B981', marginTop: '6px' }}>
-              {summary.totalPresent} <span style={{ fontSize: '13px', fontWeight: 600 }}>Days</span>
-            </div>
-          </div>
-
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px' }}>
-            <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Late Arrivals</div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: '#F59E0B', marginTop: '6px' }}>
-              {summary.totalLate} <span style={{ fontSize: '13px', fontWeight: 600 }}>Days</span>
-            </div>
-          </div>
-
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px' }}>
-            <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Half Days</div>
-            <div style={{ fontSize: '26px', fontWeight: 900, color: '#6366F1', marginTop: '6px' }}>
-              {summary.totalHalfDay} <span style={{ fontSize: '13px', fontWeight: 600 }}>Days</span>
-            </div>
-          </div>
-
-          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px' }}>
-            <div style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Total Working Time</div>
-            <div style={{ fontSize: '22px', fontWeight: 900, color: C.text, marginTop: '6px' }}>
-              {summary.totalWorkingHoursFormatted || '0h 0m'}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Attendance History Section */}
+      {/* 5. Attendance History Section */}
       <div style={{
         background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px',
-        padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px'
+        padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.04)'
       }}>
-        {/* Table Header Controls */}
+        {/* Table Controls */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h3 style={{ fontSize: '17px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.text, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FaHistory style={{ color: C.employeePrimary || '#0F766E' }} /> Attendance History
             </h3>
-            <p style={{ margin: '2px 0 0', fontSize: '12px', color: C.textMid }}>
-              View monthly check-in/out records and biometric verification logs
-            </p>
           </div>
 
-          {/* Month & Year Selectors */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
               style={{
                 background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text,
-                borderRadius: '10px', padding: '8px 12px', fontSize: '13px', fontWeight: 700, outline: 'none'
+                borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 700, outline: 'none', cursor: 'pointer'
               }}
             >
               {months.map((m) => (
@@ -384,81 +413,206 @@ export default function EmployeeAttendance() {
               onChange={(e) => setSelectedYear(Number(e.target.value))}
               style={{
                 background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text,
-                borderRadius: '10px', padding: '8px 12px', fontSize: '13px', fontWeight: 700, outline: 'none'
+                borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 700, outline: 'none', cursor: 'pointer'
               }}
             >
               {years.map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
+
+            <button
+              onClick={handleExportCSV}
+              disabled={history.length === 0}
+              style={{
+                background: history.length > 0 ? (C.employeePrimary || '#0F766E') : C.bgSecondary,
+                color: history.length > 0 ? '#ffffff' : C.textMid,
+                border: `1px solid ${C.border}`, borderRadius: '10px',
+                padding: '8px 16px', fontSize: '13px', fontWeight: 800,
+                cursor: history.length > 0 ? 'pointer' : 'not-allowed',
+                display: 'flex', alignItems: 'center', gap: '6px'
+              }}
+            >
+              <FaDownload size={12} /> Export
+            </button>
           </div>
         </div>
 
-        {/* History Table */}
+        {/* History Table or Empty State */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: C.textMid }}>
+          <div style={{ textAlign: 'center', padding: '50px 0', color: C.textMid, fontSize: '14px' }}>
             Loading attendance records...
           </div>
         ) : history.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: C.textMid, fontSize: '14px' }}>
-            No attendance records found for {months.find(m => m.value === selectedMonth)?.label} {selectedYear}.
+          /* 6. Empty State */
+          <div style={{
+            textAlign: 'center', padding: '50px 20px', background: C.bgSecondary,
+            borderRadius: '16px', border: `1px border ${C.border}`, display: 'flex',
+            flexDirection: 'column', alignItems: 'center', gap: '12px'
+          }}>
+            <div style={{ fontSize: '42px', lineHeight: 1 }}>📅</div>
+            <h4 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: C.text }}>
+              No attendance records yet
+            </h4>
+            <p style={{ margin: 0, fontSize: '13.5px', color: C.textMid, maxWidth: '400px', lineHeight: 1.5 }}>
+              Your attendance history will appear here after you complete your first check-in.
+            </p>
+            {!isCheckedIn && (
+              <button
+                onClick={handleOpenCheckIn}
+                style={{
+                  marginTop: '8px', background: 'linear-gradient(135deg, #0F766E 0%, #0D9488 100%)',
+                  color: '#ffffff', border: 'none', borderRadius: '12px',
+                  padding: '12px 24px', fontSize: '14px', fontWeight: 900,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                  boxShadow: '0 4px 12px rgba(15, 118, 110, 0.3)'
+                }}
+              >
+                <FaCamera size={15} /> Mark Check-In
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px', textAlign: 'left' }}>
               <thead>
                 <tr style={{ borderBottom: `2px solid ${C.border}`, color: C.textMid, fontSize: '12px', textTransform: 'uppercase' }}>
                   <th style={{ padding: '12px 16px' }}>Date</th>
-                  <th style={{ padding: '12px 16px' }}>Status</th>
+                  <th style={{ padding: '12px 16px' }}>Day</th>
                   <th style={{ padding: '12px 16px' }}>Check-In</th>
                   <th style={{ padding: '12px 16px' }}>Check-Out</th>
-                  <th style={{ padding: '12px 16px' }}>Duration</th>
-                  <th style={{ padding: '12px 16px' }}>Source</th>
-                  <th style={{ padding: '12px 16px' }}>Verification Ref</th>
+                  <th style={{ padding: '12px 16px' }}>Working Hours</th>
+                  <th style={{ padding: '12px 16px' }}>Status</th>
+                  <th style={{ padding: '12px 16px' }}>Verification</th>
                 </tr>
               </thead>
               <tbody>
-                {history.map((row) => (
-                  <tr key={row.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    <td style={{ padding: '14px 16px', fontWeight: 800, color: C.text }}>
-                      {new Date(row.attendance_date).toLocaleDateString('en-IN', {
-                        day: '2-digit', month: 'short', year: 'numeric', weekday: 'short'
-                      })}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{
-                        padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 800,
-                        background: row.status === 'PRESENT' ? '#D1FAE5' : row.status === 'LATE' ? '#FEF3C7' : '#FEE2E2',
-                        color: row.status === 'PRESENT' ? '#065F46' : row.status === 'LATE' ? '#92400E' : '#991B1B'
-                      }}>
-                        {row.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', color: C.text }}>{formatTime(row.check_in_time)}</td>
-                    <td style={{ padding: '14px 16px', color: C.text }}>{formatTime(row.check_out_time)}</td>
-                    <td style={{ padding: '14px 16px', fontWeight: 700, color: C.text }}>
-                      {formatDuration(row.check_in_time, row.check_out_time)}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <span style={{
-                        padding: '2px 8px', borderRadius: '8px', fontSize: '11px', fontWeight: 800,
-                        background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text
-                      }}>
-                        {row.source || 'WEB'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', color: C.employeePrimary || '#0F766E', fontWeight: 700 }}>
-                      {row.verification_reference || 'VERIFIED'}
-                    </td>
-                  </tr>
-                ))}
+                {history.map((row) => {
+                  const dt = formatDateDisplay(row.attendance_date);
+                  return (
+                    <tr 
+                      key={row.id} 
+                      onClick={() => setSelectedRecord(row)}
+                      style={{ borderBottom: `1px solid ${C.border}`, cursor: 'pointer', transition: 'background 0.15s ease' }}
+                    >
+                      <td style={{ padding: '14px 16px', fontWeight: 800, color: C.text }}>{dt.date}</td>
+                      <td style={{ padding: '14px 16px', color: C.textMid, fontWeight: 600 }}>{dt.day}</td>
+                      <td style={{ padding: '14px 16px', color: C.text, fontWeight: 700 }}>{formatTime(row.check_in_time)}</td>
+                      <td style={{ padding: '14px 16px', color: C.text, fontWeight: 700 }}>{formatTime(row.check_out_time)}</td>
+                      <td style={{ padding: '14px 16px', fontWeight: 800, color: C.text }}>
+                        {formatDuration(row.check_in_time, row.check_out_time)}
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{
+                          padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 900,
+                          background: row.status === 'PRESENT' ? '#D1FAE5' : row.status === 'LATE' ? '#FEF3C7' : '#FEE2E2',
+                          color: row.status === 'PRESENT' ? '#065F46' : row.status === 'LATE' ? '#92400E' : '#991B1B'
+                        }}>
+                          {row.status || 'PRESENT'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span style={{
+                          padding: '4px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: 800,
+                          background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#059669',
+                          display: 'inline-flex', alignItems: 'center', gap: '4px'
+                        }}>
+                          <FaCheck size={11} /> Verified
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* Verification Camera Modal */}
+      {/* 7. Verification Detail Modal */}
+      {selectedRecord && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px'
+        }}>
+          <div style={{
+            background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px',
+            width: '100%', maxWidth: '480px', padding: '28px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            position: 'relative'
+          }}>
+            <button
+              onClick={() => setSelectedRecord(null)}
+              style={{
+                position: 'absolute', top: '20px', right: '20px', background: C.bgSecondary,
+                border: `1px solid ${C.border}`, borderRadius: '50%', width: '32px', height: '32px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: C.textMid
+              }}
+            >
+              <FaTimes />
+            </button>
+
+            <h3 style={{ margin: '0 0 6px', fontSize: '20px', fontWeight: 900, color: C.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FaShieldAlt style={{ color: '#059669' }} /> Attendance Verification
+            </h3>
+            <p style={{ margin: '0 0 20px', fontSize: '13px', color: C.textMid }}>
+              Biometric & Environment Security Check Details
+            </p>
+
+            {/* Verified Checks List */}
+            <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', fontWeight: 800, color: '#065F46' }}>
+                <FaCheckCircle color="#059669" /> Face Verified
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', fontWeight: 800, color: '#065F46' }}>
+                <FaCheckCircle color="#059669" /> Liveness Verified
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', fontWeight: 800, color: '#065F46' }}>
+                <FaCheckCircle color="#059669" /> Office Environment Verified
+              </div>
+            </div>
+
+            {/* Metadata Fields */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: C.bgSecondary, borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Verification Reference</span>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: C.employeePrimary || '#0F766E' }}>
+                  {selectedRecord.verification_reference || `ATT-${selectedRecord.id.substring(0, 8).toUpperCase()}`}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: C.bgSecondary, borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Date</span>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>
+                  {formatDateDisplay(selectedRecord.attendance_date).fullDate}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: C.bgSecondary, borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Check-In</span>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>
+                  {formatTime(selectedRecord.check_in_time)}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: C.bgSecondary, borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Check-Out</span>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>
+                  {formatTime(selectedRecord.check_out_time)}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: C.bgSecondary, borderRadius: '12px', border: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: '12px', color: C.textMid, fontWeight: 700 }}>Source</span>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: C.text }}>
+                  {selectedRecord.source || 'WEB'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Check-In / Check-Out Verification Modal */}
       <AttendanceVerificationModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
