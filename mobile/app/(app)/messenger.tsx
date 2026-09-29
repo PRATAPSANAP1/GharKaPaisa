@@ -1,0 +1,494 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+  SafeAreaView
+} from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
+import { colors } from '../../theme/colors';
+import { typography } from '../../theme/typography';
+import { spacing } from '../../theme/spacing';
+import {
+  getConversations,
+  getMessages,
+  sendMessage,
+  markRead,
+  MessengerConversation,
+  MessengerMessage
+} from '../../services/messenger.service';
+
+export default function MessengerScreen() {
+  const { user, userRole } = useAuth();
+  const [conversations, setConversations] = useState<MessengerConversation[]>([]);
+  const [activeConv, setActiveConv] = useState<MessengerConversation | null>(null);
+  const [messages, setMessages] = useState<MessengerMessage[]>([]);
+  const [loadingConvs, setLoadingConvs] = useState(true);
+  const [loadingMsgs, setLoadingMsgs] = useState(false);
+  const [inputText, setInputText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
+
+  const fetchConvs = async () => {
+    try {
+      const data = await getConversations();
+      setConversations(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingConvs(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConvs();
+    const interval = setInterval(fetchConvs, 12000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const openConversation = async (conv: MessengerConversation) => {
+    setActiveConv(conv);
+    setLoadingMsgs(true);
+    try {
+      const msgs = await getMessages(conv.id);
+      setMessages(msgs);
+      await markRead(conv.id);
+      fetchConvs();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingMsgs(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!inputText.trim() || !activeConv || sending) return;
+    const textToSend = inputText.trim();
+    setInputText('');
+    setSending(true);
+
+    try {
+      const sent = await sendMessage({
+        conversation_id: activeConv.id,
+        message_text: textToSend,
+        message_type: 'TEXT'
+      });
+      if (sent) {
+        setMessages(prev => [...prev, sent]);
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchConvs();
+  };
+
+  // If viewing a single conversation thread
+  if (activeConv) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
+          {/* Thread Header */}
+          <View style={styles.threadHeader}>
+            <TouchableOpacity onPress={() => setActiveConv(null)} style={styles.backBtn}>
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
+            <View style={styles.threadTitleContainer}>
+              <Text style={styles.threadTitle} numberOfLines={1}>
+                {activeConv.name || activeConv.other_user?.full_name || 'Conversation'}
+              </Text>
+              <Text style={styles.threadSubtitle}>
+                {activeConv.conversation_type}
+              </Text>
+            </View>
+          </View>
+
+          {/* Messages Stream */}
+          {loadingMsgs ? (
+            <View style={styles.loaderContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.messagesList}
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+              renderItem={({ item }) => {
+                const isMe = String(item.sender_id).toLowerCase() === String(user?.id).toLowerCase();
+                return (
+                  <View style={[styles.msgRow, isMe ? styles.msgRowRight : styles.msgRowLeft]}>
+                    <View style={[styles.msgBubble, isMe ? styles.msgBubbleMe : styles.msgBubbleOther]}>
+                      {!isMe && item.sender_name && (
+                        <Text style={styles.senderName}>{item.sender_name}</Text>
+                      )}
+                      <Text style={[styles.msgText, isMe ? styles.msgTextMe : styles.msgTextOther]}>
+                        {item.message_text}
+                      </Text>
+                      <Text style={[styles.msgTime, isMe ? styles.msgTimeMe : styles.msgTimeOther]}>
+                        {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              }}
+            />
+          )}
+
+          {/* Message Composer */}
+          <View style={styles.composerBar}>
+            <TextInput
+              style={styles.composerInput}
+              placeholder="Type a message..."
+              placeholderTextColor={colors.textLight}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+            />
+            <TouchableOpacity
+              onPress={handleSend}
+              disabled={sending || !inputText.trim()}
+              style={[styles.sendBtn, (!inputText.trim() || sending) && styles.sendBtnDisabled]}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.sendBtnText}>Send</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  // Conversations List View
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.listHeader}>
+          <Text style={styles.screenTitle}>Messenger</Text>
+          <Text style={styles.screenSubtitle}>Real-time internal chat & support</Text>
+        </View>
+
+        {loadingConvs ? (
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : (
+          <FlatList
+            data={conversations}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.convList}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyTitle}>No Conversations Yet</Text>
+                <Text style={styles.emptyText}>Start messaging team members or support directly.</Text>
+              </View>
+            }
+            renderItem={({ item }) => {
+              const displayName = item.name || item.other_user?.full_name || 'Chat';
+              const lastText = item.last_message?.message_text || 'No messages yet';
+              const hasUnread = (item.unread_count || 0) > 0;
+
+              return (
+                <TouchableOpacity style={styles.convCard} onPress={() => openConversation(item)}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>
+                  </View>
+                  <View style={styles.convInfo}>
+                    <View style={styles.convRow}>
+                      <Text style={[styles.convTitle, hasUnread && styles.unreadTitle]} numberOfLines={1}>
+                        {displayName}
+                      </Text>
+                      {item.last_message && (
+                        <Text style={styles.convTime}>
+                          {new Date(item.last_message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.convRow}>
+                      <Text style={[styles.lastMsgText, hasUnread && styles.unreadText]} numberOfLines={1}>
+                        {lastText}
+                      </Text>
+                      {hasUnread && (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadBadgeText}>{item.unread_count}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background
+  },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background
+  },
+  listHeader: {
+    padding: spacing.md,
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border
+  },
+  screenTitle: {
+    fontSize: typography.sizes.xl,
+    fontWeight: typography.weights.bold,
+    color: colors.text
+  },
+  screenSubtitle: {
+    fontSize: typography.sizes.xs,
+    color: colors.textLight,
+    marginTop: 2
+  },
+  loaderContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  convList: {
+    padding: spacing.sm
+  },
+  convCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    padding: spacing.md,
+    borderRadius: 12,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: typography.weights.bold
+  },
+  convInfo: {
+    flex: 1
+  },
+  convRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4
+  },
+  convTitle: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    flex: 1
+  },
+  unreadTitle: {
+    color: colors.primary
+  },
+  convTime: {
+    fontSize: typography.sizes.xs,
+    color: colors.textLight,
+    marginLeft: 6
+  },
+  lastMsgText: {
+    fontSize: typography.sizes.xs,
+    color: colors.textLight,
+    flex: 1
+  },
+  unreadText: {
+    color: colors.text,
+    fontWeight: typography.weights.bold
+  },
+  unreadBadge: {
+    backgroundColor: colors.error,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+    marginLeft: 6
+  },
+  unreadBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: typography.weights.bold
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl
+  },
+  emptyTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text
+  },
+  emptyText: {
+    fontSize: typography.sizes.xs,
+    color: colors.textLight,
+    marginTop: 4,
+    textAlign: 'center'
+  },
+
+  // Thread styles
+  threadHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border
+  },
+  backBtn: {
+    paddingRight: spacing.md
+  },
+  backText: {
+    color: colors.primary,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold
+  },
+  threadTitleContainer: {
+    flex: 1
+  },
+  threadTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text
+  },
+  threadSubtitle: {
+    fontSize: typography.sizes.xs,
+    color: colors.textLight
+  },
+  messagesList: {
+    padding: spacing.md
+  },
+  msgRow: {
+    marginBottom: spacing.md,
+    flexDirection: 'row'
+  },
+  msgRowLeft: {
+    justifyContent: 'flex-start'
+  },
+  msgRowRight: {
+    justifyContent: 'flex-end'
+  },
+  msgBubble: {
+    maxWidth: '80%',
+    padding: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 16
+  },
+  msgBubbleMe: {
+    backgroundColor: colors.primary,
+    borderBottomRightRadius: 2
+  },
+  msgBubbleOther: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderBottomLeftRadius: 2
+  },
+  senderName: {
+    fontSize: 10,
+    fontWeight: typography.weights.bold,
+    color: colors.primary,
+    marginBottom: 2
+  },
+  msgText: {
+    fontSize: typography.sizes.sm,
+    lineHeight: 18
+  },
+  msgTextMe: {
+    color: '#fff'
+  },
+  msgTextOther: {
+    color: colors.text
+  },
+  msgTime: {
+    fontSize: 9,
+    marginTop: 4,
+    alignSelf: 'flex-end'
+  },
+  msgTimeMe: {
+    color: 'rgba(255,255,255,0.7)'
+  },
+  msgTimeOther: {
+    color: colors.textLight
+  },
+  composerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.card,
+    borderTopWidth: 1,
+    borderTopColor: colors.border
+  },
+  composerInput: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    maxHeight: 100,
+    fontSize: typography.sizes.sm,
+    color: colors.text
+  },
+  sendBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    marginLeft: spacing.sm
+  },
+  sendBtnDisabled: {
+    opacity: 0.5
+  },
+  sendBtnText: {
+    color: '#fff',
+    fontWeight: typography.weights.bold,
+    fontSize: typography.sizes.xs
+  }
+});

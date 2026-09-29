@@ -918,8 +918,20 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
       {/* Center: Search Bar (desktop only) */}
       {!isMobile && <PartnerSearchBar />}
 
-      {/* Right side: Notifications + Wallet + Profile */}
+      {/* Right side: Messenger + Notifications + Wallet + Profile */}
       <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px' }}>
+        {/* Messenger Icon */}
+        <div
+          onClick={() => navigate('/partner/messenger')}
+          style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '6px' }}
+          aria-label="Messenger"
+          role="button"
+          tabIndex={0}
+          title="Messenger"
+        >
+          <MdSupportAgent size={isMobile ? 22 : 24} style={{ color: C.primary || '#0D5CAB' }} />
+        </div>
+
         {/* Notifications Icon */}
         <div
           onClick={() => navigate('/partner/notifications')}

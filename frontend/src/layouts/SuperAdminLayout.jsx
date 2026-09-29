@@ -42,9 +42,10 @@ const SuperAdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Notifications states
+  // Notifications & Messenger states
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [messengerUnread, setMessengerUnread] = useState(0);
   const [privacyMode, setPrivacyMode] = useState(false);
   const [loadingPrivacy, setLoadingPrivacy] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -82,10 +83,16 @@ const SuperAdminLayout = () => {
 
   const fetchNotifications = async () => {
     try {
-      const res = await api.get("/notifications", { params: { limit: 5 } });
-      if (res.data?.success) {
-        setNotifications(res.data.data.notifications || []);
-        setUnreadCount(res.data.data.unread_count || 0);
+      const [notifRes, msgRes] = await Promise.all([
+        api.get("/notifications", { params: { limit: 5 } }).catch(() => null),
+        api.get("/messenger/unread-count").catch(() => null)
+      ]);
+      if (notifRes?.data?.success) {
+        setNotifications(notifRes.data.data.notifications || []);
+        setUnreadCount(notifRes.data.data.unread_count || 0);
+      }
+      if (msgRes?.data?.success && typeof msgRes.data?.data?.unread_count === 'number') {
+        setMessengerUnread(msgRes.data.data.unread_count);
       }
     } catch (e) {
       console.error("Failed to load header notifications", e);
@@ -612,9 +619,34 @@ const SuperAdminLayout = () => {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               
+              {/* Messenger Button */}
+              <button 
+                onClick={() => navigate("/super-admin/messenger")}
+                title="Messenger"
+                style={{
+                  background: C.bgSecondary, border: `1px solid ${C.border}`,
+                  width: '38px', height: '38px', borderRadius: '10px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', position: 'relative'
+                }}
+              >
+                <Icons.profile size={20} color={C.teal} />
+                {messengerUnread > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '-4px', right: '-4px',
+                    background: C.red, color: '#fff', fontSize: '9px', fontWeight: 900,
+                    width: '16px', height: '16px', borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {messengerUnread}
+                  </span>
+                )}
+              </button>
+
               {/* Notification Button */}
               <button 
                 onClick={() => navigate("/super-admin/notifications")}
+                title="Notifications"
                 style={{
                   background: C.bgSecondary, border: `1px solid ${C.border}`,
                   width: '38px', height: '38px', borderRadius: '10px',

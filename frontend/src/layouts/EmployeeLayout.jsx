@@ -313,6 +313,51 @@ export default function EmployeeLayout() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }}>
 
+            {/* Messenger Button */}
+            <button
+              onClick={() => navigate('/employee/messenger')}
+              title="Messenger"
+              style={{
+                background: C.bgSecondary,
+                border: `1px solid ${C.border}`,
+                borderRadius: '50%',
+                width: '38px',
+                height: '38px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                position: 'relative',
+                color: C.text,
+                transition: 'all 0.2s',
+                outline: 'none'
+              }}
+            >
+              <FaComments size={16} color={C.employeePrimary || '#0F766E'} />
+              {messengerUnread > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  background: '#EF4444',
+                  color: '#FFFFFF',
+                  fontSize: '10px',
+                  fontWeight: 900,
+                  minWidth: '18px',
+                  height: '18px',
+                  borderRadius: '9px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 4px',
+                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
+                  border: `2px solid ${C.card}`
+                }}>
+                  {messengerUnread > 99 ? '99+' : messengerUnread}
+                </span>
+              )}
+            </button>
+
             {/* Notification Bell Button & Popover Dropdown */}
             <div style={{ position: 'relative' }} ref={notifDropdownRef}>
               <button

@@ -557,6 +557,52 @@ const AdminLayout = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Messenger Button */}
+            <button
+              id="admin-messenger-button"
+              onClick={() => navigate('/admin/messenger')}
+              title="Messenger"
+              style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: `1px solid ${C.border}`,
+                borderRadius: '50%',
+                width: '38px',
+                height: '38px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                position: 'relative',
+                color: C.text,
+                transition: 'all 0.2s',
+                outline: 'none'
+              }}
+            >
+              <Icons.profile size={18} color="#3b82f6" />
+              {messengerUnread > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  background: '#EF4444',
+                  color: '#FFFFFF',
+                  fontSize: '10px',
+                  fontWeight: 900,
+                  minWidth: '18px',
+                  height: '18px',
+                  borderRadius: '9px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 4px',
+                  boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
+                  border: `2px solid ${C.card}`
+                }}>
+                  {messengerUnread > 99 ? '99+' : messengerUnread}
+                </span>
+              )}
+            </button>
+
             {/* Notification Bell Button & Popover Dropdown */}
             <div style={{ position: 'relative' }} ref={notifDropdownRef}>
               <button
