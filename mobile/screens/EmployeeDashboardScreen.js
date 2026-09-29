@@ -72,7 +72,7 @@ export default function EmployeeDashboardScreen({ navigation }) {
           <Text style={styles.processType}>Allowed Process: Punching Only (Bank Verified)</Text>
         </View>
 
-        {/* Key Metrics */}
+        {/* Key Metrics & Attendance */}
         <View style={styles.metricsGrid}>
           <TouchableOpacity 
             style={styles.metricCard}
@@ -88,6 +88,14 @@ export default function EmployeeDashboardScreen({ navigation }) {
           >
             <Text style={styles.metricVal}>{employeeData.pendingVerifications}</Text>
             <Text style={styles.metricTitle}>Pending KYC Review</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.metricCard, { backgroundColor: '#F0F9FF', borderColor: '#0284C7' }]}
+            onPress={() => navigation.navigate('EmployeeAttendance')}
+          >
+            <Text style={{ fontSize: 24, marginBottom: 4 }}>📸</Text>
+            <Text style={[styles.metricTitle, { color: '#0369A1', fontWeight: '800' }]}>My Attendance</Text>
           </TouchableOpacity>
         </View>
 

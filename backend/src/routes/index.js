@@ -118,6 +118,9 @@ const messengerRoute                        = require('../modules/messenger/mess
 const whatsappRoute                         = require('../modules/whatsapp/whatsapp.routes.js');
 const attendanceEnrollmentRoute             = require('../modules/attendance-enrollment/attendance-enrollment.routes.js');
 const attendanceVerificationRoute           = require('../modules/attendance-verification/attendance-verification.routes.js');
+const attendanceAdminRoute                  = require('../modules/attendance-admin/attendance-admin.routes.js');
+const attendanceReportsRoute                = require('../modules/attendance-reports/attendance-reports.routes.js');
+const attendanceRoute                       = require('../modules/attendance/attendance.routes.js');
 
 // ── Referrals & Team Routes ──
 router.use('/team', teamRoute);
@@ -125,8 +128,11 @@ router.use('/partner/team-dashboard', teamRoute);
 router.use('/messenger', messengerRoute);
 router.use('/whatsapp', whatsappRoute);
 
-// ── Attendance Enrollment Phase 6-2 & Verification Phase 6-3 ──
+// ── Attendance Phase 6-2, 6-3, 6-4, 6-5, 6-7 ──
 router.use('/attendance/enrollment', attendanceEnrollmentRoute);
 router.use('/attendance/verification', attendanceVerificationRoute);
+router.use('/attendance/admin/reports', attendanceReportsRoute);
+router.use('/attendance/admin', attendanceAdminRoute);
+router.use('/attendance', attendanceRoute);
 
 module.exports = router;

@@ -23,6 +23,7 @@ import HRDashboard from '../modules/hr/HRDashboard';
 import EmployeeManagement from '../modules/super-admin/employees/EmployeeManagement';
 import EmployeeLogin from '../modules/employee/EmployeeLogin';
 import EmployeeDashboard from '../modules/employee/EmployeeDashboard';
+import EmployeeAttendance from '../modules/employee/attendance/EmployeeAttendance';
 import JoiningForm from '../modules/employee/profile/JoiningForm';
 import TermsAcceptance from '../modules/employee/profile/TermsAcceptance';
 import KYCSubmission from '../modules/employee/profile/KYCSubmission';
@@ -106,6 +107,7 @@ import AdminProfilePage from '../modules/super-admin/profile/AdminProfilePage';
 import AdminWorkingHours from '../modules/super-admin/working-hours/AdminWorkingHours';
 import SuperAdminViewMessages from '../modules/super-admin/messenger/SuperAdminViewMessages';
 import SuperAdminWhatsApp from '../modules/super-admin/whatsapp/SuperAdminWhatsApp';
+import SuperAdminAttendanceDashboard from '../modules/super-admin/attendance/SuperAdminAttendanceDashboard';
 
 
 // Partner Pages
@@ -301,6 +303,7 @@ const AppRoutes = () => {
           <Route element={<EmployeeLayout />}>
             <Route path="/employee" element={<Navigate to="/employee/dashboard" replace />} />
             <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
+            <Route path="/employee/attendance" element={<EmployeeAttendance />} />
             <Route path="/employee/joining-form" element={<JoiningForm />} />
             <Route path="/employee/terms" element={<TermsAcceptance />} />
             <Route path="/employee/kyc" element={<KYCSubmission />} />
@@ -401,6 +404,7 @@ const AppRoutes = () => {
             <Route path="/super-admin/overview" element={<SuperAdminOverview />} />
             <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
             <Route path="/super-admin/employees" element={<EmployeeManagement />} />
+            <Route path="/super-admin/attendance" element={<SuperAdminAttendanceDashboard />} />
             <Route path="/super-admin/hr" element={<HRDashboard />} />
             <Route path="/super-admin/partners" element={<ManagePartners />} />
             <Route path="/super-admin/leads" element={<Navigate to="/super-admin/overview" replace />} />

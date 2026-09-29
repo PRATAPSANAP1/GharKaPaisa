@@ -477,9 +477,10 @@ const login = async (req, res, next) => {
       await query(`DELETE FROM otp_verifications WHERE identity = $1`, [otherIdentity]);
     }
 
-    // Generate JWT (15-minute access token)
+    // Generate JWT (15-minute access token with authenticated client_type claim)
+    const clientType = req.body.client_type === 'MOBILE' ? 'MOBILE' : 'WEB';
     const token = jwt.sign(
-      { id: user.id, email: user.email, phone: user.mobile, role: user.role },
+      { id: user.id, email: user.email, phone: user.mobile, role: user.role, client_type: clientType },
       JWT_SECRET,
       { expiresIn: '15m' }
     );
@@ -606,7 +607,7 @@ const loginWithMsg91 = async (req, res, next) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, phone: user.mobile, role: user.role },
+      { id: user.id, email: user.email, phone: user.mobile, role: user.role, client_type: 'MOBILE' },
       JWT_SECRET,
       { expiresIn: '15m' }
     );
@@ -671,8 +672,9 @@ const refresh = async (req, res, next) => {
     await query(`UPDATE refresh_tokens SET revoked = true, revoked_at = NOW(), last_used_at = NOW() WHERE id = $1`, [tokenRecord.id]);
 
     // Generate new tokens
+    const clientType = req.body?.client_type === 'MOBILE' ? 'MOBILE' : 'WEB';
     const newToken = jwt.sign(
-      { id: tokenRecord.user_id, email: tokenRecord.email, phone: tokenRecord.mobile, role: tokenRecord.role },
+      { id: tokenRecord.user_id, email: tokenRecord.email, phone: tokenRecord.mobile, role: tokenRecord.role, client_type: clientType },
       JWT_SECRET,
       { expiresIn: '15m' }
     );

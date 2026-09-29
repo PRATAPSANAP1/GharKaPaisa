@@ -6,7 +6,8 @@ import {
   FaChartPie, FaCreditCard, FaCoins, FaShieldAlt, FaFileAlt, FaUsers, 
   FaGift, FaUserCircle, FaCheckCircle, FaFileContract, FaCog,
   FaSignOutAlt, FaMoon, FaSun, FaBars, FaTimes, FaChevronDown,
-  FaUserPlus, FaHandshake, FaCopy, FaShareAlt, FaTrophy, FaBell, FaComments
+  FaUserPlus, FaHandshake, FaCopy, FaShareAlt, FaTrophy, FaBell, FaComments,
+  FaCalendarCheck
 } from 'react-icons/fa';
 import logo from '../assets/logos/logo.png';
 import Chatbot from '../components/Chatbot/Chatbot';
@@ -158,6 +159,7 @@ export default function EmployeeLayout() {
 
   const navItems = isApproved ? [
     { path: '/employee/dashboard', label: 'Dashboard', icon: <FaChartPie /> },
+    { path: '/employee/attendance', label: 'My Attendance', icon: <FaCalendarCheck /> },
     { path: '/employee/credit-cards', label: 'Credit Cards', icon: <FaCreditCard /> },
     { path: '/employee/loan-on-credit-card', label: 'Loan on Credit Card', icon: <FaCoins /> },
     { path: '/employee/smart-emi', label: 'Smart EMI on Credit Card', icon: <FaCreditCard /> },

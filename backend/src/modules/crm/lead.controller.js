@@ -443,12 +443,12 @@ const createLead = async (req, res, next) => {
       try {
         const { sendLinkedShareSms } = require('../../services/sms/sms.service');
         const { rows: [pUser] } = await query(`
-          SELECT u.mobile, u.phone, u.mobile as partner_mobile 
+          SELECT u.mobile, u.mobile as partner_mobile 
           FROM partner_profiles pp 
           LEFT JOIN users u ON u.id = pp.user_id 
           WHERE pp.id = $1
         `, [partner.id]);
-        const partnerMobile = pUser?.mobile || pUser?.phone || pUser?.partner_mobile;
+        const partnerMobile = pUser?.mobile || pUser?.partner_mobile;
 
         if (partnerMobile) {
           sendLinkedShareSms(partnerMobile, targetName.trim(), product?.name || 'Financial Product', shareUrl).catch(err => {

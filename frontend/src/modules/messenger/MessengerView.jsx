@@ -7,6 +7,7 @@ import {
   FaIdCard, FaCopy, FaEnvelope, FaUserCircle, FaTrashAlt, FaLock, FaSignOutAlt, FaEdit, FaImage
 } from 'react-icons/fa';
 import api from '../../services/api';
+import { getImageUrl } from '../../config/api';
 import { useAuthStore } from '../../app/store/authStore';
 
 export function maskSensitiveData(text) {
@@ -420,8 +421,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   };
 
   // Image Download Helper
-  const handleDownloadImage = async (fileUrl, fileName = 'image.png') => {
-    if (!fileUrl) return;
+  const handleDownloadImage = async (rawUrl, fileName = 'image.png') => {
+    if (!rawUrl) return;
+    const fileUrl = getImageUrl(rawUrl);
     try {
       const response = await fetch(fileUrl);
       const blob = await response.blob();
@@ -445,8 +447,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   };
 
   // Image Copy Helper
-  const handleCopyImage = async (fileUrl) => {
-    if (!fileUrl) return;
+  const handleCopyImage = async (rawUrl) => {
+    if (!rawUrl) return;
+    const fileUrl = getImageUrl(rawUrl);
     try {
       const response = await fetch(fileUrl);
       const blob = await response.blob();
@@ -601,23 +604,63 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     if (!activeConv) return;
     if (!inputText.trim() && attachments.length === 0) return;
 
+    setSending(true);
+
+    // Upload local file attachments to backend/S3 first
+    let processedAttachments = [];
+    try {
+      if (attachments.length > 0) {
+        for (const att of attachments) {
+          if (att.file_blob || (att.file_url && att.file_url.startsWith('blob:'))) {
+            const formData = new FormData();
+            formData.append('file', att.file_blob || att.file);
+            const uploadRes = await api.post('/messenger/attachments/upload', formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            if (uploadRes.data?.success && uploadRes.data.data) {
+              const up = uploadRes.data.data;
+              if (att.file_url && att.file_url.startsWith('blob:')) {
+                try { URL.revokeObjectURL(att.file_url); } catch (e) {}
+              }
+              processedAttachments.push({
+                file_name: up.file_name || att.file_name,
+                file_type: up.file_type || att.file_type,
+                file_size: up.file_size || att.file_size,
+                file_url: up.file_url,
+                storage_key: up.storage_key
+              });
+            } else {
+              throw new Error('Failed to upload file attachment');
+            }
+          } else {
+            processedAttachments.push(att);
+          }
+        }
+      }
+    } catch (uploadErr) {
+      console.error('Attachment upload failed:', uploadErr);
+      alert(uploadErr.response?.data?.message || uploadErr.message || 'Failed to upload attachment image.');
+      setSending(false);
+      return;
+    }
+
     const payload = {
       conversation_id: activeConv.id,
       message_text: inputText.trim(),
-      message_type: attachments.length > 0 ? 'FILE' : 'TEXT',
-      attachments: attachments
+      message_type: processedAttachments.length > 0 ? 'FILE' : 'TEXT',
+      attachments: processedAttachments
     };
 
     const nowIso = new Date().toISOString();
-    const msgSnippet = inputText.trim() || (attachments.length > 0 ? `📷 [${attachments.length} File Attachment]` : '');
+    const msgSnippet = inputText.trim() || (processedAttachments.length > 0 ? `📷 [${processedAttachments.length} File Attachment]` : '');
 
     const tempMsg = {
       id: `temp-${Date.now()}`,
       sender_id: user?.id,
       sender_name: user?.full_name || 'You',
       message_text: inputText.trim(),
-      message_type: attachments.length > 0 ? 'FILE' : 'TEXT',
-      attachments: attachments,
+      message_type: processedAttachments.length > 0 ? 'FILE' : 'TEXT',
+      attachments: processedAttachments,
       created_at: nowIso,
       reads: []
     };
@@ -625,7 +668,6 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     setInputText('');
     setAttachments([]);
     setShowEmojiPicker(false);
-    setSending(true);
 
     // Optimistically update conversation snippet & move to top of conversation list!
     setConversations(prev => {
@@ -1532,12 +1574,13 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                     const isImg = att.file_type === 'IMAGE' || 
                                                   /\.(png|jpe?g|gif|webp|bmp|svg)($|\?)/i.test(att.file_url || att.file_name || '') ||
                                                   (att.file_url && att.file_url.startsWith('blob:'));
+                                    const displayUrl = getImageUrl(att.file_url);
                                     return isImg ? (
                                       <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '280px' }}>
                                         <img
-                                          src={att.file_url}
+                                          src={displayUrl}
                                           alt={att.file_name || 'Attachment'}
-                                          onClick={() => setPreviewImageUrl(att.file_url)}
+                                          onClick={() => setPreviewImageUrl(displayUrl)}
                                           style={{
                                             maxWidth: '100%',
                                             maxHeight: '220px',
@@ -1548,13 +1591,13 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                             boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
                                           }}
                                         />
-                                        {att.file_url && (
+                                        {displayUrl && (
                                           <div style={{
                                             position: 'absolute', bottom: '8px', right: '8px', display: 'flex', gap: '4px', zIndex: 5
                                           }}>
                                             <button
                                               type="button"
-                                              onClick={(e) => { e.stopPropagation(); handleCopyImage(att.file_url); }}
+                                              onClick={(e) => { e.stopPropagation(); handleCopyImage(displayUrl); }}
                                               style={{
                                                 background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
                                                 borderRadius: '50%', width: '28px', height: '28px', border: 'none',
@@ -1567,7 +1610,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                             </button>
                                             <button
                                               type="button"
-                                              onClick={(e) => { e.stopPropagation(); handleDownloadImage(att.file_url, att.file_name); }}
+                                              onClick={(e) => { e.stopPropagation(); handleDownloadImage(displayUrl, att.file_name); }}
                                               style={{
                                                 background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
                                                 borderRadius: '50%', width: '28px', height: '28px', border: 'none',
@@ -1601,8 +1644,8 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                           </div>
                                           <div style={{ fontSize: '11px', color: '#64748B' }}>{att.file_size || 'Document'}</div>
                                         </div>
-                                        {att.file_url && (
-                                          <a href={att.file_url} target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>
+                                        {displayUrl && (
+                                          <a href={displayUrl} target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>
                                             <FaDownload size={14} />
                                           </a>
                                         )}
@@ -2961,7 +3004,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
             </div>
 
             <img
-              src={previewImageUrl}
+              src={getImageUrl(previewImageUrl)}
               alt="Full Preview"
               style={{
                 maxWidth: '90vw', maxHeight: '80vh', borderRadius: '16px', objectFit: 'contain',

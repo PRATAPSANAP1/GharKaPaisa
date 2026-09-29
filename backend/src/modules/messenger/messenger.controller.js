@@ -327,6 +327,18 @@ async function updateGroupName(req, res, next) {
   }
 }
 
+async function uploadAttachment(req, res, next) {
+  try {
+    if (!req.file) {
+      return error(res, 'No file uploaded', 400);
+    }
+    const uploaded = await service.uploadAttachment(req.file);
+    return success(res, uploaded, 'Attachment uploaded successfully');
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getConversations,
   createDirectChat,
@@ -354,5 +366,6 @@ module.exports = {
   getCandidateAccounts,
   getGroupMembers,
   addGroupMembers,
-  removeGroupMember
+  removeGroupMember,
+  uploadAttachment
 };

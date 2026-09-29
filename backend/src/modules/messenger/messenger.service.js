@@ -562,6 +562,57 @@ async function removeGroupMember(conversationId, currentUserId, targetUserId, us
   return await repo.getConversationParticipants(conversationId);
 }
 
+async function uploadAttachment(file) {
+  const fs = require('fs');
+  const path = require('path');
+  const { v4: uuidv4 } = require('uuid');
+  const { uploadToS3 } = require('../../services/aws/s3.service');
+  const logger = require('../../config/logger');
+
+  if (!file || !file.buffer) throw new Error('File object is required');
+
+  const originalName = file.originalname || 'attachment';
+  const ext = path.extname(originalName).toLowerCase() || '.png';
+  const mimeType = file.mimetype || 'image/png';
+  const isImage = mimeType.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(originalName);
+  const isPdf = mimeType === 'application/pdf' || originalName.endsWith('.pdf');
+  const fileType = isImage ? 'IMAGE' : isPdf ? 'PDF' : 'DOCUMENT';
+  const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+
+  let fileUrl = null;
+  let storageKey = null;
+
+  if (process.env.AWS_S3_BUCKET) {
+    try {
+      const s3Res = await uploadToS3(file.buffer, originalName, 'messenger');
+      fileUrl = s3Res.url;
+      storageKey = s3Res.key;
+    } catch (s3Err) {
+      logger.warn('[Messenger Upload] S3 upload failed, falling back to local disk:', s3Err.message);
+    }
+  }
+
+  if (!fileUrl) {
+    const uploadDir = path.join(__dirname, '../../../public/uploads/messenger');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    const filename = `${uuidv4()}${ext}`;
+    const filePath = path.join(uploadDir, filename);
+    fs.writeFileSync(filePath, file.buffer);
+    fileUrl = `/uploads/messenger/${filename}`;
+    storageKey = `uploads/messenger/${filename}`;
+  }
+
+  return {
+    file_url: fileUrl,
+    storage_key: storageKey,
+    file_name: originalName,
+    file_type: fileType,
+    file_size: fileSizeMB
+  };
+}
+
 module.exports = {
   maskSensitiveData,
   listConversations,
@@ -590,5 +641,6 @@ module.exports = {
   getAllAccountsForAssignment,
   getGroupMembers,
   addGroupMembers,
-  removeGroupMember
+  removeGroupMember,
+  uploadAttachment
 };

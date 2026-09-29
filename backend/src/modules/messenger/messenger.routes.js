@@ -34,7 +34,11 @@ router.post('/conversations/:id/clear', messengerLimiter, controller.clearChat);
 router.post('/conversations/:id/leave', messengerLimiter, controller.leaveGroup);
 router.delete('/conversations/:id', messengerLimiter, controller.deleteConversation);
 
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
 router.post('/messages', messengerLimiter, controller.sendMessage);
+router.post('/attachments/upload', messengerLimiter, upload.single('file'), controller.uploadAttachment);
 router.put('/messages/:id', messengerLimiter, controller.editMessage);
 router.delete('/messages/:id', messengerLimiter, controller.deleteMessage);
 router.get('/unread-count', controller.getUnreadCount);

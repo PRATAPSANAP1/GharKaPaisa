@@ -182,6 +182,7 @@ const SuperAdminLayout = () => {
         { path: '/super-admin/working-hours', label: 'Working Hours', icon: <Icons.clock size={16} /> },
         { path: '/super-admin/partners', label: 'Partners', icon: <Icons.profile size={16} /> },
         { path: '/super-admin/employees', label: 'Employees', icon: <Icons.profile size={16} /> },
+        { path: '/super-admin/attendance', label: 'Employee Attendance', icon: <Icons.clock size={16} /> },
         { path: '/super-admin/hr', label: 'HR', icon: <Icons.profile size={16} /> },
       ]
     },

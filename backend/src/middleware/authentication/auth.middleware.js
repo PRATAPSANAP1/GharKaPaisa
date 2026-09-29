@@ -26,7 +26,8 @@ const authenticate = async (req, res, next) => {
       id: decodedToken.id,
       email: decodedToken.email,
       phone: decodedToken.phone,
-      role: decodedToken.role
+      role: decodedToken.role,
+      client_type: decodedToken.client_type || 'WEB'
     };
 
     next();
@@ -39,6 +40,7 @@ const authenticate = async (req, res, next) => {
 const syncUser = async (req, res, next) => {
   try {
     const { id } = req.user;
+    const authClientType = req.user.client_type || 'WEB';
 
     let { rows: [user] } = await query(
       `SELECT * FROM users WHERE id = $1`,
@@ -61,7 +63,7 @@ const syncUser = async (req, res, next) => {
     
     // Strip sensitive fields from req.user
     const { password_hash, verification_token, ...safeUser } = user;
-    req.user = safeUser;
+    req.user = { ...safeUser, client_type: authClientType };
 
     // Attach partner profile for Partner role
     // Attach partner profile for Partner and Team Member roles

@@ -1012,20 +1012,16 @@ const updateStatus = async (req, res, next) => {
             a.commission_amount,
             p.name as product_name,
             -- Partner contact info
-            pu.mobile as partner_profile_mobile,
             pu.mobile as partner_user_mobile,
-            pu.phone as partner_user_phone,
             pu.id as partner_user_id,
             COALESCE(NULLIF(TRIM(CONCAT(pp.first_name, ' ', COALESCE(pp.last_name, ''))), ''), pu.full_name, 'Partner') as partner_name,
             -- Employee contact info
             emp.mobile_number as employee_profile_mobile,
             eu.mobile as employee_user_mobile,
-            eu.phone as employee_user_phone,
             eu.id as employee_user_id,
             COALESCE(NULLIF(emp.full_name, ''), eu.full_name, 'Employee') as employee_name,
             -- Submitter contact info (fallback)
             su.mobile as submitter_user_mobile,
-            su.phone as submitter_user_phone,
             su.id as submitter_user_id,
             su.full_name as submitter_user_name,
             su.role as submitter_role
@@ -1040,8 +1036,8 @@ const updateStatus = async (req, res, next) => {
         `, [app.id || id]);
 
         if (partyData) {
-          const partnerMobile = partyData.partner_profile_mobile || partyData.partner_user_mobile || partyData.partner_user_phone || (partyData.submitter_role === 'PARTNER' ? (partyData.submitter_user_mobile || partyData.submitter_user_phone) : null);
-          const employeeMobile = partyData.employee_profile_mobile || partyData.employee_user_mobile || partyData.employee_user_phone || (['EMPLOYEE', 'STAFF', 'ADMIN'].includes(partyData.submitter_role) ? (partyData.submitter_user_mobile || partyData.submitter_user_phone) : null);
+          const partnerMobile = partyData.partner_user_mobile || (partyData.submitter_role === 'PARTNER' ? partyData.submitter_user_mobile : null);
+          const employeeMobile = partyData.employee_profile_mobile || partyData.employee_user_mobile || (['EMPLOYEE', 'STAFF', 'ADMIN'].includes(partyData.submitter_role) ? partyData.submitter_user_mobile : null);
 
           let smsSent = false;
           // Send SMS to specific Partner if present
@@ -1060,7 +1056,7 @@ const updateStatus = async (req, res, next) => {
           }
           // Fallback if neither partner nor employee profile linked
           if (!smsSent) {
-            const fallbackMobile = partyData.submitter_user_mobile || partyData.submitter_user_phone;
+            const fallbackMobile = partyData.submitter_user_mobile;
             if (fallbackMobile) {
               sendApplicationStatusSms(fallbackMobile, partyData.submitter_user_name || 'Agent', partyData.product_name, targetStatus || status).catch(smsErr => {
                 logger.warn(`Failed to send application status SMS to submitter: ${smsErr.message}`);
@@ -3388,16 +3384,16 @@ const submitPartnerApplication = async (req, res, next) => {
 
     if (process_type === 'linked_share' && shareUrl) {
       const { sendLinkedShareSms } = require('../../services/sms/sms.service');
-      let partnerMobile = req.user?.mobile || req.user?.phone;
+      let partnerMobile = req.user?.mobile;
       if (!partnerMobile && partnerId) {
         try {
           const { rows: [pUser] } = await client.query(`
-            SELECT u.mobile, u.phone, u.mobile as partner_mobile 
+            SELECT u.mobile, u.mobile as partner_mobile 
             FROM partner_profiles pp 
             LEFT JOIN users u ON u.id = pp.user_id 
             WHERE pp.id = $1 OR pp.user_id = $1
           `, [partnerId]);
-          partnerMobile = pUser?.mobile || pUser?.phone || pUser?.partner_mobile;
+          partnerMobile = pUser?.mobile || pUser?.partner_mobile;
         } catch (e) { }
       }
 

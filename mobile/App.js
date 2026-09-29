@@ -30,8 +30,8 @@ import ProductDetailScreen from './screens/ProductDetailScreen';
 import PartnerResourcesScreen from './screens/PartnerResourcesScreen';
 import EmployeeToolsScreen from './screens/EmployeeToolsScreen';
 import HrDashboardScreen from './screens/HrDashboardScreen';
-
 import AdminOperatorVerificationScreen from './screens/AdminOperatorVerificationScreen';
+import EmployeeAttendanceScreen from './screens/EmployeeAttendanceScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -71,6 +71,7 @@ function MainNavigator() {
           <Stack.Screen name="SuperAdminDashboard" component={SuperAdminDashboardScreen} />
           <Stack.Screen name="AdminOperatorVerification" component={AdminOperatorVerificationScreen} />
           <Stack.Screen name="EmployeeDashboard" component={EmployeeDashboardScreen} />
+          <Stack.Screen name="EmployeeAttendance" component={EmployeeAttendanceScreen} />
           <Stack.Screen name="CustomerTracking" component={CustomerTrackingScreen} />
           <Stack.Screen name="Chatbot" component={ChatbotScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />

@@ -220,8 +220,9 @@ app.post('/api/v1/partner/referral-click', partnerCtrl.invitePartnerClick);
 app.post('/api/v1/razorpay/webhook', walletCtrl.handleRazorpayWebhook);
 app.post('/api/v1/webhooks/razorpay', walletCtrl.handleRazorpayWebhook);
 
-// ── Static Files (Generated Reports & Documents) ────────────
+// ── Static Files (Generated Reports, Uploads & Documents) ────────────
 app.use('/reports', express.static(path.join(__dirname, '../public/reports')));
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // ── API Routes ─────────────────────────────────────────────────
 const apiRouter = require('./routes/index');
@@ -302,6 +303,14 @@ const startServer = async () => {
       await migrateAttendanceVerificationPhase3();
     } catch (vErr) {
       logger.warn('Attendance Verification Phase 3 auto migration note:', vErr.message);
+    }
+
+    // Always ensure Employee Attendance Phase 4 table exists on boot
+    try {
+      const { migrateEmployeeAttendancePhase4 } = require('./database/migrations/migrate_employee_attendance_phase4.js');
+      await migrateEmployeeAttendancePhase4();
+    } catch (aErr) {
+      logger.warn('Employee Attendance Phase 4 auto migration note:', aErr.message);
     }
 
     // Always ensure Loan on Credit Card & Smart EMI products are seeded on boot
