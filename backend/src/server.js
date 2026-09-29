@@ -296,6 +296,14 @@ const startServer = async () => {
       logger.warn('Biometric Enrollment auto migration note:', bErr.message);
     }
 
+    // Always ensure Attendance Verification Phase 3 session tables exist on boot
+    try {
+      const { migrateAttendanceVerificationPhase3 } = require('./database/migrations/migrate_attendance_verification_phase3.js');
+      await migrateAttendanceVerificationPhase3();
+    } catch (vErr) {
+      logger.warn('Attendance Verification Phase 3 auto migration note:', vErr.message);
+    }
+
     // Always ensure Loan on Credit Card & Smart EMI products are seeded on boot
     try {
       const { seedSmartEmiAndLoccProducts } = require('./database/seeds/seed-smart-emi-locc.js');
