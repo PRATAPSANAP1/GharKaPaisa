@@ -3,6 +3,21 @@ const logger = require('../../config/logger');
 const { logAction } = require('../admin/audit.service');
 
 /**
+ * Helper to resolve employeeId from reqUser or user_id mapping
+ */
+const resolveEmployeeId = async (reqUser) => {
+  if (!reqUser) return null;
+  if (reqUser.employeeId || reqUser.employee_id) return reqUser.employeeId || reqUser.employee_id;
+  if (reqUser.id) {
+    try {
+      const { rows: [emp] } = await query(`SELECT id FROM employees WHERE user_id = $1 LIMIT 1`, [reqUser.id]);
+      if (emp) return emp.id;
+    } catch (e) {}
+  }
+  return null;
+};
+
+/**
  * Get current Asia/Kolkata date string (YYYY-MM-DD)
  */
 const getKolkataDateString = async () => {
@@ -14,10 +29,10 @@ const getKolkataDateString = async () => {
  * 1. Employee Check-In
  */
 const checkIn = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+  const authEmpId = await resolveEmployeeId(reqUser);
 
   if (!authEmpId) {
-    const error = new Error('Authenticated user context is not associated with an employee');
+    const error = new Error('Authenticated user context is not associated with an employee profile');
     error.statusCode = 400;
     throw error;
   }
@@ -151,10 +166,10 @@ const checkIn = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
  * 2. Employee Check-Out
  */
 const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+  const authEmpId = await resolveEmployeeId(reqUser);
 
   if (!authEmpId) {
-    const error = new Error('Authenticated user context is not associated with an employee');
+    const error = new Error('Authenticated user context is not associated with an employee profile');
     error.statusCode = 400;
     throw error;
   }
@@ -259,7 +274,9 @@ const checkOut = async ({ verificationSessionId, reqUser, source = 'WEB' }) => {
  * 3. Get Today's Attendance for authenticated employee
  */
 const getTodayAttendance = async ({ reqUser }) => {
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+  const authEmpId = await resolveEmployeeId(reqUser);
+  if (!authEmpId) return null;
+
   const todayDate = await getKolkataDateString();
 
   const { rows: [attendance] } = await query(
@@ -277,10 +294,19 @@ const getTodayAttendance = async ({ reqUser }) => {
  * 4. Get Attendance History for authenticated employee
  */
 const getMyAttendance = async ({ reqUser, month, year, limit = 31, page = 1 }) => {
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
   const now = new Date();
   const targetMonth = month ? parseInt(month, 10) : now.getMonth() + 1;
   const targetYear = year ? parseInt(year, 10) : now.getFullYear();
+
+  const authEmpId = await resolveEmployeeId(reqUser);
+  if (!authEmpId) {
+    return {
+      month: targetMonth,
+      year: targetYear,
+      totalRecords: 0,
+      records: []
+    };
+  }
 
   const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
@@ -316,10 +342,24 @@ const getMyAttendance = async ({ reqUser, month, year, limit = 31, page = 1 }) =
  * 5. Get Monthly Attendance Summary for authenticated employee
  */
 const getMySummary = async ({ reqUser, month, year }) => {
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
   const now = new Date();
   const targetMonth = month ? parseInt(month, 10) : now.getMonth() + 1;
   const targetYear = year ? parseInt(year, 10) : now.getFullYear();
+
+  const authEmpId = await resolveEmployeeId(reqUser);
+  if (!authEmpId) {
+    return {
+      month: targetMonth,
+      year: targetYear,
+      totalPresent: 0,
+      totalLate: 0,
+      totalHalfDay: 0,
+      totalLeave: 0,
+      totalAbsent: 0,
+      totalMarkedDays: 0,
+      totalWorkingHoursFormatted: '0h 0m',
+    };
+  }
 
   const { rows } = await query(
     `SELECT 
