@@ -395,67 +395,59 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
   const messagesEndRef = useRef(null);
 
-  // Copy & Emoji State
-  const [copiedMsgId, setCopiedMsgId] = useState(null);
-  const [activeEmojiTab, setActiveEmojiTab] = useState('DIGITS');
-  const [emojiSearch, setEmojiSearch] = useState('');
+  // ── Object URL & Blob Lifecycle Management ──────────────────────
+  const createdBlobUrlsRef = useRef(new Set());
 
-  // Reaction Emoji State
-  const [reactionsMap, setReactionsMap] = useState({}); // { [msgId]: emojiSymbol }
-  const [activeReactionPickerMsgId, setActiveReactionPickerMsgId] = useState(null);
-  const [hoveredMsgId, setHoveredMsgId] = useState(null);
+  const createTrackedBlobUrl = (file) => {
+    if (!file) return null;
+    const url = URL.createObjectURL(file);
+    createdBlobUrlsRef.current.add(url);
+    return url;
+  };
 
-  const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
-
-  const handleToggleReaction = (msgId, emoji) => {
-    setReactionsMap(prev => {
-      const current = prev[msgId];
-      if (current === emoji) {
-        const copy = { ...prev };
-        delete copy[msgId];
-        return copy;
+  const revokeTrackedBlobUrl = (url) => {
+    if (url && typeof url === 'string' && url.startsWith('blob:')) {
+      if (createdBlobUrlsRef.current.has(url)) {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {}
+        createdBlobUrlsRef.current.delete(url);
       }
-      return { ...prev, [msgId]: emoji };
-    });
-    setActiveReactionPickerMsgId(null);
-  };
-
-  const isMessageWithin5Minutes = (msg) => {
-    if (!msg || !msg.created_at) return false;
-    const createdAt = new Date(msg.created_at).getTime();
-    if (isNaN(createdAt)) return false;
-    const diffMinutes = (Date.now() - createdAt) / (1000 * 60);
-    return diffMinutes <= 5;
-  };
-
-  // Comprehensive Emojis including 0-9 Digits
-  const EMOJI_CATEGORIES = [
-    {
-      id: 'DIGITS',
-      name: '0-9 Digits',
-      emojis: ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '#️⃣', '*️⃣', '🔢', '🔣', '1️⃣0️⃣']
-    },
-    {
-      id: 'SMILEYS',
-      name: 'Smileys',
-      emojis: ['😊', '😂', '😍', '🥰', '😎', '😭', '🤔', '😅', '🥳', '🤩', '😇', '😃', '🙄', '😬', '🙌', '😴', '😷', '🤖', '👻']
-    },
-    {
-      id: 'HANDS',
-      name: 'Hands & People',
-      emojis: ['👍', '👎', '🙏', '👏', '🤝', '👋', '✌️', '🤞', '💪', '👈', '👉', '👆', '👇', '👊', '👤', '👥']
-    },
-    {
-      id: 'SYMBOLS',
-      name: 'Symbols & Hearts',
-      emojis: ['❤️', '💙', '💚', '💛', '💜', '🧡', '🖤', '💔', '🔥', '✨', '🎉', '💯', '✅', '❌', '⭐', '⚡', '🔔', '📢', '💬']
-    },
-    {
-      id: 'OBJECTS',
-      name: 'Objects & Work',
-      emojis: ['📱', '💻', '📞', '📄', '📝', '💼', '💰', '💳', '📊', '📈', '🏠', '🚗', '📌', '📍', '💡', '🚀', '🎁', '🏆', '🎯']
     }
-  ];
+  };
+
+  // Cleanup unrevoked Blob URLs on component unmount
+  useEffect(() => {
+    return () => {
+      createdBlobUrlsRef.current.forEach(url => {
+        try { URL.revokeObjectURL(url); } catch (e) {}
+      });
+      createdBlobUrlsRef.current.clear();
+    };
+  }, []);
+
+  // File Input Selection Handler
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    const newAttachments = files.map(file => {
+      const isImg = file.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(file.name);
+      const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+      const objectUrl = createTrackedBlobUrl(file);
+      return {
+        file_name: file.name,
+        file_type: isImg ? 'IMAGE' : isPdf ? 'PDF' : 'DOCUMENT',
+        file_size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+        file_url: objectUrl,
+        previewUrl: objectUrl,
+        file_blob: file
+      };
+    });
+
+    setAttachments(prev => [...prev, ...newAttachments]);
+    if (e.target) e.target.value = '';
+  };
 
   // Clipboard Paste Image Handler
   const handlePaste = (e) => {
@@ -470,12 +462,13 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
         const file = item.getAsFile();
         if (file) {
           hasPastedImage = true;
-          const objectUrl = URL.createObjectURL(file);
+          const objectUrl = createTrackedBlobUrl(file);
           const newAtt = {
             file_name: `Pasted_Image_${Date.now()}.png`,
             file_type: 'IMAGE',
             file_size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
             file_url: objectUrl,
+            previewUrl: objectUrl,
             file_blob: file
           };
           setAttachments(prev => [...prev, newAtt]);
@@ -487,6 +480,18 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     }
   };
 
+  // Remove Attachment Helper
+  const removeAttachment = (indexToRemove) => {
+    setAttachments(prev => {
+      const target = prev[indexToRemove];
+      if (target) {
+        if (target.previewUrl) revokeTrackedBlobUrl(target.previewUrl);
+        if (target.file_url) revokeTrackedBlobUrl(target.file_url);
+      }
+      return prev.filter((_, idx) => idx !== indexToRemove);
+    });
+  };
+
   // Image Download Helper
   const handleDownloadImage = async (rawUrl, fileName = 'image.png') => {
     if (!rawUrl) return;
@@ -494,14 +499,14 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     try {
       const response = await fetch(fileUrl);
       const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      const blobUrl = createTrackedBlobUrl(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
       a.download = fileName || `downloaded_image_${Date.now()}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(() => revokeTrackedBlobUrl(blobUrl), 10000);
     } catch (err) {
       const a = document.createElement('a');
       a.href = fileUrl;
@@ -678,10 +683,17 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
     // Upload local file attachments to backend/S3 first
     let processedAttachments = [];
+    const pendingBlobUrls = [];
     try {
       if (attachments.length > 0) {
         for (const att of attachments) {
           if (att.file_blob || (att.file_url && att.file_url.startsWith('blob:'))) {
+            if (att.file_url && att.file_url.startsWith('blob:')) {
+              pendingBlobUrls.push(att.file_url);
+            }
+            if (att.previewUrl && att.previewUrl.startsWith('blob:')) {
+              pendingBlobUrls.push(att.previewUrl);
+            }
             const formData = new FormData();
             formData.append('file', att.file_blob || att.file);
             const uploadRes = await api.post('/messenger/attachments/upload', formData, {
@@ -689,9 +701,6 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
             });
             if (uploadRes.data?.success && uploadRes.data.data) {
               const up = uploadRes.data.data;
-              if (att.file_url && att.file_url.startsWith('blob:')) {
-                try { URL.revokeObjectURL(att.file_url); } catch (e) {}
-              }
               processedAttachments.push({
                 file_name: up.file_name || att.file_name,
                 file_type: up.file_type || att.file_type,
@@ -709,7 +718,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       }
     } catch (uploadErr) {
       console.error('Attachment upload failed:', uploadErr);
-      alert(uploadErr.response?.data?.message || uploadErr.message || 'Failed to upload attachment image.');
+      alert(uploadErr.response?.data?.message || uploadErr.message || 'Failed to upload attachment file.');
       setSending(false);
       return;
     }
@@ -739,6 +748,13 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     setAttachments([]);
     setShowEmojiPicker(false);
 
+    // Schedule safe delayed revocation of temporary blob URLs after 15 seconds
+    if (pendingBlobUrls.length > 0) {
+      setTimeout(() => {
+        pendingBlobUrls.forEach(url => revokeTrackedBlobUrl(url));
+      }, 15000);
+    }
+
     // Optimistically update conversation snippet & move to top of conversation list!
     setConversations(prev => {
       const updatedList = prev.map(c => {
@@ -767,32 +783,6 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     } finally {
       setSending(false);
     }
-  };
-
-  // 4. File Attachment Handler
-  const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-
-    files.forEach(file => {
-      const isImage = file.type.includes('image');
-      const isPdf = file.name.endsWith('.pdf');
-      const objectUrl = URL.createObjectURL(file);
-
-      const newAtt = {
-        file_name: file.name,
-        file_type: isImage ? 'IMAGE' : isPdf ? 'PDF' : 'DOCUMENT',
-        file_size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
-        file_url: objectUrl,
-        file_blob: file
-      };
-      setAttachments(prev => [...prev, newAtt]);
-    });
-    if (e.target) e.target.value = '';
-  };
-
-  const removeAttachment = (index) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   // Contacts lookup
