@@ -102,7 +102,6 @@ export default function EmployeeLayout() {
     }
   };
 
-  const totalUnreadCount = messengerUnread + systemUnreadCount;
 
   useEffect(() => {
     let isMounted = true;
@@ -379,8 +378,8 @@ export default function EmployeeLayout() {
                   outline: 'none'
                 }}
               >
-                <FaBell size={16} color={totalUnreadCount > 0 ? (C.employeePrimary || '#0F766E') : C.textMid} />
-                {totalUnreadCount > 0 && (
+                <FaBell size={16} color={systemUnreadCount > 0 ? (C.employeePrimary || '#0F766E') : C.textMid} />
+                {systemUnreadCount > 0 && (
                   <span style={{
                     position: 'absolute',
                     top: '-2px',
@@ -399,7 +398,7 @@ export default function EmployeeLayout() {
                     boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
                     border: `2px solid ${C.card}`
                   }}>
-                    {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                    {systemUnreadCount > 99 ? '99+' : systemUnreadCount}
                   </span>
                 )}
               </button>
@@ -425,9 +424,9 @@ export default function EmployeeLayout() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: C.text }}>Notifications</h4>
-                      {totalUnreadCount > 0 && (
+                      {systemUnreadCount > 0 && (
                         <span style={{ background: `${C.employeePrimary || '#0F766E'}20`, color: C.employeePrimary || '#0F766E', fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '12px' }}>
-                          {totalUnreadCount} Unread
+                          {systemUnreadCount} Unread
                         </span>
                       )}
                     </div>
@@ -442,38 +441,6 @@ export default function EmployeeLayout() {
                   </div>
 
                   <div style={{ maxHeight: '340px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    
-                    {/* Messenger Unread Notification Alert Card */}
-                    {messengerUnread > 0 && (
-                      <div
-                        onClick={() => { setNotifMenuOpen(false); navigate('/employee/messenger'); }}
-                        style={{
-                          background: `linear-gradient(135deg, ${C.employeePrimary || '#0F766E'}15 0%, #3B82F615 100%)`,
-                          border: `1px solid ${C.employeePrimary || '#0F766E'}40`,
-                          borderRadius: '12px',
-                          padding: '12px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          transition: 'all 0.15s ease'
-                        }}
-                      >
-                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: C.employeePrimary || '#0F766E', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <FaComments size={18} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span>Messenger Alert</span>
-                            <span style={{ fontSize: '10px', background: '#EF4444', color: '#fff', padding: '1px 6px', borderRadius: '8px', fontWeight: 800 }}>NEW</span>
-                          </div>
-                          <p style={{ margin: '2px 0 0', fontSize: '12px', color: C.textMid, fontWeight: 600 }}>
-                            You have <strong style={{ color: C.employeePrimary || '#0F766E' }}>{messengerUnread}</strong> unread message{messengerUnread > 1 ? 's' : ''} on Messenger.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
                     {/* System Notifications List */}
                     {notificationsList.length > 0 ? (
                       notificationsList.map((notif) => (
@@ -517,33 +484,11 @@ export default function EmployeeLayout() {
                         </div>
                       ))
                     ) : (
-                      messengerUnread === 0 && (
-                        <div style={{ textAlign: 'center', padding: '24px 12px', color: C.textMid, fontSize: '13px' }}>
-                          <FaBell style={{ fontSize: '24px', opacity: 0.4, marginBottom: '6px' }} />
-                          <p style={{ margin: 0, fontWeight: 600 }}>No new notifications</p>
-                        </div>
-                      )
+                      <div style={{ textAlign: 'center', padding: '24px 12px', color: C.textMid, fontSize: '13px' }}>
+                        <FaBell style={{ fontSize: '24px', opacity: 0.4, marginBottom: '6px' }} />
+                        <p style={{ margin: 0, fontWeight: 600 }}>No new notifications</p>
+                      </div>
                     )}
-                  </div>
-
-                  {/* Footer Action */}
-                  <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '10px', display: 'flex', justifyContent: 'center' }}>
-                    <button
-                      onClick={() => { setNotifMenuOpen(false); navigate('/employee/messenger'); }}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: C.employeePrimary || '#0F766E',
-                        fontSize: '12.5px',
-                        fontWeight: 800,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
-                      }}
-                    >
-                      <FaComments /> Go to Messenger
-                    </button>
                   </div>
                 </div>
               )}

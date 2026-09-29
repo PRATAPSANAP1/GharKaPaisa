@@ -288,6 +288,14 @@ const startServer = async () => {
       logger.warn('Operator History auto migration note:', opErr.message);
     }
 
+    // Always ensure Biometric Enrollment & Environment Reference tables exist on boot
+    try {
+      const { migrateBiometricEnrollment } = require('./database/migrations/migrate_biometric_enrollment_phase2.js');
+      await migrateBiometricEnrollment();
+    } catch (bErr) {
+      logger.warn('Biometric Enrollment auto migration note:', bErr.message);
+    }
+
     // Always ensure Loan on Credit Card & Smart EMI products are seeded on boot
     try {
       const { seedSmartEmiAndLoccProducts } = require('./database/seeds/seed-smart-emi-locc.js');

@@ -6,9 +6,10 @@ import {
   FaPlus, FaCheckCircle, FaTimesCircle, FaEye, FaEdit, FaCheck, FaLock,
   FaFileAlt, FaVideo, FaUniversity, FaBuilding, FaBriefcase, FaIdCard, FaPhone, FaEnvelope, FaClock, FaUserCircle,
   FaUserTimes, FaUnlink, FaChartLine, FaTrophy, FaEllipsisV, FaDownload, FaRedo, FaInfoCircle, FaChevronRight,
-  FaCoins, FaBullseye, FaTrash, FaCalendarAlt, FaExclamationCircle
+  FaCoins, FaBullseye, FaTrash, FaCalendarAlt, FaExclamationCircle, FaCamera, FaUserShield
 } from 'react-icons/fa';
 import api from '../../../services/api';
+import BiometricManagementModal from '../biometrics/BiometricManagementModal';
 
 export default function EmployeeManagement() {
   const { C } = useTheme();
@@ -47,6 +48,8 @@ export default function EmployeeManagement() {
   const [actionModalEmp, setActionModalEmp] = useState(null);
   const [perfModalEmp, setPerfModalEmp] = useState(null);
   const [createEmpModalOpen, setCreateEmpModalOpen] = useState(false);
+  const [biometricModalOpen, setBiometricModalOpen] = useState(false);
+  const [biometricModalEmp, setBiometricModalEmp] = useState(null);
 
   // Manage Departments Modal State
   const [deptModalEmp, setDeptModalEmp] = useState(null);
@@ -1123,16 +1126,27 @@ export default function EmployeeManagement() {
             </span>
             <h1 style={{ fontSize: '22px', fontWeight: 900, color: C.text, margin: 0 }}>Employee Management Center</h1>
           </div>
-          <button
-            onClick={() => setCreateEmpModalOpen(true)}
-            style={{
-              background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px',
-              fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px',
-              boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)'
-            }}
-          >
-            <FaPlus /> Add New Employee
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={() => { setBiometricModalEmp(null); setBiometricModalOpen(true); }}
+              style={{
+                background: C.bgSecondary, color: C.text, border: `1px solid ${C.border}`, padding: '10px 18px', borderRadius: '10px',
+                fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px'
+              }}
+            >
+              <FaUserShield style={{ color: C.teal }} /> Biometric & Office Desk
+            </button>
+            <button
+              onClick={() => setCreateEmpModalOpen(true)}
+              style={{
+                background: C.teal, color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px',
+                fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px',
+                boxShadow: '0 4px 12px rgba(13, 148, 136, 0.25)'
+              }}
+            >
+              <FaPlus /> Add New Employee
+            </button>
+          </div>
         </div>
 
         {/* Global Stats Cards — 5-Level Hierarchy Structure */}
@@ -1381,21 +1395,28 @@ export default function EmployeeManagement() {
                         </span>
                       </td>
                       <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                        <button
-                          onClick={() => handleOpen360View(emp)}
-                          style={{
-                            padding: '6px 12px',
-                            background: C.bgSecondary,
-                            color: C.text,
-                            border: `1px solid ${C.border}`,
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                            fontWeight: 800,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          🔍 View 360°
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => { setBiometricModalEmp(emp); setBiometricModalOpen(true); }}
+                            style={{
+                              padding: '6px 10px', background: `${C.teal}15`, color: C.teal,
+                              border: `1px solid ${C.teal}40`, borderRadius: '8px', fontSize: '11.5px',
+                              fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px'
+                            }}
+                          >
+                            <FaCamera /> Biometric
+                          </button>
+                          <button
+                            onClick={() => handleOpen360View(emp)}
+                            style={{
+                              padding: '6px 12px', background: C.bgSecondary, color: C.text,
+                              border: `1px solid ${C.border}`, borderRadius: '8px', fontSize: '12px',
+                              fontWeight: 800, cursor: 'pointer'
+                            }}
+                          >
+                            🔍 360°
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -4180,6 +4201,12 @@ export default function EmployeeManagement() {
             </div>
           </div>
         )}
+
+        <BiometricManagementModal
+          isOpen={biometricModalOpen}
+          onClose={() => setBiometricModalOpen(false)}
+          employee={biometricModalEmp}
+        />
 
       </div>
     </div>

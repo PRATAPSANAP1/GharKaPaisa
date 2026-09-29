@@ -300,7 +300,7 @@ export default function NotificationsScreen() {
           <View>
             <Text style={styles.headerTitle}>Notifications</Text>
             {unreadCount > 0 ? (
-              <Text style={styles.unreadSubtitle}>{unreadCount} unread message{unreadCount > 1 ? 's' : ''}</Text>
+              <Text style={styles.unreadSubtitle}>{unreadCount} unread notification{unreadCount > 1 ? 's' : ''}</Text>
             ) : (
               <Text style={styles.readSubtitle}>All caught up!</Text>
             )}

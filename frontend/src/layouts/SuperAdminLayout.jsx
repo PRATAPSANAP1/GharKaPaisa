@@ -635,10 +635,10 @@ const SuperAdminLayout = () => {
                   <span style={{
                     position: 'absolute', top: '-4px', right: '-4px',
                     background: C.red, color: '#fff', fontSize: '9px', fontWeight: 900,
-                    width: '16px', height: '16px', borderRadius: '50%',
+                    minWidth: '16px', height: '16px', borderRadius: '8px', padding: '0 3px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
-                    {messengerUnread}
+                    {messengerUnread > 99 ? '99+' : messengerUnread}
                   </span>
                 )}
               </button>
@@ -659,10 +659,10 @@ const SuperAdminLayout = () => {
                   <span style={{
                     position: 'absolute', top: '-4px', right: '-4px',
                     background: C.red, color: '#fff', fontSize: '9px', fontWeight: 900,
-                    width: '16px', height: '16px', borderRadius: '50%',
+                    minWidth: '16px', height: '16px', borderRadius: '8px', padding: '0 3px',
                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
-                    {unreadCount}
+                    {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
               </button>

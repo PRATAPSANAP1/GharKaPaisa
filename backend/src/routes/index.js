@@ -116,11 +116,15 @@ router.use('/marketing/materials', marketingRoute);
 const teamRoute                             = require('../modules/team/team.routes.js');
 const messengerRoute                        = require('../modules/messenger/messenger.routes.js');
 const whatsappRoute                         = require('../modules/whatsapp/whatsapp.routes.js');
+const attendanceEnrollmentRoute             = require('../modules/attendance-enrollment/attendance-enrollment.routes.js');
 
 // ── Referrals & Team Routes ──
 router.use('/team', teamRoute);
 router.use('/partner/team-dashboard', teamRoute);
 router.use('/messenger', messengerRoute);
 router.use('/whatsapp', whatsappRoute);
+
+// ── Attendance Enrollment Phase 6-2 ──
+router.use('/attendance/enrollment', attendanceEnrollmentRoute);
 
 module.exports = router;

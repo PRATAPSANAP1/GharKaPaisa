@@ -5,7 +5,8 @@ import {
   FaUser, FaBriefcase, FaUserTag, FaIdCard, FaGraduationCap, 
   FaCheckCircle, FaVideo, FaFileContract, FaUpload, FaLanguage, 
   FaCopy, FaPlay, FaStop, FaRedo, FaMicrophone, FaClock, 
-  FaExclamationTriangle, FaExternalLinkAlt, FaFileAlt, FaChevronRight, FaChevronLeft
+  FaExclamationTriangle, FaExternalLinkAlt, FaFileAlt, FaChevronRight, FaChevronLeft,
+  FaCamera, FaLock, FaShieldAlt
 } from 'react-icons/fa';
 import axios from 'axios';
 import { getApiV1Url } from '../../../config/api';
@@ -66,6 +67,18 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
   const [joiningCompleted, setJoiningCompleted] = useState(false);
   const [termsCompleted, setTermsCompleted] = useState(false);
   const [kycCompleted, setKycCompleted] = useState(false);
+  const [faceEnrollCompleted, setFaceEnrollCompleted] = useState(false);
+
+  // --- Step 4: Biometric Face Enrollment State ---
+  const [faceEnrollStatus, setFaceEnrollStatus] = useState(null);
+  const [faceCamActive, setFaceCamActive] = useState(false);
+  const [faceCamError, setFaceCamError] = useState('');
+  const [faceSessionToken, setFaceSessionToken] = useState('');
+  const [faceCapturedBlob, setFaceCapturedBlob] = useState(null);
+  const [faceCapturedPreview, setFaceCapturedPreview] = useState('');
+  const [submittingFace, setSubmittingFace] = useState(false);
+  const faceVideoRef = useRef(null);
+  const faceStreamRef = useRef(null);
 
   // --- Step 1: Joining Form State ---
   const [joiningForm, setJoiningForm] = useState({
@@ -206,6 +219,21 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
         setKycStatus(resolvedKycStatus);
         if (resolvedKycStatus === 'VERIFIED') {
           setKycCompleted(true);
+        }
+
+        // 4. Check Biometric Face Enrollment Status
+        if (emp.id) {
+          try {
+            const bioRes = await axios.get(`${getApiV1Url()}/attendance/enrollment/employee/${emp.id}`);
+            if (bioRes.data?.success) {
+              setFaceEnrollStatus(bioRes.data.data);
+              if (bioRes.data.data.is_enrolled) {
+                setFaceEnrollCompleted(true);
+              }
+            }
+          } catch (bioErr) {
+            console.warn('Biometric status fetch note:', bioErr.message);
+          }
         }
       }
     } catch (err) {
@@ -389,13 +417,108 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
       });
 
       if (res.data.success) {
-        alert('✓ Step 3: KYC Documents Submitted Successfully!');
+        alert('✓ Step 3: KYC Documents Submitted Successfully! Proceeding to Biometric Face Enrollment.');
         loadMasterProfile();
+        setActiveTab(4);
       }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to submit KYC documents');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --- Step 4 Handlers: Biometric Face Verification Enrollment ---
+  const stopFaceCam = () => {
+    if (faceStreamRef.current) {
+      faceStreamRef.current.getTracks().forEach(track => track.stop());
+      faceStreamRef.current = null;
+    }
+    setFaceCamActive(false);
+  };
+
+  const startFaceCam = async () => {
+    setFaceCamError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        audio: false
+      });
+      faceStreamRef.current = stream;
+      setFaceCamActive(true);
+      setTimeout(() => {
+        if (faceVideoRef.current) {
+          faceVideoRef.current.srcObject = stream;
+          faceVideoRef.current.play();
+        }
+      }, 200);
+    } catch (err) {
+      setFaceCamError('Unable to access webcam for face enrollment. Please check browser permissions.');
+    }
+  };
+
+  const captureFaceFrame = () => {
+    if (!faceVideoRef.current) return;
+    const video = faceVideoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        setFaceCapturedBlob(blob);
+        setFaceCapturedPreview(canvas.toDataURL('image/jpeg'));
+        stopFaceCam();
+      }
+    }, 'image/jpeg', 0.95);
+  };
+
+  const retakeFaceFrame = () => {
+    setFaceCapturedBlob(null);
+    setFaceCapturedPreview('');
+    startFaceCam();
+  };
+
+  const handleFaceEnrollSubmit = async (e) => {
+    e.preventDefault();
+    if (!faceCapturedBlob) {
+      alert('Please capture your face photo first.');
+      return;
+    }
+
+    setSubmittingFace(true);
+    try {
+      // 1. Initiate Enrollment Session
+      const sessionRes = await axios.post(`${getApiV1Url()}/attendance/enrollment/session`, {
+        reason: 'KYC_INITIAL_ENROLLMENT'
+      });
+
+      if (!sessionRes.data?.success || !sessionRes.data?.data?.sessionToken) {
+        throw new Error('Failed to obtain enrollment session token');
+      }
+
+      const sessionToken = sessionRes.data.data.sessionToken;
+
+      // 2. Commit Face Biometric Image
+      const formData = new FormData();
+      formData.append('session_token', sessionToken);
+      formData.append('face_image', faceCapturedBlob, 'face_enrollment.jpg');
+
+      const commitRes = await axios.post(`${getApiV1Url()}/attendance/enrollment/commit`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (commitRes.data?.success) {
+        alert('✓ Step 4: Biometric Face Reference Enrolled & Locked Successfully!');
+        setFaceEnrollCompleted(true);
+        loadMasterProfile();
+      }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Biometric face enrollment failed');
+    } finally {
+      setSubmittingFace(false);
     }
   };
 
@@ -424,9 +547,9 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
           </p>
         </div>
 
-        {/* 3-Step Navigation Wizard Tabs */}
+        {/* 4-Step Navigation Wizard Tabs */}
         <div style={{ 
-          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', 
+          display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '10px', 
           background: C.card, border: `1px solid ${C.border}`, borderRadius: '20px', 
           padding: '8px', marginBottom: '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' 
         }}>
@@ -485,6 +608,25 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
             <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
               <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', display: 'block', opacity: 0.8 }}>Step 3</span>
               <strong style={{ fontSize: isMobile ? '11px' : '13px', display: 'block' }}>KYC & Documents</strong>
+            </div>
+          </button>
+
+          {/* Step 4 Tab */}
+          <button
+            type="button"
+            onClick={() => setActiveTab(4)}
+            style={{
+              padding: isMobile ? '10px 4px' : '14px 16px', borderRadius: '14px', border: 'none', cursor: 'pointer',
+              background: activeTab === 4 ? (C.teal || '#0F766E') : (faceEnrollCompleted ? `${C.teal}15` : C.bgSecondary),
+              color: activeTab === 4 ? '#ffffff' : (faceEnrollCompleted ? (C.teal || '#0F766E') : C.textMid),
+              textAlign: 'center', transition: 'all 0.2s', display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+              alignItems: 'center', justifyContent: 'center', gap: '8px'
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>{faceEnrollCompleted ? <FaCheckCircle color={activeTab === 4 ? '#fff' : '#10B981'} /> : <FaCamera />}</span>
+            <div style={{ textAlign: isMobile ? 'center' : 'left' }}>
+              <span style={{ fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', display: 'block', opacity: 0.8 }}>Step 4</span>
+              <strong style={{ fontSize: isMobile ? '11px' : '13px', display: 'block' }}>Face Enrollment</strong>
             </div>
           </button>
 
@@ -793,6 +935,138 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
             <button type="submit" disabled={loading} style={{ width: '100%', background: C.teal || '#0F766E', color: '#fff', border: 'none', padding: '16px', borderRadius: '14px', fontSize: '15px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 16px rgba(15,118,110,0.3)' }}>
               {loading ? 'Submitting & Updating KYC...' : 'Submit & Save KYC Documents'}
             </button>
+
+          </form>
+        )}
+
+        {/* STEP 4 FORM: BIOMETRIC FACE VERIFICATION ENROLLMENT */}
+        {activeTab === 4 && (
+          <form onSubmit={handleFaceEnrollSubmit} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: isMobile ? '20px 16px' : '36px', boxShadow: '0 4px 24px rgba(0,0,0,0.03)' }}>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', borderBottom: `2px solid ${C.teal || '#0F766E'}20`, paddingBottom: '12px' }}>
+              <FaCamera style={{ color: C.teal || '#0F766E', fontSize: '22px' }} />
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.teal || '#0F766E', margin: 0 }}>Step 4: Biometric Face Verification Enrollment</h3>
+                <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Enroll your official face biometric reference for future attendance verification.</p>
+              </div>
+            </div>
+
+            {/* Mandatory Biometric Policy Notice */}
+            <div style={{ background: `${C.teal || '#0F766E'}10`, border: `1px solid ${C.teal || '#0F766E'}30`, borderRadius: '16px', padding: '16px 20px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 900, color: C.teal || '#0F766E', fontSize: '13.5px', marginBottom: '4px' }}>
+                <FaShieldAlt /> MANDATORY BIOMETRIC REFERENCE NOTICE
+              </div>
+              <p style={{ fontSize: '12.5px', color: C.text, margin: '0 0 6px 0', lineHeight: 1.5 }}>
+                Your face is being enrolled for secure attendance verification.
+              </p>
+              <p style={{ fontSize: '12px', color: C.textMid, margin: 0, lineHeight: 1.4 }}>
+                This reference will be used strictly for secure server-side biometric attendance verification. It cannot be changed once enrolled.
+              </p>
+            </div>
+
+            {/* Enrolled & Locked State Banner */}
+            {(faceEnrollCompleted || faceEnrollStatus?.is_enrolled) ? (
+              <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '18px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '24px' }}>
+                  <FaCheckCircle />
+                </div>
+                <h4 style={{ fontSize: '18px', fontWeight: 900, color: '#15803D', margin: '0 0 6px 0' }}>
+                  ✓ Biometric Face Reference Enrolled & Locked
+                </h4>
+                <p style={{ fontSize: '13px', color: C.textMid, margin: '0 0 16px 0' }}>
+                  Reference template version: <strong>v{faceEnrollStatus?.active_template?.version || 1}</strong> | Enrolled Date: <strong>{faceEnrollStatus?.active_template?.enrolled_at ? new Date(faceEnrollStatus.active_template.enrolled_at).toLocaleDateString() : 'Active'}</strong>
+                </p>
+                <div style={{ background: '#DCFCE7', border: '1px solid #86EFAC', borderRadius: '12px', padding: '12px 16px', fontSize: '12px', color: '#166534', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <FaLock /> Your biometric face reference is securely registered. Standard employees cannot re-enroll. Re-enrollment requires Super Admin authorization.
+                </div>
+              </div>
+            ) : (
+              <div>
+                {/* Guidance List */}
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '16px 20px', marginBottom: '20px', fontSize: '12.5px', lineHeight: 1.5, color: C.textMid }}>
+                  <div style={{ fontWeight: 800, color: C.text, marginBottom: '6px' }}>Capture Guidelines for Accurate Biometric Registration:</div>
+                  <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                    <li>Ensure clear, even lighting on your face without harsh shadows or backlighting.</li>
+                    <li>Look straight into the camera with a neutral facial expression.</li>
+                    <li>Remove dark sunglasses, masks, or hats that obstruct facial features.</li>
+                  </ul>
+                </div>
+
+                {faceCamError && (
+                  <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px 16px', borderRadius: '12px', fontSize: '12.5px', marginBottom: '20px' }}>
+                    ⚠️ {faceCamError}
+                  </div>
+                )}
+
+                {/* Camera / Capture Viewport */}
+                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
+                  {!faceCapturedPreview ? (
+                    <div>
+                      <div style={{ width: '100%', maxWidth: '380px', height: '280px', margin: '0 auto 16px', background: '#000', borderRadius: '16px', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {faceCamActive ? (
+                          <>
+                            <video ref={faceVideoRef} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            {/* Oval Face Guide Overlay */}
+                            <div style={{
+                              position: 'absolute', width: '180px', height: '230px',
+                              border: '2px dashed #2DD4BF', borderRadius: '50%',
+                              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.45)', pointerEvents: 'none'
+                            }} />
+                            <span style={{ position: 'absolute', bottom: '12px', background: 'rgba(0,0,0,0.7)', color: '#2DD4BF', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                              Align Face Within Frame
+                            </span>
+                          </>
+                        ) : (
+                          <div style={{ color: C.textMid, fontSize: '13px', padding: '20px' }}>
+                            <FaCamera style={{ fontSize: '36px', marginBottom: '8px', color: C.border }} />
+                            <div>Camera Offline</div>
+                          </div>
+                        )}
+                      </div>
+
+                      {!faceCamActive ? (
+                        <button type="button" onClick={startFaceCam} style={{ background: C.teal || '#0F766E', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: 800, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <FaCamera /> Open Camera for Face Capture
+                        </button>
+                      ) : (
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                          <button type="button" onClick={captureFaceFrame} style={{ background: '#059669', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: 900, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <FaCamera /> Capture Face Photograph
+                          </button>
+                          <button type="button" onClick={stopFaceCam} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '12px 16px', borderRadius: '12px', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ position: 'relative', width: '100%', maxWidth: '320px', margin: '0 auto 16px' }}>
+                        <img src={faceCapturedPreview} alt="Captured Face Preview" style={{ width: '100%', height: '260px', objectFit: 'cover', borderRadius: '16px', border: `2px solid ${C.teal || '#0F766E'}` }} />
+                        <span style={{ position: 'absolute', top: '10px', right: '10px', background: '#10B981', color: '#fff', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 800 }}>
+                          Captured Frame Ready
+                        </span>
+                      </div>
+                      <button type="button" onClick={retakeFaceFrame} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '10px 18px', borderRadius: '10px', fontWeight: 800, fontSize: '12.5px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <FaRedo /> Retake Photograph
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingFace || !faceCapturedBlob}
+                  style={{
+                    width: '100%', background: faceCapturedBlob ? (C.teal || '#0F766E') : C.border, color: '#fff',
+                    border: 'none', padding: '16px', borderRadius: '14px', fontSize: '15px', fontWeight: 900,
+                    cursor: faceCapturedBlob ? 'pointer' : 'not-allowed', boxShadow: faceCapturedBlob ? '0 4px 16px rgba(15,118,110,0.3)' : 'none'
+                  }}
+                >
+                  {submittingFace ? 'Validating & Committing Biometric Reference...' : 'Lock & Save Biometric Face Reference →'}
+                </button>
+              </div>
+            )}
 
           </form>
         )}

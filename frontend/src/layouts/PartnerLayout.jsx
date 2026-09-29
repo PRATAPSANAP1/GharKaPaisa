@@ -110,13 +110,20 @@ export default function PartnerLayout() {
   }, []);
 
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [messengerUnread, setMessengerUnread] = useState(0);
   const [showForcePasswordModal, setShowForcePasswordModal] = useState(false);
 
-  const fetchUnreadNotifs = async () => {
+  const fetchUnreadCounts = async () => {
     try {
-      const res = await api.get('/notifications', { params: { unread_only: 'true' } });
-      if (res.data?.success) {
-        setUnreadNotifCount(res.data.data?.unread_count ?? (res.data.data?.notifications?.length || 0));
+      const [notifRes, msgRes] = await Promise.all([
+        api.get('/notifications', { params: { unread_only: 'true' } }).catch(() => null),
+        api.get('/messenger/unread-count').catch(() => null)
+      ]);
+      if (notifRes?.data?.success) {
+        setUnreadNotifCount(notifRes.data.data?.unread_count ?? (notifRes.data.data?.notifications?.length || 0));
+      }
+      if (msgRes?.data?.success && typeof msgRes.data?.data?.unread_count === 'number') {
+        setMessengerUnread(msgRes.data.data.unread_count);
       }
     } catch (e) {
       /* silent */
@@ -137,12 +144,15 @@ export default function PartnerLayout() {
 
   const fetchProfile = usePartnerStore((state) => state.fetchProfile);
 
-  // Data synchronization on mount and navigation (no page-wide polling timer)
+  // Data synchronization on mount and navigation with interval
   useEffect(() => {
     if (!user?.id) return;
     fetchWallet();
-    fetchUnreadNotifs();
+    fetchUnreadCounts();
     fetchProfile().catch(() => {});
+
+    const interval = setInterval(fetchUnreadCounts, 10000);
+    return () => clearInterval(interval);
   }, [user?.id, location.pathname, fetchProfile]);
   const accountStatus = user?.status || 'pending';
   const kycStatus = user?.kyc_status || 'pending';
@@ -709,6 +719,7 @@ export default function PartnerLayout() {
           profileDropdownOpen={profileDropdownOpen}
           setProfileDropdownOpen={setProfileDropdownOpen}
           unreadNotifCount={unreadNotifCount}
+          messengerUnread={messengerUnread}
         />
         {/* Status Banners */}
         {accountStatus === 'inactive' && (
@@ -807,7 +818,7 @@ export default function PartnerLayout() {
 }
 
 // ── RESPONSIVE NAV BAR HEADER COMPONENT ──────────────────────
-function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebarOpen, setMobileMenuOpen, handleLogout, walletBalance, profileDropdownOpen, setProfileDropdownOpen, unreadNotifCount }) {
+function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebarOpen, setMobileMenuOpen, handleLogout, walletBalance, profileDropdownOpen, setProfileDropdownOpen, unreadNotifCount, messengerUnread }) {
   const location = useLocation();
   const dropdownRef = useRef(null);
   const { isDark } = useTheme();
@@ -931,6 +942,29 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
           title="Messenger"
         >
           <FaComments size={isMobile ? 20 : 22} style={{ color: C.primary || '#0D5CAB' }} />
+          {messengerUnread > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                top: '2px',
+                right: '2px',
+                fontSize: '10px',
+                color: '#FFFFFF',
+                background: '#EF4444',
+                borderRadius: '50%',
+                minWidth: '16px',
+                height: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                padding: '0 3px',
+                boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)'
+              }}
+            >
+              {messengerUnread > 99 ? '99+' : messengerUnread}
+            </span>
+          )}
         </div>
 
         {/* Notifications Icon */}
