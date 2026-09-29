@@ -1,4 +1,9 @@
-const { RekognitionClient, CreateFaceLivenessSessionCommand, GetFaceLivenessSessionResultsCommand } = require('@aws-sdk/client-rekognition');
+let RekognitionClient, CreateFaceLivenessSessionCommand, GetFaceLivenessSessionResultsCommand;
+try {
+  ({ RekognitionClient, CreateFaceLivenessSessionCommand, GetFaceLivenessSessionResultsCommand } = require('@aws-sdk/client-rekognition'));
+} catch (e) {
+  // @aws-sdk/client-rekognition package not available or not yet installed
+}
 const logger = require('../../config/logger');
 
 class FaceLivenessProvider {
@@ -9,7 +14,7 @@ class FaceLivenessProvider {
     const hasCreds = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
     const isExplicitlyEnabled = process.env.AWS_REKOGNITION_LIVENESS_ENABLED === 'true';
 
-    this.isConfigured = hasCreds && isExplicitlyEnabled;
+    this.isConfigured = !!(RekognitionClient && hasCreds && isExplicitlyEnabled);
 
     if (this.isConfigured) {
       this.rekognitionClient = new RekognitionClient({
