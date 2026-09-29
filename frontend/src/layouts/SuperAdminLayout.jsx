@@ -10,7 +10,7 @@ import logo from '../assets/logos/logo.png';
 import Chatbot from '../components/Chatbot/Chatbot';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import { MdNotifications } from 'react-icons/md';
-import { FaWhatsapp } from 'react-icons/fa';
+import { FaWhatsapp, FaComments } from 'react-icons/fa';
 
 // ── Chevron Component for Collapsible Items ──────────────────────────────────
 const Chevron = ({ open, color = "currentColor", size = 16 }) => (
@@ -630,7 +630,7 @@ const SuperAdminLayout = () => {
                   cursor: 'pointer', position: 'relative'
                 }}
               >
-                <Icons.profile size={20} color={C.teal} />
+                <FaComments size={18} color={C.teal} />
                 {messengerUnread > 0 && (
                   <span style={{
                     position: 'absolute', top: '-4px', right: '-4px',

@@ -335,6 +335,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   // Reaction Emoji State
   const [reactionsMap, setReactionsMap] = useState({}); // { [msgId]: emojiSymbol }
   const [activeReactionPickerMsgId, setActiveReactionPickerMsgId] = useState(null);
+  const [hoveredMsgId, setHoveredMsgId] = useState(null);
 
   const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
 
@@ -1382,7 +1383,10 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
               )}
 
               {/* Chat Messages Body */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '14px 12px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div 
+                onClick={() => setActiveReactionPickerMsgId(null)}
+                style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '14px 12px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}
+              >
                 {loadingMsgs ? (
                   <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', marginTop: '40px' }}>
                     Loading conversation...
@@ -1414,7 +1418,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       <span>Messages & attachments automatically delete everywhere after 48 hours</span>
                     </div>
 
-                    {filteredMessages.map((msg) => {
+                    {filteredMessages.map((msg, msgIdx) => {
                       if (msg.message_type === 'SYSTEM') {
                         const sysTxt = (msg.message_text || '').toLowerCase();
                         if (sysTxt.includes('added') || sysTxt.includes('removed') || sysTxt.includes('left') || sysTxt.includes('joined')) {
@@ -1433,272 +1437,346 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       }
 
                       const isMe = String(msg.sender_id || '').toLowerCase() === String(user?.id || '').toLowerCase();
-                    const isReadByReceiver = Boolean(
-                      msg.is_read ||
-                      (Array.isArray(msg.reads) && msg.reads.some(r => r.user_id && String(r.user_id).toLowerCase() !== String(msg.sender_id).toLowerCase()))
-                    );
+                      const isReadByReceiver = Boolean(
+                        msg.is_read ||
+                        (Array.isArray(msg.reads) && msg.reads.some(r => r.user_id && String(r.user_id).toLowerCase() !== String(msg.sender_id).toLowerCase()))
+                      );
 
-                    const isEditingThis = editingMsgId === msg.id;
+                      const isEditingThis = editingMsgId === msg.id;
+                      const isNearBottom = msgIdx >= filteredMessages.length - 4;
+                      const isHovered = hoveredMsgId === msg.id;
+                      const isPickerOpen = activeReactionPickerMsgId === msg.id;
 
-                    return (
-                      <div
-                        key={msg.id}
-                        style={{
-                          display: 'flex', flexDirection: 'column',
-                          alignItems: isMe ? 'flex-end' : 'flex-start',
-                          position: 'relative'
-                        }}
-                      >
-                        {!isMe && (
-                          <span 
-                            onClick={() => {
-                              if (isSuperAdmin) {
-                                openUserProfile(msg);
+                      return (
+                        <div
+                          key={msg.id}
+                          onMouseEnter={() => setHoveredMsgId(msg.id)}
+                          onMouseLeave={() => setHoveredMsgId(null)}
+                          style={{
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: isMe ? 'flex-end' : 'flex-start',
+                            position: 'relative',
+                            width: '100%'
+                          }}
+                        >
+                          {!isMe && (
+                            <span 
+                              onClick={() => {
+                                if (isSuperAdmin) {
+                                  openUserProfile(msg);
+                                }
+                              }}
+                              title={isSuperAdmin ? "Click to view profile details" : "Member"}
+                              style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB', marginBottom: '3px', marginLeft: '4px', cursor: isSuperAdmin ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <FaUserCircle size={11} /> {
+                                (activeConv?.conversation_type === 'GROUP' || activeConv?.conversation_type === 'DEPARTMENT')
+                                  ? (isSuperAdmin
+                                      ? (msg.sender_name || 'Member')
+                                      : (() => {
+                                          const memberIdx = groupMembers.findIndex(gm => 
+                                            String(gm.user_id || gm.id).toLowerCase() === String(msg.sender_id || msg.user_id).toLowerCase()
+                                          );
+                                          return memberIdx !== -1 ? `User ${memberIdx + 1}` : 'User';
+                                        })())
+                                  : (isSuperAdminOrSharad
+                                      ? (msg.sender_name || 'Member')
+                                      : (msg.sender_partner_code || msg.sender_employee_code || 'Member'))
                               }
-                            }}
-                            title={isSuperAdmin ? "Click to view profile details" : "Member"}
-                            style={{ fontSize: '11px', fontWeight: 700, color: '#2563EB', marginBottom: '3px', marginLeft: '4px', cursor: isSuperAdmin ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <FaUserCircle size={11} /> {
-                              (activeConv?.conversation_type === 'GROUP' || activeConv?.conversation_type === 'DEPARTMENT')
-                                ? (isSuperAdmin
-                                    ? (msg.sender_name || 'Member')
-                                    : (() => {
-                                        const memberIdx = groupMembers.findIndex(gm => 
-                                          String(gm.user_id || gm.id).toLowerCase() === String(msg.sender_id || msg.user_id).toLowerCase()
-                                        );
-                                        return memberIdx !== -1 ? `User ${memberIdx + 1}` : 'User';
-                                      })())
-                                : (isSuperAdminOrSharad
-                                    ? (msg.sender_name || 'Member')
-                                    : (msg.sender_partner_code || msg.sender_employee_code || 'Member'))
-                            }
-                          </span>
-                        )}
+                            </span>
+                          )}
 
-                        {/* Floating Quick Emoji Reaction Bar (WhatsApp style) */}
-                        {activeReactionPickerMsgId === msg.id && (
                           <div style={{
-                            position: 'absolute', top: '-38px', [isMe ? 'right' : 'left']: '0px',
-                            background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '24px',
-                            padding: '4px 10px', boxShadow: '0 6px 20px rgba(0,0,0,0.15)', display: 'flex',
-                            gap: '8px', zIndex: 60, alignItems: 'center'
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            flexDirection: isMe ? 'row-reverse' : 'row',
+                            maxWidth: '100%', position: 'relative'
                           }}>
-                            {REACTION_EMOJIS.map(emoji => (
-                              <span
-                                key={emoji}
-                                onClick={() => handleToggleReaction(msg.id, emoji)}
-                                style={{
-                                  fontSize: '18px', cursor: 'pointer', transition: 'transform 0.1s',
-                                  padding: '2px 4px', borderRadius: '6px'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.25)'}
-                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                              >
-                                {emoji}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexDirection: isMe ? 'row-reverse' : 'row', width: '100%', justifyContent: isMe ? 'flex-start' : 'flex-start' }}>
-                          {/* Message Bubble Container */}
-                          <div style={{
-                            maxWidth: isMobile ? '85%' : '65%', padding: isMobile ? '10px 14px' : '12px 18px',
-                            borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                            background: isMe ? '#DBEAFE' : '#FFFFFF',
-                            border: isMe ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
-                            color: '#1E293B',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                            fontSize: isMobile ? '13.5px' : '14px', lineHeight: 1.5,
-                            position: 'relative'
-                          }}>
-                            {isEditingThis ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <input
-                                  type="text"
-                                  value={editingText}
-                                  onChange={(e) => setEditingText(e.target.value)}
-                                  style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #2563EB', outline: 'none', fontSize: '13px' }}
-                                  autoFocus
-                                />
-                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                  <button onClick={() => setEditingMsgId(null)} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                                  <button onClick={() => handleEditMessage(msg.id)} style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#2563EB', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Save</button>
-                                </div>
-                              </div>
-                            ) : (
-                              msg.message_text && (
-                                <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                                  {msg.message_text}
-                                  {msg.is_edited && <span style={{ fontSize: '10px', color: '#64748B', fontStyle: 'italic', marginLeft: '6px' }}>(edited)</span>}
-                                </div>
-                              )
-                            )}
-
-                            {/* Render File & Image Attachments */}
-                            {msg.attachments && msg.attachments.length > 0 && (
-                              <div style={{ marginTop: msg.message_text ? '10px' : 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {msg.attachments.map((att, idx) => {
-                                  const isImg = att.file_type === 'IMAGE' || 
-                                                /\.(png|jpe?g|gif|webp|bmp|svg)($|\?)/i.test(att.file_url || att.file_name || '') ||
-                                                (att.file_url && att.file_url.startsWith('blob:'));
-                                  return isImg ? (
-                                    <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '280px' }}>
-                                      <img
-                                        src={att.file_url}
-                                        alt={att.file_name || 'Attachment'}
-                                        onClick={() => setPreviewImageUrl(att.file_url)}
-                                        style={{
-                                          maxWidth: '100%',
-                                          maxHeight: '220px',
-                                          borderRadius: '12px',
-                                          objectFit: 'cover',
-                                          border: '1px solid #CBD5E1',
-                                          cursor: 'pointer',
-                                          boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                                        }}
-                                      />
-                                      {att.file_url && (
-                                        <div style={{
-                                          position: 'absolute', bottom: '8px', right: '8px', display: 'flex', gap: '4px', zIndex: 5
-                                        }}>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); handleCopyImage(att.file_url); }}
-                                            style={{
-                                              background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
-                                              borderRadius: '50%', width: '28px', height: '28px', border: 'none',
-                                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                              backdropFilter: 'blur(4px)', cursor: 'pointer'
-                                            }}
-                                            title="Copy Image to Clipboard"
-                                          >
-                                            <FaCopy size={11} />
-                                          </button>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); handleDownloadImage(att.file_url, att.file_name); }}
-                                            style={{
-                                              background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
-                                              borderRadius: '50%', width: '28px', height: '28px', border: 'none',
-                                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                              backdropFilter: 'blur(4px)', cursor: 'pointer'
-                                            }}
-                                            title="Download Image"
-                                          >
-                                            <FaDownload size={11} />
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div
-                                      key={idx}
-                                      style={{
-                                        padding: '10px 14px', background: '#FFFFFF', borderRadius: '12px',
-                                        border: '1px solid #CBD5E1', display: 'flex', alignItems: 'center', gap: '12px'
-                                      }}
-                                    >
-                                      <div style={{
-                                        width: '36px', height: '36px', borderRadius: '8px', background: '#FEE2E2',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444'
-                                      }}>
-                                        <FaFilePdf size={18} />
-                                      </div>
-                                      <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                          {att.file_name}
-                                        </div>
-                                        <div style={{ fontSize: '11px', color: '#64748B' }}>{att.file_size || 'Document'}</div>
-                                      </div>
-                                      {att.file_url && (
-                                        <a href={att.file_url} target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>
-                                          <FaDownload size={14} />
-                                        </a>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-
-                            {/* Applied Emoji Reaction Badge (WhatsApp style attached at bottom corner) */}
-                            {reactionsMap[msg.id] && (
-                              <div
-                                onClick={() => handleToggleReaction(msg.id, reactionsMap[msg.id])}
-                                style={{
-                                  position: 'absolute', bottom: '-10px', [isMe ? 'left' : 'right']: '12px',
-                                  background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '14px',
-                                  padding: '1px 6px', fontSize: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                                  cursor: 'pointer', zIndex: 15, display: 'inline-flex', alignItems: 'center'
-                                }}
-                                title="Click to remove reaction"
-                              >
-                                {reactionsMap[msg.id]}
-                              </div>
-                            )}
-
-                            {/* Timestamp & Actions */}
+                            {/* Message Bubble Container */}
                             <div style={{
-                              display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-                              gap: '6px', marginTop: '4px', fontSize: '10.5px', color: '#64748B'
+                              maxWidth: isMobile ? '85%' : '65%', padding: isMobile ? '10px 14px' : '12px 18px',
+                              borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                              background: isMe ? '#DBEAFE' : '#FFFFFF',
+                              border: isMe ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
+                              color: '#1E293B',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                              fontSize: isMobile ? '13.5px' : '14px', lineHeight: 1.5,
+                              position: 'relative'
                             }}>
-                              <span>{formatTime(msg.created_at)}</span>
-                              {msg.message_text && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopyMessageText(msg.message_text, msg.id)}
-                                  style={{ background: 'none', border: 'none', color: copiedMsgId === msg.id ? '#2563EB' : '#64748B', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: '2px', marginLeft: '4px' }}
-                                  title="Copy Message Text"
-                                >
-                                  <FaCopy size={10} />
-                                  {copiedMsgId === msg.id && <span style={{ fontSize: '9px', color: '#2563EB', fontWeight: 800 }}>Copied</span>}
-                                </button>
+                              {isEditingThis ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  <input
+                                    type="text"
+                                    value={editingText}
+                                    onChange={(e) => setEditingText(e.target.value)}
+                                    style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #2563EB', outline: 'none', fontSize: '13px' }}
+                                    autoFocus
+                                  />
+                                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                    <button onClick={() => setEditingMsgId(null)} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                                    <button onClick={() => handleEditMessage(msg.id)} style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#2563EB', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Save</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                msg.message_text && (
+                                  <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                    {msg.message_text}
+                                    {msg.is_edited && <span style={{ fontSize: '10px', color: '#64748B', fontStyle: 'italic', marginLeft: '6px' }}>(edited)</span>}
+                                  </div>
+                                )
                               )}
-                              {isMe && (
-                                <>
+
+                              {/* Render File & Image Attachments */}
+                              {msg.attachments && msg.attachments.length > 0 && (
+                                <div style={{ marginTop: msg.message_text ? '10px' : 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  {msg.attachments.map((att, idx) => {
+                                    const isImg = att.file_type === 'IMAGE' || 
+                                                  /\.(png|jpe?g|gif|webp|bmp|svg)($|\?)/i.test(att.file_url || att.file_name || '') ||
+                                                  (att.file_url && att.file_url.startsWith('blob:'));
+                                    return isImg ? (
+                                      <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '280px' }}>
+                                        <img
+                                          src={att.file_url}
+                                          alt={att.file_name || 'Attachment'}
+                                          onClick={() => setPreviewImageUrl(att.file_url)}
+                                          style={{
+                                            maxWidth: '100%',
+                                            maxHeight: '220px',
+                                            borderRadius: '12px',
+                                            objectFit: 'cover',
+                                            border: '1px solid #CBD5E1',
+                                            cursor: 'pointer',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                                          }}
+                                        />
+                                        {att.file_url && (
+                                          <div style={{
+                                            position: 'absolute', bottom: '8px', right: '8px', display: 'flex', gap: '4px', zIndex: 5
+                                          }}>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => { e.stopPropagation(); handleCopyImage(att.file_url); }}
+                                              style={{
+                                                background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
+                                                borderRadius: '50%', width: '28px', height: '28px', border: 'none',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                backdropFilter: 'blur(4px)', cursor: 'pointer'
+                                              }}
+                                              title="Copy Image to Clipboard"
+                                            >
+                                              <FaCopy size={11} />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => { e.stopPropagation(); handleDownloadImage(att.file_url, att.file_name); }}
+                                              style={{
+                                                background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
+                                                borderRadius: '50%', width: '28px', height: '28px', border: 'none',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                backdropFilter: 'blur(4px)', cursor: 'pointer'
+                                              }}
+                                              title="Download Image"
+                                            >
+                                              <FaDownload size={11} />
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div
+                                        key={idx}
+                                        style={{
+                                          padding: '10px 14px', background: '#FFFFFF', borderRadius: '12px',
+                                          border: '1px solid #CBD5E1', display: 'flex', alignItems: 'center', gap: '12px'
+                                        }}
+                                      >
+                                        <div style={{
+                                          width: '36px', height: '36px', borderRadius: '8px', background: '#FEE2E2',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444'
+                                        }}>
+                                          <FaFilePdf size={18} />
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {att.file_name}
+                                          </div>
+                                          <div style={{ fontSize: '11px', color: '#64748B' }}>{att.file_size || 'Document'}</div>
+                                        </div>
+                                        {att.file_url && (
+                                          <a href={att.file_url} target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>
+                                            <FaDownload size={14} />
+                                          </a>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Applied Emoji Reaction Badge */}
+                              {reactionsMap[msg.id] && (
+                                <div
+                                  onClick={() => handleToggleReaction(msg.id, reactionsMap[msg.id])}
+                                  style={{
+                                    position: 'absolute', bottom: '-10px', [isMe ? 'left' : 'right']: '12px',
+                                    background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '14px',
+                                    padding: '1px 6px', fontSize: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                                    cursor: 'pointer', zIndex: 15, display: 'inline-flex', alignItems: 'center'
+                                  }}
+                                  title="Click to remove reaction"
+                                >
+                                  {reactionsMap[msg.id]}
+                                </div>
+                              )}
+
+                              {/* Clean Timestamp & Ticks (No inline copy/edit/delete buttons) */}
+                              <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+                                gap: '4px', marginTop: '4px', fontSize: '10.5px', color: '#64748B'
+                              }}>
+                                <span>{formatTime(msg.created_at)}</span>
+                                {isMe && (
                                   <FaCheckDouble
                                     color={isReadByReceiver ? '#2563EB' : '#94A3B8'}
                                     size={13}
                                     title={isReadByReceiver ? 'Read by recipient' : 'Sent'}
                                   />
-                                  {!isEditingThis && (
-                                    <div style={{ display: 'inline-flex', gap: '4px', marginLeft: '6px' }}>
-                                      {/* Only show edit if message is within 5 minutes of sending */}
-                                      {isMessageWithin5Minutes(msg) && (
-                                        <button onClick={() => { setEditingMsgId(msg.id); setEditingText(msg.message_text || ''); }} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0 }} title="Edit message (Available for 5 mins)"><FaEdit size={10} /></button>
-                                      )}
-                                      <button onClick={() => handleDeleteSingleMessage(msg.id)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0 }} title="Delete message"><FaTimes size={10} /></button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Hover Smile Emoji Trigger Button */}
+                            {!readOnly && (isHovered || isPickerOpen) && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveReactionPickerMsgId(prev => prev === msg.id ? null : msg.id);
+                                }}
+                                style={{
+                                  background: '#FFFFFF', border: '1px solid #CBD5E1',
+                                  color: isPickerOpen ? '#2563EB' : '#64748B',
+                                  cursor: 'pointer', width: '28px', height: '28px', borderRadius: '50%',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)', transition: 'all 0.15s ease',
+                                  flexShrink: 0
+                                }}
+                                title="Emoji & Message Actions"
+                              >
+                                <FaSmile size={15} />
+                              </button>
+                            )}
+
+                            {/* Popup Action & Reaction Menu (Boundary Aware) */}
+                            {isPickerOpen && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                  position: 'absolute',
+                                  ...(isNearBottom ? { bottom: '100%', marginBottom: '6px' } : { top: '100%', marginTop: '6px' }),
+                                  ...(isMe ? { right: '0px' } : { left: '0px' }),
+                                  background: '#FFFFFF',
+                                  border: '1px solid #CBD5E1',
+                                  borderRadius: '16px',
+                                  padding: '10px 12px',
+                                  boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
+                                  zIndex: 100,
+                                  width: '260px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '8px'
+                                }}
+                              >
+                                {/* Top Section: Emoji Reaction Row */}
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                  {REACTION_EMOJIS.map(emoji => (
+                                    <span
+                                      key={emoji}
+                                      onClick={() => handleToggleReaction(msg.id, emoji)}
+                                      style={{
+                                        fontSize: '19px', cursor: 'pointer', transition: 'transform 0.1s',
+                                        padding: '2px 4px', borderRadius: '6px', display: 'inline-block'
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.3)'}
+                                      onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                                      title={`React with ${emoji}`}
+                                    >
+                                      {emoji}
+                                    </span>
+                                  ))}
+                                </div>
+
+                                {/* Divider Line */}
+                                <div style={{ height: '1px', background: '#E2E8F0', margin: '2px 0' }} />
+
+                                {/* Bottom Section: Vertical List of Actions */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  {/* Copy Message Action */}
+                                  {msg.message_text && (
+                                    <div
+                                      onClick={() => {
+                                        handleCopyMessageText(msg.message_text, msg.id);
+                                        setActiveReactionPickerMsgId(null);
+                                      }}
+                                      style={{
+                                        padding: '8px 10px', borderRadius: '8px', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px',
+                                        color: '#1E293B', fontWeight: 600, transition: 'background 0.15s'
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.background = '#F1F5F9'}
+                                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                      <FaCopy size={13} color="#2563EB" />
+                                      <span>{copiedMsgId === msg.id ? 'Copied!' : 'Copy Message'}</span>
                                     </div>
                                   )}
-                                </>
-                              )}
-                            </div>
-                          </div>
 
-                          {/* Reaction Trigger Smile Icon (Left side for Sender, Right side for Receiver) */}
-                          {!readOnly && (
-                            <button
-                              type="button"
-                              onClick={() => setActiveReactionPickerMsgId(prev => prev === msg.id ? null : msg.id)}
-                              style={{
-                                background: 'transparent', border: 'none', color: activeReactionPickerMsgId === msg.id ? '#2563EB' : '#94A3B8',
-                                cursor: 'pointer', padding: '4px', borderRadius: '50%', display: 'flex', alignItems: 'center',
-                                justifyContent: 'center', opacity: 0.75, transition: 'opacity 0.15s, color 0.15s'
-                              }}
-                              title="React with Emoji"
-                              onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#2563EB'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.75'; if (activeReactionPickerMsgId !== msg.id) e.currentTarget.style.color = '#94A3B8'; }}
-                            >
-                              <FaSmile size={13} />
-                            </button>
-                          )}
+                                  {/* Edit Message Action (Sender & within 5 mins) */}
+                                  {isMe && isMessageWithin5Minutes(msg) && (
+                                    <div
+                                      onClick={() => {
+                                        setEditingMsgId(msg.id);
+                                        setEditingText(msg.message_text || '');
+                                        setActiveReactionPickerMsgId(null);
+                                      }}
+                                      style={{
+                                        padding: '8px 10px', borderRadius: '8px', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px',
+                                        color: '#1E293B', fontWeight: 600, transition: 'background 0.15s'
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.background = '#F1F5F9'}
+                                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                      <FaEdit size={13} color="#2563EB" />
+                                      <span>Edit Message</span>
+                                    </div>
+                                  )}
+
+                                  {/* Delete Message Action (Sender only) */}
+                                  {isMe && (
+                                    <div
+                                      onClick={() => {
+                                        setActiveReactionPickerMsgId(null);
+                                        handleDeleteSingleMessage(msg.id);
+                                      }}
+                                      style={{
+                                        padding: '8px 10px', borderRadius: '8px', cursor: 'pointer',
+                                        display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px',
+                                        color: '#DC2626', fontWeight: 600, transition: 'background 0.15s'
+                                      }}
+                                      onMouseEnter={(e) => e.currentTarget.style.background = '#FEF2F2'}
+                                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                      <FaTrashAlt size={13} color="#DC2626" />
+                                      <span>Delete Message</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
-                }</>
+                      );
+                    })}</>
                 )}
                 <div ref={messagesEndRef} />
               </div>

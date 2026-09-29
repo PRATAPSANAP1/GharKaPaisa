@@ -140,6 +140,8 @@ export default function AppLayout() {
       <Tabs.Screen name="whatsapp" options={{ href: null }} />
       <Tabs.Screen name="reports" options={{ href: null }} />
       <Tabs.Screen name="security" options={{ href: null }} />
+      <Tabs.Screen name="employee-team" options={{ href: null }} />
+      <Tabs.Screen name="employee-referrals" options={{ href: null }} />
     </Tabs>
   );
 }

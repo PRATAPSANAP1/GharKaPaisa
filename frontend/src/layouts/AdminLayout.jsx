@@ -10,6 +10,7 @@ import Chatbot from '../components/Chatbot/Chatbot';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 import api from '../services/api';
 import { MdExpandMore, MdChevronRight, MdAccountBalance, MdShoppingBag, MdSettings, MdMenu, MdClose, MdNotifications } from 'react-icons/md';
+import { FaComments } from 'react-icons/fa';
 
 const DEFAULT_BANKS = [
   { id: 'hdfc', name: 'HDFC Bank', short_code: 'HDFC' },
@@ -578,7 +579,7 @@ const AdminLayout = () => {
                 outline: 'none'
               }}
             >
-              <Icons.profile size={18} color="#3b82f6" />
+              <FaComments size={18} color="#3b82f6" />
               {messengerUnread > 0 && (
                 <span style={{
                   position: 'absolute',

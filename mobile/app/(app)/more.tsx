@@ -46,7 +46,7 @@ export default function MoreScreen() {
       title: 'Team & Staff',
       subtitle: 'Overview of team members & active assignments',
       icon: '👥',
-      route: '/(app)/team'
+      route: '/(app)/employee-team'
     }
   ];
 
@@ -57,6 +57,13 @@ export default function MoreScreen() {
       subtitle: 'Explore credit cards, loans, insurance & bank products',
       icon: '💳',
       route: '/(app)/products'
+    },
+    {
+      id: 'referrals',
+      title: 'Referral Products & Links',
+      subtitle: 'Product referral links & employee commission codes',
+      icon: '🔗',
+      route: '/(app)/employee-referrals'
     },
     {
       id: 'wallet',

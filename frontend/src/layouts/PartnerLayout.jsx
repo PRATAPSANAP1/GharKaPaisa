@@ -16,6 +16,7 @@ import {
   MdNotifications, MdBarChart, MdSearch, MdShield, MdExpandMore, MdExpandLess, MdAdd, MdArrowForward,
   MdPerson, MdAssignmentInd, MdGroup, MdAnalytics, MdFileDownload, MdPendingActions, MdCheckCircle, MdCancel, MdReceipt
 } from 'react-icons/md';
+import { FaComments } from 'react-icons/fa';
 import logo from '../assets/logos/logo.png';
 import ForcePasswordChangeModal from '../modules/partner/profile/ForcePasswordChangeModal';
 import api, { getAccessToken } from '../services/api';
@@ -929,7 +930,7 @@ function PartnerHeader({ C, user, navigate, t, isMobile, sidebarOpen, setSidebar
           tabIndex={0}
           title="Messenger"
         >
-          <MdSupportAgent size={isMobile ? 22 : 24} style={{ color: C.primary || '#0D5CAB' }} />
+          <FaComments size={isMobile ? 20 : 22} style={{ color: C.primary || '#0D5CAB' }} />
         </div>
 
         {/* Notifications Icon */}
