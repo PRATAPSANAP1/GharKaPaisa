@@ -269,13 +269,76 @@ async function createGroup(currentUserId, { name, description, memberUserIds = [
   return await repo.getConversationById(conv.id);
 }
 
-async function getConversationDetails(conversationId, userId, userRole = null) {
-  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
-  if (!isSuperAdmin) {
-    const isPart = await repo.isParticipant(conversationId, userId);
-    if (!isPart) {
-      throw new Error('Access denied to this conversation.');
+async function resolveIsSuperAdmin(userId, userOrRole = null) {
+  const normalize = (val) => String(val || '').trim().toUpperCase().replace(/[\s\_]+/g, '');
+
+  if (userOrRole) {
+    if (typeof userOrRole === 'object') {
+      const r = normalize(userOrRole.role);
+      const d = normalize(userOrRole.designation);
+      if (r === 'SUPERADMIN' || d === 'SUPERADMIN') return true;
+    } else {
+      const r = normalize(userOrRole);
+      if (r === 'SUPERADMIN') return true;
     }
+  }
+
+  if (userId) {
+    try {
+      const { rows: [u] } = await query(`SELECT role, designation FROM users WHERE id = $1`, [userId]);
+      if (u) {
+        const r = normalize(u.role);
+        const d = normalize(u.designation);
+        if (r === 'SUPERADMIN' || d === 'SUPERADMIN') return true;
+      }
+    } catch (e) {}
+  }
+
+  return false;
+}
+
+async function ensureParticipantAccess(conversationId, userId, userOrRole = null) {
+  let isPart = await repo.isParticipant(conversationId, userId);
+  if (isPart) return true;
+
+  const isSuper = await resolveIsSuperAdmin(userId, userOrRole);
+  if (isSuper) {
+    await repo.addParticipant({ conversation_id: conversationId, user_id: userId, role: 'ADMIN' });
+    return true;
+  }
+
+  // Check if conversation exists and auto-enroll if authorized
+  const conv = await repo.getConversationById(conversationId);
+  if (conv) {
+    if (conv.conversation_type === 'APPLICATION' && conv.application_id) {
+      const { rows: [app] } = await query(`SELECT id, created_by FROM applications WHERE id = $1 OR app_number = $1`, [conv.application_id]);
+      const { rows: [u] } = await query(`SELECT role, designation FROM users WHERE id = $1`, [userId]);
+      const uRole = String(u?.role || u?.designation || '').trim().toUpperCase().replace(/[\s\_]+/g, '');
+      const ADMIN_ROLES = [
+        'ADMIN', 'SUPERADMIN', 'EMPLOYEE', 'OPERATIONALHEAD', 'OPERATIONSHEAD',
+        'ADMINISTRATIVEOPERATOR', 'ADMINISTRATIVESALESEXECUTIVE',
+        'PANCHECKER', 'QDOPERATOR', 'REMARKOPERATOR', 'TELECALLER', 'TEAMLEADER', 'FINALSTATUSOPERATOR'
+      ];
+      if (ADMIN_ROLES.includes(uRole) || (app && app.created_by === userId)) {
+        await repo.addParticipant({ conversation_id: conversationId, user_id: userId, role: 'MEMBER' });
+        return true;
+      }
+    } else if (conv.conversation_type === 'DIRECT') {
+      const { rows: [u] } = await query(`SELECT role, designation FROM users WHERE id = $1`, [userId]);
+      if (u) {
+        await repo.addParticipant({ conversation_id: conversationId, user_id: userId, role: 'MEMBER' });
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+async function getConversationDetails(conversationId, userId, userRole = null) {
+  const isAuthorized = await ensureParticipantAccess(conversationId, userId, userRole);
+  if (!isAuthorized) {
+    throw new Error('Access denied to this conversation.');
   }
   const conv = await repo.getConversationById(conversationId);
   const participants = await repo.getConversationParticipants(conversationId);
@@ -283,18 +346,16 @@ async function getConversationDetails(conversationId, userId, userRole = null) {
 }
 
 async function getMessages(conversationId, userId, limit = 5000, offset = 0, userRole = null) {
-  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
-  if (!isSuperAdmin) {
-    const isPart = await repo.isParticipant(conversationId, userId);
-    if (!isPart) {
-      throw new Error('Access denied to this conversation.');
-    }
+  const isAuthorized = await ensureParticipantAccess(conversationId, userId, userRole);
+  if (!isAuthorized) {
+    throw new Error('Access denied to this conversation.');
   }
   await repo.markMessagesAsRead(conversationId, userId);
   const messages = await repo.getMessages(conversationId, userId, limit, offset);
 
   const conv = await repo.getConversationById(conversationId);
   const isGroup = conv && (conv.conversation_type === 'GROUP' || conv.conversation_type === 'DEPARTMENT');
+  const isSuperAdmin = await resolveIsSuperAdmin(userId, userRole);
 
   return messages.map(m => {
     let senderName = m.sender_name;
@@ -310,15 +371,9 @@ async function getMessages(conversationId, userId, limit = 5000, offset = 0, use
 }
 
 async function postMessage(senderId, { conversation_id, message_type = 'TEXT', message_text, reply_to_message_id, attachments = [] }, userRole = null) {
-  const isSuperAdmin = (userRole || '').toUpperCase() === 'SUPER_ADMIN';
-  let isPart = await repo.isParticipant(conversation_id, senderId);
-  if (!isPart) {
-    if (isSuperAdmin) {
-      await repo.addParticipant({ conversation_id, user_id: senderId, role: 'ADMIN' });
-      isPart = true;
-    } else {
-      throw new Error('You are not a participant of this conversation.');
-    }
+  const isAuthorized = await ensureParticipantAccess(conversation_id, senderId, userRole);
+  if (!isAuthorized) {
+    throw new Error('You are not a participant of this conversation.');
   }
 
   if (!message_text && (!attachments || attachments.length === 0)) {

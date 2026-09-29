@@ -7,7 +7,7 @@ async function getConversations(req, res, next) {
     const userId = req.user.id;
     const filter = req.query.filter || 'ALL';
     const search = req.query.search || '';
-    const data = await service.listConversations(userId, filter, search, req.user.role);
+    const data = await service.listConversations(userId, filter, search, req.user);
     return success(res, data, 'Conversations retrieved successfully');
   } catch (err) {
     next(err);
@@ -61,7 +61,7 @@ async function getConversation(req, res, next) {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const conv = await service.getConversationDetails(id, userId, req.user.role);
+    const conv = await service.getConversationDetails(id, userId, req.user);
     return success(res, conv, 'Conversation details retrieved');
   } catch (err) {
     next(err);
@@ -74,7 +74,7 @@ async function getMessages(req, res, next) {
     const { id } = req.params;
     const limit = Math.min(parseInt(req.query.limit || 5000, 10), 5000);
     const offset = parseInt(req.query.offset || 0, 10);
-    const messages = await service.getMessages(id, userId, limit, offset, req.user.role);
+    const messages = await service.getMessages(id, userId, limit, offset, req.user);
     return success(res, messages, 'Messages retrieved');
   } catch (err) {
     next(err);
@@ -95,7 +95,7 @@ async function sendMessage(req, res, next) {
       message_text,
       reply_to_message_id,
       attachments
-    }, req.user.role);
+    }, req.user);
     return success(res, msg, 'Message sent successfully');
   } catch (err) {
     next(err);
