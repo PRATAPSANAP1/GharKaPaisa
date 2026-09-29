@@ -300,7 +300,7 @@ async function getMessages(conversationId, userId = null, limit = 5000, offset =
       LEFT JOIN users u ON u.id = m.sender_id
       LEFT JOIN partner_profiles pp ON pp.user_id = u.id
       LEFT JOIN employees emp ON emp.user_id = u.id
-      WHERE m.conversation_id = $1 AND m.deleted_at IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
+      WHERE m.conversation_id = $1 AND m.deleted_at IS NULL
         ${clearedFilter}
       ORDER BY m.created_at DESC
       LIMIT $2 OFFSET $3
@@ -437,7 +437,7 @@ async function markMessagesAsRead(conversationId, userId) {
     INSERT INTO message_reads (message_id, user_id)
     SELECT m.id, $2
     FROM messages m
-    WHERE m.conversation_id = $1 AND m.sender_id != $2 AND m.created_at >= NOW() - INTERVAL '48 hours'
+    WHERE m.conversation_id = $1 AND m.sender_id != $2
     ON CONFLICT (message_id, user_id) DO NOTHING
   `;
   await query(sql, [conversationId, userId]);
@@ -449,10 +449,14 @@ async function markMessagesAsRead(conversationId, userId) {
   );
 
   // Update system chat notifications for this user to is_read = true
-  await query(
-    `UPDATE notifications SET is_read = true, read_at = NOW() WHERE user_id = $1 AND category = 'chat' AND is_read = false`,
-    [userId]
-  );
+  try {
+    await query(
+      `UPDATE notifications SET is_read = true, read_at = NOW() WHERE user_id = $1 AND category = 'chat' AND is_read = false`,
+      [userId]
+    );
+  } catch (err) {
+    // Ignore notification table/schema errors silently
+  }
 }
 
 /**
