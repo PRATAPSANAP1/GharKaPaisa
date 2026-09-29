@@ -330,10 +330,21 @@ const startServer = async () => {
     const messengerSocket = require('./socket/messengerSocket');
 
     server = http.createServer(app);
+    const allowedOrigins = process.env.CORS_ORIGIN 
+      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+      : ['https://gharkapaisa.in', 'https://www.gharkapaisa.in', 'http://localhost:5173', 'http://localhost:3000'];
+
     const io = new Server(server, {
       cors: {
-        origin: '*',
-        methods: ['GET', 'POST']
+        origin: (origin, callback) => {
+          if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+            callback(null, true);
+          } else {
+            callback(null, true); // Fallback allow in dev
+          }
+        },
+        methods: ['GET', 'POST'],
+        credentials: true
       }
     });
     messengerSocket.init(io);

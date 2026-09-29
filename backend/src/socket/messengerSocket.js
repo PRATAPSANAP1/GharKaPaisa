@@ -49,10 +49,10 @@ function init(io) {
       // Check if recipient is online
       const recipientSocketId = onlineUsers.get(recipient_id);
 
-      // Check if recipient is already in a call
+      // Check if recipient or caller is already in a call
       let recipientBusy = false;
       for (const [_, callInfo] of activeCalls.entries()) {
-        if ((callInfo.recipient_id === recipient_id || callInfo.caller_id === recipient_id) && callInfo.status !== 'ENDED') {
+        if ((callInfo.recipient_id === recipient_id || callInfo.caller_id === recipient_id || callInfo.caller_id === userId || callInfo.recipient_id === userId) && callInfo.status !== 'ENDED') {
           recipientBusy = true;
           break;
         }
