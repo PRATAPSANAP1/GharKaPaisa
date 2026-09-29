@@ -9,6 +9,8 @@ import {
 import api from '../../services/api';
 import { getImageUrl } from '../../config/api';
 import { useAuthStore } from '../../app/store/authStore';
+import { getMessengerSocket } from '../../services/messengerSocket';
+import MessengerCallModal from './MessengerCallModal';
 
 export function maskSensitiveData(text) {
   if (!text || typeof text !== 'string') return text;
@@ -93,6 +95,53 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [showChatSearch, setShowChatSearch] = useState(false);
   const [msgSearch, setMsgSearch] = useState('');
   const [callStatus, setCallStatus] = useState(null); // { type: 'voice' | 'video', active: true }
+  const [activeCall, setActiveCall] = useState(null); // Active WebRTC Call Session
+
+  // Listen for real-time incoming WebRTC call socket events
+  useEffect(() => {
+    const socket = getMessengerSocket();
+    if (!socket) return;
+
+    const handleIncomingCall = (data) => {
+      setActiveCall({
+        callId: data.call_id,
+        callerId: data.caller_id,
+        callerName: data.caller_name || 'Incoming Call',
+        callType: data.call_type || 'voice',
+        isIncoming: true,
+        conversationId: data.conversation_id
+      });
+    };
+
+    socket.on('call:incoming', handleIncomingCall);
+    return () => {
+      socket.off('call:incoming', handleIncomingCall);
+    };
+  }, []);
+
+  const handleInitiateCall = (callType) => {
+    if (!activeConv) return;
+    if (activeConv.conversation_type === 'GROUP') {
+      alert('Group audio/video calls are coming soon! Only 1-on-1 calls are currently supported.');
+      return;
+    }
+
+    const otherUser = activeConv.other_participants?.[0];
+    const recipientId = otherUser?.id || activeConv.participant_id || activeConv.user_id;
+
+    if (!recipientId) {
+      alert('Unable to identify call recipient.');
+      return;
+    }
+
+    setActiveCall({
+      recipientId,
+      recipientName: getConvTitle(activeConv),
+      callType,
+      isIncoming: false,
+      conversationId: activeConv.id
+    });
+  };
 
   // Message Editing & Deletion State
   const [editingMsgId, setEditingMsgId] = useState(null);
@@ -587,6 +636,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       }
     } catch (err) {
       console.error('Failed to load messages:', err);
+      if (err.response?.status === 403 || err.response?.data?.message?.includes('Access denied')) {
+        setActiveConv(null);
+      }
     } finally {
       if (showLoader) setLoadingMsgs(false);
     }
@@ -1295,14 +1347,14 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                   {!isMobile && (
                     <>
                       <button
-                        onClick={() => setCallStatus({ type: 'voice', active: true })}
+                        onClick={() => handleInitiateCall('voice')}
                         title="Voice Call"
                         style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer', padding: '6px' }}
                       >
                         <FaPhone size={15} />
                       </button>
                       <button
-                        onClick={() => setCallStatus({ type: 'video', active: true })}
+                        onClick={() => handleInitiateCall('video')}
                         title="Video Call"
                         style={{ background: 'transparent', border: 'none', color: '#64748B', cursor: 'pointer', padding: '6px' }}
                       >
@@ -1342,14 +1394,14 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                       {isMobile && (
                         <>
                           <div
-                            onClick={() => { setCallStatus({ type: 'voice', active: true }); setShowMoreMenu(false); }}
+                            onClick={() => { handleInitiateCall('voice'); setShowMoreMenu(false); }}
                             style={{ padding: '10px 16px', fontSize: '13px', color: '#1E293B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
                           >
                             <FaPhone size={13} color="#2563EB" />
                             <span>Voice Call</span>
                           </div>
                           <div
-                            onClick={() => { setCallStatus({ type: 'video', active: true }); setShowMoreMenu(false); }}
+                            onClick={() => { handleInitiateCall('video'); setShowMoreMenu(false); }}
                             style={{ padding: '10px 16px', fontSize: '13px', color: '#1E293B', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
                           >
                             <FaVideo size={13} color="#2563EB" />
@@ -3052,6 +3104,14 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
             )}
           </div>
         </div>
+      )}
+
+      {/* ── MODAL: REAL-TIME WEBRTC CALL OVERLAY ── */}
+      {activeCall && (
+        <MessengerCallModal
+          activeCall={activeCall}
+          onCloseCall={() => setActiveCall(null)}
+        />
       )}
 
     </div>

@@ -325,7 +325,20 @@ const startServer = async () => {
     const { initReportJobs } = require('./jobs/report.job.js');
     initReportJobs();
 
-    server = app.listen(PORT, () => {
+    const http = require('http');
+    const { Server } = require('socket.io');
+    const messengerSocket = require('./socket/messengerSocket');
+
+    server = http.createServer(app);
+    const io = new Server(server, {
+      cors: {
+        origin: '*',
+        methods: ['GET', 'POST']
+      }
+    });
+    messengerSocket.init(io);
+
+    server.listen(PORT, () => {
       logger.info(`
       ╔════════════════════════════════════════╗
       ║  GharKaPaisa API Server Running        ║

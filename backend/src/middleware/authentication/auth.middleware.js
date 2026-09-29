@@ -180,6 +180,18 @@ const selfOrAdmin = (paramName = 'id') => async (req, res, next) => {
     if (userId && userId === targetId) return next();
     if (userPartnerId && userPartnerId === targetId) return next();
 
+    // Check employee profile mapping for employee user
+    const { rows: [emp] } = await query(
+      `SELECT id, user_id FROM employees WHERE id = $1 OR user_id = $1 OR user_id = $2 OR id = $2 LIMIT 1`,
+      [rawTargetId, req.user?.id]
+    );
+    if (emp) {
+      const empId = String(emp.id).toLowerCase();
+      const empUserId = String(emp.user_id).toLowerCase();
+      if (empUserId === userId && (targetId === empId || targetId === empUserId)) return next();
+      if (empId === targetId || empUserId === targetId) return next();
+    }
+
     // Fetch partner profile for current user
     const { rows: [currentUserProfile] } = await query(
       `SELECT id, user_id, parent_partner_id FROM partner_profiles WHERE user_id = $1 OR id = $1 LIMIT 1`,

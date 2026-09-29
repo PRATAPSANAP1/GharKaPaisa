@@ -83,7 +83,7 @@ export default function EmployeeDashboard() {
     // When approved & verified (and video is NOT rejected), render Partner Dashboard
     const partnerAdapter = {
       ...employee,
-      partner_id: employee?.id,
+      partner_id: employee?.user_id || employee?.id,
       partner_code: employee?.employee_id,
       kyc_status: 'approved'
     };

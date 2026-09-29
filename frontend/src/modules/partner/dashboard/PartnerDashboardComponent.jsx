@@ -275,7 +275,7 @@ export default function PartnerDashboardComponent({ partner }) {
       setLoading(true);
       try {
         const [dashRes, wallRes, teamRes, bannerRes, notifRes, leadsRes, bonusRes] = await Promise.all([
-          api.get(`/Partners/${partnerId}/dashboard`).catch(() => null),
+          (!isEmployee && partnerId) ? api.get(`/Partners/${partnerId}/dashboard`).catch(() => null) : Promise.resolve(null),
           api.get('/wallet').catch(() => null),
           api.get('team/dashboard').catch(() => null),
           api.get('/banners', { params: { page: 'offer' } }).catch(() => null),
