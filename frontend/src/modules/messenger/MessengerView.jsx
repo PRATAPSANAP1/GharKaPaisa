@@ -121,13 +121,24 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
   const handleInitiateCall = (callType) => {
     if (!activeConv) return;
-    if (activeConv.conversation_type === 'GROUP') {
+    if (activeConv.conversation_type === 'GROUP' || activeConv.conversation_type === 'DEPARTMENT') {
       alert('Group audio/video calls are coming soon! Only 1-on-1 calls are currently supported.');
       return;
     }
 
-    const otherUser = activeConv.other_participants?.[0];
-    const recipientId = otherUser?.id || activeConv.participant_id || activeConv.user_id;
+    const counterpart = 
+      activeConv.other_participants?.find(p => (p.user_id || p.id) !== user?.id) ||
+      activeConv.participants?.find(p => (p.user_id || p.id) !== user?.id) ||
+      activeConv.other_participants?.[0] ||
+      activeConv.participants?.[0];
+
+    const recipientId = 
+      counterpart?.user_id ||
+      counterpart?.id ||
+      activeConv.target_user_id ||
+      activeConv.participant_id ||
+      activeConv.participant_user_id ||
+      (activeConv.user_id !== user?.id ? activeConv.user_id : null);
 
     if (!recipientId) {
       alert('Unable to identify call recipient.');
