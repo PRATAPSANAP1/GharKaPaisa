@@ -5,12 +5,16 @@ const rateLimit = require('express-rate-limit');
 const userOrIpKey = (req) =>
   req.user?.id || req.body?.email || req.body?.mobile || req.body?.identity || req.ip;
 
+// Helper function to skip preflight OPTIONS requests from rate limiting
+const skipOptions = (req) => req.method === 'OPTIONS';
+
 // Global API rate limiter
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 2000,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipOptions,
   validate: { trustProxy: false },
   message: { success: false, message: 'Too many requests. Please slow down.' }
 });
@@ -20,6 +24,7 @@ const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   skipSuccessfulRequests: true,
+  skip: skipOptions,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -32,6 +37,7 @@ const sendOtpLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 10,
   skipSuccessfulRequests: false,
+  skip: skipOptions,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -44,6 +50,7 @@ const verifyOtpLimiter = rateLimit({
   windowMs: 2 * 60 * 1000,
   max: 10,
   skipSuccessfulRequests: true,
+  skip: skipOptions,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -55,6 +62,7 @@ const verifyOtpLimiter = rateLimit({
 const registerLimiter = rateLimit({
   windowMs: 30 * 60 * 1000,
   max: 5,
+  skip: skipOptions,
   standardHeaders: true,
   legacyHeaders: false,
   validate: { trustProxy: false },
@@ -66,6 +74,7 @@ const forgotPasswordLimiter = rateLimit({
   windowMs: 30 * 60 * 1000,
   max: 5,
   skipSuccessfulRequests: false,
+  skip: skipOptions,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -77,6 +86,7 @@ const forgotPasswordLimiter = rateLimit({
 const refreshLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 1000,
+  skip: skipOptions,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -88,6 +98,7 @@ const refreshLimiter = rateLimit({
 const chatbotLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 60,
+  skip: skipOptions,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -99,6 +110,7 @@ const chatbotLimiter = rateLimit({
 const customerTrackingLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
+  skip: skipOptions,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -110,6 +122,7 @@ const customerTrackingLimiter = rateLimit({
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
+  skip: skipOptions,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
@@ -121,6 +134,7 @@ const uploadLimiter = rateLimit({
 const messengerLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 60,
+  skip: skipOptions,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,

@@ -72,7 +72,9 @@ const corsOptions = {
         hostname === '127.0.0.1' ||
         hostname === 'gharkapaisa.in' ||
         hostname.endsWith('.gharkapaisa.in') ||
-        hostname.endsWith('.vercel.app')
+        hostname.endsWith('.vercel.app') ||
+        hostname.endsWith('.amazonaws.com') ||
+        hostname.includes('amazonaws.com')
       ) {
         return callback(null, true);
       }
@@ -97,12 +99,13 @@ const corsOptions = {
   ],
   exposedHeaders: ['Content-Range', 'X-Content-Range', 'Authorization'],
   credentials: true,
+  maxAge: 86400,
   optionsSuccessStatus: 200,
 };
 
 // ── CORS & Security Middleware ─────────────────────────────────
 app.use(cors(corsOptions));
-app.options('(.*)', cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },

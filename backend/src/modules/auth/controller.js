@@ -526,6 +526,7 @@ const login = async (req, res, next) => {
     return res.json({
       success: true,
       token,
+      refreshToken,
       role: user.role,
       status: user.status,
       user: {
@@ -636,7 +637,7 @@ const loginWithMsg91 = async (req, res, next) => {
 
     setRefreshTokenCookie(res, refreshToken, req.body.rememberMe !== false);
     logger.info(`[MSG91] Mobile login completed for user ${user.id}`);
-    return res.json({ success: true, token, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
+    return res.json({ success: true, token, refreshToken, role: user.role, status: user.status, kyc_status: kycStatus, rejection_reason: rejectionReason, redirect: redirectUrl });
   } catch (err) {
     next(err);
   }
@@ -684,7 +685,8 @@ const refresh = async (req, res, next) => {
     setRefreshTokenCookie(res, newRefreshToken, isLongSession);
     return res.json({
       success: true,
-      token: newToken
+      token: newToken,
+      refreshToken: newRefreshToken
     });
   } catch (err) {
     logger.error('[Auth Refresh Error]:', err);
