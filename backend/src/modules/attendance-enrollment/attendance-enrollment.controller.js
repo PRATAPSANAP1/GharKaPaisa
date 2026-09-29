@@ -6,10 +6,24 @@ const logger = require('../../config/logger');
 const createSession = async (req, res) => {
   try {
     const { employee_id, is_re_enrollment, reason } = req.body;
-    const targetEmployeeId = employee_id || req.user.employeeId || req.user.employee_id;
+    const userRole = (req.user.role || '').toUpperCase();
+    const isAdminRole = ['SUPER_ADMIN', 'ADMIN', 'HR'].includes(userRole);
+    const authEmpId = req.user.employeeId || req.user.employee_id;
+
+    let targetEmployeeId;
+
+    if (isAdminRole) {
+      targetEmployeeId = employee_id || authEmpId;
+    } else {
+      // Non-administrative roles MUST use authenticated employee ID and cannot target others
+      if (employee_id && authEmpId && employee_id !== authEmpId) {
+        return error(res, 'Unauthorized to create biometric enrollment session for another employee', 403);
+      }
+      targetEmployeeId = authEmpId;
+    }
 
     if (!targetEmployeeId) {
-      return error(res, 'employee_id is required', 400);
+      return error(res, 'employee_id is required or user is not linked to an employee profile', 400);
     }
 
     const result = await service.createEnrollmentSession({

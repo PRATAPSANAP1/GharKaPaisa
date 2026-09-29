@@ -10,9 +10,20 @@ const { JWT_SECRET } = require('../../config/jwt');
 const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'gharkapaisa-production-storage';
 
 /**
- * Create a secure enrollment session token (valid 15 minutes)
+ * Create a secure enrollment session token (valid 5 minutes)
  */
 const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = false, reason = null, reqUser }) => {
+  const userRole = (reqUser.role || '').toUpperCase();
+  const isAdminRole = ['SUPER_ADMIN', 'ADMIN', 'HR'].includes(userRole);
+  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+
+  // Non-administrative users cannot target other employees
+  if (!isAdminRole && authEmpId && employeeId !== authEmpId) {
+    const error = new Error('Unauthorized to create biometric enrollment session for another employee');
+    error.statusCode = 403;
+    throw error;
+  }
+
   // Check employee existence
   const { rows: [employee] } = await query(
     `SELECT id, employee_id, full_name, designation, department, employee_status FROM employees WHERE id = $1`,
@@ -24,8 +35,6 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
     error.statusCode = 404;
     throw error;
   }
-
-  const userRole = (reqUser.role || '').toUpperCase();
 
   // If re-enrollment requested, require SUPER_ADMIN role
   if (isReEnrollment && userRole !== 'SUPER_ADMIN') {
@@ -56,11 +65,11 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
     type: 'BIOMETRIC_ENROLLMENT_SESSION',
   };
 
-  const sessionToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
+  const sessionToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '5m' });
 
   return {
     sessionToken,
-    expiresInSeconds: 900,
+    expiresInSeconds: 300,
     employee: {
       id: employee.id,
       employee_id: employee.employee_id,
@@ -95,6 +104,17 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
   if (session.type !== 'BIOMETRIC_ENROLLMENT_SESSION' || !session.employeeId) {
     const error = new Error('Malformed enrollment session payload');
     error.statusCode = 400;
+    throw error;
+  }
+
+  const userRole = (reqUser.role || '').toUpperCase();
+  const isAdminRole = ['SUPER_ADMIN', 'ADMIN', 'HR'].includes(userRole);
+  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+
+  // Non-administrative users cannot commit an enrollment session belonging to another employee
+  if (!isAdminRole && authEmpId && session.employeeId !== authEmpId) {
+    const error = new Error('Session token employee ID does not match authenticated employee context');
+    error.statusCode = 403;
     throw error;
   }
 
