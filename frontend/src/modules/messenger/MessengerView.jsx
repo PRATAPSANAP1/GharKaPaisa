@@ -327,6 +327,150 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
   const messagesEndRef = useRef(null);
 
+  // Copy & Emoji State
+  const [copiedMsgId, setCopiedMsgId] = useState(null);
+  const [activeEmojiTab, setActiveEmojiTab] = useState('DIGITS');
+  const [emojiSearch, setEmojiSearch] = useState('');
+
+  // Reaction Emoji State
+  const [reactionsMap, setReactionsMap] = useState({}); // { [msgId]: emojiSymbol }
+  const [activeReactionPickerMsgId, setActiveReactionPickerMsgId] = useState(null);
+
+  const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🔥', '👏'];
+
+  const handleToggleReaction = (msgId, emoji) => {
+    setReactionsMap(prev => {
+      const current = prev[msgId];
+      if (current === emoji) {
+        const copy = { ...prev };
+        delete copy[msgId];
+        return copy;
+      }
+      return { ...prev, [msgId]: emoji };
+    });
+    setActiveReactionPickerMsgId(null);
+  };
+
+  const isMessageWithin5Minutes = (msg) => {
+    if (!msg || !msg.created_at) return false;
+    const createdAt = new Date(msg.created_at).getTime();
+    if (isNaN(createdAt)) return false;
+    const diffMinutes = (Date.now() - createdAt) / (1000 * 60);
+    return diffMinutes <= 5;
+  };
+
+  // Comprehensive Emojis including 0-9 Digits
+  const EMOJI_CATEGORIES = [
+    {
+      id: 'DIGITS',
+      name: '0-9 Digits',
+      emojis: ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '#️⃣', '*️⃣', '🔢', '🔣', '1️⃣0️⃣']
+    },
+    {
+      id: 'SMILEYS',
+      name: 'Smileys',
+      emojis: ['😊', '😂', '😍', '🥰', '😎', '😭', '🤔', '😅', '🥳', '🤩', '😇', '😃', '🙄', '😬', '🙌', '😴', '😷', '🤖', '👻']
+    },
+    {
+      id: 'HANDS',
+      name: 'Hands & People',
+      emojis: ['👍', '👎', '🙏', '👏', '🤝', '👋', '✌️', '🤞', '💪', '👈', '👉', '👆', '👇', '👊', '👤', '👥']
+    },
+    {
+      id: 'SYMBOLS',
+      name: 'Symbols & Hearts',
+      emojis: ['❤️', '💙', '💚', '💛', '💜', '🧡', '🖤', '💔', '🔥', '✨', '🎉', '💯', '✅', '❌', '⭐', '⚡', '🔔', '📢', '💬']
+    },
+    {
+      id: 'OBJECTS',
+      name: 'Objects & Work',
+      emojis: ['📱', '💻', '📞', '📄', '📝', '💼', '💰', '💳', '📊', '📈', '🏠', '🚗', '📌', '📍', '💡', '🚀', '🎁', '🏆', '🎯']
+    }
+  ];
+
+  // Clipboard Paste Image Handler
+  const handlePaste = (e) => {
+    if (readOnly) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    let hasPastedImage = false;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type && item.type.indexOf('image') !== -1) {
+        const file = item.getAsFile();
+        if (file) {
+          hasPastedImage = true;
+          const objectUrl = URL.createObjectURL(file);
+          const newAtt = {
+            file_name: `Pasted_Image_${Date.now()}.png`,
+            file_type: 'IMAGE',
+            file_size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
+            file_url: objectUrl,
+            file_blob: file
+          };
+          setAttachments(prev => [...prev, newAtt]);
+        }
+      }
+    }
+    if (hasPastedImage) {
+      e.preventDefault();
+    }
+  };
+
+  // Image Download Helper
+  const handleDownloadImage = async (fileUrl, fileName = 'image.png') => {
+    if (!fileUrl) return;
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName || `downloaded_image_${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      const a = document.createElement('a');
+      a.href = fileUrl;
+      a.target = '_blank';
+      a.download = fileName || 'downloaded_image.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
+  // Image Copy Helper
+  const handleCopyImage = async (fileUrl) => {
+    if (!fileUrl) return;
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ [blob.type || 'image/png']: blob })
+      ]);
+      alert('Image copied to clipboard!');
+    } catch (err) {
+      try {
+        await navigator.clipboard.writeText(fileUrl);
+        alert('Image URL copied to clipboard!');
+      } catch (e) {
+        alert('Failed to copy image.');
+      }
+    }
+  };
+
+  // Message Text Copy Helper
+  const handleCopyMessageText = (text, msgId) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedMsgId(msgId);
+    setTimeout(() => setCopiedMsgId(null), 2000);
+  };
+
   // Responsive state
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [winW, setWinW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
@@ -1331,134 +1475,225 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                             }
                           </span>
                         )}
-                        <div style={{
-                          maxWidth: isMobile ? '85%' : '65%', padding: isMobile ? '10px 14px' : '12px 18px',
-                          borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                          background: isMe ? '#DBEAFE' : '#FFFFFF',
-                          border: isMe ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
-                          color: '#1E293B',
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                          fontSize: isMobile ? '13.5px' : '14px', lineHeight: 1.5,
-                          position: 'relative'
-                        }}>
-                          {isEditingThis ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                              <input
-                                type="text"
-                                value={editingText}
-                                onChange={(e) => setEditingText(e.target.value)}
-                                style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #2563EB', outline: 'none', fontSize: '13px' }}
-                                autoFocus
-                              />
-                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                <button onClick={() => setEditingMsgId(null)} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-                                <button onClick={() => handleEditMessage(msg.id)} style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#2563EB', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Save</button>
-                              </div>
-                            </div>
-                          ) : (
-                            msg.message_text && (
-                              <div>
-                                {msg.message_text}
-                                {msg.is_edited && <span style={{ fontSize: '10px', color: '#64748B', fontStyle: 'italic', marginLeft: '6px' }}>(edited)</span>}
-                              </div>
-                            )
-                          )}
 
-                          {/* Render File & Image Attachments */}
-                          {msg.attachments && msg.attachments.length > 0 && (
-                            <div style={{ marginTop: msg.message_text ? '10px' : 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              {msg.attachments.map((att, idx) => {
-                                const isImg = att.file_type === 'IMAGE' || 
-                                              /\.(png|jpe?g|gif|webp|bmp|svg)($|\?)/i.test(att.file_url || att.file_name || '') ||
-                                              (att.file_url && att.file_url.startsWith('blob:'));
-                                return isImg ? (
-                                  <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '280px' }}>
-                                    <img
-                                      src={att.file_url}
-                                      alt={att.file_name || 'Attachment'}
-                                      onClick={() => setPreviewImageUrl(att.file_url)}
-                                      style={{
-                                        maxWidth: '100%',
-                                        maxHeight: '220px',
-                                        borderRadius: '12px',
-                                        objectFit: 'cover',
-                                        border: '1px solid #CBD5E1',
-                                        cursor: 'pointer',
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                                      }}
-                                    />
-                                    {att.file_url && (
-                                      <a
-                                        href={att.file_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        download={att.file_name}
-                                        style={{
-                                          position: 'absolute', bottom: '8px', right: '8px',
-                                          background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
-                                          borderRadius: '50%', width: '28px', height: '28px',
-                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                          backdropFilter: 'blur(4px)'
-                                        }}
-                                        title="Download Image"
-                                      >
-                                        <FaDownload size={12} />
-                                      </a>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div
-                                    key={idx}
-                                    style={{
-                                      padding: '10px 14px', background: '#FFFFFF', borderRadius: '12px',
-                                      border: '1px solid #CBD5E1', display: 'flex', alignItems: 'center', gap: '12px'
-                                    }}
-                                  >
-                                    <div style={{
-                                      width: '36px', height: '36px', borderRadius: '8px', background: '#FEE2E2',
-                                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444'
-                                    }}>
-                                      <FaFilePdf size={18} />
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {att.file_name}
-                                      </div>
-                                      <div style={{ fontSize: '11px', color: '#64748B' }}>{att.file_size || 'Document'}</div>
-                                    </div>
-                                    {att.file_url && (
-                                      <a href={att.file_url} target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>
-                                        <FaDownload size={14} />
-                                      </a>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {/* Timestamp & Actions */}
+                        {/* Floating Quick Emoji Reaction Bar (WhatsApp style) */}
+                        {activeReactionPickerMsgId === msg.id && (
                           <div style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-                            gap: '6px', marginTop: '4px', fontSize: '10.5px', color: '#64748B'
+                            position: 'absolute', top: '-38px', [isMe ? 'right' : 'left']: '0px',
+                            background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '24px',
+                            padding: '4px 10px', boxShadow: '0 6px 20px rgba(0,0,0,0.15)', display: 'flex',
+                            gap: '8px', zIndex: 60, alignItems: 'center'
                           }}>
-                            <span>{formatTime(msg.created_at)}</span>
-                            {isMe && (
-                              <>
-                                <FaCheckDouble
-                                  color={isReadByReceiver ? '#2563EB' : '#94A3B8'}
-                                  size={13}
-                                  title={isReadByReceiver ? 'Read by recipient' : 'Sent'}
-                                />
-                                {!isEditingThis && (
-                                  <div style={{ display: 'inline-flex', gap: '4px', marginLeft: '6px' }}>
-                                    <button onClick={() => { setEditingMsgId(msg.id); setEditingText(msg.message_text || ''); }} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0 }} title="Edit message"><FaEdit size={10} /></button>
-                                    <button onClick={() => handleDeleteSingleMessage(msg.id)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0 }} title="Delete message"><FaTimes size={10} /></button>
-                                  </div>
-                                )}
-                              </>
-                            )}
+                            {REACTION_EMOJIS.map(emoji => (
+                              <span
+                                key={emoji}
+                                onClick={() => handleToggleReaction(msg.id, emoji)}
+                                style={{
+                                  fontSize: '18px', cursor: 'pointer', transition: 'transform 0.1s',
+                                  padding: '2px 4px', borderRadius: '6px'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.25)'}
+                                onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              >
+                                {emoji}
+                              </span>
+                            ))}
                           </div>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexDirection: isMe ? 'row-reverse' : 'row', width: '100%', justifyContent: isMe ? 'flex-start' : 'flex-start' }}>
+                          {/* Message Bubble Container */}
+                          <div style={{
+                            maxWidth: isMobile ? '85%' : '65%', padding: isMobile ? '10px 14px' : '12px 18px',
+                            borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                            background: isMe ? '#DBEAFE' : '#FFFFFF',
+                            border: isMe ? '1px solid #BFDBFE' : '1px solid #E2E8F0',
+                            color: '#1E293B',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
+                            fontSize: isMobile ? '13.5px' : '14px', lineHeight: 1.5,
+                            position: 'relative'
+                          }}>
+                            {isEditingThis ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <input
+                                  type="text"
+                                  value={editingText}
+                                  onChange={(e) => setEditingText(e.target.value)}
+                                  style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #2563EB', outline: 'none', fontSize: '13px' }}
+                                  autoFocus
+                                />
+                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                  <button onClick={() => setEditingMsgId(null)} style={{ padding: '3px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#F8FAFC', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                                  <button onClick={() => handleEditMessage(msg.id)} style={{ padding: '3px 10px', borderRadius: '6px', border: 'none', background: '#2563EB', color: '#fff', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}>Save</button>
+                                </div>
+                              </div>
+                            ) : (
+                              msg.message_text && (
+                                <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                                  {msg.message_text}
+                                  {msg.is_edited && <span style={{ fontSize: '10px', color: '#64748B', fontStyle: 'italic', marginLeft: '6px' }}>(edited)</span>}
+                                </div>
+                              )
+                            )}
+
+                            {/* Render File & Image Attachments */}
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <div style={{ marginTop: msg.message_text ? '10px' : 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {msg.attachments.map((att, idx) => {
+                                  const isImg = att.file_type === 'IMAGE' || 
+                                                /\.(png|jpe?g|gif|webp|bmp|svg)($|\?)/i.test(att.file_url || att.file_name || '') ||
+                                                (att.file_url && att.file_url.startsWith('blob:'));
+                                  return isImg ? (
+                                    <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '280px' }}>
+                                      <img
+                                        src={att.file_url}
+                                        alt={att.file_name || 'Attachment'}
+                                        onClick={() => setPreviewImageUrl(att.file_url)}
+                                        style={{
+                                          maxWidth: '100%',
+                                          maxHeight: '220px',
+                                          borderRadius: '12px',
+                                          objectFit: 'cover',
+                                          border: '1px solid #CBD5E1',
+                                          cursor: 'pointer',
+                                          boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                                        }}
+                                      />
+                                      {att.file_url && (
+                                        <div style={{
+                                          position: 'absolute', bottom: '8px', right: '8px', display: 'flex', gap: '4px', zIndex: 5
+                                        }}>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); handleCopyImage(att.file_url); }}
+                                            style={{
+                                              background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
+                                              borderRadius: '50%', width: '28px', height: '28px', border: 'none',
+                                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                              backdropFilter: 'blur(4px)', cursor: 'pointer'
+                                            }}
+                                            title="Copy Image to Clipboard"
+                                          >
+                                            <FaCopy size={11} />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); handleDownloadImage(att.file_url, att.file_name); }}
+                                            style={{
+                                              background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
+                                              borderRadius: '50%', width: '28px', height: '28px', border: 'none',
+                                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                              backdropFilter: 'blur(4px)', cursor: 'pointer'
+                                            }}
+                                            title="Download Image"
+                                          >
+                                            <FaDownload size={11} />
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div
+                                      key={idx}
+                                      style={{
+                                        padding: '10px 14px', background: '#FFFFFF', borderRadius: '12px',
+                                        border: '1px solid #CBD5E1', display: 'flex', alignItems: 'center', gap: '12px'
+                                      }}
+                                    >
+                                      <div style={{
+                                        width: '36px', height: '36px', borderRadius: '8px', background: '#FEE2E2',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444'
+                                      }}>
+                                        <FaFilePdf size={18} />
+                                      </div>
+                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                          {att.file_name}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#64748B' }}>{att.file_size || 'Document'}</div>
+                                      </div>
+                                      {att.file_url && (
+                                        <a href={att.file_url} target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>
+                                          <FaDownload size={14} />
+                                        </a>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Applied Emoji Reaction Badge (WhatsApp style attached at bottom corner) */}
+                            {reactionsMap[msg.id] && (
+                              <div
+                                onClick={() => handleToggleReaction(msg.id, reactionsMap[msg.id])}
+                                style={{
+                                  position: 'absolute', bottom: '-10px', [isMe ? 'left' : 'right']: '12px',
+                                  background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '14px',
+                                  padding: '1px 6px', fontSize: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                                  cursor: 'pointer', zIndex: 15, display: 'inline-flex', alignItems: 'center'
+                                }}
+                                title="Click to remove reaction"
+                              >
+                                {reactionsMap[msg.id]}
+                              </div>
+                            )}
+
+                            {/* Timestamp & Actions */}
+                            <div style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+                              gap: '6px', marginTop: '4px', fontSize: '10.5px', color: '#64748B'
+                            }}>
+                              <span>{formatTime(msg.created_at)}</span>
+                              {msg.message_text && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyMessageText(msg.message_text, msg.id)}
+                                  style={{ background: 'none', border: 'none', color: copiedMsgId === msg.id ? '#2563EB' : '#64748B', cursor: 'pointer', padding: 0, display: 'inline-flex', alignItems: 'center', gap: '2px', marginLeft: '4px' }}
+                                  title="Copy Message Text"
+                                >
+                                  <FaCopy size={10} />
+                                  {copiedMsgId === msg.id && <span style={{ fontSize: '9px', color: '#2563EB', fontWeight: 800 }}>Copied</span>}
+                                </button>
+                              )}
+                              {isMe && (
+                                <>
+                                  <FaCheckDouble
+                                    color={isReadByReceiver ? '#2563EB' : '#94A3B8'}
+                                    size={13}
+                                    title={isReadByReceiver ? 'Read by recipient' : 'Sent'}
+                                  />
+                                  {!isEditingThis && (
+                                    <div style={{ display: 'inline-flex', gap: '4px', marginLeft: '6px' }}>
+                                      {/* Only show edit if message is within 5 minutes of sending */}
+                                      {isMessageWithin5Minutes(msg) && (
+                                        <button onClick={() => { setEditingMsgId(msg.id); setEditingText(msg.message_text || ''); }} style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0 }} title="Edit message (Available for 5 mins)"><FaEdit size={10} /></button>
+                                      )}
+                                      <button onClick={() => handleDeleteSingleMessage(msg.id)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 0 }} title="Delete message"><FaTimes size={10} /></button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Reaction Trigger Smile Icon (Left side for Sender, Right side for Receiver) */}
+                          {!readOnly && (
+                            <button
+                              type="button"
+                              onClick={() => setActiveReactionPickerMsgId(prev => prev === msg.id ? null : msg.id)}
+                              style={{
+                                background: 'transparent', border: 'none', color: activeReactionPickerMsgId === msg.id ? '#2563EB' : '#94A3B8',
+                                cursor: 'pointer', padding: '4px', borderRadius: '50%', display: 'flex', alignItems: 'center',
+                                justifyContent: 'center', opacity: 0.75, transition: 'opacity 0.15s, color 0.15s'
+                              }}
+                              title="React with Emoji"
+                              onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#2563EB'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.75'; if (activeReactionPickerMsgId !== msg.id) e.currentTarget.style.color = '#94A3B8'; }}
+                            >
+                              <FaSmile size={13} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -1485,24 +1720,92 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 </div>
               )}
 
-              {/* Emoji Picker Popup Overlay */}
+              {/* Comprehensive Emoji Picker Popup Overlay with 0-9 Digits */}
               {showEmojiPicker && (
                 <div style={{
-                  position: 'absolute', bottom: isMobile ? '60px' : '70px', left: isMobile ? '10px' : '24px', right: isMobile ? '10px' : 'auto',
+                  position: 'absolute', bottom: isMobile ? '60px' : '75px', left: isMobile ? '10px' : '24px',
+                  width: isMobile ? 'calc(100% - 20px)' : '340px',
                   background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '16px', padding: '12px',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.12)', display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)',
-                  gap: '8px', zIndex: 100
+                  boxShadow: '0 12px 30px rgba(0,0,0,0.15)', zIndex: 100, display: 'flex', flexDirection: 'column', gap: '8px'
                 }}>
-                  {quickEmojis.map(emoji => (
+                  {/* Emoji Picker Header with Close Button */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#0F172A' }}>Select Emojis</span>
                     <button
-                      key={emoji}
                       type="button"
-                      onClick={() => { setInputText(prev => prev + emoji); setShowEmojiPicker(false); }}
-                      style={{ background: 'transparent', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '6px', borderRadius: '8px' }}
+                      onClick={() => setShowEmojiPicker(false)}
+                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748B', fontSize: '14px', fontWeight: 800 }}
                     >
-                      {emoji}
+                      ✕
                     </button>
-                  ))}
+                  </div>
+
+                  {/* Category Tabs */}
+                  <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '4px', borderBottom: '1px solid #F1F5F9' }}>
+                    {EMOJI_CATEGORIES.map(cat => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => { setActiveEmojiTab(cat.id); setEmojiSearch(''); }}
+                        style={{
+                          padding: '4px 10px', borderRadius: '12px', border: 'none',
+                          background: activeEmojiTab === cat.id ? '#2563EB' : '#F1F5F9',
+                          color: activeEmojiTab === cat.id ? '#FFFFFF' : '#475569',
+                          fontSize: '11px', fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {cat.name}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Emoji Search Box */}
+                  <input
+                    type="text"
+                    placeholder="Search emojis or 0-9 digits..."
+                    value={emojiSearch}
+                    onChange={(e) => setEmojiSearch(e.target.value)}
+                    style={{
+                      padding: '6px 10px', borderRadius: '8px', border: '1px solid #E2E8F0',
+                      fontSize: '12px', outline: 'none', background: '#F8FAFC'
+                    }}
+                  />
+
+                  {/* Emoji Grid */}
+                  <div style={{
+                    maxHeight: '180px', overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px'
+                  }}>
+                    {(() => {
+                      let displayList = [];
+                      if (emojiSearch.trim()) {
+                        const q = emojiSearch.trim().toLowerCase();
+                        EMOJI_CATEGORIES.forEach(c => {
+                          c.emojis.forEach(e => {
+                            if (e.includes(q) || c.name.toLowerCase().includes(q)) displayList.push(e);
+                          });
+                        });
+                      } else {
+                        const currentCat = EMOJI_CATEGORIES.find(c => c.id === activeEmojiTab) || EMOJI_CATEGORIES[0];
+                        displayList = currentCat.emojis;
+                      }
+
+                      return displayList.map((emoji, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => { setInputText(prev => prev + emoji); }}
+                          style={{
+                            background: 'transparent', border: 'none', fontSize: '20px',
+                            cursor: 'pointer', padding: '6px', borderRadius: '8px', transition: 'transform 0.1s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#EFF6FF'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          {emoji}
+                        </button>
+                      ));
+                    })()}
+                  </div>
                 </div>
               )}
 
@@ -1518,6 +1821,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
               ) : (
                 <form
                   onSubmit={handleSendMessage}
+                  onPaste={handlePaste}
                   style={{
                     padding: isMobile ? '10px 12px 16px' : '16px 24px', background: '#FFFFFF', borderTop: '1px solid #E2E8F0',
                     display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px'
@@ -1532,15 +1836,22 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                     <FaSmile />
                   </button>
 
-                  <input
-                    type="text"
-                    placeholder="Type a message..."
+                  <textarea
+                    rows={1}
+                    placeholder="Type a message... (Shift+Enter for new line)"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage(e);
+                      }
+                    }}
                     style={{
-                      flex: 1, padding: '12px 20px', background: '#F8FAFC',
-                      border: '1px solid #E2E8F0', borderRadius: '24px',
-                      color: '#0F172A', fontSize: '14px', outline: 'none'
+                      flex: 1, padding: '10px 16px', background: '#F8FAFC',
+                      border: '1px solid #E2E8F0', borderRadius: '18px',
+                      color: '#0F172A', fontSize: '14px', outline: 'none',
+                      resize: 'none', fontFamily: 'inherit', maxHeight: '100px', lineHeight: 1.4
                     }}
                   />
 
@@ -2511,28 +2822,71 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
         <div 
           onClick={() => setPreviewImageUrl(null)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.88)',
-            backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', zIndex: 999999, padding: '24px'
+            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.90)',
+            backdropFilter: 'blur(8px)', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', zIndex: 999999, padding: '24px'
           }}
         >
-          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => setPreviewImageUrl(null)}
-              style={{
-                position: 'absolute', top: '-16px', right: '-16px', background: '#EF4444',
-                color: '#FFFFFF', border: 'none', borderRadius: '50%', width: '36px', height: '36px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                fontWeight: 900, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', zIndex: 10
-              }}
-            >
-              ✕
-            </button>
+          <div style={{
+            position: 'relative', maxWidth: '90vw', maxHeight: '90vh',
+            display: 'flex', flexDirection: 'column', alignItems: 'center'
+          }} onClick={(e) => e.stopPropagation()}>
+            
+            {/* Top Action Control Bar */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              marginBottom: '12px', background: 'rgba(30, 41, 59, 0.85)',
+              padding: '8px 16px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.15)',
+              backdropFilter: 'blur(6px)'
+            }}>
+              <button
+                type="button"
+                onClick={() => handleDownloadImage(previewImageUrl, 'chat_image.png')}
+                style={{
+                  background: '#2563EB', color: '#FFFFFF', border: 'none',
+                  borderRadius: '16px', padding: '6px 14px', display: 'flex',
+                  alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 800,
+                  cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.4)'
+                }}
+                title="Download Image to Device"
+              >
+                <FaDownload size={13} /> Download
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleCopyImage(previewImageUrl)}
+                style={{
+                  background: 'rgba(255,255,255,0.15)', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '16px', padding: '6px 14px', display: 'flex',
+                  alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+                title="Copy Image to Clipboard"
+              >
+                <FaCopy size={13} /> Copy Image
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPreviewImageUrl(null)}
+                style={{
+                  background: '#EF4444', color: '#FFFFFF', border: 'none',
+                  borderRadius: '50%', width: '30px', height: '30px', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                  fontWeight: 900, marginLeft: '6px'
+                }}
+                title="Close Preview"
+              >
+                ✕
+              </button>
+            </div>
+
             <img
               src={previewImageUrl}
               alt="Full Preview"
               style={{
-                maxWidth: '90vw', maxHeight: '85vh', borderRadius: '16px', objectFit: 'contain',
+                maxWidth: '90vw', maxHeight: '80vh', borderRadius: '16px', objectFit: 'contain',
                 boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid rgba(255,255,255,0.2)'
               }}
             />
