@@ -97,6 +97,13 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   // Message Editing & Deletion State
   const [editingMsgId, setEditingMsgId] = useState(null);
   const [editingText, setEditingText] = useState('');
+  const [failedImageUrls, setFailedImageUrls] = useState({});
+  const [previewImgError, setPreviewImgError] = useState(false);
+
+  const openPreviewModal = (url) => {
+    setPreviewImgError(false);
+    setPreviewImageUrl(url);
+  };
 
   const handleEditMessage = async (msgId) => {
     if (!editingText.trim()) return;
@@ -1575,56 +1582,65 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                                   /\.(png|jpe?g|gif|webp|bmp|svg)($|\?)/i.test(att.file_url || att.file_name || '') ||
                                                   (att.file_url && att.file_url.startsWith('blob:'));
                                     const displayUrl = getImageUrl(att.file_url);
-                                    return isImg ? (
-                                      <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '280px' }}>
-                                        <img
-                                          src={displayUrl}
-                                          alt={att.file_name || 'Attachment'}
-                                          onClick={() => setPreviewImageUrl(displayUrl)}
-                                          style={{
-                                            maxWidth: '100%',
-                                            maxHeight: '220px',
-                                            borderRadius: '12px',
-                                            objectFit: 'cover',
-                                            border: '1px solid #CBD5E1',
-                                            cursor: 'pointer',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-                                          }}
-                                        />
-                                        {displayUrl && (
-                                          <div style={{
-                                            position: 'absolute', bottom: '8px', right: '8px', display: 'flex', gap: '4px', zIndex: 5
-                                          }}>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => { e.stopPropagation(); handleCopyImage(displayUrl); }}
-                                              style={{
-                                                background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
-                                                borderRadius: '50%', width: '28px', height: '28px', border: 'none',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                backdropFilter: 'blur(4px)', cursor: 'pointer'
-                                              }}
-                                              title="Copy Image to Clipboard"
-                                            >
-                                              <FaCopy size={11} />
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => { e.stopPropagation(); handleDownloadImage(displayUrl, att.file_name); }}
-                                              style={{
-                                                background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
-                                                borderRadius: '50%', width: '28px', height: '28px', border: 'none',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                backdropFilter: 'blur(4px)', cursor: 'pointer'
-                                              }}
-                                              title="Download Image"
-                                            >
-                                              <FaDownload size={11} />
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    ) : (
+                                    const isFailed = failedImageUrls[displayUrl] || failedImageUrls[att.file_url];
+
+                                    if (isImg && !isFailed) {
+                                      return (
+                                        <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '280px' }}>
+                                          <img
+                                            src={displayUrl}
+                                            alt={att.file_name || 'Attachment'}
+                                            onError={() => {
+                                              setFailedImageUrls(prev => ({ ...prev, [displayUrl]: true, [att.file_url]: true }));
+                                            }}
+                                            onClick={() => openPreviewModal(displayUrl)}
+                                            style={{
+                                              maxWidth: '100%',
+                                              maxHeight: '220px',
+                                              borderRadius: '12px',
+                                              objectFit: 'cover',
+                                              border: '1px solid #CBD5E1',
+                                              cursor: 'pointer',
+                                              boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+                                            }}
+                                          />
+                                          {displayUrl && (
+                                            <div style={{
+                                              position: 'absolute', bottom: '8px', right: '8px', display: 'flex', gap: '4px', zIndex: 5
+                                            }}>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); handleCopyImage(displayUrl); }}
+                                                style={{
+                                                  background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
+                                                  borderRadius: '50%', width: '28px', height: '28px', border: 'none',
+                                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                  backdropFilter: 'blur(4px)', cursor: 'pointer'
+                                                }}
+                                                title="Copy Image to Clipboard"
+                                              >
+                                                <FaCopy size={11} />
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); handleDownloadImage(displayUrl, att.file_name); }}
+                                                style={{
+                                                  background: 'rgba(15,23,42,0.75)', color: '#FFFFFF',
+                                                  borderRadius: '50%', width: '28px', height: '28px', border: 'none',
+                                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                  backdropFilter: 'blur(4px)', cursor: 'pointer'
+                                                }}
+                                                title="Download Image"
+                                              >
+                                                <FaDownload size={11} />
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    }
+
+                                    return (
                                       <div
                                         key={idx}
                                         style={{
@@ -1633,18 +1649,22 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                         }}
                                       >
                                         <div style={{
-                                          width: '36px', height: '36px', borderRadius: '8px', background: '#FEE2E2',
-                                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#EF4444'
+                                          width: '36px', height: '36px', borderRadius: '8px',
+                                          background: isImg ? '#FEF2F2' : '#FEE2E2',
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                          color: isImg ? '#DC2626' : '#EF4444'
                                         }}>
-                                          <FaFilePdf size={18} />
+                                          {isImg ? <FaImage size={18} /> : <FaFilePdf size={18} />}
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                           <div style={{ fontWeight: 700, fontSize: '13px', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                            {att.file_name}
+                                            {att.file_name || 'Attachment'}
                                           </div>
-                                          <div style={{ fontSize: '11px', color: '#64748B' }}>{att.file_size || 'Document'}</div>
+                                          <div style={{ fontSize: '11px', color: '#64748B' }}>
+                                            {isFailed ? 'Image link or browser session expired' : att.file_size || 'Document'}
+                                          </div>
                                         </div>
-                                        {displayUrl && (
+                                        {!isFailed && displayUrl && (
                                           <a href={displayUrl} target="_blank" rel="noreferrer" style={{ color: '#2563EB' }}>
                                             <FaDownload size={14} />
                                           </a>
@@ -2960,33 +2980,37 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
               padding: '8px 16px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.15)',
               backdropFilter: 'blur(6px)'
             }}>
-              <button
-                type="button"
-                onClick={() => handleDownloadImage(previewImageUrl, 'chat_image.png')}
-                style={{
-                  background: '#2563EB', color: '#FFFFFF', border: 'none',
-                  borderRadius: '16px', padding: '6px 14px', display: 'flex',
-                  alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 800,
-                  cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.4)'
-                }}
-                title="Download Image to Device"
-              >
-                <FaDownload size={13} /> Download
-              </button>
+              {!previewImgError && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadImage(previewImageUrl, 'chat_image.png')}
+                    style={{
+                      background: '#2563EB', color: '#FFFFFF', border: 'none',
+                      borderRadius: '16px', padding: '6px 14px', display: 'flex',
+                      alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 800,
+                      cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.4)'
+                    }}
+                    title="Download Image to Device"
+                  >
+                    <FaDownload size={13} /> Download
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => handleCopyImage(previewImageUrl)}
-                style={{
-                  background: 'rgba(255,255,255,0.15)', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.2)',
-                  borderRadius: '16px', padding: '6px 14px', display: 'flex',
-                  alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 700,
-                  cursor: 'pointer'
-                }}
-                title="Copy Image to Clipboard"
-              >
-                <FaCopy size={13} /> Copy Image
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyImage(previewImageUrl)}
+                    style={{
+                      background: 'rgba(255,255,255,0.15)', color: '#FFFFFF', border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '16px', padding: '6px 14px', display: 'flex',
+                      alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                    title="Copy Image to Clipboard"
+                  >
+                    <FaCopy size={13} /> Copy Image
+                  </button>
+                </>
+              )}
 
               <button
                 type="button"
@@ -3003,14 +3027,29 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
               </button>
             </div>
 
-            <img
-              src={getImageUrl(previewImageUrl)}
-              alt="Full Preview"
-              style={{
-                maxWidth: '90vw', maxHeight: '80vh', borderRadius: '16px', objectFit: 'contain',
-                boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid rgba(255,255,255,0.2)'
-              }}
-            />
+            {previewImgError ? (
+              <div style={{
+                padding: '40px 50px', background: '#1E293B', borderRadius: '16px',
+                color: '#94A3B8', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)'
+              }}>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#F1F5F9', marginBottom: '8px' }}>
+                  Image Preview Unavailable
+                </div>
+                <div style={{ fontSize: '14px', color: '#94A3B8' }}>
+                  The requested image link or local browser preview session has expired.
+                </div>
+              </div>
+            ) : (
+              <img
+                src={getImageUrl(previewImageUrl)}
+                alt="Full Preview"
+                onError={() => setPreviewImgError(true)}
+                style={{
+                  maxWidth: '90vw', maxHeight: '80vh', borderRadius: '16px', objectFit: 'contain',
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid rgba(255,255,255,0.2)'
+                }}
+              />
+            )}
           </div>
         </div>
       )}
