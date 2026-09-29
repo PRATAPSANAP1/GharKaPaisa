@@ -10,12 +10,53 @@ const { JWT_SECRET } = require('../../config/jwt');
 const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'gharkapaisa-production-storage';
 
 /**
+ * Helper to resolve employeeId from reqUser or user_id mapping
+ * Handles both employee_id (UUID) and employee_code (string) by mapping to UUID
+ */
+const resolveEmployeeId = async (reqUser) => {
+  if (!reqUser) return null;
+  
+  // If employee_id is already a UUID, return it
+  if (reqUser.employeeId || reqUser.employee_id) {
+    const empId = reqUser.employeeId || reqUser.employee_id;
+    // Validate it's a UUID format (basic check)
+    if (typeof empId === 'string' && empId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      return empId;
+    }
+  }
+  
+  // If employee_code is provided, map it to employee_id (UUID)
+  if (reqUser.employee_code) {
+    try {
+      const { rows: [emp] } = await query(
+        `SELECT id FROM employees WHERE employee_code = $1 LIMIT 1`,
+        [reqUser.employee_code]
+      );
+      if (emp) return emp.id;
+    } catch (e) {
+      logger.error('Error resolving employee_code to employee_id:', e.message);
+    }
+  }
+  
+  // Fallback: try to find employee by user_id
+  if (reqUser.id) {
+    try {
+      const { rows: [emp] } = await query(`SELECT id FROM employees WHERE user_id = $1 LIMIT 1`, [reqUser.id]);
+      if (emp) return emp.id;
+    } catch (e) {}
+  }
+  
+  return null;
+};
+
+/**
  * Create a secure enrollment session token (valid 5 minutes)
+ * Note: Biometric enrollment is DEPRECATED - attendance now uses KYC photo from employee_documents
  */
 const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = false, reason = null, reqUser }) => {
   const userRole = (reqUser.role || '').toUpperCase();
   const isAdminRole = ['SUPER_ADMIN', 'ADMIN', 'HR'].includes(userRole);
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+  const authEmpId = await resolveEmployeeId(reqUser);
 
   // Non-administrative users cannot target other employees
   if (!isAdminRole && authEmpId && employeeId !== authEmpId) {
@@ -36,24 +77,11 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
     throw error;
   }
 
-  // If re-enrollment requested, require SUPER_ADMIN role
-  if (isReEnrollment && userRole !== 'SUPER_ADMIN') {
-    const error = new Error('Only Super Admin is authorized to initiate biometric re-enrollment');
-    error.statusCode = 403;
-    throw error;
-  }
-
-  // Check active biometric template status
-  const { rows: [activeTemplate] } = await query(
-    `SELECT id, version, status, enrolled_at FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1`,
+  // Check for KYC photo (compulsory for attendance)
+  const { rows: [kycPhoto] } = await query(
+    `SELECT document_key, verification_status FROM employee_documents WHERE employee_id = $1 AND document_type = 'photo' LIMIT 1`,
     [employeeId]
   );
-
-  if (activeTemplate && !isReEnrollment) {
-    const error = new Error('Employee already has an active biometric face reference. Re-enrollment requires Super Admin authorization.');
-    error.statusCode = 409;
-    throw error;
-  }
 
   // Session payload
   const payload = {
@@ -77,8 +105,11 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
       designation: employee.designation,
       department: employee.department,
     },
-    hasActiveReference: !!activeTemplate,
-    activeTemplate: activeTemplate ? { version: activeTemplate.version, enrolled_at: activeTemplate.enrolled_at } : null,
+    hasKycPhoto: !!kycPhoto,
+    kycPhotoStatus: kycPhoto ? kycPhoto.verification_status : 'NOT_UPLOADED',
+    message: !kycPhoto 
+      ? 'KYC photograph is compulsory for attendance. Please upload your photo in the employee panel.' 
+      : 'KYC photo found. Attendance verification will use this photo.',
   };
 };
 
@@ -109,7 +140,7 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
 
   const userRole = (reqUser.role || '').toUpperCase();
   const isAdminRole = ['SUPER_ADMIN', 'ADMIN', 'HR'].includes(userRole);
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+  const authEmpId = await resolveEmployeeId(reqUser);
 
   // Non-administrative users cannot commit an enrollment session belonging to another employee
   if (!isAdminRole && authEmpId && session.employeeId !== authEmpId) {
@@ -384,6 +415,7 @@ const revokeEnvironmentReference = async (referenceCode, reason, reqUser) => {
 };
 
 module.exports = {
+  resolveEmployeeId,
   createEnrollmentSession,
   commitFaceEnrollment,
   getEmployeeBiometricStatus,

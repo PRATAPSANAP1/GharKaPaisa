@@ -1,40 +1,18 @@
 /**
  * Employee Attendance Feature Rollout Gate Configuration
- * Restricts the Phase 6-4 Employee Website Attendance functionality
- * to authorized employee codes during controlled testing/rollout.
+ * Enables attendance functionality across all employee accounts.
  */
 
-export const ATTENDANCE_ENABLED_EMPLOYEE_CODES = [
-  'CAND10001'
-];
+export const ATTENDANCE_ENABLED_EMPLOYEE_CODES = [];
 
 /**
  * Determine if Attendance functionality is enabled for the provided employee code or user context.
- * Returns true ONLY if the employee code matches CAND10001 (or any code in ATTENDANCE_ENABLED_EMPLOYEE_CODES).
- * Returns false if missing, null, undefined, empty, or unapproved.
+ * Returns true for all authenticated employees.
  * 
  * @param {string|object} userOrCode - Employee code string or authenticated user/employee profile object
  * @returns {boolean}
  */
 export const isAttendanceEnabled = (userOrCode) => {
-  if (!userOrCode) return false;
-
-  let code = '';
-
-  if (typeof userOrCode === 'string') {
-    code = userOrCode;
-  } else if (typeof userOrCode === 'object') {
-    code = userOrCode.employee_id || 
-           userOrCode.emp_code || 
-           userOrCode.employee_code || 
-           userOrCode.candidate_code || 
-           userOrCode.code || 
-           '';
-  }
-
-  const cleanCode = String(code).trim().toUpperCase();
-
-  if (!cleanCode) return false;
-
-  return ATTENDANCE_ENABLED_EMPLOYEE_CODES.map((c) => c.toUpperCase()).includes(cleanCode);
+  return true;
 };
+

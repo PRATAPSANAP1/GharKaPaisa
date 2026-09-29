@@ -63,6 +63,36 @@ export const sendMessage = async (data: {
   return res.data?.data;
 };
 
+export const sendMessageWithAttachment = async (
+  conversationId: string,
+  imageUri: string,
+  messageText?: string
+): Promise<MessengerMessage> => {
+  const formData = new FormData();
+  formData.append('conversation_id', conversationId);
+  if (messageText) {
+    formData.append('message_text', messageText);
+  }
+  formData.append('message_type', 'IMAGE');
+  
+  const filename = imageUri.split('/').pop() || `image_${Date.now()}.jpg`;
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `image/${match[1]}` : 'image/jpeg';
+  
+  formData.append('attachment', {
+    uri: imageUri,
+    name: filename,
+    type: type,
+  } as any);
+  
+  const res = await apiClient.post('/messenger/messages', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return res.data?.data;
+};
+
 export const markRead = async (conversationId: string): Promise<boolean> => {
   const res = await apiClient.post(`/messenger/conversations/${conversationId}/read`);
   return res.data?.success || false;

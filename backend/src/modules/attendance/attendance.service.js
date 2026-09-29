@@ -2,18 +2,43 @@ const { query, getClient } = require('../../config/database');
 const logger = require('../../config/logger');
 const { logAction } = require('../admin/audit.service');
 
+const isValidUuid = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 /**
- * Helper to resolve employeeId from reqUser or user_id mapping
+ * Helper to resolve employeeId from reqUser or user_id mapping.
+ * Ensures that candidate codes like "CAND10003" or "EMP1001" are resolved into valid employee UUIDs.
  */
 const resolveEmployeeId = async (reqUser) => {
   if (!reqUser) return null;
-  if (reqUser.employeeId || reqUser.employee_id) return reqUser.employeeId || reqUser.employee_id;
+
+  const candidate = reqUser.employeeId || reqUser.employee_id || reqUser.employee_code;
+  
+  // 1. If candidate is already a valid UUID format, return it
+  if (candidate && isValidUuid(candidate)) {
+    return candidate;
+  }
+  
+  // 2. If candidate is a string code like "CAND10003", query employees table for its UUID
+  if (candidate) {
+    try {
+      const { rows: [emp] } = await query(
+        `SELECT id FROM employees WHERE employee_id = $1 OR employee_code = $1 OR candidate_id = $1 OR user_id = $2 LIMIT 1`,
+        [candidate, reqUser.id]
+      );
+      if (emp && isValidUuid(emp.id)) return emp.id;
+    } catch (e) {
+      logger.error('Error resolving employee code to UUID:', e.message);
+    }
+  }
+  
+  // 3. Fallback: try to resolve employee by user_id
   if (reqUser.id) {
     try {
       const { rows: [emp] } = await query(`SELECT id FROM employees WHERE user_id = $1 LIMIT 1`, [reqUser.id]);
-      if (emp) return emp.id;
+      if (emp && isValidUuid(emp.id)) return emp.id;
     } catch (e) {}
   }
+  
   return null;
 };
 

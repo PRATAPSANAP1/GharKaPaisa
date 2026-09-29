@@ -10,8 +10,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
-  SafeAreaView
+  SafeAreaView,
+  Image,
+  Alert
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
@@ -20,6 +23,7 @@ import {
   getConversations,
   getMessages,
   sendMessage,
+  sendMessageWithAttachment,
   markRead,
   MessengerConversation,
   MessengerMessage
@@ -35,6 +39,8 @@ export default function MessengerScreen() {
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const fetchConvs = async () => {
@@ -71,26 +77,61 @@ export default function MessengerScreen() {
   };
 
   const handleSend = async () => {
-    if (!inputText.trim() || !activeConv || sending) return;
+    if ((!inputText.trim() && !selectedImage) || !activeConv || sending) return;
     const textToSend = inputText.trim();
     setInputText('');
+    setSelectedImage(null);
     setSending(true);
 
     try {
-      const sent = await sendMessage({
-        conversation_id: activeConv.id,
-        message_text: textToSend,
-        message_type: 'TEXT'
-      });
+      let sent;
+      if (selectedImage) {
+        sent = await sendMessageWithAttachment(activeConv.id, selectedImage, textToSend || undefined);
+      } else {
+        sent = await sendMessage({
+          conversation_id: activeConv.id,
+          message_text: textToSend,
+          message_type: 'TEXT'
+        });
+      }
       if (sent) {
         setMessages(prev => [...prev, sent]);
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
       }
     } catch (e) {
       console.error(e);
+      Alert.alert('Error', 'Failed to send message');
     } finally {
       setSending(false);
     }
+  };
+
+  const pickImage = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please grant camera roll permissions to upload photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const removeSelectedImage = () => {
+    setSelectedImage(null);
   };
 
   const onRefresh = () => {
@@ -136,15 +177,28 @@ export default function MessengerScreen() {
               onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
               renderItem={({ item }) => {
                 const isMe = String(item.sender_id).toLowerCase() === String(user?.id).toLowerCase();
+                const hasAttachment = item.attachments && item.attachments.length > 0;
+                const attachment = hasAttachment ? item.attachments[0] : null;
+                const isImage = attachment && (attachment.file_type?.startsWith('image/') || attachment.file_name?.match(/\.(jpg|jpeg|png|gif)$/i));
+
                 return (
                   <View style={[styles.msgRow, isMe ? styles.msgRowRight : styles.msgRowLeft]}>
                     <View style={[styles.msgBubble, isMe ? styles.msgBubbleMe : styles.msgBubbleOther]}>
                       {!isMe && item.sender_name && (
                         <Text style={styles.senderName}>{item.sender_name}</Text>
                       )}
-                      <Text style={[styles.msgText, isMe ? styles.msgTextMe : styles.msgTextOther]}>
-                        {item.message_text}
-                      </Text>
+                      {isImage && attachment?.file_url && (
+                        <Image
+                          source={{ uri: attachment.file_url }}
+                          style={styles.attachmentImage}
+                          resizeMode="cover"
+                        />
+                      )}
+                      {item.message_text && (
+                        <Text style={[styles.msgText, isMe ? styles.msgTextMe : styles.msgTextOther]}>
+                          {item.message_text}
+                        </Text>
+                      )}
                       <Text style={[styles.msgTime, isMe ? styles.msgTimeMe : styles.msgTimeOther]}>
                         {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </Text>
@@ -157,6 +211,9 @@ export default function MessengerScreen() {
 
           {/* Message Composer */}
           <View style={styles.composerBar}>
+            <TouchableOpacity onPress={pickImage} style={styles.attachBtn}>
+              <Text style={styles.attachBtnText}>📷</Text>
+            </TouchableOpacity>
             <TextInput
               style={styles.composerInput}
               placeholder="Type a message..."
@@ -167,8 +224,8 @@ export default function MessengerScreen() {
             />
             <TouchableOpacity
               onPress={handleSend}
-              disabled={sending || !inputText.trim()}
-              style={[styles.sendBtn, (!inputText.trim() || sending) && styles.sendBtnDisabled]}
+              disabled={sending || (!inputText.trim() && !selectedImage)}
+              style={[styles.sendBtn, (!inputText.trim() && !selectedImage || sending) && styles.sendBtnDisabled]}
             >
               {sending ? (
                 <ActivityIndicator size="small" color="#fff" />
@@ -177,6 +234,16 @@ export default function MessengerScreen() {
               )}
             </TouchableOpacity>
           </View>
+
+          {/* Image Preview */}
+          {selectedImage && (
+            <View style={styles.imagePreviewContainer}>
+              <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+              <TouchableOpacity onPress={removeSelectedImage} style={styles.removeImageBtn}>
+                <Text style={styles.removeImageText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
     );
@@ -490,5 +557,47 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: typography.weights.bold,
     fontSize: typography.sizes.xs
+  },
+  attachBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+    marginRight: spacing.sm
+  },
+  attachBtnText: {
+    fontSize: 20
+  },
+  attachmentImage: {
+    width: 200,
+    height: 150,
+    borderRadius: 8,
+    marginBottom: spacing.xs
+  },
+  imagePreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.card,
+    borderTopWidth: 1,
+    borderTopColor: colors.border
+  },
+  imagePreview: {
+    width: 60,
+    height: 60,
+    borderRadius: 8
+  },
+  removeImageBtn: {
+    marginLeft: spacing.sm,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  removeImageText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: typography.weights.bold
   }
 });

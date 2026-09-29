@@ -6,11 +6,51 @@ const faceMatchProvider = require('../../services/biometric/faceMatch.provider')
 const environmentMatchProvider = require('../../services/biometric/environmentMatch.provider');
 const { logAction } = require('../admin/audit.service');
 
+const isValidUuid = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+/**
+ * Helper to resolve employeeId from reqUser or user_id mapping.
+ * Ensures candidate string codes like "CAND10003" or "EMP1001" are resolved into valid employee UUIDs.
+ */
+const resolveEmployeeId = async (reqUser) => {
+  if (!reqUser) return null;
+
+  const candidate = reqUser.employeeId || reqUser.employee_id || reqUser.employee_code;
+  
+  // 1. If candidate is already a valid UUID format, return it
+  if (candidate && isValidUuid(candidate)) {
+    return candidate;
+  }
+  
+  // 2. If candidate is a string code like "CAND10003", query employees table for its UUID
+  if (candidate) {
+    try {
+      const { rows: [emp] } = await query(
+        `SELECT id FROM employees WHERE employee_id = $1 OR employee_code = $1 OR candidate_id = $1 OR user_id = $2 LIMIT 1`,
+        [candidate, reqUser.id]
+      );
+      if (emp && isValidUuid(emp.id)) return emp.id;
+    } catch (e) {
+      logger.error('Error resolving employee code to UUID:', e.message);
+    }
+  }
+  
+  // 3. Fallback: try to resolve employee by user_id
+  if (reqUser.id) {
+    try {
+      const { rows: [emp] } = await query(`SELECT id FROM employees WHERE user_id = $1 LIMIT 1`, [reqUser.id]);
+      if (emp && isValidUuid(emp.id)) return emp.id;
+    } catch (e) {}
+  }
+  
+  return null;
+};
+
 /**
  * 1. Create a server-side attendance verification session (valid 5 minutes)
  */
 const createVerificationSession = async ({ reqUser }) => {
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+  const authEmpId = await resolveEmployeeId(reqUser);
 
   if (!authEmpId) {
     const error = new Error('User context is not associated with an employee record');
@@ -30,14 +70,14 @@ const createVerificationSession = async ({ reqUser }) => {
     throw error;
   }
 
-  // Check for active biometric reference
-  const { rows: [activeTemplate] } = await query(
-    `SELECT id, version, status FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1`,
+  // Check for KYC photo (compulsory for attendance)
+  const { rows: [kycPhoto] } = await query(
+    `SELECT document_key FROM employee_documents WHERE employee_id = $1 AND document_type = 'photo' LIMIT 1`,
     [authEmpId]
   );
 
-  if (!activeTemplate) {
-    const error = new Error('No ACTIVE biometric face reference found. Mandatory biometric enrollment required first.');
+  if (!kycPhoto || !kycPhoto.document_key) {
+    const error = new Error('KYC photograph is compulsory for attendance. Please upload your photo in the employee panel.');
     error.statusCode = 404;
     throw error;
   }
@@ -53,7 +93,7 @@ const createVerificationSession = async ({ reqUser }) => {
 
   await logAction(reqUser, 'ATTENDANCE_VERIFICATION_STARTED', authEmpId, {
     verification_session_id: session.id,
-    template_version: activeTemplate.version,
+    reference_type: 'KYC_PHOTO',
   });
 
   return {
@@ -69,7 +109,13 @@ const createVerificationSession = async ({ reqUser }) => {
  * 2. Create AWS Rekognition / Provider Liveness Session
  */
 const initiateLivenessSession = async ({ sessionId, reqUser }) => {
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+  const authEmpId = await resolveEmployeeId(reqUser);
+
+  if (!authEmpId) {
+    const error = new Error('User context is not associated with an employee record');
+    error.statusCode = 400;
+    throw error;
+  }
 
   const { rows: [session] } = await query(
     `SELECT id, employee_id, status, liveness_status, expires_at 
@@ -139,7 +185,13 @@ const initiateLivenessSession = async ({ sessionId, reqUser }) => {
  * 3. Validate liveness result from provider
  */
 const validateLivenessResult = async ({ sessionId, providerSessionId, reqUser }) => {
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+  const authEmpId = await resolveEmployeeId(reqUser);
+
+  if (!authEmpId) {
+    const error = new Error('User context is not associated with an employee record');
+    error.statusCode = 400;
+    throw error;
+  }
 
   const { rows: [session] } = await query(
     `SELECT id, employee_id, status, expires_at FROM attendance_verification_sessions WHERE id = $1 LIMIT 1`,
@@ -188,7 +240,13 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, reqUser })
  * 4. Complete backend attendance verification pipeline (Liveness -> Face -> Environment -> Policy)
  */
 const completeAttendanceVerification = async ({ sessionId, faceImageBuffer, mimeType, reqUser }) => {
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+  const authEmpId = await resolveEmployeeId(reqUser);
+
+  if (!authEmpId) {
+    const error = new Error('User context is not associated with an employee record');
+    error.statusCode = 400;
+    throw error;
+  }
 
   if (!sessionId) {
     const error = new Error('verification_session_id is required');
@@ -254,40 +312,42 @@ const completeAttendanceVerification = async ({ sessionId, faceImageBuffer, mime
   }
 
   // ── STEP B: FACE MATCH VERIFICATION ────────────────────────────
-  // Query ACTIVE biometric reference ONLY
-  const { rows: [activeTemplate] } = await query(
-    `SELECT id, s3_key, version FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1`,
+  // First, try to get KYC photo from employee_documents (compulsory for attendance)
+  const { rows: [kycPhoto] } = await query(
+    `SELECT document_key FROM employee_documents WHERE employee_id = $1 AND document_type = 'photo' LIMIT 1`,
     [authEmpId]
   );
 
-  if (!activeTemplate || !activeTemplate.s3_key) {
+  if (!kycPhoto || !kycPhoto.document_key) {
     await query(
       `UPDATE attendance_verification_sessions 
-       SET face_status = 'REFERENCE_NOT_FOUND', status = 'FAILED', failure_reason = 'FACE_REFERENCE_NOT_FOUND', updated_at = NOW() 
+       SET face_status = 'REFERENCE_NOT_FOUND', status = 'FAILED', failure_reason = 'KYC_PHOTO_NOT_FOUND', updated_at = NOW() 
        WHERE id = $1`,
       [sessionId]
     );
 
     await logAction(reqUser, 'ATTENDANCE_FACE_MATCH_FAILED', authEmpId, {
       session_id: sessionId,
-      reason: 'FACE_REFERENCE_NOT_FOUND',
+      reason: 'KYC_PHOTO_NOT_FOUND',
     });
 
     await logAction(reqUser, 'ATTENDANCE_VERIFICATION_FAILED', authEmpId, {
       session_id: sessionId,
-      reason: 'FACE_REFERENCE_NOT_FOUND',
+      reason: 'KYC_PHOTO_NOT_FOUND',
     });
 
     return {
       success: false,
-      reason: 'FACE_REFERENCE_NOT_FOUND',
+      reason: 'KYC_PHOTO_NOT_FOUND',
+      message: 'KYC photograph is compulsory for attendance. Please upload your photo in the employee panel.',
     };
   }
 
   // Validate face quality
   faceBiometricProvider.validateFaceQuality(faceImageBuffer, mimeType);
 
-  const faceRes = await faceMatchProvider.compareFace(faceImageBuffer, activeTemplate.s3_key);
+  // Use KYC photo as reference for face matching
+  const faceRes = await faceMatchProvider.compareFace(faceImageBuffer, kycPhoto.document_key);
 
   if (!faceRes.matched) {
     const reason = faceRes.matchStatus || 'FACE_MISMATCH';
@@ -421,7 +481,13 @@ const completeAttendanceVerification = async ({ sessionId, faceImageBuffer, mime
  * Fetch verification session status
  */
 const getVerificationSessionStatus = async ({ sessionId, reqUser }) => {
-  const authEmpId = reqUser.employeeId || reqUser.employee_id;
+  const authEmpId = await resolveEmployeeId(reqUser);
+
+  if (!authEmpId) {
+    const error = new Error('User context is not associated with an employee record');
+    error.statusCode = 400;
+    throw error;
+  }
 
   const { rows: [session] } = await query(
     `SELECT id, employee_id, status, liveness_status, face_status, environment_status, matched_environment_code, failure_reason, expires_at, completed_at, created_at 
@@ -440,6 +506,7 @@ const getVerificationSessionStatus = async ({ sessionId, reqUser }) => {
 };
 
 module.exports = {
+  resolveEmployeeId,
   createVerificationSession,
   initiateLivenessSession,
   validateLivenessResult,
