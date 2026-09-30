@@ -31,6 +31,12 @@ async function migrateBiometricEnrollment() {
       );
     `);
 
+    // Ensure columns exist idempotently for Phase 6-9 compatibility
+    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS employee_code VARCHAR(50)`);
+    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS rekognition_collection_id VARCHAR(255)`);
+    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS rekognition_face_id TEXT`);
+    await query(`ALTER TABLE employee_biometric_templates ADD COLUMN IF NOT EXISTS provider_user_id TEXT`);
+
     // Unique constraint: Only ONE active biometric template per employee at a time
     await query(`
       CREATE UNIQUE INDEX IF NOT EXISTS idx_emp_biometric_active_unique 
@@ -42,6 +48,7 @@ async function migrateBiometricEnrollment() {
     await query(`
       CREATE INDEX IF NOT EXISTS idx_emp_biometric_emp_id ON employee_biometric_templates(employee_id);
       CREATE INDEX IF NOT EXISTS idx_emp_biometric_status ON employee_biometric_templates(status);
+      CREATE INDEX IF NOT EXISTS idx_emp_biometric_emp_code ON employee_biometric_templates(employee_code);
     `);
 
     // 2. Attendance Office Environment References Table

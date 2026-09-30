@@ -293,6 +293,8 @@ const startServer = async () => {
     try {
       const { migrateBiometricEnrollment } = require('./database/migrations/migrate_biometric_enrollment_phase2.js');
       await migrateBiometricEnrollment();
+      const { migrateKycBiometricEnrollmentPhase6_9 } = require('./database/migrations/migrate_kyc_biometric_enrollment_phase6_9.js');
+      await migrateKycBiometricEnrollmentPhase6_9();
     } catch (bErr) {
       logger.warn('Biometric Enrollment auto migration note:', bErr.message);
     }
