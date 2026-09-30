@@ -3,12 +3,9 @@ const logger = require('../../config/logger');
 const ipaddr = require('ipaddr.js');
 
 /**
- * Enhanced Environment Match Provider with Secondary Validation Anchors
- * 
- * Implements fallback validation when visual environment matching fails:
- * 1. Network BSSID/IP whitelist validation
- * 2. Geo-fencing validation
- * 3. Combined scoring for hybrid verification
+ * @deprecated UNUSED EXPERIMENTAL ENHANCED ENVIRONMENT PROVIDER
+ * Final V1 architecture uses primary environmentMatch.provider.js (BKG reference lookup).
+ * This alternative weighted scoring module is not mounted in the main verification pipeline.
  */
 class EnvironmentMatchEnhancedProvider {
   constructor() {

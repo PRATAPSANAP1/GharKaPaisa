@@ -171,6 +171,22 @@ const uploadBiometricReference = async ({ buffer, employeeId, version = 1, mimeT
   };
 };
 
+// Get S3 Object Stream (for private streaming through backend)
+const getObjectStream = async (key) => {
+  if (!BUCKET) throw new Error('AWS_S3_BUCKET not configured');
+  let cleanKey = String(key || '').replace(/^\/+/, '');
+  if (cleanKey.includes('?')) {
+    cleanKey = cleanKey.split('?')[0];
+  }
+  const command = new GetObjectCommand({ Bucket: BUCKET, Key: cleanKey });
+  const data = await s3Client.send(command);
+  return {
+    stream: data.Body,
+    contentType: data.ContentType,
+    contentLength: data.ContentLength,
+  };
+};
+
 // Delete from S3
 const deleteFromS3 = async (key) => {
   await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
@@ -183,6 +199,7 @@ module.exports = {
   uploadToS3, 
   uploadBiometricReference, 
   getSignedDownloadUrl, 
+  getObjectStream,
   getCloudFrontUrl, 
   deleteFromS3 
 };

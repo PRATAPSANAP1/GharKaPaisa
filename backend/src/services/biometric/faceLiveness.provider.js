@@ -11,19 +11,19 @@ class FaceLivenessProvider {
     this.providerName = 'AWS_REKOGNITION_LIVENESS';
     this.region = process.env.AWS_REGION || 'ap-south-1';
 
-    const hasCreds = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
-    const isExplicitlyEnabled = process.env.AWS_REKOGNITION_LIVENESS_ENABLED === 'true';
+    const isExplicitlyDisabled = process.env.AWS_REKOGNITION_LIVENESS_ENABLED === 'false';
 
-    this.isConfigured = !!(RekognitionClient && hasCreds && isExplicitlyEnabled);
+    this.isConfigured = !!(RekognitionClient && !isExplicitlyDisabled);
 
     if (this.isConfigured) {
-      this.rekognitionClient = new RekognitionClient({
-        region: this.region,
-        credentials: {
+      const clientOptions = { region: this.region };
+      if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+        clientOptions.credentials = {
           accessKeyId: process.env.AWS_ACCESS_KEY_ID,
           secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        },
-      });
+        };
+      }
+      this.rekognitionClient = new RekognitionClient(clientOptions);
     } else {
       this.rekognitionClient = null;
     }

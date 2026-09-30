@@ -941,25 +941,27 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
 
         {/* STEP 4 FORM: BIOMETRIC FACE VERIFICATION ENROLLMENT */}
         {activeTab === 4 && (
-          <form onSubmit={handleFaceEnrollSubmit} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: '24px', padding: isMobile ? '20px 16px' : '36px', boxShadow: '0 4px 24px rgba(0,0,0,0.03)' }}>
+          <form onSubmit={handleFaceEnrollSubmit} style={{ background: C.card || '#FFFFFF', border: `1px solid ${C.border || '#E2E8F0'}`, borderRadius: '24px', padding: isMobile ? '20px 16px' : '36px', boxShadow: '0 4px 24px rgba(0,0,0,0.03)' }}>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', borderBottom: `2px solid ${C.teal || '#0F766E'}20`, paddingBottom: '12px' }}>
-              <FaCamera style={{ color: C.teal || '#0F766E', fontSize: '22px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', borderBottom: `2px solid ${C.border || '#E2E8F0'}`, paddingBottom: '12px' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FaCamera style={{ fontSize: '20px' }} />
+              </div>
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, color: C.teal || '#0F766E', margin: 0 }}>Step 4: Face Verification for Attendance</h3>
-                <p style={{ fontSize: '12px', color: C.textMid, margin: 0 }}>Enroll your official face biometric reference for secure server-side attendance verification.</p>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0F172A', margin: 0 }}>Step 4: Face Verification Enrollment</h3>
+                <p style={{ fontSize: '12px', color: '#64748B', margin: 0 }}>Enroll your official face biometric reference for secure server-side attendance verification.</p>
               </div>
             </div>
 
             {/* Mandatory Biometric Policy Notice */}
-            <div style={{ background: `${C.teal || '#0F766E'}10`, border: `1px solid ${C.teal || '#0F766E'}30`, borderRadius: '16px', padding: '16px 20px', marginBottom: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 900, color: C.teal || '#0F766E', fontSize: '13.5px', marginBottom: '4px' }}>
+            <div style={{ background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '16px', padding: '16px 20px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#2563EB', fontSize: '13.5px', marginBottom: '4px' }}>
                 <FaShieldAlt /> ATTENDANCE BIOMETRIC REFERENCE ≠ PROFILE PHOTO
               </div>
-              <p style={{ fontSize: '12.5px', color: C.text, margin: '0 0 6px 0', lineHeight: 1.5 }}>
+              <p style={{ fontSize: '12.5px', color: '#0F172A', margin: '0 0 6px 0', lineHeight: 1.5 }}>
                 The face captured during KYC is stored specifically as your official <strong>Attendance Biometric Reference</strong>.
               </p>
-              <p style={{ fontSize: '12px', color: C.textMid, margin: 0, lineHeight: 1.4 }}>
+              <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.4 }}>
                 This reference is immutable for the employee. Changing your profile picture later will NOT modify or replace your authoritative attendance biometric reference.
               </p>
             </div>
@@ -967,14 +969,14 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
             {/* Enrolled & Locked State Banner */}
             {(faceEnrollCompleted || faceEnrollStatus?.is_enrolled) ? (
               <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '18px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '24px' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#16A34A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '24px' }}>
                   <FaCheckCircle />
                 </div>
-                <h4 style={{ fontSize: '18px', fontWeight: 900, color: '#15803D', margin: '0 0 6px 0' }}>
+                <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#16A34A', margin: '0 0 6px 0' }}>
                   ✓ Attendance Biometric Reference Enrolled & Locked
                 </h4>
-                <p style={{ fontSize: '13px', color: C.textMid, margin: '0 0 16px 0' }}>
-                  Biometric Version: <strong>V{faceEnrollStatus?.active_template?.version || 1}</strong> | Enrolled Date: <strong>{faceEnrollStatus?.active_template?.enrolled_at ? new Date(faceEnrollStatus.active_template.enrolled_at).toLocaleDateString('en-IN') : 'Active'}</strong> | Status: <strong style={{ color: '#10B981' }}>ACTIVE</strong>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 16px 0' }}>
+                  Biometric Version: <strong>V{faceEnrollStatus?.active_template?.version || 1}</strong> | Enrolled Date: <strong>{faceEnrollStatus?.active_template?.enrolled_at ? new Date(faceEnrollStatus.active_template.enrolled_at).toLocaleDateString('en-IN') : 'Active'}</strong> | Status: <strong style={{ color: '#16A34A' }}>ACTIVE</strong>
                 </p>
                 <div style={{ background: '#DCFCE7', border: '1px solid #86EFAC', borderRadius: '12px', padding: '12px 16px', fontSize: '12px', color: '#166534', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                   <FaLock /> Your biometric reference is locked. Employees cannot replace it. Re-enrollment requires Super Admin authorization.
@@ -982,9 +984,9 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
               </div>
             ) : (
               <div>
-                {/* Clear 14-Point Instructions Checklist Box */}
-                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '18px', padding: '20px', marginBottom: '24px', fontSize: '12.5px', lineHeight: 1.6, color: C.text }}>
-                  <div style={{ fontWeight: 900, color: C.teal || '#0F766E', fontSize: '14px', marginBottom: '10px' }}>
+                {/* Clear Instructions Checklist Box */}
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '18px', padding: '20px', marginBottom: '24px', fontSize: '12.5px', lineHeight: 1.6, color: '#0F172A' }}>
+                  <div style={{ fontWeight: 700, color: '#2563EB', fontSize: '14px', marginBottom: '10px' }}>
                     Please follow these instructions before starting verification:
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '8px 16px' }}>
@@ -1006,47 +1008,47 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
                 </div>
 
                 {faceCamError && (
-                  <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B', padding: '12px 16px', borderRadius: '12px', fontSize: '12.5px', marginBottom: '20px' }}>
+                  <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', color: '#DC2626', padding: '12px 16px', borderRadius: '12px', fontSize: '12.5px', marginBottom: '20px' }}>
                     ⚠️ {faceCamError}
                   </div>
                 )}
 
                 {/* Camera / Capture Viewport */}
-                <div style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '20px', padding: '24px', textAlign: 'center', marginBottom: '24px' }}>
                   {!faceCapturedPreview ? (
                     <div>
-                      <div style={{ width: '100%', maxWidth: '380px', height: '280px', margin: '0 auto 16px', background: '#000', borderRadius: '16px', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '100%', maxWidth: '380px', height: '280px', margin: '0 auto 16px', background: '#0F172A', borderRadius: '16px', overflow: 'hidden', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {faceCamActive ? (
                           <>
-                            <video ref={faceVideoRef} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <video ref={faceVideoRef} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
                             {/* Oval Face Guide Overlay */}
                             <div style={{
                               position: 'absolute', width: '180px', height: '230px',
-                              border: '2px dashed #2DD4BF', borderRadius: '50%',
-                              boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.45)', pointerEvents: 'none'
+                              border: '3px solid #16A34A', borderRadius: '50%',
+                              boxShadow: '0 0 16px rgba(22, 163, 74, 0.4)', pointerEvents: 'none'
                             }} />
-                            <span style={{ position: 'absolute', bottom: '12px', background: 'rgba(0,0,0,0.7)', color: '#2DD4BF', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: 800 }}>
+                            <span style={{ position: 'absolute', bottom: '12px', background: 'rgba(15, 23, 42, 0.85)', color: '#FFFFFF', padding: '4px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
                               Align Face Within Frame
                             </span>
                           </>
                         ) : (
-                          <div style={{ color: C.textMid, fontSize: '13px', padding: '20px' }}>
-                            <FaCamera style={{ fontSize: '36px', marginBottom: '8px', color: C.border }} />
+                          <div style={{ color: '#64748B', fontSize: '13px', padding: '20px' }}>
+                            <FaCamera style={{ fontSize: '36px', marginBottom: '8px', color: '#94A3B8' }} />
                             <div>Camera Closed</div>
                           </div>
                         )}
                       </div>
 
                       {!faceCamActive ? (
-                        <button type="button" onClick={startFaceCam} style={{ background: C.teal || '#0F766E', color: '#fff', border: 'none', padding: '14px 28px', borderRadius: '14px', fontWeight: 900, fontSize: '14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(15,118,110,0.3)' }}>
-                          <FaCamera /> [ Start Face Verification ]
+                        <button type="button" onClick={startFaceCam} style={{ background: '#2563EB', color: '#fff', border: 'none', padding: '14px 28px', borderRadius: '12px', fontWeight: 600, fontSize: '14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)' }}>
+                          <FaCamera /> Start Face Verification
                         </button>
                       ) : (
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                          <button type="button" onClick={captureFaceFrame} style={{ background: '#059669', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: 900, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <button type="button" onClick={captureFaceFrame} style={{ background: '#16A34A', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                             <FaCamera /> Capture Biometric Reference
                           </button>
-                          <button type="button" onClick={stopFaceCam} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '12px 16px', borderRadius: '12px', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}>
+                          <button type="button" onClick={stopFaceCam} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A', padding: '12px 16px', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
                             Cancel
                           </button>
                         </div>
@@ -1055,12 +1057,12 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
                   ) : (
                     <div>
                       <div style={{ position: 'relative', width: '100%', maxWidth: '320px', margin: '0 auto 16px' }}>
-                        <img src={faceCapturedPreview} alt="Captured Face Preview" style={{ width: '100%', height: '260px', objectFit: 'cover', borderRadius: '16px', border: `2px solid ${C.teal || '#0F766E'}` }} />
-                        <span style={{ position: 'absolute', top: '10px', right: '10px', background: '#10B981', color: '#fff', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 800 }}>
+                        <img src={faceCapturedPreview} alt="Captured Face Preview" style={{ width: '100%', height: '260px', objectFit: 'cover', borderRadius: '16px', border: '2px solid #2563EB' }} />
+                        <span style={{ position: 'absolute', top: '10px', right: '10px', background: '#16A34A', color: '#fff', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
                           Biometric Capture Ready
                         </span>
                       </div>
-                      <button type="button" onClick={retakeFaceFrame} style={{ background: C.bgSecondary, border: `1px solid ${C.border}`, color: C.text, padding: '10px 18px', borderRadius: '10px', fontWeight: 800, fontSize: '12.5px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                      <button type="button" onClick={retakeFaceFrame} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A', padding: '10px 18px', borderRadius: '10px', fontWeight: 600, fontSize: '12.5px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <FaRedo /> Retake Photograph
                       </button>
                     </div>
@@ -1071,9 +1073,9 @@ export default function UnifiedEmployeeOnboarding({ initialStep = 1 }) {
                   type="submit"
                   disabled={submittingFace || !faceCapturedBlob}
                   style={{
-                    width: '100%', background: faceCapturedBlob ? (C.teal || '#0F766E') : C.border, color: '#fff',
-                    border: 'none', padding: '16px', borderRadius: '14px', fontSize: '15px', fontWeight: 900,
-                    cursor: faceCapturedBlob ? 'pointer' : 'not-allowed', boxShadow: faceCapturedBlob ? '0 4px 16px rgba(15,118,110,0.3)' : 'none'
+                    width: '100%', background: faceCapturedBlob ? '#2563EB' : '#E2E8F0', color: faceCapturedBlob ? '#fff' : '#94A3B8',
+                    border: 'none', padding: '16px', borderRadius: '14px', fontSize: '15px', fontWeight: 700,
+                    cursor: faceCapturedBlob ? 'pointer' : 'not-allowed', boxShadow: faceCapturedBlob ? '0 4px 16px rgba(37,99,235,0.3)' : 'none'
                   }}
                 >
                   {submittingFace ? 'Validating & Committing Biometric Reference...' : 'Commit & Lock Attendance Biometric Reference →'}

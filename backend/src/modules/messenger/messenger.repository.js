@@ -264,7 +264,7 @@ async function getMessages(conversationId, userId = null, limit = 5000, offset =
           SELECT json_agg(json_build_object(
             'id', ma.id,
             'file_name', ma.file_name,
-            'file_url', ma.file_url,
+            'file_url', CONCAT('/api/v1/messenger/media/', ma.id),
             'file_type', ma.file_type,
             'file_size', ma.file_size
           ))
@@ -391,6 +391,20 @@ function parseFileSizeToBytes(size) {
 }
 
 /**
+ * Get attachment by ID with conversation context for authorization check
+ */
+async function getAttachmentById(attachmentId) {
+  const sql = `
+    SELECT ma.*, m.conversation_id, m.sender_id
+    FROM message_attachments ma
+    JOIN messages m ON m.id = ma.message_id
+    WHERE ma.id = $1
+  `;
+  const { rows } = await query(sql, [attachmentId]);
+  return rows[0] || null;
+}
+
+/**
  * Add attachment to message
  */
 async function createAttachment({ message_id, file_name, file_url, file_type, file_size, storage_key }) {
@@ -402,13 +416,17 @@ async function createAttachment({ message_id, file_name, file_url, file_type, fi
   `;
   try {
     const { rows } = await query(sql, [message_id, file_name, file_url, file_type || null, parsedSize, storage_key || null]);
-    return rows[0];
+    const att = rows[0];
+    if (att) att.file_url = `/api/v1/messenger/media/${att.id}`;
+    return att;
   } catch (err) {
     if (err.message && err.message.includes('too long')) {
       await query(`ALTER TABLE message_attachments ALTER COLUMN file_url TYPE TEXT`).catch(() => {});
       await query(`ALTER TABLE message_attachments ALTER COLUMN storage_key TYPE TEXT`).catch(() => {});
       const { rows } = await query(sql, [message_id, file_name, file_url, file_type || null, parsedSize, storage_key || null]);
-      return rows[0];
+      const att = rows[0];
+      if (att) att.file_url = `/api/v1/messenger/media/${att.id}`;
+      return att;
     }
     throw err;
   }
@@ -887,6 +905,7 @@ module.exports = {
   getMessages,
   createMessage,
   createAttachment,
+  getAttachmentById,
   updateConversationLastMessage,
   markMessagesAsRead,
   getUnreadCount,

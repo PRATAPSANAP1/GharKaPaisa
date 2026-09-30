@@ -1,16 +1,12 @@
 # GharKaPaisa
 
-GharKaPaisa is a financial services management platform providing tools for lead processing, partner onboarding, and service management.
-
-## Developer Documentation
-
-For complete architectural details, module mapping, file locations, database schema, roles, and workflows, refer to the [Developer Guide](DEVELOPER_GUIDE.md).
+GharKaPaisa is a financial services management platform providing tools for lead processing, partner onboarding, credit cards, loans, and service management.
 
 ## Tech Stack
 
 - **Frontend**: React 19, Vite, React Router, Zustand, CSS
 - **Backend**: Node.js, Express.js, PostgreSQL
-- **Integrations**: AWS S3, MSG91 SMS, Razorpay
+- **Mobile**: React Native, Expo
 
 ## Quick Start
 
@@ -18,28 +14,27 @@ For complete architectural details, module mapping, file locations, database sch
 - Node.js (v18+)
 - PostgreSQL (v15+)
 
-### Installation
+### Setup
 
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd yohesa
-   ```
-
-2. **Setup Backend**:
+1. **Backend**:
    ```bash
    cd backend
    npm install
-   cp .env.example .env
-   npm run migrate
    npm run dev
    ```
 
-3. **Setup Frontend**:
+2. **Frontend**:
    ```bash
-   cd ../frontend
+   cd frontend
    npm install
    npm run dev
+   ```
+
+3. **Mobile**:
+   ```bash
+   cd mobile
+   npm install
+   npx expo start
    ```
 
 ## License

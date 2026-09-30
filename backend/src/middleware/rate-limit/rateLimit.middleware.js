@@ -1,20 +1,37 @@
 const rateLimit = require('express-rate-limit');
 
-// Key by identity (user ID / email / mobile) when present, fallback to IP.
-// Prevents shared-IP environments (offices, colleges) from blocking each other.
-const userOrIpKey = (req) =>
-  req.user?.id || req.body?.email || req.body?.mobile || req.body?.identity || req.ip;
+// Key by user identifier (email, phone, mobile, username, user ID) when present, fallback to IP.
+// Prevents shared-IP environments (offices, colleges, mobile carriers NAT) from blocking each other.
+const userOrIpKey = (req) => {
+  const identifier =
+    req.user?.id ||
+    req.body?.email ||
+    req.body?.phone ||
+    req.body?.username ||
+    req.body?.mobile ||
+    req.body?.identity;
+
+  if (identifier) {
+    return `${String(identifier).toLowerCase().trim()}_${req.ip}`;
+  }
+  return req.ip;
+};
 
 // Helper function to skip preflight OPTIONS requests from rate limiting
 const skipOptions = (req) => req.method === 'OPTIONS';
 
-// Global API rate limiter
+// Global API rate limiter - excludes Auth routes (/api/v1/auth) so background calls don't consume login allowance
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 2000,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: skipOptions,
+  skip: (req) => {
+    if (skipOptions(req)) return true;
+    const url = req.originalUrl || req.url || req.path || '';
+    return url.includes('/api/v1/auth') || url.includes('/auth');
+  },
+  keyGenerator: userOrIpKey,
   validate: { trustProxy: false },
   message: { success: false, message: 'Too many requests. Please slow down.' }
 });

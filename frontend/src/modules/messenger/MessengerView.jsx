@@ -34,6 +34,74 @@ export function maskSensitiveData(text) {
   return masked;
 }
 
+export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props }) {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    let localUrl = null;
+
+    if (!src) {
+      setLoading(false);
+      if (onError) onError();
+      return;
+    }
+
+    if (src.startsWith('data:') || src.startsWith('blob:')) {
+      setBlobUrl(src);
+      setLoading(false);
+      return;
+    }
+
+    api.get(src, { responseType: 'blob' })
+      .then((res) => {
+        if (isMounted) {
+          localUrl = URL.createObjectURL(res.data);
+          setBlobUrl(localUrl);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setLoading(false);
+          if (onError) onError(err);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+      if (localUrl) {
+        try { URL.revokeObjectURL(localUrl); } catch (e) {}
+      }
+    };
+  }, [src]);
+
+  if (loading) {
+    return (
+      <div style={{
+        width: '180px', height: '120px', background: '#F1F5F9',
+        borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#94A3B8', fontSize: '11px', fontWeight: 600
+      }}>
+        Loading image...
+      </div>
+    );
+  }
+
+  if (!blobUrl) return null;
+
+  return (
+    <AuthenticatedImage
+      src={blobUrl}
+      alt={alt}
+      style={style}
+      onClick={onClick}
+      {...props}
+    />
+  );
+}
+
 export default function MessengerView({ initialAppId = null, readOnly = false, targetUserId = null }) {
   const { user } = useAuthStore();
 
@@ -579,10 +647,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   // Image Download Helper
   const handleDownloadImage = async (rawUrl, fileName = 'image.png') => {
     if (!rawUrl) return;
-    const fileUrl = getImageUrl(rawUrl);
     try {
-      const response = await fetch(fileUrl);
-      const blob = await response.blob();
+      const response = await api.get(rawUrl, { responseType: 'blob' });
+      const blob = response.data;
       const blobUrl = createTrackedBlobUrl(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
@@ -592,34 +659,22 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       document.body.removeChild(a);
       setTimeout(() => revokeTrackedBlobUrl(blobUrl), 10000);
     } catch (err) {
-      const a = document.createElement('a');
-      a.href = fileUrl;
-      a.target = '_blank';
-      a.download = fileName || 'downloaded_image.png';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      alert('Failed to download image. Session may have expired or access denied.');
     }
   };
 
   // Image Copy Helper
   const handleCopyImage = async (rawUrl) => {
     if (!rawUrl) return;
-    const fileUrl = getImageUrl(rawUrl);
     try {
-      const response = await fetch(fileUrl);
-      const blob = await response.blob();
+      const response = await api.get(rawUrl, { responseType: 'blob' });
+      const blob = response.data;
       await navigator.clipboard.write([
         new ClipboardItem({ [blob.type || 'image/png']: blob })
       ]);
       alert('Image copied to clipboard!');
     } catch (err) {
-      try {
-        await navigator.clipboard.writeText(fileUrl);
-        alert('Image URL copied to clipboard!');
-      } catch (e) {
-        alert('Failed to copy image.');
-      }
+      alert('Failed to copy image.');
     }
   };
 
@@ -1728,8 +1783,8 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                     if (isImg && !isFailed) {
                                       return (
                                         <div key={idx} style={{ position: 'relative', display: 'inline-block', maxWidth: '280px' }}>
-                                          <img
-                                            src={displayUrl}
+                                          <AuthenticatedImage
+                                             src={displayUrl}
                                             alt={att.file_name || 'Attachment'}
                                             onError={() => {
                                               setFailedImageUrls(prev => ({ ...prev, [displayUrl]: true, [att.file_url]: true }));
@@ -1802,7 +1857,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                                             {att.file_name || 'Attachment'}
                                           </div>
                                           <div style={{ fontSize: '11px', color: '#64748B' }}>
-                                            {isFailed ? 'Image link or browser session expired' : att.file_size || 'Document'}
+                                            {isFailed ? 'Image unavailable' : att.file_size || 'Document'}
                                           </div>
                                         </div>
                                         {!isFailed && displayUrl && (

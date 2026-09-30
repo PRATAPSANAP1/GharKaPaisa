@@ -2,7 +2,7 @@ const os = require('os');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../config/logger');
-const JWT_SECRET = process.env.JWT_SECRET || 'gharkapaisa_secret_jwt';
+const JWT_SECRET = process.env.JWT_SECRET;
 const { query } = require('../config/database');
 
 const HOSTNAME = os.hostname();
@@ -51,12 +51,20 @@ async function resolveTargetUserId(recipientInput) {
 }
 
 function init(io) {
-  // Authentication middleware for Socket.IO
+  // Verify JWT_SECRET is configured
+  if (!JWT_SECRET) {
+    logger.error('[CALL SOCKET] CRITICAL: JWT_SECRET environment variable is missing for socket auth!');
+  }
+
+  // Authentication middleware for Socket.IO (enforce Authorization payload token)
   io.use((socket, next) => {
     try {
-      const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+      const token = socket.handshake.auth?.token;
       if (!token) {
-        return next(new Error('Authentication token required'));
+        return next(new Error('Authentication token required in socket.handshake.auth'));
+      }
+      if (!JWT_SECRET) {
+        return next(new Error('Server configuration error'));
       }
       const cleanToken = token.replace(/^Bearer\s+/i, '');
       const decoded = jwt.verify(cleanToken, JWT_SECRET);

@@ -668,6 +668,73 @@ async function uploadAttachment(file) {
   };
 }
 
+async function getMediaAttachmentStream(attachmentId, userId, userOrRole = null) {
+  const attachment = await repo.getAttachmentById(attachmentId);
+  if (!attachment) {
+    throw new Error('Attachment not found.');
+  }
+
+  const isAuthorized = await ensureParticipantAccess(attachment.conversation_id, userId, userOrRole);
+  if (!isAuthorized) {
+    throw new Error('Access denied to this attachment.');
+  }
+
+  const path = require('path');
+  const fs = require('fs');
+
+  let storageKey = attachment.storage_key;
+  if (!storageKey && attachment.file_url) {
+    const rawUrl = String(attachment.file_url);
+    if (rawUrl.includes('.amazonaws.com/')) {
+      storageKey = rawUrl.split('.amazonaws.com/')[1].split('?')[0];
+    } else if (rawUrl.includes('.cloudfront.net/')) {
+      storageKey = rawUrl.split('.cloudfront.net/')[1].split('?')[0];
+    } else if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
+      storageKey = rawUrl.replace(/^\/+/, '');
+    }
+  }
+
+  if (!storageKey) {
+    throw new Error('Media file storage key unavailable.');
+  }
+
+  if (storageKey.startsWith('uploads/messenger/') || storageKey.startsWith('/uploads/messenger/')) {
+    const relativePath = storageKey.replace(/^\/+/, '');
+    const localFilePath = path.join(__dirname, '../../../public', relativePath);
+    if (!fs.existsSync(localFilePath)) {
+      throw new Error('Local media file not found.');
+    }
+    return {
+      isLocal: true,
+      filePath: localFilePath,
+      fileName: attachment.file_name,
+      contentType: attachment.file_type === 'IMAGE' ? 'image/png' : attachment.file_type === 'PDF' ? 'application/pdf' : 'application/octet-stream'
+    };
+  }
+
+  const { getObjectStream } = require('../../services/aws/s3.service');
+  const s3Data = await getObjectStream(storageKey);
+
+  let contentType = s3Data.contentType;
+  if (!contentType || contentType === 'binary/octet-stream' || contentType === 'application/octet-stream') {
+    const ext = path.extname(attachment.file_name || '').toLowerCase();
+    if (ext === '.png') contentType = 'image/png';
+    else if (ext === '.jpg' || ext === '.jpeg') contentType = 'image/jpeg';
+    else if (ext === '.pdf') contentType = 'application/pdf';
+    else if (ext === '.gif') contentType = 'image/gif';
+    else if (ext === '.webp') contentType = 'image/webp';
+    else contentType = attachment.file_type === 'IMAGE' ? 'image/png' : 'application/octet-stream';
+  }
+
+  return {
+    isLocal: false,
+    stream: s3Data.stream,
+    contentType,
+    contentLength: s3Data.contentLength,
+    fileName: attachment.file_name
+  };
+}
+
 module.exports = {
   maskSensitiveData,
   listConversations,
@@ -697,5 +764,6 @@ module.exports = {
   getGroupMembers,
   addGroupMembers,
   removeGroupMember,
-  uploadAttachment
+  uploadAttachment,
+  getMediaAttachmentStream
 };

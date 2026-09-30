@@ -11,6 +11,9 @@ backend/firebase-service-account.json
 
 # Internal Documentation & Reports
 documentation/
+**/docs/
+*.md
+!/README.md
 *.docx
 *.pdf
 *.xlsx

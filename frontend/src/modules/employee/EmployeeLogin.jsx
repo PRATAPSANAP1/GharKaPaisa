@@ -26,6 +26,7 @@ export default function EmployeeLogin() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (loading) return; // Prevent double-trigger
     setError('');
     if (!mobileNumber) {
       setError('Mobile number is required.');

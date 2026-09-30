@@ -1,7 +1,6 @@
 const { RekognitionClient, CompareFacesCommand } = require('@aws-sdk/client-rekognition');
 const logger = require('../../config/logger');
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'gharkapaisa-production-storage';
 const FACE_MATCH_THRESHOLD = parseInt(process.env.FACE_MATCH_THRESHOLD || '90', 10);
 
 class FaceMatchProvider {
@@ -10,19 +9,19 @@ class FaceMatchProvider {
     this.region = process.env.AWS_REGION || 'ap-south-1';
     this.threshold = FACE_MATCH_THRESHOLD;
 
-    const hasCreds = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
-    const isExplicitlyEnabled = process.env.AWS_REKOGNITION_FACEMATCH_ENABLED === 'true';
+    const isExplicitlyDisabled = process.env.AWS_REKOGNITION_FACEMATCH_ENABLED === 'false';
 
-    this.isConfigured = hasCreds && isExplicitlyEnabled;
+    this.isConfigured = !!(RekognitionClient && !isExplicitlyDisabled);
 
     if (this.isConfigured) {
-      this.rekognitionClient = new RekognitionClient({
-        region: this.region,
-        credentials: {
+      const clientOptions = { region: this.region };
+      if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+        clientOptions.credentials = {
           accessKeyId: process.env.AWS_ACCESS_KEY_ID,
           secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        },
-      });
+        };
+      }
+      this.rekognitionClient = new RekognitionClient(clientOptions);
     } else {
       this.rekognitionClient = null;
     }
@@ -32,6 +31,18 @@ class FaceMatchProvider {
    * Compare live face capture image buffer against active employee reference S3 key
    */
   async compareFace(liveImageBuffer, referenceS3Key) {
+    const bucketName = process.env.AWS_S3_BUCKET;
+    if (!bucketName) {
+      logger.error('[FACE MATCH PROVIDER] AWS_S3_BUCKET environment variable is not configured');
+      return {
+        matched: false,
+        matchStatus: 'FACE_BUCKET_NOT_CONFIGURED',
+        similarity: 0,
+        threshold: this.threshold,
+        providerName: this.providerName,
+      };
+    }
+
     if (!this.isConfigured || !this.rekognitionClient) {
       logger.info('[FACE MATCH PROVIDER] AWS Rekognition FaceMatch provider not configured — failing closed');
       return {
@@ -60,7 +71,7 @@ class FaceMatchProvider {
         },
         TargetImage: {
           S3Object: {
-            Bucket: BUCKET_NAME,
+            Bucket: bucketName,
             Name: referenceS3Key,
           },
         },

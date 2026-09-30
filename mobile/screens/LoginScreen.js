@@ -96,6 +96,7 @@ export default function LoginScreen({ route, navigation }) {
   const isEmailAddress = (str) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim());
 
   const handleSendOtp = async () => {
+    if (loading.otp || loading.login) return;
     const trimmed = identity.trim();
     if (!trimmed) {
       Alert.alert('Required', 'Please enter your registered mobile number or email address.');
@@ -145,6 +146,7 @@ export default function LoginScreen({ route, navigation }) {
   };
 
   const handleLoginWithPassword = async () => {
+    if (loading.login) return;
     const trimmedIdentity = identity.trim();
     if (!trimmedIdentity) {
       Alert.alert('Required', 'Please enter your mobile number or email address.');
@@ -193,6 +195,7 @@ export default function LoginScreen({ route, navigation }) {
   };
 
   const handleLoginWithOtp = async () => {
+    if (loading.login) return;
     const trimmedIdentity = identity.trim();
     if (!trimmedIdentity) {
       Alert.alert('Required', 'Please enter your mobile number or email.');

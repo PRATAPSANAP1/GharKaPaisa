@@ -334,6 +334,7 @@ export default function PartnerLogin() {
   };
 
   const submitOtpLogin = async () => {
+    if (loading.login || verifyingRef.current) return; // Prevent double-trigger
     const finalOtp = otpDigits.join("");
     if (!finalOtp || finalOtp.length < 6) {
       setStatus("fail");
@@ -601,7 +602,7 @@ export default function PartnerLogin() {
 
   const handleLoginSubmit = async (e) => {
     if (e) e.preventDefault();
-    if (verifyingRef.current) return;
+    if (loading.login || verifyingRef.current) return; // Prevent double-trigger
     verifyingRef.current = true;
     setErr("");
     setToast(null);

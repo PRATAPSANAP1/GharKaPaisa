@@ -339,6 +339,42 @@ async function uploadAttachment(req, res, next) {
   }
 }
 
+async function getMediaAttachment(req, res, next) {
+  try {
+    const { attachmentId } = req.params;
+    const userId = req.user.id;
+    const media = await service.getMediaAttachmentStream(attachmentId, userId, req.user);
+
+    res.setHeader('Cache-Control', 'private, max-age=3600, no-transform');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(media.fileName || 'attachment')}"`);
+
+    if (media.isLocal) {
+      if (media.contentType) {
+        res.setHeader('Content-Type', media.contentType);
+      }
+      return res.sendFile(media.filePath);
+    }
+
+    if (media.contentType) {
+      res.setHeader('Content-Type', media.contentType);
+    }
+    if (media.contentLength) {
+      res.setHeader('Content-Length', media.contentLength);
+    }
+
+    return media.stream.pipe(res);
+  } catch (err) {
+    if (err.message && err.message.includes('Access denied')) {
+      return res.status(403).json({ success: false, message: err.message });
+    }
+    if (err.message && err.message.includes('not found')) {
+      return res.status(404).json({ success: false, message: err.message });
+    }
+    logger.error('[Messenger Media Error]:', err.message);
+    return res.status(404).json({ success: false, message: 'Media attachment unavailable' });
+  }
+}
+
 module.exports = {
   getConversations,
   createDirectChat,
@@ -367,5 +403,6 @@ module.exports = {
   getGroupMembers,
   addGroupMembers,
   removeGroupMember,
-  uploadAttachment
+  uploadAttachment,
+  getMediaAttachment
 };

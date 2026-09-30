@@ -2,10 +2,9 @@ const { query, getClient } = require('../../config/database');
 const logger = require('../../config/logger');
 
 /**
- * Attendance Verification Queue Service
- * 
- * Handles traffic spikes by queuing verification requests and processing them asynchronously.
- * Prevents database locks and timeout issues during shift change rushes.
+ * @deprecated UNUSED EXPERIMENTAL QUEUE
+ * Final V1 architecture uses synchronous biometric verification (Liveness -> KYC Face Match -> PostgreSQL).
+ * Do NOT enable or mount in production.
  */
 class VerificationQueueService {
   constructor() {

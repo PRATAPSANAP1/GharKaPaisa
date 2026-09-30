@@ -13,6 +13,14 @@ if (missingEnvVars.length > 0) {
   }
 }
 
+// Log feature configuration warnings
+if (!process.env.AWS_S3_BUCKET) {
+  logger.warn('[STARTUP NOTICE] AWS_S3_BUCKET not set — S3 file storage uploads will fail closed');
+}
+if (!process.env.AWS_REGION) {
+  logger.info('[STARTUP NOTICE] AWS_REGION default set to ap-south-1');
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -50,12 +58,12 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
   "http://localhost:4173",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:5173",
   "https://gharkapaisa.in",
   "https://www.gharkapaisa.in",
   "https://admin.gharkapaisa.in",
   "https://api.gharkapaisa.in",
-  "https://ghar-ka-paisa.vercel.app",
-  "https://gharkapaisa.vercel.app",
   ...envOrigins
 ];
 
@@ -71,10 +79,7 @@ const corsOptions = {
         hostname === 'localhost' ||
         hostname === '127.0.0.1' ||
         hostname === 'gharkapaisa.in' ||
-        hostname.endsWith('.gharkapaisa.in') ||
-        hostname.endsWith('.vercel.app') ||
-        hostname.endsWith('.amazonaws.com') ||
-        hostname.includes('amazonaws.com')
+        hostname.endsWith('.gharkapaisa.in')
       ) {
         return callback(null, true);
       }
@@ -124,9 +129,6 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
-// Global rate limiter
-app.use(globalLimiter);
-
 // Catch malformed URI requests gracefully (e.g., bot/scanner probes with invalid % encoding)
 app.use((req, res, next) => {
   try {
@@ -139,8 +141,8 @@ app.use((req, res, next) => {
 });
 
 // ── Body Parsing ───────────────────────────────────────────────
-// Capture raw text for JSON payloads to handle malformed inputs
-app.use(express.text({ type: 'application/json', limit: '50mb' }));
+// Capture raw text for JSON payloads (10mb limit for safety)
+app.use(express.text({ type: 'application/json', limit: '10mb' }));
 
 // Middleware to clean and parse malformed JSON bodies
 app.use((req, res, next) => {
@@ -157,8 +159,11 @@ app.use((req, res, next) => {
 });
 
 // Parse URL‑encoded bodies and cookies
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// Global rate limiter (placed after body parsing so req.body is populated for key generation & auth bypass)
+app.use(globalLimiter);
 
 // ── Data Sanitization ──────────────────────────────────────────
 // Data sanitization against NoSQL query injection (allowDots: true preserves dotted query parameters like hub.mode)
