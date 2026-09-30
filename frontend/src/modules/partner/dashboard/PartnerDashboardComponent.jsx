@@ -275,12 +275,12 @@ export default function PartnerDashboardComponent({ partner }) {
       setLoading(true);
       try {
         const [dashRes, wallRes, teamRes, bannerRes, notifRes, leadsRes, bonusRes] = await Promise.all([
-          (!isEmployee && partnerId) ? api.get(`/Partners/${partnerId}/dashboard`).catch(() => null) : Promise.resolve(null),
+          isEmployee ? api.get('/applications/dashboard').catch(() => null) : (partnerId ? api.get(`/Partners/${partnerId}/dashboard`).catch(() => null) : Promise.resolve(null)),
           api.get('/wallet').catch(() => null),
           api.get('team/dashboard').catch(() => null),
           api.get('/banners', { params: { page: 'offer' } }).catch(() => null),
           api.get('/notifications', { params: { limit: 10 } }).catch(() => null),
-          api.get('/leads', { params: { limit: 100 } }).catch(() => null),
+          api.get(isEmployee ? '/applications' : '/leads', { params: { limit: 100 } }).catch(() => null),
           isEmployee ? api.get('/employee/my-bonus-progress').catch(() => null) : Promise.resolve(null)
         ]);
 
@@ -288,7 +288,11 @@ export default function PartnerDashboardComponent({ partner }) {
         if (wallRes?.data?.success) setWalletData(wallRes.data.data);
         if (teamRes?.data?.success) setTeamDashboard(teamRes.data.data);
         if (bannerRes?.data?.success) setBanners(bannerRes.data.data || []);
-        if (leadsRes?.data?.success) setAllLeads(leadsRes.data.data || []);
+        if (leadsRes?.data?.success) {
+          const rawData = leadsRes.data.data;
+          const list = Array.isArray(rawData) ? rawData : (rawData?.items || rawData?.rows || rawData?.applications || []);
+          setAllLeads(list);
+        }
         if (bonusRes?.data?.success) setEmployeeBonusData(bonusRes.data);
 
         if (notifRes?.data?.success) {
@@ -356,7 +360,7 @@ export default function PartnerDashboardComponent({ partner }) {
     const list = dashboardData?.recent || (allLeads && allLeads.length > 0 ? allLeads : []);
     if (!list || list.length === 0) return [];
     return list.slice(0, 5).map(item => {
-      const name = item.customer_name || 'Customer';
+      const name = item.customer_name || item.full_name || item.name || item.customer || 'Customer';
       const names = name.trim().split(' ');
       const initials = names.map(n => n[0]).join('').toUpperCase().slice(0, 2);
       const statusRaw = item.status || 'Pending';

@@ -22,7 +22,7 @@ const resolveEmployeeId = async (reqUser) => {
   if (candidate) {
     try {
       const { rows: [emp] } = await query(
-        `SELECT id FROM employees WHERE employee_id = $1 OR employee_code = $1 OR candidate_id = $1 OR user_id = $2 LIMIT 1`,
+        `SELECT id FROM employees WHERE employee_id = $1 OR candidate_id::text = $1 OR user_id = $2 LIMIT 1`,
         [candidate, reqUser.id]
       );
       if (emp && isValidUuid(emp.id)) return emp.id;

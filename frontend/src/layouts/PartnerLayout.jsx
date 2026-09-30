@@ -151,8 +151,16 @@ export default function PartnerLayout() {
     fetchUnreadCounts();
     fetchProfile().catch(() => {});
 
+    const handleUnreadUpdate = () => {
+      fetchUnreadCounts();
+    };
+
+    window.addEventListener('messenger:unread_updated', handleUnreadUpdate);
     const interval = setInterval(fetchUnreadCounts, 10000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('messenger:unread_updated', handleUnreadUpdate);
+      clearInterval(interval);
+    };
   }, [user?.id, location.pathname, fetchProfile]);
   const accountStatus = user?.status || 'pending';
   const kycStatus = user?.kyc_status || 'pending';
@@ -405,6 +413,19 @@ export default function PartnerLayout() {
       >
         <Icon size={isMobileNav ? 22 : 20} style={{ color: isActive ? '#fff' : SIDEBAR_TEXT }} />
         {t('partnerLayout.' + item.id.replace(/-/g, ''), item.label)}
+        {item.id === 'messenger' && messengerUnread > 0 && (
+          <span style={{
+            marginLeft: 'auto',
+            background: '#EF4444',
+            color: '#FFFFFF',
+            fontSize: '11px',
+            fontWeight: 700,
+            borderRadius: '10px',
+            padding: '2px 7px'
+          }}>
+            {messengerUnread > 99 ? '99+' : messengerUnread}
+          </span>
+        )}
       </NavLink>
     );
   };

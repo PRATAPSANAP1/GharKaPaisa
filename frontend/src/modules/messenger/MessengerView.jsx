@@ -711,6 +711,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       }
       if (res.data?.success) {
         setMessages(res.data.data || []);
+        if (!readOnly) {
+          window.dispatchEvent(new CustomEvent('messenger:unread_updated'));
+        }
       }
     } catch (err) {
       console.error('Failed to load messages:', err);
@@ -729,6 +732,7 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     setShowChatSearch(false);
     fetchMessages(conv.id, true);
     setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unread_count: 0 } : c));
+    window.dispatchEvent(new CustomEvent('messenger:unread_updated'));
   };
 
   useEffect(() => {

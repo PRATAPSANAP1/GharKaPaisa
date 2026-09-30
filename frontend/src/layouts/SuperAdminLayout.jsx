@@ -122,8 +122,17 @@ const SuperAdminLayout = () => {
       eventSource.close();
     };
 
+    const handleUnreadUpdate = () => {
+      fetchNotifications();
+    };
+
+    window.addEventListener('messenger:unread_updated', handleUnreadUpdate);
+    const interval = setInterval(fetchNotifications, 10000);
+
     return () => {
       eventSource.close();
+      window.removeEventListener('messenger:unread_updated', handleUnreadUpdate);
+      clearInterval(interval);
     };
   }, [user?.id]);
 
@@ -432,6 +441,19 @@ const SuperAdminLayout = () => {
                   >
                     <span style={{ color: isActive ? '#fff' : C.textSecondary, fontSize: '18px', display: 'flex', alignItems: 'center' }}>{item.icon}</span>
                     <span>{item.label}</span>
+                    {item.path === '/super-admin/messenger' && messengerUnread > 0 && (
+                      <span style={{
+                        marginLeft: 'auto',
+                        background: '#EF4444',
+                        color: '#FFFFFF',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        borderRadius: '10px',
+                        padding: '2px 7px'
+                      }}>
+                        {messengerUnread > 99 ? '99+' : messengerUnread}
+                      </span>
+                    )}
                   </NavLink>
                 );
               })}

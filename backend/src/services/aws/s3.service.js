@@ -151,10 +151,38 @@ const getCloudFrontUrl = (urlOrKey) => {
   return urlOrKey;
 };
 
+// Upload private biometric reference image (Never exposed via public URL)
+const uploadBiometricReference = async ({ buffer, employeeId, version = 1, mimeType = 'image/jpeg' }) => {
+  const ext = mimeType === 'image/png' ? 'png' : 'jpg';
+  const key = `employee-biometric/${employeeId}/v${version}/reference.${ext}`;
+
+  await s3Client.send(new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    Body: buffer,
+    ContentType: mimeType === 'image/png' ? 'image/png' : 'image/jpeg',
+    ServerSideEncryption: 'AES256',
+  }));
+
+  logger.info(`[S3 BIOMETRIC] Securely stored private biometric reference: ${key}`);
+  return {
+    bucket: BUCKET,
+    key,
+  };
+};
+
 // Delete from S3
 const deleteFromS3 = async (key) => {
   await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
   logger.info(`Deleted from S3: ${key}`);
 };
 
-module.exports = { upload, uploadVideo, uploadToS3, getSignedDownloadUrl, getCloudFrontUrl, deleteFromS3 };
+module.exports = { 
+  upload, 
+  uploadVideo, 
+  uploadToS3, 
+  uploadBiometricReference, 
+  getSignedDownloadUrl, 
+  getCloudFrontUrl, 
+  deleteFromS3 
+};

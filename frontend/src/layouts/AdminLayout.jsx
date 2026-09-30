@@ -148,8 +148,16 @@ const AdminLayout = () => {
     if (!user) return;
     fetchNotificationCounts();
 
+    const handleUnreadUpdate = () => {
+      fetchNotificationCounts();
+    };
+
+    window.addEventListener('messenger:unread_updated', handleUnreadUpdate);
     const interval = setInterval(fetchNotificationCounts, 10000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('messenger:unread_updated', handleUnreadUpdate);
+      clearInterval(interval);
+    };
   }, [user?.id]);
 
   useEffect(() => {
@@ -373,6 +381,19 @@ const AdminLayout = () => {
             <NavLink to="/admin/messenger" style={navLinkStyle}>
               <Icons.profile size={18} />
               <span>Messenger</span>
+              {messengerUnread > 0 && (
+                <span style={{
+                  marginLeft: 'auto',
+                  background: '#EF4444',
+                  color: '#FFFFFF',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  borderRadius: '10px',
+                  padding: '2px 7px'
+                }}>
+                  {messengerUnread > 99 ? '99+' : messengerUnread}
+                </span>
+              )}
             </NavLink>
 
             {/* Additional Admin Nav Items */}

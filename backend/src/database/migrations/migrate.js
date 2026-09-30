@@ -5085,6 +5085,14 @@ const migrate = async () => {
     logger.error('Final Status Operator migration error note:', fsoErr.message);
   }
 
+  // Phase 6-9: KYC-Based Employee Biometric Enrollment Migration
+  try {
+    const { migrateKycBiometricEnrollmentPhase6_9 } = require('./migrate_kyc_biometric_enrollment_phase6_9');
+    await migrateKycBiometricEnrollmentPhase6_9();
+  } catch (bioErr) {
+    logger.error('Phase 6-9 Biometric Enrollment migration error note:', bioErr.message);
+  }
+
   if (require.main === module) {
     process.exit(0);
   }

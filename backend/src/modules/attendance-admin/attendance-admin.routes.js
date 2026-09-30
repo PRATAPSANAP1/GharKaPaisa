@@ -1,11 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const jwtAuth = require('../../middleware/authentication/jwtAuth.middleware');
-const roleCheck = require('../../middleware/authorization/role.middleware');
+const { authenticate, syncUser, authorize } = require('../../middleware/authentication/auth.middleware');
 const ctrl = require('./attendance-admin.controller');
 
-// Enforce authentication & SUPER_ADMIN role for all admin attendance endpoints
-router.use(jwtAuth, roleCheck('SUPER_ADMIN'));
+// Enforce authentication & SUPER_ADMIN / ADMIN authorization for admin attendance endpoints
+router.use(authenticate, syncUser, authorize('SUPER_ADMIN', 'ADMIN', 'OPERATIONAL_HEAD', 'OPERATIONS_HEAD'));
 
 /**
  * GET /api/v1/attendance/admin/today
@@ -24,5 +23,12 @@ router.get('/history', ctrl.getAttendanceHistory);
  * Retrieve detailed monthly attendance breakdown for a specific employee
  */
 router.get('/employee/:employeeId', ctrl.getEmployeeAttendanceDetails);
+
+/**
+ * Environment Bypass Admin Management
+ */
+router.post('/environment-bypass', ctrl.createEnvironmentBypass);
+router.get('/environment-bypass', ctrl.listEnvironmentBypasses);
+router.delete('/environment-bypass/:bypassId', ctrl.revokeEnvironmentBypass);
 
 module.exports = router;

@@ -22,11 +22,11 @@ const resolveEmployeeId = async (reqUser) => {
     return candidate;
   }
   
-  // 2. If candidate is a string code like "CAND10003", query employees table for its UUID
+  // 2. If candidate is a string code like "CAND10003" or "EMP1001", query employees table for its UUID
   if (candidate) {
     try {
       const { rows: [emp] } = await query(
-        `SELECT id FROM employees WHERE employee_id = $1 OR employee_code = $1 OR candidate_id = $1 OR user_id = $2 LIMIT 1`,
+        `SELECT id FROM employees WHERE employee_id = $1 OR candidate_id::text = $1 OR user_id = $2 LIMIT 1`,
         [candidate, reqUser.id]
       );
       if (emp && isValidUuid(emp.id)) return emp.id;
@@ -70,14 +70,14 @@ const createVerificationSession = async ({ reqUser }) => {
     throw error;
   }
 
-  // Check for KYC photo (compulsory for attendance)
-  const { rows: [kycPhoto] } = await query(
-    `SELECT document_key FROM employee_documents WHERE employee_id = $1 AND document_type = 'photo' LIMIT 1`,
+  // Check for ACTIVE KYC Biometric Template (Authoritative source for attendance)
+  const { rows: [activeTemplate] } = await query(
+    `SELECT id, version, s3_key, status FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1`,
     [authEmpId]
   );
 
-  if (!kycPhoto || !kycPhoto.document_key) {
-    const error = new Error('KYC photograph is compulsory for attendance. Please upload your photo in the employee panel.');
+  if (!activeTemplate || !activeTemplate.s3_key) {
+    const error = new Error('Attendance Biometric Enrollment is required before marking attendance. Please complete biometric enrollment in the KYC panel.');
     error.statusCode = 404;
     throw error;
   }
@@ -93,7 +93,8 @@ const createVerificationSession = async ({ reqUser }) => {
 
   await logAction(reqUser, 'ATTENDANCE_VERIFICATION_STARTED', authEmpId, {
     verification_session_id: session.id,
-    reference_type: 'KYC_PHOTO',
+    template_version: activeTemplate.version,
+    reference_type: 'KYC_BIOMETRIC_TEMPLATE',
   });
 
   return {
@@ -237,7 +238,7 @@ const validateLivenessResult = async ({ sessionId, providerSessionId, reqUser })
 };
 
 /**
- * 4. Complete backend attendance verification pipeline (Liveness -> Face -> Environment -> Policy)
+ * 4. Complete backend attendance verification pipeline (Liveness -> Face Match -> Environment -> Policy)
  */
 const completeAttendanceVerification = async ({ sessionId, faceImageBuffer, mimeType, reqUser }) => {
   const authEmpId = await resolveEmployeeId(reqUser);
@@ -311,43 +312,42 @@ const completeAttendanceVerification = async ({ sessionId, faceImageBuffer, mime
     };
   }
 
-  // ── STEP B: FACE MATCH VERIFICATION ────────────────────────────
-  // First, try to get KYC photo from employee_documents (compulsory for attendance)
-  const { rows: [kycPhoto] } = await query(
-    `SELECT document_key FROM employee_documents WHERE employee_id = $1 AND document_type = 'photo' LIMIT 1`,
+  // ── STEP B: FACE MATCH VERIFICATION AGAINST KYC BIOMETRIC TEMPLATE ──
+  const { rows: [activeTemplate] } = await query(
+    `SELECT id, version, s3_key, face_provider, rekognition_face_id FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1`,
     [authEmpId]
   );
 
-  if (!kycPhoto || !kycPhoto.document_key) {
+  if (!activeTemplate || !activeTemplate.s3_key) {
     await query(
       `UPDATE attendance_verification_sessions 
-       SET face_status = 'REFERENCE_NOT_FOUND', status = 'FAILED', failure_reason = 'KYC_PHOTO_NOT_FOUND', updated_at = NOW() 
+       SET face_status = 'REFERENCE_NOT_FOUND', status = 'FAILED', failure_reason = 'BIOMETRIC_REFERENCE_NOT_FOUND', updated_at = NOW() 
        WHERE id = $1`,
       [sessionId]
     );
 
     await logAction(reqUser, 'ATTENDANCE_FACE_MATCH_FAILED', authEmpId, {
       session_id: sessionId,
-      reason: 'KYC_PHOTO_NOT_FOUND',
+      reason: 'BIOMETRIC_REFERENCE_NOT_FOUND',
     });
 
     await logAction(reqUser, 'ATTENDANCE_VERIFICATION_FAILED', authEmpId, {
       session_id: sessionId,
-      reason: 'KYC_PHOTO_NOT_FOUND',
+      reason: 'BIOMETRIC_REFERENCE_NOT_FOUND',
     });
 
     return {
       success: false,
-      reason: 'KYC_PHOTO_NOT_FOUND',
-      message: 'KYC photograph is compulsory for attendance. Please upload your photo in the employee panel.',
+      reason: 'BIOMETRIC_REFERENCE_NOT_FOUND',
+      message: 'Attendance Biometric Enrollment is required before marking attendance. Please complete biometric enrollment in the KYC panel.',
     };
   }
 
-  // Validate face quality
+  // Validate face image quality & size
   faceBiometricProvider.validateFaceQuality(faceImageBuffer, mimeType);
 
-  // Use KYC photo as reference for face matching
-  const faceRes = await faceMatchProvider.compareFace(faceImageBuffer, kycPhoto.document_key);
+  // Compare live capture against the employee's active biometric template S3 key
+  const faceRes = await faceMatchProvider.compareFace(faceImageBuffer, activeTemplate.s3_key);
 
   if (!faceRes.matched) {
     const reason = faceRes.matchStatus || 'FACE_MISMATCH';
@@ -362,6 +362,7 @@ const completeAttendanceVerification = async ({ sessionId, faceImageBuffer, mime
     await logAction(reqUser, 'ATTENDANCE_FACE_MATCH_FAILED', authEmpId, {
       session_id: sessionId,
       reason,
+      template_version: activeTemplate.version,
     });
 
     await logAction(reqUser, 'ATTENDANCE_VERIFICATION_FAILED', authEmpId, {
@@ -385,81 +386,30 @@ const completeAttendanceVerification = async ({ sessionId, faceImageBuffer, mime
   await logAction(reqUser, 'ATTENDANCE_FACE_MATCH_SUCCESS', authEmpId, {
     session_id: sessionId,
     similarity: faceRes.similarity,
+    template_version: activeTemplate.version,
   });
 
-  // ── STEP C: OFFICE ENVIRONMENT VERIFICATION ─────────────────────
-  const { rows: activeEnvRefs } = await query(
-    `SELECT reference_code, s3_key FROM attendance_environment_references WHERE environment_status = 'ACTIVE'`
-  );
+  // ── STEP C: ADVISORY ENVIRONMENT METADATA (PENDING INTEGRATION) ──
+  const envStatus = 'PENDING_INTEGRATION';
 
-  if (!activeEnvRefs || activeEnvRefs.length === 0) {
-    await query(
-      `UPDATE attendance_verification_sessions 
-       SET environment_status = 'NO_ACTIVE_REFERENCES', status = 'FAILED', failure_reason = 'NO_ACTIVE_ENVIRONMENT_REFERENCES', updated_at = NOW() 
-       WHERE id = $1`,
-      [sessionId]
-    );
-
-    await logAction(reqUser, 'ATTENDANCE_ENVIRONMENT_MATCH_FAILED', authEmpId, {
-      session_id: sessionId,
-      reason: 'NO_ACTIVE_ENVIRONMENT_REFERENCES',
-    });
-
-    await logAction(reqUser, 'ATTENDANCE_VERIFICATION_FAILED', authEmpId, {
-      session_id: sessionId,
-      reason: 'NO_ACTIVE_ENVIRONMENT_REFERENCES',
-    });
-
-    return {
-      success: false,
-      reason: 'NO_ACTIVE_ENVIRONMENT_REFERENCES',
-    };
-  }
-
-  const envRes = await environmentMatchProvider.compareScene(faceImageBuffer, activeEnvRefs);
-
-  if (!envRes.matched) {
-    const reason = envRes.matchStatus || 'ENVIRONMENT_MISMATCH';
-
-    await query(
-      `UPDATE attendance_verification_sessions 
-       SET environment_status = $1, status = 'FAILED', failure_reason = $2, updated_at = NOW() 
-       WHERE id = $3`,
-      [reason, reason, sessionId]
-    );
-
-    await logAction(reqUser, 'ATTENDANCE_ENVIRONMENT_MATCH_FAILED', authEmpId, {
-      session_id: sessionId,
-      reason,
-    });
-
-    await logAction(reqUser, 'ATTENDANCE_VERIFICATION_FAILED', authEmpId, {
-      session_id: sessionId,
-      reason,
-    });
-
-    return {
-      success: false,
-      reason,
-    };
-  }
-
-  // ── STEP D: FINAL DECISION POLICY (ALL THREE MUST BE PASSED) ──────
+  // ── STEP D: FINAL AUTHORITATIVE DECISION POLICY (LIVENESS + KYC FACE MATCH) ──────
   await query(
     `UPDATE attendance_verification_sessions 
-     SET environment_status = 'PASSED', matched_environment_code = $1, status = 'PASSED', completed_at = NOW(), updated_at = NOW() 
+     SET environment_status = $1, status = 'PASSED', completed_at = NOW(), updated_at = NOW() 
      WHERE id = $2`,
-    [envRes.matchedCode, sessionId]
+    [envStatus, sessionId]
   );
 
-  await logAction(reqUser, 'ATTENDANCE_ENVIRONMENT_MATCH_SUCCESS', authEmpId, {
+  await logAction(reqUser, 'ATTENDANCE_ENVIRONMENT_MATCH_ADVISORY', authEmpId, {
     session_id: sessionId,
-    matched_code: envRes.matchedCode,
+    environment_status: envStatus,
+    note: 'Environment visual match pending genuine scene matcher integration'
   });
 
   await logAction(reqUser, 'ATTENDANCE_VERIFICATION_SUCCESS', authEmpId, {
     session_id: sessionId,
-    matched_environment: envRes.matchedCode,
+    environment_status: envStatus,
+    template_version: activeTemplate.version,
   });
 
   logger.info(`[ATTENDANCE VERIFICATION] Verification PASSED for employee ${authEmpId} (Session: ${sessionId})`);
@@ -469,10 +419,11 @@ const completeAttendanceVerification = async ({ sessionId, faceImageBuffer, mime
     verification: {
       liveness: 'PASSED',
       face: 'PASSED',
-      environment: 'PASSED',
+      environment: 'PENDING_INTEGRATION',
     },
     reference: {
-      environment: envRes.matchedCode,
+      environment: 'PENDING_INTEGRATION',
+      template_version: activeTemplate.version,
     },
   };
 };

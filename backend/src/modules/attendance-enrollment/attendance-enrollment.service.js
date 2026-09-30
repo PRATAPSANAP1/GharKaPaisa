@@ -1,9 +1,8 @@
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
 const { query, getClient } = require('../../config/database');
 const logger = require('../../config/logger');
 const faceBiometricProvider = require('../../services/biometric/faceBiometric.provider');
-const { uploadToS3, getSignedDownloadUrl } = require('../../services/aws/s3.service');
+const { uploadBiometricReference, uploadToS3, getSignedDownloadUrl } = require('../../services/aws/s3.service');
 const { logAction } = require('../admin/audit.service');
 const { JWT_SECRET } = require('../../config/jwt');
 
@@ -16,21 +15,19 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'gharkapaisa-production-storage
 const resolveEmployeeId = async (reqUser) => {
   if (!reqUser) return null;
   
-  // If employee_id is already a UUID, return it
-  if (reqUser.employeeId || reqUser.employee_id) {
-    const empId = reqUser.employeeId || reqUser.employee_id;
-    // Validate it's a UUID format (basic check)
-    if (typeof empId === 'string' && empId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-      return empId;
-    }
+  // 1. If employee_id is already a valid UUID, return it
+  const empId = reqUser.employeeId || reqUser.employee_id;
+  if (typeof empId === 'string' && empId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+    return empId;
   }
   
-  // If employee_code is provided, map it to employee_id (UUID)
-  if (reqUser.employee_code) {
+  // 2. If employee_code is provided, map it to employee_id (UUID)
+  const empCode = reqUser.employee_code || reqUser.emp_code || (typeof empId === 'string' && !empId.includes('-') ? empId : null);
+  if (empCode) {
     try {
       const { rows: [emp] } = await query(
-        `SELECT id FROM employees WHERE employee_code = $1 LIMIT 1`,
-        [reqUser.employee_code]
+        `SELECT id FROM employees WHERE employee_id = $1 OR candidate_id::text = $1 LIMIT 1`,
+        [empCode]
       );
       if (emp) return emp.id;
     } catch (e) {
@@ -38,7 +35,7 @@ const resolveEmployeeId = async (reqUser) => {
     }
   }
   
-  // Fallback: try to find employee by user_id
+  // 3. Fallback: resolve employee by user_id
   if (reqUser.id) {
     try {
       const { rows: [emp] } = await query(`SELECT id FROM employees WHERE user_id = $1 LIMIT 1`, [reqUser.id]);
@@ -51,10 +48,10 @@ const resolveEmployeeId = async (reqUser) => {
 
 /**
  * Create a secure enrollment session token (valid 5 minutes)
- * Note: Biometric enrollment is DEPRECATED - attendance now uses KYC photo from employee_documents
  */
 const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = false, reason = null, reqUser }) => {
   const userRole = (reqUser.role || '').toUpperCase();
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
   const isAdminRole = ['SUPER_ADMIN', 'ADMIN', 'HR'].includes(userRole);
   const authEmpId = await resolveEmployeeId(reqUser);
 
@@ -77,18 +74,36 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
     throw error;
   }
 
-  // Check for KYC photo (compulsory for attendance)
-  const { rows: [kycPhoto] } = await query(
-    `SELECT document_key, verification_status FROM employee_documents WHERE employee_id = $1 AND document_type = 'photo' LIMIT 1`,
-    [employeeId]
+  // Check if an ACTIVE biometric template already exists
+  const { rows: [activeTemplate] } = await query(
+    `SELECT id, version, status, enrolled_at FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1`,
+    [employee.id]
   );
+
+  if (activeTemplate && !isReEnrollment && !isSuperAdmin) {
+    const error = new Error('Biometric face reference already enrolled and locked. Only Super Admin can authorize re-enrollment.');
+    error.statusCode = 409;
+    throw error;
+  }
+
+  if (isReEnrollment && !isSuperAdmin) {
+    const error = new Error('Only Super Admin can initiate biometric re-enrollment.');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (isReEnrollment && (!reason || reason.trim().length < 5)) {
+    const error = new Error('A valid reason (minimum 5 characters) is required for biometric re-enrollment.');
+    error.statusCode = 400;
+    throw error;
+  }
 
   // Session payload
   const payload = {
     employeeId: employee.id,
     employeeCode: employee.employee_id,
     isReEnrollment: !!isReEnrollment,
-    reason: reason || null,
+    reason: reason ? reason.trim() : null,
     initiatedBy: userId,
     type: 'BIOMETRIC_ENROLLMENT_SESSION',
   };
@@ -105,16 +120,16 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
       designation: employee.designation,
       department: employee.department,
     },
-    hasKycPhoto: !!kycPhoto,
-    kycPhotoStatus: kycPhoto ? kycPhoto.verification_status : 'NOT_UPLOADED',
-    message: !kycPhoto 
-      ? 'KYC photograph is compulsory for attendance. Please upload your photo in the employee panel.' 
-      : 'KYC photo found. Attendance verification will use this photo.',
+    is_enrolled: !!activeTemplate,
+    active_template_version: activeTemplate ? activeTemplate.version : null,
+    message: activeTemplate
+      ? (isReEnrollment ? 'Super Admin re-enrollment session active' : 'Biometric reference already active')
+      : 'Biometric enrollment session created successfully. Capture live employee face photograph.',
   };
 };
 
 /**
- * Commit captured face image as biometric reference
+ * Commit captured face image as authoritative KYC biometric reference
  */
 const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, mimeType, reqUser }) => {
   if (!sessionToken) {
@@ -139,6 +154,7 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
   }
 
   const userRole = (reqUser.role || '').toUpperCase();
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
   const isAdminRole = ['SUPER_ADMIN', 'ADMIN', 'HR'].includes(userRole);
   const authEmpId = await resolveEmployeeId(reqUser);
 
@@ -149,18 +165,11 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
     throw error;
   }
 
-  // Validate image quality & format
+  // 1. Validate image quality, size, and MIME format
   faceBiometricProvider.validateFaceQuality(imageBuffer, mimeType);
 
-  // Compute cryptographic SHA-256 hash
+  // 2. Compute cryptographic SHA-256 hash
   const imageHash = faceBiometricProvider.calculateImageHash(imageBuffer);
-
-  const folderPath = `biometric/employees/${session.employeeId}/face-reference`;
-  const ext = mimeType === 'image/png' ? '.png' : '.jpg';
-  const fileName = `ref_${uuidv4()}${ext}`;
-
-  // Upload to private S3
-  const s3Result = await uploadToS3(imageBuffer, fileName, folderPath);
 
   const client = await getClient();
   try {
@@ -168,18 +177,18 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
 
     // Fetch existing active template
     const { rows: [existingTemplate] } = await client.query(
-      `SELECT id, version, status, s3_key FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' LIMIT 1`,
+      `SELECT id, version, status, s3_key FROM employee_biometric_templates WHERE employee_id = $1 AND status = 'ACTIVE' FOR UPDATE`,
       [session.employeeId]
     );
 
     let nextVersion = 1;
 
     if (existingTemplate) {
-      if (!session.isReEnrollment && (reqUser.role || '').toUpperCase() !== 'SUPER_ADMIN') {
-        throw new Error('Biometric reference already exists. Only Super Admin can re-enroll.');
+      if (!session.isReEnrollment && !isSuperAdmin) {
+        throw new Error('Biometric face reference already enrolled. Only Super Admin can authorize re-enrollment.');
       }
 
-      // Revoke old template
+      // Revoke old template only inside transaction
       await client.query(
         `UPDATE employee_biometric_templates 
          SET status = 'REVOKED', revoked_at = NOW(), revoked_by = $1, revocation_reason = $2, updated_at = NOW()
@@ -190,20 +199,39 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
       nextVersion = (existingTemplate.version || 1) + 1;
     }
 
+    // 3. Upload to private S3: employee-biometric/{employeeId}/v{version}/reference.{ext}
+    const s3Result = await uploadBiometricReference({
+      buffer: imageBuffer,
+      employeeId: session.employeeId,
+      version: nextVersion,
+      mimeType,
+    });
+
+    // 4. Index in Rekognition Collection if provider configured
+    const indexResult = await faceBiometricProvider.indexFaceReference({
+      bucket: s3Result.bucket,
+      key: s3Result.key,
+      employeeId: session.employeeId,
+    });
+
     const enrollmentSource = session.isReEnrollment ? 'SUPER_ADMIN_RE_ENROLLMENT' : 'KYC_FACE_ENROLLMENT';
 
-    // Insert new active template
+    // 5. Insert new ACTIVE template
     const { rows: [newTemplate] } = await client.query(
       `INSERT INTO employee_biometric_templates 
-       (employee_id, version, status, s3_bucket, s3_key, face_provider, image_hash, enrollment_source, enrolled_by, enrolled_at)
-       VALUES ($1, $2, 'ACTIVE', $3, $4, $5, $6, $7, $8, NOW())
-       RETURNING id, employee_id, version, status, s3_key, image_hash, enrollment_source, enrolled_at`,
+       (employee_id, employee_code, version, status, s3_bucket, s3_key, face_provider, face_provider_id, rekognition_collection_id, rekognition_face_id, image_hash, enrollment_source, enrolled_by, enrolled_at)
+       VALUES ($1, $2, $3, 'ACTIVE', $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+       RETURNING id, employee_id, employee_code, version, status, s3_key, image_hash, enrollment_source, enrolled_at`,
       [
         session.employeeId,
+        session.employeeCode || null,
         nextVersion,
-        BUCKET_NAME,
+        s3Result.bucket,
         s3Result.key,
-        faceBiometricProvider.providerName,
+        indexResult.faceProvider || 'LOCAL_S3',
+        indexResult.faceId || null,
+        indexResult.collectionId || null,
+        indexResult.faceId || null,
         imageHash,
         enrollmentSource,
         reqUser.id
@@ -212,23 +240,24 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
 
     await client.query('COMMIT');
 
-    // Write audit log
+    // 6. Write audit log
     const auditAction = session.isReEnrollment ? 'FACE_RE_ENROLLMENT' : 'FACE_ENROLLMENT';
     await logAction(reqUser, auditAction, session.employeeId, {
       template_id: newTemplate.id,
       version: newTemplate.version,
       image_hash: newTemplate.image_hash,
       source: enrollmentSource,
-      reason: session.reason || null
+      reason: session.reason || null,
+      provider: indexResult.faceProvider || 'LOCAL_S3',
     });
 
-    logger.info(`Biometric face reference committed successfully for employee ${session.employeeId} (v${newTemplate.version})`);
+    logger.info(`[BIOMETRIC ENROLLMENT] Biometric face reference committed successfully for employee ${session.employeeId} (v${newTemplate.version})`);
 
     return {
       success: true,
       message: session.isReEnrollment 
         ? 'Biometric face reference updated successfully by Super Admin' 
-        : 'Biometric face reference enrolled successfully',
+        : 'Biometric face reference enrolled and locked successfully for attendance',
       template: {
         id: newTemplate.id,
         employee_id: newTemplate.employee_id,
@@ -236,12 +265,21 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
         status: newTemplate.status,
         enrollment_source: newTemplate.enrollment_source,
         enrolled_at: newTemplate.enrolled_at,
-        image_hash: newTemplate.image_hash
       }
     };
   } catch (err) {
     await client.query('ROLLBACK');
     logger.error('Error committing biometric face enrollment:', err.message);
+
+    // Audit failed enrollment
+    const failAction = session?.isReEnrollment ? 'FACE_RE_ENROLLMENT_FAILED' : 'FACE_ENROLLMENT_FAILED';
+    if (session?.employeeId) {
+      await logAction(reqUser, failAction, session.employeeId, {
+        error: err.message,
+        reason: session.reason || null
+      }).catch(() => {});
+    }
+
     throw err;
   } finally {
     client.release();
@@ -253,7 +291,7 @@ const commitFaceEnrollment = async ({ sessionToken, imageBuffer, originalName, m
  */
 const getEmployeeBiometricStatus = async (employeeId, reqUser) => {
   const { rows: templates } = await query(
-    `SELECT t.id, t.employee_id, t.version, t.status, t.enrollment_source, t.enrolled_at, t.revoked_at, t.revocation_reason,
+    `SELECT t.id, t.employee_id, t.employee_code, t.version, t.status, t.enrollment_source, t.enrolled_at, t.revoked_at, t.revocation_reason,
             u.full_name as enrolled_by_name
      FROM employee_biometric_templates t
      LEFT JOIN users u ON u.id = t.enrolled_by
@@ -348,7 +386,7 @@ const registerEnvironmentReference = async ({ referenceCode, referenceName, capt
 
   const folderPath = `biometric/environment/${normalizedCode}`;
   const ext = mimeType === 'image/png' ? '.png' : '.jpg';
-  const fileName = `env_${uuidv4()}${ext}`;
+  const fileName = `env_${Date.now()}${ext}`;
 
   const s3Result = await uploadToS3(imageBuffer, fileName, folderPath);
 

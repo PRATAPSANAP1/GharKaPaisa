@@ -22,7 +22,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
     whereClause += ` AND (
       SELECT COUNT(*) FROM messages m
       LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
-      WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
+      WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL
     ) > 0`;
   }
 
@@ -39,8 +39,8 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
       c.description,
       c.avatar_url,
       c.application_id,
-      CASE WHEN c.last_message_at >= NOW() - INTERVAL '48 hours' AND (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_id ELSE NULL END AS last_message_id,
-      CASE WHEN c.last_message_at >= NOW() - INTERVAL '48 hours' AND (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_text ELSE NULL END AS last_message_text,
+      CASE WHEN (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_id ELSE NULL END AS last_message_id,
+      CASE WHEN (cp.cleared_at IS NULL OR c.last_message_at > cp.cleared_at) THEN c.last_message_text ELSE NULL END AS last_message_text,
       COALESCE(
         (SELECT MAX(m_max.created_at) FROM messages m_max WHERE m_max.conversation_id = c.id AND m_max.deleted_at IS NULL AND (cp.cleared_at IS NULL OR m_max.created_at > cp.cleared_at)),
         c.last_message_at,
@@ -60,7 +60,7 @@ async function getConversationsForUser(userId, filter = 'ALL', search = '') {
         SELECT COUNT(*) 
         FROM messages m
         LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
-        WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
+        WHERE m.conversation_id = c.id AND m.sender_id != $1 AND mr.id IS NULL
           AND (cp.cleared_at IS NULL OR m.created_at > cp.cleared_at)
       )::INT AS unread_count,
       (
@@ -468,7 +468,7 @@ async function getUnreadCount(userId) {
     FROM messages m
     JOIN conversation_participants cp ON cp.conversation_id = m.conversation_id AND cp.user_id = $1 AND cp.left_at IS NULL
     LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $1
-    WHERE m.sender_id != $1 AND mr.id IS NULL AND m.created_at >= NOW() - INTERVAL '48 hours'
+    WHERE m.sender_id != $1 AND mr.id IS NULL
       AND (cp.cleared_at IS NULL OR m.created_at > cp.cleared_at)
   `;
   const { rows } = await query(sql, [userId]);

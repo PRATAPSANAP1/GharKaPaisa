@@ -65,8 +65,16 @@ export default function EmployeeLayout() {
     if (!user) return;
     fetchNotificationCounts();
 
+    const handleUnreadUpdate = () => {
+      fetchNotificationCounts();
+    };
+
+    window.addEventListener('messenger:unread_updated', handleUnreadUpdate);
     const interval = setInterval(fetchNotificationCounts, 10000);
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('messenger:unread_updated', handleUnreadUpdate);
+      clearInterval(interval);
+    };
   }, [user?.id]);
 
   useEffect(() => {

@@ -1,4 +1,5 @@
 const attendanceAdminService = require('./attendance-admin.service');
+const environmentBypassService = require('./environmentBypass.service');
 const logger = require('../../config/logger');
 
 /**
@@ -81,8 +82,88 @@ const getEmployeeAttendanceDetails = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/v1/attendance/admin/environment-bypass
+ * Creates controlled environment bypass with non-self-approval enforcement
+ */
+const createEnvironmentBypass = async (req, res, next) => {
+  try {
+    const { employeeId, bypassReason, startDate, endDate } = req.body;
+
+    const data = await environmentBypassService.createEnvironmentBypass({
+      employeeId,
+      bypassReason,
+      startDate,
+      endDate,
+      reqUser: req.user
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Environment bypass approval created successfully',
+      data
+    });
+  } catch (error) {
+    logger.error(`[ATTENDANCE-ADMIN] createEnvironmentBypass error: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/attendance/admin/environment-bypass
+ * Lists active & historical environment bypasses
+ */
+const listEnvironmentBypasses = async (req, res, next) => {
+  try {
+    const { page, limit, employeeId, activeOnly } = req.query;
+
+    const data = await environmentBypassService.listEnvironmentBypasses({
+      page,
+      limit,
+      employeeId,
+      activeOnly: activeOnly === 'true'
+    });
+
+    res.json({
+      success: true,
+      message: 'Environment bypass approvals retrieved successfully',
+      data
+    });
+  } catch (error) {
+    logger.error(`[ATTENDANCE-ADMIN] listEnvironmentBypasses error: ${error.message}`);
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/v1/attendance/admin/environment-bypass/:bypassId
+ * Revokes / deactivates an environment bypass approval
+ */
+const revokeEnvironmentBypass = async (req, res, next) => {
+  try {
+    const { bypassId } = req.params;
+
+    const data = await environmentBypassService.revokeEnvironmentBypass({
+      bypassId,
+      reqUser: req.user
+    });
+
+    res.json({
+      success: true,
+      message: 'Environment bypass approval revoked successfully',
+      data
+    });
+  } catch (error) {
+    logger.error(`[ATTENDANCE-ADMIN] revokeEnvironmentBypass error: ${error.message}`);
+    next(error);
+  }
+};
+
 module.exports = {
   getTodayAttendance,
   getAttendanceHistory,
   getEmployeeAttendanceDetails,
+  createEnvironmentBypass,
+  listEnvironmentBypasses,
+  revokeEnvironmentBypass
 };
