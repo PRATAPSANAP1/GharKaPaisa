@@ -28,6 +28,7 @@ export default function MessengerCallModal({
   const localStreamRef = useRef(null);
   const durationTimerRef = useRef(null);
   const currentCallIdRef = useRef(activeCall?.callId || null);
+  const pendingOfferRef = useRef(activeCall?.sdp || null);
 
   const isVideoCall = activeCall?.callType === 'video';
   const peerName = activeCall?.isIncoming ? (activeCall.callerName || 'Caller') : (activeCall.recipientName || 'User');
@@ -159,11 +160,16 @@ export default function MessengerCallModal({
       // Add local stream tracks to WebRTC peer connection
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
+      // Create WebRTC SDP offer
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
       // Emit initiate event to backend with acknowledgment callback
       socket.emit('call:initiate', {
         recipient_id: activeCall.recipientId,
         conversation_id: activeCall.conversationId,
-        call_type: activeCall.callType
+        call_type: activeCall.callType,
+        sdp: offer
       }, (ack) => {
         console.log('[CALL DEBUG] initiate ACK', ack);
         if (!ack?.success) {
@@ -176,7 +182,7 @@ export default function MessengerCallModal({
         }
       });
 
-      console.log('[CALL DEBUG] call:initiate emitted');
+      console.log('[CALL DEBUG] call:initiate emitted with SDP offer');
     } catch (err) {
       endCallSession('FAILED', err.message);
     }
@@ -194,8 +200,9 @@ export default function MessengerCallModal({
 
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      // If offer SDP was already received before user clicked accept
-      if (pc.remoteDescription) {
+      const sdpOffer = activeCall.sdp || pendingOfferRef.current;
+      if (sdpOffer) {
+        await pc.setRemoteDescription(new RTCSessionDescription(sdpOffer));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         socket.emit('call:answer', {
@@ -205,6 +212,7 @@ export default function MessengerCallModal({
         });
       }
     } catch (err) {
+      console.error('[WebRTC] Accept call error:', err);
       endCallSession('FAILED', err.message);
     }
   };
@@ -261,32 +269,34 @@ export default function MessengerCallModal({
 
     // Incoming Call SDP Offer
     const handleOffer = async (data) => {
-      const { call_id, caller_id, sdp } = data;
-      currentCallIdRef.current = call_id;
-      const pc = createPeerConnection(socket, caller_id);
-      try {
-        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
-        // If caller already accepted incoming UI
-        if (callState === 'CONNECTING' || callState === 'CONNECTED') {
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          socket.emit('call:answer', { call_id, caller_id, sdp: answer });
+      const { call_id, caller_id, sdp } = data || {};
+      if (call_id) currentCallIdRef.current = call_id;
+      if (sdp) pendingOfferRef.current = sdp;
+
+      if (pcRef.current && sdp) {
+        try {
+          await pcRef.current.setRemoteDescription(new RTCSessionDescription(sdp));
+          if (callState === 'CONNECTING' || callState === 'CONNECTED') {
+            const answer = await pcRef.current.createAnswer();
+            await pcRef.current.setLocalDescription(answer);
+            socket.emit('call:answer', { call_id, caller_id, sdp: answer });
+          }
+        } catch (e) {
+          console.error('[WebRTC] Set remote description error:', e);
         }
-      } catch (e) {
-        console.error('Set remote description error:', e);
       }
     };
 
     // Outgoing Call SDP Answer
     const handleAnswer = async (data) => {
-      const { sdp } = data;
-      if (pcRef.current) {
+      const { sdp } = data || {};
+      console.log('[CALL DEBUG] call:answer received from recipient');
+      setCallState('CONNECTING');
+      if (pcRef.current && sdp) {
         try {
           await pcRef.current.setRemoteDescription(new RTCSessionDescription(sdp));
-          setCallState('CONNECTED');
-          startTimer();
         } catch (e) {
-          console.error('Set remote answer error:', e);
+          console.error('[WebRTC] Set remote answer error:', e);
         }
       }
     };

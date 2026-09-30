@@ -157,7 +157,8 @@ function init(io) {
         caller_id: userId,
         caller_name: socket.user.full_name || 'User',
         call_type: call_type || 'voice',
-        conversation_id
+        conversation_id,
+        sdp: data?.sdp || null
       });
 
       // Confirm to caller that ringing started

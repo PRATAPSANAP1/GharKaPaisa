@@ -118,7 +118,8 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
         callerName: data.caller_name || 'Incoming Call',
         callType: data.call_type || 'voice',
         isIncoming: true,
-        conversationId: data.conversation_id
+        conversationId: data.conversation_id,
+        sdp: data.sdp || null
       });
     };
 
