@@ -145,24 +145,38 @@ export default function MessengerCallModal({
   // ── Start Outgoing Call Flow ──
   const startOutgoingCall = async () => {
     const socket = getMessengerSocket();
-    if (!socket) {
-      endCallSession('FAILED', 'Real-time messenger socket is unauthenticated.');
+    if (!socket || !socket.connected) {
+      console.warn('[CALL DEBUG] Cannot emit initiate - socket disconnected');
+      endCallSession('FAILED', 'Real-time messenger socket is disconnected.');
       return;
     }
 
     try {
+      console.log('[CALL DEBUG] emitting call:initiate');
       const stream = await startLocalStream(isVideoCall);
       const pc = createPeerConnection(socket, activeCall.recipientId);
 
       // Add local stream tracks to WebRTC peer connection
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
 
-      // Emit initiate event to backend
+      // Emit initiate event to backend with acknowledgment callback
       socket.emit('call:initiate', {
         recipient_id: activeCall.recipientId,
         conversation_id: activeCall.conversationId,
         call_type: activeCall.callType
+      }, (ack) => {
+        console.log('[CALL DEBUG] initiate ACK', ack);
+        if (!ack?.success) {
+          endCallSession(
+            'UNAVAILABLE',
+            ack?.reason === 'RECIPIENT_OFFLINE' 
+              ? 'Recipient is currently offline or unreachable.' 
+              : (ack?.reason || 'Unable to initiate call.')
+          );
+        }
       });
+
+      console.log('[CALL DEBUG] call:initiate emitted');
     } catch (err) {
       endCallSession('FAILED', err.message);
     }
@@ -229,7 +243,20 @@ export default function MessengerCallModal({
 
     // Outgoing ringing confirmation
     const handleRinging = (data) => {
+      console.log('[CALL DEBUG] call:ringing received', data);
       if (data.call_id) currentCallIdRef.current = data.call_id;
+    };
+
+    // Recipient Unavailable
+    const handleUnavailable = (data) => {
+      console.log('[CALL DEBUG] call:unavailable received', data);
+      endCallSession('UNAVAILABLE', data?.message || 'Recipient is currently offline.');
+    };
+
+    // Socket Call Error
+    const handleError = (data) => {
+      console.log('[CALL DEBUG] call:error received', data);
+      endCallSession('FAILED', data?.message || 'Call error occurred.');
     };
 
     // Incoming Call SDP Offer
@@ -297,6 +324,8 @@ export default function MessengerCallModal({
     };
 
     socket.on('call:ringing', handleRinging);
+    socket.on('call:unavailable', handleUnavailable);
+    socket.on('call:error', handleError);
     socket.on('call:offer', handleOffer);
     socket.on('call:answer', handleAnswer);
     socket.on('call:ice-candidate', handleIceCandidate);
@@ -311,6 +340,8 @@ export default function MessengerCallModal({
 
     return () => {
       socket.off('call:ringing', handleRinging);
+      socket.off('call:unavailable', handleUnavailable);
+      socket.off('call:error', handleError);
       socket.off('call:offer', handleOffer);
       socket.off('call:answer', handleAnswer);
       socket.off('call:ice-candidate', handleIceCandidate);

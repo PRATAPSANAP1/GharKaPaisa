@@ -2900,7 +2900,7 @@ export default function EmployeeManagement() {
                               );
                             })}
 
-                            {/* Verification Video Box */}
+                             {/* Verification Video Box */}
                             {(() => {
                               const vSt = emp360Data.terms?.verification_status || emp360Data.kyc?.video_status || selectedEmp?.video_status || (emp360Data.terms?.video_url ? 'UNDER_REVIEW' : 'PENDING');
                               const isVideoVerified = vSt === 'VERIFIED' || vSt === 'APPROVED';
@@ -2940,6 +2940,73 @@ export default function EmployeeManagement() {
                                     </button>
                                     <button onClick={() => handleDocVerify(selectedEmp.id, 'video', 'REJECTED')} style={{ flex: 1, background: '#EF4444', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}>
                                       ✕ Reject
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* 5. Face Verification for Attendance Card */}
+                            {(() => {
+                              const bioEnrolled = emp360Data.biometrics?.is_enrolled || selectedEmp?.face_enrolled || selectedEmp?.biometric_status === 'ACTIVE';
+                              const bioTemplate = emp360Data.biometrics?.active_template;
+                              
+                              const badgeText = bioEnrolled ? 'COMPLETED' : 'MISSING / PENDING';
+                              const badgeBg = bioEnrolled ? '#D1FAE5' : '#FEF3C7';
+                              const badgeColor = bioEnrolled ? '#065F46' : '#92400E';
+
+                              return (
+                                <div style={{ background: C.bgSecondary, padding: '14px', borderRadius: '12px', border: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                  <div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                      <span style={{ fontSize: '11px', color: C.textMid, fontWeight: 700 }}>5. Face Verification</span>
+                                      <span style={{ fontSize: '10.5px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', background: badgeBg, color: badgeColor }}>
+                                        {bioEnrolled ? '✓ ' : '⚠️ '}{badgeText}
+                                      </span>
+                                    </div>
+                                    {bioEnrolled ? (
+                                      <div>
+                                        <strong style={{ fontSize: '13px', color: '#10B981', display: 'block', marginBottom: '4px' }}>
+                                          ✓ Attendance Biometric Reference Registered
+                                        </strong>
+                                        <div style={{ fontSize: '11px', color: C.textMid, lineHeight: 1.4 }}>
+                                          Biometric Version: <strong>V{bioTemplate?.version || 1}</strong> | Status: <strong style={{ color: '#10B981' }}>ACTIVE</strong>
+                                          <br />
+                                          Enrolled: <strong>{bioTemplate?.enrolled_at ? new Date(bioTemplate.enrolled_at).toLocaleDateString('en-IN') : 'Enrolled'}</strong>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <strong style={{ fontSize: '13px', color: '#D97706', display: 'block', marginBottom: '4px' }}>
+                                          ⚠️ Face Verification Pending
+                                        </strong>
+                                        <div style={{ fontSize: '11px', color: C.textMid }}>
+                                          No authoritative face biometric reference captured yet.
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div style={{ display: 'flex', gap: '6px', marginTop: '10px', paddingTop: '8px', borderTop: `1px dashed ${C.border}` }}>
+                                    {!bioEnrolled && (
+                                      <button
+                                        onClick={() => handleSendReminder(selectedEmp.id, selectedEmp.full_name)}
+                                        disabled={sendingReminder[selectedEmp.id]}
+                                        style={{ flex: 1, background: '#F59E0B', color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}
+                                      >
+                                        🔔 {sendingReminder[selectedEmp.id] ? 'Sending...' : 'Send Reminder'}
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => {
+                                        const empToManage = selectedEmp;
+                                        setSelectedEmp(null);
+                                        setBiometricModalEmp(empToManage);
+                                        setBiometricModalOpen(true);
+                                      }}
+                                      style={{ flex: 1, background: C.teal, color: '#fff', border: 'none', padding: '6px 8px', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '11px' }}
+                                    >
+                                      <FaCamera /> {bioEnrolled ? 'Re-Enroll Reference' : 'Complete Verification'}
                                     </button>
                                   </div>
                                 </div>

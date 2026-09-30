@@ -97,6 +97,40 @@ export default function AttendanceVerificationModal({ isOpen, onClose, actionTyp
     setIsProviderUnavailable(false);
   };
 
+  const formatBiometricErrorMessage = (rawMessage) => {
+    if (!rawMessage) return 'Face verification failed. Please align your face and try again.';
+    const str = String(rawMessage).toLowerCase();
+
+    if (str.includes('provider_not_configured') || str.includes('unavailable')) {
+      return 'Biometric verification service temporarily unavailable. Please try again later.';
+    }
+    if (str.includes('glasses') || str.includes('goggles') || str.includes('eyewear')) {
+      return 'Please remove glasses or goggles and try again.';
+    }
+    if (str.includes('cap') || str.includes('hat') || str.includes('headwear')) {
+      return 'Please remove your cap and keep your full face visible.';
+    }
+    if (str.includes('mask') || str.includes('cover')) {
+      return 'Please remove your mask and try again.';
+    }
+    if (str.includes('dark') || str.includes('lighting') || str.includes('brightness')) {
+      return 'Your face is too dark. Please move to a well-lit area.';
+    }
+    if (str.includes('outside') || str.includes('frame') || str.includes('bounds') || str.includes('partially')) {
+      return 'Please position your complete face inside the frame.';
+    }
+    if (str.includes('multiple') || str.includes('more than one') || str.includes('many faces')) {
+      return 'Only one person should be visible in the camera.';
+    }
+    if (str.includes('liveness')) {
+      return 'Live face verification failed. Please try again.';
+    }
+    if (str.includes('mismatch') || str.includes('match_failed') || str.includes('threshold') || str.includes('match')) {
+      return 'Face verification failed. Please align your face and try again.';
+    }
+    return rawMessage;
+  };
+
   const handleCaptureAndVerify = async () => {
     const sessionId = videoRef.current_sessionId;
     if (!sessionId || !videoRef.current) return;
@@ -129,9 +163,9 @@ export default function AttendanceVerificationModal({ isOpen, onClose, actionTyp
         const reason = verRes?.data?.reason || verRes?.message || 'Biometric verification failed';
         if (reason.includes('PROVIDER_NOT_CONFIGURED')) {
           setIsProviderUnavailable(true);
-          throw new Error('Face attendance verification is currently unavailable. Live biometric verification pending provider configuration.');
+          throw new Error('Biometric verification service temporarily unavailable. Please try again later.');
         }
-        throw new Error(`Verification failed: ${reason}`);
+        throw new Error(reason);
       }
 
       // 5. Submit Check-In or Check-Out
@@ -158,7 +192,8 @@ export default function AttendanceVerificationModal({ isOpen, onClose, actionTyp
       stopCamera();
       setLoading(false);
       setStep('RESULT');
-      setErrorMessage(err.response?.data?.message || err.message || 'Attendance verification failed');
+      const rawErr = err.response?.data?.message || err.message || 'Attendance verification failed';
+      setErrorMessage(formatBiometricErrorMessage(rawErr));
     }
   };
 
@@ -242,13 +277,29 @@ export default function AttendanceVerificationModal({ isOpen, onClose, actionTyp
                 style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
               />
               <div style={{
-                position: 'absolute', inset: '20px', border: '2px dashed rgba(255,255,255,0.6)',
+                position: 'absolute', inset: '20px', border: '2px dashed rgba(45,212,191,0.8)',
                 borderRadius: '50%', pointerEvents: 'none'
               }} />
+              
+              {/* Live Verification Indicators */}
+              <div style={{
+                position: 'absolute', top: '12px', left: '12px', right: '12px',
+                display: 'flex', justifyContent: 'space-between', gap: '6px', fontSize: '10px', fontWeight: 800
+              }}>
+                <span style={{ background: 'rgba(16,185,129,0.85)', color: '#fff', padding: '3px 8px', borderRadius: '8px' }}>
+                  ✓ Face Detected
+                </span>
+                <span style={{ background: 'rgba(16,185,129,0.85)', color: '#fff', padding: '3px 8px', borderRadius: '8px' }}>
+                  ✓ Lighting Sufficient
+                </span>
+                <span style={{ background: 'rgba(16,185,129,0.85)', color: '#fff', padding: '3px 8px', borderRadius: '8px' }}>
+                  ✓ Live Session
+                </span>
+              </div>
             </div>
 
             <p style={{ margin: 0, fontSize: '12px', color: C.textMid, textAlign: 'center' }}>
-              Position your face clearly inside the circle with good lighting.
+              Position your face clearly inside the frame with good lighting.
             </p>
 
             <button

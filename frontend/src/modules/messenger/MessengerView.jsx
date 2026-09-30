@@ -102,7 +102,16 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     const socket = getMessengerSocket();
     if (!socket) return;
 
+    if (user?.id) {
+      console.log(`[CALL SOCKET] userId=${user.id} socketId=${socket.id} connected=${socket.connected} room=user:${user.id}`);
+    }
+
     const handleIncomingCall = (data) => {
+      console.log('[CALL DEBUG] incoming call event received', data);
+      console.log('[CALL DEBUG] incoming caller ID:', data.caller_id);
+      console.log('[CALL DEBUG] incoming call type:', data.call_type);
+      console.log('[CALL DEBUG] showing incoming call UI');
+
       setActiveCall({
         callId: data.call_id,
         callerId: data.caller_id,
@@ -117,12 +126,23 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     return () => {
       socket.off('call:incoming', handleIncomingCall);
     };
-  }, []);
+  }, [user?.id]);
 
   const handleInitiateCall = (callType) => {
+    console.log('[CALL DEBUG] initiate');
+
     if (!activeConv) return;
     if (activeConv.conversation_type === 'GROUP' || activeConv.conversation_type === 'DEPARTMENT') {
       alert('Group audio/video calls are coming soon! Only 1-on-1 calls are currently supported.');
+      return;
+    }
+
+    const socket = getMessengerSocket();
+    const isSocketConnected = Boolean(socket && socket.connected);
+    console.log('[CALL DEBUG] socket connected:', isSocketConnected);
+
+    if (!isSocketConnected) {
+      alert('Unable to initiate call. Messenger socket connection is not active.');
       return;
     }
 
@@ -132,21 +152,22 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
       activeConv.other_participants?.[0] ||
       activeConv.participants?.[0];
 
-    const recipientId = 
+    const recipientUserId = 
       counterpart?.user_id ||
-      counterpart?.id ||
+      (counterpart?.id && String(counterpart.id) !== String(user?.id) ? counterpart.id : null) ||
       activeConv.target_user_id ||
-      activeConv.participant_id ||
       activeConv.participant_user_id ||
       (activeConv.user_id !== user?.id ? activeConv.user_id : null);
 
-    if (!recipientId) {
-      alert('Unable to identify call recipient.');
+    console.log('[CALL DEBUG] receiverUserId:', recipientUserId);
+
+    if (!recipientUserId) {
+      alert('Unable to identify call recipient user ID.');
       return;
     }
 
     setActiveCall({
-      recipientId,
+      recipientId: recipientUserId,
       recipientName: getConvTitle(activeConv),
       callType,
       isIncoming: false,
