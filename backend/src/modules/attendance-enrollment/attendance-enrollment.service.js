@@ -56,7 +56,7 @@ const createEnrollmentSession = async ({ userId, employeeId, isReEnrollment = fa
   const authEmpId = await resolveEmployeeId(reqUser);
 
   // Non-administrative users cannot target other employees
-  if (!isAdminRole && authEmpId && employeeId !== authEmpId) {
+  if (!isAdminRole && authEmpId && String(employeeId).toLowerCase() !== String(authEmpId).toLowerCase()) {
     const error = new Error('Unauthorized to create biometric enrollment session for another employee');
     error.statusCode = 403;
     throw error;
