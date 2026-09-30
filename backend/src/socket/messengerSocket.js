@@ -1,9 +1,12 @@
+const os = require('os');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../config/logger');
 const JWT_SECRET = process.env.JWT_SECRET || 'gharkapaisa_secret_jwt';
-
 const { query } = require('../config/database');
+
+const HOSTNAME = os.hostname();
+const INSTANCE_ID = process.env.EC2_INSTANCE_ID || process.env.HOSTNAME || HOSTNAME;
 
 // Track online users & active calls
 const onlineUsers = new Map(); // userId -> socketId
@@ -75,7 +78,7 @@ function init(io) {
     onlineUsers.set(userId, socket.id);
     socket.join(`user:${userId}`);
 
-    logger.info(`[CALL SOCKET] userId=${userId} socketId=${socket.id} connected=${socket.connected} room=user:${userId}`);
+    logger.info(`[CALL SOCKET]\nhostname=${HOSTNAME}\ninstanceId=${INSTANCE_ID}\nuserId=${userId}\nsocketId=${socket.id}\nroom=user:${userId}`);
 
     // Broadcast online status
     io.emit('user:online', { userId });
@@ -94,16 +97,15 @@ function init(io) {
 
       // Resolve canonical user ID
       const targetUserId = await resolveTargetUserId(recipient_id);
-      logger.info(`[CALL SIGNAL] receiverUserId=${targetUserId}`);
-      logger.info(`[CALL SIGNAL] receiver socket lookup`);
-
+      
       // Check room presence in Socket.IO adapter & onlineUsers Map
-      const roomSockets = io.sockets.adapter.rooms.get(`user:${targetUserId}`);
-      const hasRoomSockets = Boolean(roomSockets && roomSockets.size > 0);
+      const roomSocketsSet = io.sockets.adapter.rooms.get(`user:${targetUserId}`);
+      const roomSocketIds = roomSocketsSet ? Array.from(roomSocketsSet) : [];
+      const hasRoomSockets = roomSocketIds.length > 0;
       const isOnlineMap = onlineUsers.has(targetUserId);
       const recipientFound = hasRoomSockets || isOnlineMap;
 
-      logger.info(`[CALL SIGNAL] receiver socket found=${recipientFound} (roomSockets=${hasRoomSockets}, onlineMap=${isOnlineMap})`);
+      logger.info(`[CALL SIGNAL]\nhostname=${HOSTNAME}\ncallerUserId=${userId}\nreceiverUserId=${targetUserId}\nreceiver socket found=${recipientFound}\nroom exists=${hasRoomSockets}\nonlineMap contains receiver=${isOnlineMap}\nroomSocketIds=${JSON.stringify(roomSocketIds)}`);
 
       // Check if recipient or caller is already in an active call
       let recipientBusy = false;
@@ -139,7 +141,7 @@ function init(io) {
       }
 
       if (!recipientFound) {
-        logger.warn(`[CALL SIGNAL] Recipient ${targetUserId} socket NOT found / OFFLINE`);
+        logger.warn(`[CALL SIGNAL] Recipient ${targetUserId} socket NOT found / OFFLINE on instance ${HOSTNAME}`);
         socket.emit('call:unavailable', {
           call_id: callId,
           recipient_id: targetUserId,
@@ -253,7 +255,7 @@ function init(io) {
 
     // ── DISCONNECT HANDLER ──
     socket.on('disconnect', () => {
-      logger.info(`[Socket] User disconnected: ${userId}`);
+      logger.info(`[CALL SOCKET DISCONNECT]\nhostname=${HOSTNAME}\nuserId=${userId}\nsocketId=${socket.id}`);
       onlineUsers.delete(userId);
       io.emit('user:offline', { userId });
 
