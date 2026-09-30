@@ -18,7 +18,9 @@ import EmployeeMobileBottomNav from '../components/EmployeeMobileBottomNav';
 import AnnouncementBanner from '../components/AnnouncementBanner';
 
 export default function EmployeeLayout() {
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+
   const { C, theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();

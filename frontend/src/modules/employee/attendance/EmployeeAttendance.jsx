@@ -14,7 +14,8 @@ import AttendanceSecurityCard from './components/AttendanceSecurityCard';
 import AttendanceVerificationModal from './AttendanceVerificationModal';
 
 export default function EmployeeAttendance() {
-  const { user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+
   const [todayAttendance, setTodayAttendance] = useState(null);
   const [history, setHistory] = useState([]);
   const [summary, setSummary] = useState({ present: 0, late: 0, absent: 0, total: 0 });
