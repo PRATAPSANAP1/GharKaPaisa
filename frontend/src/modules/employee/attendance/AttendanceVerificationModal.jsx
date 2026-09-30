@@ -151,7 +151,7 @@ export default function AttendanceVerificationModal({
       setCurrentState('LIVENESS_STARTING');
       setOverlayMessage('Starting verification session...');
       const sessionRes = await attendanceService.createVerificationSession();
-      const newSessionId = sessionRes?.session_id || sessionRes?.data?.session_id;
+      const newSessionId = sessionRes?.session_id || sessionRes?.data?.session_id || sessionRes?.sessionId || sessionRes?.data?.sessionId;
       if (!newSessionId) {
         throw new Error('Could not create verification session');
       }

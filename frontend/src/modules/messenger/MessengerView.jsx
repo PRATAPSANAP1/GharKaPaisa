@@ -48,7 +48,7 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
       return;
     }
 
-    if (src.startsWith('data:') || src.startsWith('blob:')) {
+    if (src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http://') || src.startsWith('https://')) {
       setBlobUrl(src);
       setLoading(false);
       return;
@@ -65,6 +65,7 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
       .catch((err) => {
         if (isMounted) {
           setLoading(false);
+          setBlobUrl(src);
           if (onError) onError(err);
         }
       });
@@ -92,18 +93,20 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
   if (!blobUrl) return null;
 
   return (
-    <AuthenticatedImage
+    <img
       src={blobUrl}
-      alt={alt}
+      alt={alt || ''}
       style={style}
       onClick={onClick}
+      onError={onError}
       {...props}
     />
   );
 }
 
 export default function MessengerView({ initialAppId = null, readOnly = false, targetUserId = null }) {
-  const { user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
+
 
   const isSuperAdmin = (user?.role || '').toUpperCase() === 'SUPER_ADMIN';
 
@@ -484,6 +487,16 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   const [attachments, setAttachments] = useState([]);
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+
+  // Controlled Scroll State & Refs
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const [showNewMessages, setShowNewMessages] = useState(false);
+  const hasInitialScrolledRef = useRef(false);
+  const prevMessagesRef = useRef([]);
+  const prevConvIdRef = useRef(null);
+  const isUserSentMessageRef = useRef(false);
+
 
   // Copy & Emoji State
   const [copiedMsgId, setCopiedMsgId] = useState(null);
@@ -802,7 +815,48 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     }
   };
 
+  // Centralized scroll helper
+  const scrollToLatest = useCallback(({ behavior = 'smooth' } = {}) => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior
+      });
+    } else if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior });
+    }
+    setIsAtBottom(true);
+    setShowNewMessages(false);
+  }, []);
+
+  // Passive scroll position listener for threshold detection
+  const handleScroll = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const isNearBottom = distanceFromBottom <= 150;
+
+    setIsAtBottom(isNearBottom);
+    if (isNearBottom) {
+      setShowNewMessages(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+    };
+  }, [handleScroll]);
+
   const handleSelectConv = (conv) => {
+    hasInitialScrolledRef.current = false;
+    setIsAtBottom(true);
+    setShowNewMessages(false);
     setActiveConv(conv);
     setMobileShowChat(true);
     setShowMoreMenu(false);
@@ -812,9 +866,68 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
     window.dispatchEvent(new CustomEvent('messenger:unread_updated'));
   };
 
+  // Controlled message scroll effect
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!activeConv) {
+      prevMessagesRef.current = [];
+      prevConvIdRef.current = null;
+      return;
+    }
+
+    const convChanged = prevConvIdRef.current !== activeConv.id;
+    if (convChanged) {
+      prevConvIdRef.current = activeConv.id;
+      hasInitialScrolledRef.current = false;
+      setIsAtBottom(true);
+      setShowNewMessages(false);
+      prevMessagesRef.current = messages;
+      return;
+    }
+
+    // Initial load scroll for the conversation
+    if (!hasInitialScrolledRef.current && messages.length > 0) {
+      requestAnimationFrame(() => {
+        scrollToLatest({ behavior: 'auto' });
+        hasInitialScrolledRef.current = true;
+      });
+      prevMessagesRef.current = messages;
+      return;
+    }
+
+    const prevMsgs = prevMessagesRef.current;
+    prevMessagesRef.current = messages;
+
+    if (!prevMsgs || prevMsgs.length === 0) return;
+
+    // Detect if a new message was appended to the bottom of the list
+    const lastOldMsg = prevMsgs[prevMsgs.length - 1];
+    const lastNewMsg = messages[messages.length - 1];
+
+    const isNewMessageAppended = 
+      messages.length > prevMsgs.length &&
+      lastNewMsg &&
+      (!lastOldMsg || (lastNewMsg.id !== lastOldMsg.id && String(lastNewMsg.id).replace('temp-', '') !== String(lastOldMsg.id).replace('temp-', '')));
+
+    if (isNewMessageAppended) {
+      const isSentByMe = isUserSentMessageRef.current || String(lastNewMsg.sender_id || '').toLowerCase() === String(user?.id || '').toLowerCase();
+      isUserSentMessageRef.current = false;
+
+      if (isSentByMe) {
+        requestAnimationFrame(() => {
+          scrollToLatest({ behavior: 'smooth' });
+        });
+      } else {
+        if (isAtBottom) {
+          requestAnimationFrame(() => {
+            scrollToLatest({ behavior: 'smooth' });
+          });
+        } else {
+          setShowNewMessages(true);
+        }
+      }
+    }
+  }, [messages, activeConv, isAtBottom, scrollToLatest, user?.id]);
+
 
   // 3. Send Message
   const handleSendMessage = async (e) => {
@@ -1189,7 +1302,8 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
   return (
     <div style={{
       display: 'flex',
-      height: isMobile ? 'calc(100vh - 65px)' : 'calc(100vh - 90px)',
+      height: isMobile ? 'calc(100dvh - 125px)' : 'calc(100vh - 90px)',
+      maxHeight: isMobile ? 'calc(100dvh - 125px)' : 'none',
       background: '#F8FAFC',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       borderRadius: isMobile ? '0px' : '16px',
@@ -1629,8 +1743,9 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
 
               {/* Chat Messages Body */}
               <div 
+                ref={messagesContainerRef}
                 onClick={() => setActiveReactionPickerMsgId(null)}
-                style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '14px 12px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}
+                style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '14px 12px' : '24px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}
               >
                 {loadingMsgs ? (
                   <div style={{ textAlign: 'center', color: '#94A3B8', fontSize: '13px', marginTop: '40px' }}>
@@ -2039,6 +2154,39 @@ export default function MessengerView({ initialAppId = null, readOnly = false, t
                 )}
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Floating New Messages Indicator Pill Button */}
+              {showNewMessages && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: attachments.length > 0 ? (isMobile ? '110px' : '125px') : (isMobile ? '65px' : '80px'),
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  zIndex: 30
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => scrollToLatest({ behavior: 'smooth' })}
+                    style={{
+                      background: '#2563EB',
+                      color: '#FFFFFF',
+                      borderRadius: '999px',
+                      padding: '8px 16px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      boxShadow: '0 4px 14px rgba(15, 23, 42, 0.22)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>↓ New messages</span>
+                  </button>
+                </div>
+              )}
 
               {/* Pending Attachments Chip Bar */}
               {attachments.length > 0 && (
