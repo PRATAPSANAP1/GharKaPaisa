@@ -45,15 +45,8 @@ jobs:
               "Key=tag:Environment,Values=Production" \
               "Key=tag:Service,Values=Backend" \
             --parameters 'commands=[
-              "set -e",
-              "cd /home/ubuntu/GharKaPaisa/backend",
-              "git fetch origin master",
-              "git reset --hard origin/master",
-              "npm ci",
-              "node --check src/server.js",
-              "pm2 reload gharkapaisa-backend",
-              "pm2 save"
-            ]' \
+  "sudo -iu ubuntu bash -lc '\''set -e; cd /home/ubuntu/GharKaPaisa/backend; git fetch origin master; git reset --hard origin/master; npm ci; node --check src/server.js; pm2 reload gharkapaisa-backend; pm2 save'\''"
+]' \
             --query 'Command.CommandId' \
             --output text)
 
