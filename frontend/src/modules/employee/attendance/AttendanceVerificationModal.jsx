@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, RefreshCw, ScanFace, CheckCircle2 } from 'lucide-react';
-import { FaceLivenessDetector } from '@aws-amplify/ui-react-liveness';
+import { X, RefreshCw } from 'lucide-react';
+import { FaceLivenessDetectorCore } from '@aws-amplify/ui-react-liveness';
 import '@aws-amplify/ui-react-liveness/styles.css';
 
 import attendanceService from '../../../services/attendance.service';
@@ -25,6 +25,7 @@ export default function AttendanceVerificationModal({
   const [sessionId, setSessionId] = useState(null);
   const [awsProviderSessionId, setAwsProviderSessionId] = useState(null);
   const [awsRegion, setAwsRegion] = useState('ap-south-1');
+  const [awsCredentials, setAwsCredentials] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [verificationResult, setVerificationResult] = useState(null);
   const [overlayMessage, setOverlayMessage] = useState('Preparing live face verification...');
@@ -42,6 +43,7 @@ export default function AttendanceVerificationModal({
     setCurrentState('INSTRUCTIONS');
     setSessionId(null);
     setAwsProviderSessionId(null);
+    setAwsCredentials(null);
     setErrorMessage('');
     setVerificationResult(null);
     onClose();
@@ -53,6 +55,7 @@ export default function AttendanceVerificationModal({
       setCurrentState('INSTRUCTIONS');
       setSessionId(null);
       setAwsProviderSessionId(null);
+      setAwsCredentials(null);
       setErrorMessage('');
     }
   }, [isOpen]);
@@ -78,12 +81,13 @@ export default function AttendanceVerificationModal({
 
       setSessionId(newSessionId);
 
-      // Step 2: Initiate AWS Rekognition Face Liveness Session
+      // Step 2: Initiate AWS Rekognition Face Liveness Session + fetch short-lived temporary AWS credentials
       setOverlayMessage('Initializing AWS Face Liveness...');
       const livenessRes = await attendanceService.initiateLivenessSession(newSessionId);
       const livenessData = livenessRes?.data || livenessRes;
       const providerSessionId = livenessData?.providerSessionId || livenessData?.sessionId;
       const region = livenessData?.region || import.meta.env.VITE_AWS_REGION || 'ap-south-1';
+      const tempCredentials = livenessData?.credentials;
 
       if (!providerSessionId || livenessData?.status === 'PROVIDER_NOT_CONFIGURED') {
         setErrorMessage('Liveness verification service is not configured in production environment');
@@ -93,8 +97,21 @@ export default function AttendanceVerificationModal({
 
       setAwsProviderSessionId(providerSessionId);
       setAwsRegion(region);
+      if (tempCredentials) {
+        setAwsCredentials(tempCredentials);
+      }
+
       setCurrentState('LIVENESS_ACTIVE');
       setOverlayMessage('Position your face inside the oval frame and follow instructions');
+
+      // Safe Diagnostic Log (NO SECRETS OR KEYS LOGGED)
+      console.log('[LIVENESS DIAGNOSTIC]', {
+        verificationSessionId: newSessionId,
+        awsLivenessSessionId: providerSessionId,
+        credentialProviderInvoked: false,
+        expiration: tempCredentials?.expiration,
+        livenessFlowStatus: 'started'
+      });
     } catch (err) {
       console.error('Verification initiation error:', err);
       const errReason = err.response?.data?.reason || err.reason;
@@ -110,9 +127,53 @@ export default function AttendanceVerificationModal({
     }
   };
 
-  // Called when AWS Amplify FaceLivenessDetector completes client-side challenge
+  // Custom AWS Credential Provider for FaceLivenessDetectorCore
+  const credentialProvider = useCallback(async () => {
+    // Safe Diagnostic Log (NO SECRETS, ACCESS KEYS, OR TOKENS LOGGED)
+    console.log('[LIVENESS DIAGNOSTIC]', {
+      verificationSessionId: sessionId,
+      awsLivenessSessionId: awsProviderSessionId,
+      credentialProviderInvoked: true,
+      expiration: awsCredentials?.expiration
+    });
+
+    if (awsCredentials?.accessKeyId && awsCredentials?.secretAccessKey) {
+      return {
+        accessKeyId: awsCredentials.accessKeyId,
+        secretAccessKey: awsCredentials.secretAccessKey,
+        sessionToken: awsCredentials.sessionToken,
+        expiration: awsCredentials.expiration ? new Date(awsCredentials.expiration) : undefined,
+      };
+    }
+
+    // Fetch fresh temporary credentials from backend if not present
+    const credsRes = await attendanceService.getLivenessCredentials(sessionId);
+    const credsData = credsRes?.data?.credentials || credsRes?.credentials;
+
+    if (!credsData || !credsData.accessKeyId) {
+      throw new Error('Could not obtain temporary AWS credentials for liveness challenge');
+    }
+
+    setAwsCredentials(credsData);
+
+    return {
+      accessKeyId: credsData.accessKeyId,
+      secretAccessKey: credsData.secretAccessKey,
+      sessionToken: credsData.sessionToken,
+      expiration: credsData.expiration ? new Date(credsData.expiration) : undefined,
+    };
+  }, [sessionId, awsProviderSessionId, awsCredentials]);
+
+  // Called when AWS Amplify FaceLivenessDetectorCore completes client-side challenge
   const handleAnalysisComplete = async () => {
     try {
+      // Safe Diagnostic Log
+      console.log('[LIVENESS DIAGNOSTIC]', {
+        verificationSessionId: sessionId,
+        awsLivenessSessionId: awsProviderSessionId,
+        livenessFlowStatus: 'completed'
+      });
+
       setCurrentState('VERIFYING_RESULTS');
       setOverlayMessage('Matching with your registered KYC identity...');
 
@@ -159,7 +220,7 @@ export default function AttendanceVerificationModal({
     }
   };
 
-  // Called on AWS Amplify FaceLivenessDetector error
+  // Called on AWS Amplify FaceLivenessDetectorCore error
   const handleLivenessError = (livenessError) => {
     console.error('FaceLivenessDetector error:', livenessError);
     const msg = livenessError?.error?.message || livenessError?.message || 'Liveness verification error occurred';
@@ -167,7 +228,7 @@ export default function AttendanceVerificationModal({
     setCurrentState('VERIFICATION_FAILED');
   };
 
-  // Called on AWS Amplify FaceLivenessDetector user cancel
+  // Called on AWS Amplify FaceLivenessDetectorCore user cancel
   const handleLivenessCancel = () => {
     handleModalClose();
   };
@@ -176,6 +237,7 @@ export default function AttendanceVerificationModal({
   const handleRetry = () => {
     setSessionId(null);
     setAwsProviderSessionId(null);
+    setAwsCredentials(null);
     setErrorMessage('');
     setVerificationResult(null);
     handleStartVerification();
@@ -310,7 +372,7 @@ export default function AttendanceVerificationModal({
               gap: '24px',
               alignItems: 'start'
             }}>
-              {/* Left Column: Official AWS Amplify Face Liveness Component */}
+              {/* Left Column: Official AWS Amplify FaceLivenessDetectorCore Component */}
               <div style={{
                 position: 'relative',
                 width: '100%',
@@ -325,12 +387,15 @@ export default function AttendanceVerificationModal({
               }}>
                 {currentState === 'LIVENESS_ACTIVE' && awsProviderSessionId ? (
                   <div style={{ width: '100%', height: '100%', minHeight: isMobile ? '380px' : '480px' }}>
-                    <FaceLivenessDetector
+                    <FaceLivenessDetectorCore
                       sessionId={awsProviderSessionId}
                       region={awsRegion}
                       onAnalysisComplete={handleAnalysisComplete}
                       onError={handleLivenessError}
                       onUserCancel={handleLivenessCancel}
+                      config={{
+                        credentialProvider
+                      }}
                     />
                   </div>
                 ) : (

@@ -107,9 +107,31 @@ const getSessionStatus = async (req, res) => {
   }
 };
 
+// POST /api/v1/attendance/verification/liveness/credentials
+const getLivenessCredentials = async (req, res) => {
+  try {
+    const { session_id } = req.body;
+    if (!session_id) {
+      return res.status(400).json({ success: false, reason: 'INVALID_REQUEST', message: 'session_id is required' });
+    }
+
+    const result = await service.getLivenessCredentials({ sessionId: session_id, reqUser: req.user });
+    return success(res, result, 'Temporary AWS liveness credentials issued');
+  } catch (err) {
+    logger.error('Error issuing liveness credentials:', err.message);
+    const statusCode = err.statusCode || 500;
+    return res.status(statusCode).json({
+      success: false,
+      reason: err.reason || 'LIVENESS_PROVIDER_ERROR',
+      message: err.message,
+    });
+  }
+};
+
 module.exports = {
   createSession,
   createLivenessSession,
+  getLivenessCredentials,
   validateLivenessResult,
   completeVerification,
   getSessionStatus,

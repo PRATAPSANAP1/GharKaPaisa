@@ -13,7 +13,10 @@ router.post('/session', ctrl.createSession);
 // 2. Initiate liveness session
 router.post('/liveness/session', ctrl.createLivenessSession);
 
-// 3. Validate liveness session result
+// 3. Issue short-lived temporary AWS credentials for browser-side liveness challenge
+router.post('/liveness/credentials', ctrl.getLivenessCredentials);
+
+// 4. Validate liveness session result
 router.post('/liveness/result', ctrl.validateLivenessResult);
 
 // 4. Complete verification pipeline (Liveness -> Face -> Environment -> Policy)

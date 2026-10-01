@@ -127,6 +127,94 @@ class FaceLivenessProvider {
       };
     }
   }
+
+  /**
+   * Generate short-lived temporary AWS credentials for browser-side FaceLivenessDetectorCore
+   */
+  async getTemporaryCredentials({ sessionId }) {
+    if (!this.isConfigured) {
+      return null;
+    }
+
+    try {
+      let STSClient, GetSessionTokenCommand, AssumeRoleCommand;
+      try {
+        ({ STSClient, GetSessionTokenCommand, AssumeRoleCommand } = require('@aws-sdk/client-sts'));
+      } catch (err) {
+        logger.error('[LIVENESS PROVIDER] @aws-sdk/client-sts package not available:', err.message);
+        return null;
+      }
+
+      const clientOptions = { region: this.region };
+      if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+        clientOptions.credentials = {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        };
+      }
+
+      const stsClient = new STSClient(clientOptions);
+
+      // If an IAM role ARN for liveness streaming is configured, use AssumeRole
+      if (process.env.AWS_LIVENESS_ROLE_ARN) {
+        const command = new AssumeRoleCommand({
+          RoleArn: process.env.AWS_LIVENESS_ROLE_ARN,
+          RoleSessionName: `LivenessSession-${(sessionId || 'anon').substring(0, 8)}`,
+          DurationSeconds: 900, // 15 mins (minimum for STS AssumeRole)
+          Policy: JSON.stringify({
+            Version: '2012-10-17',
+            Statement: [
+              {
+                Effect: 'Allow',
+                Action: 'rekognition:StartFaceLivenessSession',
+                Resource: '*',
+              },
+            ],
+          }),
+        });
+
+        const res = await stsClient.send(command);
+        const creds = res.Credentials;
+
+        logger.info('[LIVENESS PROVIDER] Issued temporary AWS credentials via AssumeRole', {
+          verificationSessionId: sessionId,
+          expiration: creds?.Expiration,
+          credentialProviderInvoked: true,
+        });
+
+        return {
+          accessKeyId: creds.AccessKeyId,
+          secretAccessKey: creds.SecretAccessKey,
+          sessionToken: creds.SessionToken,
+          expiration: creds.Expiration,
+        };
+      } else {
+        // Fallback to GetSessionToken for IAM user credentials
+        const command = new GetSessionTokenCommand({
+          DurationSeconds: 900,
+        });
+
+        const res = await stsClient.send(command);
+        const creds = res.Credentials;
+
+        logger.info('[LIVENESS PROVIDER] Issued temporary AWS credentials via GetSessionToken', {
+          verificationSessionId: sessionId,
+          expiration: creds?.Expiration,
+          credentialProviderInvoked: true,
+        });
+
+        return {
+          accessKeyId: creds.AccessKeyId,
+          secretAccessKey: creds.SecretAccessKey,
+          sessionToken: creds.SessionToken,
+          expiration: creds.Expiration,
+        };
+      }
+    } catch (err) {
+      logger.error('[LIVENESS PROVIDER] Failed to issue temporary STS credentials:', err.message);
+      return null;
+    }
+  }
 }
 
 module.exports = new FaceLivenessProvider();

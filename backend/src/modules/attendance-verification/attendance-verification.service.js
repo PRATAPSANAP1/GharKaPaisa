@@ -181,11 +181,64 @@ const initiateLivenessSession = async ({ sessionId, reqUser }) => {
     );
   }
 
+  const credentials = await faceLivenessProvider.getTemporaryCredentials({ sessionId: session.id });
+
   return {
     success: true,
     sessionId: session.id,
     providerSessionId: livenessRes.sessionId,
     region: livenessRes.region || faceLivenessProvider.region || 'ap-south-1',
+    credentials,
+  };
+};
+
+/**
+ * Generate short-lived temporary AWS credentials for browser-side FaceLivenessDetectorCore
+ */
+const getLivenessCredentials = async ({ sessionId, reqUser }) => {
+  const authEmpId = await resolveEmployeeId(reqUser);
+
+  if (!authEmpId) {
+    const error = new Error('User context is not associated with an employee record');
+    error.statusCode = 400;
+    error.reason = 'UNAUTHORIZED';
+    throw error;
+  }
+
+  const { rows: [session] } = await query(
+    `SELECT id, employee_id, status, expires_at 
+     FROM attendance_verification_sessions 
+     WHERE id = $1 LIMIT 1`,
+    [sessionId]
+  );
+
+  if (!session || session.employee_id !== authEmpId) {
+    const error = new Error('Verification session not found or unauthorized');
+    error.statusCode = 403;
+    error.reason = 'FORBIDDEN';
+    throw error;
+  }
+
+  if (new Date(session.expires_at) < new Date()) {
+    const error = new Error('Verification session has expired');
+    error.statusCode = 410;
+    error.reason = 'LIVENESS_EXPIRED';
+    throw error;
+  }
+
+  const credentials = await faceLivenessProvider.getTemporaryCredentials({ sessionId: session.id });
+
+  if (!credentials) {
+    const error = new Error('Could not generate temporary AWS credentials for liveness streaming');
+    error.statusCode = 503;
+    error.reason = 'LIVENESS_PROVIDER_ERROR';
+    throw error;
+  }
+
+  return {
+    success: true,
+    sessionId: session.id,
+    credentials,
   };
 };
 
@@ -450,6 +503,7 @@ module.exports = {
   resolveEmployeeId,
   createVerificationSession,
   initiateLivenessSession,
+  getLivenessCredentials,
   validateLivenessResult,
   completeAttendanceVerification,
   getVerificationSessionStatus,

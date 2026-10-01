@@ -14,6 +14,13 @@ const attendanceService = {
     return response.data;
   },
 
+  getLivenessCredentials: async (sessionId) => {
+    const response = await api.post('/attendance/verification/liveness/credentials', {
+      session_id: sessionId,
+    });
+    return response.data;
+  },
+
   validateLivenessResult: async (sessionId, providerSessionId) => {
     const response = await api.post('/attendance/verification/liveness/result', {
       session_id: sessionId,
