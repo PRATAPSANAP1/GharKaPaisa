@@ -48,7 +48,7 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
       return;
     }
 
-    if (src.startsWith('data:') || src.startsWith('blob:') || src.startsWith('http://') || src.startsWith('https://')) {
+    if (src.startsWith('data:') || src.startsWith('blob:')) {
       setBlobUrl(src);
       setLoading(false);
       return;
@@ -66,7 +66,6 @@ export function AuthenticatedImage({ src, alt, style, onClick, onError, ...props
         if (isMounted) {
           setLoading(false);
           setBlobUrl(src);
-          if (onError) onError(err);
         }
       });
 
